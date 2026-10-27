@@ -11,7 +11,7 @@ export default function GoogleSignIn() {
     const unlisten = listen<string>("oauth-code", async ({ payload: code }) => {
       try {
         await (signIn as unknown as (provider: undefined, params: { code: string }) => Promise<unknown>)(undefined, { code });
-        if (getLocation().pathname === "/") navigate("/metronome", { replace: true });
+        if (getLocation().pathname === "/") navigate("/dashboard", { replace: true });
       } catch (error) {
         console.error("Google sign-in failed", error);
       }

@@ -40,7 +40,6 @@ export default defineConfig({
       exact("@/lib/metronome", "native/metronome.ts"),
       exact("@/lib/toneGenerator", "native/toneGenerator.ts"),
       exact("@/lib/audioInput", "native/audioInput.ts"),
-      exact("@/lib/toolRegistry", "native/toolRegistry.tsx"),
       exact("@convex-dev/auth/react", "native/convexAuthReact.ts"),
       { find: /^convex-auth-react-original$/, replacement: require.resolve("@convex-dev/auth/react") },
       exact("next/link", "shims/next-link.tsx"),

@@ -36,6 +36,18 @@ export function getLocation(): Location {
   return current;
 }
 
+let routeParams: Record<string, string> = {};
+
+/** The current page's path parameters (`/post/:id` → `{ id }`), set by `Routes`, read by the
+    `useParams()` stand-in. */
+export function setRouteParams(params: Record<string, string>) {
+  routeParams = params;
+}
+
+export function getRouteParams(): Record<string, string> {
+  return routeParams;
+}
+
 export function navigate(href: string, { replace = false, scroll = true } = {}) {
   const url = new URL(href, window.location.href);
   if (url.origin !== window.location.origin) {

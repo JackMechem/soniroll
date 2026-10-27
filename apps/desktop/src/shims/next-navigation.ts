@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getLocation, navigate, useLocation } from "../router";
+import { getLocation, getRouteParams, navigate, useLocation } from "../router";
 
 /** Stand-in for `next/navigation`, on top of the desktop router. */
 
@@ -25,9 +25,9 @@ export function useSearchParams(): URLSearchParams {
   return useMemo(() => new URLSearchParams(search), [search]);
 }
 
-/** The desktop app has no URL parameters in paths yet (no `/tune/[id]` etc.). */
 export function useParams<T extends Record<string, string> = Record<string, string>>(): T {
-  return {} as T;
+  useLocation();
+  return getRouteParams() as T;
 }
 
 export function redirect(href: string): never {

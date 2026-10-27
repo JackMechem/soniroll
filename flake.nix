@@ -105,11 +105,18 @@
             pkgs.openssl
             pkgs.alsa-lib
             pkgs.pipewire
+            # WebKitGTK plays Web Audio and decodes audio files through GStreamer.
+            pkgs.gst_all_1.gstreamer
+            pkgs.gst_all_1.gst-plugins-base
+            pkgs.gst_all_1.gst-plugins-good
+            pkgs.gst_all_1.gst-plugins-bad
+            pkgs.gst_all_1.gst-libav
           ];
           shellHook = ''
             export GIO_MODULE_DIR=${pkgs.glib-networking}/lib/gio/modules
             export XDG_DATA_DIRS=${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS
             export ALSA_PLUGIN_DIR=${pkgs.pipewire}/lib/alsa-lib
+            export GST_PLUGIN_SYSTEM_PATH_1_0=${pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (with pkgs.gst_all_1; [ gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-libav pkgs.pipewire ])}
             # WebKitGTK's GPU compositing is flaky on some Linux setups (blank window).
             export WEBKIT_DISABLE_DMABUF_RENDERER=1
           '';
