@@ -518,3 +518,74 @@ disk), and after closing and reopening the app, localStorage (recents, dismissed
 IndexedDB (Slow Downer's saved file) were still there. Image copy to the clipboard
 (`ClipboardItem`, the progress card's "Share image") works after awaits. Theme fonts load from
 Google Fonts; Geist and Petaluma are bundled and load.
+
+## 2026-10-27 — the Recorder on the Web Audio bridge
+
+The native Recorder and the Web Audio bridge were built at the same time; this puts the Recorder
+on top of the bridge. (It replaces what the bridge section above says about the Recorder failing
+and not having the chip.) Nothing changed in `recorder.rs` or `native/recorderEngine.ts` except a
+test helper.
+
+- **What the Recorder needed from the old mixer:** `audio::heard_nanos(at)`, when a sound
+  scheduled at output time `at` comes out of the speakers, anchored on the audio callback's own
+  timestamp; and `latestFirstBeat()` in `native/clickEngine.ts`.
+- **The clock tap** (`bridge.rs`): `web-audio-api` doesn't expose when its render callback runs,
+  and the clock thread's 20 ms poll of `current_time()` is far too coarse for sample-exact takes.
+  So the live graph has one silent node, a Rust `AudioWorkletProcessor` (`ClockTap`), that notes
+  the context time and wall clock (`audio::now_nanos()`) at the first render quantum of each
+  callback. (A callback asking for 256 frames renders two quanta microseconds apart; quanta less
+  than 0.5 ms apart count as one callback.) `bridge::heard_nanos(at)` = that wall clock + (`at` −
+  that time) + the output delay, which is the same anchor the old mixer used. `audio::heard_nanos`
+  (the "Shared with the Recorder" block) calls it, so `recorder.rs` didn't change. The clock sent
+  to JavaScript now also extrapolates from the tap instead of from the polled time.
+- `latestFirstBeat()` is back in the bridge version of `native/clickEngine.ts`: first beat = the
+  scheduler's first clock reading + 0.06 s, as before (keep it in step with `runClickScheduler`).
+- The chip on `/recorder` has the Recorder's Input picker as well as the bridge's output and
+  buffer size; every other sound tool has the chip without it.
+- **Start-up sample rate:** in one launch cpal's PipeWire host reported 44.1 kHz for the test
+  sink, which was running at 48 kHz like the PipeWire graph (cpal takes a node's own `node.rate`,
+  or else PipeWire's `clock.rate` setting). Every later reading said 48 kHz and I couldn't get it
+  to happen again. At 44.1 kHz PipeWire would have resampled the whole app, so the bridge now asks
+  until two readings agree and logs them (`audio bridge: running at … Hz (readings …)`). Cause
+  not found; if it shows up again on real hardware, that log line says so.
+- The Recorder's two MP3 round-trip tests sometimes failed when they ran at the same time: LAME's
+  decoder (mpglib, a test-only dependency) keeps global state. The test decode helper now takes a
+  lock.
+- The page audit's `downloads.ts` wraps `URL.createObjectURL`/`revokeObjectURL`. Neither the bridge
+  nor the native Recorder engine makes blob URLs; the website's own (the Slow Downer's file, a
+  take's playback) only get an extra reference until they're revoked.
+
+### What was verified, and how
+
+`cargo test` (23 tests, six runs in a row), `cargo build`, `tsc`, `pnpm lint`, `vite build`, after
+merging both the Recorder and the page audit. In the real window (Xvfb, private D-Bus, sound only
+into a null sink, a `pw-loopback` "mic" fed from that sink's monitor at session priority 0,
+`SONIROLL_AUDIO_INPUT` set to it, takes saved by `SONIROLL_RECORDER_DUMP`, the Recorder's
+sign-in gate bypassed for the test and restored afterwards):
+
+- **Metronome at 100 BPM:** 19 clicks recorded from the sink, every gap exactly 28,800 samples.
+- **A take of a 440 Hz tone** (played through the bridge, heard by the loopback mic): MP3, 48 kHz
+  stereo, 160 kb/s, 440 Hz throughout; 3.528 s decoded for a 3.489 s take (+ the 1,105-sample
+  codec delay + frame padding).
+- **A take with a 1-bar count-in and the metronome on, recording its own clicks:** "Count-in…" for
+  four beats, then "Recording". In the decoded file the downbeat is at sample 1366 (1,105 codec
+  delay + 261 samples, 5.4 ms). The Recorder's own test on the old mixer got 1364 and put the
+  quantum down to `pw-loopback`, so the bridge's clock tap lines takes up the same as the old
+  engine did. Click positions by cross-correlation are exactly 115,200 samples (one bar) apart to
+  within 0.01 sample. (Threshold crossings in the MP3 wobble by ±1 sample: codec noise.)
+- **Stop during the count-in:** back to Ready, no take written, the input closed (no links left on
+  the loopback mic), no error.
+- **Jam Practice's count-off** (the website's `playCountOff`, called from the module the app loads
+  because the test profile has no tunes to pick): 2 bars at 120 BPM, 8 clicks, every gap exactly
+  24,000 samples, accents on the downbeats, on the native context.
+- **Syncopation** played (hi-hat count-in, then the pattern); the drum chain stayed at 6 nodes after
+  Stop.
+- **Random Sticking Warmup:** a rerun had 11 gaps of exactly 28,800 samples, straight through the
+  count-off → pattern switch. The first run had one gap 768 samples short (exactly three
+  256-frame quanta) with every other gap exact. A late output would make a gap longer, so that
+  looks like the recording dropping three cycles; it didn't happen again.
+- **Score Writer:** a new score with eight typed notes played back (about 2 s of notes).
+
+Not verified: anything signed in (uploading a take, Record a clip in the Shed Log), the song
+line-up, real microphones and interfaces (their real capture and output delays), anything by
+ear, macOS/Windows, a release build.

@@ -348,7 +348,8 @@ mod tests {
                 desc.as_ref().map(|d| d.driver().map(str::to_string)),
             );
             if device.supports_output() {
-                println!("    sink: {:?}", output_sink(&id, true));
+                let rate = device.default_output_config().map(|c| c.sample_rate()).ok();
+                println!("    sink: {:?}, rate {rate:?}", output_sink(&id, true));
             }
         }
     }

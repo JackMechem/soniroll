@@ -736,6 +736,26 @@ fn buffer_frames(requested: u32) -> u32 {
     }
 }
 
+/// The output's own rate, so nothing gets resampled. Asked until two readings agree: once, at
+/// start-up, cpal's PipeWire host reported 44.1 kHz for a sink running at 48 kHz (and 48 kHz on
+/// every later look), which would have had PipeWire resampling everything.
+fn startup_sample_rate() -> f32 {
+    let forced = audio::forced_output();
+    let mut readings = Vec::new();
+    let mut last = None;
+    for _ in 0..4 {
+        let rate = audio::output_sample_rate(forced.as_deref());
+        readings.push(rate);
+        if rate.is_some() && rate == last {
+            break;
+        }
+        last = rate;
+    }
+    let rate = last.unwrap_or(48_000.0);
+    eprintln!("audio bridge: running at {rate} Hz (readings {readings:?})");
+    rate
+}
+
 /// Closes a context without waiting forever: a context whose device vanished never answers.
 fn close(ctx: AudioContext) {
     let (done_tx, done_rx) = mpsc::channel();
@@ -751,7 +771,7 @@ fn close(ctx: AudioContext) {
 impl Bridge {
     pub fn new() -> Self {
         let (ended_tx, ended_rx) = mpsc::channel();
-        let sample_rate = audio::output_sample_rate(audio::forced_output().as_deref()).unwrap_or(48_000.0);
+        let sample_rate = startup_sample_rate();
         Self {
             inner: Mutex::default(),
             buffers: Mutex::default(),
