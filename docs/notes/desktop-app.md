@@ -143,3 +143,143 @@ interface, macOS and Windows (never built), installers.
   doesn't share the app data of a copy Jack has open.
 - **Never stop the app with `pidof soniroll-desktop`**: Jack may have his own copy running. Stop
   only the PIDs you started.
+
+## 2026-10-27 — every tool's sound on native audio: the Web Audio bridge
+
+Before this, only the click engine, reference tones and the tuner's mic were native; every other
+sound (trainers, piano/Rhodes samples, drums, upright bass, comping, Bass Genius, Drum Generator,
+Syncopation, sticking warmup, recordings) went through `getAudioContext()`, which was the
+WebKitGTK window's own Web Audio. Now `getAudioContext()` is a **JavaScript stand-in for
+`AudioContext`** that forwards the graph to the Rust crate **`web-audio-api` 1.7** (a spec
+implementation of Web Audio). No website file changed: it's the same graph, built by the same
+code, on a different engine.
+
+### How it fits together
+
+- **JS side** (`src/native/webAudio/`): `context.ts` (`NativeAudioContext`), `nodes.ts` (gain,
+  oscillator, buffer source, constant source, compressor, convolver, analyser, splitter, merger,
+  biquad, delay, stereo panner, wave shaper, destination), `param.ts` (`AudioParam`),
+  `buffer.ts` (`AudioBuffer`, `decodeAudioData`, `PeriodicWave`), `bridge.ts` (transport).
+  JavaScript owns the ids (nodes and buffers share one counter, starting at a random number so an
+  event from before a page reload can't hit a new node). Every call becomes an op; the ops of one
+  tick go to Rust in one `wa_ops` call; calls go through one promise queue so they arrive in order.
+- **Rust side** (`src-tauri/src/bridge.rs`): `Graph<C>` maps ids to `web-audio-api` nodes and
+  applies ops; generic over the context so the tests render offline. `audio.rs` now only lists
+  devices, maps the chip's device onto the bridge, and runs the tuner's input + YIN.
+- **It catches every path:** `src/native/webAudio/install.ts` (imported first in `main.tsx`) sets
+  `window.AudioContext` to the stand-in, and constructing it returns the one shared instance. The
+  `@/lib/metronome` alias alone missed a lot: `playCountOff` (Jam Practice) calls that module's
+  own `getAudioContext`, and `uprightBass`, `bassGeniusEngine`, `drumGeneratorEngine` and
+  `syncopationEngine` import `./metronome`, which the exact-match alias doesn't see.
+  `native/metronome.ts`'s `getAudioContext()` returns the same instance.
+- **One output, one clock.** The click engine is now the website's own `scheduleClick` (an
+  oscillator into a gain) on the bridge; `native/clickEngine.ts` only waits for the clock
+  (`ensureStarted`) and passes the output delay to the beat display. `native/toneGenerator.ts` is
+  gone (the website's runs on the bridge). The old cpal mixer in `audio.rs` is removed. Clicks and
+  a tool's own sounds share one clock, so nothing can drift between them.
+
+### Decisions
+
+- **Sync reads have JS mirrors.** `currentTime` is the old `audio-clock` extrapolation (Rust sends
+  `ctx.current_time() + offset` every 20 ms; every bridge call's reply re-anchors it). A param's
+  automation timeline is kept in JS too (`valueAt` in `param.ts`, the spec's rules), so `.value`
+  reads what's playing (the tone generator fades a held tone out from `gain.value`; a wrong value
+  would jump to 1). Long timelines compact themselves. Analysers are pull-based: each read returns
+  the last reply and asks for a fresh one (one frame behind; the very first read is silence).
+- **Buffers.** `decodeAudioData` sends the file's bytes to Rust (`wa_decode`, raw binary IPC),
+  which decodes with symphonia at the app's rate in an `OfflineAudioContext` (loading a file never
+  opens the output), keeps the buffer to play, and returns the channels as raw bytes (16-byte
+  header, then planar f32) for `getChannelData` (drum/bass onset detection, waveforms). If Rust
+  can't decode a file, the window's own decoder is tried and the buffer goes to Rust when first
+  played. `createBuffer` buffers are uploaded (`wa_buffer`, raw bytes) when first used, and again
+  if written since; any `getChannelData` call on them counts as a write. Decoded buffers are
+  treated as read-only. Nodes and buffers are freed on the Rust side when JavaScript
+  garbage-collects them (`FinalizationRegistry`).
+- **Lifetimes like a browser's:** a started source is held until Rust reports it ended (`wa-ended`
+  event → `onended`), a node holds what it's connected to, and Rust drops a source as soon as it
+  ends. A metronome run held 2–4 nodes in Rust the whole time.
+- **The spec's exceptions are thrown in JS** (start twice, stop before start, buffer set twice,
+  exponential ramp to 0, negative times, bad fftSize), because `web-audio-api` panics on them.
+  Anything that slips through is caught per op (`catch_unwind`) and logged as "ignored an op the
+  engine refused".
+- **Connections are tracked in Rust** because `web-audio-api` doesn't ignore a repeated `connect()`
+  (it would double the signal); this also makes disconnects exact.
+- **Reopening the output** (the chip's device or buffer size, or the device vanished: the clock
+  stalls for 1.5 s and the next sound reopens it) makes a fresh context with an empty graph. Every
+  reply carries the output's generation; when it changes, JS replays its live nodes (create,
+  channel config, attributes, buffer/wave/curve, each param's current value plus future events,
+  connections). Sources already playing are cut off (their `onended` fires). Times stay
+  continuous: Rust adds an `offset` so JS's clock never jumps back. `set_sink_id` would keep the
+  graph but resets the buffer size to `web-audio-api`'s default, so every change goes through
+  reopen + replay instead. The old context is closed on a thread with a 500 ms timeout:
+  `close_sync` waits forever on a context whose device has gone.
+- **Sample rate** is fixed for the app's life, like a browser's: the forced/default output's rate,
+  put in the window before any script runs by a tiny plugin's init script
+  (`window.__SONIROLL_AUDIO__`), because tools build reverb impulses at `ctx.sampleRate` as soon as
+  they mount. Contexts open at that rate (PipeWire resamples for a device at another rate).
+- **Devices:** `web-audio-api` 1.7 uses the same cpal 0.18 (one copy in the lockfile) with its
+  `cpal-pipewire` feature, so it's on PipeWire on Linux. It names outputs by description (numbered
+  when two share one); `audio::output_sink` maps the chip's cpal id onto that. With
+  `SONIROLL_AUDIO_OUTPUT` the mapping is strict: a missing device is an error, never a fallback to
+  the default (the speakers). The buffer size becomes a latency hint (next power of two); the
+  chip's "Device default" option is gone (the crate always asks for a size), 256 stays the default.
+- **The chip** now sits on every tool whose sound is native, not just the Metronome and Tuner. Not
+  on the Slow Downer: its playback is a `<video>` element (WebKit's media player, with
+  `preservesPitch`), which this bridge doesn't touch; only its waveform decode is native. Not on
+  the Recorder either (another agent is replacing `lib/recorderEngine` natively).
+- **Not supported:** `createMediaStreamSource`/`Destination`, `createMediaElementSource`,
+  `createScriptProcessor`, `createPanner`, `createIIRFilter` throw a clear `NotSupportedError`.
+  Until the native Recorder lands, the website's Recorder fails on this branch for that reason.
+  `close()` is a no-op (the one shared context stays open); the compressor's `reduction` reads 0.
+- Dependencies are built optimized in `tauri dev` too (`[profile.dev.package."*"]`): unoptimized
+  convolution and mp3 decoding can't keep up with a 256-sample buffer.
+
+### Gotchas
+
+- A null sink without `node.description` is called "unknown", like other apps' streams and other
+  test sinks. The mapping copes (by position), but give test sinks a description.
+- `pw-cli ls Node | grep -B3 -A6 <name>` shows the *next* node's id after the match: check the id
+  with `pw-cli info <id>` before destroying anything. (One unrelated node was destroyed this way.)
+- `pw-record` writes 16-bit PCM unless told otherwise; stop it with `timeout -s INT` so the WAV
+  header is finished.
+- Test windows must run inside `dbus-run-session --` with `GDK_DEBUG=no-portals`, or WebKitGTK can
+  pop portal dialogs (camera, file chooser) on Jack's real desktop.
+- Driving the real window without test code in the repo: a scratch Vite config (passed with
+  `--config` in `beforeDevCommand`) spreads the repo's config and adds a plugin that injects a
+  small polling script; the agent writes JS to a file, the page runs it and posts the result back.
+  The config must be `.mts` when it lives outside the package (else Vite bundles it as CommonJS).
+
+### What was verified, and how
+
+- `cargo test` (14: a click lands on its exact sample; three clicks exactly 28,800 samples apart
+  at 100 BPM; times keep the offset after a reopen; a repeated connect doesn't double the level;
+  disconnect + free silence a node; `disconnect(node)` leaves param connections; an uploaded buffer
+  plays at its playback rate and reports `ended`; a one-channel gain sums a stereo sample to the
+  middle; refused ops are skipped; the binary formats round-trip; a WAV decodes; the device-name
+  picker; YIN), `cargo build` (no warnings), `tsc` and `pnpm lint` in `apps/desktop`, `vite build`.
+- In the real window (Xvfb, private D-Bus, everything into a null sink, recorded with
+  `pw-record`):
+  - **Metronome at 100 BPM: 21 clicks, every gap exactly 28,800 samples** at 48 kHz, accents on
+    beat 1 (0.70 vs 0.42). The chip read PipeWire, 48 kHz, 256 samples, 5.3 ms device delay,
+    11 ms total.
+  - Guess the Interval (sampled piano) played a round. Rust's decode of the piano mp3 matches
+    WebKit's decode of the same file (correlation 0.9999 at zero lag, lengths within a sample).
+  - The website's tones through its own `playNote`: triangle, organ (PeriodicWave), square, pluck,
+    sine and Rhodes all at 440 Hz, peaks within ~1% of the same functions rendered by WebKit's real
+    Web Audio (`OfflineAudioContext`): 0.388/0.390, 0.295/0.299, 0.150/0.147, 0.397/0.397,
+    0.395/0.394.
+  - Drum Generator (samples → compressor → convolver reverb) played, with the reverb tail after
+    Stop. Bass Genius (walking bass + piano comping, through the `./metronome` imports) played.
+  - Reference tones: a plucked tone's `onEnd` fired at 536 ms (0.5 s + 20 ms stop); a held tone
+    stopped with a fade from its level, no jump.
+  - Switching the buffer to 512 mid-groove: the drums carried on, the clock went 53.441 →
+    53.447 s, 24 nodes were replayed, status showed 512.
+  - Slow Downer: a file loaded through its file input, waveform drawn (decoded in Rust), and it
+    played (through WebKit's media player, into `PULSE_SINK`).
+  - Rust's node count stayed at 2–4 during a 30 s metronome run, and was 1 after Stop.
+
+Not verified: anything heard by ear; a device actually unplugged (the stall → reopen path); a real
+interface's latency; the chip's device picker with real hardware (only the forced test sink);
+recordings playback (`TimelinePlayer`, needs a signed-in account with recordings), the Syncopation
+and sticking-warmup engines, Jam Practice's count-off, Score Writer playback and the Practice
+Timer chime (same APIs as what was tested, but not run); macOS/Windows; a release build.

@@ -1,132 +1,29 @@
-//! The native audio engine. One output stream (clicks and reference tones, mixed in the audio
-//! callback at exact sample positions) and one optional input stream (the tuner's microphone).
-//!
-//! The web app's scheduling logic still runs in JavaScript: it decides *when* each click
-//! happens, in engine seconds, and sends a batch ahead of time (`audio_schedule`). This side only
-//! has to place each click on the right sample, which is what makes the timing exact. The engine
-//! clock (seconds of audio rendered) is reported back about 50 times a second so JavaScript can
-//! read it like Web Audio's `currentTime`.
+//! Audio devices and the microphone. Output goes through the Web Audio bridge (`bridge.rs`): every
+//! sound, the metronome's clicks included, is one graph on one native output. This file lists the
+//! devices, maps the chip's choice onto that output, and runs the one optional input stream (the
+//! tuner's microphone, with its pitch detector).
 
-use std::f32::consts::TAU;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{BufferSize, Device, FromSample, OutputCallbackInfo, SampleFormat, SizedSample, StreamConfig};
-use serde::{Deserialize, Serialize};
+use cpal::{Device, FromSample, SampleFormat, SizedSample, StreamConfig};
+use serde::Serialize;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, Emitter};
+use web_audio_api::media_devices::{enumerate_devices_sync, MediaDeviceInfoKind};
 
-// ---------------------------------------------------------------------------------------------
-// Shared state
-
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum Wave {
-    Sine,
-    Square,
-    Sawtooth,
-    Triangle,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize)]
-pub struct Click {
-    /// Engine seconds.
-    at: f64,
-    wave: Wave,
-    freq: f32,
-    gain: f32,
-    /// Seconds.
-    length: f32,
-}
-
-enum Cmd {
-    Click(Click),
-    ToneStart { id: u32, freq: f32, wave: Wave, volume: f32, duration: Option<f32> },
-    ToneStop { id: u32 },
-}
-
-/// Lock-free numbers the audio callback writes and everything else reads.
-struct Meters {
-    /// Engine seconds at the start of the last callback (f64 bits).
-    now_bits: AtomicU64,
-    /// When that callback ran, in nanoseconds since `epoch()`.
-    callback_nanos: AtomicU64,
-    /// Frames per callback, as last seen.
-    buffer_frames: AtomicU32,
-    /// Time from the callback to the sound reaching the device, in microseconds.
-    latency_micros: AtomicU32,
-    running: AtomicBool,
-    /// The output device went away (unplugged); reopen on the next sound.
-    lost: AtomicBool,
-}
-
-static METERS: Meters = Meters {
-    now_bits: AtomicU64::new(0),
-    callback_nanos: AtomicU64::new(0),
-    buffer_frames: AtomicU32::new(0),
-    latency_micros: AtomicU32::new(0),
-    running: AtomicBool::new(false),
-    lost: AtomicBool::new(false),
-};
-
-fn epoch() -> Instant {
-    static EPOCH: OnceLock<Instant> = OnceLock::new();
-    *EPOCH.get_or_init(Instant::now)
-}
-
-/// The engine clock right now: the last callback's time plus how long ago it ran.
-fn engine_now() -> f64 {
-    let base = f64::from_bits(METERS.now_bits.load(Ordering::Acquire));
-    if !METERS.running.load(Ordering::Acquire) {
-        return base;
-    }
-    let at = METERS.callback_nanos.load(Ordering::Acquire);
-    let since = epoch().elapsed().as_nanos() as u64;
-    base + since.saturating_sub(at) as f64 / 1e9
-}
-
-struct Output {
-    commands: rtrb::Producer<Cmd>,
-    stop: mpsc::Sender<()>,
-    device_name: String,
-    device_id: String,
-    sample_rate: u32,
-    requested_buffer: u32,
-}
-
+#[derive(Default)]
 pub struct AudioState {
-    output: Mutex<Option<Output>>,
-    /// Which output device and buffer size to use the next time the stream opens.
-    prefs: Mutex<OutputPrefs>,
     input_stop: Mutex<Option<Arc<AtomicBool>>>,
-    ended: Mutex<Option<rtrb::Consumer<u32>>>,
-}
-
-#[derive(Clone, Default)]
-struct OutputPrefs {
-    device_id: String,
-    buffer_frames: u32,
 }
 
 /// `SONIROLL_AUDIO_OUTPUT=<device id>` forces the output device (for testing against a silent
 /// sink without ever touching the speakers). The in-app choice is ignored while it's set.
-fn forced_output() -> Option<String> {
+pub fn forced_output() -> Option<String> {
     std::env::var("SONIROLL_AUDIO_OUTPUT").ok().filter(|id| !id.is_empty())
-}
-
-impl Default for AudioState {
-    fn default() -> Self {
-        Self {
-            output: Mutex::default(),
-            prefs: Mutex::new(OutputPrefs { device_id: forced_output().unwrap_or_default(), buffer_frames: 0 }),
-            input_stop: Mutex::default(),
-            ended: Mutex::default(),
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -140,6 +37,10 @@ fn host() -> cpal::Host {
         }
     }
     cpal::default_host()
+}
+
+pub fn host_name() -> String {
+    host().id().name().to_string()
 }
 
 #[derive(Serialize)]
@@ -161,14 +62,15 @@ fn describe(device: &Device) -> Option<DeviceInfo> {
     Some(DeviceInfo { id, label })
 }
 
+/// Exactly this device, or nothing.
+fn device_by_id(host: &cpal::Host, id: &str) -> Option<Device> {
+    host.device_by_id(&id.parse().ok()?)
+}
+
 fn find_device(id: &str, input: bool) -> Option<Device> {
     let host = host();
-    if !id.is_empty() {
-        if let Ok(parsed) = id.parse() {
-            if let Some(device) = host.device_by_id(&parsed) {
-                return Some(device);
-            }
-        }
+    if let Some(device) = device_by_id(&host, id) {
+        return Some(device);
     }
     if input {
         host.default_input_device()
@@ -203,473 +105,66 @@ pub fn audio_devices() -> Devices {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Voices (all of this runs on the audio thread: no allocation, no locks)
-
-const MAX_VOICES: usize = 64;
-const SILENT: f32 = 0.0001;
-const TONE_ATTACK: f32 = 0.03;
-const TONE_RELEASE: f32 = 0.12;
-
-#[derive(Clone, Copy)]
-enum Stage {
-    /// Waiting for its start frame.
-    Pending,
-    /// Ramping by `mult` per frame until `stage_end`.
-    Ramp,
-    /// Holding its level until stopped (a sustained tone).
-    Hold,
+/// The sample rate the app's audio runs at: the output's own rate, so nothing gets resampled.
+/// The forced test output if there is one, otherwise the system default.
+pub fn output_sample_rate(forced: Option<&str>) -> Option<f32> {
+    let host = host();
+    let device = match forced {
+        Some(id) => device_by_id(&host, id)?,
+        None => host.default_output_device()?,
+    };
+    Some(device.default_output_config().ok()?.sample_rate() as f32)
 }
 
-#[derive(Clone, Copy)]
-struct Voice {
-    tone_id: Option<u32>,
-    wave: Wave,
-    phase: f32,
-    step: f32,
-    amp: f32,
-    mult: f32,
-    start: u64,
-    stage: Stage,
-    stage_end: u64,
-    /// What happens when the current ramp ends: hold, decay to silence by `decay_end`, or stop.
-    after: After,
-    decay_end: u64,
-    /// The frame the voice stops sounding (0 = not set yet).
-    end: u64,
+/// `web-audio-api` names outputs its own way: by the device's description, numbered when two
+/// share one. Which of the ones called `label` is ours, among outputs that have a config (the
+/// ones it lists, in the same order).
+fn nth_with_label(labels: &[(String, String)], label: &str, nth: usize) -> Option<String> {
+    labels.iter().filter(|(_, l)| l == label).nth(nth).map(|(id, _)| id.clone())
 }
 
-#[derive(Clone, Copy, PartialEq)]
-enum After {
-    Hold,
-    Decay,
-    Stop,
-}
-
-/// Web Audio's exponential ramp, as a per-frame multiplier.
-fn ramp_mult(from: f32, to: f32, frames: u64) -> f32 {
-    if frames == 0 {
-        return 1.0;
+/// The bridge's sink id for a device id from the chip ("" = the system default), and the name to
+/// show. With `strict` (the forced test output) a device that can't be found is an error, never
+/// a quiet fallback to the default (that would be the speakers).
+pub fn output_sink(device_id: &str, strict: bool) -> Result<(String, String), String> {
+    let host = host();
+    let default_name = || {
+        host.default_output_device().and_then(|d| describe(&d)).map_or("System default".into(), |d| d.label)
+    };
+    if device_id.is_empty() {
+        return Ok((String::new(), default_name()));
     }
-    (to.max(SILENT) / from.max(SILENT)).powf(1.0 / frames as f32)
-}
-
-/// PolyBLEP: rounds off the jumps in square and saw waves so high clicks don't alias.
-fn poly_blep(t: f32, dt: f32) -> f32 {
-    if t < dt {
-        let t = t / dt;
-        t + t - t * t - 1.0
-    } else if t > 1.0 - dt {
-        let t = (t - 1.0) / dt;
-        t * t + t + t + 1.0
-    } else {
-        0.0
-    }
-}
-
-impl Voice {
-    fn sample(&mut self) -> f32 {
-        let t = self.phase;
-        let dt = self.step;
-        let value = match self.wave {
-            Wave::Sine => (t * TAU).sin(),
-            Wave::Triangle => 1.0 - 4.0 * (t - 0.5).abs(),
-            Wave::Sawtooth => (2.0 * t - 1.0) - poly_blep(t, dt),
-            Wave::Square => {
-                let naive = if t < 0.5 { 1.0 } else { -1.0 };
-                naive + poly_blep(t, dt) - poly_blep((t + 0.5) % 1.0, dt)
-            }
-        };
-        self.phase += dt;
-        if self.phase >= 1.0 {
-            self.phase -= 1.0;
-        }
-        value
-    }
-}
-
-struct Mixer {
-    voices: [Option<Voice>; MAX_VOICES],
-    sample_rate: f32,
-    frame: u64,
-    start_secs: f64,
-    ended: rtrb::Producer<u32>,
-}
-
-impl Mixer {
-    fn add(&mut self, voice: Voice) {
-        if let Some(slot) = self.voices.iter_mut().find(|v| v.is_none()) {
-            *slot = Some(voice);
-        }
-    }
-
-    fn secs_to_frame(&self, secs: f64) -> u64 {
-        let offset = (secs - self.start_secs) * self.sample_rate as f64;
-        if offset <= self.frame as f64 {
-            self.frame
+    let not_found = || {
+        if strict {
+            Err(format!("The audio output {device_id} wasn't found."))
         } else {
-            offset.round() as u64
-        }
-    }
-
-    fn handle(&mut self, cmd: Cmd) {
-        let sr = self.sample_rate;
-        match cmd {
-            Cmd::Click(c) => {
-                let start = self.secs_to_frame(c.at);
-                let len = ((c.length * sr) as u64).max(1);
-                let gain = c.gain.max(SILENT);
-                self.add(Voice {
-                    tone_id: None,
-                    wave: c.wave,
-                    phase: 0.0,
-                    step: c.freq / sr,
-                    amp: gain,
-                    mult: ramp_mult(gain, SILENT, len),
-                    start,
-                    stage: Stage::Pending,
-                    stage_end: start + len,
-                    after: After::Stop,
-                    decay_end: 0,
-                    end: start + len,
-                });
-            }
-            Cmd::ToneStart { id, freq, wave, volume, duration } => {
-                let start = self.frame;
-                let attack = (TONE_ATTACK * sr) as u64;
-                let (after, decay_end) = match duration {
-                    Some(d) => (After::Decay, start + (d * sr) as u64),
-                    None => (After::Hold, 0),
-                };
-                self.add(Voice {
-                    tone_id: Some(id),
-                    wave,
-                    phase: 0.0,
-                    step: freq / sr,
-                    amp: SILENT,
-                    mult: ramp_mult(SILENT, volume, attack),
-                    start,
-                    stage: Stage::Pending,
-                    stage_end: start + attack,
-                    after,
-                    decay_end,
-                    end: if after == After::Decay { decay_end + (0.02 * sr) as u64 } else { 0 },
-                });
-            }
-            Cmd::ToneStop { id } => {
-                let release = (TONE_RELEASE * sr) as u64;
-                let frame = self.frame;
-                for voice in self.voices.iter_mut().flatten() {
-                    if voice.tone_id == Some(id) {
-                        voice.stage = Stage::Ramp;
-                        voice.mult = ramp_mult(voice.amp, SILENT, release);
-                        voice.stage_end = frame + release;
-                        voice.after = After::Stop;
-                        voice.end = frame + release + (0.02 * sr) as u64;
-                    }
-                }
-            }
-        }
-    }
-
-    fn next(&mut self) -> f32 {
-        let frame = self.frame;
-        let mut mix = 0.0;
-        for slot in self.voices.iter_mut() {
-            let Some(voice) = slot else { continue };
-            if voice.end != 0 && frame >= voice.end {
-                if let Some(id) = voice.tone_id {
-                    let _ = self.ended.push(id);
-                }
-                *slot = None;
-                continue;
-            }
-            match voice.stage {
-                Stage::Pending => {
-                    if frame < voice.start {
-                        continue;
-                    }
-                    voice.stage = Stage::Ramp;
-                }
-                Stage::Ramp if frame >= voice.stage_end => match voice.after {
-                    After::Hold => {
-                        voice.stage = Stage::Hold;
-                    }
-                    After::Decay => {
-                        voice.mult = ramp_mult(voice.amp, SILENT, voice.decay_end.saturating_sub(frame));
-                        voice.stage_end = voice.decay_end;
-                        voice.after = After::Stop;
-                    }
-                    After::Stop => {
-                        voice.amp = 0.0;
-                        voice.mult = 1.0;
-                    }
-                },
-                _ => {}
-            }
-            mix += voice.sample() * voice.amp;
-            if matches!(voice.stage, Stage::Ramp) {
-                voice.amp *= voice.mult;
-            }
-        }
-        self.frame += 1;
-        mix
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Output stream
-
-fn open_output(state: &AudioState) -> Result<(), String> {
-    let mut output = state.output.lock().unwrap();
-    if METERS.lost.swap(false, Ordering::AcqRel) {
-        if let Some(old) = output.take() {
-            let _ = old.stop.send(());
-        }
-    }
-    if output.is_some() {
-        return Ok(());
-    }
-    let prefs = state.prefs.lock().unwrap().clone();
-    let device = find_device(&prefs.device_id, false).ok_or("No audio output found.")?;
-    let supported = device.default_output_config().map_err(|e| e.to_string())?;
-    let mut config: StreamConfig = supported.config();
-    if prefs.buffer_frames > 0 {
-        if let cpal::SupportedBufferSize::Range { min, max } = supported.buffer_size() {
-            config.buffer_size = BufferSize::Fixed(prefs.buffer_frames.clamp(*min, *max));
-        }
-    }
-
-    let (commands, consumer) = rtrb::RingBuffer::<Cmd>::new(1024);
-    let (ended_tx, ended_rx) = rtrb::RingBuffer::<u32>::new(256);
-    *state.ended.lock().unwrap() = Some(ended_rx);
-    let (stop, stop_rx) = mpsc::channel::<()>();
-    let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
-    let start_secs = engine_now();
-    let format = supported.sample_format();
-    let info = describe(&device);
-
-    // cpal streams aren't `Send` on every platform, so each one lives on its own thread.
-    thread::spawn(move || {
-        let mixer = Mixer {
-            voices: [None; MAX_VOICES],
-            sample_rate: config.sample_rate as f32,
-            frame: 0,
-            start_secs,
-            ended: ended_tx,
-        };
-        let stream = match format {
-            SampleFormat::F32 => build_output::<f32>(&device, config, mixer, consumer),
-            SampleFormat::I16 => build_output::<i16>(&device, config, mixer, consumer),
-            SampleFormat::I32 => build_output::<i32>(&device, config, mixer, consumer),
-            SampleFormat::U16 => build_output::<u16>(&device, config, mixer, consumer),
-            SampleFormat::F64 => build_output::<f64>(&device, config, mixer, consumer),
-            other => Err(format!("Unsupported sample format {other}")),
-        };
-        let stream = match stream.and_then(|s| s.play().map(|_| s).map_err(|e| e.to_string())) {
-            Ok(stream) => stream,
-            Err(error) => {
-                let _ = ready_tx.send(Err(error));
-                return;
-            }
-        };
-        let _ = ready_tx.send(Ok(()));
-        let _ = stop_rx.recv();
-        METERS.running.store(false, Ordering::Release);
-        drop(stream);
-    });
-
-    ready_rx.recv().map_err(|e| e.to_string())??;
-    let info = info.unwrap_or(DeviceInfo { id: String::new(), label: "Default".into() });
-    *output = Some(Output {
-        commands,
-        stop,
-        device_name: info.label,
-        device_id: info.id,
-        sample_rate: config.sample_rate,
-        requested_buffer: prefs.buffer_frames,
-    });
-    Ok(())
-}
-
-fn build_output<T>(
-    device: &Device,
-    config: StreamConfig,
-    mut mixer: Mixer,
-    mut commands: rtrb::Consumer<Cmd>,
-) -> Result<cpal::Stream, String>
-where
-    T: SizedSample + FromSample<f32>,
-{
-    let channels = config.channels as usize;
-    let sample_rate = config.sample_rate as f64;
-    device
-        .build_output_stream(
-            config,
-            move |data: &mut [T], info: &OutputCallbackInfo| {
-                let ts = info.timestamp();
-                let latency = ts.playback.duration_since(ts.callback);
-                METERS.latency_micros.store(latency.as_micros() as u32, Ordering::Relaxed);
-                METERS.buffer_frames.store((data.len() / channels) as u32, Ordering::Relaxed);
-                let now = mixer.start_secs + mixer.frame as f64 / sample_rate;
-                METERS.now_bits.store(now.to_bits(), Ordering::Release);
-                METERS.callback_nanos.store(epoch().elapsed().as_nanos() as u64, Ordering::Release);
-                METERS.running.store(true, Ordering::Release);
-
-                while let Ok(cmd) = commands.pop() {
-                    mixer.handle(cmd);
-                }
-                for frame in data.chunks_mut(channels) {
-                    let value = T::from_sample(mixer.next().clamp(-1.0, 1.0));
-                    for sample in frame.iter_mut() {
-                        *sample = value;
-                    }
-                }
-            },
-            |error| {
-                eprintln!("audio output error: {error}");
-                use cpal::ErrorKind::*;
-                if matches!(error.kind(), DeviceNotAvailable | StreamInvalidated | DeviceChanged) {
-                    METERS.lost.store(true, Ordering::Release);
-                }
-            },
-            None,
-        )
-        .map_err(|e| e.to_string())
-}
-
-fn send(state: &AudioState, cmds: impl IntoIterator<Item = Cmd>) -> Result<(), String> {
-    open_output(state)?;
-    let mut output = state.output.lock().unwrap();
-    let output = output.as_mut().ok_or("Audio output isn't open.")?;
-    for cmd in cmds {
-        output.commands.push(cmd).map_err(|_| "Audio engine is busy.".to_string())?;
-    }
-    Ok(())
-}
-
-fn close_output(state: &AudioState) {
-    if let Some(output) = state.output.lock().unwrap().take() {
-        let _ = output.stop.send(());
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Commands
-
-#[derive(Serialize)]
-pub struct Status {
-    running: bool,
-    host: String,
-    device_id: String,
-    device_name: String,
-    sample_rate: u32,
-    requested_buffer: u32,
-    buffer_frames: u32,
-    buffer_ms: f64,
-    output_latency_ms: f64,
-}
-
-#[tauri::command]
-pub fn audio_status(state: tauri::State<'_, AudioState>) -> Status {
-    let output = state.output.lock().unwrap();
-    let frames = METERS.buffer_frames.load(Ordering::Relaxed);
-    let (device_id, device_name, sample_rate, requested_buffer) = match output.as_ref() {
-        Some(o) => (o.device_id.clone(), o.device_name.clone(), o.sample_rate, o.requested_buffer),
-        None => {
-            let prefs = state.prefs.lock().unwrap();
-            (prefs.device_id.clone(), String::new(), 0, prefs.buffer_frames)
+            Ok((String::new(), default_name()))
         }
     };
-    let running = output.is_some() && METERS.running.load(Ordering::Acquire);
-    Status {
-        running,
-        host: host().id().name().to_string(),
-        device_id,
-        device_name,
-        sample_rate,
-        requested_buffer,
-        buffer_frames: frames,
-        buffer_ms: if sample_rate > 0 { frames as f64 * 1000.0 / sample_rate as f64 } else { 0.0 },
-        output_latency_ms: METERS.latency_micros.load(Ordering::Relaxed) as f64 / 1000.0,
-    }
-}
-
-/// Starts (or wakes) the output stream so the clock is running before anything is scheduled.
-#[tauri::command]
-pub fn audio_start(state: tauri::State<'_, AudioState>) -> Result<f64, String> {
-    open_output(&state)?;
-    Ok(engine_now())
-}
-
-/// Picks the output device and buffer size (0 = the device's default), reopening the stream.
-#[tauri::command]
-pub fn audio_set_output(state: tauri::State<'_, AudioState>, device_id: String, buffer_frames: u32) -> Result<(), String> {
-    let device_id = forced_output().unwrap_or(device_id);
-    {
-        let mut prefs = state.prefs.lock().unwrap();
-        if prefs.device_id == device_id && prefs.buffer_frames == buffer_frames {
-            return Ok(());
+    let Some(device) = device_by_id(&host, device_id) else { return not_found() };
+    let Ok(description) = device.description() else { return not_found() };
+    let label = description.to_string();
+    let mut nth = 0;
+    for other in host.output_devices().map_err(|e| e.to_string())? {
+        if other.default_output_config().is_err() {
+            continue;
         }
-        *prefs = OutputPrefs { device_id, buffer_frames };
-    }
-    let was_open = state.output.lock().unwrap().is_some();
-    close_output(&state);
-    if was_open {
-        open_output(&state)?;
-    }
-    Ok(())
-}
-
-#[tauri::command]
-pub fn audio_schedule(state: tauri::State<'_, AudioState>, clicks: Vec<Click>) -> Result<(), String> {
-    send(&state, clicks.into_iter().map(Cmd::Click))
-}
-
-#[tauri::command]
-pub fn audio_tone_start(
-    state: tauri::State<'_, AudioState>,
-    id: u32,
-    freq: f32,
-    wave: Wave,
-    volume: f32,
-    duration: Option<f32>,
-) -> Result<(), String> {
-    send(&state, [Cmd::ToneStart { id, freq, wave, volume, duration }])
-}
-
-#[tauri::command]
-pub fn audio_tone_stop(state: tauri::State<'_, AudioState>, id: u32) -> Result<(), String> {
-    send(&state, [Cmd::ToneStop { id }])
-}
-
-#[derive(Clone, Serialize)]
-struct ClockTick {
-    time: f64,
-    latency: f64,
-}
-
-/// Reports the engine clock (and any reference tones that finished) to the window.
-pub fn spawn_clock(app: AppHandle) {
-    thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(20));
-        if METERS.running.load(Ordering::Acquire) {
-            let latency = METERS.latency_micros.load(Ordering::Relaxed) as f64 / 1e6;
-            let _ = app.emit("audio-clock", ClockTick { time: engine_now(), latency });
+        if other.id().ok() == device.id().ok() {
+            break;
         }
-        let ended: Vec<u32> = {
-            use tauri::Manager;
-            let state = app.state::<AudioState>();
-            let mut guard = state.ended.lock().unwrap();
-            match guard.as_mut() {
-                Some(consumer) => std::iter::from_fn(|| consumer.pop().ok()).collect(),
-                None => Vec::new(),
-            }
-        };
-        for id in ended {
-            let _ = app.emit("audio-tone-ended", id);
+        if other.description().map(|d| d.to_string()).ok().as_deref() == Some(label.as_str()) {
+            nth += 1;
         }
-    });
+    }
+    let sinks: Vec<(String, String)> = enumerate_devices_sync()
+        .into_iter()
+        .filter(|d| d.kind() == MediaDeviceInfoKind::AudioOutput)
+        .map(|d| (d.device_id().to_string(), d.label().to_string()))
+        .collect();
+    match nth_with_label(&sinks, &label, nth) {
+        Some(sink) => Ok((sink, describe(&device).map_or(label, |d| d.label))),
+        None => not_found(),
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -813,22 +308,19 @@ fn detect_pitch(buffer: &[f32], sample_rate: f32, min_hz: f32, max_hz: f32) -> O
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f32::consts::TAU;
 
-    fn mixer(sample_rate: f32) -> (Mixer, rtrb::Consumer<u32>) {
-        let (ended, ended_rx) = rtrb::RingBuffer::new(16);
-        (Mixer { voices: [None; MAX_VOICES], sample_rate, frame: 0, start_secs: 10.0, ended }, ended_rx)
-    }
-
-    /// `cargo test -- --ignored --nocapture list_devices` prints what the device lists see.
+    /// `cargo test -- --ignored --nocapture list_devices` prints what the device lists see, and
+    /// the bridge's sink id for each output.
     #[test]
     #[ignore]
     fn list_devices() {
         let host = host();
         for device in host.devices().unwrap() {
             let desc = device.description().ok();
+            let id = device.id().map(|i| i.to_string()).unwrap_or_default();
             println!(
-                "{:?} | {:?} | in={} out={} | {:?} {:?} {:?}",
-                device.id().map(|i| i.to_string()),
+                "{id:?} | {:?} | in={} out={} | {:?} {:?} {:?}",
                 desc.as_ref().map(|d| d.name().to_string()),
                 device.supports_input(),
                 device.supports_output(),
@@ -836,58 +328,23 @@ mod tests {
                 desc.as_ref().map(|d| d.interface_type()),
                 desc.as_ref().map(|d| d.driver().map(str::to_string)),
             );
+            if device.supports_output() {
+                println!("    sink: {:?}", output_sink(&id, true));
+            }
         }
     }
 
     #[test]
-    fn click_lands_on_its_exact_sample() {
-        let (mut m, _) = mixer(48_000.0);
-        // 10.5 engine seconds = 0.5 s after this stream started = frame 24000.
-        m.handle(Cmd::Click(Click { at: 10.5, wave: Wave::Sine, freq: 1000.0, gain: 0.9, length: 0.06 }));
-        let out: Vec<f32> = (0..30_000).map(|_| m.next()).collect();
-        let first = out.iter().position(|s| s.abs() > 1e-6).unwrap();
-        // A sine starts at phase 0, so the first non-zero sample is the one right after.
-        assert_eq!(first, 24_001);
-        assert!(out[..24_000].iter().all(|s| *s == 0.0));
-        // Gone after 0.06 s (2880 frames).
-        assert!(out[24_000 + 2_880..].iter().all(|s| *s == 0.0));
-        assert!(m.voices.iter().all(|v| v.is_none()));
-    }
-
-    #[test]
-    fn late_click_plays_now() {
-        let (mut m, _) = mixer(48_000.0);
-        for _ in 0..100 {
-            m.next();
-        }
-        m.handle(Cmd::Click(Click { at: 9.0, wave: Wave::Square, freq: 900.0, gain: 0.5, length: 0.05 }));
-        // (A band-limited square starts at 0 on its first sample, then jumps.)
-        let start: Vec<f32> = (0..4).map(|_| m.next()).collect();
-        assert!(start.iter().any(|s| s.abs() > 0.1), "{start:?}");
-    }
-
-    #[test]
-    fn decaying_tone_ends_and_reports_it() {
-        let (mut m, mut ended) = mixer(48_000.0);
-        m.handle(Cmd::ToneStart { id: 7, freq: 440.0, wave: Wave::Sine, volume: 0.35, duration: Some(0.5) });
-        let out: Vec<f32> = (0..48_000).map(|_| m.next()).collect();
-        let peak = out[..3_000].iter().fold(0.0f32, |a, s| a.max(s.abs()));
-        assert!((peak - 0.35).abs() < 0.02, "peak {peak}");
-        assert!(out[25_000..].iter().all(|s| *s == 0.0));
-        assert_eq!(ended.pop().ok(), Some(7));
-    }
-
-    #[test]
-    fn sustained_tone_holds_until_stopped() {
-        let (mut m, mut ended) = mixer(48_000.0);
-        m.handle(Cmd::ToneStart { id: 3, freq: 440.0, wave: Wave::Triangle, volume: 0.35, duration: None });
-        let held: Vec<f32> = (0..96_000).map(|_| m.next()).collect();
-        let late_peak = held[90_000..].iter().fold(0.0f32, |a, s| a.max(s.abs()));
-        assert!(late_peak > 0.3, "still sounding after 2 s: {late_peak}");
-        m.handle(Cmd::ToneStop { id: 3 });
-        let after: Vec<f32> = (0..12_000).map(|_| m.next()).collect();
-        assert!(after[7_000..].iter().all(|s| *s == 0.0));
-        assert_eq!(ended.pop().ok(), Some(3));
+    fn picks_the_right_one_of_two_outputs_with_the_same_name() {
+        let sinks = vec![
+            ("a".to_string(), "USB Audio".to_string()),
+            ("b".to_string(), "Speakers".to_string()),
+            ("c".to_string(), "USB Audio".to_string()),
+        ];
+        assert_eq!(nth_with_label(&sinks, "USB Audio", 0).as_deref(), Some("a"));
+        assert_eq!(nth_with_label(&sinks, "USB Audio", 1).as_deref(), Some("c"));
+        assert_eq!(nth_with_label(&sinks, "USB Audio", 2), None);
+        assert_eq!(nth_with_label(&sinks, "Headphones", 0), None);
     }
 
     #[test]

@@ -10,9 +10,10 @@ import webPkg from "../web/package.json" with { type: "json" };
 // it looks exactly the same. Three kinds of alias make that work:
 //  1. `@/…` points at apps/web, like it does in the website.
 //  2. Next.js-only modules (next/link, next/navigation, …) point at small stand-ins in src/shims.
-//  3. A few audio modules point at native versions in src/native, which drive the Rust audio
-//     engine instead of Web Audio. Each native module imports the original through `@web/…`
-//     (which the exact-match aliases below don't catch) for everything it doesn't replace.
+//  3. A few audio modules point at native versions in src/native (the shared AudioContext is the
+//     native Web Audio bridge; the click engine waits for its clock; the microphone is opened
+//     natively). Each native module imports the original through `@web/…` (which the
+//     exact-match aliases below don't catch) for everything it doesn't replace.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const web = path.resolve(here, "../web");
 const src = path.resolve(here, "src");
@@ -38,7 +39,6 @@ export default defineConfig({
     alias: [
       exact("@/lib/clickEngine", "native/clickEngine.ts"),
       exact("@/lib/metronome", "native/metronome.ts"),
-      exact("@/lib/toneGenerator", "native/toneGenerator.ts"),
       exact("@/lib/audioInput", "native/audioInput.ts"),
       exact("@convex-dev/auth/react", "native/convexAuthReact.ts"),
       { find: /^convex-auth-react-original$/, replacement: require.resolve("@convex-dev/auth/react") },

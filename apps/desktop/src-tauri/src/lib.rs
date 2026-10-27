@@ -1,4 +1,5 @@
 mod audio;
+mod bridge;
 mod oauth;
 
 use tauri::plugin::{Builder as PluginBuilder, TauriPlugin};
@@ -32,28 +33,38 @@ fn open_external(app: tauri::AppHandle, url: String) -> Result<(), String> {
     app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// Tells the page the audio sample rate before any of its own scripts run (see
+/// `Bridge::init_script`).
+fn native_audio<R: Runtime>(bridge: &bridge::Bridge) -> TauriPlugin<R> {
+    PluginBuilder::new("native-audio").js_init_script(bridge.init_script()).build()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let bridge = bridge::Bridge::new();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(external_links())
+        .plugin(native_audio(&bridge))
         .manage(audio::AudioState::default())
+        .manage(bridge)
         .setup(|app| {
-            audio::spawn_clock(app.handle().clone());
+            bridge::spawn_clock(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             open_external,
             oauth::oauth_listen,
             audio::audio_devices,
-            audio::audio_status,
-            audio::audio_start,
-            audio::audio_set_output,
-            audio::audio_schedule,
-            audio::audio_tone_start,
-            audio::audio_tone_stop,
             audio::input_start,
             audio::input_stop,
+            bridge::audio_status,
+            bridge::audio_set_output,
+            bridge::wa_init,
+            bridge::wa_ops,
+            bridge::wa_buffer,
+            bridge::wa_decode,
+            bridge::wa_analyser,
         ])
         .run(tauri::generate_context!())
         .expect("error while running soniroll");

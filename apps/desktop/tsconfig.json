@@ -15,7 +15,6 @@
     "paths": {
       "@/lib/clickEngine": ["./src/native/clickEngine.ts"],
       "@/lib/metronome": ["./src/native/metronome.ts"],
-      "@/lib/toneGenerator": ["./src/native/toneGenerator.ts"],
       "@/lib/audioInput": ["./src/native/audioInput.ts"],
       "@/*": ["../web/*"],
       "@web/*": ["../web/*"],

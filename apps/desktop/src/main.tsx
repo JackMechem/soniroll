@@ -1,3 +1,5 @@
+// First, so every `new AudioContext()` from here on is the native one.
+import "./native/webAudio/install";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";

@@ -82,7 +82,8 @@ type Route = { path: string; render: (params: Record<string, string>, query: Que
 const q = (query: Query, key: string) => query.get(key) ?? "";
 const opt = (query: Query, key: string) => query.get(key) ?? undefined;
 
-/** A native-audio tool: the website's page plus the desktop's audio chip. */
+/** A tool that makes sound: the website's page plus the desktop's Native audio chip. (Not the
+    Slow Downer, which plays through the window's media player, or the Recorder.) */
 function NativeTool({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
@@ -96,23 +97,23 @@ const ROUTES: Route[] = [
   { path: "/dashboard", render: () => <Home /> },
   { path: "/metronome", render: () => <NativeTool><Metronome /></NativeTool> },
   { path: "/tuner", render: () => <NativeTool><Tuner /></NativeTool> },
-  { path: "/jam-practice", render: () => <JamPractice /> },
-  { path: "/bass-genius", render: () => <BassGenius /> },
-  { path: "/drum-generator", render: () => <DrumGenerator /> },
+  { path: "/jam-practice", render: () => <NativeTool><JamPractice /></NativeTool> },
+  { path: "/bass-genius", render: () => <NativeTool><BassGenius /></NativeTool> },
+  { path: "/drum-generator", render: () => <NativeTool><DrumGenerator /></NativeTool> },
   { path: "/slow-downer", render: () => <SlowDowner /> },
   { path: "/recorder", render: (_, query) => <Recorder tuneId={opt(query, "tuneId")} /> },
-  { path: "/note-trainer", render: () => <NoteTrainer /> },
-  { path: "/scale-trainer", render: () => <ScaleTrainer /> },
-  { path: "/interval-trainer", render: () => <IntervalTrainer /> },
-  { path: "/guess-the-interval", render: () => <GuessTheInterval /> },
-  { path: "/guess-the-chord", render: () => <GuessTheChord /> },
-  { path: "/guess-the-progression", render: () => <GuessTheProgression /> },
-  { path: "/practice-timer", render: () => <PracticeTimer /> },
-  { path: "/random-metric-modulation", render: () => <RandomMetricModulation /> },
-  { path: "/tempo-trainer", render: () => <TempoTrainer /> },
-  { path: "/random-sticking-warmup", render: () => <StickControl /> },
-  { path: "/syncopation", render: () => <Syncopation /> },
-  { path: "/score-writer", render: (_, query) => <ScoreWriter initialId={opt(query, "id")} /> },
+  { path: "/note-trainer", render: () => <NativeTool><NoteTrainer /></NativeTool> },
+  { path: "/scale-trainer", render: () => <NativeTool><ScaleTrainer /></NativeTool> },
+  { path: "/interval-trainer", render: () => <NativeTool><IntervalTrainer /></NativeTool> },
+  { path: "/guess-the-interval", render: () => <NativeTool><GuessTheInterval /></NativeTool> },
+  { path: "/guess-the-chord", render: () => <NativeTool><GuessTheChord /></NativeTool> },
+  { path: "/guess-the-progression", render: () => <NativeTool><GuessTheProgression /></NativeTool> },
+  { path: "/practice-timer", render: () => <NativeTool><PracticeTimer /></NativeTool> },
+  { path: "/random-metric-modulation", render: () => <NativeTool><RandomMetricModulation /></NativeTool> },
+  { path: "/tempo-trainer", render: () => <NativeTool><TempoTrainer /></NativeTool> },
+  { path: "/random-sticking-warmup", render: () => <NativeTool><StickControl /></NativeTool> },
+  { path: "/syncopation", render: () => <NativeTool><Syncopation /></NativeTool> },
+  { path: "/score-writer", render: (_, query) => <NativeTool><ScoreWriter initialId={opt(query, "id")} /></NativeTool> },
 
   { path: "/shed-log", render: (_, query) => <ShedLogGate><PracticeLog initialDate={opt(query, "date")} /></ShedLogGate> },
   { path: "/shed-log/routines", render: () => <ShedLogGate><RoutinesPage /></ShedLogGate> },

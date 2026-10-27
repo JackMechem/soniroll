@@ -19,9 +19,17 @@ serde_json = "1"
 cpal = "0.18"
 rtrb = "0.4"
 url = "2"
+# A Rust implementation of the Web Audio spec. Every tool's sound graph runs in it (bridge.rs).
+web-audio-api = { version = "1.7", default-features = false, features = ["cpal"] }
 
 [features]
 default = ["pipewire"]
 # Linux: talk to PipeWire directly instead of through its ALSA plugin (lower, steadier latency).
 # Does nothing on macOS and Windows.
-pipewire = ["cpal/pipewire"]
+pipewire = ["cpal/pipewire", "web-audio-api/cpal-pipewire"]
+
+# The audio graph (reverb convolution, resampling, mp3 decoding) is real DSP: unoptimized, it
+# can't keep up with small buffers and crackles. Dependencies are built optimized even in
+# `tauri dev`; this crate stays quick to rebuild.
+[profile.dev.package."*"]
+opt-level = 3

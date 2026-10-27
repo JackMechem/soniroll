@@ -7,8 +7,9 @@ import { SpeakerIcon } from "@/components/tools";
 import { HintsContext } from "@/lib/hints";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { invoke, type AudioDevices, type AudioStatus } from "./native/engine";
+import { setOutput } from "./native/webAudio/bridge";
 
-const BUFFER_SIZES = [0, 64, 128, 256, 512, 1024];
+const BUFFER_SIZES = [64, 128, 256, 512, 1024];
 
 // Per computer, not synced: devices differ from one machine to the next.
 const DEFAULTS = { outputDeviceId: "", bufferFrames: 256 };
@@ -17,8 +18,8 @@ function ms(value: number) {
   return `${value.toFixed(value < 10 ? 1 : 0)} ms`;
 }
 
-/** Desktop only: which output the native engine plays through, its buffer size, and how much
-    delay that adds. Sits in the bottom-right corner of the Metronome and Tuner, next to the
+/** Desktop only: which output the native audio plays through, its buffer size, and how much
+    delay that adds. Sits in the bottom-right corner of every tool that makes a sound, next to the
     feedback button. */
 export default function NativeAudioChip() {
   const [prefs, setPrefs] = usePersistedSettings("jam-practice-desktop-audio", DEFAULTS);
@@ -27,9 +28,10 @@ export default function NativeAudioChip() {
   const [open, setOpen] = useState(false);
   const [showHints, setShowHints] = useState(false);
 
-  // Rust ignores this when nothing changed, so it's safe on every mount.
+  // Rust ignores this when nothing changed, so it's safe on every mount. A change reopens the
+  // output, and the bridge replays every tool's graph into it.
   useEffect(() => {
-    void invoke("audio_set_output", { deviceId: prefs.outputDeviceId, bufferFrames: prefs.bufferFrames });
+    void setOutput(prefs.outputDeviceId, prefs.bufferFrames);
   }, [prefs.outputDeviceId, prefs.bufferFrames]);
 
   useEffect(() => {
@@ -69,13 +71,13 @@ export default function NativeAudioChip() {
               ]}
             />
           </label>
-          <Hint>Where the clicks and tones play. Pick your audio interface for the lowest delay.</Hint>
+          <Hint>Where every sound plays: clicks, tones and samples. Pick your audio interface for the lowest delay.</Hint>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-muted">Buffer size</span>
             <Select
-              value={prefs.bufferFrames}
+              value={prefs.bufferFrames || DEFAULTS.bufferFrames}
               onChange={(bufferFrames) => setPrefs({ bufferFrames })}
-              options={BUFFER_SIZES.map((n) => ({ value: n, label: n === 0 ? "Device default" : `${n} samples` }))}
+              options={BUFFER_SIZES.map((n) => ({ value: n, label: `${n} samples` }))}
             />
           </label>
           <Hint>Smaller is quicker to respond. If you hear crackles, go one size up.</Hint>
