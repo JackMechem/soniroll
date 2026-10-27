@@ -82,12 +82,13 @@ type Route = { path: string; render: (params: Record<string, string>, query: Que
 const q = (query: Query, key: string) => query.get(key) ?? "";
 const opt = (query: Query, key: string) => query.get(key) ?? undefined;
 
-/** A tool that makes sound: the website's page plus the desktop's Native audio chip. (Not the
-    Slow Downer, which plays through the window's media player, or the Recorder.) */
-function NativeTool({ children }: { children: ReactNode }) {
+/** A tool that makes sound: the website's page plus the desktop's Native audio chip (with the
+    Input picker on the Recorder). Not the Slow Downer, which plays through the window's media
+    player. */
+function NativeTool({ children, input = false }: { children: ReactNode; input?: boolean }) {
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
-      <NativeAudioChip />
+      <NativeAudioChip input={input} />
       {children}
     </div>
   );
@@ -101,7 +102,7 @@ const ROUTES: Route[] = [
   { path: "/bass-genius", render: () => <NativeTool><BassGenius /></NativeTool> },
   { path: "/drum-generator", render: () => <NativeTool><DrumGenerator /></NativeTool> },
   { path: "/slow-downer", render: () => <SlowDowner /> },
-  { path: "/recorder", render: (_, query) => <Recorder tuneId={opt(query, "tuneId")} /> },
+  { path: "/recorder", render: (_, query) => <NativeTool input><Recorder tuneId={opt(query, "tuneId")} /></NativeTool> },
   { path: "/note-trainer", render: () => <NativeTool><NoteTrainer /></NativeTool> },
   { path: "/scale-trainer", render: () => <NativeTool><ScaleTrainer /></NativeTool> },
   { path: "/interval-trainer", render: () => <NativeTool><IntervalTrainer /></NativeTool> },

@@ -21,6 +21,12 @@ rtrb = "0.4"
 url = "2"
 # A Rust implementation of the Web Audio spec. Every tool's sound graph runs in it (bridge.rs).
 web-audio-api = { version = "1.7", default-features = false, features = ["cpal"] }
+# The Recorder: MP3 encoding (LAME, built from source by the crate; see recorder.rs)
+mp3lame-encoder = "0.2.5"
+
+[dev-dependencies]
+# LAME's decoder, so the Recorder's tests can decode what they encode.
+mp3lame-sys = { version = "0.1.11", features = ["decoder"] }
 
 [features]
 default = ["pipewire"]

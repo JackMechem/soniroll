@@ -5,9 +5,9 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, SampleFormat, SizedSample, StreamConfig};
@@ -67,7 +67,7 @@ fn device_by_id(host: &cpal::Host, id: &str) -> Option<Device> {
     host.device_by_id(&id.parse().ok()?)
 }
 
-fn find_device(id: &str, input: bool) -> Option<Device> {
+pub(crate) fn find_device(id: &str, input: bool) -> Option<Device> {
     let host = host();
     if let Some(device) = device_by_id(&host, id) {
         return Some(device);
@@ -303,6 +303,25 @@ fn detect_pitch(buffer: &[f32], sample_rate: f32, min_hz: f32, max_hz: f32) -> O
     let denominator = prev + next - 2.0 * cmnd[tau];
     let shift = if denominator == 0.0 { 0.0 } else { (prev - next) / (2.0 * denominator) };
     Some(sample_rate / (tau as f32 + shift))
+}
+
+// ---------------------------------------------------------------------------------------------
+// Shared with the Recorder (`recorder.rs`)
+
+fn epoch() -> Instant {
+    static EPOCH: OnceLock<Instant> = OnceLock::new();
+    *EPOCH.get_or_init(Instant::now)
+}
+
+/// Now, on the clock the output's timing uses (nanoseconds since `epoch()`).
+pub(crate) fn now_nanos() -> u64 {
+    epoch().elapsed().as_nanos() as u64
+}
+
+/// When a sound scheduled at output time `at` (the time JavaScript sees) comes out of the output
+/// device, in `now_nanos()` terms. None while the output isn't running.
+pub(crate) fn heard_nanos(at: f64) -> Option<u64> {
+    crate::bridge::heard_nanos(at)
 }
 
 #[cfg(test)]

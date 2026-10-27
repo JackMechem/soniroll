@@ -40,6 +40,7 @@ export default defineConfig({
       exact("@/lib/clickEngine", "native/clickEngine.ts"),
       exact("@/lib/metronome", "native/metronome.ts"),
       exact("@/lib/audioInput", "native/audioInput.ts"),
+      exact("@/lib/recorderEngine", "native/recorderEngine.ts"),
       exact("@convex-dev/auth/react", "native/convexAuthReact.ts"),
       { find: /^convex-auth-react-original$/, replacement: require.resolve("@convex-dev/auth/react") },
       exact("next/link", "shims/next-link.tsx"),

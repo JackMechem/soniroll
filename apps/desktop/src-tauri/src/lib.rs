@@ -1,6 +1,7 @@
 mod audio;
 mod bridge;
 mod oauth;
+mod recorder;
 
 use tauri::plugin::{Builder as PluginBuilder, TauriPlugin};
 use tauri::{Runtime, Url};
@@ -47,6 +48,7 @@ pub fn run() {
         .plugin(external_links())
         .plugin(native_audio(&bridge))
         .manage(audio::AudioState::default())
+        .manage(recorder::RecorderState::default())
         .manage(bridge)
         .setup(|app| {
             bridge::spawn_clock(app.handle().clone());
@@ -65,6 +67,11 @@ pub fn run() {
             bridge::wa_buffer,
             bridge::wa_decode,
             bridge::wa_analyser,
+            recorder::recorder_open,
+            recorder::recorder_begin,
+            recorder::recorder_stop,
+            recorder::recorder_take,
+            recorder::recorder_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running soniroll");

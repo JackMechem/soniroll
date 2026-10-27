@@ -13,6 +13,7 @@
 use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::Mutex;
 use std::thread;
@@ -31,6 +32,9 @@ use web_audio_api::node::{
     BiquadFilterType, ChannelCountMode, ChannelInterpretation, ChannelMergerNode, ChannelSplitterNode,
     ConstantSourceNode, ConvolverNode, DelayNode, DynamicsCompressorNode, GainNode, OscillatorNode, OscillatorType,
     OverSampleType, StereoPannerNode, WaveShaperNode,
+};
+use web_audio_api::worklet::{
+    AudioParamValues, AudioWorkletGlobalScope, AudioWorkletNode, AudioWorkletNodeOptions, AudioWorkletProcessor,
 };
 use web_audio_api::{AudioBuffer, AudioParam, PeriodicWaveOptions};
 
@@ -576,6 +580,102 @@ fn decode(bytes: Vec<u8>, sample_rate: f32) -> Result<AudioBuffer, String> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The clock tap: when each render callback ran
+
+/// Quanta less than this apart belong to one callback (a callback asking for 256 frames renders
+/// two 128-frame quanta back to back, microseconds apart; callbacks are 1.3 ms or more apart).
+const CALLBACK_GAP_NANOS: u64 = 500_000;
+/// A tap reading older than this means the output isn't running.
+const TAP_FRESH_NANOS: u64 = 200_000_000;
+
+/// Lock-free numbers the audio thread writes and anything reads: the context time at the start
+/// of the latest render callback and when that callback ran (`audio::now_nanos()`), plus the
+/// offset and output delay to go with them. That's what turns a time on JavaScript's clock into
+/// the moment it's heard (the Recorder starts a take on the input sample where the first beat
+/// after the count-in was heard), and what keeps the clock JavaScript sees smooth.
+struct Tap {
+    time_bits: AtomicU64,
+    nanos: AtomicU64,
+    last_quantum_nanos: AtomicU64,
+    offset_bits: AtomicU64,
+    latency_nanos: AtomicU64,
+}
+
+static TAP: Tap = Tap {
+    time_bits: AtomicU64::new(0),
+    nanos: AtomicU64::new(0),
+    last_quantum_nanos: AtomicU64::new(0),
+    offset_bits: AtomicU64::new(0),
+    latency_nanos: AtomicU64::new(0),
+};
+
+/// A silent node in the live graph whose only job is to note when each render callback ran (its
+/// first quantum). `web-audio-api` doesn't expose the callback's timing any other way.
+struct ClockTap;
+
+impl AudioWorkletProcessor for ClockTap {
+    type ProcessorOptions = ();
+
+    fn constructor(_: ()) -> Self {
+        ClockTap
+    }
+
+    fn process<'a, 'b>(
+        &mut self,
+        _inputs: &'b [&'a [&'a [f32]]],
+        outputs: &'b mut [&'a mut [&'a mut [f32]]],
+        _params: AudioParamValues<'b>,
+        scope: &'b AudioWorkletGlobalScope,
+    ) -> bool {
+        let now = audio::now_nanos();
+        let last = TAP.last_quantum_nanos.swap(now, Ordering::Relaxed);
+        if now.saturating_sub(last) > CALLBACK_GAP_NANOS {
+            TAP.time_bits.store(scope.current_time.to_bits(), Ordering::Release);
+            TAP.nanos.store(now, Ordering::Release);
+        }
+        for channel in outputs.iter_mut().flat_map(|o| o.iter_mut()) {
+            channel.fill(0.0);
+        }
+        true
+    }
+}
+
+fn add_tap(ctx: &AudioContext) -> AudioWorkletNode {
+    let options = AudioWorkletNodeOptions {
+        number_of_inputs: 0,
+        number_of_outputs: 1,
+        output_channel_count: vec![1],
+        ..AudioWorkletNodeOptions::default()
+    };
+    let tap = AudioWorkletNode::new::<ClockTap>(ctx, options);
+    tap.connect(&ctx.destination());
+    tap
+}
+
+/// The latest callback's reading as (seconds JavaScript sees, `now_nanos()`), if it's fresh.
+fn tap_reading() -> Option<(f64, u64)> {
+    loop {
+        let nanos = TAP.nanos.load(Ordering::Acquire);
+        let time = f64::from_bits(TAP.time_bits.load(Ordering::Acquire));
+        if TAP.nanos.load(Ordering::Acquire) != nanos {
+            continue; // a callback wrote in between
+        }
+        if nanos == 0 || audio::now_nanos().saturating_sub(nanos) > TAP_FRESH_NANOS {
+            return None;
+        }
+        return Some((time + f64::from_bits(TAP.offset_bits.load(Ordering::Relaxed)), nanos));
+    }
+}
+
+/// When a sound scheduled at `at` (JavaScript's clock) comes out of the output device, in
+/// `audio::now_nanos()` terms. None while the output isn't running.
+pub fn heard_nanos(at: f64) -> Option<u64> {
+    let (time, nanos) = tap_reading()?;
+    let heard = nanos as f64 + (at - time) * 1e9 + TAP.latency_nanos.load(Ordering::Relaxed) as f64;
+    Some(heard.max(0.0) as u64)
+}
+
+// ---------------------------------------------------------------------------------------------
 // The live context
 
 #[derive(Clone, Default, PartialEq)]
@@ -602,6 +702,8 @@ struct Inner {
     generation: u32,
     lost: bool,
     last_tick: Option<(f64, Instant)>,
+    /// The live graph's clock tap (kept here so it lives as long as the context).
+    tap: Option<AudioWorkletNode>,
 }
 
 pub struct Bridge {
@@ -688,6 +790,9 @@ impl Bridge {
         let ctx = catch_unwind(|| AudioContext::try_new(options))
             .map_err(|_| "The audio output couldn't be opened.".to_string())?
             .map_err(|e| e.to_string())?;
+        TAP.nanos.store(0, Ordering::Release);
+        TAP.offset_bits.store(inner.offset.to_bits(), Ordering::Release);
+        inner.tap = Some(add_tap(&ctx));
         inner.graph = Some(Graph::new(ctx, inner.offset, self.ended_tx.clone()));
         inner.generation += 1;
         inner.opened = Opened { device_id, device_name, buffer_frames: frames };
@@ -696,6 +801,7 @@ impl Bridge {
     }
 
     fn close(inner: &mut Inner) {
+        inner.tap = None;
         if let Some(graph) = inner.graph.take() {
             inner.offset = graph.now();
             close(graph.ctx);
@@ -727,7 +833,14 @@ impl Bridge {
             }
             _ => inner.last_tick = Some((now, Instant::now())),
         }
-        Some(ClockTick { time: now + graph.offset, latency: graph.ctx.base_latency() + graph.ctx.output_latency() })
+        let latency = graph.ctx.base_latency() + graph.ctx.output_latency();
+        TAP.latency_nanos.store((latency * 1e9) as u64, Ordering::Relaxed);
+        // The context's own clock moves a callback at a time; the tap says when that callback ran.
+        let time = match tap_reading() {
+            Some((time, nanos)) => time + audio::now_nanos().saturating_sub(nanos) as f64 / 1e9,
+            None => now + graph.offset,
+        };
+        Some(ClockTick { time, latency })
     }
 
     /// Sources that finished since the last call (each one forgotten here too).
