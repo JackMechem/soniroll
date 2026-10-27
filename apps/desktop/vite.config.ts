@@ -48,6 +48,8 @@ export default defineConfig({
       exact("next/image", "shims/next-image.tsx"),
       exact("next/font/google", "shims/next-font-google.ts"),
       exact("next/font/local", "shims/next-font-local.ts"),
+      // Share links point at soniroll.com, not the app's own origin.
+      exact("@/lib/siteOrigin", "shims/siteOrigin.ts"),
       { find: /^@web\//, replacement: `${web}/` },
       { find: /^@\//, replacement: `${web}/` },
     ],
