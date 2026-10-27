@@ -125,6 +125,16 @@ export type ClickTrack = {
   onBeat: (beat: number, sub: number) => void;
 };
 
+/** What the scheduler needs from an audio engine: its clock (seconds) and a way to play one click
+    at a time on that clock. The website uses Web Audio; the desktop app passes its native engine. */
+export type ClickOutput = {
+  now: () => number;
+  play: (time: number, wave: OscillatorType, freq: number, gain: number, length: number) => void;
+  /** Seconds between a click's scheduled time and it being heard (default 0), so the beat
+      display can wait for it. */
+  latency?: () => number;
+};
+
 /**
  * Starts one or more drift-free, simultaneous clicks (e.g. a main click and a reference click at
  * a different tempo) off a single shared scheduler tick. Running them off one `setInterval`
@@ -134,8 +144,17 @@ export type ClickTrack = {
 export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
   const ctx = getAudioContext();
   if (ctx.state === "suspended") void ctx.resume();
+  return runClickScheduler(tracks, {
+    now: () => ctx.currentTime,
+    play: (time, wave, freq, gain, length) => {
+      scheduleClick(ctx, time, wave, freq, gain, length);
+    },
+  });
+}
 
-  const startAt = ctx.currentTime + 0.06;
+/** `startClickEngine`'s scheduler, for any `ClickOutput`. */
+export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): ClickEngine {
+  const startAt = output.now() + 0.06;
   const state = tracks.map(() => ({ nextTime: startAt, beat: 0, sub: 0 }));
   const timeouts = new Set<ReturnType<typeof setTimeout>>();
 
@@ -143,7 +162,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
     for (let i = 0; i < tracks.length; i++) {
       const { getSettings, onBeat } = tracks[i];
       const st = state[i];
-      while (st.nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
+      while (st.nextTime < output.now() + LOOKAHEAD_SEC) {
         const s = getSettings(st.beat, st.sub);
         if (st.beat >= s.beatsPerBar) st.beat = 0;
         if (st.sub >= s.subdivision) st.sub = 0;
@@ -156,8 +175,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
         if (st.sub === 0) {
           const level = s.accents[st.beat] ?? 1;
           if (level === 2) {
-            scheduleClick(
-              ctx,
+            output.play(
               st.nextTime,
               sound.wave,
               sound.accentFreq,
@@ -165,8 +183,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
               sound.length,
             );
           } else if (level === 1) {
-            scheduleClick(
-              ctx,
+            output.play(
               st.nextTime,
               sound.wave,
               sound.normalFreq,
@@ -181,8 +198,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
             // Louder/higher-pitched than a normal subdivision click (same `normalFreq` a normal
             // main beat uses), but quieter than one — an accented "&" should stand out from the
             // other subdivision clicks without being confused for an actual downbeat.
-            scheduleClick(
-              ctx,
+            output.play(
               st.nextTime,
               sound.wave,
               sound.normalFreq,
@@ -190,8 +206,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
               sound.length * 0.8,
             );
           } else if (level === 1) {
-            scheduleClick(
-              ctx,
+            output.play(
               st.nextTime,
               sound.wave,
               sound.subFreq,
@@ -203,7 +218,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
 
         const shownBeat = st.beat;
         const shownSub = st.sub;
-        const delayMs = Math.max(0, (st.nextTime - ctx.currentTime) * 1000);
+        const delayMs = Math.max(0, (st.nextTime - output.now() + (output.latency?.() ?? 0)) * 1000);
         const t = setTimeout(() => {
           timeouts.delete(t);
           onBeat(shownBeat, shownSub);

@@ -20,6 +20,20 @@ import type { QueryCtx } from "./_generated/server";
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [Password({ verify: ResendOTP, reset: ResendPasswordReset }), Google],
   callbacks: {
+    // Where Google sends people back to. The desktop app (apps/desktop) signs in through the
+    // system browser and listens on a one-off local address (`http://127.0.0.1:<port>/`) for the
+    // code; the code is useless without the verifier the app kept, so allowing that address is
+    // safe. Everything else keeps Convex Auth's own rule: a path on SITE_URL.
+    async redirect({ redirectTo }) {
+      if (/^http:\/\/127\.0\.0\.1:\d{1,5}\/$/.test(redirectTo)) return redirectTo;
+      const base = (process.env.SITE_URL ?? "").replace(/\/$/, "");
+      if (redirectTo.startsWith("?") || redirectTo.startsWith("/")) return `${base}${redirectTo}`;
+      if (redirectTo.startsWith(base)) {
+        const after = redirectTo[base.length];
+        if (after === undefined || after === "?" || after === "/") return redirectTo;
+      }
+      throw new Error(`Invalid redirectTo ${redirectTo}`);
+    },
     // Mayday → "Pause sign-ups": refuse brand-new accounts. This runs in the same transaction
     // that creates the user, so throwing here means the account is never made.
     async afterUserCreatedOrUpdated(ctx, { existingUserId }) {

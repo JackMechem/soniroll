@@ -86,6 +86,35 @@
           packages = [ pkgs.eas-cli ];
         };
 
+        # `nix develop .#desktop` — the system libraries the Tauri desktop app (apps/desktop) needs
+        # on Linux: WebKitGTK and friends for the window; PipeWire (plus libclang, through
+        # bindgenHook) and ALSA for the native audio engine. Rust comes from your own toolchain.
+        devShells.desktop = pkgs.mkShell {
+          nativeBuildInputs = [ pkgs.pkg-config pkgs.wrapGAppsHook3 pkgs.rustPlatform.bindgenHook ];
+          buildInputs = [
+            pkgs.webkitgtk_4_1
+            pkgs.gtk3
+            pkgs.libsoup_3
+            pkgs.glib
+            pkgs.glib-networking
+            pkgs.cairo
+            pkgs.pango
+            pkgs.gdk-pixbuf
+            pkgs.atk
+            pkgs.librsvg
+            pkgs.openssl
+            pkgs.alsa-lib
+            pkgs.pipewire
+          ];
+          shellHook = ''
+            export GIO_MODULE_DIR=${pkgs.glib-networking}/lib/gio/modules
+            export XDG_DATA_DIRS=${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS
+            export ALSA_PLUGIN_DIR=${pkgs.pipewire}/lib/alsa-lib
+            # WebKitGTK's GPU compositing is flaky on some Linux setups (blank window).
+            export WEBKIT_DISABLE_DMABUF_RENDERER=1
+          '';
+        };
+
         # `nix develop .#androidBuild` — everything `./gradlew assembleDebug`/`npx expo run:android`
         # needs (SDK platform/build-tools, NDK, CMake, JDK 17), no emulator/system-image weight.
         # Gradle's own memory ceilings (heap/parallelism/daemon) are set in

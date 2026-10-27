@@ -9,6 +9,8 @@
     "lint": "pnpm --filter @jam-practice/web lint",
     "convex:dev": "pnpm --filter @jam-practice/convex dev",
     "convex:deploy": "pnpm --filter @jam-practice/convex deploy",
-    "mobile": "pnpm --filter @jam-practice/mobile start"
+    "mobile": "pnpm --filter @jam-practice/mobile start",
+    "desktop": "pnpm --filter @jam-practice/desktop dev",
+    "desktop:build": "pnpm --filter @jam-practice/desktop build"
   }
 }

@@ -1,0 +1,12 @@
+/* The website's stylesheet, unchanged. Tailwind scans the website's source for class names. */
+@import "../../web/app/globals.css";
+@source "../../web/components";
+@source "../../web/lib";
+@source "../../../packages/core";
+@source "./";
+
+/* The website's <body> is the flex container for the sidebar and page; here React renders into
+   #root, so let it pass straight through. */
+#root {
+  display: contents;
+}

@@ -30,12 +30,27 @@ pnpm mobile       # the Expo app (development is paused)
 The web app reads `NEXT_PUBLIC_CONVEX_URL` from `apps/web/.env.local`; the mobile app reads
 `EXPO_PUBLIC_CONVEX_URL` from `apps/mobile/.env.local`.
 
+### The desktop app (early test)
+
+`apps/desktop` is a [Tauri](https://tauri.app) app that reuses the website's own components and
+plays sound through a native (Rust) audio engine. So far it has the Metronome and the Tuner; every
+other page says it isn't in the desktop app yet. It uses the same Convex deployment as
+`apps/web/.env.local`. You need Rust, plus the system libraries from the flake's `desktop` shell on
+Linux:
+
+```bash
+nix develop .#desktop   # Linux: WebKitGTK, PipeWire, ALSA
+pnpm desktop            # opens the app (with hot reload)
+pnpm desktop:build      # a release build and installers, in apps/desktop/src-tauri/target/release
+```
+
 ## Repo layout
 
 | Folder | What's in it |
 | --- | --- |
 | `apps/web` | The website (Next.js + Tailwind) |
 | `apps/mobile` | The iOS/Android app (Expo). Development is paused for now; it may pick up again later. |
+| `apps/desktop` | The desktop app (Tauri), an early test: the website's components with native audio |
 | `packages/core` | Shared logic used by both apps and the backend |
 | `packages/convex` | The backend ([Convex](https://convex.dev)) |
 | `docs` | [How it fits together](docs/architecture.md), [style guide](docs/guides/style.md), [versioning](docs/guides/versioning.md), [testing](docs/guides/testing.md), [deploying](docs/guides/deploying.md), and [feature notes](docs/notes/) |
