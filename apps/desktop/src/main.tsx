@@ -15,6 +15,7 @@ import Sidebar from "@/components/Sidebar";
 import UsernamePrompt from "@/components/UsernamePrompt";
 import GoogleSignIn from "./GoogleSignIn";
 import { installExternalLinks } from "./links";
+import { installMediaDevices } from "./mediaDevices";
 import { Routes } from "./routes";
 import "./desktop.css";
 
@@ -25,6 +26,7 @@ new Function(DISPLAY_INIT_SCRIPT)();
 document.documentElement.className += ` ${FONT_VARIABLE_CLASSES} h-full antialiased`;
 document.body.className = "flex h-dvh overflow-hidden bg-surface";
 installExternalLinks();
+installMediaDevices();
 
 const convex = new ConvexReactClient(import.meta.env.NEXT_PUBLIC_CONVEX_URL as string);
 
