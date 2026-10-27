@@ -143,3 +143,135 @@ interface, macOS and Windows (never built), installers.
   doesn't share the app data of a copy Jack has open.
 - **Never stop the app with `pidof soniroll-desktop`**: Jack may have his own copy running. Stop
   only the PIDs you started.
+
+## 2026-10-27 — the Recorder records through the native engine
+
+The website's Recorder (and the Shed Log's "Record a clip", same engine) works in the desktop app
+without `getUserMedia`/`MediaRecorder`, which WebKitGTK doesn't do reliably (and which can pop
+portal dialogs). Nothing in `apps/web` changed.
+
+### What was built
+
+- **`src/native/recorderEngine.ts`** replaces `@/lib/recorderEngine` (alias in `vite.config.ts`
+  and `tsconfig.json`), with the same exports: the snapshot store, `startRecording`,
+  `stopRecording`, `updateRecorderMetronome`, `setRecorderSongVolume`, `clearRecorderError` and
+  the types (re-exported from the website's module, type-only). Same phases (idle → countin →
+  recording → finishing), same count-in rule, same song preload, same errors where they apply.
+  It never touches `navigator.mediaDevices` or `getAudioContext()`.
+- **`src-tauri/src/recorder.rs`** (new module; `audio.rs` only got `find_device` made
+  `pub(crate)` and a grouped "Shared with the Recorder" block: `now_nanos()`, `heard_nanos(at)`).
+  Commands: `recorder_open(deviceId, mono, autoGain, onLevel)` opens a cpal input and streams the
+  level (RMS of the newest 2048 samples × 4, every 70 ms, like the website's meter);
+  `recorder_begin(at?)` starts the take; `recorder_stop` finishes it (async, off the main
+  thread); `recorder_take` returns the bytes as an `ArrayBuffer` (`tauri::ipc::Response`, no
+  JSON); `recorder_cancel`.
+- **Input choice:** the Native audio chip now also sits on `/recorder` and there shows an
+  **Input** picker (`inputDeviceId` in `jam-practice-desktop-audio`, per computer, like the
+  output). A saved input that's gone falls back to the system default, like the Tuner. The Tuner
+  keeps its own synced choice.
+- **Mono** (Left / Mix / Right) works like the website's: Mix is the average; a mono input gives a
+  mono file whatever's picked. Otherwise the input's first two channels are recorded.
+- **Auto gain** is a small AGC in Rust standing in for the browser's `autoGainControl`: peak
+  envelope, aims at about −12 dBFS peaks, between −12 dB and +18 dB, comes down in ~20 ms and
+  goes up over ~2 s, holds still below −50 dBFS (so silence isn't boosted into hiss), and a soft
+  clip above 0.8. Off = the raw input.
+
+### The format: MP3
+
+MPEG-1 Layer III, constant bitrate, **128 kb/s mono / 160 kb/s joint stereo** (about 1 / 1.2 MB a
+minute, the same as the website's 128 kb/s takes, so the 100 MB quota lasts as long), at the
+input's rate when it's 32/44.1/48 kHz (LAME resamples anything else to 48 or 44.1 kHz). Encoded as
+it records by LAME (`mp3lame-encoder` crate, which builds LAME 3.100 from source with autotools;
+the test build adds LAME's decoder through a dev-dependency feature).
+
+Why not Opus: it's the one compressed format every browser plays and decodes
+(`decodeAudioData` + `<audio>`), including Safari versions that have no WebM or Ogg Opus, the
+paused mobile app's players, and pure-Rust decoders like Symphonia, which has no Opus decoder —
+relevant if the desktop's Web Audio bridge decodes recordings natively. The patents have
+expired. The cost is a little efficiency compared with Opus, which doesn't matter at these
+bitrates.
+
+**No Xing/LAME tag**, on purpose: browsers disagree on whether they use it to trim MP3's start
+delay. Without it nobody trims, so the decoded file always starts exactly `CODEC_DELAY_FRAMES` =
+576 (LAME) + 529 (decoder) = **1105 samples** before the take's first sample. Measured the same in
+LAME's decoder (unit test), ffmpeg and Chromium. A constant bitrate file has an exact duration
+and seeks without the tag (Chromium's `<audio>` read 2.736 s for a 2.736 s file).
+
+LAME is LGPL. Fine for an open-source app that's built from source, but it should go on
+`/credits` alongside the other bundled things before a desktop release (not done: that's web
+code).
+
+### Timing (what the native engine does better)
+
+- **Count-in:** the take starts on the exact input sample where the first beat after the count-in
+  was *heard*. JS gets the first beat's engine time from `latestFirstBeat()`, a small addition to
+  `native/clickEngine.ts` (it mirrors `runClickScheduler`'s `startAt = now() + 0.06`, so keep
+  them in step), adds the count-in length and passes that to `recorder_begin`. Rust turns it into
+  wall-clock time with `heard_nanos` (engine clock + the output's reported delay), and into an
+  input frame with markers that every input callback sends (frame number, capture time = now −
+  the capture delay cpal/PipeWire report). The worker keeps the last 4 s of processed input, so
+  the start can be a little in the past and the JS timer doesn't need to be exact. The website
+  just starts `MediaRecorder` when a timer fires.
+- **Stop** ends the take on the sample captured at that moment (it waits up to 750 ms for it).
+- **`durationSec`** is the real sample count, not wall-clock time.
+- **Song line-up** (`songOffsetSec`): `start point − time the song took to start − lead − output
+  delay`, where `lead` (from `recorder_begin`) is how long before that moment the decoded file's
+  first sample was captured, codec delay included. The song still plays through an `<audio>`
+  element (WebKit's media player), whose output delay can't be read, so the native output's delay
+  stands in for it.
+
+### Test hooks (like `SONIROLL_AUDIO_OUTPUT`)
+
+- `SONIROLL_AUDIO_INPUT=<device id>` forces the Recorder's input and **never falls back** to the
+  default (that would be the real microphone): a missing device is an error. It logs the input
+  the app asked for, so you can still check the in-app choice got through.
+- `SONIROLL_RECORDER_DUMP=<folder>` saves a copy of every finished take
+  (`take-<ms>-<duration>s.mp3`), so a test can check the file without signing in to save it.
+
+### Gotchas
+
+- The Recorder page is signed-in only. To test it signed out, its gate in `Recorder.tsx` was
+  bypassed temporarily and restored afterwards (not committed).
+- Run test windows inside `dbus-run-session --` with `GDK_DEBUG=no-portals`: WebKitGTK talks to
+  the desktop portals over the session bus, and a test window once caused an "Allow apps to use
+  the camera?" dialog on Jack's real screen. Headless Chromium inherits your shell's `DISPLAY`,
+  so give it a private bus too, and remember the portal services it starts there. Stop them by
+  PID (in zsh, `kill $PIDS` doesn't split the list — write the PIDs out).
+- A freshly opened PipeWire input delivers ~30 ms of silence before the first real samples (links
+  being made). A take started without a count-in begins with that silence. With a count-in the
+  input has been open for a bar already.
+- cpal prints `recorder input error: Device disconnected` when the stream is dropped at the end of
+  a take. It's harmless.
+- `pw-loopback`, used as the test "mic", seems to add one quantum (256 samples) of delay that it
+  doesn't report. See below.
+
+### What was verified, and how
+
+- `cargo test` (14 tests; 9 new): MP3 round trips (mono 48 kHz: pitch, level, length, starts with
+  a plain MPEG-1 frame; stereo 44.1 kHz: each side keeps its own pitch), **the codec delay is
+  exactly 1105 samples**, the take assembler (start in the past, in the future, too old → oldest
+  kept, end on its frame, stopped before starting = empty), capture-time → frame mapping, mono
+  choices, auto gain (quiet comes up, loud comes down, about right stays, silence isn't boosted,
+  never clips). `tsc` and `pnpm lint` in `apps/desktop`, `vite build`, `cargo build`.
+- **The real window under Xvfb**, sound only to a null sink, the input a `pw-loopback` "mic" fed
+  from that sink, in a private session bus:
+  - Picked the loopback mic in the chip's new Input picker; the log showed the app asked Rust for
+    exactly that device. Only the loopback was linked to the app's capture stream.
+  - A 440 Hz tone: a 3.368 s take decoded (ffmpeg) as 440 Hz throughout, 48 kHz stereo, 160 kb/s,
+    3.408 s = take + codec delay + padding. The level meter showed about 70% while it played.
+    The save dialog's player (WebKit's own `decodeAudioData`) played it.
+  - **Metronome at 100 BPM with a 1-bar count-in, recording its own clicks** through the loopback:
+    the downbeat is at sample 1364 of the decoded file (expected 1105: 259 samples / 5.4 ms
+    late, about one 256-sample quantum, probably `pw-loopback`'s own buffering), and the next
+    clicks are exactly 28,800 samples apart (no dropped or doubled samples).
+  - Stopping during the count-in: back to Ready, no take, input closed, no error.
+  - Mono → Right with a 440 Hz left / 660 Hz right signal: a mono 128 kb/s file at 660 Hz.
+  - Headless Chromium: `canPlayType("audio/mpeg")` = probably; `decodeAudioData` and `<audio>`
+    gave the same length and click positions as ffmpeg.
+- **Not verified:** anything signed in (uploading a take, the quota check, saving from the
+  dialog, "Record a clip" in the Shed Log), the song line-up (needs a tune with a song), Firefox
+  and Safari decoding these files (expected to work: plain CBR MP3), real microphones and
+  interfaces (the actual capture/output delays, and whether the 5 ms above is the loopback or
+  something real), more than 2 input channels, input rates other than 48 kHz, unplugging the
+  input mid-take, macOS/Windows (LAME builds with autotools / cc there, never tried), anything by
+  ear.

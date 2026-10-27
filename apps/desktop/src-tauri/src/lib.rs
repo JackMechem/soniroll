@@ -1,5 +1,6 @@
 mod audio;
 mod oauth;
+mod recorder;
 
 use tauri::plugin::{Builder as PluginBuilder, TauriPlugin};
 use tauri::{Runtime, Url};
@@ -38,6 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(external_links())
         .manage(audio::AudioState::default())
+        .manage(recorder::RecorderState::default())
         .setup(|app| {
             audio::spawn_clock(app.handle().clone());
             Ok(())
@@ -54,6 +56,11 @@ pub fn run() {
             audio::audio_tone_stop,
             audio::input_start,
             audio::input_stop,
+            recorder::recorder_open,
+            recorder::recorder_begin,
+            recorder::recorder_stop,
+            recorder::recorder_take,
+            recorder::recorder_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running soniroll");

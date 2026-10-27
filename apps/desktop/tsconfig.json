@@ -17,6 +17,7 @@
       "@/lib/metronome": ["./src/native/metronome.ts"],
       "@/lib/toneGenerator": ["./src/native/toneGenerator.ts"],
       "@/lib/audioInput": ["./src/native/audioInput.ts"],
+      "@/lib/recorderEngine": ["./src/native/recorderEngine.ts"],
       "@/*": ["../web/*"],
       "@web/*": ["../web/*"],
       "convex-auth-react-original": ["../web/node_modules/@convex-dev/auth/dist/react/index.d.ts"],

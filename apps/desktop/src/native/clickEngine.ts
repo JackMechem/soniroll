@@ -50,13 +50,32 @@ export function scheduleClick(
   void ensureStarted().then(() => send({ at: engineNow() + delay, wave, freq, gain, length }));
 }
 
+// The engine time of the first beat of the latest `startClickEngine`, for the Recorder: its take
+// starts on the beat after the count-in. `runClickScheduler` puts the first beat at
+// `now() + 0.06` from its first reading of the clock.
+const SCHEDULER_START_SEC = 0.06;
+let firstBeat: Promise<number> | null = null;
+
+/** When the latest click engine's first beat plays (engine seconds), once it has started. */
+export function latestFirstBeat(): Promise<number> | null {
+  return firstBeat;
+}
+
 export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
   let engine: ClickEngine | null = null;
   let stopped = false;
+  let resolveFirstBeat: (time: number) => void = () => {};
+  firstBeat = new Promise((resolve) => (resolveFirstBeat = resolve));
   void ensureStarted().then(() => {
     if (stopped) return;
+    let first = true;
     engine = runClickScheduler(tracks, {
-      now: engineNow,
+      now: () => {
+        const time = engineNow();
+        if (first) resolveFirstBeat(time + SCHEDULER_START_SEC);
+        first = false;
+        return time;
+      },
       play: (at, wave, freq, gain, length) => send({ at, wave, freq, gain, length }),
       latency: engineLatency,
     });

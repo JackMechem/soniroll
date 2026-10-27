@@ -10,17 +10,18 @@ import { invoke, type AudioDevices, type AudioStatus } from "./native/engine";
 
 const BUFFER_SIZES = [0, 64, 128, 256, 512, 1024];
 
-// Per computer, not synced: devices differ from one machine to the next.
-const DEFAULTS = { outputDeviceId: "", bufferFrames: 256 };
+// Per computer, not synced: devices differ from one machine to the next. `inputDeviceId` is the
+// Recorder's input (read by `native/recorderEngine.ts`); the Tuner keeps its own choice.
+const DEFAULTS = { outputDeviceId: "", bufferFrames: 256, inputDeviceId: "" };
 
 function ms(value: number) {
   return `${value.toFixed(value < 10 ? 1 : 0)} ms`;
 }
 
 /** Desktop only: which output the native engine plays through, its buffer size, and how much
-    delay that adds. Sits in the bottom-right corner of the Metronome and Tuner, next to the
-    feedback button. */
-export default function NativeAudioChip() {
+    delay that adds. Sits in the bottom-right corner of the Metronome, Tuner and Recorder, next to
+    the feedback button. With `input` (the Recorder) it also picks what to record from. */
+export default function NativeAudioChip({ input = false }: { input?: boolean }) {
   const [prefs, setPrefs] = usePersistedSettings("jam-practice-desktop-audio", DEFAULTS);
   const [devices, setDevices] = useState<AudioDevices | null>(null);
   const [status, setStatus] = useState<AudioStatus | null>(null);
@@ -45,6 +46,9 @@ export default function NativeAudioChip() {
 
   const total = status?.running ? status.buffer_ms + status.output_latency_ms : null;
   const outputs = devices?.outputs ?? [];
+  const inputs = devices?.inputs ?? [];
+  // Like the Tuner: a saved input that isn't there any more falls back to the default.
+  const inputId = inputs.some((d) => d.id === prefs.inputDeviceId) ? prefs.inputDeviceId : "";
 
   return (
     <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[4.5rem] z-20">
@@ -58,6 +62,22 @@ export default function NativeAudioChip() {
         headerExtra={<HintsButton on={showHints} onToggle={() => setShowHints((on) => !on)} />}
       >
         <HintsContext.Provider value={showHints}>
+          {input && (
+            <>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-muted">Input</span>
+                <Select
+                  value={devices ? inputId : ""}
+                  onChange={(inputDeviceId) => setPrefs({ inputDeviceId })}
+                  options={[
+                    { value: "", label: "System default" },
+                    ...inputs.map((d) => ({ value: d.id, label: d.label })),
+                  ]}
+                />
+              </label>
+              <Hint>The microphone or audio interface the Recorder records from.</Hint>
+            </>
+          )}
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-muted">Output</span>
             <Select

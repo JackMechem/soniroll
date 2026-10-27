@@ -161,7 +161,7 @@ fn describe(device: &Device) -> Option<DeviceInfo> {
     Some(DeviceInfo { id, label })
 }
 
-fn find_device(id: &str, input: bool) -> Option<Device> {
+pub(crate) fn find_device(id: &str, input: bool) -> Option<Device> {
     let host = host();
     if !id.is_empty() {
         if let Ok(parsed) = id.parse() {
@@ -808,6 +808,25 @@ fn detect_pitch(buffer: &[f32], sample_rate: f32, min_hz: f32, max_hz: f32) -> O
     let denominator = prev + next - 2.0 * cmnd[tau];
     let shift = if denominator == 0.0 { 0.0 } else { (prev - next) / (2.0 * denominator) };
     Some(sample_rate / (tau as f32 + shift))
+}
+
+// ---------------------------------------------------------------------------------------------
+// Shared with the Recorder (`recorder.rs`)
+
+/// Now, on the clock the engine's own timing uses (nanoseconds since `epoch()`).
+pub(crate) fn now_nanos() -> u64 {
+    epoch().elapsed().as_nanos() as u64
+}
+
+/// When a sound scheduled at engine time `at` comes out of the output device, in `now_nanos()`
+/// terms. None while the output isn't running.
+pub(crate) fn heard_nanos(at: f64) -> Option<u64> {
+    if !METERS.running.load(Ordering::Acquire) {
+        return None;
+    }
+    let latency = METERS.latency_micros.load(Ordering::Relaxed) as f64 * 1e3;
+    let nanos = now_nanos() as f64 + (at - engine_now()) * 1e9 + latency;
+    Some(nanos.max(0.0) as u64)
 }
 
 #[cfg(test)]

@@ -83,10 +83,10 @@ const q = (query: Query, key: string) => query.get(key) ?? "";
 const opt = (query: Query, key: string) => query.get(key) ?? undefined;
 
 /** A native-audio tool: the website's page plus the desktop's audio chip. */
-function NativeTool({ children }: { children: ReactNode }) {
+function NativeTool({ children, input = false }: { children: ReactNode; input?: boolean }) {
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
-      <NativeAudioChip />
+      <NativeAudioChip input={input} />
       {children}
     </div>
   );
@@ -100,7 +100,7 @@ const ROUTES: Route[] = [
   { path: "/bass-genius", render: () => <BassGenius /> },
   { path: "/drum-generator", render: () => <DrumGenerator /> },
   { path: "/slow-downer", render: () => <SlowDowner /> },
-  { path: "/recorder", render: (_, query) => <Recorder tuneId={opt(query, "tuneId")} /> },
+  { path: "/recorder", render: (_, query) => <NativeTool input><Recorder tuneId={opt(query, "tuneId")} /></NativeTool> },
   { path: "/note-trainer", render: () => <NoteTrainer /> },
   { path: "/scale-trainer", render: () => <ScaleTrainer /> },
   { path: "/interval-trainer", render: () => <IntervalTrainer /> },

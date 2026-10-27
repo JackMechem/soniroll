@@ -19,6 +19,12 @@ serde_json = "1"
 cpal = "0.18"
 rtrb = "0.4"
 url = "2"
+# The Recorder: MP3 encoding (LAME, built from source by the crate; see recorder.rs)
+mp3lame-encoder = "0.2.5"
+
+[dev-dependencies]
+# LAME's decoder, so the Recorder's tests can decode what they encode.
+mp3lame-sys = { version = "0.1.11", features = ["decoder"] }
 
 [features]
 default = ["pipewire"]
