@@ -14,6 +14,8 @@ import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import Sidebar from "@/components/Sidebar";
 import UsernamePrompt from "@/components/UsernamePrompt";
 import GoogleSignIn from "./GoogleSignIn";
+import { installDownloads } from "./downloads";
+import { installFileDrop } from "./fileDrop";
 import { installExternalLinks } from "./links";
 import { installMediaDevices } from "./mediaDevices";
 import { Routes } from "./routes";
@@ -27,6 +29,8 @@ document.documentElement.className += ` ${FONT_VARIABLE_CLASSES} h-full antialia
 document.body.className = "flex h-dvh overflow-hidden bg-surface";
 installExternalLinks();
 installMediaDevices();
+installDownloads();
+installFileDrop();
 
 const convex = new ConvexReactClient(import.meta.env.NEXT_PUBLIC_CONVEX_URL as string);
 

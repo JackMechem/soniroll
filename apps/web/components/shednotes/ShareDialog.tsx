@@ -11,6 +11,7 @@ import SwitchRow from "@/components/SwitchRow";
 import { CheckIcon, CloseIcon, LinkIcon } from "@/components/tools";
 import UserAvatar from "@/components/UserAvatar";
 import { errorText } from "@/lib/useShedNotes";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 type Role = "read" | "write";
 type LinkAccess = "off" | "invited" | "anyone";
@@ -32,7 +33,7 @@ const DEPTH: { value: "all" | "one"; label: string }[] = [
 ];
 
 /** The address a note's link opens (`app/note/[token]`). */
-export const noteLinkUrl = (token: string) => `${typeof window === "undefined" ? "" : window.location.origin}/note/${token}`;
+export const noteLinkUrl = (token: string) => `${typeof window === "undefined" ? "" : siteOrigin()}/note/${token}`;
 
 /**
  * Share one note: add people by username (public profiles are suggested while typing; a private

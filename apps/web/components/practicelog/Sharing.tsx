@@ -13,6 +13,7 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, DownloadIcon, 
 import { type PracticeLogData, type ProgressCardKind, type ProgressCardRange, type Routine, MONTH_NAMES, WEEKDAY_NAMES, addDays, dayReportCard, fromDateKey, progressCard, toPublicRoutine, todayKey } from "@/lib/practiceLog";
 import { shareLink } from "@/lib/shareLink";
 import { SIGN_IN_PATH } from "@/lib/landing";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 function useEscape(onClose: () => void) {
   useEffect(() => {
@@ -238,14 +239,14 @@ export function RoutineShareDialog({ routine, onClose }: { routine: Routine; onC
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState<"link" | "post" | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const url = shareId ? `${typeof window === "undefined" ? "https://www.soniroll.com" : window.location.origin}/routine/${shareId}` : null;
+  const url = shareId ? `${typeof window === "undefined" ? "https://www.soniroll.com" : siteOrigin()}/routine/${shareId}` : null;
 
   async function makeLink() {
     setBusy("link");
     setNote(null);
     try {
       const id = await share({ routineId: routine.id, routine: toPublicRoutine(routine) });
-      const result = await shareLink(routine.name || "Routine", `${window.location.origin}/routine/${id}`);
+      const result = await shareLink(routine.name || "Routine", `${siteOrigin()}/routine/${id}`);
       if (result === "copied") setNote("Link copied.");
     } catch (e) {
       setNote(e instanceof Error ? e.message.split("\n")[0] : "Couldn't make a link.");

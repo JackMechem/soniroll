@@ -1,4 +1,6 @@
 mod audio;
+mod downloads;
+mod file_drop;
 mod oauth;
 mod recorder;
 
@@ -37,7 +39,10 @@ fn open_external(app: tauri::AppHandle, url: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(external_links())
+        .manage(file_drop::DroppedFiles::default())
+        .on_window_event(file_drop::on_window_event)
         .manage(audio::AudioState::default())
         .manage(recorder::RecorderState::default())
         .setup(|app| {
@@ -46,6 +51,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             open_external,
+            downloads::save_download,
+            file_drop::read_dropped_file,
             oauth::oauth_listen,
             audio::audio_devices,
             audio::audio_status,

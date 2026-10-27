@@ -8,10 +8,11 @@ import { CheckIcon, ChordChartIcon, CloseIcon, FileIcon, LinkIcon, MicIcon, Shar
 import { errorText, filesApi } from "@/lib/files";
 import { recordingsApi } from "@/lib/recordings";
 import { shareLink } from "@/lib/shareLink";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 /** The address a shared tune's link opens (`app/tune/[id]`). */
 export function sharedTuneUrl(shareId: string) {
-  return `${window.location.origin}/tune/${shareId}`;
+  return `${siteOrigin()}/tune/${shareId}`;
 }
 
 /**
