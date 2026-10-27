@@ -50,12 +50,15 @@ pub fn oauth_listen(app: AppHandle) -> Result<u16, String> {
                 Err(_) => continue,
             };
             if url.path() != "/" {
-                let _ = (&stream).write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                let _ = (&stream)
+                    .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
                 continue;
             }
             let code = url.query_pairs().find(|(k, _)| k == "code").map(|(_, v)| v.into_owned());
             let body = match &code {
-                Some(_) => page("Back to soniroll", "You can close this tab. soniroll is finishing signing you in."),
+                Some(_) => {
+                    page("Back to soniroll", "You can close this tab. soniroll is finishing signing you in.")
+                }
                 None => page("Sign-in didn't finish", "Go back to soniroll and try again."),
             };
             let response = format!(

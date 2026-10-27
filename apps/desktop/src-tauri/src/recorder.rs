@@ -180,7 +180,11 @@ pub struct Processor {
 
 impl Processor {
     pub fn new(in_channels: usize, mono: Option<MonoSource>, auto_gain: bool, sample_rate: f32) -> Self {
-        Self { in_channels: in_channels.clamp(1, 2), mono, auto_gain: auto_gain.then(|| AutoGain::new(sample_rate)) }
+        Self {
+            in_channels: in_channels.clamp(1, 2),
+            mono,
+            auto_gain: auto_gain.then(|| AutoGain::new(sample_rate)),
+        }
     }
 
     /// One channel for a mono input or in mono mode, else two.
@@ -440,7 +444,8 @@ pub fn recorder_open(
             }
         };
         let _ = ready_tx.send(Ok(()));
-        let result = run_worker(&worker_shared, consumer, markers_rx, processor, kept, sample_rate, &on_level);
+        let result =
+            run_worker(&worker_shared, consumer, markers_rx, processor, kept, sample_rate, &on_level);
         drop(stream);
         if let Some(result) = result {
             let _ = done_tx.send(result);
@@ -450,10 +455,13 @@ pub fn recorder_open(
     ready_rx.recv().map_err(|e| e.to_string())??;
     // The first callback reports the capture delay.
     let waited = Instant::now();
-    while shared.input_latency_micros.load(Ordering::Acquire) == 0 && waited.elapsed() < Duration::from_millis(200) {
+    while shared.input_latency_micros.load(Ordering::Acquire) == 0
+        && waited.elapsed() < Duration::from_millis(200)
+    {
         thread::sleep(Duration::from_millis(5));
     }
-    let input_latency_ms = shared.input_latency_micros.load(Ordering::Acquire).saturating_sub(1) as f64 / 1000.0;
+    let input_latency_ms =
+        shared.input_latency_micros.load(Ordering::Acquire).saturating_sub(1) as f64 / 1000.0;
     eprintln!("recorder: {device_name}, {sample_rate} Hz, {in_channels} ch {format}, capture delay {input_latency_ms:.1} ms");
     *state.session.lock().unwrap() = Some(Session { shared, done: Some(done_rx), sample_rate });
     Ok(OpenInfo { sample_rate, channels: out_channels, device_name, input_latency_ms })
@@ -483,7 +491,8 @@ where
                 let now = audio::now_nanos();
                 // (+1 so a zero delay still reads as "reported".)
                 shared.input_latency_micros.store(delay.as_micros() as u32 + 1, Ordering::Release);
-                let _ = markers.push(Marker { frame: frames_seen, nanos: now.saturating_sub(delay.as_nanos() as u64) });
+                let _ = markers
+                    .push(Marker { frame: frames_seen, nanos: now.saturating_sub(delay.as_nanos() as u64) });
                 for frame in data.chunks(channels) {
                     for sample in &frame[..kept] {
                         // Dropped only if the worker stalls for seconds; the frame count stays right.
@@ -579,7 +588,10 @@ fn run_worker(
 
         // Done: everything up to the end is in, or the input stopped delivering (unplugged).
         let timed_out = stop_asked.is_some_and(|at| at.elapsed() > Duration::from_millis(750));
-        if assembler.finished() || timed_out || (stop_asked.is_some() && shared.failed.load(Ordering::Acquire)) {
+        if assembler.finished()
+            || timed_out
+            || (stop_asked.is_some() && shared.failed.load(Ordering::Acquire))
+        {
             let frames = assembler.frames_written().max(writer.frames());
             return Some(writer.finish().map(|mp3| Take { mp3, frames }));
         }
@@ -632,7 +644,10 @@ pub async fn recorder_stop(state: tauri::State<'_, RecorderState>) -> Result<Sto
 /// the file without signing in to save it (like `SONIROLL_AUDIO_OUTPUT` in audio.rs).
 fn dump_for_tests(mp3: &[u8], duration_sec: f64) {
     let Some(dir) = std::env::var_os("SONIROLL_RECORDER_DUMP").filter(|d| !d.is_empty()) else { return };
-    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
     let path = std::path::Path::new(&dir).join(format!("take-{stamp}-{duration_sec:.3}s.mp3"));
     if let Err(error) = std::fs::write(&path, mp3) {
         eprintln!("recorder: couldn't write {}: {error}", path.display());
@@ -674,7 +689,13 @@ mod tests {
                 let mut chunk = chunk.to_vec();
                 let mut len = chunk.len();
                 loop {
-                    let got = ffi::hip_decode1(hip, chunk.as_mut_ptr(), len, left[n..].as_mut_ptr(), right[n..].as_mut_ptr());
+                    let got = ffi::hip_decode1(
+                        hip,
+                        chunk.as_mut_ptr(),
+                        len,
+                        left[n..].as_mut_ptr(),
+                        right[n..].as_mut_ptr(),
+                    );
                     assert!(got >= 0, "decode error");
                     if got == 0 {
                         break;
@@ -758,7 +779,9 @@ mod tests {
         let decoded = &decode(&writer.finish().unwrap(), 1)[0];
         let best = (0..4_000)
             .max_by(|a, b| {
-                let score = |lag: &usize| burst.iter().enumerate().map(|(i, s)| s * decoded[burst_at + lag + i]).sum::<f32>();
+                let score = |lag: &usize| {
+                    burst.iter().enumerate().map(|(i, s)| s * decoded[burst_at + lag + i]).sum::<f32>()
+                };
                 score(a).total_cmp(&score(b))
             })
             .unwrap();

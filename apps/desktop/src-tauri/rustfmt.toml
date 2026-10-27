@@ -1,0 +1,3 @@
+# The code was written to a ~110-character line; keep it that way rather than rewrap everything.
+max_width = 110
+use_small_heuristics = "Max"

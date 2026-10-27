@@ -180,7 +180,11 @@ pub struct InputFrame {
 }
 
 #[tauri::command]
-pub fn input_start(state: tauri::State<'_, AudioState>, device_id: String, on_frame: Channel<InputFrame>) -> Result<(), String> {
+pub fn input_start(
+    state: tauri::State<'_, AudioState>,
+    device_id: String,
+    on_frame: Channel<InputFrame>,
+) -> Result<(), String> {
     input_stop(state.clone());
     let device = find_device(&device_id, true).ok_or("No audio input found.")?;
     let supported = device.default_input_config().map_err(|e| e.to_string())?;
@@ -235,7 +239,11 @@ pub fn input_start(state: tauri::State<'_, AudioState>, device_id: String, on_fr
     ready_rx.recv().map_err(|e| e.to_string())?
 }
 
-fn build_input<T>(device: &Device, config: StreamConfig, mut producer: rtrb::Producer<f32>) -> Result<cpal::Stream, String>
+fn build_input<T>(
+    device: &Device,
+    config: StreamConfig,
+    mut producer: rtrb::Producer<f32>,
+) -> Result<cpal::Stream, String>
 where
     T: SizedSample,
     f32: FromSample<T>,

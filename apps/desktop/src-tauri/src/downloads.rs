@@ -8,7 +8,10 @@ use tauri_plugin_dialog::DialogExt;
 
 /// Returns the saved path, or `None` if the dialog was cancelled.
 #[tauri::command]
-pub async fn save_download<R: Runtime>(window: WebviewWindow<R>, request: Request<'_>) -> Result<Option<String>, String> {
+pub async fn save_download<R: Runtime>(
+    window: WebviewWindow<R>,
+    request: Request<'_>,
+) -> Result<Option<String>, String> {
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err("expected the file's bytes".into());
     };

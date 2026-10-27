@@ -28,13 +28,14 @@ use web_audio_api::context::{
     OfflineAudioContext,
 };
 use web_audio_api::node::{
-    AnalyserNode, AudioBufferSourceNode, AudioDestinationNode, AudioNode, AudioScheduledSourceNode, BiquadFilterNode,
-    BiquadFilterType, ChannelCountMode, ChannelInterpretation, ChannelMergerNode, ChannelSplitterNode,
-    ConstantSourceNode, ConvolverNode, DelayNode, DynamicsCompressorNode, GainNode, OscillatorNode, OscillatorType,
-    OverSampleType, StereoPannerNode, WaveShaperNode,
+    AnalyserNode, AudioBufferSourceNode, AudioDestinationNode, AudioNode, AudioScheduledSourceNode,
+    BiquadFilterNode, BiquadFilterType, ChannelCountMode, ChannelInterpretation, ChannelMergerNode,
+    ChannelSplitterNode, ConstantSourceNode, ConvolverNode, DelayNode, DynamicsCompressorNode, GainNode,
+    OscillatorNode, OscillatorType, OverSampleType, StereoPannerNode, WaveShaperNode,
 };
 use web_audio_api::worklet::{
-    AudioParamValues, AudioWorkletGlobalScope, AudioWorkletNode, AudioWorkletNodeOptions, AudioWorkletProcessor,
+    AudioParamValues, AudioWorkletGlobalScope, AudioWorkletNode, AudioWorkletNodeOptions,
+    AudioWorkletProcessor,
 };
 use web_audio_api::{AudioBuffer, AudioParam, PeriodicWaveOptions};
 
@@ -73,22 +74,76 @@ pub enum Kind {
 #[serde(tag = "op", rename_all = "camelCase")]
 pub enum Op {
     /// `arg`: the splitter's outputs, the merger's inputs, or the delay's longest delay.
-    Create { id: u32, kind: Kind, arg: Option<f64> },
+    Create {
+        id: u32,
+        kind: Kind,
+        arg: Option<f64>,
+    },
     /// JavaScript garbage-collected the node: let it go once it's silent.
-    Free { id: u32 },
-    FreeBuffer { id: u32 },
-    Connect { from: u32, to: u32, #[serde(default)] output: u32, #[serde(default)] input: u32, param: Option<String> },
+    Free {
+        id: u32,
+    },
+    FreeBuffer {
+        id: u32,
+    },
+    Connect {
+        from: u32,
+        to: u32,
+        #[serde(default)]
+        output: u32,
+        #[serde(default)]
+        input: u32,
+        param: Option<String>,
+    },
     /// Whatever isn't given matches everything (`disconnect()` has none of them).
-    Disconnect { from: u32, to: Option<u32>, output: Option<u32>, input: Option<u32>, param: Option<String> },
-    Channels { id: u32, count: Option<usize>, mode: Option<String>, interpretation: Option<String> },
+    Disconnect {
+        from: u32,
+        to: Option<u32>,
+        output: Option<u32>,
+        input: Option<u32>,
+        param: Option<String>,
+    },
+    Channels {
+        id: u32,
+        count: Option<usize>,
+        mode: Option<String>,
+        interpretation: Option<String>,
+    },
     /// A plain attribute: `type`, `loop`, `loopStart`, `loopEnd`, `normalize`, `fftSize`, ...
-    Set { id: u32, key: String, value: Value },
-    Buffer { id: u32, buffer: Option<u32> },
-    Wave { id: u32, real: Vec<f32>, imag: Vec<f32>, normalize: bool },
-    Curve { id: u32, curve: Option<Vec<f32>> },
-    Param { id: u32, name: String, call: ParamCall },
-    Start { id: u32, when: f64, offset: Option<f64>, duration: Option<f64> },
-    Stop { id: u32, when: f64 },
+    Set {
+        id: u32,
+        key: String,
+        value: Value,
+    },
+    Buffer {
+        id: u32,
+        buffer: Option<u32>,
+    },
+    Wave {
+        id: u32,
+        real: Vec<f32>,
+        imag: Vec<f32>,
+        normalize: bool,
+    },
+    Curve {
+        id: u32,
+        curve: Option<Vec<f32>>,
+    },
+    Param {
+        id: u32,
+        name: String,
+        call: ParamCall,
+    },
+    Start {
+        id: u32,
+        when: f64,
+        offset: Option<f64>,
+        duration: Option<f64>,
+    },
+    Stop {
+        id: u32,
+        when: f64,
+    },
     Suspend,
     Resume,
 }
@@ -97,19 +152,44 @@ pub enum Op {
 #[serde(tag = "fn", rename_all = "camelCase")]
 pub enum ParamCall {
     /// `param.value = x`
-    Value { value: f32 },
-    SetValueAtTime { value: f32, time: f64 },
-    LinearRampToValueAtTime { value: f32, time: f64 },
-    ExponentialRampToValueAtTime { value: f32, time: f64 },
-    SetTargetAtTime { value: f32, time: f64, tc: f64 },
-    SetValueCurveAtTime { values: Vec<f32>, time: f64, duration: f64 },
-    CancelScheduledValues { time: f64 },
-    CancelAndHoldAtTime { time: f64 },
+    Value {
+        value: f32,
+    },
+    SetValueAtTime {
+        value: f32,
+        time: f64,
+    },
+    LinearRampToValueAtTime {
+        value: f32,
+        time: f64,
+    },
+    ExponentialRampToValueAtTime {
+        value: f32,
+        time: f64,
+    },
+    SetTargetAtTime {
+        value: f32,
+        time: f64,
+        tc: f64,
+    },
+    SetValueCurveAtTime {
+        values: Vec<f32>,
+        time: f64,
+        duration: f64,
+    },
+    CancelScheduledValues {
+        time: f64,
+    },
+    CancelAndHoldAtTime {
+        time: f64,
+    },
 }
 
 // ---------------------------------------------------------------------------------------------
 // The graph (generic so the tests can render it offline)
 
+// One per JS node, kept in a map; boxing the big ones would only add a pointer hop per op.
+#[allow(clippy::large_enum_variant)]
 enum Node {
     Destination(AudioDestinationNode),
     Gain(GainNode),
@@ -247,7 +327,9 @@ impl<C: BaseAudioContext> Graph<C> {
                     Kind::Compressor => Node::Compressor(ctx.create_dynamics_compressor()),
                     Kind::Convolver => Node::Convolver(ctx.create_convolver()),
                     Kind::Analyser => Node::Analyser(ctx.create_analyser()),
-                    Kind::Splitter => Node::Splitter(ctx.create_channel_splitter(arg.unwrap_or(6.0) as usize)),
+                    Kind::Splitter => {
+                        Node::Splitter(ctx.create_channel_splitter(arg.unwrap_or(6.0) as usize))
+                    }
                     Kind::Merger => Node::Merger(ctx.create_channel_merger(arg.unwrap_or(6.0) as usize)),
                     Kind::Biquad => Node::Biquad(ctx.create_biquad_filter()),
                     Kind::Delay => Node::Delay(ctx.create_delay(arg.unwrap_or(1.0))),
@@ -276,7 +358,11 @@ impl<C: BaseAudioContext> Graph<C> {
                 }
                 match &edge.input {
                     Input::Index(input) => {
-                        src.audio().connect_from_output_to_input(dest.audio(), output as usize, *input as usize);
+                        src.audio().connect_from_output_to_input(
+                            dest.audio(),
+                            output as usize,
+                            *input as usize,
+                        );
                     }
                     Input::Param(name) => {
                         let Some(param) = dest.param(name) else { return };
@@ -308,9 +394,11 @@ impl<C: BaseAudioContext> Graph<C> {
                     self.edges.remove(&edge);
                     let Some(dest) = self.nodes.get(&edge.to) else { continue };
                     match &edge.input {
-                        Input::Index(i) => {
-                            src.audio().disconnect_dest_from_output_to_input(dest.audio(), edge.output as usize, *i as usize)
-                        }
+                        Input::Index(i) => src.audio().disconnect_dest_from_output_to_input(
+                            dest.audio(),
+                            edge.output as usize,
+                            *i as usize,
+                        ),
                         Input::Param(name) => {
                             if let Some(param) = dest.param(name) {
                                 src.audio().disconnect_dest_from_output(param, edge.output as usize);
@@ -354,12 +442,18 @@ impl<C: BaseAudioContext> Graph<C> {
                     (Node::BufferSource(n), "loopStart") => n.set_loop_start(json_f64(&value).unwrap_or(0.0)),
                     (Node::BufferSource(n), "loopEnd") => n.set_loop_end(json_f64(&value).unwrap_or(0.0)),
                     (Node::Convolver(n), "normalize") => n.set_normalize(value.as_bool().unwrap_or(true)),
-                    (Node::Analyser(n), "fftSize") => n.set_fft_size(json_f64(&value).unwrap_or(2048.0) as usize),
+                    (Node::Analyser(n), "fftSize") => {
+                        n.set_fft_size(json_f64(&value).unwrap_or(2048.0) as usize)
+                    }
                     (Node::Analyser(n), "smoothingTimeConstant") => {
                         n.set_smoothing_time_constant(json_f64(&value).unwrap_or(0.8))
                     }
-                    (Node::Analyser(n), "minDecibels") => n.set_min_decibels(json_f64(&value).unwrap_or(-100.0)),
-                    (Node::Analyser(n), "maxDecibels") => n.set_max_decibels(json_f64(&value).unwrap_or(-30.0)),
+                    (Node::Analyser(n), "minDecibels") => {
+                        n.set_min_decibels(json_f64(&value).unwrap_or(-100.0))
+                    }
+                    (Node::Analyser(n), "maxDecibels") => {
+                        n.set_max_decibels(json_f64(&value).unwrap_or(-30.0))
+                    }
                     (Node::Biquad(n), "type") => {
                         let kind = match value.as_str() {
                             Some("lowpass") => BiquadFilterType::Lowpass,
@@ -440,7 +534,9 @@ impl<C: BaseAudioContext> Graph<C> {
                     Some(Node::Oscillator(n)) => n.start_at(when),
                     Some(Node::ConstantSource(n)) => n.start_at(when),
                     Some(Node::BufferSource(n)) => match duration {
-                        Some(duration) => n.start_at_with_offset_and_duration(when, from.unwrap_or(0.0), duration),
+                        Some(duration) => {
+                            n.start_at_with_offset_and_duration(when, from.unwrap_or(0.0), duration)
+                        }
                         None => n.start_at_with_offset(when, from.unwrap_or(0.0)),
                     },
                     _ => return,
@@ -552,14 +648,15 @@ fn planar_from_bytes(bytes: &[u8], channels: usize, length: usize) -> Result<Vec
     }
     Ok(bytes
         .chunks_exact(length * 4)
-        .map(|run| run.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect())
+        .map(|run| run.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect())
         .collect())
 }
 
 /// A decoded buffer for JavaScript: a 16-byte header (channels, length, sample rate, 0), then
 /// the channels. The header keeps the samples 4-byte aligned for a `Float32Array` view.
 fn encode_buffer(buffer: &AudioBuffer) -> Vec<u8> {
-    let channels: Vec<&[f32]> = (0..buffer.number_of_channels()).map(|c| buffer.get_channel_data(c)).collect();
+    let channels: Vec<&[f32]> =
+        (0..buffer.number_of_channels()).map(|c| buffer.get_channel_data(c)).collect();
     let mut out = Vec::with_capacity(16);
     out.extend_from_slice(&(buffer.number_of_channels() as u32).to_le_bytes());
     out.extend_from_slice(&(buffer.length() as u32).to_le_bytes());
@@ -802,7 +899,9 @@ impl Bridge {
         let frames = buffer_frames(inner.prefs.buffer_frames);
         let options = AudioContextOptions {
             // Half a frame extra so the seconds → frames rounding can't land one short.
-            latency_hint: AudioContextLatencyCategory::Custom((frames as f64 + 0.5) / self.sample_rate as f64),
+            latency_hint: AudioContextLatencyCategory::Custom(
+                (frames as f64 + 0.5) / self.sample_rate as f64,
+            ),
             sample_rate: Some(self.sample_rate),
             sink_id,
             ..AudioContextOptions::default()
@@ -902,11 +1001,7 @@ pub fn spawn_clock(app: AppHandle) {
 // Commands
 
 fn header<'a>(request: &'a Request<'_>, name: &str) -> Result<&'a str, String> {
-    request
-        .headers()
-        .get(name)
-        .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| format!("missing {name} header"))
+    request.headers().get(name).and_then(|v| v.to_str().ok()).ok_or_else(|| format!("missing {name} header"))
 }
 
 fn raw_body(request: &Request<'_>) -> Result<Vec<u8>, String> {
@@ -957,7 +1052,8 @@ pub fn wa_buffer(bridge: tauri::State<'_, Bridge>, request: Request<'_>) -> Resu
     let spec: Vec<f64> = header(&request, "x-buffer")?.split(',').filter_map(|v| v.parse().ok()).collect();
     let [id, channels, length, sample_rate] = spec[..] else { return Err("bad x-buffer header".into()) };
     let data = planar_from_bytes(&raw_body(&request)?, channels as usize, length as usize)?;
-    let buffer = catch_unwind(|| AudioBuffer::from(data, sample_rate as f32)).map_err(|_| "invalid buffer".to_string())?;
+    let buffer = catch_unwind(|| AudioBuffer::from(data, sample_rate as f32))
+        .map_err(|_| "invalid buffer".to_string())?;
     bridge.buffers.lock().unwrap().insert(id as u32, buffer);
     Ok(())
 }
@@ -986,7 +1082,11 @@ pub fn wa_analyser(bridge: tauri::State<'_, Bridge>, id: u32, kind: String) -> R
 /// Picks the output device and buffer size (0 = the default), reopening the output if it's
 /// running; JavaScript then replays its graph into the new one.
 #[tauri::command(async)]
-pub fn audio_set_output(bridge: tauri::State<'_, Bridge>, device_id: String, buffer_frames: u32) -> Result<Batch, String> {
+pub fn audio_set_output(
+    bridge: tauri::State<'_, Bridge>,
+    device_id: String,
+    buffer_frames: u32,
+) -> Result<Batch, String> {
     let mut inner = bridge.inner.lock().unwrap();
     let prefs = OutputPrefs { device_id, buffer_frames };
     if inner.prefs != prefs {
@@ -1018,7 +1118,8 @@ pub struct Status {
 #[tauri::command]
 pub fn audio_status(bridge: tauri::State<'_, Bridge>) -> Status {
     let inner = bridge.inner.lock().unwrap();
-    let running = inner.graph.as_ref().is_some_and(|g| g.ctx.state() == AudioContextState::Running) && !inner.lost;
+    let running =
+        inner.graph.as_ref().is_some_and(|g| g.ctx.state() == AudioContextState::Running) && !inner.lost;
     let latency = inner.graph.as_ref().map_or(0.0, |g| g.ctx.output_latency());
     let frames = if running { inner.opened.buffer_frames } else { 0 };
     Status {

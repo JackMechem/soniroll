@@ -14,7 +14,9 @@ use tauri_plugin_opener::OpenerExt;
 fn is_app_url(url: &Url) -> bool {
     match url.scheme() {
         "tauri" | "about" | "data" | "blob" => true,
-        "http" | "https" => matches!(url.host_str(), Some("tauri.localhost") | Some("localhost")) && url.port() != Some(80),
+        "http" | "https" => {
+            matches!(url.host_str(), Some("tauri.localhost") | Some("localhost")) && url.port() != Some(80)
+        }
         _ => false,
     }
 }
