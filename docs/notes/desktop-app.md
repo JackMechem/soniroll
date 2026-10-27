@@ -589,3 +589,42 @@ sign-in gate bypassed for the test and restored afterwards):
 Not verified: anything signed in (uploading a take, Record a clip in the Shed Log), the song
 line-up, real microphones and interfaces (their real capture and output delays), anything by
 ear, macOS/Windows, a release build.
+
+## 2026-10-27 — CI, releases and the Nix package
+
+Set up like Jack's open-stomp-manager, simplified.
+
+- **Version:** the desktop app has its own, starting at 0.1.0, in `apps/desktop/package.json`,
+  `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (+ Cargo.lock).
+  `apps/desktop/scripts/check-version.sh [version]` checks they agree and that
+  `apps/desktop/CHANGELOG.md` has a `## [x.y.z]` section. Tags are `desktop-vX.Y.Z`, not `vX.Y.Z`,
+  so they can't be confused with the website's version (which the sidebar still shows).
+- **`.github/workflows/desktop-ci.yml`:** on any branch push touching the app, the website, the
+  packages, the lock file or the flake. Frontend job: filtered install
+  (`--filter "@jam-practice/desktop..."`, which skips the mobile app), version check, `tsc`,
+  ESLint, `vite build`. Rust job on Ubuntu 24.04, macOS and Windows: `cargo fmt --check` (Linux),
+  `clippy -D warnings`, `cargo test`, `tauri build --no-bundle`. Nix job: `nix build
+  .#soniroll-desktop`.
+- **`.github/workflows/desktop-release.yml`:** a `desktop-v*` tag builds `.deb`/`.rpm`/`.AppImage`,
+  a universal `.dmg` (+ zipped `.app`, ad-hoc signed, not notarized) and a Windows NSIS installer,
+  and publishes a GitHub release with that version's changelog section plus install notes. 0.x is a
+  pre-release. Unlike open-stomp's, publish runs with whatever platforms built (a failed one is left
+  out; the run shows red), so an untested macOS/Windows build can't block Linux.
+- **Ubuntu 24.04, not 22.04:** cpal's PipeWire backend asks for libpipewire 0.3.53; 22.04 has 0.3.48.
+  The `.deb` depends on `libpipewire-0.3-0t64 | libpipewire-0.3-0`, the `.rpm` on `pipewire-libs`.
+- **Releases and the Nix package talk to production Convex** (`grandiose-dolphin-564`), set as
+  `NEXT_PUBLIC_CONVEX_URL` in both workflows and in `flake.nix` (it's public anyway). Dev runs still
+  read `apps/web/.env.local`. A Vite plugin (`requireConvexUrl`) fails `tauri build` if the URL is
+  missing, so a release can't ship pointing at nothing.
+- **Nix (`packages.soniroll-desktop`, also `default`, Linux only):** `buildRustPackage` +
+  `cargo-tauri.hook`, with `fetchPnpmDeps` over the workspace filtered to the desktop app and its
+  workspace dependencies (`pnpmWorkspaces`). The source is a fileset of just the workspace files,
+  `apps/desktop`, `apps/web`, `packages/*` and `apps/mobile/package.json` (the lock file's importer
+  needs it). The repo's pinned nixpkgs supports `fetcherVersion` 3/4 (not 5 yet). **When
+  `pnpm-lock.yaml` changes, the hash must be updated** (set `""`, build, copy the printed hash); the
+  CI nix job fails otherwise. Wrapped with GStreamer plugins, glib-networking (TLS for Convex's
+  websocket), `ALSA_PLUGIN_DIR` and `WEBKIT_DISABLE_DMABUF_RENDERER=1` as a default. Tests are off in
+  the Nix build (CI runs them).
+- **Rust formatting:** `src-tauri/rustfmt.toml` (110 wide, `use_small_heuristics = "Max"`) is the
+  closest to how the code was written; the code was run through it once. Two clippy fixes:
+  `as_chunks::<4>()` for f32 decoding, and `large_enum_variant` allowed on the bridge's `Node`.

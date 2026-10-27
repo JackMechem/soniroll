@@ -27,6 +27,31 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Music",
+    "shortDescription": "Music practice tools with low-latency native audio",
+    "longDescription": "The soniroll desktop app: every soniroll tool and page, with sound played natively for lower, steadier latency than a browser.",
+    "homepage": "https://www.soniroll.com",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libpipewire-0.3-0t64 | libpipewire-0.3-0"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "pipewire-libs"
+        ]
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

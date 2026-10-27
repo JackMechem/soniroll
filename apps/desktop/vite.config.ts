@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import webPkg from "../web/package.json" with { type: "json" };
 
 // The desktop app reuses the website's own components straight out of apps/web (no copies), so
@@ -24,8 +24,22 @@ const exact = (name: string, file: string) => ({
   replacement: path.join(src, file),
 });
 
+// `tauri build` (releases, the Nix package) bakes the backend's address in; without one the app
+// opens but nothing loads. Plain `vite build` (CI's check) doesn't need it.
+function requireConvexUrl(): Plugin {
+  return {
+    name: "require-convex-url",
+    apply: "build",
+    configResolved(config) {
+      if (process.env.TAURI_ENV_PLATFORM && !config.env.NEXT_PUBLIC_CONVEX_URL) {
+        throw new Error("NEXT_PUBLIC_CONVEX_URL isn't set (apps/web/.env.local, or the environment)");
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), requireConvexUrl()],
   clearScreen: false,
   // Images, samples and help screenshots come from the website too.
   publicDir: path.join(web, "public"),

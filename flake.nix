@@ -80,8 +80,125 @@
         };
 
         androidBuildSdkRoot = "${androidBuildComposition.androidsdk}/libexec/android-sdk";
+
+        lib = pkgs.lib;
+        desktopVersion = (lib.importTOML ./apps/desktop/src-tauri/Cargo.toml).package.version;
+
+        # What the desktop app's window and audio need at run time on Linux.
+        desktopLibs = [
+          pkgs.webkitgtk_4_1
+          pkgs.gtk3
+          pkgs.libsoup_3
+          pkgs.glib
+          pkgs.glib-networking # TLS, for Convex's websocket
+          pkgs.librsvg
+          pkgs.openssl
+          pkgs.alsa-lib
+          pkgs.pipewire
+          pkgs.gsettings-desktop-schemas
+          # WebKitGTK plays media (the Slow Downer's player) through GStreamer.
+          pkgs.gst_all_1.gstreamer
+          pkgs.gst_all_1.gst-plugins-base
+          pkgs.gst_all_1.gst-plugins-good
+          pkgs.gst_all_1.gst-plugins-bad
+          pkgs.gst_all_1.gst-libav
+        ];
+
+        # Only what the desktop build reads: the workspace files, the desktop app, and the website
+        # and packages it borrows components and assets from. (A flake copies only tracked files,
+        # so node_modules, build output and .env files are never here.)
+        desktopSrc = lib.fileset.toSource {
+          root = ./.;
+          fileset = lib.fileset.unions [
+            ./package.json
+            ./pnpm-lock.yaml
+            ./pnpm-workspace.yaml
+            ./patches
+            ./apps/desktop
+            ./apps/web
+            ./apps/mobile/package.json
+            ./packages/core
+            ./packages/convex
+          ];
+        };
+
+        # The npm packages the desktop app and the workspace packages it uses need, pinned by
+        # pnpm-lock.yaml. After the lock file changes, set `hash` to "" and build once; Nix prints
+        # the new hash (CI's nix job does the same).
+        desktopPnpmDeps = pkgs.fetchPnpmDeps {
+          pname = "soniroll-desktop";
+          version = desktopVersion;
+          src = lib.fileset.toSource {
+            root = ./.;
+            fileset = lib.fileset.unions [
+              ./package.json
+              ./pnpm-lock.yaml
+              ./pnpm-workspace.yaml
+              ./patches
+              ./apps/desktop/package.json
+              ./apps/web/package.json
+              ./apps/mobile/package.json
+              ./packages/core/package.json
+              ./packages/convex/package.json
+            ];
+          };
+          pnpmWorkspaces = [ "@jam-practice/desktop..." ];
+          fetcherVersion = 4;
+          hash = "sha256-IJeKyshDxMcSYN8/9qzPyDVACvxAA+QbdnehurO4bD8=";
+        };
+
+        # `nix build .#soniroll-desktop` / `nix run github:JackMechem/soniroll` — the desktop app,
+        # talking to the live site's backend.
+        soniroll-desktop = pkgs.rustPlatform.buildRustPackage {
+          pname = "soniroll-desktop";
+          version = desktopVersion;
+          src = desktopSrc;
+          pnpmDeps = desktopPnpmDeps;
+          pnpmWorkspaces = [ "@jam-practice/desktop..." ];
+
+          cargoRoot = "apps/desktop/src-tauri";
+          buildAndTestSubdir = "apps/desktop/src-tauri";
+          cargoLock.lockFile = ./apps/desktop/src-tauri/Cargo.lock;
+
+          # Vite bakes this in (the same production backend soniroll.com uses).
+          NEXT_PUBLIC_CONVEX_URL = "https://grandiose-dolphin-564.convex.cloud";
+
+          nativeBuildInputs = [
+            pkgs.cargo-tauri.hook
+            pkgs.nodejs
+            pkgs.pnpm
+            pkgs.pnpmConfigHook
+            pkgs.pkg-config
+            pkgs.wrapGAppsHook3
+            pkgs.rustPlatform.bindgenHook # libpipewire's bindings
+          ];
+          buildInputs = desktopLibs;
+
+          # CI runs the tests; they'd only rebuild everything again here.
+          doCheck = false;
+
+          preFixup = ''
+            gappsWrapperArgs+=(
+              --set-default ALSA_PLUGIN_DIR ${pkgs.pipewire}/lib/alsa-lib
+              # WebKitGTK's GPU compositing gives a blank window on some setups.
+              --set-default WEBKIT_DISABLE_DMABUF_RENDERER 1
+            )
+          '';
+
+          meta = {
+            description = "soniroll desktop app: music practice tools with low-latency native audio";
+            homepage = "https://www.soniroll.com";
+            mainProgram = "soniroll-desktop";
+            platforms = lib.platforms.linux;
+          };
+        };
       in
       {
+        packages = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          default = soniroll-desktop;
+          inherit soniroll-desktop;
+        };
+
         devShells.default = pkgs.mkShell {
           packages = [ pkgs.eas-cli ];
         };

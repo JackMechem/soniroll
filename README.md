@@ -33,16 +33,40 @@ The web app reads `NEXT_PUBLIC_CONVEX_URL` from `apps/web/.env.local`; the mobil
 ### The desktop app (early test)
 
 `apps/desktop` is a [Tauri](https://tauri.app) app that reuses the website's own components and
-plays sound through a native (Rust) audio engine. So far it has the Metronome and the Tuner; every
-other page says it isn't in the desktop app yet. It uses the same Convex deployment as
-`apps/web/.env.local`. You need Rust, plus the system libraries from the flake's `desktop` shell on
-Linux:
+plays sound through a native (Rust) audio engine. It has every tool and page. In development it
+uses the same Convex deployment as `apps/web/.env.local`; releases use production. You need Rust,
+plus the system libraries from the flake's `desktop` shell on Linux:
 
 ```bash
 nix develop .#desktop   # Linux: WebKitGTK, PipeWire, ALSA
 pnpm desktop            # opens the app (with hot reload)
 pnpm desktop:build      # a release build and installers, in apps/desktop/src-tauri/target/release
 ```
+
+**Installing a release.** Downloads for Linux (`.deb`, `.rpm`, `.AppImage`), macOS (`.dmg`) and
+Windows (`-setup.exe`) are on the [releases page](https://github.com/JackMechem/soniroll/releases).
+On NixOS, run it straight from the flake, or add it to your configuration:
+
+```nix
+# flake.nix inputs (pin a release tag)
+soniroll.url = "github:JackMechem/soniroll/desktop-v0.1.0";
+
+# configuration.nix
+environment.systemPackages = [ inputs.soniroll.packages.${pkgs.stdenv.hostPlatform.system}.soniroll-desktop ];
+```
+
+```bash
+nix run github:JackMechem/soniroll/desktop-v0.1.0
+```
+
+**Releasing.** The desktop app has its own version, separate from the website's: bump it in
+`apps/desktop/package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (then
+`cargo build` for the lock file), add a section to `apps/desktop/CHANGELOG.md`, and check with
+`apps/desktop/scripts/check-version.sh`. Pushing a tag `desktop-vX.Y.Z` builds the installers and
+publishes the GitHub release (`.github/workflows/desktop-release.yml`). Every push that touches the
+app, the website or the packages runs the desktop checks (`desktop-ci.yml`). If `pnpm-lock.yaml`
+changes, the flake's `pnpm` hash for the desktop package changes too: set it to `""`, run
+`nix build .#soniroll-desktop`, and copy in the hash it prints.
 
 ## Repo layout
 
