@@ -2,6 +2,7 @@
 
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 /**
  * Files people upload to their account (`packages/convex/files.ts`): on their own, or attached to
@@ -47,7 +48,7 @@ export function entryOf(file: UserFile): StoredEntry {
 
 /** The address a shared file's link opens (`app/file/[id]`). */
 export function sharedFileUrl(shareId: string) {
-  return `${window.location.origin}/file/${shareId}`;
+  return `${siteOrigin()}/file/${shareId}`;
 }
 
 /** Saves a file under its own name. Stored files live on another domain, where the browser ignores

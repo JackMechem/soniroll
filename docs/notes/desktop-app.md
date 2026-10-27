@@ -415,3 +415,106 @@ interface's latency; the chip's device picker with real hardware (only the force
 recordings playback (`TimelinePlayer`, needs a signed-in account with recordings), the Syncopation
 and sticking-warmup engines, Jam Practice's count-off, Score Writer playback and the Practice
 Timer chime (same APIs as what was tested, but not run); macOS/Windows; a release build.
+
+## 2026-10-27 — the website's web-only assumptions, audited (share links, downloads, drops)
+
+Every page rendered, but the website assumes it's served from soniroll.com in a browser. Went
+through everything that depends on that, in the real window (WebKitGTK under Xvfb, driven with
+`xdotool`; JavaScript run through WebKitGTK's remote inspector, `WEBKIT_INSPECTOR_HTTP_SERVER`,
+which works in debug builds).
+
+### Fixed
+
+- **Share links** used `window.location.origin` (`tauri://localhost` in the app). The website now
+  asks `lib/siteOrigin.ts` (`window.location.origin`, unchanged behaviour); the desktop aliases
+  it to `src/shims/siteOrigin.ts` → `https://www.soniroll.com`. Covers routines, tunes, files,
+  notes, lesson invites and booking offers, and the changelog's "Link". Setlists, posts and
+  profiles already used a fixed address. New code that builds a link people will open elsewhere
+  should use `siteOrigin()`, never `location.origin`.
+- **New-tab links to the app's own pages** (the share dialogs' "Open") went to the system browser
+  as `http://localhost:1420/…` (`tauri://localhost/…` in release). `src/links.ts` now opens
+  same-origin `target="_blank"` links and `window.open` of app pages inside the app.
+- **Downloads** (`<a download>`: CSV/JSON/ICS/zip exports, progress cards, stored files):
+  WebKitGTK saved them silently into Downloads. `src/downloads.ts` catches them (the anchor's
+  `click()`, which the website calls on links it often never adds to the page, and real clicks),
+  keeps each blob for a minute after the page frees it (most exports revoke right after
+  `click()`), and Rust's `save_download` (`src-tauri/src/downloads.rs`, `tauri-plugin-dialog`)
+  shows the Save dialog starting in Downloads and writes the file.
+- **Dropping files** (Files, Slow Downer, Shed Notes, the Tunes/Charts drop zones): WebKitGTK
+  2.5x gives pages an empty `dataTransfer.files` on file drops (WebKit bug 323277 — dragging
+  from a file manager shows only `text/uri-list`), so simply turning off Tauri's handler doesn't
+  work. Tauri keeps catching file drops natively; `src/fileDrop.ts` replays them as
+  dragenter/dragover/dragleave/drop DOM events at the pointer with real `File`s read through
+  `read_dropped_file` (`src-tauri/src/file_drop.rs`, which only serves the latest drop's files).
+  `drop` only fires if the page accepted `dragover`, like a browser. On Linux wry only intercepts
+  drags that carry file URIs, so dragging inside the page (notes into folders, the calendar) is
+  untouched. `tauri.windows.conf.json` turns native drop handling off on Windows (it would break
+  in-page drag and drop there, and WebView2 handles file drops itself) — it repeats the window
+  settings because Tauri's platform files replace the `windows` array; keep both in step.
+
+### Checked and fine
+
+- Clipboard (`navigator.clipboard.writeText`) works from a click, even ~1 s after it (an awaited
+  mutation first). `navigator.share` doesn't exist in WebKitGTK, so `shareLink` copies instead.
+- `<input type="file">` opens the GTK file chooser, honours `accept`, and the `File` works (Tunes
+  I Know → Import CSV imported two tunes).
+- `window.print()` opens the GTK print dialog (Shed Notes printing).
+- `mailto:` and other sites' links go to the system's handler / browser; `window.open` of an
+  external address too.
+- Closing the window fires `pagehide`, so the website's flush-on-leave code (Shed Notes, tool
+  time, the day stopwatch) runs. Whether an in-flight Convex mutation gets out before the
+  process exits wasn't checked (signed in only).
+- No `confirm()`/`prompt()`/`alert()` anywhere (the site uses its own dialogs); no `Notification`
+  API (the Practice Timer's alert is the in-page takeover plus its sound).
+- Every route at the window's minimum width (380 CSS px): no page-level horizontal scroll and
+  nothing sticking out outside a horizontal scroller. Note Xvfb runs at ~100 dpi, so WebKitGTK's
+  `devicePixelRatio` is 1.04 there and a 380 px window is only 365 CSS px wide; at 365 the Drum
+  Generator page overflows by ~35 px (the site never promises less than 390).
+- "/" opens the ⌘K palette, Escape closes it, Enter opens a result (release build). Tauri adds
+  no accelerators of its own in release; the site's other shortcuts (Shed Notes, Score Writer)
+  weren't tried one by one.
+- The app never shows or copies a `tauri://` address (the only `location.origin` reads left are
+  in `lib/siteOrigin.ts`; `location.href`/`pathname` reads are for the address bar and feedback).
+
+### Testing safely (portals)
+
+WebKitGTK and GTK talk to the desktop portals over the session D-Bus, so a test window under Xvfb
+can still pop dialogs (camera permission, file chooser, print) on Jack's real screen. Run test
+windows with `dbus-run-session --` and `GDK_DEBUG=no-portals` (GTK then uses its own in-window
+dialogs, which `xdotool` can drive under Xvfb), and give other GTK tools started on the test
+display `DBUS_SESSION_BUS_ADDRESS=disabled:` and no `WAYLAND_DISPLAY`. Real users will get portal
+dialogs (file chooser, print, camera if anything asks) — that's expected.
+
+File drops can be tested with `ripdrag` (GTK4) as the drag source on the Xvfb display and
+`xdotool` moving in small steps (XDND ignores a single jump); `dragon-drop` works too but shows
+the same WebKit bug.
+
+### Still wrong / not done
+
+- **The camera-dialog fix (`src/mediaDevices.ts`) doesn't stick on WebKitGTK.** It patches the
+  `navigator.mediaDevices` object itself; WebKit drops those properties when it garbage-collects
+  that object's JavaScript wrapper and hands out a fresh one later. Seen here: patched at start-up,
+  back to the native `enumerateDevices` a few pages later, and the Tuner then raised the camera
+  portal again (inside the private test bus). Holding a reference kept the patch; patching
+  `MediaDevices.prototype` (`addEventListener`, `enumerateDevices`) instead of the instance is
+  the likely fix. Left to the audio side (not changed here).
+- Share links made by the **dev** app point at soniroll.com but the dev app writes to the dev
+  Convex deployment, so they only resolve once the app talks to prod.
+- HiDPI: file-drop positions are divided by `devicePixelRatio` (right on Xvfb, where GTK and
+  WebKit disagree by 1.04); not checked on a scaled display. Dropped files are read whole into
+  memory (fine for the 100 MB upload cap).
+- Never checked: macOS and Windows (WKWebView's `window.print()`, drops with the Windows config),
+  anything signed in (stored-file downloads, .ics, Shed Notes export and print, share dialogs,
+  whether a Convex write gets out when the window closes).
+
+### Verified (2026-10-27)
+
+`tsc` and `pnpm lint` in `apps/desktop`; `tsc` and eslint on the changed files in `apps/web`
+(after `next typegen`); `cargo build` (dev) and `tauri build --no-bundle` (release) in the
+`desktop` shell. In the real window under Xvfb, in a private D-Bus session: everything listed
+above, plus in the **release** build (`tauri://localhost`): the ⌘K palette, a WAV dropped on
+Slow Downer (loaded, 0:02.0), Import CSV → Export all through the Save dialog (bytes checked on
+disk), and after closing and reopening the app, localStorage (recents, dismissed intros) and
+IndexedDB (Slow Downer's saved file) were still there. Image copy to the clipboard
+(`ClipboardItem`, the progress card's "Share image") works after awaits. Theme fonts load from
+Google Fonts; Geist and Petaluma are bundled and load.

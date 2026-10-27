@@ -1,5 +1,7 @@
 mod audio;
 mod bridge;
+mod downloads;
+mod file_drop;
 mod oauth;
 mod recorder;
 
@@ -45,8 +47,11 @@ pub fn run() {
     let bridge = bridge::Bridge::new();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(external_links())
         .plugin(native_audio(&bridge))
+        .manage(file_drop::DroppedFiles::default())
+        .on_window_event(file_drop::on_window_event)
         .manage(audio::AudioState::default())
         .manage(recorder::RecorderState::default())
         .manage(bridge)
@@ -56,6 +61,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             open_external,
+            downloads::save_download,
+            file_drop::read_dropped_file,
             oauth::oauth_listen,
             audio::audio_devices,
             audio::input_start,

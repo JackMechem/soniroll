@@ -657,8 +657,12 @@ mod tests {
     use std::f32::consts::TAU;
 
     /// Decodes with LAME's own decoder (mpglib; the `decoder` feature is on for tests only).
+    /// mpglib keeps global state: two tests decoding at once garbled each other's output, so
+    /// decodes take turns.
     fn decode(mp3: &[u8], channels: usize) -> Vec<Vec<f32>> {
         use mp3lame_encoder::ffi;
+        static ONE_AT_A_TIME: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _turn = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
         let capacity = mp3.len() * 100 + 48_000;
         let mut left = vec![0i16; capacity];
         let mut right = vec![0i16; capacity];

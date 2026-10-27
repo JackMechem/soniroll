@@ -15,6 +15,7 @@ import {
   type ShownRelease,
 } from "@/lib/changelog";
 import { LinkIcon, SparkIcon } from "@/components/tools";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 /** How each kind of change looks: a tinted chip with its own icon. */
 export const KIND_STYLE: Record<ChangeKind, { label: string; chip: string; dot: string }> = {
@@ -143,7 +144,7 @@ function ReleaseEntry({ release: r, latest, filter }: { release: ShownRelease; l
             <button
               type="button"
               onClick={() => {
-                const url = `${location.origin}/changelog#${anchor}`;
+                const url = `${siteOrigin()}/changelog#${anchor}`;
                 navigator.clipboard?.writeText(url).then(() => {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
