@@ -98,7 +98,6 @@ struct Output {
     requested_buffer: u32,
 }
 
-#[derive(Default)]
 pub struct AudioState {
     output: Mutex<Option<Output>>,
     /// Which output device and buffer size to use the next time the stream opens.
@@ -111,6 +110,23 @@ pub struct AudioState {
 struct OutputPrefs {
     device_id: String,
     buffer_frames: u32,
+}
+
+/// `SONIROLL_AUDIO_OUTPUT=<device id>` forces the output device (for testing against a silent
+/// sink without ever touching the speakers). The in-app choice is ignored while it's set.
+fn forced_output() -> Option<String> {
+    std::env::var("SONIROLL_AUDIO_OUTPUT").ok().filter(|id| !id.is_empty())
+}
+
+impl Default for AudioState {
+    fn default() -> Self {
+        Self {
+            output: Mutex::default(),
+            prefs: Mutex::new(OutputPrefs { device_id: forced_output().unwrap_or_default(), buffer_frames: 0 }),
+            input_stop: Mutex::default(),
+            ended: Mutex::default(),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -589,6 +605,7 @@ pub fn audio_start(state: tauri::State<'_, AudioState>) -> Result<f64, String> {
 /// Picks the output device and buffer size (0 = the device's default), reopening the stream.
 #[tauri::command]
 pub fn audio_set_output(state: tauri::State<'_, AudioState>, device_id: String, buffer_frames: u32) -> Result<(), String> {
+    let device_id = forced_output().unwrap_or(device_id);
     {
         let mut prefs = state.prefs.lock().unwrap();
         if prefs.device_id == device_id && prefs.buffer_frames == buffer_frames {

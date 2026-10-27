@@ -126,3 +126,20 @@ off-site link to the system browser.
 Not verified: an actual Google login all the way through (needs Jack's Google account), password
 sign-in, staying signed in after a restart, anything heard by ear, real latency on Jack's
 interface, macOS and Windows (never built), installers.
+
+## 2026-10-27 — every page, and testing without the speakers
+
+- `src/routes.tsx` now carries the website's whole route table (same components, same props,
+  the website's redirects; `/` goes to the dashboard). Tools that build their own sounds use the
+  window's Web Audio (WebKitGTK → GStreamer, in the `desktop` shell); the click engine, tones and
+  mic input stay native. Checked: every route loads in headless Chromium without errors, and a
+  Guess the Interval round recorded from a silent sink inside the real window (`PULSE_SINK`).
+- **Testing without making a sound:** create a null sink
+  (`pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=<name> media.class=Audio/Sink object.linger=true audio.position=[FL FR] priority.session=0 }'`),
+  run the app with `SONIROLL_AUDIO_OUTPUT=pipewire:<name>` (native engine) **and**
+  `PULSE_SINK=<name>` (WebKit's Web Audio), record it with
+  `pw-record --target <name> -P '{ stream.capture.sink=true }'`, then `pw-cli destroy <id>`.
+  Without both variables, sound goes to the real speakers. Use `XDG_DATA_HOME=<tmp>` so a test run
+  doesn't share the app data of a copy Jack has open.
+- **Never stop the app with `pidof soniroll-desktop`**: Jack may have his own copy running. Stop
+  only the PIDs you started.
