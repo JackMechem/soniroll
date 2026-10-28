@@ -4,6 +4,13 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.2] - 2026-10-27
+
+- Every metronome click has four levels you step through by clicking a beat: accent, normal, soft
+  and muted. Each beat shows its level as up to three bars, and lower levels are lower in pitch
+  rather than quieter.
+- A nicer Tap tempo button that flashes as you tap.
+
 ## [0.1.1] - 2026-10-27
 
 - Smoother on Linux: the app draws with the graphics card again (it only falls back on NVIDIA
