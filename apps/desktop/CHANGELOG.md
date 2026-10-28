@@ -4,6 +4,13 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.3] - 2026-10-28
+
+- New tool, **Time Test** (under Drums): play along to the click on a practice pad and see how far
+  off every stroke was. On desktop the mic is recorded natively and lined up with the app's own
+  click, so calibration only has to cover the last few milliseconds.
+- Thinner scrollbars.
+
 ## [0.1.2] - 2026-10-27
 
 - Every metronome click has four levels you step through by clicking a beat: accent, normal, soft

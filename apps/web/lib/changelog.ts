@@ -33,6 +33,16 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.2",
+    date: "2026-10-28",
+    title: "Time Test",
+    summary: "A new drum tool that listens to you play along to the click and shows how far off every stroke was.",
+    changes: [
+      { kind: "new", text: "**Time Test** (under Drums): play along to the click on a practice pad and the mic hears every stroke. While you play you see how early or late each one was; afterwards you get a score, your average push or pull, how consistent you were, your real tempo, a waveform with every stroke marked (play it back with or without the click), where your strokes land, the worst moments, and how each beat and each note of the beat did." },
+      { kind: "new", text: "It works out what you're playing beat by beat (quarters, 8ths, triplets, 16ths), or you can choose. **Calibrate** once so your setup's delay doesn't count against you, and your takes are kept in **History**." },
+    ],
+  },
+  {
     version: "0.10.1",
     date: "2026-10-20",
     title: "Pictures in notes, templates and faster typing",

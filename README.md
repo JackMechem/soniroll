@@ -1,6 +1,6 @@
 # soniroll
 
-**Current version: v0.10.1 (beta)** · [What's new](https://www.soniroll.com/changelog)
+**Current version: v0.10.2 (beta)** · [What's new](https://www.soniroll.com/changelog)
 
 Free practice tools for musicians, in the browser: a metronome (odd and changing meters,
 polyrhythm modulation), a tuner, ear training with levelled learning paths, note, scale and
