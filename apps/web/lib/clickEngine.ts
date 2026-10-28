@@ -1,12 +1,11 @@
 import { getAudioContext } from "@/lib/metronome";
 
-/** How loud one click is: 0 = muted, 3 = soft, 1 = normal, 2 = accent. Soft came later and got
-    the next free number, so settings saved before it keep their meaning; `LEVEL_RANK` puts them in
-    order of loudness. */
+/** A click's level: 0 = muted, 3 = soft, 1 = normal, 2 = accent (each higher pitched than the last).
+    Soft came later and got the next free number, so settings saved before it keep their meaning;
+    `LEVEL_RANK` puts them in order. */
 export type BeatLevel = 0 | 1 | 2 | 3;
 
-/** Each level's place from quietest (0, muted) to loudest (3, accent): how many of a beat's three
-    bars are lit. */
+/** Each level's place from muted (0) to accent (3): how many of a beat's three bars are lit. */
 export const LEVEL_RANK: Record<BeatLevel, number> = { 0: 0, 3: 1, 1: 2, 2: 3 };
 
 export type ClickSound = {
@@ -119,21 +118,29 @@ export function scheduleClick(
 
 type Click = { freq: number; gain: number; length: number };
 
+/** Levels differ in pitch, not loudness: every beat plays at `BEAT_GAIN` and every subdivision at
+    `SUB_GAIN` (quieter, so the beat still leads), and each step down is a little lower. Soft sits a
+    minor third under normal. */
+const BEAT_GAIN = 0.75;
+const SUB_GAIN = 0.4;
+const SOFT_RATIO = 2 ** (-3 / 12);
+
 /** The click a main beat plays at `level` (null when muted). */
 export function mainBeatClick(level: BeatLevel, sound: ClickSound, vol: number): Click | null {
-  if (level === 2) return { freq: sound.accentFreq, gain: 0.9 * vol, length: sound.length };
-  if (level === 1) return { freq: sound.normalFreq, gain: 0.55 * vol, length: sound.length };
-  if (level === 3) return { freq: sound.normalFreq, gain: 0.25 * vol, length: sound.length };
+  const gain = BEAT_GAIN * vol;
+  if (level === 2) return { freq: sound.accentFreq, gain, length: sound.length };
+  if (level === 1) return { freq: sound.normalFreq, gain, length: sound.length };
+  if (level === 3) return { freq: sound.normalFreq * SOFT_RATIO, gain, length: sound.length };
   return null;
 }
 
-/** The click a subdivision plays at `level` (null when muted). An accented "&" is louder and
-    higher than the other subdivision clicks but quieter than a beat, so it's never mistaken for
-    a downbeat. */
+/** The click a subdivision plays at `level` (null when muted). An accented "&" takes the normal
+    beat's pitch, so it stands out from the other subdivision clicks. */
 export function subClick(level: BeatLevel, sound: ClickSound, vol: number): Click | null {
-  if (level === 2) return { freq: sound.normalFreq, gain: 0.4 * vol, length: sound.length * 0.8 };
-  if (level === 1) return { freq: sound.subFreq, gain: 0.25 * vol, length: sound.length * 0.6 };
-  if (level === 3) return { freq: sound.subFreq, gain: 0.12 * vol, length: sound.length * 0.6 };
+  const gain = SUB_GAIN * vol;
+  if (level === 2) return { freq: sound.normalFreq, gain, length: sound.length * 0.8 };
+  if (level === 1) return { freq: sound.subFreq, gain, length: sound.length * 0.6 };
+  if (level === 3) return { freq: sound.subFreq * SOFT_RATIO, gain, length: sound.length * 0.6 };
   return null;
 }
 
