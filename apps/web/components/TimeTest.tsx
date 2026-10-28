@@ -357,45 +357,48 @@ export default function TimeTest() {
         {recording && <LiveFeedback hits={liveHits} toleranceMs={settings.toleranceMs} countInLeft={countInLeft} />}
 
         <div className="flex flex-col items-center gap-3">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {recording ? (
-              <button
-                type="button"
-                onClick={stopAndAnalyze}
-                className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
-              >
-                <StopIcon className="h-4 w-4" />
-                Stop and analyze
-              </button>
-            ) : calibrating ? (
-              <button type="button" disabled className="rounded-full bg-surface px-8 py-3 text-base font-semibold opacity-70">
-                Calibrating… stay quiet
-              </button>
-            ) : (
-              <>
+          {/* KeyHint pulls itself up under the buttons, so they keep the Metronome's spacing. */}
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {recording ? (
                 <button
                   type="button"
-                  onClick={phase === "metronome" ? stopMetronome : start}
-                  className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-                    phase === "metronome" ? "bg-surface hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-                  }`}
+                  onClick={stopAndAnalyze}
+                  className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
                 >
-                  {phase === "metronome" ? "Stop" : "Start"}
+                  <StopIcon className="h-4 w-4" />
+                  Stop and analyze
                 </button>
-                <button
-                  type="button"
-                  onClick={record}
-                  className="flex items-center gap-2 rounded-full bg-surface px-6 py-3 text-base font-semibold transition-colors hover:bg-surface-hover"
-                >
-                  <RecordIcon className="h-4 w-4 text-danger" />
-                  Record
+              ) : calibrating ? (
+                <button type="button" disabled className="rounded-full bg-surface px-8 py-3 text-base font-semibold opacity-70">
+                  Calibrating… stay quiet
                 </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={phase === "metronome" ? stopMetronome : start}
+                    className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
+                      phase === "metronome" ? "bg-surface hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
+                    }`}
+                  >
+                    {phase === "metronome" ? "Stop" : "Start"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={record}
+                    className="flex items-center gap-2 rounded-full bg-surface px-6 py-3 text-base font-semibold transition-colors hover:bg-surface-hover"
+                  >
+                    <RecordIcon className="h-4 w-4 text-danger" />
+                    Record
+                  </button>
+                </>
+              )}
+            </div>
+            <KeyHint>
+              <KeyHint.Key>Space</KeyHint.Key> start or stop · <KeyHint.Key>R</KeyHint.Key> record, then stop and analyze
+            </KeyHint>
           </div>
-          <KeyHint>
-            <KeyHint.Key>Space</KeyHint.Key> start or stop · <KeyHint.Key>R</KeyHint.Key> record, then stop and analyze
-          </KeyHint>
           {!calibrated && phase === "idle" && (
             <p className="max-w-sm text-center text-xs text-muted">Calibrate first (Mic → Calibrate) so your setup&apos;s delay doesn&apos;t skew the results.</p>
           )}
