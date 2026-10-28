@@ -76,7 +76,8 @@ export function nearestNoteValue(n: number): number {
   );
 }
 
-export const NEXT_LEVEL: Record<BeatLevel, BeatLevel> = { 2: 1, 1: 0, 0: 2 };
+/** Clicking a beat steps it down a level: accent → normal → soft → muted → accent. */
+export const NEXT_LEVEL: Record<BeatLevel, BeatLevel> = { 2: 1, 1: 3, 3: 0, 0: 2 };
 
 export function defaultAccents(
   beats: number,

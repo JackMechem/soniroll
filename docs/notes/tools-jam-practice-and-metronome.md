@@ -193,3 +193,31 @@
   were before), plus a small "Time signature" heading above both of them tying the whole stacked
   pair together as one concept. `tsc`, `eslint`, and `next build` all pass. **Not verified**: how
   any of this actually reads once rendered — this sandbox still has no working browser.
+
+## 2026-10-27 — four click levels, shown as three bars per beat
+
+Jack (with a screenshot of another metronome app's beat columns) asked for every click to have
+three levels you step through by clicking it, on every metronome on the site.
+
+- `BeatLevel` (`lib/clickEngine.ts`) is now `0 | 1 | 2 | 3`: 0 muted, **3 soft (new)**, 1 normal,
+  2 accent. Soft took the next free number so every saved `accents`/`subAccents` array (tool
+  settings, structures, the account) keeps its meaning; `LEVEL_RANK` orders them by loudness
+  (muted 0 … accent 3). `NEXT_LEVEL` steps down: accent → normal → soft → muted → accent.
+- Sounds: `mainBeatClick` / `subClick` in `clickEngine.ts` are the one place a level becomes a click
+  (the scheduler and `stickControlEngine.ts`'s count-off and pulse clicks use them). Soft is the
+  normal click's pitch at under half its gain (0.25 vs 0.55 of the volume on a beat; 0.12 vs 0.25
+  on a subdivision).
+- `BeatIndicator`: each bar holds three segments that fill from the bottom by rank: three in the
+  accent colour for an accent, two (foreground colour) for normal, one for soft, none for muted
+  (which is also dimmed, its number struck through). Every metronome uses this component (Metronome,
+  Metric Modulation, Jam Practice, Tempo Trainer, Recorder count-in, sticking warmup, structures,
+  the background dock, landing previews), so they all get it.
+- Mobile (paused) shares `packages/core`: its `BeatLevel` and click helpers know soft (so a soft
+  beat synced from the website plays softly), its `BeatIndicator` shows soft like normal, and its own
+  cycle is unchanged (a soft beat steps to muted there).
+
+Checked in the nix Chromium (dev server on 3100, signed out): stepping beats through all four
+levels on the Metronome (titles and saved `accents` `[2,3,0,2]`, kept after a reload), the bars in
+light and dark, the Metric Modulation page. tsc for web, desktop, mobile, core (two old
+`lessonFiles.ts` errors in core aren't from this) and convex; web lint. **Not heard:** how soft
+sounds next to normal; the desktop app's native audio playing soft clicks.

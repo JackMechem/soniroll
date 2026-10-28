@@ -94,7 +94,8 @@ export function nearestNoteValue(n: number): number {
 }
 
 /** Cycling order for clicking a beat/subdivision bar: accent -> normal -> muted -> accent. */
-export const NEXT_LEVEL: Record<BeatLevel, BeatLevel> = { 2: 1, 1: 0, 0: 2 };
+// The mobile app's cycle stays accent → normal → muted; a soft beat set on the website goes to muted.
+export const NEXT_LEVEL: Record<BeatLevel, BeatLevel> = { 2: 1, 1: 0, 3: 0, 0: 2 };
 
 /** Builds a `beats`-long accent array, defaulting beat 0 to accented and the rest to normal, but
     keeping whatever's already in `previous` at each index that still exists (so growing/shrinking

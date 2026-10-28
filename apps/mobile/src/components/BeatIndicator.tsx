@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-const LEVEL_LABEL: Record<BeatLevel, string> = { 2: 'accent', 1: 'normal', 0: 'muted' };
+const LEVEL_LABEL: Record<BeatLevel, string> = { 2: 'accent', 1: 'normal', 3: 'soft', 0: 'muted' };
 
 /**
  * Native port of `apps/web/components/BeatIndicator.tsx`'s own "sequencer strip" look — each beat
@@ -39,8 +39,8 @@ function Bar({
   const width = small ? 28 : 40;
   const height = small ? 40 : 64;
 
-  const backgroundColor = level === 2 ? colors.accent : level === 1 ? colors.foreground : colors.surface;
-  const textColor = level === 2 ? colors['accent-foreground'] : level === 1 ? colors.background : colors.muted;
+  const backgroundColor = level === 2 ? colors.accent : level === 1 || level === 3 ? colors.foreground : colors.surface;
+  const textColor = level === 2 ? colors['accent-foreground'] : level === 1 || level === 3 ? colors.background : colors.muted;
 
   const content = (
     <View

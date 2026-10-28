@@ -556,14 +556,14 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Set the tempo", text: "Drag, type, or tap it in." },
       { title: "Set the meter", text: "Time signature and subdivision from the chips under the beats." },
-      { title: "Shape the accents", text: "Tap a beat to cycle accent, normal or silent." },
+      { title: "Shape the accents", text: "Tap a beat to step it through accent, normal, soft and silent. The bars show how loud each click is." },
     ],
     features: ["Odd and changing meters (structures)", "Subdivisions with their own accents", "Tempo by any note value", "5 click sounds", "Tap tempo"],
     options: [
       { name: "Tempo", text: "Drag the slider, use − and +, type it, or tap it in. The note above the number sets which note value the BPM counts (e.g. quarter = 120 in 6/8)." },
       { name: "Time", text: "The time signature — any number of beats over any note value, or one of the quick picks (4/4, 3/4, 6/8, 7/8…)." },
       { name: "Subdivision", text: "Clicks between the beats: eighths, triplets, sixteenths and more." },
-      { name: "Accents", text: "Tap a beat (or a subdivision) in the strip to cycle it between accent, normal and silent." },
+      { name: "Accents", text: "Tap a beat (or a subdivision) in the strip to step it through accent, normal, soft and silent. Its bars fill up with how loud it is: three for an accent, two for normal, one for soft." },
       { name: "One meter / Changing meters", text: "Changing meters lets you build sections (each with its own time signature, subdivision and accents) and put them in a form, like 2 bars of 11/8 then a bar of 12/8, looping." },
       { name: "Sound", text: "Five click sounds and the volume." },
       { name: "Your stats", text: "The pills by the title: your Metronome streak (days in a row with at least a minute of use), today's time while it actually runs, this week, and in total. Tap the total for your day-by-day history. A dot on a choice means you haven't tried it yet." },

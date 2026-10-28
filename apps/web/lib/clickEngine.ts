@@ -1,9 +1,15 @@
 import { getAudioContext } from "@/lib/metronome";
 
-/** 0 = silent, 1 = normal click, 2 = accented click. */
-export type BeatLevel = 0 | 1 | 2;
+/** How loud one click is: 0 = muted, 3 = soft, 1 = normal, 2 = accent. Soft came later and got
+    the next free number, so settings saved before it keep their meaning; `LEVEL_RANK` puts them in
+    order of loudness. */
+export type BeatLevel = 0 | 1 | 2 | 3;
 
-type ClickSound = {
+/** Each level's place from quietest (0, muted) to loudest (3, accent): how many of a beat's three
+    bars are lit. */
+export const LEVEL_RANK: Record<BeatLevel, number> = { 0: 0, 3: 1, 1: 2, 2: 3 };
+
+export type ClickSound = {
   id: string;
   label: string;
   wave: OscillatorType;
@@ -111,6 +117,26 @@ export function scheduleClick(
   return osc;
 }
 
+type Click = { freq: number; gain: number; length: number };
+
+/** The click a main beat plays at `level` (null when muted). */
+export function mainBeatClick(level: BeatLevel, sound: ClickSound, vol: number): Click | null {
+  if (level === 2) return { freq: sound.accentFreq, gain: 0.9 * vol, length: sound.length };
+  if (level === 1) return { freq: sound.normalFreq, gain: 0.55 * vol, length: sound.length };
+  if (level === 3) return { freq: sound.normalFreq, gain: 0.25 * vol, length: sound.length };
+  return null;
+}
+
+/** The click a subdivision plays at `level` (null when muted). An accented "&" is louder and
+    higher than the other subdivision clicks but quieter than a beat, so it's never mistaken for
+    a downbeat. */
+export function subClick(level: BeatLevel, sound: ClickSound, vol: number): Click | null {
+  if (level === 2) return { freq: sound.normalFreq, gain: 0.4 * vol, length: sound.length * 0.8 };
+  if (level === 1) return { freq: sound.subFreq, gain: 0.25 * vol, length: sound.length * 0.6 };
+  if (level === 3) return { freq: sound.subFreq, gain: 0.12 * vol, length: sound.length * 0.6 };
+  return null;
+}
+
 export type ClickTrack = {
   /**
    * Also given the beat/subdivision counters it's about to schedule, so a caller that needs a
@@ -172,49 +198,13 @@ export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): Cl
         const vol = s.volume * sound.gain;
         const subSlots = Math.max(0, s.subdivision - 1);
 
-        if (st.sub === 0) {
-          const level = s.accents[st.beat] ?? 1;
-          if (level === 2) {
-            output.play(
-              st.nextTime,
-              sound.wave,
-              sound.accentFreq,
-              0.9 * vol,
-              sound.length,
-            );
-          } else if (level === 1) {
-            output.play(
-              st.nextTime,
-              sound.wave,
-              sound.normalFreq,
-              0.55 * vol,
-              sound.length,
-            );
-          }
-        } else if (subSlots > 0) {
-          const subIndex = st.beat * subSlots + (st.sub - 1);
-          const level = s.subAccents[subIndex] ?? 1;
-          if (level === 2) {
-            // Louder/higher-pitched than a normal subdivision click (same `normalFreq` a normal
-            // main beat uses), but quieter than one — an accented "&" should stand out from the
-            // other subdivision clicks without being confused for an actual downbeat.
-            output.play(
-              st.nextTime,
-              sound.wave,
-              sound.normalFreq,
-              0.4 * vol,
-              sound.length * 0.8,
-            );
-          } else if (level === 1) {
-            output.play(
-              st.nextTime,
-              sound.wave,
-              sound.subFreq,
-              0.25 * vol,
-              sound.length * 0.6,
-            );
-          }
-        }
+        const click =
+          st.sub === 0
+            ? mainBeatClick(s.accents[st.beat] ?? 1, sound, vol)
+            : subSlots > 0
+              ? subClick(s.subAccents[st.beat * subSlots + (st.sub - 1)] ?? 1, sound, vol)
+              : null;
+        if (click) output.play(st.nextTime, sound.wave, click.freq, click.gain, click.length);
 
         const shownBeat = st.beat;
         const shownSub = st.sub;

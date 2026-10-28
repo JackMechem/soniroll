@@ -23,7 +23,7 @@
  * cell-by-cell to reflect that rather than by dividing a bar into equal slots.
  */
 
-import { type BeatLevel, CLICK_SOUNDS, scheduleClick } from "@/lib/clickEngine";
+import { type BeatLevel, CLICK_SOUNDS, mainBeatClick, scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
 import {
   CELL_BEAT_FRACTION,
@@ -251,12 +251,8 @@ function beginScheduling() {
         // The count-off is just plain metronome bars in the same meter, so it reads the same
         // per-beat `accents` the "pulse" click mode below does — a muted beat (level 0) plays no
         // click at all, same as `lib/clickEngine.ts`'s own generic main-beat accent logic.
-        const level = settings.accents[beatInBar] ?? 1;
-        if (level === 2) {
-          scheduleClick(ctx, nextTime, sound.wave, sound.accentFreq, 0.9 * vol, sound.length);
-        } else if (level === 1) {
-          scheduleClick(ctx, nextTime, sound.wave, sound.normalFreq, 0.55 * vol, sound.length);
-        }
+        const click = mainBeatClick(settings.accents[beatInBar] ?? 1, sound, vol);
+        if (click) scheduleClick(ctx, nextTime, sound.wave, click.freq, click.gain, click.length);
         cellDuration = beatDuration;
         countOffLeft--;
       } else {
@@ -274,12 +270,8 @@ function beginScheduling() {
 
         if (settings.clickMode === "pulse") {
           if (isBeatStart) {
-            const level = settings.accents[beatInBar] ?? 1;
-            if (level === 2) {
-              scheduleClick(ctx, nextTime, sound.wave, sound.accentFreq, 0.9 * vol, sound.length);
-            } else if (level === 1) {
-              scheduleClick(ctx, nextTime, sound.wave, sound.normalFreq, 0.55 * vol, sound.length);
-            }
+            const click = mainBeatClick(settings.accents[beatInBar] ?? 1, sound, vol);
+            if (click) scheduleClick(ctx, nextTime, sound.wave, click.freq, click.gain, click.length);
           }
         } else if (settings.clickMode === "byHand") {
           scheduleClick(

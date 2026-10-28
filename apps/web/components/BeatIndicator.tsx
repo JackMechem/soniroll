@@ -1,15 +1,18 @@
 "use client";
 
-import type { BeatLevel } from "@/lib/clickEngine";
+import { LEVEL_RANK, type BeatLevel } from "@/lib/clickEngine";
 
 const LEVEL_LABEL: Record<BeatLevel, string> = {
   2: "accent",
   1: "normal",
+  3: "soft",
   0: "muted",
 };
 
 /** A single vertical bar — a main beat (numbered) or a subdivision tick (unnumbered) — shared by
-    both rows below so they look and behave identically apart from the number. */
+    both rows below so they look and behave identically apart from the number. Its three segments
+    fill from the bottom with the click's level: all three for an accent (in the accent colour),
+    two for normal, one for soft, none when muted. */
 function Bar({
   level,
   active,
@@ -26,19 +29,26 @@ function Bar({
   dim: string;
   onClick?: () => void;
 }) {
-  const className = `relative ${dim} shrink-0 rounded-md transition-[transform,filter] ${
-    level === 2
-      ? "bg-accent text-accent-foreground"
-      : level === 1
-        ? "bg-foreground text-background"
-        : "bg-surface-hover text-muted opacity-50 ring-1 ring-inset ring-muted/40"
+  const rank = LEVEL_RANK[level] ?? 2;
+  const lit = level === 2 ? "bg-accent" : "bg-foreground";
+  const className = `relative flex ${dim} shrink-0 flex-col-reverse gap-[3px] rounded-md bg-surface p-[3px] ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
+    level === 0 ? "opacity-50" : ""
   } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;
-  const content = number !== undefined && (
-    <span
-      className={`absolute left-1.5 top-1 text-xs font-semibold tabular-nums ${level === 0 ? "line-through" : ""}`}
-    >
-      {number}
-    </span>
+  const content = (
+    <>
+      {[0, 1, 2].map((i) => (
+        <span key={i} className={`flex-1 rounded-[3px] ${i < rank ? lit : "bg-foreground/10"}`} />
+      ))}
+      {number !== undefined && (
+        <span
+          className={`absolute left-1.5 top-1 text-xs font-semibold tabular-nums ${
+            rank === 3 ? "text-accent-foreground" : "text-muted"
+          } ${level === 0 ? "line-through" : ""}`}
+        >
+          {number}
+        </span>
+      )}
+    </>
   );
   return onClick ? (
     <button
@@ -73,7 +83,7 @@ export default function BeatIndicator({
 }: {
   accents: BeatLevel[];
   currentBeat: number | null;
-  /** When given, beats are buttons that cycle accent / normal / muted. */
+  /** When given, beats are buttons that cycle accent / normal / soft / muted. */
   onCycle?: (index: number) => void;
   /** "sm" shrinks the whole thing — for a smaller reference metronome. */
   size?: "md" | "sm";
@@ -91,7 +101,7 @@ export default function BeatIndicator({
       subdivision-1` lights up that subdivision tick instead. Mirrors `lib/clickEngine.ts`'s
       `onBeat(beat, sub)` almost exactly — pass `sub` straight through. */
   currentSub?: number;
-  /** When given, subdivision ticks are buttons that cycle accent / normal / muted too, the same
+  /** When given, subdivision ticks are buttons that cycle accent / normal / soft / muted too, the same
       interaction `onCycle` gives the beats — called with the beat index and the tick's own
       0-based position within that beat (`0` is the first tick after the beat). */
   onCycleSub?: (beatIndex: number, subIndex: number) => void;

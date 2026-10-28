@@ -8,7 +8,9 @@
  */
 
 /** 0 = silent, 1 = normal click, 2 = accented click. */
-export type BeatLevel = 0 | 1 | 2;
+/** 0 = muted, 3 = soft, 1 = normal, 2 = accent (soft got the next free number, so saved settings
+    keep their meaning). The website sets soft; the mobile app plays it but doesn't offer it. */
+export type BeatLevel = 0 | 1 | 2 | 3;
 
 export type OscillatorWave = "sine" | "square" | "triangle" | "sawtooth";
 
@@ -70,6 +72,7 @@ export function resolveMainBeatClick(
 ): { variant: ClickVariant; freq: number; gain: number; length: number } | null {
   if (level === 2) return { variant: "accent", freq: sound.accentFreq, gain: 0.9 * vol, length: sound.length };
   if (level === 1) return { variant: "normal", freq: sound.normalFreq, gain: 0.55 * vol, length: sound.length };
+  if (level === 3) return { variant: "normal", freq: sound.normalFreq, gain: 0.25 * vol, length: sound.length };
   return null;
 }
 
@@ -83,6 +86,9 @@ export function resolveSubClick(
   }
   if (level === 1) {
     return { variant: "subNormal", freq: sound.subFreq, gain: 0.25 * vol, length: sound.length * 0.6 };
+  }
+  if (level === 3) {
+    return { variant: "subNormal", freq: sound.subFreq, gain: 0.12 * vol, length: sound.length * 0.6 };
   }
   return null;
 }
