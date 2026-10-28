@@ -1,5 +1,6 @@
 import { type EditorState, Prec, type Range, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType, keymap } from "@codemirror/view";
+import { blockBox, unwatchBlockBox } from "./blockBox";
 import { liveFacet } from "./livePreview";
 
 /**
@@ -137,7 +138,10 @@ class TableWidget extends WidgetType {
       view.dispatch({ selection: { anchor: Number(cell.dataset.pos) } });
       view.focus();
     });
-    return wrap;
+    return blockBox(view, wrap, "6px 0");
+  }
+  destroy(dom: HTMLElement) {
+    unwatchBlockBox(dom);
   }
   ignoreEvent() {
     return true;

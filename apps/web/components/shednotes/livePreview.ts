@@ -4,6 +4,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import type { SyntaxNode } from "@lezer/common";
 import { WIKILINK_RE, parseLinkInner, titleKey } from "@jam-practice/core/shedNotes";
 import type { NoteActions } from "./commands";
+import { blockBox, unwatchBlockBox } from "./blockBox";
 import { addEmbed, ownerFacet, removeEmbed } from "./embedStore";
 import { type FileEmbed, findFileEmbeds } from "./fileEmbedSetup";
 
@@ -85,6 +86,10 @@ class RuleWidget extends WidgetType {
     const s = document.createElement("span");
     s.className = "cm-rule";
     return s;
+  }
+  /** A click right on the line puts the cursor there, like anywhere else on the line. */
+  ignoreEvent() {
+    return false;
   }
 }
 
@@ -384,8 +389,12 @@ class AbcWidget extends WidgetType {
     const body = document.createElement("div");
     wrap.append(body);
     renderNotation(body, this.abc);
-    if (!this.editing) revealOnClick(wrap, view);
-    return wrap;
+    const box = blockBox(view, wrap, this.editing ? "2px 0 6px" : "6px 0");
+    if (!this.editing) revealOnClick(box, view);
+    return box;
+  }
+  destroy(dom: HTMLElement) {
+    unwatchBlockBox(dom);
   }
   ignoreEvent() {
     return true;
@@ -410,11 +419,13 @@ class ScoreWidget extends WidgetType {
     const wrap = document.createElement("div");
     wrap.className = `cm-score${this.editing ? " cm-abc-editing" : ""}`;
     addEmbed({ el: wrap, kind: "score", id: this.scoreId, view, owner: view.state.facet(ownerFacet) });
-    if (!this.editing) revealOnClick(wrap, view);
-    return wrap;
+    const box = blockBox(view, wrap, this.editing ? "2px 0 6px" : "6px 0");
+    if (!this.editing) revealOnClick(box, view);
+    return box;
   }
   destroy(dom: HTMLElement) {
-    removeEmbed(dom);
+    removeEmbed(dom.firstElementChild as HTMLElement);
+    unwatchBlockBox(dom);
   }
   ignoreEvent() {
     return true;
@@ -442,11 +453,13 @@ class FileWidget extends WidgetType {
     const wrap = document.createElement("div");
     wrap.className = `cm-file${this.editing ? " cm-file-editing" : ""}`;
     addEmbed({ el: wrap, kind: "file", id: this.ref, name: this.name, width: this.width, view, owner: view.state.facet(ownerFacet) });
-    if (!this.editing) revealOnClick(wrap, view);
-    return wrap;
+    const box = blockBox(view, wrap, this.editing ? "2px 0 6px" : "6px 0");
+    if (!this.editing) revealOnClick(box, view);
+    return box;
   }
   destroy(dom: HTMLElement) {
-    removeEmbed(dom);
+    removeEmbed(dom.firstElementChild as HTMLElement);
+    unwatchBlockBox(dom);
   }
   ignoreEvent() {
     return true;

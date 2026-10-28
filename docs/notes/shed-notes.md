@@ -555,3 +555,37 @@ In Share, once the switch is on, a `Select` under it: "Every level (their linked
 "Also shared" list follow the choice. Checked with the Node script (one level → only direct links;
 deeper notes refused by `sharedAlong`/`linkedThrough`) and in the harness at 390 px dark (3 → 2 notes,
 Private dropped, stored `"one"`).
+
+## 2026-10-28 — vim `k` jumping lines, clicks landing on the line below
+
+Jack: "in vim mode when i press k to go up it sometimes goes up multiple lines or sometimes goes to the
+top of the note. also with my mouse i have to click above the line im aiming for".
+
+Cause: the block widgets (tables, ```abc notation, scores, files, the "Uploading…" line) had CSS
+**margins** (`margin: 6px 0`, `4px 0`). CodeMirror measures a block by its border box, so margins aren't
+counted, and every one moved the editor's idea of where lines are 12 px further from where they're
+drawn. After a couple of tables, `posAtCoords` (mouse clicks) picked the line below, and
+`moveVertically` (what vim's `j`/`k` uses through `findPosV`) skipped lines; in the harness one `k` went
+from line 130 to line 96.
+
+Fix: `components/shednotes/blockBox.ts` — every block widget's DOM is now a plain outer box with the
+space as **padding** (same sizes as the old margins; the editing variants keep their 2 px top), and no
+widget class has a vertical margin any more. The box is also watched with a `ResizeObserver` that calls
+`view.requestMeasure()`: CodeMirror only re-measures when it redraws, so a picture, score or notation
+finishing loading after it's drawn left the heights stale until then (each widget's `destroy` stops
+watching). Score and file widgets register the inner element with `embedStore` (`destroy` gets the box,
+so it passes `firstElementChild`). Also the `---` rule's widget no longer ignores clicks, so clicking
+right on the line puts the cursor there.
+
+Rule for the future: **no vertical margins on anything CodeMirror measures** (block widgets, `.cm-line`
+decorations). Use padding (on a wrapper if the element has a border or background).
+
+Checked in an esbuild harness with the real `livePreview`/`tables`/`editorTheme` + vim, in headless
+Chromium, on a note with six sections of headings, lists, a quote, a table, a code block, a rule and ABC
+notation: the height map matched every drawn line (0 px drift; it was +6 px per table before); clicking
+the middle of every visible line put the cursor on that line (2 misses before); `k` from the end of the
+note to the top went up exactly one line every press at 1200, 800 and 500 px wide. Still there, and
+the same before this change: at 390 px, with the cursor on the top edge of the screen and a table
+right above, one `k` skipped the blank line above the table (CodeMirror hadn't drawn that line yet).
+Not checked: the real signed-in Shed Notes page, scores and file embeds (they need the backend), and
+anything on a real phone.

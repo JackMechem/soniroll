@@ -1,5 +1,6 @@
 import { type EditorState, Facet, type Range, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { blockBox, unwatchBlockBox } from "./blockBox";
 
 /**
  * Files in a note. A line that's only `![name](file:<ref>)` shows the file there (a picture, a PDF,
@@ -116,7 +117,10 @@ class PendingWidget extends WidgetType {
       });
       el.append(x);
     }
-    return el;
+    return blockBox(view, el, "4px 0");
+  }
+  destroy(dom: HTMLElement) {
+    unwatchBlockBox(dom);
   }
   ignoreEvent() {
     return true;
