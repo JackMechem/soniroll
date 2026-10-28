@@ -170,6 +170,13 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Play along",
   },
   {
+    href: "/time-test",
+    label: "Time Test",
+    description:
+      "Play along to the click on a practice pad and see how far off it every stroke was: early or late, by how much, and where.",
+    category: "Drums",
+  },
+  {
     href: "/syncopation",
     label: "Syncopation",
     description:

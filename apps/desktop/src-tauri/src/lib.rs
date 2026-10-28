@@ -3,6 +3,7 @@ mod bridge;
 mod downloads;
 mod file_drop;
 mod oauth;
+mod pad_input;
 mod recorder;
 
 use tauri::plugin::{Builder as PluginBuilder, TauriPlugin};
@@ -70,6 +71,7 @@ pub fn run() {
         .on_window_event(file_drop::on_window_event)
         .manage(audio::AudioState::default())
         .manage(recorder::RecorderState::default())
+        .manage(pad_input::PadInputState::default())
         .manage(bridge)
         .setup(|app| {
             bridge::spawn_clock(app.handle().clone());
@@ -95,6 +97,8 @@ pub fn run() {
             recorder::recorder_stop,
             recorder::recorder_take,
             recorder::recorder_cancel,
+            pad_input::pad_input_open,
+            pad_input::pad_input_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running soniroll");

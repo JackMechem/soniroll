@@ -65,6 +65,7 @@ import StickControl from "@/components/StickControl";
 import SupportPage from "@/components/support/SupportPage";
 import Syncopation from "@/components/Syncopation";
 import TempoTrainer from "@/components/TempoTrainer";
+import TimeTest from "@/components/TimeTest";
 import TuneHub from "@/components/TuneHub";
 import Tuner from "@/components/Tuner";
 import NativeAudioChip from "./NativeAudioChip";
@@ -114,6 +115,7 @@ const ROUTES: Route[] = [
   { path: "/tempo-trainer", render: () => <NativeTool><TempoTrainer /></NativeTool> },
   { path: "/random-sticking-warmup", render: () => <NativeTool><StickControl /></NativeTool> },
   { path: "/syncopation", render: () => <NativeTool><Syncopation /></NativeTool> },
+  { path: "/time-test", render: () => <NativeTool><TimeTest /></NativeTool> },
   { path: "/score-writer", render: (_, query) => <NativeTool><ScoreWriter initialId={opt(query, "id")} /></NativeTool> },
 
   { path: "/shed-log", render: (_, query) => <ShedLogGate><PracticeLog initialDate={opt(query, "date")} /></ShedLogGate> },

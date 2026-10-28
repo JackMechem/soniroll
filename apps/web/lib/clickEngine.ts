@@ -156,6 +156,10 @@ export type ClickTrack = {
       but every subdivision click in between too, so a caller that shows subdivision dots
       (`BeatIndicator`'s `currentSub`) can highlight exactly which one just played. */
   onBeat: (beat: number, sub: number) => void;
+  /** Called as each tick is scheduled (ahead of time), muted ones too, with the exact output time
+      it plays at and its level. For a tool that has to know precisely when every click sounds
+      (the Time Test lines its recording up with them). */
+  onSchedule?: (tick: { time: number; beat: number; sub: number; level: BeatLevel; settings: ClickSettings }) => void;
 };
 
 /** What the scheduler needs from an audio engine: its clock (seconds) and a way to play one click
@@ -193,7 +197,7 @@ export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): Cl
 
   const id = setInterval(() => {
     for (let i = 0; i < tracks.length; i++) {
-      const { getSettings, onBeat } = tracks[i];
+      const { getSettings, onBeat, onSchedule } = tracks[i];
       const st = state[i];
       while (st.nextTime < output.now() + LOOKAHEAD_SEC) {
         const s = getSettings(st.beat, st.sub);
@@ -205,13 +209,15 @@ export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): Cl
         const vol = s.volume * sound.gain;
         const subSlots = Math.max(0, s.subdivision - 1);
 
-        const click =
+        const level: BeatLevel =
           st.sub === 0
-            ? mainBeatClick(s.accents[st.beat] ?? 1, sound, vol)
+            ? (s.accents[st.beat] ?? 1)
             : subSlots > 0
-              ? subClick(s.subAccents[st.beat * subSlots + (st.sub - 1)] ?? 1, sound, vol)
-              : null;
+              ? (s.subAccents[st.beat * subSlots + (st.sub - 1)] ?? 1)
+              : 0;
+        const click = st.sub === 0 ? mainBeatClick(level, sound, vol) : subClick(level, sound, vol);
         if (click) output.play(st.nextTime, sound.wave, click.freq, click.gain, click.length);
+        onSchedule?.({ time: st.nextTime, beat: st.beat, sub: st.sub, level, settings: s });
 
         const shownBeat = st.beat;
         const shownSub = st.sub;

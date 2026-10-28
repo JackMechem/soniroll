@@ -772,6 +772,14 @@ pub fn heard_nanos(at: f64) -> Option<u64> {
     Some(heard.max(0.0) as u64)
 }
 
+/// The inverse of `heard_nanos`: the time (JavaScript's clock) of a sound that comes out of the
+/// output device at `nanos`. None while the output isn't running.
+pub fn time_heard_at(nanos: u64) -> Option<f64> {
+    let (time, tap_nanos) = tap_reading()?;
+    let latency = TAP.latency_nanos.load(Ordering::Relaxed) as f64;
+    Some(time + (nanos as f64 - tap_nanos as f64 - latency) / 1e9)
+}
+
 // ---------------------------------------------------------------------------------------------
 // The live context
 

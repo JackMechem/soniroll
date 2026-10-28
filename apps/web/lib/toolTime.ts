@@ -44,6 +44,7 @@ export const LOG_BY_BUTTON = new Set<string>([
   "/random-sticking-warmup",
   "/drum-generator",
   "/syncopation",
+  "/time-test",
 ]);
 
 /** Tools that keep their own options look (stats and Log button, but not the reward look). */

@@ -558,6 +558,17 @@ export function MetricModulationIcon({ className }: { className?: string }) {
   );
 }
 
+/** Time Test: a target, for landing on the click. */
+export function TimeTestIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  );
+}
+
 export function TempoTrainerIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -729,6 +740,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/recorder": RecordIcon,
   "/random-sticking-warmup": DrumIcon,
   "/drum-generator": DrumIcon,
+  "/time-test": TimeTestIcon,
   "/syncopation": SyncopationIcon,
   "/community": UsersIcon,
 };

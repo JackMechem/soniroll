@@ -747,6 +747,37 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     shot: "syncopation",
   },
+  {
+    id: "time-test",
+    title: "Time Test",
+    group: "Drums",
+    href: "/time-test",
+    tagline: "How close to the click are you, really?",
+    purpose: "Play along to the click on a practice pad. The mic hears every stroke and shows how early or late it was, by how much, and where.",
+    steps: [
+      { title: "Calibrate once", text: "Mic → Calibrate measures your setup's delay, so a stroke right on the click scores 0 ms." },
+      { title: "Check the mic", text: "In the Mic options, hit the pad: every stroke should flash, and nothing else should." },
+      { title: "Record", text: "Press Record (or R), play after the count-in, then stop to see how you did." },
+    ],
+    features: [
+      "Live early/late readout while you play",
+      "Score, average push or pull, consistency and your real tempo",
+      "Zoomable waveform with every stroke marked, and playback with or without the click",
+      "Breakdowns by beat and by note (\"your 'a's rush\")",
+      "History of past takes",
+    ],
+    options: [
+      { name: "Time, Subdivision, Sound", text: "The same click as the Metronome." },
+      { name: "Count-in", text: "Bars of click before grading starts. Keep at least one, so it can learn how loud the click is in the mic." },
+      { name: "You're playing", text: "Work it out beat by beat (move between quarters, 8ths, triplets and 16ths as you like), or choose one so notes you leave out count as missed." },
+      { name: "On time within", text: "How close to the click a stroke has to be to count as on time." },
+      { name: "Mic", text: "Which input to listen to, how sensitive it is, the measured delay (with a fine-tune), and whether to ignore the click leaking into the mic." },
+    ],
+    tips: [
+      "Use one audio interface for both the mic and the click if you can.",
+      "Calibrate again whenever you change headphones, speakers or interfaces.",
+    ],
+  },
 ];
 
 export function topicById(id: string | null | undefined): HelpTopic {

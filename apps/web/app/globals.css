@@ -266,6 +266,24 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
   }
 }
 
+/* Time Test (components/timetest/MicPanel.tsx): a dot that flashes when the mic hears a stroke.
+   With less motion it just shows. */
+@keyframes stroke-flash {
+  from {
+    opacity: 1;
+    scale: 1.4;
+  }
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .stroke-flash {
+    animation: stroke-flash 0.35s ease-out forwards;
+  }
+}
+
 /* Tap tempo (components/MeterFields.tsx's TempoHero): a ring flashing out from the button on each
    tap. The ring is invisible when it isn't animating, so less motion simply shows nothing. */
 @keyframes tap-ring {

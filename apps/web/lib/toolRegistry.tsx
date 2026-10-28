@@ -54,6 +54,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   }),
   "/drum-generator": dynamic(() => import("@/components/DrumGenerator"), { loading: PaneLoading }),
   "/syncopation": dynamic(() => import("@/components/Syncopation"), { loading: PaneLoading }),
+  "/time-test": dynamic(() => import("@/components/TimeTest"), { loading: PaneLoading }),
   "/community": dynamic(() => import("@/components/Community"), { loading: PaneLoading }),
   "/account": dynamic(() => import("@/components/AccountPage"), { loading: PaneLoading }),
   "/help": dynamic(() => import("@/components/help/HelpPage"), { loading: PaneLoading }),

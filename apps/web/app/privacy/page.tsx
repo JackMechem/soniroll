@@ -44,6 +44,10 @@ export default function PrivacyPage() {
           <li>Emailed confirmation codes are stored hashed and expire after 15 minutes.</li>
         </ul>
         <p>Slow Downer&apos;s audio files always stay in your browser, signed in or not.</p>
+        <p>
+          The Tuner and the Time Test listen through your mic only while you use them, and what they hear is never saved or sent anywhere. The Time
+          Test keeps each take&apos;s results (its score and timing numbers) in its history, like other tool settings.
+        </p>
       </LegalSection>
 
       <LegalSection title="What others can see">
