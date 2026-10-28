@@ -10,3 +10,18 @@
 #root {
   display: contents;
 }
+
+/* Thinner scrollbars than the website's: a 4px pill in a 10px gutter (same colours and
+   behaviour, from globals.css). Same layer and media query, so this wins by coming later. */
+@layer base {
+  @media (hover: hover) and (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      min-height: 28px;
+      min-width: 28px;
+    }
+  }
+}
