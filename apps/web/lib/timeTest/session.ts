@@ -26,7 +26,7 @@ import { Detector, type Onset } from "./onset";
  * recording's own timeline.
  */
 
-export type Phase = "idle" | "metronome" | "recording" | "calibrating";
+export type Phase = "idle" | "recording" | "calibrating";
 export type LiveHit = { id: number; errorMs: number };
 export type Tick = { beat: number; sub: number; bar: number };
 
@@ -243,19 +243,6 @@ function startClicks(getSettings: () => ClickSettings) {
 function stopClicks() {
   engine?.stop();
   engine = null;
-}
-
-/** Plays the click without recording. */
-export function startMetronome(getSettings: () => ClickSettings) {
-  stopPlayback();
-  rec = null;
-  startClicks(getSettings);
-  state.set({ phase: "metronome", tick: null });
-}
-
-export function stopMetronome() {
-  stopClicks();
-  if (state.get().phase === "metronome") state.set({ phase: "idle", tick: null });
 }
 
 function gradeLive(onsets: Onset[]) {

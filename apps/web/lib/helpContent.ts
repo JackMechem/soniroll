@@ -757,7 +757,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Calibrate once", text: "Mic → Calibrate measures your setup's delay, so a stroke right on the click scores 0 ms." },
       { title: "Check the mic", text: "In the Mic options, hit the pad: every stroke should flash, and nothing else should." },
-      { title: "Record", text: "Press Record (or R), play after the count-in, then stop to see how you did." },
+      { title: "Record", text: "Press Record (or Space or R), play after the count-in, then stop to see how you did." },
     ],
     features: [
       "Live early/late readout while you play",

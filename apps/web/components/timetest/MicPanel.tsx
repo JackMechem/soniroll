@@ -79,7 +79,7 @@ export default function MicPanel({
   onCalibrate: () => void;
   lastCalibration: Calibration | null;
   micError: string | null;
-  /** The click is running or a take is recording: calibration waits. */
+  /** A take is recording: calibration waits. */
   busy: boolean;
 }) {
   const [inputs, setInputs] = useState<InputDevice[]>([]);

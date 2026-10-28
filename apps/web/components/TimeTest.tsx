@@ -35,10 +35,8 @@ import {
   playTake,
   runCalibration,
   setLiveParams,
-  startMetronome,
   startRecording,
   stopAll,
-  stopMetronome,
   stopPlayback,
   stopRecording,
   subscribeTimeTest,
@@ -146,7 +144,6 @@ export default function TimeTest() {
 
   const recording = phase === "recording";
   const calibrating = phase === "calibrating";
-  const sounding = phase === "metronome" || recording;
   useToolActivity("/time-test", phase !== "idle");
 
   const clickSettings: ClickSettings = useMemo(
@@ -202,11 +199,6 @@ export default function TimeTest() {
     const id = setInterval(() => setNow(performance.now()), 250);
     return () => clearInterval(id);
   }, [recording]);
-
-  const start = () => {
-    setError(null);
-    startMetronome(() => clickRef.current);
-  };
 
   const recMeta = useRef({ bpm, beatsPerBar });
   const record = () => {
@@ -271,13 +263,13 @@ export default function TimeTest() {
     );
   };
 
-  // Space starts or stops the click (or stops a take); R records, then stops and analyzes.
-  useSpaceToggle(() => {
+  // Space or R: record, then stop and analyze.
+  const toggleRecording = () => {
     if (calibrating) return;
     if (recording) stopAndAnalyze();
-    else if (phase === "metronome") stopMetronome();
-    else start();
-  });
+    else record();
+  };
+  useSpaceToggle(toggleRecording);
   const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     keyRef.current = (e: KeyboardEvent) => {
@@ -286,8 +278,7 @@ export default function TimeTest() {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || calibrating) return;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest("[role='dialog']"))) return;
       e.preventDefault();
-      if (recording) stopAndAnalyze();
-      else record();
+      toggleRecording();
     };
   });
   useEffect(() => {
@@ -345,7 +336,7 @@ export default function TimeTest() {
           <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={beatUnit} />
           <BeatIndicator
             accents={accents}
-            currentBeat={sounding && tick ? tick.beat : null}
+            currentBeat={recording && tick ? tick.beat : null}
             onCycle={cycleBeat}
             subdivision={subdivision}
             subAccents={subAccents}
@@ -374,29 +365,18 @@ export default function TimeTest() {
                   Calibrating… stay quiet
                 </button>
               ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={phase === "metronome" ? stopMetronome : start}
-                    className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-                      phase === "metronome" ? "bg-surface hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-                    }`}
-                  >
-                    {phase === "metronome" ? "Stop" : "Start"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={record}
-                    className="flex items-center gap-2 rounded-full bg-surface px-6 py-3 text-base font-semibold transition-colors hover:bg-surface-hover"
-                  >
-                    <RecordIcon className="h-4 w-4 text-danger" />
-                    Record
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={record}
+                  className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                >
+                  <RecordIcon className="h-4 w-4" />
+                  Record
+                </button>
               )}
             </div>
             <KeyHint>
-              <KeyHint.Key>Space</KeyHint.Key> start or stop · <KeyHint.Key>R</KeyHint.Key> record, then stop and analyze
+              <KeyHint.Key>Space</KeyHint.Key> or <KeyHint.Key>R</KeyHint.Key> to record, then stop and analyze
             </KeyHint>
           </div>
           {!calibrated && phase === "idle" && (
@@ -506,7 +486,7 @@ export default function TimeTest() {
                   onCalibrate={calibrate}
                   lastCalibration={calibration}
                   micError={engine.micError}
-                  busy={sounding}
+                  busy={recording}
                 />
               </HintsContext.Provider>
             </SettingChip>
