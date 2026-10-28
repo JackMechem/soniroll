@@ -267,7 +267,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
-| Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`) | `site-settings.md` |
+| Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |

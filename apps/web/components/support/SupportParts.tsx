@@ -77,7 +77,7 @@ function hideForAWhile() {
 
 /** True while the card has been put away (on this device). Hidden on the server, so it never
     flashes in and out on load. */
-function useCardHidden() {
+export function useSupportCardHidden() {
   return useSyncExternalStore(
     (l) => {
       listeners.add(l);
@@ -88,13 +88,14 @@ function useCardHidden() {
   );
 }
 
-/** "Keep soniroll free" — the dashboard's ask. "Not now" puts it away on this device for 30 days. */
-export function SupportCard() {
-  const hidden = useCardHidden();
-  if (hidden) return null;
+/** "Keep soniroll free" — the dashboard's ask. "Not now" puts it away on this device for 30 days
+    (`always` shows it anyway: the dashboard while you edit it). */
+export function SupportCard({ always = false }: { always?: boolean }) {
+  const hidden = useSupportCardHidden();
+  if (hidden && !always) return null;
   return (
     <section
-      className="relative flex flex-col gap-4 overflow-hidden rounded-3xl p-5 sm:flex-row sm:items-center sm:p-6"
+      className="relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl p-5 @2xl:flex-row @2xl:items-center sm:p-6"
       style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${HEART} 14%, var(--surface)) 0%, var(--surface) 75%)` }}
     >
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ background: `color-mix(in srgb, ${HEART} 18%, transparent)`, color: HEART }}>

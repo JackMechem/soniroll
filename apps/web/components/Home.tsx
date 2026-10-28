@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { DONATE_URL, SUPPORT_PATH, SupportCard } from "@/components/support/SupportParts";
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { SUPPORT_PATH, SupportCard, useSupportCardHidden } from "@/components/support/SupportParts";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
@@ -15,6 +15,7 @@ import {
   CloseIcon,
   NAV_LINKS,
   NoteIcon,
+  PencilIcon,
   PlusIcon,
   SearchIcon,
   SetlistIcon,
@@ -37,11 +38,14 @@ import { useFavorites } from "@/lib/useFavorites";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { usePracticeSessions } from "@/lib/usePracticeSessions";
 import { useSetlists } from "@/lib/useSetlists";
-import { useSiteSettings, type DashboardCard } from "@/lib/siteSettings";
+import { useSiteSettings } from "@/lib/siteSettings";
+import { cardDef, resolveLayout, type CardSize, type DashboardItem } from "@/lib/dashboardLayout";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
-import TodayPractice from "@/components/practicelog/TodayPractice";
-import LessonsDashboard from "@/components/lessons/LessonsDashboard";
+import TodayPractice, { HeatGrid, TodayMomentum } from "@/components/practicelog/TodayPractice";
+import LessonsDashboard, { useLessonsData } from "@/components/lessons/LessonsDashboard";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import { DEFAULT_LEARNING_PROGRESS, LEARNING_KEY, summarizeLearning } from "@/lib/learningPath";
 
 type ToolLink = (typeof NAV_LINKS)[number];
@@ -72,12 +76,19 @@ function greeting(today: string | null) {
   return h < 5 ? "Up late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
+/** `?edit` (Settings → Dashboard links here) opens the dashboard in edit mode. */
+function urlAsksToEdit() {
+  return new URLSearchParams(window.location.search).has("edit");
+}
+
+/** How many weeks the "Days practiced" grid shows at each size. */
+const GRID_WEEKS: Record<CardSize, number> = { small: 18, medium: 26, large: 40, full: 52 };
+
 /**
  * Home: the app's dashboard (the sidebar's "Dashboard"; the logo goes to the landing page).
- * A greeting and search on top, then a grid of cards built from what you actually have: where
- * you left off, a tune of the day from your list, pinned tools, your library at a glance,
- * setlists, practice sessions (or the running one), your ear-training weak spots, and every
- * tool in a compact launcher. The search finds tools and your tunes.
+ * A greeting and search on top, then your cards: which ones, in what order and how big is yours to
+ * choose with Edit (`DashboardGrid`, saved in the site settings; `lib/dashboardLayout.ts` has the
+ * cards and the default). The search finds tools and your tunes.
  */
 export default function Home() {
   const { isAuthenticated } = useConvexAuth();
@@ -100,8 +111,30 @@ export default function Home() {
   const [{ progressionStats }] = useSyncedSettings("jam-practice-guess-the-progression", PROGRESSION_STATS_DEFAULTS);
   const [learningProgress] = useSyncedSettings(LEARNING_KEY, DEFAULT_LEARNING_PROGRESS);
   const learningSummaries = summarizeLearning(learningProgress);
+  const lessonsData = useLessonsData();
+  const supportHidden = useSupportCardHidden();
 
-  const q = query.trim();
+  // Edit mode: from the Edit button, or `?edit` in the address.
+  const urlEdit = useSyncExternalStore(noop, urlAsksToEdit, () => false);
+  const [editChoice, setEditChoice] = useState<boolean | null>(null);
+  const editing = editChoice ?? urlEdit;
+  const [confirmReset, setConfirmReset] = useState(false);
+  const finishEditing = () => {
+    setEditChoice(false);
+    if (urlAsksToEdit()) window.history.replaceState(window.history.state, "", window.location.pathname);
+  };
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setEditChoice(false);
+      if (urlAsksToEdit()) window.history.replaceState(window.history.state, "", window.location.pathname);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing]);
+
+  const q = editing ? "" : query.trim();
   const known = lists.tunes.tunes;
   const learning = lists.learn.tunes;
 
@@ -121,9 +154,13 @@ export default function Home() {
     return out.slice(0, 8);
   }, [q, lists]);
 
-  // Settings: the cards you've turned off, and tools you've hidden (a search still finds them).
-  const [site] = useSiteSettings();
-  const show = (card: DashboardCard) => !site.hiddenCards.includes(card);
+  // Settings: the layout, features that are off, and tools you've hidden (a search still finds them).
+  const [site, updateSite] = useSiteSettings();
+  const layout = resolveLayout(site.dashboard, site.hiddenCards);
+  const available = (id: string) => {
+    const feature = (cardDef(id) as { feature?: "shedLog" | "lessons" } | undefined)?.feature;
+    return !feature || site[feature];
+  };
   const tools = TOOLS.filter((t) => !site.hiddenTools.includes(t.href));
   const favoriteTools = tools.filter((t) => favorites.includes(t.href));
   const pinned = favoriteTools.length ? favoriteTools : tools.filter((t) => STARTER_HREFS.includes(t.href));
@@ -176,32 +213,296 @@ export default function Home() {
   const name = profile?.username || user?.name?.split(" ")[0];
   const toolMatches = q ? filterNavLinks(TOOLS, q) : [];
 
+  /** One card's content, or null when it has nothing to show right now. */
+  const renderCard = ({ id, size }: DashboardItem): ReactNode | null => {
+    switch (id) {
+      case "momentum":
+        return isAuthenticated ? (
+          <Card title="Goal and streak" tone="plain">
+            <TodayMomentum />
+          </Card>
+        ) : null;
+      case "today":
+        return (
+          <Card title="Today's practice" action={{ label: "Shed Log", href: "/shed-log" }}>
+            <TodayPractice />
+          </Card>
+        );
+      case "practiceGrid":
+        return isAuthenticated ? (
+          <Card title="Days practiced">
+            <HeatGrid bare weeks={GRID_WEEKS[size]} />
+          </Card>
+        ) : null;
+      case "recent":
+        return (
+          <Card title="Pick up where you left off" tone="accent">
+            {recents.length ? (
+              <>
+                <Link href={recents[0].href} className="group flex items-center gap-4 rounded-2xl bg-surface p-4 transition-colors hover:bg-surface-hover">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                    {(() => {
+                      const I = recents[0].icon;
+                      return <I className="h-7 w-7" />;
+                    })()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xl font-bold">{recents[0].title}</span>
+                    <span className="block text-sm text-muted">{recents[0].detail}</span>
+                  </span>
+                  <span className="hidden items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground @md:flex">
+                    Resume <ChevronRightIcon className="h-4 w-4" />
+                  </span>
+                </Link>
+                {recents.length > 1 && (
+                  <div className="grid grid-cols-2 gap-2 @xl:grid-cols-3 @5xl:grid-cols-4">
+                    {recents.slice(1, 7).map((r) => (
+                      <Link key={r.key} href={r.href} className="flex min-w-0 items-center gap-2.5 rounded-xl bg-surface/70 px-3 py-2.5 transition-colors hover:bg-surface">
+                        <r.icon className="h-4 w-4 shrink-0 text-accent" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">{r.title}</span>
+                          <span className="block truncate text-xs text-muted">{r.detail}</span>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="rounded-2xl bg-surface p-4 text-sm text-muted">The tools, tunes and charts you open will show up here.</p>
+            )}
+          </Card>
+        );
+      case "tuneOfDay":
+        return (
+          <Card title="Tune of the day" action={tuneOfDay ? { label: "Shuffle in Jam Practice", href: "/jam-practice" } : undefined}>
+            {tuneOfDay ? (
+              <div className="flex flex-1 flex-col justify-between gap-4">
+                <div>
+                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="block text-2xl font-bold leading-tight tracking-tight hover:underline">
+                    {tuneOfDay.tune.name}
+                  </Link>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {tuneOfDay.key && <Chip>in {tuneOfDay.key}</Chip>}
+                    {tuneOfDay.tempo && <Chip>{tuneOfDay.tempo} BPM</Chip>}
+                    <Chip muted>{tuneOfDay.tune.timeSignature}</Chip>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="flex items-center justify-center gap-1 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover">
+                    Open the tune <ChevronRightIcon className="h-4 w-4" />
+                  </Link>
+                  <p className="text-center text-xs text-muted">A new one from Tunes I Know every day.</p>
+                </div>
+              </div>
+            ) : (
+              <Empty>
+                Add the tunes you know and one comes up here each day.{" "}
+                <Link href="/tunes" className="font-semibold text-accent hover:underline">Add tunes</Link>
+              </Empty>
+            )}
+          </Card>
+        );
+      case "favorites":
+        return (
+          <Card title={favoriteTools.length ? "Favorites" : "Get started"} detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}>
+            <div className="grid auto-rows-fr content-start gap-3 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+              {pinned.map((item) => (
+                <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} canStar={canStar} onToggle={() => toggleFavorite(item.href)} />
+              ))}
+            </div>
+            {favoriteTools.length > 0 && favoriteTools.length < 3 && (
+              <p className="mt-auto flex items-center gap-1.5 text-xs text-muted">
+                <StarIcon className="h-3.5 w-3.5" /> Star more tools in the sidebar to pin them here.
+              </p>
+            )}
+          </Card>
+        );
+      case "library":
+        return (
+          <Card title="Your library">
+            <div className="-mx-2 flex flex-col">
+              <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
+              <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
+              <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
+              <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes?tab=charts" detail={playlists.length ? `${playlists.length} playlist${playlists.length === 1 ? "" : "s"}` : undefined} />
+            </div>
+          </Card>
+        );
+      case "setlists":
+        return (
+          <Card title="Setlists" action={{ label: setlists.length ? "All" : "New", href: "/tunes?tab=setlists" }}>
+            {setlists.length ? (
+              <div className="-mx-2 flex flex-col">
+                {[...setlists]
+                  .sort((a, b) => b.updatedAt - a.updatedAt)
+                  .slice(0, 4)
+                  .map((s) => (
+                    <Link key={s.id} href={`/tunes/setlist?id=${encodeURIComponent(s.id)}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+                      <IconChip icon={SetlistIcon} />
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.name}</span>
+                      <span className="text-xs tabular-nums text-muted">{s.tuneIds.length} tunes</span>
+                    </Link>
+                  ))}
+              </div>
+            ) : (
+              <Empty>
+                Put tunes in order for a gig or a session, with the key and tempo for each.{" "}
+                <Link href="/tunes?tab=setlists" className="font-semibold text-accent hover:underline">Make a setlist</Link>
+              </Empty>
+            )}
+          </Card>
+        );
+      case "sessions":
+        return (
+          <Card title={timer ? "Practicing now" : "Practice sessions"} action={{ label: "Open timer", href: "/practice-timer" }}>
+            {timer ? (
+              <div className="-mx-1">
+                <PracticeTimerWidget />
+              </div>
+            ) : sessions.length ? (
+              <div className="-mx-2 flex flex-col">
+                {sessions.slice(0, 4).map((s) => (
+                  <Link key={s.id} href="/practice-timer" className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+                    <IconChip icon={StopwatchIcon} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">{s.name || "Untitled session"}</span>
+                      <span className="block truncate text-xs text-muted">{describeSession(s)}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <Empty>
+                Chain timed blocks (scales, then tunes, then a break) or run a Pomodoro.{" "}
+                <Link href="/practice-timer" className="font-semibold text-accent hover:underline">Plan a session</Link>
+              </Empty>
+            )}
+          </Card>
+        );
+      case "weakSpots":
+        return (
+          <Card title="Ear training weak spots">
+            {weakSpots.length ? (
+              <div className="flex flex-col gap-3">
+                {weakSpots.map((w) => {
+                  const total = attempts(w.counts);
+                  const pct = total ? Math.round(((w.counts.correct + w.counts.partial * 0.5) / total) * 100) : 0;
+                  return (
+                    <Link key={w.key} href={w.href} className="group flex flex-col gap-1.5">
+                      <span className="flex items-baseline justify-between gap-2 text-sm">
+                        <span className="truncate font-semibold group-hover:underline">{w.label}</span>
+                        <span className="shrink-0 text-xs tabular-nums text-muted">{pct}% of {total}</span>
+                      </span>
+                      <span className="h-1.5 overflow-hidden rounded-full bg-background">
+                        <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(pct, 4)}%` }} />
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <Empty>
+                Play a few rounds of{" "}
+                <Link href="/guess-the-interval" className="font-semibold text-accent hover:underline">Guess the Interval</Link>,{" "}
+                <Link href="/guess-the-chord" className="font-semibold text-accent hover:underline">Guess the Chord</Link> or{" "}
+                <Link href="/guess-the-progression" className="font-semibold text-accent hover:underline">Guess the Progression</Link> and the ones you miss most show up here.
+              </Empty>
+            )}
+          </Card>
+        );
+      case "earPath":
+        return (
+          <Card title="Ear training path" detail="Learn mode in each tool">
+            <EarTrainingProgress summaries={learningSummaries} links />
+          </Card>
+        );
+      case "allTools":
+        return (
+          <Card title="All tools">
+            <div className="grid gap-x-6 gap-y-5 @xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5">
+              {groupByCategory(tools).map(({ category, items }) => (
+                <div key={category} className="min-w-0">
+                  <h3 className="mb-1.5 px-2 text-xs font-semibold text-muted">{category}</h3>
+                  <ToolRows items={items} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      case "lessons":
+        return lessonsData ? (
+          <Card title="Lessons" tone="plain" action={{ label: "All lessons", href: "/lessons" }}>
+            <LessonsDashboard data={lessonsData} />
+          </Card>
+        ) : null;
+      case "support":
+        return !supportHidden || editing ? <SupportCard always={editing} /> : null;
+      default:
+        return null;
+    }
+  };
+
+  const emptyText = (id: string) =>
+    id === "lessons" ? "Shows once you have a student or a teacher." : id === "momentum" || id === "practiceGrid" ? "Shows once you're signed in." : "Nothing to show right now.";
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-10">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
-            <h1 className="truncate text-3xl font-bold tracking-tight sm:text-4xl">
-              {isAuthenticated ? `${greeting(today)}${name ? `, ${name}` : ""}` : "Your practice space"}
-            </h1>
-          </div>
-          <label className="flex w-full items-center gap-2.5 rounded-full bg-surface pl-4 pr-1 focus-within:ring-2 focus-within:ring-accent md:w-80">
-            <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search tools and tunes…"
-              className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
-                <CloseIcon className="h-4 w-4" />
+        {editing ? (
+          <div className="sticky top-[calc(env(safe-area-inset-top)+4.5rem)] z-40 flex flex-wrap items-center gap-3 rounded-2xl bg-surface p-3 pl-4 shadow-lg ring-1 ring-accent/30 lg:top-4">
+            <PencilIcon className="h-5 w-5 shrink-0 text-accent" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Editing your dashboard</p>
+              <p className="text-xs text-muted">Drag a card to move it, change its size, or take it off. Add more at the bottom.</p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button type="button" onClick={() => setConfirmReset(true)} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+                Reset
               </button>
-            )}
-          </label>
-        </header>
+              <button type="button" onClick={finishEditing} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
+              <h1 className="truncate text-3xl font-bold tracking-tight sm:text-4xl">
+                {isAuthenticated ? `${greeting(today)}${name ? `, ${name}` : ""}` : "Your practice space"}
+              </h1>
+            </div>
+            <div className="flex w-full items-center gap-2 md:w-auto">
+              <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full bg-surface pl-4 pr-1 focus-within:ring-2 focus-within:ring-accent md:w-80 md:flex-none">
+                <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search tools and tunes…"
+                  className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
+                />
+                {query && (
+                  <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
+                    <CloseIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setEditChoice(true);
+                }}
+                title="Choose and arrange your cards"
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover"
+              >
+                <PencilIcon className="h-4 w-4" /> Edit
+              </button>
+            </div>
+          </header>
+        )}
 
         {q ? (
           <div className="grid gap-4 lg:grid-cols-2">
@@ -227,246 +528,20 @@ export default function Home() {
             </Card>
           </div>
         ) : (
-          <>
-          {site.shedLog && show("today") && <TodayPractice />}
-          {show("support") && <SupportCard />}
-          {site.lessons && show("lessons") && <LessonsDashboard />}
-          {/* Dense, so turning a card off (Settings) doesn't leave a hole in the rows. */}
-          <div className="grid gap-4 lg:grid-flow-row-dense lg:grid-cols-12">
-            {/* Where you left off */}
-            {show("recent") && (
-            <section className="flex flex-col gap-4 rounded-3xl bg-accent/10 p-5 ring-1 ring-accent/15 lg:col-span-8">
-              <h2 className="text-sm font-semibold text-muted">Pick up where you left off</h2>
-              {recents.length ? (
-                <>
-                  <Link href={recents[0].href} className="group flex items-center gap-4 rounded-2xl bg-surface p-4 transition-colors hover:bg-surface-hover">
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-                      {(() => {
-                        const I = recents[0].icon;
-                        return <I className="h-7 w-7" />;
-                      })()}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xl font-bold">{recents[0].title}</span>
-                      <span className="block text-sm text-muted">{recents[0].detail}</span>
-                    </span>
-                    <span className="hidden items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground sm:flex">
-                      Resume <ChevronRightIcon className="h-4 w-4" />
-                    </span>
-                  </Link>
-                  {recents.length > 1 && (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {recents.slice(1, 7).map((r) => (
-                        <Link key={r.key} href={r.href} className="flex min-w-0 items-center gap-2.5 rounded-xl bg-surface/70 px-3 py-2.5 transition-colors hover:bg-surface">
-                          <r.icon className="h-4 w-4 shrink-0 text-accent" />
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-semibold">{r.title}</span>
-                            <span className="block truncate text-xs text-muted">{r.detail}</span>
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="rounded-2xl bg-surface p-4 text-sm text-muted">The tools, tunes and charts you open will show up here.</p>
-              )}
-            </section>
-            )}
-
-            {/* Tune of the day */}
-            {show("tuneOfDay") && (
-            <Card title="Tune of the day" className="lg:col-span-4" action={tuneOfDay ? { label: "Shuffle in Jam Practice", href: "/jam-practice" } : undefined}>
-              {tuneOfDay ? (
-                <div className="flex flex-1 flex-col justify-between gap-4">
-                  <div>
-                    <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="block text-2xl font-bold leading-tight tracking-tight hover:underline">
-                      {tuneOfDay.tune.name}
-                    </Link>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {tuneOfDay.key && <Chip>in {tuneOfDay.key}</Chip>}
-                      {tuneOfDay.tempo && <Chip>{tuneOfDay.tempo} BPM</Chip>}
-                      <Chip muted>{tuneOfDay.tune.timeSignature}</Chip>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="flex items-center justify-center gap-1 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover">
-                      Open the tune <ChevronRightIcon className="h-4 w-4" />
-                    </Link>
-                    <p className="text-center text-xs text-muted">A new one from Tunes I Know every day.</p>
-                  </div>
-                </div>
-              ) : (
-                <Empty>
-                  Add the tunes you know and one comes up here each day.{" "}
-                  <Link href="/tunes" className="font-semibold text-accent hover:underline">Add tunes</Link>
-                </Empty>
-              )}
-            </Card>
-            )}
-
-            {/* Pinned tools */}
-            {show("favorites") && (
-            <Card
-              title={favoriteTools.length ? "Favorites" : "Get started"}
-              detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}
-              className="lg:col-span-8"
-            >
-              {/* Cards keep their natural height (no stretching to match the card beside this one);
-                  one or two favorites stack in a single column instead of a half-empty row. */}
-              <div className={`grid auto-rows-fr content-start gap-3 ${pinned.length > 2 ? "sm:grid-cols-2" : ""}`}>
-                {pinned.map((item) => (
-                  <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} canStar={canStar} onToggle={() => toggleFavorite(item.href)} />
-                ))}
-              </div>
-              {favoriteTools.length > 0 && favoriteTools.length < 3 && (
-                <p className="mt-auto flex items-center gap-1.5 text-xs text-muted">
-                  <StarIcon className="h-3.5 w-3.5" /> Star more tools in the sidebar or below to pin them here.
-                </p>
-              )}
-            </Card>
-            )}
-
-            {/* Library */}
-            {show("library") && (
-            <Card title="Your library" className="lg:col-span-4">
-              <div className="-mx-2 flex flex-col">
-                <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
-                <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
-                <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
-                <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes?tab=charts" detail={playlists.length ? `${playlists.length} playlist${playlists.length === 1 ? "" : "s"}` : undefined} />
-              </div>
-            </Card>
-            )}
-
-            {/* Setlists */}
-            {show("setlists") && (
-            <Card title="Setlists" className="lg:col-span-4" action={{ label: setlists.length ? "All" : "New", href: "/tunes?tab=setlists" }}>
-              {setlists.length ? (
-                <div className="-mx-2 flex flex-col">
-                  {[...setlists]
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
-                    .slice(0, 4)
-                    .map((s) => (
-                      <Link key={s.id} href={`/tunes/setlist?id=${encodeURIComponent(s.id)}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
-                        <IconChip icon={SetlistIcon} />
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.name}</span>
-                        <span className="text-xs tabular-nums text-muted">{s.tuneIds.length} tunes</span>
-                      </Link>
-                    ))}
-                </div>
-              ) : (
-                <Empty>
-                  Put tunes in order for a gig or a session, with the key and tempo for each.{" "}
-                  <Link href="/tunes?tab=setlists" className="font-semibold text-accent hover:underline">Make a setlist</Link>
-                </Empty>
-              )}
-            </Card>
-            )}
-
-            {/* Practice sessions, or the one running now */}
-            {show("sessions") && (
-            <Card title={timer ? "Practicing now" : "Practice sessions"} className="lg:col-span-4" action={{ label: "Open timer", href: "/practice-timer" }}>
-              {timer ? (
-                <div className="-mx-1">
-                  <PracticeTimerWidget />
-                </div>
-              ) : sessions.length ? (
-                <div className="-mx-2 flex flex-col">
-                  {sessions.slice(0, 4).map((s) => (
-                    <Link key={s.id} href="/practice-timer" className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
-                      <IconChip icon={StopwatchIcon} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{s.name || "Untitled session"}</span>
-                        <span className="block truncate text-xs text-muted">{describeSession(s)}</span>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <Empty>
-                  Chain timed blocks (scales, then tunes, then a break) or run a Pomodoro.{" "}
-                  <Link href="/practice-timer" className="font-semibold text-accent hover:underline">Plan a session</Link>
-                </Empty>
-              )}
-            </Card>
-            )}
-
-            {/* Ear training weak spots */}
-            {show("weakSpots") && (
-            <Card title="Ear training weak spots" className="lg:col-span-4">
-              {weakSpots.length ? (
-                <div className="flex flex-col gap-3">
-                  {weakSpots.map((w) => {
-                    const total = attempts(w.counts);
-                    const pct = total ? Math.round(((w.counts.correct + w.counts.partial * 0.5) / total) * 100) : 0;
-                    return (
-                      <Link key={w.key} href={w.href} className="group flex flex-col gap-1.5">
-                        <span className="flex items-baseline justify-between gap-2 text-sm">
-                          <span className="truncate font-semibold group-hover:underline">{w.label}</span>
-                          <span className="shrink-0 text-xs tabular-nums text-muted">{pct}% of {total}</span>
-                        </span>
-                        <span className="h-1.5 overflow-hidden rounded-full bg-background">
-                          <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(pct, 4)}%` }} />
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Empty>
-                  Play a few rounds of{" "}
-                  <Link href="/guess-the-interval" className="font-semibold text-accent hover:underline">Guess the Interval</Link>,{" "}
-                  <Link href="/guess-the-chord" className="font-semibold text-accent hover:underline">Guess the Chord</Link> or{" "}
-                  <Link href="/guess-the-progression" className="font-semibold text-accent hover:underline">Guess the Progression</Link> and the ones you miss most show up here.
-                </Empty>
-              )}
-            </Card>
-            )}
-
-            {/* Ear-training learning paths */}
-            {show("earPath") && (
-            <Card title="Ear training path" className="lg:col-span-12" detail="Learn mode in each tool">
-              <EarTrainingProgress summaries={learningSummaries} links />
-            </Card>
-            )}
-
-            {/* Every tool */}
-            {show("allTools") && (
-            <section className="rounded-3xl bg-surface p-5 lg:col-span-12">
-              <h2 className="mb-4 text-sm font-semibold text-muted">All tools</h2>
-              <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
-                {groupByCategory(tools).map(({ category, items }) => (
-                  <div key={category} className="min-w-0">
-                    <h3 className="mb-1.5 px-2 text-xs font-semibold text-muted">{category}</h3>
-                    <ToolRows items={items} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
-                  </div>
-                ))}
-              </div>
-            </section>
-            )}
-          </div>
-          </>
+          <DashboardGrid
+            items={layout}
+            editing={editing}
+            onChange={(dashboard) => updateSite({ dashboard })}
+            renderCard={renderCard}
+            available={available}
+            emptyText={emptyText}
+          />
         )}
-
-        <section className="mt-6 flex flex-col items-start gap-4 rounded-3xl border border-foreground/[0.06] p-5 sm:flex-row sm:items-center">
-          <p className="flex-1 text-sm text-muted">
-            soniroll is free, with no ads, popups or paywalled tools. Servers aren&apos;t free, so if you&apos;re feeling generous, consider chipping in.
+        {!editing && layout.every((i) => !available(i.id)) && !q && (
+          <p className="rounded-3xl bg-surface p-5 text-sm text-muted">
+            Your dashboard is empty. Press Edit to add cards.
           </p>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <a
-              href={DONATE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover"
-            >
-              Buy me a coffee
-            </a>
-            <Link href={SUPPORT_PATH} className="inline-flex items-center rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-              Why it helps
-            </Link>
-          </div>
-        </section>
+        )}
       </main>
 
       <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-2 pb-6 text-center text-sm text-muted">
@@ -478,32 +553,49 @@ export default function Home() {
         </span>
         <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
         <Link href="/" className="hover:text-foreground">About</Link>
+        <Link href={SUPPORT_PATH} className="hover:text-foreground">Support soniroll</Link>
         <Link href="/feedback" className="hover:text-foreground">Send feedback</Link>
         <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
         <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
         <Link href="/terms" className="hover:text-foreground">Terms</Link>
         <Link href="/credits" className="hover:text-foreground">Credits</Link>
       </footer>
+
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset the dashboard?"
+          message="Your cards go back to the default ones, in the default order and sizes."
+          confirmLabel="Reset"
+          onConfirm={() => {
+            updateSite({ dashboard: null, hiddenCards: [] });
+            setConfirmReset(false);
+          }}
+          onCancel={() => setConfirmReset(false)}
+        />
+      )}
     </div>
   );
 }
 
+/** A dashboard card: a title row (with an optional detail and link) over its content. `accent`
+    tints it; `plain` has no background of its own (for content made of its own tiles). */
 function Card({
   title,
   detail,
   action,
-  className = "",
+  tone = "surface",
   children,
 }: {
   title: string;
   detail?: string;
   action?: { label: string; href: string };
-  className?: string;
+  tone?: "surface" | "accent" | "plain";
   children: ReactNode;
 }) {
+  const frame = tone === "plain" ? "" : tone === "accent" ? "rounded-3xl bg-accent/10 p-5 ring-1 ring-inset ring-accent/15" : "rounded-3xl bg-surface p-5";
   return (
-    <section className={`flex min-w-0 flex-col gap-4 rounded-3xl bg-surface p-5 ${className}`}>
-      <div className="flex items-center gap-2">
+    <section className={`flex h-full min-w-0 flex-col gap-4 ${frame}`}>
+      <div className={`flex items-center gap-2 ${tone === "plain" ? "px-1" : ""}`}>
         <h2 className="text-sm font-semibold text-muted">{title}</h2>
         {detail && <span className="truncate text-xs text-muted/80">· {detail}</span>}
         {action && (

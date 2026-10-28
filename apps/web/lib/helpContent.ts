@@ -44,9 +44,10 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Do what's on today", text: "Start a routine or tick off today's tasks right from the dashboard." },
       { title: "Pick up where you left off", text: "The tools, tunes and charts you used last are one click away." },
       { title: "Find anything", text: "Search tools and your tunes from the box at the top." },
+      { title: "Make it yours", text: "Press Edit to drag cards around, change their size, take some off or add others. Done saves it." },
     ],
-    features: ["Today's goal, streak, week and hours", "On today: routines and tasks", "The last 18 weeks of practice", "Tune of the day", "Favorites and recent tools", "Your library counts and setlists"],
-    tips: ["Press / anywhere to search every tool.", "Star tools in the sidebar to pin them as Favorites."],
+    features: ["Today's goal, streak, week and hours", "On today: routines and tasks", "Days practiced, as a grid", "Tune of the day", "Favorites and recent tools", "More cards to add: your library, setlists, practice sessions, ear training, every tool"],
+    tips: ["Press / anywhere to search every tool.", "Star tools in the sidebar to pin them as Favorites.", "Reset (while editing) brings back the default cards."],
     shot: "dashboard",
   },
   {

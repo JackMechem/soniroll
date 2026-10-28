@@ -15,7 +15,7 @@ import { NAV_LINKS, groupByCategory } from "@/components/tools";
 import { DISPLAY_DEFAULTS, DISPLAY_KEY, TEXT_SIZES } from "@/lib/display";
 import { HintsContext } from "@/lib/hints";
 import { WEEKDAY_LETTER, formatMinutesShort } from "@/lib/practiceLog";
-import { DASHBOARD_CARDS, SITE_DEFAULTS, useSiteSettings, type DashboardCard, type ShedLogOpenOn } from "@/lib/siteSettings";
+import { SITE_DEFAULTS, useSiteSettings, type ShedLogOpenOn } from "@/lib/siteSettings";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
@@ -184,41 +184,20 @@ export function SidebarSettings() {
 
 // ---------------------------------------------------------------- Dashboard
 
-const CARD_HINTS: Record<DashboardCard, string> = {
-  today: "Today's routines and goal from the Shed Log.",
-  support: "The card asking for a donation.",
-  lessons: "Upcoming lessons, for teachers and students.",
-  recent: "The tools, tunes and charts you opened last.",
-  tuneOfDay: "A tune from Tunes I Know, a new one each day.",
-  favorites: "Your starred tools.",
-  library: "How many tunes, setlists and charts you have.",
-  setlists: "Your latest setlists.",
-  sessions: "Your Practice Timer sessions.",
-  weakSpots: "The intervals, chords and progressions you miss most.",
-  earPath: "How far you are in each ear trainer's Learn mode.",
-  allTools: "Every tool, by group.",
-};
-
 export function DashboardSettings() {
   const [site, update] = useSiteSettings();
   return (
-    <SettingsCard title="Dashboard cards" description="Choose what shows on your dashboard.">
-      {DASHBOARD_CARDS.map((c) => {
-        const off = (c.id === "today" && !site.shedLog) || (c.id === "lessons" && !site.lessons);
-        return (
-          <SwitchRow
-            key={c.id}
-            label={c.label}
-            checked={!off && !site.hiddenCards.includes(c.id)}
-            disabled={off}
-            onChange={(on) => update({ hiddenCards: toggleIn(site.hiddenCards, c.id, on) })}
-            hint={off ? `${c.id === "today" ? "The Shed Log" : "Lessons"} is turned off in General.` : CARD_HINTS[c.id]}
-          />
-        );
-      })}
-      <Link href="/dashboard" className="self-start text-sm font-semibold text-accent hover:underline">
-        Open the dashboard →
-      </Link>
+    <SettingsCard title="Dashboard" description="Choose your cards, their order and their sizes right on the dashboard: press Edit at the top of it." hints={false}>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/dashboard?edit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          Edit the dashboard
+        </Link>
+        {site.dashboard && (
+          <button type="button" onClick={() => update({ dashboard: null, hiddenCards: [] })} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+            Back to the default cards
+          </button>
+        )}
+      </div>
     </SettingsCard>
   );
 }

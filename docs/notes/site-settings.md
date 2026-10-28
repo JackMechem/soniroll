@@ -70,3 +70,49 @@ hiding Support, turning off Community, two dashboard cards off, 24 h clock and L
 took effect on the dashboard and sidebar and survived a reload; the Shed Log opened on Day with
 24 h times. **Not verified:** signed in (the account sync and the cache handoff on a fresh
 device), real phones, light mode for every tab, hover styles.
+
+## 2026-10-27 — the dashboard is edited right on it (Edit), with a calmer default
+
+Jack: the dashboard had too much going on; he wanted it fully customizable on the dashboard itself,
+behind an edit mode. Same component in the desktop app (it renders `components/Home.tsx`).
+
+- **Layout:** `lib/dashboardLayout.ts` has every card (`DASHBOARD_CARDS`: id, label, hint, the sizes
+  it allows, and the feature it needs), `DEFAULT_LAYOUT`, and helpers (`resolveLayout`, `moveItem`,
+  `nextSize`, `defaultSize`). The layout is a list of `{ id, size }` saved as `dashboard` in the
+  site settings (synced; `null` = default). Sizes: small/medium/large/full = 4/6/8/12 of a 12-column
+  grid from `lg`, 1 or 2 columns from `md`, one column on phones (the size button is hidden there).
+- **Old setting:** `hiddenCards` (the Settings switches) is only read while `dashboard` is null, so
+  people who'd switched cards off keep them off in the default; the old "today" also hides the two
+  cards it was split into. Reset (and Settings → Dashboard → Back to the default cards) clears both.
+- **Cards changed:** "Today's practice" was split into **Goal and streak** (`TodayMomentum`),
+  **Today's practice** (day timer + on today + quick add; the "Start your Shed Log" invite signed out)
+  and **Days practiced** (`HeatGrid bare`, 18/26/40 weeks by size). Every card now has the same
+  frame (`Card` in `Home.tsx`: a title row, `tone` surface/accent/plain). Lessons and Support kept
+  their looks but the dashboard decides whether they show: `useLessonsData()` (null = no lessons)
+  and `useSupportCardHidden()`. The old always-there "chip in" box at the bottom is gone (the
+  Support card covers it; the footer gained a "Support soniroll" link).
+- **Default:** Goal and streak, Today's practice + Days practiced, Pick up where you left off + Tune of
+  the day, Favorites, Lessons (only if you have any), Support. Library, Setlists, Practice sessions,
+  weak spots, Ear training path and All tools are in Edit → Add a card.
+- **Edit mode (`components/dashboard/DashboardGrid.tsx`):** the Edit button by the search (or
+  `/dashboard?edit`, which Settings links to) swaps the header for a sticky "Editing your dashboard"
+  bar (Reset with a confirm, Done; Escape also leaves and drops `?edit`). Each card gets a dashed
+  frame with a row of controls: a drag handle, its name, a size button (cycles through the sizes it
+  allows) and ×; its content is `inert` and dimmed. Cards with nothing to show get a placeholder
+  ("Shows once you're signed in"). "Add a card" lists what's missing (descriptions behind the ?).
+- **Dragging** is hand-rolled with pointer events: a mouse can grab anywhere on a card, a finger or
+  pen only the handle (`touch-none`), so phones still scroll. The card follows the pointer
+  (a transform, no re-render), an accent bar shows where it'll land (before/after the card under the
+  pointer; above/below when that card is nearly full width), and it's placed on release (Escape
+  cancels). It scrolls the app's scrolling area near its edges. Arrow keys on the handle move a card
+  one place, and focus is put back on the handle afterwards.
+- Outside edit mode the grid is `grid-flow-row-dense`, so a card that has nothing to show doesn't
+  leave a hole; while editing, the grid follows the saved order exactly.
+
+Checked with the nix Chromium (dev server on port 3100, signed out, 1440 and 390 wide, light and
+dark): the default layout, Edit, a mouse drag (the drop bar and the new order), size changes, ×,
+adding cards, arrow-key moves (focus stays on the handle), the order and sizes surviving a reload,
+`?edit` and Escape, Reset, no console errors, no sideways scroll on a phone. `tsc` and lint pass for
+web and desktop; the desktop frontend builds. **Not checked:** anything signed in (Goal and streak,
+the Today's practice list, Days practiced and Lessons with real data, the layout syncing to the
+account), dragging with a finger on a real phone, and the desktop app's window itself.

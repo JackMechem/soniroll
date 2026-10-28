@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePersistedSettings, writeSettings } from "@/lib/usePersistedSettings";
+import type { DashboardItem } from "@/lib/dashboardLayout";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
 /**
@@ -14,23 +15,6 @@ import { useSyncedSettings } from "@/lib/useSyncedSettings";
  */
 export const SITE_SETTINGS_KEY = "jam-practice-site-settings";
 const CACHE_KEY = "jam-practice-site-settings-cache";
-
-/** The dashboard's cards, in the order they appear there. */
-export const DASHBOARD_CARDS = [
-  { id: "today", label: "Today's practice" },
-  { id: "support", label: "Support soniroll" },
-  { id: "lessons", label: "Lessons" },
-  { id: "recent", label: "Pick up where you left off" },
-  { id: "tuneOfDay", label: "Tune of the day" },
-  { id: "favorites", label: "Favorites" },
-  { id: "library", label: "Your library" },
-  { id: "setlists", label: "Setlists" },
-  { id: "sessions", label: "Practice sessions" },
-  { id: "weakSpots", label: "Ear training weak spots" },
-  { id: "earPath", label: "Ear training path" },
-  { id: "allTools", label: "All tools" },
-] as const;
-export type DashboardCard = (typeof DASHBOARD_CARDS)[number]["id"];
 
 export type ShedLogOpenOn = "last" | "month" | "week" | "day";
 
@@ -61,7 +45,11 @@ export const SITE_DEFAULTS = {
   community: true,
   lessons: true,
 
-  /** Dashboard cards you've turned off. */
+  /** The dashboard's cards, their order and sizes, as arranged with its Edit button
+      (`lib/dashboardLayout.ts`); null is the default layout. */
+  dashboard: null as DashboardItem[] | null,
+  /** Dashboard cards switched off before the dashboard could be edited. Only read while
+      `dashboard` is null, so those cards stay off in the default layout. */
   hiddenCards: [] as string[],
 
   /** Which view the Shed Log opens on. */
