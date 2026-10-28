@@ -4,6 +4,7 @@ import { useState } from "react";
 import Hint from "@/components/Hint";
 import NumberField from "@/components/NumberField";
 import Select from "@/components/Select";
+import { MetronomeIcon } from "@/components/tools";
 import { OptionGroup, SoundPicker, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
 import type { BeatLevel } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
@@ -474,6 +475,7 @@ export function TempoHero({
 }) {
   const { whole, tenths } = splitTenths(precise ?? bpm);
   const reward = useReward();
+  const [taps, setTaps] = useState(0);
   return (
     <div className="flex w-full flex-col items-center gap-4">
       {/* A sibling row above the −/number/+ row, not nested inside it — so the steppers below
@@ -519,7 +521,7 @@ export function TempoHero({
       </div>
 
       {!locked && (
-        <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full flex-col gap-3">
           <input
             type="range"
             min={0}
@@ -538,10 +540,17 @@ export function TempoHero({
           />
           <button
             type="button"
-            onClick={onTap}
-            className="rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover"
+            onClick={() => {
+              onTap();
+              setTaps((n) => n + 1);
+            }}
+            title="Tap along a few times to set the tempo"
+            className="relative flex h-11 items-center gap-2 self-center rounded-full bg-surface px-6 text-sm font-semibold transition-transform hover:bg-surface-hover active:scale-95"
           >
+            <MetronomeIcon className="h-4 w-4 text-accent" />
             Tap tempo
+            {/* A ring flashes out from the button on every tap. */}
+            {taps > 0 && <span key={taps} aria-hidden className="tap-ring pointer-events-none absolute inset-0 rounded-full opacity-0 ring-2 ring-accent" />}
           </button>
         </div>
       )}

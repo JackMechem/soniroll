@@ -266,6 +266,24 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
   }
 }
 
+/* Tap tempo (components/MeterFields.tsx's TempoHero): a ring flashing out from the button on each
+   tap. The ring is invisible when it isn't animating, so less motion simply shows nothing. */
+@keyframes tap-ring {
+  from {
+    opacity: 0.7;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 1.18;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tap-ring {
+    animation: tap-ring 0.45s ease-out;
+  }
+}
+
 /* Ear-training learning path: the level-complete celebration and the current level's pulse. */
 @keyframes confetti-fall {
   0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
