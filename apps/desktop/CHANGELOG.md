@@ -4,6 +4,13 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.1] - 2026-10-27
+
+- Smoother on Linux: the app draws with the graphics card again (it only falls back on NVIDIA
+  drivers, where that can show a blank window).
+- The dashboard is yours to arrange: press Edit to move cards, change their size, take some off or
+  add others. It also starts with fewer cards.
+
 ## [0.1.0] - 2026-10-27
 
 The first test release.
