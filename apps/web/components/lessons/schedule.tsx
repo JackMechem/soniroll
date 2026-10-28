@@ -10,6 +10,7 @@ import { CalendarIcon, CheckIcon, CloseIcon, DownloadIcon, LinkIcon, PlusIcon } 
 import { Dialog, errorText, field } from "@/components/lessons/parts";
 import { shareLink } from "@/lib/shareLink";
 import { durationLabel, googleCalendarUrl, lessonIcs, LESSON_LENGTHS, zoneName, type LessonEvent, type Slot } from "@jam-practice/core/lessonSchedule";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 /** The browser's time zone. */
 export function localTz(): string {
@@ -339,7 +340,7 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
   const booked = data.upcoming.filter((b) => b.status === "confirmed");
 
   async function copy(token: string) {
-    const res = await shareLink("Pick a lesson time", `${window.location.origin}/lessons/book?offer=${token}`);
+    const res = await shareLink("Pick a lesson time", `${siteOrigin()}/lessons/book?offer=${token}`);
     setCopied(res === "copied" ? token : null);
   }
 
@@ -497,7 +498,7 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
   }
 
   if (done) {
-    const link = `${window.location.origin}/lessons/book?offer=${done.token}`;
+    const link = `${siteOrigin()}/lessons/book?offer=${done.token}`;
     return (
       <Dialog title="Times offered" onClose={onClose}>
         <p className="text-sm">

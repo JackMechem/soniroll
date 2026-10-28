@@ -96,6 +96,8 @@ apps/web/          Next.js app: app/ (routes), components/, lib/, public/, next.
                    vercel.json, AGENTS.md. Package "@jam-practice/web".
 apps/mobile/       Expo app: src/app (routes), src/components, src/lib, scripts/.
                    android/ and android-prod/ are gitignored prebuild output.
+apps/desktop/      Tauri desktop app (early test): Vite + the website's own components (aliased,
+                   with next/* stand-ins) and a Rust audio engine in src-tauri/.
 packages/convex/   Convex functions and schema at the folder's root; convex.json (load-bearing);
                    _generated/ is committed. Package "@jam-practice/convex".
 packages/core/     Shared pure logic (themes, navLinks, chords, iRealPro, practiceLog, bassLine,
@@ -282,6 +284,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |
 | Feedback, reports, admin panel, Mayday switches, analytics, launch checklist | `launch-admin-analytics.md` |
+| Desktop app (`apps/desktop`): Tauri, reusing web components via aliases, native audio (the Web Audio bridge to `web-audio-api`), Google sign-in through the system browser; CI, `desktop-v*` release tags and the Nix package (update its pnpm hash when the lock file changes) | `desktop-app.md` |
 
 ## Current state at a glance (2026-10-18)
 

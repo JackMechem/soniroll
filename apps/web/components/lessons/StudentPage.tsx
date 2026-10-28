@@ -19,6 +19,7 @@ import { RoutineRow } from "@/components/lessons/routines";
 import { todayKey, type Routine } from "@/lib/practiceLog";
 import { shareLink } from "@/lib/shareLink";
 import { usePracticeLog } from "@/lib/usePracticeLog";
+import { siteOrigin } from "@/lib/siteOrigin";
 
 type Adding = { kind: "routine"; replace?: LessonItem };
 
@@ -66,7 +67,7 @@ export default function StudentPage({ id }: { id: string }) {
   const lessonId = data.id;
   const features = data.features;
   const routineItems = (data.items as LessonItem[]).filter((i) => i.kind === "routine");
-  const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/lessons/join?invite=${data.code}` : "";
+  const inviteUrl = typeof window !== "undefined" ? `${siteOrigin()}/lessons/join?invite=${data.code}` : "";
   const routineSummary = new Map(data.routines.map((r) => [r.itemId, r]));
 
 

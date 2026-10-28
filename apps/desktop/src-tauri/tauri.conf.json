@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "soniroll",
+  "version": "0.1.0",
+  "identifier": "com.soniroll.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm vite",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm vite:build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "soniroll",
+        "width": 1320,
+        "height": 860,
+        "minWidth": 380,
+        "minHeight": 560
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Music",
+    "shortDescription": "Music practice tools with low-latency native audio",
+    "longDescription": "The soniroll desktop app: every soniroll tool and page, with sound played natively for lower, steadier latency than a browser.",
+    "homepage": "https://www.soniroll.com",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libpipewire-0.3-0t64 | libpipewire-0.3-0"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "pipewire-libs"
+        ]
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-"
+    }
+  }
+}
