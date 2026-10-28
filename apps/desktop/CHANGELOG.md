@@ -4,6 +4,12 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.4] - 2026-10-28
+
+- Shed Notes: clicking a line puts the cursor on that line, even below tables, notation, scores and
+  pictures, and with vim keys on, `k` and `j` move one line at a time instead of sometimes skipping
+  lines or jumping far up the note.
+
 ## [0.1.3] - 2026-10-28
 
 - New tool, **Time Test** (under Drums): play along to the click on a practice pad and see how far

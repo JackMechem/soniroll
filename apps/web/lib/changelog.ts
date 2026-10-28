@@ -33,6 +33,16 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.3",
+    date: "2026-10-28",
+    title: "Shed Notes cursor fixes",
+    changes: [
+      { kind: "fixed", text: "In Shed Notes, clicking a line puts the cursor on that line, even below tables, notation, scores and pictures (it used to land on the line below)." },
+      { kind: "fixed", text: "With vim keys on, **k** and **j** move one line at a time instead of sometimes skipping lines or jumping far up the note." },
+      { kind: "fixed", text: "Clicking right on a horizontal rule puts the cursor there." },
+    ],
+  },
+  {
     version: "0.10.2",
     date: "2026-10-28",
     title: "Time Test",
