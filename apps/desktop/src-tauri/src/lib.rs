@@ -45,7 +45,21 @@ fn native_audio<R: Runtime>(bridge: &bridge::Bridge) -> TauriPlugin<R> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// WebKitGTK draws through the GPU with DMA-BUF buffers, which gives a blank or broken window with
+/// NVIDIA's driver. Only there, fall back to its slower path (unless the variable is already set
+/// either way). Everyone else keeps the smooth one.
+#[cfg(target_os = "linux")]
+fn webkit_gpu_workaround() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
+        && std::path::Path::new("/proc/driver/nvidia/version").exists()
+    {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    webkit_gpu_workaround();
     let bridge = bridge::Bridge::new();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

@@ -628,3 +628,12 @@ Set up like Jack's open-stomp-manager, simplified.
 - **Rust formatting:** `src-tauri/rustfmt.toml` (110 wide, `use_small_heuristics = "Max"`) is the
   closest to how the code was written; the code was run through it once. Two clippy fixes:
   `as_chunks::<4>()` for f32 decoding, and `large_enum_variant` allowed on the bridge's `Node`.
+
+## 2026-10-27 — smoother drawing on Linux: the DMA-BUF workaround only for NVIDIA
+
+Jack noticed the desktop app ran at a lower frame rate than the browser. The dev shell and the Nix
+package set `WEBKIT_DISABLE_DMABUF_RENDERER=1` for everyone, which forces WebKitGTK off its GPU
+(DMA-BUF) path; it's only needed with NVIDIA's driver (blank or broken windows). Now `lib.rs`
+(`webkit_gpu_workaround`) sets it at start-up only when `/proc/driver/nvidia/version` exists and
+the variable isn't already set, and the flake no longer sets it. Jack's machine: AMD RX 7700/7800 XT,
+Hyprland (Wayland). Not verified by me: whether it's smoother (Jack to check), and NVIDIA machines.
