@@ -650,7 +650,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Speed", text: "How fast it plays, from very slow to faster than normal." },
       { name: "Keep original pitch", text: "On, slowing down keeps the pitch. Off, it drops like a slowed record." },
-      { name: "Loop", text: "Drag on the waveform to loop a section; it repeats until you clear it." },
+      { name: "Volume", text: "How loud the file plays." },
+      { name: "Loop", text: "Shift-drag on the waveform to loop a section; it repeats until you clear it. The ⏮ button (or B) jumps back to the loop's start." },
       { name: "Markers", text: "Named points with notes, to jump between sections." },
       { name: "Saved files", text: "Files you've loaded stay in this browser to open again." },
     ],
