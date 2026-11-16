@@ -35,6 +35,7 @@ export const LOG_BY_BUTTON = new Set<string>([
   "/guess-the-interval",
   "/guess-the-chord",
   "/guess-the-progression",
+  "/find-the-root",
   "/metronome",
   "/random-metric-modulation",
   "/tempo-trainer",

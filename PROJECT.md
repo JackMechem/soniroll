@@ -216,6 +216,7 @@ Web (`apps/web`):
 - Meter/tempo: `lib/meterControls.ts`, `components/MeterFields.tsx`,
   `components/metronome/MetronomeOptions.tsx`, `StructureEditor`, `BeatIndicator`.
 - Audio: `lib/clickEngine.ts` (run simultaneous clicks as tracks of **one** `startClickEngine`),
+  `lib/steadyTimer.ts` (`setSteadyInterval` for any audio scheduler, so it keeps time in a background tab),
   `lib/tones.ts` (`playNote`, `playNotesTogether`, `prepare`), `lib/sampledTones.ts`,
   `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`.
 - Dialogs and inputs: `Select`, `SwitchRow`, `ConfirmDialog`, `PromptDialog`, `NumberField`,
@@ -262,6 +263,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Landing page, `/dashboard` routing, forgot password | `landing-and-password-reset.md`; newer shots/teaching section in `launch-admin-analytics.md` |
 | Page transitions, Metronome options, setting chips everywhere, Pomodoro editor | `web-ui-patterns.md` |
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
+| Find the Root (`/find-the-root`): rootless voicings, sing/play or pick the root; the theory table in `lib/rootlessVoicings.ts` (7♭9's four right roots, spelling) | `find-the-root.md` |
 | Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
 | Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |
@@ -280,7 +282,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
-| Metric modulation, Tuner, Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
+| Metric modulation, Tuner (and its takes: record, pitch graph, kept on this device), Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
 | Practice Timer | `tools-practice-timer.md` |
 | Chord Charts (parser, renderer, fonts, editor, transpose, `sheddex://` links) | `tools-chord-charts.md` |
 | Random Sticking Warmup | `tools-sticking-warmup.md` |

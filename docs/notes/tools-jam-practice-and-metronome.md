@@ -230,3 +230,20 @@ Same day: the **Tap tempo** button (`TempoHero` in `MeterFields.tsx`, used by ev
 tempo) went from a full-width flat bar to a centred pill with the metronome icon that shrinks a
 touch when pressed, and a ring (`.tap-ring` in globals.css) flashes out from it on every tap
 (invisible without motion). Checked at 1000 and 390 wide, light and dark; five taps set the tempo.
+
+## 2026-11-16 — clicks in a background tab, and the lost first click (FB-14, FB-19)
+
+Both were the click scheduler (`lib/clickEngine.ts` `runClickScheduler`) queuing ~0.12 s ahead
+from a main-thread `setInterval`: when the timer runs late, clicks are scheduled in the past, and
+`scheduleClick`'s gain envelope (`setValueAtTime` + exponential ramp) has already ended, so they
+play **silently** rather than late.
+- Background tabs slow main-thread timers to ~1/s. `lib/steadyTimer.ts` `setSteadyInterval` ticks
+  from one shared Blob Web Worker (not throttled); `lookahead()` queues ≥2 s ahead while
+  `document.hidden`. `stop()` now cuts off queued clicks that haven't started yet.
+- The first click was fixed at start + 60 ms; opening the mic (Time Test) can stall the page past
+  that. The grid now starts from the scheduler's first run if the first click is < 20 ms away;
+  `ClickOutput.onStart` reports the real time (the desktop Recorder's `latestFirstBeat` uses it).
+- Also on the worker timer: Syncopation, Random Sticking Warmup, `playCountOff`.
+Checked in headless Chromium by holding main-thread intervals to 1/s (old: 11 of 12 clicks in the
+past; new: none) and by stalling the main thread 200 ms at Start. Not checked in a real hidden tab
+in Firefox/Safari, nor on desktop.

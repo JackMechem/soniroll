@@ -45,8 +45,14 @@ export default function PrivacyPage() {
         </ul>
         <p>Slow Downer&apos;s audio files always stay in your browser, signed in or not.</p>
         <p>
-          The Tuner and the Time Test listen through your mic only while you use them, and what they hear is never saved or sent anywhere. The Time
+          The Tuner, the Time Test and the tools that listen for the note you play or sing (Note, Scale and Interval Trainer, Find the Root) use
+          your mic only while you use them, and what they hear is never sent anywhere. The Time
           Test keeps each take&apos;s results (its score and timing numbers) in its history, like other tool settings.
+        </p>
+        <p>
+          When you press Record in the Tuner, the take is saved in your browser on this device only, signed in or not. So are audio files you open
+          in the Tuner, and the copy made when you open one of your recordings there. They&apos;re never uploaded or added to your account, and don&apos;t
+          count towards its 100 MB. Delete them from the Tuner&apos;s Takes, or by clearing your browser&apos;s data for soniroll.com.
         </p>
       </LegalSection>
 
