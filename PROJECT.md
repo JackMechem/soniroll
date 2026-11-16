@@ -211,6 +211,7 @@ Web (`apps/web`):
 - Meter/tempo: `lib/meterControls.ts`, `components/MeterFields.tsx`,
   `components/metronome/MetronomeOptions.tsx`, `StructureEditor`, `BeatIndicator`.
 - Audio: `lib/clickEngine.ts` (run simultaneous clicks as tracks of **one** `startClickEngine`),
+  `lib/steadyTimer.ts` (`setSteadyInterval` for any audio scheduler, so it keeps time in a background tab),
   `lib/tones.ts` (`playNote`, `playNotesTogether`, `prepare`), `lib/sampledTones.ts`,
   `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`.
 - Dialogs and inputs: `Select`, `SwitchRow`, `ConfirmDialog`, `PromptDialog`, `NumberField`,
