@@ -33,6 +33,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   "/guess-the-progression": dynamic(() => import("@/components/GuessTheProgression"), {
     loading: PaneLoading,
   }),
+  "/find-the-root": dynamic(() => import("@/components/FindTheRoot"), { loading: PaneLoading }),
   "/practice-timer": dynamic(() => import("@/components/PracticeTimer"), { loading: PaneLoading }),
   "/lessons": dynamic(() => import("@/components/lessons/LessonsPage"), { loading: PaneLoading }),
   "/shed-log": dynamic(() => import("@/components/practicelog/GatedPracticeLog"), { loading: PaneLoading }),

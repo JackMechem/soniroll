@@ -11,6 +11,7 @@ import DrumGenerator from "@/components/DrumGenerator";
 import FeedbackPage from "@/components/feedback/FeedbackPage";
 import SharedFilePage from "@/components/files/SharedFilePage";
 import SharedTunePage from "@/components/files/SharedTunePage";
+import FindTheRoot from "@/components/FindTheRoot";
 import FollowLists from "@/components/FollowLists";
 import GuessTheChord from "@/components/GuessTheChord";
 import GuessTheInterval from "@/components/GuessTheInterval";
@@ -110,6 +111,7 @@ const ROUTES: Route[] = [
   { path: "/guess-the-interval", render: () => <NativeTool><GuessTheInterval /></NativeTool> },
   { path: "/guess-the-chord", render: () => <NativeTool><GuessTheChord /></NativeTool> },
   { path: "/guess-the-progression", render: () => <NativeTool><GuessTheProgression /></NativeTool> },
+  { path: "/find-the-root", render: () => <NativeTool><FindTheRoot /></NativeTool> },
   { path: "/practice-timer", render: () => <NativeTool><PracticeTimer /></NativeTool> },
   { path: "/random-metric-modulation", render: () => <NativeTool><RandomMetricModulation /></NativeTool> },
   { path: "/tempo-trainer", render: () => <NativeTool><TempoTrainer /></NativeTool> },
