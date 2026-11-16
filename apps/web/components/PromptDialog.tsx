@@ -57,7 +57,13 @@ export default function PromptDialog({
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
           onFocus={(e) => e.currentTarget.select()}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            // Stops the Enter's keypress from clicking whatever gets focus next (a confirm
+            // dialog opened by `onSubmit` focuses its Cancel button).
+            e.preventDefault();
+            submit();
+          }}
           className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
         />
         <div className="flex justify-end gap-2">

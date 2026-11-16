@@ -9,6 +9,7 @@ import { OptionSection, OptionsCard } from "@/components/OptionsCard";
 import KeyHint from "@/components/KeyHint";
 import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import WaveScrollbar from "@/components/WaveScrollbar";
 import Waveform, { LoopRegion, View } from "@/components/Waveform";
 import {
@@ -398,6 +399,7 @@ export default function SlowDowner() {
   return (
     <ToolLayout
       title="Slow Downer"
+      presets={toolPresets("slow-downer", settings, updateSettings, ["maximized"])}
       layout="stacked"
       options={
         <OptionsCard id="slow-downer">

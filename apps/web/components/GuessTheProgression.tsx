@@ -5,6 +5,7 @@ import SwitchRow from "@/components/SwitchRow";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Select from "@/components/Select";
@@ -707,6 +708,7 @@ export default function GuessTheProgression() {
   return (
     <ToolLayout
       title="Guess the Progression"
+      presets={toolPresets("guess-the-progression", settings, updateSettings)}
       sidePanel={
         <>
           <CollapsiblePanel

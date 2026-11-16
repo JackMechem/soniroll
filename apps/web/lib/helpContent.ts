@@ -205,6 +205,25 @@ export const HELP_TOPICS: HelpTopic[] = [
     tips: ["Close panes down to one to go back to the normal page."],
   },
   {
+    id: "presets",
+    title: "Presets",
+    group: "Getting started",
+    tagline: "Save a tool's options and get them back in one tap.",
+    purpose: "Every tool with options has a Presets chip: name the way you have it set up (say, “7/8 at 140, woodblock”) and pick it again later.",
+    steps: [
+      { title: "Set it up", text: "Change the tool's options the way you like them." },
+      { title: "Save it", text: "Open Presets and press Save current options, then give it a name." },
+      { title: "Use it", text: "Next time, open Presets and tap its name. The chip shows which preset you're on, or Custom once you change something." },
+    ],
+    features: [
+      "On every tool with options (in the side panel on Bass Genius, Drum Generator and Syncopation)",
+      "Update, rename or delete a preset from its ⋮ menu",
+      "Only options: your history and stats stay as they are",
+      "Saved to your account when you're signed in, in this browser when you're not",
+    ],
+    tips: ["Saving with a name you already use replaces that preset (it asks first)."],
+  },
+  {
     id: "account",
     title: "Account, sync & themes",
     group: "Getting started",

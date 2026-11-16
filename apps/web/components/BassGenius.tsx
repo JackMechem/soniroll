@@ -12,6 +12,8 @@ import BassPlayersTab from "@/components/bassgenius/BassPlayersTab";
 import TranscriptionScore from "@/components/notation/Score";
 import PhraseDialog from "@/components/bassgenius/PhraseDialog";
 import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { PresetsSection } from "@/components/PresetsChip";
+import { toolPresets } from "@/lib/toolPresets";
 import { TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { BassIcon, ChordChartIcon, ChordIcon, DrumIcon, EyeIcon, EyeOffIcon, MetronomeIcon, PlayIcon, ShuffleIcon, SlidersIcon, SpeakerIcon, StopIcon } from "@/components/tools";
@@ -466,6 +468,11 @@ export default function BassGenius() {
   );
   const panel = (
     <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-2xl">
+      {/* The band setup only: which chart (and its key) and the view stay as they are. */}
+      <PresetsSection
+        id="presets"
+        tool={toolPresets("bass-genius", settings, update, ["tab", "showChart", "source", "chartId", "typedText", "typedKey", "typedMeter", "transposeKey"])}
+      />
       {tempoSection}
       <PanelSection id="tune" title="Tune" icon={ChordChartIcon} summary={`${chartName}${!typed && transposeKey ? ` · in ${transposeKey}` : ""}`}>
         <Segmented

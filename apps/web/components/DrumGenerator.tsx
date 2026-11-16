@@ -7,6 +7,8 @@ import ToolLayout from "@/components/ToolLayout";
 import { TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { PresetsSection } from "@/components/PresetsChip";
+import { toolPresets } from "@/lib/toolPresets";
 import DrumScore, { DRUM_LEGEND } from "@/components/drumgen/DrumScore";
 import { DrumIcon, MetronomeIcon, PlayIcon, ShuffleIcon, SlidersIcon, SpeakerIcon, StopIcon } from "@/components/tools";
 import { ALL_VOICES, drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from "@/lib/drumSounds";
@@ -312,6 +314,7 @@ export default function DrumGenerator() {
 
   const panel = (
     <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-2xl">
+      <PresetsSection id="dg-presets" tool={toolPresets("drum-generator", settings, update)} />
       <PanelSection id="dg-tempo" title="Tempo" icon={MetronomeIcon} summary={`${bpm} BPM`}>
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={style.meter.top} beatUnit={style.meter.bottom} onTap={tap} />
         {style.meter.bottom === 8 && <p className="-mt-2 text-center text-xs text-muted">Dotted quarter = {bpm}</p>}

@@ -7,6 +7,7 @@ import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Disclosure from "@/components/Disclosure";
@@ -931,6 +932,7 @@ export default function ScaleTrainer() {
   return (
     <ToolLayout
       title="Scale Trainer"
+      presets={toolPresets("scale-trainer", settings, updateSettings)}
       sidePanel={
         listenMode && (
           <>
