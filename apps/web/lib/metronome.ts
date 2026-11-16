@@ -1,3 +1,5 @@
+import { setSteadyInterval } from "@/lib/steadyTimer";
+
 let audioCtx: AudioContext | null = null;
 
 export function getAudioContext(): AudioContext {
@@ -74,10 +76,10 @@ export function playCountOff(
 
   const durationMs = (totalBeats * beatDuration + 0.1) * 1000;
 
-  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let stopTimer: (() => void) | null = null;
   if (continueIndefinitely) {
     let nextBeat = totalBeats;
-    intervalId = setInterval(() => {
+    stopTimer = setSteadyInterval(() => {
       const horizon = ctx.currentTime + SCHEDULE_LOOKAHEAD_SEC;
       while (startTime + nextBeat * beatDuration < horizon) {
         scheduleBeat(nextBeat);
@@ -89,7 +91,7 @@ export function playCountOff(
   return {
     durationMs: continueIndefinitely ? Infinity : durationMs,
     stop: () => {
-      if (intervalId) clearInterval(intervalId);
+      stopTimer?.();
       for (const t of timeouts) clearTimeout(t);
       timeouts.clear();
       for (const osc of oscillators) {

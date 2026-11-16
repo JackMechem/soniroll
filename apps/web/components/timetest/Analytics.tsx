@@ -370,6 +370,7 @@ export default function Analytics({
   });
   const [cursor, setCursor] = useState(() => Math.max(0, a.countInEnd));
   const [playhead, setPlayhead] = useState<number | null>(null);
+  const [scrub, setScrub] = useState<number | null>(null);
   const viewRef = useRef(view);
   useEffect(() => {
     viewRef.current = view;
@@ -510,7 +511,7 @@ export default function Analytics({
             {playClick ? "With click" : "Without click"}
           </button>
           <span className="text-sm tabular-nums text-muted">
-            {fmtTime(playhead ?? cursor)} / {fmtTime(a.duration)}
+            {fmtTime(scrub ?? playhead ?? cursor)} / {fmtTime(a.duration)}
           </span>
           <div className="ml-auto flex items-center gap-1.5">
             <button type="button" onClick={() => zoom(2)} aria-label="Zoom out" title="Zoom out" className={roundButton}>
@@ -529,7 +530,9 @@ export default function Analytics({
           analysis={a}
           view={view}
           setView={setView}
-          playhead={playhead}
+          playhead={playhead ?? cursor}
+          playing={playing}
+          onScrub={setScrub}
           onSeek={(t) => {
             setCursor(t);
             if (playing) onPlay(t);
@@ -537,7 +540,7 @@ export default function Analytics({
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <StatusLegend tol={tol} />
-          <span className="text-xs text-muted">Scroll to zoom · drag to move · click to set where playback starts</span>
+          <span className="text-xs text-muted">Scroll to zoom · drag to move · click, or drag the playhead, to play from there</span>
         </div>
         <p className="text-xs text-muted">
           Vertical lines are the click (bars numbered). Each stroke is a coloured line, shaded back to where it should have landed; the strip below shows how
