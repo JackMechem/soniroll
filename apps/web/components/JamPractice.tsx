@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
@@ -161,6 +162,7 @@ export default function JamPractice() {
   return (
     <ToolLayout
       title="Jam Practice"
+      presets={toolPresets("jam-practice", settings, updateSettings)}
       credit="Idea by Rob Moreno"
       options={
         <>

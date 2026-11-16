@@ -7,6 +7,7 @@ import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Disclosure from "@/components/Disclosure";
@@ -837,6 +838,7 @@ export default function NoteTrainer() {
   return (
     <ToolLayout
       title="Note Trainer"
+      presets={toolPresets("note-trainer", settings, updateSettings)}
       credit="Idea by Rob Moreno"
       sidePanel={
         listenMode && (

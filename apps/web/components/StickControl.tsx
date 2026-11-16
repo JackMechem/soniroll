@@ -11,6 +11,7 @@ import { SteppedField, SoundOptions, TempoHero } from "@/components/MeterFields"
 import { ListIcon, RepeatIcon, SpeakerIcon } from "@/components/tools";
 import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import Hint from "@/components/Hint";
 import { type BeatLevel, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
@@ -184,6 +185,7 @@ export default function StickControl() {
   return (
     <ToolLayout
       title="Random Sticking Warmup"
+      presets={toolPresets("random-sticking-warmup", settings, updateSettings)}
       layout="stacked"
       topAligned
       options={

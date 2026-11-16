@@ -204,6 +204,11 @@ Web (`apps/web`):
   become chips automatically. `optionsMode` holds a mode switch above the chips; `sidePanel`s
   (History, Struggles) are chips above the main display. The title must match the tool's
   `NAV_LINKS` label (icon and intro lookup).
+- Presets (`lib/toolPresets.ts`, `components/PresetsChip.tsx`) — every tool with options gets
+  them: `presets={toolPresets("<href-slug>", settings, update, [non-option fields])}` on
+  `ToolLayout`, or `<PresetsChip tool={…} />` in a tool's own `SettingsBar`, or
+  `<PresetsSection id tool />` in a `PanelSection` panel. Only option fields are saved/applied
+  (history, `…Stats`, `inputDeviceId` always left out). A new tool with options should opt in.
 - `packages/core/navLinks.ts` + `components/tools.tsx` — the tool list, categories, icons,
   `CATEGORY_COLORS`; the source for the sidebar, ⌘K palette and Help.
 - `lib/useSyncedSettings.ts` (returns `[settings, update, ready]`), `lib/useSyncedTunes.ts`,
@@ -271,6 +276,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
+| Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |

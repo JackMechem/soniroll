@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import { InstrumentIcon } from "@/components/InstrumentIcons";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
@@ -291,6 +292,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
   return (
     <ToolLayout
       title="Tuner"
+      presets={toolPresets("tuner", settings, updateSettings, ["takeZoom"])}
       sidePanel={
         <TakesChip
           takes={takes}

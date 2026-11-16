@@ -5,6 +5,7 @@ import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
@@ -676,6 +677,7 @@ export default function GuessTheInterval() {
   return (
     <ToolLayout
       title="Guess the Interval"
+      presets={toolPresets("guess-the-interval", settings, updateSettings)}
       optionsMode={
         <Segmented
           onPage

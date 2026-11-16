@@ -22,6 +22,8 @@ import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import { SUB_LABELS, Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
 import { ChipsModeContext, SettingChip, SettingsBar } from "@/components/SettingsBar";
 import ToolLayout from "@/components/ToolLayout";
+import { PresetsChip } from "@/components/PresetsChip";
+import { toolPresets } from "@/lib/toolPresets";
 import { MeterIcon, MetronomeIcon, NoteIcon, SpeakerIcon, StopIcon } from "@/components/tools";
 import { type BeatLevel, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
 import {
@@ -433,7 +435,11 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               <ChipsModeContext.Provider value={true}>
                 <div className="flex w-full flex-col items-center gap-3 pt-1">
                   {optionsMode}
-                  <SettingsBar fit>{options}</SettingsBar>
+                  <SettingsBar fit>
+                    {/* The metronome's setup only: the mic options belong to this setup, not a preset. */}
+                    <PresetsChip tool={toolPresets("recorder", settings, updateSettings, ["autoGain", "mono", "monoSource", "playSong", "songVolume", "metronome"])} />
+                    {options}
+                  </SettingsBar>
                 </div>
               </ChipsModeContext.Provider>
             </>

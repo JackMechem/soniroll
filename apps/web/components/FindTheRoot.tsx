@@ -12,6 +12,7 @@ import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { PoolPill } from "@/components/reward/Reward";
 import {
@@ -583,6 +584,7 @@ export default function FindTheRoot() {
   return (
     <ToolLayout
       title="Find the Root"
+      presets={toolPresets("find-the-root", settings, updateSettings)}
       optionsMode={
         <Segmented
           onPage

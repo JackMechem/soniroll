@@ -657,6 +657,15 @@ export function LogOutIcon({ className }: { className?: string }) {
 }
 
 /** The sidebar's favorite/star toggle — `filled` for a favorited tool, outline otherwise. */
+/** A bookmark ribbon — a tool's saved presets. */
+export function BookmarkIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M6.5 3.5h11v17L12 16.5l-5.5 4z" />
+    </svg>
+  );
+}
+
 export function StarIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
     <svg {...svgProps(className)} fill={filled ? "currentColor" : "none"}>
