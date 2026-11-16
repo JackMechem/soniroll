@@ -1,4 +1,4 @@
-Bass Genius and Drum Generator drum samples: Virtuosity Drums by Versilian Studios & Karoryfer Samples, CC0 —
+Rhythm Section drum samples (Bass Genius and the Drum Generator before it): Virtuosity Drums by Versilian Studios & Karoryfer Samples, CC0 —
 https://github.com/sfzinstruments/virtuosity_drums — converted to mono mp3 (trimmed, kick/snare close mics mixed with overheads).
 sticks/: ride, ride bell, crash, hi-hat (pedal, closed, open), kick, snare (center, cross-stick, rimshot), high and low
 toms (mid mic + overheads), plus the set's auxiliary cowbell (close + overhead) and high woodblock (from VSCO 2 / Karoryfer,

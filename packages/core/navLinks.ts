@@ -40,9 +40,9 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Play along",
   },
   {
-    href: "/bass-genius",
-    label: "Bass Genius",
-    description: "Pick one of your chord charts and a jazz upright bass walks the changes with you.",
+    href: "/rhythm-section",
+    label: "Rhythm Section",
+    description: "Drums in over 30 styles to play along with. Add one of your chord charts and an upright bass and piano play it too.",
     category: "Play along",
   },
   {
@@ -163,13 +163,6 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Drums",
   },
   {
-    href: "/drum-generator",
-    label: "Drum Generator",
-    description:
-      "A drummer to play along with — jazz and Latin American grooves from Brazil, Cuba, the Caribbean and Argentina on a real kit, written out as it plays.",
-    category: "Play along",
-  },
-  {
     href: "/time-test",
     label: "Time Test",
     description:
@@ -210,6 +203,19 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Community",
   },
 ];
+
+/** Tools that were folded into another: their old hrefs (still in saved Shed Log sessions and
+    attachments, usage stats, favorites, recents and old links) → the tool that replaced them.
+    Bass Genius and the Drum Generator became Rhythm Section (2026-11-16). */
+export const RETIRED_TOOL_HREFS: Record<string, string> = {
+  "/bass-genius": "/rhythm-section",
+  "/drum-generator": "/rhythm-section",
+};
+
+/** A tool's current href: a retired one's replacement, else itself. */
+export function currentToolHref(href: string): string {
+  return RETIRED_TOOL_HREFS[href] ?? href;
+}
 
 /** Case-insensitive substring match on `label`, same rule `apps/web/components/tools.tsx`'s own
     `filterLinks` already used before this moved here — kept generic over the link shape so both

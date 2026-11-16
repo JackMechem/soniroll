@@ -143,7 +143,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     group: "Practice tools",
     href: "/score-writer",
     tagline: "Write music in notation and hear it back.",
-    purpose: "Write lines, exercises, licks and lead sheets as real notation. It's the same editor Shed Notes and Bass Genius use.",
+    purpose: "Write lines, exercises, licks and lead sheets as real notation. It's the same editor Shed Notes and Rhythm Section's bass players use.",
     steps: [
       { title: "Start a score", text: "Press New score, give it a title, then pick the clef, key, time signature and tempo." },
       { title: "Write notes", text: "Type a letter (A–G) to add a note in the key, 3–7 to pick its length, R for a rest. Or press Write and click notes onto the staff." },
@@ -163,7 +163,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Select / Write", text: "Select: clicks only pick a note or bars. Write: clicking the staff adds a note there, or changes the one under the pointer." },
       { name: "Key", text: "Letters you type and notes you click follow the key signature (F in G major is F♯). Accidentals show against the key." },
       { name: "Time", text: "Changing it moves the notes into the new bars, as long as no note would cross a bar line." },
-      { name: "Export / Import", text: "Save a score as a file, or bring one in (Bass Genius transcriptions too)." },
+      { name: "Export / Import", text: "Save a score as a file, or bring one in (Rhythm Section bass transcriptions too)." },
     ],
     tips: ["Signed out, scores stay in this browser; signed in, they're in your account.", "Right-click bars to copy or paste their chords."],
   },
@@ -377,29 +377,36 @@ export const HELP_TOPICS: HelpTopic[] = [
     shot: "jam-practice",
   },
   {
-    id: "bass-genius",
-    title: "Bass Genius",
+    id: "rhythm-section",
+    title: "Rhythm Section",
     group: "Play along",
-    href: "/bass-genius",
-    tagline: "A bass player to walk the changes with you.",
-    purpose: "An upright bass plays a walking line over any chart — with piano and drums if you like — written out as it plays.",
+    href: "/rhythm-section",
+    tagline: "A band to play along with.",
+    purpose:
+      "Drums in over 30 styles on a real kit, written out as they play. Add one of your chord charts (or type chords) and an upright bass and a piano or Rhodes play the changes with them.",
     steps: [
-      { title: "Pick the changes", text: "Choose one of your charts, or type a progression." },
-      { title: "Set the band", text: "Tempo, feel, chords (piano or Rhodes) and drums." },
-      { title: "Play along", text: "Watch the bass line on the staff as it's played." },
+      { title: "Pick a style", text: "Swing, shuffle, bossa nova, samba, mambo, songo, merengue, tango and more." },
+      { title: "Add the changes", text: "Choose one of your charts or type a progression — or let the drums play on their own." },
+      { title: "Play along", text: "Follow the bass line and the drums on the staff as they play." },
     ],
-    features: ["Walking or two-feel", "Bass lines in the style of transcriptions you add", "Comping piano or Rhodes", "A swinging drummer", "Mixer"],
+    features: [
+      "30+ drum styles, grouped by country",
+      "A walking bass on swing; a fitting bass part on every other style",
+      "Bass lines in the style of transcriptions you add",
+      "Piano or Rhodes chords",
+      "Notation as it plays",
+      "A fader per drum",
+    ],
     options: [
-      { name: "Tune", text: "Play over one of your chord charts, or type chords (Dm7 G7 | Cmaj7) or numerals (ii V I) in any key. Key transposes the chart; How long sets the number of choruses or keep going; Count-in adds bars first." },
-      { name: "Bass player", text: "Computer walks a line from scratch. Your own players (and the built-in one) play from the transcriptions you add: Their phrases reuses their actual lines, Their style writes new lines the way they play." },
-      { name: "Feel", text: "Walking in 4 or a two feel (half notes). Only for the Computer." },
-      { name: "Touch", text: "How hard the bass is plucked — soft, medium or strong — which changes the sound, not just the volume." },
-      { name: "Swing", text: "How long the first eighth note of each pair is. Auto swings harder at slow tempos and straighter as it gets faster." },
-      { name: "Chords", text: "Off, piano or Rhodes. Comping plays varied rhythms; Held plays one chord per change, on the beat." },
-      { name: "Drums", text: "Off, just time (ride, hi-hat on 2 and 4), or with comping (snare, setups into sections). Drum settings has every detail of the swing and ride pattern." },
-      { name: "Mix", text: "Levels for bass, chords, drums, the click and the room sound." },
+      { name: "Tune", text: "No chart (the drums play on their own), one of your chord charts, or chords you type (Dm7 G7 | Cmaj7) or numerals (ii V I) in any key. Key transposes the chart; How long sets the number of choruses or keep going; Count-in adds a bar first." },
+      { name: "Style", text: "The groove the whole band plays, grouped by country. Swing styles walk the bass and swing; the others play a bass part that fits them (root and fifth with the pushes in a bossa, the tumbao in a mambo, and so on). Swing sets how long the first eighth note of each pair is." },
+      { name: "Drums", text: "On swing: just time (ride, hi-hat on 2 and 4) or with comping (snare, setups into sections); Drum settings has every detail of the swing and ride. On the other styles: what the right hand plays, cross-stick and woodblock (the style's part, a clave, or nothing), clave direction, fills, variation and human feel. With the drums off you can have a hi-hat click on 2 and 4." },
+      { name: "Bass", text: "Off, or the upright. On swing, the Computer walks a line from scratch (walking in 4 or a two feel); your own players (and the built-in one) play from the transcriptions you add: Their phrases reuses their lines, Their style writes new lines the way they play. Touch is how hard it's plucked." },
+      { name: "Chords", text: "Off, piano or Rhodes. On swing, Comping plays varied rhythms and Held plays one chord per change; other styles hold the chords." },
+      { name: "Mix", text: "Levels for bass, chords, drums, the click and the room sound, and a fader for each part of the kit." },
+      { name: "Bass players", text: "The second tab: add players and transcribe their lines (or import MusicXML), so the bass can play like them. The idea and the built-in Ray Brown transcription are Rob Moreno's." },
     ],
-    shot: "bass-genius",
+    shot: "rhythm-section",
   },
   {
     id: "note-trainer",
@@ -702,30 +709,6 @@ export const HELP_TOPICS: HelpTopic[] = [
     shot: "random-sticking-warmup",
   },
   {
-    id: "drum-generator",
-    title: "Drum Generator",
-    group: "Play along",
-    href: "/drum-generator",
-    tagline: "A drummer for any groove.",
-    purpose: "Jazz and Latin American grooves on a real kit, written out as they play — to play along with or learn.",
-    steps: [
-      { title: "Pick a style", text: "Swing, bossa, samba, mambo, songo, merengue, tango and more." },
-      { title: "Shape it", text: "Clave direction, fills, variation, the instruments it plays." },
-      { title: "Play along", text: "Follow the notation as it plays; mix each drum." },
-    ],
-    features: ["30+ styles", "Notation as it plays", "Clave and fill options", "A fader per drum"],
-    options: [
-      { name: "Style", text: "Grooves grouped by country: swing, shuffle and waltz; bossa, samba, baião; mambo, songo, son; merengue; calypso; tango and more." },
-      { name: "Timekeeping", text: "What the right hand plays: the style's own instrument, or always hi-hat, ride, bell or cowbell, or Automatic to move around." },
-      { name: "Cross-stick and woodblock", text: "Play the style's own part, a clave (son, rumba, bossa, 6/8), or nothing." },
-      { name: "Clave direction", text: "3-2 or 2-3, when a two-bar clave is in play." },
-      { name: "Fills", text: "How often a fill leads into the next phrase." },
-      { name: "Variation and human feel", text: "How much the groove changes bar to bar, and how loose the timing and dynamics are." },
-      { name: "Mix", text: "A fader for each part of the kit, and the room sound." },
-    ],
-    shot: "drum-generator",
-  },
-  {
     id: "syncopation",
     title: "Syncopation",
     group: "Drums",
@@ -781,7 +764,9 @@ export const HELP_TOPICS: HelpTopic[] = [
 ];
 
 export function topicById(id: string | null | undefined): HelpTopic {
-  return HELP_TOPICS.find((t) => t.id === id) ?? HELP_TOPICS[0];
+  // Bass Genius and the Drum Generator became Rhythm Section.
+  const wanted = id === "bass-genius" || id === "drum-generator" ? "rhythm-section" : id;
+  return HELP_TOPICS.find((t) => t.id === wanted) ?? HELP_TOPICS[0];
 }
 
 /** The topic for a page (by its path), if there is one. */

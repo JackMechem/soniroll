@@ -1,6 +1,6 @@
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { NAV_LINKS_DATA } from "@jam-practice/core/navLinks";
+import { useEffect, useMemo, useRef } from "react";
+import { currentToolHref, NAV_LINKS_DATA } from "@jam-practice/core/navLinks";
 import { usePersistedSettings } from "./usePersistedSettings";
 
 /** The tools opened most recently in this browser (their nav hrefs, newest first) — Home's "Jump
@@ -11,7 +11,9 @@ const MAX = 8;
 const TOOL_HREFS = new Set(NAV_LINKS_DATA.map((l) => l.href));
 
 export function useRecentTools(): string[] {
-  return usePersistedSettings(KEY, DEFAULTS)[0].hrefs;
+  const hrefs = usePersistedSettings(KEY, DEFAULTS)[0].hrefs;
+  // A tool folded into another (Bass Genius, Drum Generator) shows as the one that replaced it.
+  return useMemo(() => [...new Set(hrefs.map(currentToolHref))], [hrefs]);
 }
 
 /** Mounted once (in `AppShell`): notes every tool page that's opened. */

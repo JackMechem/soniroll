@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { NAV_LINKS } from "@/components/tools";
+import { findToolLink } from "@/components/tools";
 import { queueLogEntry } from "@/lib/practiceTimerEngine";
 import { loggedMs, markLogged, recordUsage, todayKey, usedMs, type ToolUsage } from "@/lib/toolUsage";
 import { trackToolStart, trackToolTime } from "@/lib/usage";
 
 /**
  * Counts the time a tool is actually running — the Metronome playing, an ear-training round
- * going, the Tuner listening, Bass Genius or the Drum Generator playing, a take recording… — not
+ * going, the Tuner listening, Rhythm Section playing, a take recording… — not
  * just its page being open. Each tool says when it's running (`useToolActivity`);
  * `useToolTimeTracker` (mounted once, app-wide) adds up the time.
  *
@@ -28,7 +28,7 @@ import { trackToolStart, trackToolTime } from "@/lib/usage";
     stats pills): every tool that reports running time. (The Practice Timer logs itself.) */
 export const LOG_BY_BUTTON = new Set<string>([
   "/jam-practice",
-  "/bass-genius",
+  "/rhythm-section",
   "/note-trainer",
   "/scale-trainer",
   "/interval-trainer",
@@ -42,13 +42,12 @@ export const LOG_BY_BUTTON = new Set<string>([
   "/slow-downer",
   "/recorder",
   "/random-sticking-warmup",
-  "/drum-generator",
   "/syncopation",
   "/time-test",
 ]);
 
 /** Tools that keep their own options look (stats and Log button, but not the reward look). */
-export const PLAIN_OPTIONS = new Set<string>(["/bass-genius", "/drum-generator", "/syncopation", "/random-sticking-warmup"]);
+export const PLAIN_OPTIONS = new Set<string>(["/rhythm-section", "/syncopation", "/random-sticking-warmup"]);
 
 type Active = { since: number; visibleOnly: boolean };
 
@@ -61,7 +60,7 @@ const pendingLog = new Map<string, number>();
 let lastTick = Date.now();
 
 function labelOf(href: string) {
-  return NAV_LINKS.find((l) => l.href === href)?.label ?? href;
+  return findToolLink(href)?.label ?? href;
 }
 
 function accumulate() {

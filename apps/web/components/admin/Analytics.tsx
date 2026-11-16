@@ -4,7 +4,7 @@ import { useAction } from "convex/react";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { CloseIcon, NAV_LINKS, PlusIcon } from "@/components/tools";
+import { CloseIcon, findToolLink, PlusIcon } from "@/components/tools";
 
 // ---------------------------------------------------------------- metrics
 
@@ -654,7 +654,7 @@ function TimeChart({
 
 // ---------------------------------------------------------------- breakdowns
 
-const TOOL_LABEL = (href: string) => NAV_LINKS.find((l) => l.href === href)?.label ?? href;
+const TOOL_LABEL = (href: string) => findToolLink(href)?.label ?? href;
 const PRETTY: Record<string, string> = {
   google: "Google",
   password: "Email & password",

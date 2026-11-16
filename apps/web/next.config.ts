@@ -31,6 +31,10 @@ const nextConfig: NextConfig = {
       { source: "/tunes/setlists", destination: "/tunes?tab=setlists", permanent: false },
       { source: "/chord-charts", destination: "/tunes?tab=charts", permanent: false },
       { source: "/files", destination: "/tunes?tab=files", permanent: false },
+      // Bass Genius and the Drum Generator became Rhythm Section (`?tab=players` carries over;
+      // the Drum Generator's link plays the drums on their own).
+      { source: "/bass-genius", destination: "/rhythm-section", permanent: false },
+      { source: "/drum-generator", destination: "/rhythm-section?play=drums", permanent: false },
     ];
   },
 };

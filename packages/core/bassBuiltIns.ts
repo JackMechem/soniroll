@@ -14,7 +14,7 @@ export const BUILT_IN_PLAYERS: BuiltInPlayer[] = [
   {
     id: "builtin:ray-brown",
     name: "Ray Brown",
-    description: "Comes with Bass Genius. Transcription by Rob Moreno, who came up with the idea for this tool.",
+    description: "Comes with Rhythm Section. Transcription by Rob Moreno, who came up with the idea for its bass.",
     transcriptions: [{ id: "builtin:ray-brown:cool-walk", data: COOL_WALK }],
   },
 ];

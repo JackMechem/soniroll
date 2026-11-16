@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { RETIRED_TOOL_HREFS } from "@jam-practice/core/navLinks";
 import { addDays, startOfWeek, toDateKey } from "@jam-practice/core/practiceLog";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
@@ -105,19 +106,44 @@ export function recordUsage(href: string, ms: number, day = todayKey()) {
   });
 }
 
-/** Marks a tool's day as logged into the Shed Log up to `ms`. */
+/** Marks a tool's day as logged into the Shed Log up to `ms` (and the same day of the tools it
+    replaced, whose time it shows — see `withRetired`). */
 export function markLogged(href: string, ms: number, day = todayKey()) {
   write((u) => {
-    const days = u[href] ?? {};
-    const [used] = days[day] ?? [0, 0];
-    return { ...u, [href]: { ...days, [day]: [used, Math.min(used, ms)] } };
+    let out = u;
+    for (const h of [href, ...Object.keys(RETIRED_TOOL_HREFS).filter((old) => RETIRED_TOOL_HREFS[old] === href)]) {
+      const days = out[h] ?? {};
+      if (h !== href && !days[day]) continue;
+      const [used] = days[day] ?? [0, 0];
+      out = { ...out, [h]: { ...days, [day]: [used, Math.min(used, ms)] } };
+    }
+    return out;
   });
+}
+
+/** Retired tools' days counted under the tool that replaced them (Bass Genius and the Drum
+    Generator under Rhythm Section), so its streak and totals carry on. Read-only: nothing is moved
+    in storage. */
+export function withRetired(u: ToolUsage): ToolUsage {
+  const retired = Object.entries(RETIRED_TOOL_HREFS).filter(([old]) => u[old]);
+  if (!retired.length) return u;
+  const out = { ...u };
+  for (const [old, now] of retired) {
+    const days = { ...(out[now] ?? {}) };
+    for (const [day, [ms, logged]] of Object.entries(u[old])) {
+      const [m, l] = days[day] ?? [0, 0];
+      days[day] = [m + ms, l + logged];
+    }
+    out[now] = days;
+  }
+  return out;
 }
 
 /** The stored usage (signed out: this device; signed in: the account), and whether it's loaded. */
 export function useToolUsage(): [ToolUsage, boolean] {
   const [stored, , ready] = useSyncedSettings(TOOL_USAGE_KEY, DEFAULT_USAGE);
-  return [stored.tools, ready];
+  const tools = useMemo(() => withRetired(stored.tools), [stored.tools]);
+  return [tools, ready];
 }
 
 /** Mounted once (`PracticeLogGlobal`): the one place usage is written from. */
