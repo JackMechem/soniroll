@@ -4,6 +4,19 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.5] - 2026-11-16
+
+- New **Rhythm Section** tool, replacing Bass Genius and the Drum Generator: drums in over 30 styles,
+  with an upright bass and piano or Rhodes playing your chord charts, and a bass part for every style.
+- **Presets** on every tool: save a tool's options under a name and pick them again later.
+- New ear trainer, **Find the Root**: hear a rootless voicing and sing, play or pick its root.
+- **Record in the Tuner** and play the take back through it, with a graph of how in tune each note
+  was. Recorded natively, and kept on this computer only.
+- Slow Downer: a Volume chip, and a button and the B key back to the loop start.
+- Time Test: drag the playhead, or click anywhere, to play from there; the count-in no longer
+  loses its first click.
+- Clicks keep time when the window is in the background.
+
 ## [0.1.4] - 2026-10-28
 
 - Shed Notes: clicking a line puts the cursor on that line, even below tables, notation, scores and
