@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { tuneHref } from "@/components/library/useTuneActions";
 import { setlistHref } from "@/components/library/setlistParts";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
-import { ChordChartIcon, CheckIcon, CloseIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, NAV_LINKS } from "@/components/tools";
+import { ChordChartIcon, CheckIcon, CloseIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, NAV_LINKS, findToolLink } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { type Attachment, attachmentKey } from "@/lib/practiceLog";
 import { useTuneIndex } from "@/lib/recordings";
@@ -41,7 +41,7 @@ export function useAttachmentResolver() {
           return { href: c ? `/chord-charts/view?id=${encodeURIComponent(a.id)}` : null, label: c?.title ?? a.label, icon: ChordChartIcon, kindLabel: "Chord chart" };
         }
         case "tool": {
-          const tool = NAV_LINKS.find((l) => l.href === a.href);
+          const tool = findToolLink(a.href);
           return { href: a.href, label: tool?.label ?? a.label, icon: tool?.icon ?? NoteIcon, kindLabel: "Tool" };
         }
       }

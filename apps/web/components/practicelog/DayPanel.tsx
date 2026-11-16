@@ -15,7 +15,7 @@ import TaskDialog from "@/components/practicelog/TaskDialog";
 import Subtasks from "@/components/practicelog/Subtasks";
 import LogTimeDialog from "@/components/practicelog/LogTimeDialog";
 import DayTimer, { useDayTimerMs } from "@/components/practicelog/DayTimer";
-import { CheckIcon, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MicIcon, NAV_LINKS, PencilIcon, PlayIcon, PlusIcon, RepeatIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
+import { CheckIcon, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MicIcon, findToolLink, PencilIcon, PlayIcon, PlusIcon, RepeatIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
 import {
   type DayTask,
   addDays,
@@ -183,7 +183,7 @@ export default function DayPanel({
         <div className="flex flex-col gap-1 rounded-2xl bg-surface p-4">
           <ul className="flex flex-col text-sm">
             {day.sessions!.map((s, i) => {
-              const tool = s.tool ? NAV_LINKS.find((l) => l.href === s.tool) : undefined;
+              const tool = s.tool ? findToolLink(s.tool) : undefined;
               const ToolIcon = tool?.icon ?? StopwatchIcon;
               return (
               <li key={i} className="flex items-center justify-between gap-2 py-0.5">

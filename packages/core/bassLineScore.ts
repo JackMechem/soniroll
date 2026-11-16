@@ -66,12 +66,31 @@ export function chorusToTranscription(
   });
   const sorted = [...notes].sort((a, b) => a.beat - b.beat);
   const noteAt: ScoredChorus["noteAt"] = [];
+  // A note held over the bar line (a Latin bass part's push into the next chord): the rest of it
+  // starts the next bar, tied.
+  let carry: { note: BassNote; until: number } | null = null;
 
   const measures = bars.map((bar, mi) => {
     const end = bar.start + bar.beats;
     const inBar = sorted.filter((n) => n.beat >= bar.start - 1e-6 && n.beat < end - 1e-6);
     const out: TNote[] = [];
     let t = 0;
+    if (carry) {
+      const held = carry.note;
+      const len = Math.min(q4(Math.min(carry.until, inBar[0]?.beat ?? end) - bar.start), capacity);
+      shapesFor(len, 0).forEach((shape, p, all) => {
+        out.push({
+          id: newId(),
+          ...shape,
+          pitch: spellMidi(held.midi, opts.preferFlat),
+          midi: held.midi,
+          ...(p < all.length - 1 ? { tie: true } : {}),
+          ...(held.ghost ? { ghost: true } : {}),
+        } as TNote);
+        t += shapeTicks(shape);
+      });
+      carry = null;
+    }
     inBar.forEach((n, k) => {
       const s = q4(n.beat - bar.start);
       if (s < t || s >= capacity) return;
@@ -93,6 +112,13 @@ export function chorusToTranscription(
         } as TNote);
       });
       t = s + pieces.reduce((sum, sh) => sum + shapeTicks(sh), 0);
+      // Still sounding at the bar line, with nothing struck on the next downbeat: tie it over.
+      const until = n.beat + n.length;
+      const next = sorted.find((o) => o.beat >= end - 1e-6);
+      if (!inBar[k + 1] && mi < bars.length - 1 && until > end + 1e-6 && q4(until - end) >= 8 && (!next || next.beat > end + 1e-6) && out.length) {
+        out[out.length - 1] = { ...out[out.length - 1], tie: true };
+        carry = { note: n, until };
+      }
     });
 
     const chords: Transcription["measures"][number]["chords"] = [];

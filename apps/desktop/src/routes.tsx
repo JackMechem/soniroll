@@ -4,10 +4,8 @@ import PrivacyPage from "@/app/privacy/page";
 import TermsPage from "@/app/terms/page";
 import AccountPage from "@/components/AccountPage";
 import AdminPage from "@/components/admin/AdminPage";
-import BassGenius from "@/components/BassGenius";
 import ChangelogPage from "@/components/changelog/ChangelogPage";
 import Community, { CommunitySubPage } from "@/components/Community";
-import DrumGenerator from "@/components/DrumGenerator";
 import FeedbackPage from "@/components/feedback/FeedbackPage";
 import SharedFilePage from "@/components/files/SharedFilePage";
 import SharedTunePage from "@/components/files/SharedTunePage";
@@ -56,6 +54,7 @@ import Recorder from "@/components/Recorder";
 import RecordingPage from "@/components/recordings/RecordingPage";
 import RecordingsPage from "@/components/recordings/RecordingsPage";
 import ResetPassword from "@/components/ResetPassword";
+import RhythmSection from "@/components/RhythmSection";
 import ScaleTrainer from "@/components/ScaleTrainer";
 import ScoreWriter from "@/components/scorewriter/ScoreWriter";
 import SharedSetlistPage from "@/components/SharedSetlistPage";
@@ -101,8 +100,14 @@ const ROUTES: Route[] = [
   { path: "/metronome", render: () => <NativeTool><Metronome /></NativeTool> },
   { path: "/tuner", render: (_, query) => <NativeTool><Tuner openTakeId={opt(query, "take")} /></NativeTool> },
   { path: "/jam-practice", render: () => <NativeTool><JamPractice /></NativeTool> },
-  { path: "/bass-genius", render: () => <NativeTool><BassGenius /></NativeTool> },
-  { path: "/drum-generator", render: () => <NativeTool><DrumGenerator /></NativeTool> },
+  {
+    path: "/rhythm-section",
+    render: (_, query) => (
+      <NativeTool>
+        <RhythmSection initialTab={opt(query, "tab")} initialPlay={opt(query, "play")} />
+      </NativeTool>
+    ),
+  },
   { path: "/slow-downer", render: () => <SlowDowner /> },
   { path: "/recorder", render: (_, query) => <NativeTool input><Recorder tuneId={opt(query, "tuneId")} /></NativeTool> },
   { path: "/note-trainer", render: () => <NativeTool><NoteTrainer /></NativeTool> },
@@ -200,6 +205,9 @@ function redirectFor(pathname: string, query: Query): string | null {
   if (pathname === "/files") return "/tunes?tab=files";
   if (pathname === "/settings") return `/account?tab=${encodeURIComponent(query.get("tab") || "general")}`;
   if (pathname === "/lessons/availability") return "/lessons/settings#hours";
+  // Bass Genius and the Drum Generator became Rhythm Section.
+  if (pathname === "/bass-genius") return `/rhythm-section${query.get("tab") ? `?tab=${encodeURIComponent(query.get("tab")!)}` : ""}`;
+  if (pathname === "/drum-generator") return "/rhythm-section?play=drums";
   if (pathname === "/tune") {
     return `/tunes/tune?list=${encodeURIComponent(query.get("list") || "tunes")}&id=${encodeURIComponent(query.get("id") || "")}`;
   }

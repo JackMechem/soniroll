@@ -152,6 +152,10 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - Tailwind `translate-*` and `hover:translate-*` on one element fight (both set
   `--tw-translate-y`); put centering on a wrapper.
 - The dev server reads `next.config.ts` only at startup (restart to see a new version number).
+- A tool's href lives on in saved data (Shed Log sessions, attachments, usage stats, favorites,
+  recents, hidden tools, split-screen panes). When tools are merged or renamed, add the old href to
+  `RETIRED_TOOL_HREFS` (`packages/core/navLinks.ts`), redirect it (`next.config.ts` and the desktop
+  router), and look tools up with `findToolLink`, not `NAV_LINKS.find`. Keep the old settings keys.
 
 **Mobile**
 - Color does **not** go through NativeWind classNames: `vars()` CSS variables never update on
@@ -218,7 +222,9 @@ Web (`apps/web`):
 - Audio: `lib/clickEngine.ts` (run simultaneous clicks as tracks of **one** `startClickEngine`),
   `lib/steadyTimer.ts` (`setSteadyInterval` for any audio scheduler, so it keeps time in a background tab),
   `lib/tones.ts` (`playNote`, `playNotesTogether`, `prepare`), `lib/sampledTones.ts`,
-  `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`.
+  `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`;
+  `lib/rhythmSectionEngine.ts` (bass, chords and drums on one clock — add a part there rather than
+  starting a second engine beside it).
 - Dialogs and inputs: `Select`, `SwitchRow`, `ConfirmDialog`, `PromptDialog`, `NumberField`,
   `ContextMenu`, `Flyout`, `LoadingSpinner`, `Hint`, `HelpButton`.
 - Library pages: `components/library/ui.tsx` (`Hero`, `KeyBadge`, `Panel`, cards),
@@ -264,11 +270,12 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Page transitions, Metronome options, setting chips everywhere, Pomodoro editor | `web-ui-patterns.md` |
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
 | Find the Root (`/find-the-root`): rootless voicings, sing/play or pick the root; the theory table in `lib/rootlessVoicings.ts` (7♭9's four right roots, spelling) | `find-the-root.md` |
-| Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
-| Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
+| Rhythm Section (`/rhythm-section`, 2026-11-16: Bass Genius and the Drum Generator in one tool): the style decides the band, one engine/clock, style bass parts, old keys and hrefs kept | `rhythm-section.md` |
+| Bass Genius history (bass lines, players, transcriptions, comping, the swing drummer) — now Rhythm Section's bass | `bass-genius.md` |
+| Drum Generator history (styles, kit, notation) — now Rhythm Section's drums; Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |
 | Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
-| Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Bass Genius; clefs, key signatures, re-barring | `score-writer.md` |
+| Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Rhythm Section's bass players; clefs, key signatures, re-barring | `score-writer.md` |
 | Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
@@ -304,7 +311,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
   `/credits`.
 - **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
   native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
-  placeholder. Web-only so far: Bass Genius, Drum Generator, Syncopation, the Shed Log, Lessons and
+  placeholder. Web-only so far: Rhythm Section, Syncopation, the Shed Log, Lessons and
   Files / tune and file share links.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches

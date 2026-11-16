@@ -96,3 +96,10 @@ every family/rests/line combination (every bar fills 48 ticks, only enabled fami
 off), `tsc`, `eslint`, `next build`, and in nix Chromium (all ostinatos, line modes, playback
 lighting the notes, 390 px, no errors). **Not heard.** Mobile: listed (placeholder screen).
 
+
+**Now part of Rhythm Section (2026-11-16):** the Drum Generator and Bass Genius became one tool,
+`/rhythm-section` (`/drum-generator` redirects to `/rhythm-section?play=drums`, which plays the drums
+on their own). Its styles, groove options and kit faders are Rhythm Section's Style and Drums
+sections; settings still live under `jam-practice-drum-generator`. `lib/drumGeneratorEngine.ts` was
+replaced by `lib/rhythmSectionEngine.ts`; `DrumScore` now fits a busy bar (a fill no longer runs past
+its bar line). See `rhythm-section.md`.

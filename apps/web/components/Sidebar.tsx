@@ -34,7 +34,7 @@ import {
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
-import { useSiteSettings } from "@/lib/siteSettings";
+import { isToolHidden, useSiteSettings } from "@/lib/siteSettings";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
@@ -367,7 +367,7 @@ function NavItems({
   // Settings: tools you've hidden stay out of the lists (a search still finds them), and so do
   // Community and Lessons when they're turned off.
   const filtered = filterLinks(query).filter(
-    (l) => (searching || !site.hiddenTools.includes(l.href)) && (site.community || l.href !== "/community") && (site.lessons || l.href !== "/lessons"),
+    (l) => (searching || !isToolHidden(site.hiddenTools, l.href)) && (site.community || l.href !== "/community") && (site.lessons || l.href !== "/lessons"),
   );
   const router = useRouter();
   const [menu, setMenu] = useState<MenuState | null>(null);

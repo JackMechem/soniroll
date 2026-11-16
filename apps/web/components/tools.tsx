@@ -5,12 +5,13 @@ import {
   type Category,
   type NavLinkInfo,
   NAV_LINKS_DATA,
+  currentToolHref,
   filterNavLinks,
   groupByCategory,
 } from "@jam-practice/core/navLinks";
 
 // Shared by the sidebar and the command palette.
-export { CATEGORIES, groupByCategory };
+export { CATEGORIES, currentToolHref, groupByCategory };
 export type { Category };
 
 export function svgProps(className?: string) {
@@ -739,7 +740,7 @@ export const CATEGORY_COLORS: Record<Category, string> = {
     separately-ordered list that could drift out of sync with it. */
 const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JSX.Element> = {
   "/jam-practice": ShuffleIcon,
-  "/bass-genius": BassIcon,
+  "/rhythm-section": BassIcon,
   "/note-trainer": NoteIcon,
   "/scale-trainer": ScaleIcon,
   "/interval-trainer": IntervalIcon,
@@ -761,7 +762,6 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/tunes": LibraryIcon,
   "/recorder": RecordIcon,
   "/random-sticking-warmup": DrumIcon,
-  "/drum-generator": DrumIcon,
   "/time-test": TimeTestIcon,
   "/syncopation": SyncopationIcon,
   "/community": UsersIcon,
@@ -772,6 +772,13 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
     component via `NAV_LINK_ICONS`. */
 export const NAV_LINKS: (NavLinkInfo & { icon: (props: { className?: string }) => React.JSX.Element })[] =
   NAV_LINKS_DATA.map((link) => ({ ...link, icon: NAV_LINK_ICONS[link.href] }));
+
+/** The tool at `href` — a retired tool's href (Bass Genius, Drum Generator) finds the tool that
+    replaced it, so old Shed Log entries, stats and links still get a name and icon. */
+export function findToolLink(href: string | undefined) {
+  const current = href && currentToolHref(href);
+  return current ? NAV_LINKS.find((l) => l.href === current) : undefined;
+}
 
 export function filterLinks(query: string) {
   return filterNavLinks(NAV_LINKS, query);

@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { SignInModal } from "@/components/AccountMenu";
 import { FlameIcon, burstAt, toastNow } from "@/components/practicelog/Celebrations";
 import { SettingChip } from "@/components/SettingsBar";
-import { CheckIcon, EyeIcon, EyeOffIcon, NAV_LINKS, PlusIcon, StopwatchIcon } from "@/components/tools";
+import { CheckIcon, EyeIcon, EyeOffIcon, findToolLink, PlusIcon, StopwatchIcon } from "@/components/tools";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { formatMinutesShort, formatShortDate, hourMilestone, weekdayOf } from "@jam-practice/core/practiceLog";
 import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
@@ -38,7 +38,7 @@ export default function ToolStats({ href }: { href: string }) {
   const logRef = useRef<HTMLButtonElement>(null);
   if (!ready || !viewReady) return null;
 
-  const link = NAV_LINKS.find((l) => l.href === href);
+  const link = findToolLink(href);
   const color = "var(--accent)";
   const today = todayKey();
   const todayMs = usedMs(usage, href, today) + liveMs;

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import { useSidebarShownWidth } from "@/components/Sidebar";
-import { NAV_LINKS, svgProps } from "@/components/tools";
+import { findToolLink, svgProps } from "@/components/tools";
 import {
   getMetricModServerSnapshot,
   getMetricModSnapshot,
@@ -49,7 +49,7 @@ function DockCard({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const link = NAV_LINKS.find((l) => l.href === href);
+  const link = findToolLink(href);
   const Icon = link?.icon;
   return (
     <div className="relative flex flex-col gap-2 rounded-2xl bg-surface p-3 shadow-lg">

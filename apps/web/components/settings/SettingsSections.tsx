@@ -15,7 +15,7 @@ import { NAV_LINKS, groupByCategory } from "@/components/tools";
 import { DISPLAY_DEFAULTS, DISPLAY_KEY, TEXT_SIZES } from "@/lib/display";
 import { HintsContext } from "@/lib/hints";
 import { WEEKDAY_LETTER, formatMinutesShort } from "@/lib/practiceLog";
-import { SITE_DEFAULTS, useSiteSettings, type ShedLogOpenOn } from "@/lib/siteSettings";
+import { isToolHidden, SITE_DEFAULTS, useSiteSettings, withToolHidden, type ShedLogOpenOn } from "@/lib/siteSettings";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
@@ -54,8 +54,6 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
     </button>
   );
 }
-
-const toggleIn = (list: string[], item: string, on: boolean) => (on ? list.filter((x) => x !== item) : [...new Set([...list, item])]);
 
 // ---------------------------------------------------------------- General
 
@@ -162,9 +160,9 @@ export function SidebarSettings() {
             <FieldLabel>{category}</FieldLabel>
             <div className="flex flex-wrap gap-1.5">
               {items.map((l) => {
-                const on = !site.hiddenTools.includes(l.href);
+                const on = !isToolHidden(site.hiddenTools, l.href);
                 return (
-                  <Pill key={l.href} on={on} onClick={() => update({ hiddenTools: toggleIn(site.hiddenTools, l.href, !on) })}>
+                  <Pill key={l.href} on={on} onClick={() => update({ hiddenTools: withToolHidden(site.hiddenTools, l.href, on) })}>
                     {l.label}
                   </Pill>
                 );

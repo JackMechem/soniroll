@@ -41,16 +41,17 @@ export default function CreditsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="Bass Genius">
+      <LegalSection title="Rhythm Section's bass">
         <p>
-          Bass Genius was Rob Moreno&apos;s idea, and Rob wrote the Ray Brown transcription (&quot;Cool Walk&quot;, two choruses of rhythm
-          changes) that comes with it — the line its built-in Ray Brown player learns from.
+          The bass in Rhythm Section (it started out as its own tool, Bass Genius) was Rob Moreno&apos;s idea, and Rob wrote the Ray Brown
+          transcription (&quot;Cool Walk&quot;, two choruses of rhythm changes) that comes with it — the line its built-in Ray Brown player
+          learns from.
         </p>
       </LegalSection>
 
-      <LegalSection title="Bass Genius chords">
+      <LegalSection title="Rhythm Section chords">
         <p>
-          The piano comping in Bass Genius uses the velocity-layered{" "}
+          The piano comping in Rhythm Section uses the velocity-layered{" "}
           <LegalLink href="https://archive.org/details/SalamanderGrandPianoV3">Salamander Grand Piano</LegalLink> (Alexander Holm,{" "}
           <LegalLink href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</LegalLink>), as hosted by the{" "}
           <LegalLink href="https://github.com/tambien/Piano">Tone.js Piano</LegalLink> project. The Rhodes is{" "}
@@ -61,13 +62,13 @@ export default function CreditsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="Bass Genius and Drum Generator drums">
+      <LegalSection title="Rhythm Section drums">
         <p>
           The drummer plays{" "}
           <LegalLink href="https://github.com/sfzinstruments/virtuosity_drums">Virtuosity Drums</LegalLink> by Versilian Studios and Karoryfer
           Samples (<LegalLink href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</LegalLink>), a contemporary jazz kit recorded at
-          Virtuosity Musical Instruments in Boston, served by soniroll itself as mono mp3s (mic pairs mixed) — Drum Generator also uses
-          its hi-hat, cross-stick, rimshot and toms, and the same release&apos;s cowbell and woodblock.
+          Virtuosity Musical Instruments in Boston, served by soniroll itself as mono mp3s (mic pairs mixed): its ride, hi-hat, snare, cross-stick,
+          rimshot, toms, bass drum and crash, and the same release&apos;s cowbell and woodblock.
         </p>
       </LegalSection>
 
@@ -84,7 +85,7 @@ export default function CreditsPage() {
 
       <LegalSection title="Upright bass">
         <p>
-          Bass Genius plays{" "}
+          Rhythm Section&apos;s bass is{" "}
           <LegalLink href="https://github.com/sfzinstruments/karoryfer.meatbass">Meatbass</LegalLink>{" "}
           by Karoryfer Samples — a 1958 Otto Rubner double bass, played pizzicato and mapped by D.
           Smolken, recorded by Ludwik Zamenhof. It&apos;s released under{" "}
