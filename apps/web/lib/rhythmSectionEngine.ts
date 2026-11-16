@@ -1,5 +1,6 @@
 import { scheduleClick } from "./clickEngine";
 import { getAudioContext } from "./metronome";
+import { setSteadyInterval } from "./steadyTimer";
 import {
   chartHarmony,
   generateChorus,
@@ -504,14 +505,14 @@ export function startRhythmSection(opts: RhythmSectionStart): RhythmSectionRun {
     }
 
     if (finished && nextNote >= notes.length && nextBeat >= beats.length) {
-      clearInterval(interval);
+      stopInterval();
       later(() => {
         stopped = true;
         opts.onEnd();
       }, timeOf(beats.length) + 1.5);
     }
   };
-  const interval = setInterval(tick, TICK_MS);
+  const stopInterval = setSteadyInterval(tick, TICK_MS);
   tick();
 
   /** The first bar line at or after `beat` (or the end of what's written). */
@@ -520,7 +521,7 @@ export function startRhythmSection(opts: RhythmSectionStart): RhythmSectionRun {
   return {
     stop() {
       stopped = true;
-      clearInterval(interval);
+      stopInterval();
       for (const t of timers) clearTimeout(t);
       timers.clear();
     },
