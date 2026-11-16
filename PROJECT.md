@@ -276,7 +276,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
-| Metric modulation, Tuner, Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
+| Metric modulation, Tuner (and its takes: record, pitch graph, kept on this device), Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
 | Practice Timer | `tools-practice-timer.md` |
 | Chord Charts (parser, renderer, fonts, editor, transpose, `sheddex://` links) | `tools-chord-charts.md` |
 | Random Sticking Warmup | `tools-sticking-warmup.md` |

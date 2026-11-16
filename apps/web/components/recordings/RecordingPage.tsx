@@ -11,8 +11,9 @@ import { EmptyCard, PageHeader, PageShell } from "@/components/library/shared";
 import { SavedMixPlayer } from "@/components/recordings/MixPlayer";
 import TakePlayer from "@/components/recordings/TakePlayer";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { LinkIcon, TrashIcon } from "@/components/tools";
+import { LinkIcon, TrashIcon, TunerIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
+import { copyRecordingToTuner } from "@/lib/tunerTakes";
 
 /** `/recordings/view?id=…` — one recording: play it, rename it, keep notes on it, link it to a tune
     (or change or unlink it), or delete it. Edits save with the Save button, or when you leave. */
@@ -27,6 +28,7 @@ export default function RecordingPage({ id }: { id: string }) {
   const [notes, setNotes] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [toTuner, setToTuner] = useState<"idle" | "busy" | string>("idle");
 
   // Anything typed but not saved is saved on the way out.
   const pending = useRef<{ id: Id<"recordings">; name?: string; notes?: string } | null>(null);
@@ -75,6 +77,17 @@ export default function RecordingPage({ id }: { id: string }) {
     setNotes(null);
   }
   const linked = rec.tuneId ? byId.get(rec.tuneId) : undefined;
+  // A copy goes into the Tuner's takes (on this device only), so it can be looked at there again.
+  async function openInTuner() {
+    if (!rec.url) return;
+    setToTuner("busy");
+    try {
+      const takeId = await copyRecordingToTuner({ id: rec._id, name: rec.name, url: rec.url, durationSec: rec.durationSec });
+      router.push(`/tuner?take=${encodeURIComponent(takeId)}`);
+    } catch (e) {
+      setToTuner((e as Error).message || "Couldn't open it in the Tuner.");
+    }
+  }
 
   return (
     <PageShell>
@@ -89,6 +102,19 @@ export default function RecordingPage({ id }: { id: string }) {
                 Save
               </button>
             )}
+            {rec.url && (
+              <button
+                type="button"
+                onClick={() => void openInTuner()}
+                disabled={toTuner === "busy"}
+                aria-label="Open in Tuner"
+                title="Play it through the Tuner to see your intonation"
+                className="flex h-9 items-center gap-2 rounded-lg bg-surface px-3 text-sm font-semibold hover:bg-surface-hover disabled:opacity-60"
+              >
+                {toTuner === "busy" ? <LoadingSpinner size="sm" inline label="Opening in the Tuner" /> : <TunerIcon className="h-4 w-4 text-accent" />}
+                <span className="hidden sm:inline">Open in Tuner</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
@@ -101,6 +127,7 @@ export default function RecordingPage({ id }: { id: string }) {
           </>
         }
       />
+      {toTuner !== "idle" && toTuner !== "busy" && <p className="text-sm text-danger">{toTuner}</p>}
       {rec.url &&
         (song?.url ? (
           <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
