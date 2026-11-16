@@ -213,3 +213,88 @@
   value yet the same tick a key is clicked). Each key's `onMouseDown` prevents the browser's
   default focus-shifting-to-the-button behavior, so the answer field never visibly loses focus to
   a keypad tap at all.
+
+### Tuner: record takes and look back at your intonation (2026-11-16, FB-8 / issue #11)
+
+Feedback from a recording's page: "play recordings through the tuner, so you can look back on your
+intonation". Jack: takes recorded in the Tuner are stored **locally**. Branch
+`feature/tuner-recordings`.
+
+- **Record** (next to Start listening): records a take from the Tuner's own input and starts
+  listening too, so the needle follows you while it records (Stop ends the listening again if
+  Record started it). One "Stop recording 0:12" button while it runs; Space stops it. Stopping
+  saves the take as "Take N" and opens it.
+- **Takes are on this device only**: IndexedDB `jam-practice-tuner-takes`, through
+  `lib/fileLibrary.ts`'s `createLibrary` (now generic: each file can carry a `meta`, plus
+  `setMeta`; the Slow Downer's library is unchanged). `lib/tunerTakes.ts` holds the store: length,
+  where it came from (`take` / `file` / `recording`), download extension, and the worked-out pitch
+  track. Not uploaded, not in the account, not counted in the 100 MB; no cap on how many. Never
+  read on the server (the list loads in an effect).
+- **Takes chip** (`components/tuner/TakesChip.tsx`, the `sidePanel` above the dial, like History
+  elsewhere): play in the tuner, rename (`PromptDialog`), download (`<name>.<ext>`), delete
+  (`ConfirmDialog`), and **Open a file** (audio from disk, up to 40 MB, saved like a take). The
+  dialogs sit outside the popover (it closes when you click into them).
+- **Playing a take through the tuner** (`components/tuner/useTakePlayback.ts`, `TakePanel.tsx`,
+  `PitchGraph.tsx`): the take is decoded and played on the recordings' `TimelinePlayer` (seekable,
+  unlike `<audio>` with browser-recorded WebM). The dial, cents bar and note readout follow the
+  take at the playhead instead of the mic (the mic stops). Under the dial: Play/Pause, time, zoom
+  (3–48 s, or "All" when the take is shorter; saved as `takeZoom`), the pitch graph and a summary
+  ("6 notes · 3 in tune · 1 sharp · 2 flat · Average 0 cents"). The panel is wider than the dial
+  column from `xl` (44rem, centred over it). The tuner's strings row hides while a take is open.
+- **The pitch track** (`lib/pitchTrack.ts`) is worked out once for the whole take with the live
+  tuner's own `detectPitch` (YIN), 30 ms steps like the live tuner, ~85 ms window. To be quick the
+  audio is mixed to mono and brought down to ~24 kHz first (triangular low-pass, every 2nd sample
+  at 48 kHz): 3 minutes take about 5 s in Chromium, done in slices so the page stays smooth
+  (frames ≤ 33 ms apart while analysing and playing), and the graph fills in as it goes. Stored
+  with the take (`PITCH_TRACK_VERSION`; bump it if the analysis changes), so reopening is instant.
+  Readings are **chromatic** (nearest semitone) even when the live tuner snaps to an instrument's
+  strings — for looking back at intonation that's what makes sense. The Sensitivity setting
+  applies (per-frame RMS is stored). The needle holds 0.8 s through silence and smooths over two
+  frames, like the live tuner.
+- **Notes**: runs of frames on the same semitone (gaps up to 2 frames), each with its median
+  cents; under 3 frames counts as short (drawn thin and muted, not labelled or counted). The graph
+  draws each note's line without its first and last frame (they straddle the attack/release and
+  read wild), labels note name (written pitch, so transposing instruments match the dial) and
+  cents, shades the ±8 in-tune band, dashes ±25. Click/drag seeks (the view holds still while you
+  drag, and stays there while the playhead is in it); otherwise it turns the page as the playhead
+  reaches the edge. An overview strip of the whole take sits under it when the take is longer than
+  the view. The graph is a focusable slider: ←/→ 1 s, Shift 5 s, Home/End.
+- **Colours are theme tokens now**: `--tune-in`, `--tune-close`, `--tune-off` in `globals.css`
+  (fixed green/amber/red as the fallback; with relative colours, off = `--danger` and the others
+  are it turned to amber and green in OKLCH). The live dial and the background dock's tuner card
+  use them too (they were hard-coded hex before), via `centsColor` in `lib/pitchTrack.ts`.
+- **Open in Tuner** on a recording's page (`RecordingPage.tsx`): downloads the recording and keeps
+  a **local copy** with the takes (one per recording: opening it again reuses the copy), then goes
+  to `/tuner?take=<id>` (`app/tuner/page.tsx` passes `openTakeId`). A copy, not a pass-through, so
+  it's in the takes list next time and its pitch track is stored.
+- **Desktop**: `lib/tunerRecorder.ts` (web: `getUserMedia` on the Tuner's input + `MediaRecorder`)
+  is aliased to `apps/desktop/src/native/tunerRecorder.ts`, which records through the native
+  Recorder engine (`recorder_open` with the Tuner's input, mono mix, no auto gain → `recorder_begin`
+  → `recorder_stop` → `recorder_take`, MP3). No Rust change. The native engine does one take at a
+  time, so it refuses to start while the Recorder tool is recording (the Recorder would cut a Tuner
+  take off if started during one — not guarded). Playback and decoding go through the Web Audio
+  bridge like the recordings pages; IndexedDB works in WebKitGTK.
+- **Privacy page**: says Tuner takes, opened files and Open in Tuner copies stay in the browser
+  on this device.
+
+Verified: `tsc` (web, desktop), `pnpm lint` (web: only the old SettingsBar warning; desktop),
+`pnpm build`, desktop `vite build`. In headless Chromium with a fake mic playing a generated WAV
+(A4 0, C5 −15, E4 +30, G4 +5, D5 −20 cents): recorded a take; the graph read exactly those cents
+and the summary counted them right; playback moved the playhead and the dial (A4 → C5 …); a click
+and a drag on the graph seeked; the take survived a reload; rename, download (an `.m4a`, which is
+Opus in MP4 from Chromium), delete (closes the open take); Open a file read the WAV exactly; a
+3-minute stereo file analysed in ~5 s, overview click to 2:00 worked, reopening took 0.2 s;
+`?take=` opened a take. 1440 and 390, light, dark, Gruvbox and Synthwave colours: no console errors,
+no horizontal overflow. In the real desktop window (Xvfb, private D-Bus, the existing debug
+binary built from the same Rust, sound only into a null sink, a `pw-loopback` "mic" fed from it,
+`SONIROLL_AUDIO_INPUT` set to it, the Tuner's input set to it too): Record → played the WAV into
+the sink → Stop gave a 23.7 s MP3 take, analysed in about half a second with the same five
+notes and cents; playback moved the playhead and the dial (C5 −14.7, E4 +30.1, G4 +5.7) and the
+take's audio came out of the native output (recorded from the sink); Open a file (a Rhodes A2
+sample, decoded by the bridge) read A2 +3.
+
+Not verified: anything signed in — **Open in Tuner** on a real recording (the download, the copy,
+the jump to the Tuner) wasn't run; audio by ear; Safari/Firefox recording and decoding (Safari
+should pick AAC in MP4); real microphones; the desktop file chooser itself (the file was handed to
+the input from a script); macOS/Windows desktop; the Recorder and the Tuner recording at the same
+time on desktop.

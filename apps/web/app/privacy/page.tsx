@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 20, 2026">
+    <LegalPage title="Privacy Policy" updated="November 16, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, recordings and any files you upload (PDFs,
+            <strong>Your stuff:</strong> tool settings and the presets you save, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, recordings and any files you upload (PDFs,
             images, audio, video and so on, on their own or attached to a tune). Each account can store up to 100 MB.
             When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
@@ -45,8 +45,14 @@ export default function PrivacyPage() {
         </ul>
         <p>Slow Downer&apos;s audio files always stay in your browser, signed in or not.</p>
         <p>
-          The Tuner and the Time Test listen through your mic only while you use them, and what they hear is never saved or sent anywhere. The Time
+          The Tuner, the Time Test and the tools that listen for the note you play or sing (Note, Scale and Interval Trainer, Find the Root) use
+          your mic only while you use them, and what they hear is never sent anywhere. The Time
           Test keeps each take&apos;s results (its score and timing numbers) in its history, like other tool settings.
+        </p>
+        <p>
+          When you press Record in the Tuner, the take is saved in your browser on this device only, signed in or not. So are audio files you open
+          in the Tuner, and the copy made when you open one of your recordings there. They&apos;re never uploaded or added to your account, and don&apos;t
+          count towards its 100 MB. Delete them from the Tuner&apos;s Takes, or by clearing your browser&apos;s data for soniroll.com.
         </p>
       </LegalSection>
 

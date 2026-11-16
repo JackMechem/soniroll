@@ -17,6 +17,7 @@
       "@/lib/metronome": ["./src/native/metronome.ts"],
       "@/lib/audioInput": ["./src/native/audioInput.ts"],
       "@/lib/recorderEngine": ["./src/native/recorderEngine.ts"],
+      "@/lib/tunerRecorder": ["./src/native/tunerRecorder.ts"],
       "@/lib/padInput": ["./src/native/padInput.ts"],
       "@/*": ["../web/*"],
       "@web/*": ["../web/*"],

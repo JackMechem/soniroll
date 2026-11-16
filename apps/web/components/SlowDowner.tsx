@@ -9,6 +9,7 @@ import { OptionSection, OptionsCard } from "@/components/OptionsCard";
 import KeyHint from "@/components/KeyHint";
 import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import WaveScrollbar from "@/components/WaveScrollbar";
 import Waveform, { LoopRegion, View } from "@/components/Waveform";
 import {
@@ -19,6 +20,8 @@ import {
   PlusIcon,
   RepeatIcon,
   ShrinkHeightIcon,
+  SkipForwardIcon,
+  SpeakerIcon,
   StopwatchIcon,
 } from "@/components/tools";
 import { Peaks, analyzeAudio, formatTime } from "@/lib/audioFile";
@@ -61,6 +64,7 @@ const CONTROL_HINTS: [string, string][] = [
   ["Shift + scroll", "pan"],
   ["Right-click", "markers"],
   ["Space", "play / pause"],
+  ["B", "back to loop start"],
 ];
 
 function TransportButton({
@@ -279,6 +283,28 @@ export default function SlowDowner() {
 
   useSpaceToggle(togglePlay, file !== null);
 
+  /** Back to the start of the loop (or of the file, with no loop on); keeps playing if it was. */
+  function toLoopStart() {
+    seek(loopOn && loop ? loop.start : 0);
+  }
+
+  const toLoopStartRef = useRef(toLoopStart);
+  useEffect(() => {
+    toLoopStartRef.current = toLoopStart;
+  });
+  useEffect(() => {
+    if (!file) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key.toLowerCase() !== "b" || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("input, textarea, select, [contenteditable='true'], [role='dialog'], [role='alertdialog']")) return;
+      e.preventDefault();
+      toLoopStartRef.current();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [file]);
+
   function updateLoop(region: LoopRegion) {
     setLoop(region);
     setLoopOn(true);
@@ -398,6 +424,7 @@ export default function SlowDowner() {
   return (
     <ToolLayout
       title="Slow Downer"
+      presets={toolPresets("slow-downer", settings, updateSettings, ["maximized"])}
       layout="stacked"
       options={
         <OptionsCard id="slow-downer">
@@ -432,6 +459,9 @@ export default function SlowDowner() {
               onChange={(checked) => updateSettings({ preservePitch: checked })}
               hint="Corrects the pitch so slowing down doesn't also drop it (or speeding up raise it)."
             />
+          </OptionSection>
+
+          <OptionSection title="Volume" icon={SpeakerIcon} summary={`${Math.round(volume * 100)}%`}>
             <label className="flex flex-col gap-2 text-sm">
               <span className="flex items-center justify-between font-medium text-muted">
                 Volume
@@ -771,6 +801,9 @@ export default function SlowDowner() {
           />
 
           <div className="flex items-center gap-3">
+            <TransportButton label={loopOn && loop ? "Back to loop start (B)" : "Back to the start (B)"} onClick={toLoopStart}>
+              <SkipForwardIcon className="h-5 w-5 -scale-x-100" />
+            </TransportButton>
             <TransportButton
               label={`Back ${SKIP_SECONDS} seconds`}
               onClick={() => seek(time - SKIP_SECONDS)}

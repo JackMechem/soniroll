@@ -4,6 +4,8 @@ import { createContext, useContext } from "react";
 import { NAV_LINKS } from "@/components/tools";
 import { RewardProvider } from "@/components/reward/Reward";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
+import { PresetsChip } from "@/components/PresetsChip";
+import type { ToolPresets } from "@/lib/toolPresets";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
 import ToolStats from "@/components/toolstats/ToolStats";
@@ -33,6 +35,7 @@ export default function ToolLayout({
   help,
   sidePanel,
   credit,
+  presets,
   children,
 }: {
   title: string;
@@ -51,6 +54,9 @@ export default function ToolLayout({
       decides which chips there are. */
   optionsMode?: React.ReactNode;
   options: React.ReactNode;
+  /** Saved presets of the tool's options: a "Presets" chip first in the chips. Build it with
+      `toolPresets(id, settings, update)` (`lib/toolPresets.ts`). Hidden whenever `options` is. */
+  presets?: ToolPresets;
   children: React.ReactNode;
 }) {
   const stacked = layout === "stacked";
@@ -101,7 +107,7 @@ export default function ToolLayout({
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
               {children}
             </section>
-            {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
+            {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
           </main>
         ) : (
           <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16 xl:max-w-5xl">
@@ -110,7 +116,7 @@ export default function ToolLayout({
                 {statsHref && <PhoneStats href={statsHref} />}
                 {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
-                {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
+                {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
               </div>
             </section>
           </main>
@@ -133,15 +139,20 @@ export default function ToolLayout({
 function OptionChips({
   children,
   mode,
+  presets,
 }: {
   children: React.ReactNode;
   mode?: React.ReactNode;
+  presets?: ToolPresets;
 }) {
   return (
     <ChipsModeContext.Provider value={true}>
       <div className="flex w-full flex-col items-center gap-3 pt-2">
         {mode}
-        <SettingsBar>{children}</SettingsBar>
+        <SettingsBar>
+          {presets && <PresetsChip tool={presets} />}
+          {children}
+        </SettingsBar>
       </div>
     </ChipsModeContext.Provider>
   );

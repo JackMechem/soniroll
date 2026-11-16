@@ -15,6 +15,7 @@ import {
 import { MeterIcon, ShuffleIcon, SpeakerIcon } from "@/components/tools";
 import { ClickSoundCards, OptionGroup, soundSummary } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import { BeatLevel, CLICK_SOUNDS, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
@@ -228,6 +229,7 @@ export default function RandomMetricModulation() {
   return (
     <ToolLayout
       title="Polyrhythm Metric Modulation Metronome"
+      presets={toolPresets("random-metric-modulation", settings, updateSettings)}
       credit="Idea by Rob Moreno"
       sidePanel={
         log.length > 0 && (

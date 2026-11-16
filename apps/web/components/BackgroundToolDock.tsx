@@ -19,6 +19,7 @@ import {
   subscribeMetronome,
 } from "@/lib/metronomeEngine";
 import { midiToNote } from "@/lib/noteRange";
+import { centsColor } from "@/lib/pitchTrack";
 import {
   getTunerServerSnapshot,
   getTunerSnapshot,
@@ -33,15 +34,6 @@ function CloseIcon({ className }: { className?: string }) {
       <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   );
-}
-
-const IN_TUNE = "#22c55e";
-const CLOSE = "#f59e0b";
-const OFF = "#ef4444";
-
-function centsColor(cents: number) {
-  const abs = Math.abs(cents);
-  return abs <= 8 ? IN_TUNE : abs <= 25 ? CLOSE : OFF;
 }
 
 /** The card shell shared by every preview below — label/icon (from `NAV_LINKS`) link back to the

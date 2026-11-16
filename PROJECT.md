@@ -208,6 +208,11 @@ Web (`apps/web`):
   become chips automatically. `optionsMode` holds a mode switch above the chips; `sidePanel`s
   (History, Struggles) are chips above the main display. The title must match the tool's
   `NAV_LINKS` label (icon and intro lookup).
+- Presets (`lib/toolPresets.ts`, `components/PresetsChip.tsx`) — every tool with options gets
+  them: `presets={toolPresets("<href-slug>", settings, update, [non-option fields])}` on
+  `ToolLayout`, or `<PresetsChip tool={…} />` in a tool's own `SettingsBar`, or
+  `<PresetsSection id tool />` in a `PanelSection` panel. Only option fields are saved/applied
+  (history, `…Stats`, `inputDeviceId` always left out). A new tool with options should opt in.
 - `packages/core/navLinks.ts` + `components/tools.tsx` — the tool list, categories, icons,
   `CATEGORY_COLORS`; the source for the sidebar, ⌘K palette and Help.
 - `lib/useSyncedSettings.ts` (returns `[settings, update, ready]`), `lib/useSyncedTunes.ts`,
@@ -215,6 +220,7 @@ Web (`apps/web`):
 - Meter/tempo: `lib/meterControls.ts`, `components/MeterFields.tsx`,
   `components/metronome/MetronomeOptions.tsx`, `StructureEditor`, `BeatIndicator`.
 - Audio: `lib/clickEngine.ts` (run simultaneous clicks as tracks of **one** `startClickEngine`),
+  `lib/steadyTimer.ts` (`setSteadyInterval` for any audio scheduler, so it keeps time in a background tab),
   `lib/tones.ts` (`playNote`, `playNotesTogether`, `prepare`), `lib/sampledTones.ts`,
   `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`;
   `lib/rhythmSectionEngine.ts` (bass, chords and drums on one clock — add a part there rather than
@@ -263,6 +269,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Landing page, `/dashboard` routing, forgot password | `landing-and-password-reset.md`; newer shots/teaching section in `launch-admin-analytics.md` |
 | Page transitions, Metronome options, setting chips everywhere, Pomodoro editor | `web-ui-patterns.md` |
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
+| Find the Root (`/find-the-root`): rootless voicings, sing/play or pick the root; the theory table in `lib/rootlessVoicings.ts` (7♭9's four right roots, spelling) | `find-the-root.md` |
 | Rhythm Section (`/rhythm-section`, 2026-11-16: Bass Genius and the Drum Generator in one tool): the style decides the band, one engine/clock, style bass parts, old keys and hrefs kept | `rhythm-section.md` |
 | Bass Genius history (bass lines, players, transcriptions, comping, the swing drummer) — now Rhythm Section's bass | `bass-genius.md` |
 | Drum Generator history (styles, kit, notation) — now Rhythm Section's drums; Syncopation | `drum-generator-and-syncopation.md` |
@@ -276,12 +283,13 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
+| Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
-| Metric modulation, Tuner, Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
+| Metric modulation, Tuner (and its takes: record, pitch graph, kept on this device), Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
 | Practice Timer | `tools-practice-timer.md` |
 | Chord Charts (parser, renderer, fonts, editor, transpose, `sheddex://` links) | `tools-chord-charts.md` |
 | Random Sticking Warmup | `tools-sticking-warmup.md` |

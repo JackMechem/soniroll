@@ -7,6 +7,7 @@ import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Disclosure from "@/components/Disclosure";
@@ -957,6 +958,7 @@ export default function IntervalTrainer() {
   return (
     <ToolLayout
       title="Interval Trainer"
+      presets={toolPresets("interval-trainer", settings, updateSettings)}
       sidePanel={
         listenMode && (
           <>

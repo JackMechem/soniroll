@@ -89,6 +89,14 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Ear training",
   },
   {
+    href: "/find-the-root",
+    label: "Find the Root",
+    short: "Rootless voicings",
+    description:
+      "Hear a rootless voicing (E♭ G B♭ D) and sing, play or pick the root that makes it the chord asked for (C for a C minor 9).",
+    category: "Ear training",
+  },
+  {
     href: "/shed-log",
     label: "Shed Log",
     description:

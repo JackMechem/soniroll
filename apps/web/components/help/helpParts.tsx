@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { createElement } from "react";
-import { CalendarIcon, DocumentIcon, FileIcon, GraduationCapIcon, HelpIcon, HomeIcon, MaximizeIcon, MicIcon, NAV_LINKS, SetlistIcon, UserIcon } from "@/components/tools";
+import { BookmarkIcon, CalendarIcon, DocumentIcon, FileIcon, GraduationCapIcon, HelpIcon, HomeIcon, MaximizeIcon, MicIcon, NAV_LINKS, SetlistIcon, UserIcon } from "@/components/tools";
 import { HELP_TOPICS, type HelpTopic } from "@/lib/helpContent";
 
 /** Pieces shared by the Help page and the first-visit intros (`ToolIntro`). */
@@ -14,6 +14,7 @@ const EXTRA_ICONS: Record<string, IconType> = {
   "shed-log": CalendarIcon,
   "shed-notes": DocumentIcon,
   "split-screen": MaximizeIcon,
+  presets: BookmarkIcon,
   account: UserIcon,
   tunes: SetlistIcon,
   recordings: MicIcon,

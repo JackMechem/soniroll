@@ -252,6 +252,18 @@ export function ChordIcon({ className }: { className?: string }) {
   );
 }
 
+/** Find the Root: a stack of notes with the bottom one (the root) left as a dashed outline. */
+export function RootlessIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <ellipse cx="7" cy="19" rx="3" ry="2.2" strokeDasharray="2 2" />
+      <ellipse cx="7" cy="13.5" rx="3" ry="2.2" />
+      <ellipse cx="7" cy="8" rx="3" ry="2.2" />
+      <path d="M10 13.5V4M10 4l6 1.5" />
+    </svg>
+  );
+}
+
 /** An upright bass — scroll, neck and the body's two bouts — for Bass Genius. */
 export function BassIcon({ className }: { className?: string }) {
   return (
@@ -646,6 +658,15 @@ export function LogOutIcon({ className }: { className?: string }) {
 }
 
 /** The sidebar's favorite/star toggle — `filled` for a favorited tool, outline otherwise. */
+/** A bookmark ribbon — a tool's saved presets. */
+export function BookmarkIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M6.5 3.5h11v17L12 16.5l-5.5 4z" />
+    </svg>
+  );
+}
+
 export function StarIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
     <svg {...svgProps(className)} fill={filled ? "currentColor" : "none"}>
@@ -726,6 +747,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/guess-the-interval": EarIcon,
   "/guess-the-chord": ChordIcon,
   "/guess-the-progression": ProgressionIcon,
+  "/find-the-root": RootlessIcon,
   "/lessons": GraduationCapIcon,
   "/practice-timer": StopwatchIcon,
   "/shed-log": CalendarIcon,

@@ -17,6 +17,7 @@ import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import { SUB_LABELS, Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
 import { SettingChip } from "@/components/SettingsBar";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import { type BeatLevel, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
@@ -223,6 +224,7 @@ export default function TempoTrainer() {
   return (
     <ToolLayout
       title="Tempo Trainer"
+      presets={toolPresets("tempo-trainer", settings, updateSettings)}
       optionsMode={
         <>
           <Segmented

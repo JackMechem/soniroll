@@ -11,6 +11,7 @@ import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import PomodoroEditor, { normalizePomodoro } from "@/components/PomodoroEditor";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import {
   PauseIcon,
@@ -168,6 +169,7 @@ export default function PracticeTimer() {
   return (
     <ToolLayout
       title="Practice Timer"
+      presets={toolPresets("practice-timer", settings, updateSoundSettings)}
       options={
         <>
           <PanelsToggle ids={PANEL_IDS} />

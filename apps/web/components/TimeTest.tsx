@@ -45,6 +45,8 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
+import { toolPresets } from "@/lib/toolPresets";
+import { PresetsChip } from "@/components/PresetsChip";
 
 const COMMON_METERS: [number, number][] = [
   [4, 4],
@@ -387,6 +389,7 @@ export default function TimeTest() {
 
         <div className="flex w-full flex-col items-center gap-2">
           <SettingsBar>
+            <PresetsChip tool={toolPresets("time-test", settings, update)} />
             <SettingChip icon={MeterIcon} label="Time" title="Time signature" value={`${beatsPerBar}/${beatUnit}`}>
               <TimeSignatureControl
                 beatsPerBar={beatsPerBar}
