@@ -625,9 +625,14 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Pick your instrument", text: "Its strings show as quick reference pitches." },
       { title: "Start listening", text: "Play a note and center the needle." },
       { title: "Or tap a note", text: "Hear it and tune to it by ear." },
+      { title: "Record and look back", text: "Press Record, play, then watch the needle replay your take and see how sharp or flat each note was." },
     ],
-    features: ["Mic tuning", "Reference tones", "Instrument tunings", "Adjustable A = 440"],
+    features: ["Mic tuning", "Reference tones", "Instrument tunings", "Adjustable A = 440", "Record and replay your intonation"],
     options: [
+      {
+        name: "Takes",
+        text: "Your Tuner recordings, kept on this device only (not uploaded or saved to your account). Play one to see each note's cents sharp or flat on a graph you can drag through. You can also open an audio file, or send a saved recording here with Open in Tuner.",
+      },
       { name: "Instrument", text: "Sets the reference pitches shown for each string or the instrument's usual notes." },
       { name: "Input", text: "Which microphone to listen to." },
       { name: "Reference & tone", text: "A4 = 440 Hz or another reference, a tuning offset in cents, and the sound and octave of the reference tone." },

@@ -98,7 +98,7 @@ function NativeTool({ children, input = false }: { children: ReactNode; input?: 
 const ROUTES: Route[] = [
   { path: "/dashboard", render: () => <Home /> },
   { path: "/metronome", render: () => <NativeTool><Metronome /></NativeTool> },
-  { path: "/tuner", render: () => <NativeTool><Tuner /></NativeTool> },
+  { path: "/tuner", render: (_, query) => <NativeTool><Tuner openTakeId={opt(query, "take")} /></NativeTool> },
   { path: "/jam-practice", render: () => <NativeTool><JamPractice /></NativeTool> },
   { path: "/bass-genius", render: () => <NativeTool><BassGenius /></NativeTool> },
   { path: "/drum-generator", render: () => <NativeTool><DrumGenerator /></NativeTool> },
