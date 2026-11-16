@@ -4,8 +4,8 @@
 
 Free practice tools for musicians, in the browser: a metronome (odd and changing meters,
 polyrhythm modulation), a tuner, ear training with levelled learning paths, note, scale and
-interval trainers, chord charts (with iReal Pro import), a jam-practice tune picker, a bass-line
-and drum generator to play along with, a slow-downer/looper, a recorder, a practice log with
+interval trainers, chord charts (with iReal Pro import), a jam-practice tune picker, a rhythm
+section (drums, bass and piano) to play along with, a slow-downer/looper, a recorder, a practice log with
 streaks and goals, setlists, your files (PDFs, recordings, lead sheets) with share links, a community, and tools for teachers and students.
 
 No ads, no paywalls. Every tool works without an account; signing in syncs your stuff between
