@@ -33,6 +33,25 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.4",
+    date: "2026-11-16",
+    title: "Rhythm Section, presets and Find the Root",
+    summary: "Bass Genius and the Drum Generator become one Rhythm Section, every tool can save presets, and the Tuner can record you.",
+    changes: [
+      { kind: "new", text: "**Rhythm Section** replaces Bass Genius and the Drum Generator: drums in over 30 styles to play along with, and an upright bass and piano or Rhodes that play your chord charts with them. Old links still work." },
+      { kind: "new", text: "Every drum style now has a bass part that fits it (bossa, samba, tumbao, merengue, tango and more) and follows your chart's chords. Swing still walks, with your bass players." },
+      { kind: "new", text: "**Presets** on every tool: save how you have a tool set up, give it a name, and get it back in one tap. The Presets chip shows which one you're on, or Custom once you change something. Presets only save options, so your history and stats stay as they are." },
+      { kind: "new", text: "**Find the Root** (under Ear training): hear a rootless voicing like E♭ G B♭ D, then sing, play or pick the root that makes it the chord asked for (C for a C minor 9). Twelve chord types, from minor 7 to altered, including left-hand A and B voicings." },
+      { kind: "new", text: "**Record in the Tuner** and play the take back through it: the needle follows what you played, and a graph shows how sharp or flat each note was. Takes stay on this device. You can also open an audio file, or a saved recording with **Open in Tuner**." },
+      { kind: "new", text: "Slow Downer: a **⏮** button and the **B** key jump back to the start of the loop." },
+      { kind: "improved", text: "Slow Downer: **Volume** has its own chip instead of being tucked inside Speed." },
+      { kind: "improved", text: "Time Test: you can see and drag the playhead, and click anywhere (including the overview strip) to play from there, even while a take is playing." },
+      { kind: "fixed", text: "The Metronome and other click tools no longer cut out when their tab is in the background." },
+      { kind: "fixed", text: "Time Test's count-in sometimes played 3 clicks instead of 4." },
+      { kind: "fixed", text: "A drum fill no longer runs past the end of its bar in the written-out groove." },
+    ],
+  },
+  {
     version: "0.10.3",
     date: "2026-10-28",
     title: "Shed Notes cursor fixes",
