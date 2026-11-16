@@ -258,6 +258,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Landing page, `/dashboard` routing, forgot password | `landing-and-password-reset.md`; newer shots/teaching section in `launch-admin-analytics.md` |
 | Page transitions, Metronome options, setting chips everywhere, Pomodoro editor | `web-ui-patterns.md` |
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
+| Find the Root (`/find-the-root`): rootless voicings, sing/play or pick the root; the theory table in `lib/rootlessVoicings.ts` (7♭9's four right roots, spelling) | `find-the-root.md` |
 | Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
 | Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |

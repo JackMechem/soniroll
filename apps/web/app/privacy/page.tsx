@@ -45,7 +45,8 @@ export default function PrivacyPage() {
         </ul>
         <p>Slow Downer&apos;s audio files always stay in your browser, signed in or not.</p>
         <p>
-          The Tuner and the Time Test listen through your mic only while you use them, and what they hear is never saved or sent anywhere. The Time
+          The Tuner, the Time Test and the tools that listen for the note you play or sing (Note, Scale and Interval Trainer, Find the Root) use
+          your mic only while you use them, and what they hear is never saved or sent anywhere. The Time
           Test keeps each take&apos;s results (its score and timing numbers) in its history, like other tool settings.
         </p>
       </LegalSection>
