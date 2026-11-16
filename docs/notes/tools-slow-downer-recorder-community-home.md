@@ -351,3 +351,11 @@
   no ads, minimal data collection), not a substitute for real legal review if that ever matters
   more (e.g. it picks up real users, or the planned data-sync phases land).
 
+
+### Slow Downer: Volume chip and back to the loop start (2026-11-16)
+
+FB-15/16/17. Volume moved out of the Speed chip into its own Volume chip. A ⏮ transport button
+(the `SkipForwardIcon` mirrored with `-scale-x-100`, not a new icon) and the **B** key jump to the
+loop's start, or the file's start with no loop on; the key is ignored in inputs, dialogs and with
+modifiers. Enter was considered (Logic/Pro Tools use Return) but it would fight focused buttons.
+Checked headless at 1440/390; not by ear.
