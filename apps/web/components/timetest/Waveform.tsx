@@ -11,6 +11,9 @@ const LANE_H = 76;
 const HEIGHT = WAVE_H + LANE_H;
 const OVERVIEW_H = 44;
 const MIN_SPAN = 0.08;
+/** The playhead's handle size, and how close (px) a press has to be to grab it. */
+const HANDLE = 6;
+const GRAB = 8;
 /** Above this many samples on screen, the waveform is drawn from the overview instead. */
 const MAX_EXACT_SAMPLES = 4_000_000;
 
@@ -64,15 +67,21 @@ export default function Waveform({
   analysis,
   view,
   setView,
-  playhead,
+  playhead: shownPlayhead,
+  playing,
   onSeek,
+  onScrub,
 }: {
   take: Take;
   analysis: Analysis;
   view: View;
   setView: (v: View) => void;
-  playhead: number | null;
+  /** Where playback is, or where it will start from when stopped. */
+  playhead: number;
+  playing: boolean;
   onSeek: (t: number) => void;
+  /** Where the playhead is while it's being dragged (null when let go). */
+  onScrub?: (t: number | null) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,6 +89,13 @@ export default function Waveform({
   const viewRef = useRef(view);
   const [width, setWidth] = useState(800);
   const [hover, setHover] = useState<{ x: number; hit: Hit } | null>(null);
+  // While the playhead is being dragged, where it is (it only seeks on release).
+  const [scrub, setScrubState] = useState<number | null>(null);
+  const setScrub = (t: number | null) => {
+    setScrubState(t);
+    onScrub?.(t);
+  };
+  const playhead = scrub ?? shownPlayhead;
   const themeKey = useThemeKey();
   const { duration, toleranceMs: tol } = analysis;
 
@@ -276,16 +292,26 @@ export default function Waveform({
       ctx.globalAlpha = 1;
     }
 
-    if (playhead !== null && playhead >= view.start && playhead <= view.end) {
+    if (playhead >= view.start && playhead <= view.end) {
       const x = Math.round(xOf(playhead)) + 0.5;
       ctx.strokeStyle = c.accent;
+      ctx.fillStyle = c.accent;
       ctx.lineWidth = 2;
+      ctx.globalAlpha = playing || scrub !== null ? 1 : 0.7;
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, HEIGHT);
       ctx.stroke();
+      // A handle at the top to grab it by.
+      ctx.beginPath();
+      ctx.moveTo(x - HANDLE, 0);
+      ctx.lineTo(x + HANDLE, 0);
+      ctx.lineTo(x, HANDLE * 1.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
-  }, [peaks, view, width, analysis, playhead, hover, themeKey, amp, xOf, laneRange, tol, span, duration]);
+  }, [peaks, view, width, analysis, playhead, playing, scrub, hover, themeKey, amp, xOf, laneRange, tol, span, duration]);
 
   // ---- overview ----
   useEffect(() => {
@@ -318,10 +344,8 @@ export default function Waveform({
     ctx.strokeStyle = c.accent;
     ctx.lineWidth = 2;
     ctx.strokeRect(vx + 1, 1, vw - 2, OVERVIEW_H - 2);
-    if (playhead !== null) {
-      ctx.fillStyle = c.accent;
-      ctx.fillRect((playhead / duration) * width - 1, 0, 2, OVERVIEW_H);
-    }
+    ctx.fillStyle = c.accent;
+    ctx.fillRect((playhead / duration) * width - 1, 0, 2, OVERVIEW_H);
   }, [analysis, view, width, playhead, themeKey, amp, duration, tol]);
 
   // ---- interaction ----
@@ -347,7 +371,7 @@ export default function Waveform({
     return () => canvas.removeEventListener("wheel", onWheel);
   }, [duration, setView]);
 
-  const drag = useRef<{ x: number; start: View; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; start: View; moved: boolean; scrub: boolean } | null>(null);
 
   const nearestHit = (x: number) => {
     let best: Hit | null = null;
@@ -363,12 +387,16 @@ export default function Waveform({
     return best;
   };
 
-  const onOverview = (clientX: number) => {
+  const overviewTime = (clientX: number) => {
     const rect = overviewRef.current!.getBoundingClientRect();
-    const t = ((clientX - rect.left) / rect.width) * duration;
+    return Math.max(0, Math.min(duration, ((clientX - rect.left) / rect.width) * duration));
+  };
+  const onOverview = (clientX: number) => {
+    const t = overviewTime(clientX);
     const s = view.end - view.start;
     setView(clampView({ start: t - s / 2, end: t + s / 2 }, duration));
   };
+  const clampTime = (t: number) => Math.max(0, Math.min(duration, t));
 
   const hoverHit = hover?.hit;
   return (
@@ -376,15 +404,26 @@ export default function Waveform({
       <canvas
         ref={canvasRef}
         style={{ width, height: HEIGHT }}
-        className="block cursor-crosshair rounded-xl bg-background"
+        className={`block rounded-xl bg-background ${scrub !== null ? "cursor-grabbing" : "cursor-crosshair"}`}
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
-          drag.current = { x: e.clientX, start: view, moved: false };
+          const rect = e.currentTarget.getBoundingClientRect();
+          // Grabbing the playhead drags it; anywhere else drags the view.
+          const onPlayhead = Math.abs(e.clientX - rect.left - xOf(playhead)) <= GRAB;
+          drag.current = { x: e.clientX, start: view, moved: false, scrub: onPlayhead };
+          if (onPlayhead) {
+            setScrub(playhead);
+            setHover(null);
+          }
         }}
         onPointerMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const x = e.clientX - rect.left;
           const d = drag.current;
+          if (d?.scrub) {
+            setScrub(clampTime(tOf(x)));
+            return;
+          }
           if (d) {
             const dx = e.clientX - d.x;
             if (Math.abs(dx) > 3) d.moved = true;
@@ -402,10 +441,15 @@ export default function Waveform({
         onPointerUp={(e) => {
           const d = drag.current;
           drag.current = null;
-          if (d && !d.moved) {
+          setScrub(null);
+          if (d && (d.scrub || !d.moved)) {
             const rect = e.currentTarget.getBoundingClientRect();
-            onSeek(Math.max(0, Math.min(duration, tOf(e.clientX - rect.left))));
+            onSeek(clampTime(tOf(e.clientX - rect.left)));
           }
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+          setScrub(null);
         }}
         onPointerLeave={() => setHover(null)}
         role="img"
@@ -444,12 +488,20 @@ export default function Waveform({
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
           onOverview(e.clientX);
+          setScrub(overviewTime(e.clientX));
         }}
         onPointerMove={(e) => {
-          if (e.buttons & 1) onOverview(e.clientX);
+          if (!(e.buttons & 1)) return;
+          onOverview(e.clientX);
+          setScrub(overviewTime(e.clientX));
         }}
+        onPointerUp={(e) => {
+          setScrub(null);
+          onSeek(overviewTime(e.clientX));
+        }}
+        onPointerCancel={() => setScrub(null)}
         role="img"
-        aria-label="Whole take overview; click to jump"
+        aria-label="Whole take overview; click to jump there"
       />
     </div>
   );

@@ -12,9 +12,7 @@ import { ensureStarted } from "./webAudio/bridge";
 export * from "@web/lib/clickEngine";
 
 // The output time of the first beat of the latest `startClickEngine`, for the Recorder: its take
-// starts on the beat after the count-in. `runClickScheduler` puts the first beat at
-// `now() + 0.06` from its first reading of the clock (keep the two in step).
-const SCHEDULER_START_SEC = 0.06;
+// starts on the beat after the count-in.
 let firstBeat: Promise<number> | null = null;
 
 /** When the latest click engine's first beat plays (output seconds), once it has started. */
@@ -30,16 +28,11 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
   firstBeat = new Promise((resolve) => (resolveFirstBeat = resolve));
   void ensureStarted().then(() => {
     if (stopped) return;
-    let first = true;
     engine = runClickScheduler(tracks, {
-      now: () => {
-        const time = ctx.currentTime;
-        if (first) resolveFirstBeat(time + SCHEDULER_START_SEC);
-        first = false;
-        return time;
-      },
-      play: (time, wave, freq, gain, length) => void scheduleClick(ctx, time, wave, freq, gain, length),
+      now: () => ctx.currentTime,
+      play: (time, wave, freq, gain, length) => scheduleClick(ctx, time, wave, freq, gain, length),
       latency: engineLatency,
+      onStart: resolveFirstBeat,
     });
   });
   return {
