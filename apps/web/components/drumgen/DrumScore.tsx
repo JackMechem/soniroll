@@ -148,12 +148,13 @@ export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumSt
         return { voices, beams, tuplets, tags, formatter, weight: formatter.preCalculateMinTotalWidth(voices) };
       });
 
-    const usable = width - 4 - 46;
     const rowH = 150;
-    /** Draws the bars `perRow` to a row; false if a note ran over its bar line. Within a row, each
-        bar's width follows how much is in it, so a busy bar (a fill) gets more room. */
-    const draw = (perRow: number): boolean => {
+    /** Draws the bars `perRow` to a row, `drawWidth` wide; false if a note ran over its bar line.
+        Within a row, each bar's width follows how much is in it, so a busy bar (a fill) gets more
+        room. */
+    const draw = (perRow: number, drawWidth: number): boolean => {
       el.innerHTML = "";
+      const usable = drawWidth - 4 - 46;
       const built = build();
       const mean = built.reduce((a, b) => a + b.weight, 0) / Math.max(1, built.length);
       const widths = built.map((b, i) => {
@@ -164,7 +165,7 @@ export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumSt
       });
       const rows = Math.ceil(bars.length / perRow);
       const renderer = new Renderer(el, Renderer.Backends.SVG);
-      renderer.resize(width, rows * rowH + 10);
+      renderer.resize(drawWidth, rows * rowH + 10);
       const ctx = renderer.getContext();
       const ends: number[] = [];
       built.forEach(({ voices, beams, tuplets, tags, formatter }, i) => {
@@ -185,18 +186,32 @@ export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumSt
         ends.push(x + stave.getWidth());
       });
       // Did every note land inside its bar?
-      const left = el.getBoundingClientRect().left;
       return [...el.querySelectorAll("[data-at]")].every((n) => {
         const bar = Number(n.getAttribute("data-at")!.split(":")[0]);
-        const head = n.querySelector(".vf-notehead") ?? n;
-        return head.getBoundingClientRect().right - left <= ends[bar] + 2;
+        const box = ((n.querySelector(".vf-notehead") ?? n) as SVGGraphicsElement).getBBox();
+        return box.x + box.width <= ends[bar] + 2;
       });
     };
     // As many bars a row as the width allows — fewer if a bar wouldn't fit (squeezed, a bar of
-    // 16ths with a fill ran over its bar line).
+    // 16ths with a fill ran over its bar line); and if even one bar a row doesn't fit (a phone),
+    // the score is drawn wider and scaled down to the width there is.
     let perRow = Math.max(1, Math.min(4, Math.floor(width / ROW_MIN_BAR)));
-    while (!draw(perRow) && perRow > 1) perRow--;
+    let drawWidth = width;
+    while (!draw(perRow, drawWidth)) {
+      if (perRow > 1) perRow--;
+      else if (drawWidth < width * 2) drawWidth = Math.round(drawWidth * 1.2);
+      else break;
+    }
     const svg = el.querySelector("svg");
+    if (svg && drawWidth > width) {
+      const h = Number(svg.getAttribute("height")) || 0;
+      const scaled = Math.round((h * width) / drawWidth);
+      svg.setAttribute("viewBox", `0 0 ${drawWidth} ${h}`);
+      svg.setAttribute("width", String(width));
+      svg.setAttribute("height", String(scaled));
+      svg.style.width = `${width}px`;
+      svg.style.height = `${scaled}px`;
+    }
     if (svg) {
       svg.setAttribute("fill", "currentColor");
       svg.setAttribute("stroke", "currentColor");
