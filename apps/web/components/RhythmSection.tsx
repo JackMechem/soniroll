@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { PresetsSection } from "@/components/PresetsChip";
+import { toolPresets } from "@/lib/toolPresets";
 import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
@@ -198,6 +200,9 @@ const GROOVE_DEFAULTS: GrooveSettings = {
   parts: {},
 };
 
+/** Band fields a preset leaves alone: the tune you're on and the view. */
+const BAND_NOT_OPTIONS = ["tab", "source", "chartId", "typedText", "typedKey", "typedMeter", "transposeKey", "showChart"] as const;
+
 const noop = () => {};
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 /** Bars of drums shown at a time. */
@@ -264,6 +269,15 @@ const PICKABLE = DRUM_STYLES.filter((s) => s.id !== "swing-comping");
 export default function RhythmSection({ initialTab, initialPlay }: { initialTab?: string; initialPlay?: string }) {
   const [settings, update] = useSyncedSettings(BAND_KEY, BAND_DEFAULTS);
   const [grooveSettings, updateGroove] = useSyncedSettings(GROOVE_KEY, GROOVE_DEFAULTS);
+  // One preset covers both stores: the band (bass, chords, mix — not the tune) and the groove.
+  const presets = useMemo(() => {
+    const band: Partial<BandSettings> = { ...settings };
+    for (const f of BAND_NOT_OPTIONS) delete band[f];
+    return toolPresets("rhythm-section", { band, groove: grooveSettings }, (patch) => {
+      if (patch.band) update(patch.band);
+      if (patch.groove) updateGroove(patch.groove);
+    });
+  }, [settings, grooveSettings, update, updateGroove]);
   const { tab, source, chartId, typedText, typedKey, typedMeter, player, playerMode, feel, touch, choruses, click, swing, volume, room, transposeKey, chordStyle, chordVolume, clickVolume, roomAmount, drumsVolume } = settings;
   const countIn = settings.countIn && grooveSettings.countIn;
   const drumConfig = useMemo(() => drumConfigOf(settings.drumConfig), [settings.drumConfig]);
@@ -724,6 +738,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
 
   const panel = (
     <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-2xl">
+      <PresetsSection id="presets" tool={presets} />
       <PanelSection id="tempo" title="Tempo" icon={MetronomeIcon} summary={`${bpm} BPM`}>
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={ts.top} beatUnit={ts.bottom} onTap={tap} />
         {style.meter.bottom === 8 && <p className="-mt-2 text-center text-xs text-muted">Dotted quarter = {bpm}</p>}
