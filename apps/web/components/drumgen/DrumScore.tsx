@@ -90,82 +90,112 @@ export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumSt
     // Hold the height while redrawing so the page doesn't jump.
     el.style.minHeight = `${el.offsetHeight}px`;
     el.innerHTML = "";
-    const perRow = Math.max(1, Math.min(4, Math.floor(width / ROW_MIN_BAR)));
-    const rows = Math.ceil(bars.length / perRow);
-    const rowH = 150;
-    const renderer = new Renderer(el, Renderer.Backends.SVG);
-    renderer.resize(width, rows * rowH + 10);
-    const ctx = renderer.getContext();
     const per = style.stepsPerBeat;
     const muted = "var(--muted)";
 
-    bars.forEach((bar, i) => {
-      const row = Math.floor(i / perRow);
-      const col = i % perRow;
-      const lead = col === 0 ? 46 : 0;
-      const usable = width - 4 - 46;
-      const barW = usable / perRow;
-      const x = 2 + (col === 0 ? 0 : 46 + col * barW);
-      const stave = new Stave(x, row * rowH + 34, barW + lead);
-      if (col === 0) stave.addClef("percussion");
-      if (i === 0) stave.addTimeSignature(`${style.meter.top}/${style.meter.bottom}`);
-      stave.setContext(ctx).draw();
-      ctx.setFont("Inter, sans-serif", 10, "normal");
-      ctx.fillText(String(firstBar + i), x + 2, row * rowH + 42);
-
-      const groups: { dir: 1 | -1; hits: Map<number, { voice: DrumVoice; velocity: number }[]> }[] = [
-        { dir: 1, hits: new Map() },
-        { dir: -1, hits: new Map() },
-      ];
-      for (const h of bar.hits) {
-        const g = groups[FEET.has(h.voice) ? 1 : 0];
-        const at = g.hits.get(h.step) ?? [];
-        if (!at.some((a) => KEYS[a.voice] === KEYS[h.voice])) at.push({ voice: h.voice, velocity: h.velocity });
-        g.hits.set(h.step, at);
-      }
-      const voices: Voice[] = [];
-      const beams: Beam[] = [];
-      const tuplets: Tuplet[] = [];
-      const tags: { note: StaveNote; tag: string }[] = [];
-      for (const g of groups) {
-        const notes: StaveNote[] = [];
-        for (let b = 0; b < style.beats; b++) {
-          const slots = beatSlots(g.hits, b * per, per);
-          const beatNotes: StaveNote[] = [];
-          for (const s of slots) {
-            const duration = durationFor(s.len, style);
-            if (!s.voices.length) {
-              const rest = new StaveNote({ keys: [g.dir === 1 ? "b/4" : "e/4"], duration: `${duration}r`, stemDirection: g.dir });
-              rest.setStyle({ fillStyle: muted, strokeStyle: muted });
-              beatNotes.push(rest);
-              continue;
-            }
-            const keys = [...new Set(s.voices.map((v) => KEYS[v.voice]))];
-            const note = new StaveNote({ keys, duration, stemDirection: g.dir });
-            // Accents and the open hi-hat's "o" go above the hands' notes.
-            // (Drum charts don't usually accent the feet.)
-            const marks = g.dir === 1 ? [s.voices.some((v) => v.velocity >= 0.85) ? ">" : "", s.voices.some((v) => v.voice === "hhOpen") ? "o" : ""].filter(Boolean).join(" ") : "";
-            if (marks) note.addModifier(new Annotation(marks).setFont("Inter, sans-serif", 11, "bold").setVerticalJustification(Annotation.VerticalJustify.TOP));
-            if (keys.length === 1 && s.voices.every((v) => v.velocity < 0.3)) Parenthesis.buildAndAttach([note]);
-            tags.push({ note, tag: `${i}:${s.step}:${g.dir === 1 ? "up" : "down"}` });
-            beatNotes.push(note);
-          }
-          // Triplets: a beat that isn't a single note is a triplet.
-          if (style.triplets && beatNotes.length > 1) tuplets.push(new Tuplet(beatNotes, { numNotes: 3, notesOccupied: 2 }));
-          const flagged = beatNotes.filter((n) => !n.isRest() && ["8", "16"].includes(n.getDuration()));
-          if (beatNotes.length > 1 && beatNotes.every((n) => !n.isRest()) && flagged.length >= 2) beams.push(new Beam(beatNotes));
-          notes.push(...beatNotes);
+    /** Every bar's notes, ready to lay out. */
+    const build = () =>
+      bars.map((bar, i) => {
+        const groups: { dir: 1 | -1; hits: Map<number, { voice: DrumVoice; velocity: number }[]> }[] = [
+          { dir: 1, hits: new Map() },
+          { dir: -1, hits: new Map() },
+        ];
+        for (const h of bar.hits) {
+          const g = groups[FEET.has(h.voice) ? 1 : 0];
+          const at = g.hits.get(h.step) ?? [];
+          if (!at.some((a) => KEYS[a.voice] === KEYS[h.voice])) at.push({ voice: h.voice, velocity: h.velocity });
+          g.hits.set(h.step, at);
         }
-        const voice = new Voice({ numBeats: style.meter.top, beatValue: style.meter.bottom }).setStrict(false);
-        voice.addTickables(notes);
-        voices.push(voice);
-      }
-      new Formatter().joinVoices(voices).format(voices, Math.max(60, stave.getNoteEndX() - stave.getNoteStartX() - 10));
-      for (const v of voices) v.draw(ctx, stave);
-      for (const b of beams) b.setContext(ctx).draw();
-      for (const t of tuplets) t.setContext(ctx).draw();
-      for (const { note, tag } of tags) note.getSVGElement()?.setAttribute("data-at", tag);
-    });
+        const voices: Voice[] = [];
+        const beams: Beam[] = [];
+        const tuplets: Tuplet[] = [];
+        const tags: { note: StaveNote; tag: string }[] = [];
+        for (const g of groups) {
+          const notes: StaveNote[] = [];
+          for (let b = 0; b < style.beats; b++) {
+            const slots = beatSlots(g.hits, b * per, per);
+            const beatNotes: StaveNote[] = [];
+            for (const s of slots) {
+              const duration = durationFor(s.len, style);
+              if (!s.voices.length) {
+                const rest = new StaveNote({ keys: [g.dir === 1 ? "b/4" : "e/4"], duration: `${duration}r`, stemDirection: g.dir });
+                rest.setStyle({ fillStyle: muted, strokeStyle: muted });
+                beatNotes.push(rest);
+                continue;
+              }
+              const keys = [...new Set(s.voices.map((v) => KEYS[v.voice]))];
+              const note = new StaveNote({ keys, duration, stemDirection: g.dir });
+              // Accents and the open hi-hat's "o" go above the hands' notes.
+              // (Drum charts don't usually accent the feet.)
+              const marks = g.dir === 1 ? [s.voices.some((v) => v.velocity >= 0.85) ? ">" : "", s.voices.some((v) => v.voice === "hhOpen") ? "o" : ""].filter(Boolean).join(" ") : "";
+              if (marks) note.addModifier(new Annotation(marks).setFont("Inter, sans-serif", 11, "bold").setVerticalJustification(Annotation.VerticalJustify.TOP));
+              if (keys.length === 1 && s.voices.every((v) => v.velocity < 0.3)) Parenthesis.buildAndAttach([note]);
+              tags.push({ note, tag: `${i}:${s.step}:${g.dir === 1 ? "up" : "down"}` });
+              beatNotes.push(note);
+            }
+            // Triplets: a beat that isn't a single note is a triplet.
+            if (style.triplets && beatNotes.length > 1) tuplets.push(new Tuplet(beatNotes, { numNotes: 3, notesOccupied: 2 }));
+            const flagged = beatNotes.filter((n) => !n.isRest() && ["8", "16"].includes(n.getDuration()));
+            if (beatNotes.length > 1 && beatNotes.every((n) => !n.isRest()) && flagged.length >= 2) beams.push(new Beam(beatNotes));
+            notes.push(...beatNotes);
+          }
+          const voice = new Voice({ numBeats: style.meter.top, beatValue: style.meter.bottom }).setStrict(false);
+          voice.addTickables(notes);
+          voices.push(voice);
+        }
+        const formatter = new Formatter().joinVoices(voices);
+        // How much this bar has in it, for sharing out a row's width.
+        return { voices, beams, tuplets, tags, formatter, weight: formatter.preCalculateMinTotalWidth(voices) };
+      });
+
+    const usable = width - 4 - 46;
+    const rowH = 150;
+    /** Draws the bars `perRow` to a row; false if a note ran over its bar line. Within a row, each
+        bar's width follows how much is in it, so a busy bar (a fill) gets more room. */
+    const draw = (perRow: number): boolean => {
+      el.innerHTML = "";
+      const built = build();
+      const mean = built.reduce((a, b) => a + b.weight, 0) / Math.max(1, built.length);
+      const widths = built.map((b, i) => {
+        const row = Math.floor(i / perRow);
+        const inRow = built.slice(row * perRow, row * perRow + perRow);
+        const total = inRow.reduce((a, o) => a + o.weight, 0) + (perRow - inRow.length) * mean;
+        return (usable * b.weight) / Math.max(1, total);
+      });
+      const rows = Math.ceil(bars.length / perRow);
+      const renderer = new Renderer(el, Renderer.Backends.SVG);
+      renderer.resize(width, rows * rowH + 10);
+      const ctx = renderer.getContext();
+      const ends: number[] = [];
+      built.forEach(({ voices, beams, tuplets, tags, formatter }, i) => {
+        const row = Math.floor(i / perRow);
+        const col = i % perRow;
+        const x = 2 + (col === 0 ? 0 : 46 + widths.slice(row * perRow, i).reduce((a, w) => a + w, 0));
+        const stave = new Stave(x, row * rowH + 34, widths[i] + (col === 0 ? 46 : 0));
+        if (col === 0) stave.addClef("percussion");
+        if (i === 0) stave.addTimeSignature(`${style.meter.top}/${style.meter.bottom}`);
+        stave.setContext(ctx).draw();
+        ctx.setFont("Inter, sans-serif", 10, "normal");
+        ctx.fillText(String(firstBar + i), x + 2, row * rowH + 42);
+        formatter.format(voices, Math.max(60, stave.getNoteEndX() - stave.getNoteStartX() - 10));
+        for (const v of voices) v.draw(ctx, stave);
+        for (const b of beams) b.setContext(ctx).draw();
+        for (const t of tuplets) t.setContext(ctx).draw();
+        for (const { note, tag } of tags) note.getSVGElement()?.setAttribute("data-at", tag);
+        ends.push(x + stave.getWidth());
+      });
+      // Did every note land inside its bar?
+      const left = el.getBoundingClientRect().left;
+      return [...el.querySelectorAll("[data-at]")].every((n) => {
+        const bar = Number(n.getAttribute("data-at")!.split(":")[0]);
+        const head = n.querySelector(".vf-notehead") ?? n;
+        return head.getBoundingClientRect().right - left <= ends[bar] + 2;
+      });
+    };
+    // As many bars a row as the width allows — fewer if a bar wouldn't fit (squeezed, a bar of
+    // 16ths with a fill ran over its bar line).
+    let perRow = Math.max(1, Math.min(4, Math.floor(width / ROW_MIN_BAR)));
+    while (!draw(perRow) && perRow > 1) perRow--;
     const svg = el.querySelector("svg");
     if (svg) {
       svg.setAttribute("fill", "currentColor");
