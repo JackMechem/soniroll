@@ -122,3 +122,8 @@ mobile app (untouched, and paused). Account deletion doesn't remove `syncedSetti
 happens to the rest of a deleted account's settings.
 
 **Privacy page:** "tool settings and the presets you save" under "Your stuff" (date bumped).
+
+
+**2026-11-16, at merge time:** Jack asked for presets on *every* tool, so the Practice Timer got the
+one line after all (its sound/alarm settings; saved sessions are separate), and Find the Root got it
+when the two branches met. The Tuner's take-graph zoom (`takeZoom`) is left out of its presets.
