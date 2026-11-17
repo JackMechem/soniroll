@@ -170,7 +170,7 @@ export default function Community() {
           <LoadingSpinner />
         </div>
       ) : (
-        <div className={`grid gap-6 ${isAuthenticated ? "xl:grid-cols-[minmax(0,1fr)_18rem]" : "mx-auto w-full max-w-3xl"}`}>
+        <div className={`grid gap-6 ${isAuthenticated ? "xl:grid-cols-[minmax(0,1fr)_18rem]" : ""}`}>
           <div className="flex min-w-0 flex-col gap-5">
             {isAuthenticated ? (
               <div className="xl:hidden">

@@ -42,6 +42,7 @@ export default function SetlistsPage() {
       <Hero
         title="Library"
         icon={LibraryIcon}
+        helpTopic="tunes"
         titleExtra={<StoragePill />}
         tabs={<LibraryTabs active="setlists" />}
       >

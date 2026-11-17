@@ -40,6 +40,11 @@ function segmentPath(centerDegrees: number) {
 }
 
 /** A ring of the 12 notes (C at the top) with the tuner readout in the middle. */
+/** "C#" → "C♯", "Db" → "D♭", for the labels on the dial. */
+function glyphs(name: string) {
+  return name.replace("#", "♯").replace(/^([A-G])b/, "$1♭");
+}
+
 export default function TunerDial({
   detectedPc,
   detectedColor,
@@ -113,7 +118,7 @@ export default function TunerDial({
                   isDetected ? "fill-background" : "fill-foreground"
                 }`}
               >
-                {main}
+                {glyphs(main)}
               </text>
               {alt && (
                 <text
@@ -125,7 +130,7 @@ export default function TunerDial({
                     isDetected ? "fill-background" : "fill-muted"
                   }`}
                 >
-                  {alt}
+                  {glyphs(alt)}
                 </text>
               )}
             </g>

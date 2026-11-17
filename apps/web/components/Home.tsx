@@ -258,7 +258,7 @@ export default function Home() {
         return (
           <Card title="Tune of the day" action={tuneOfDay ? { label: "Shuffle in Jam Practice", href: "/jam-practice" } : undefined}>
             {tuneOfDay ? (
-              <div className="flex flex-1 flex-col justify-between gap-4">
+              <div className="flex flex-col gap-4">
                 <div>
                   <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="block text-xl font-semibold leading-tight tracking-tight hover:underline">
                     {tuneOfDay.tune.name}

@@ -68,8 +68,8 @@ export function usePopKey(value: string): number {
 /** A small dot on a choice you haven't tried yet. */
 export function NewBadge({ color }: { color: string }) {
   return (
-    <span aria-hidden title="New: you haven't tried this one yet" className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
-      <span className="relative inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-surface" style={{ background: color }} />
+    <span title="You haven't tried this one yet" className="absolute right-1 top-1 rounded-sm px-1 text-[9px] font-semibold leading-4" style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}>
+      New
     </span>
   );
 }
