@@ -4,7 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { FlameIcon, SHARE_PROGRESS_EVENT } from "@/components/practicelog/Celebrations";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
@@ -31,6 +31,7 @@ import {
   fromDateKey,
   goalOn,
   isDateKey,
+  lifetimeMinutes,
   minutesOn,
   monthGrid,
   startOfWeek,
@@ -74,8 +75,9 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   const [newTask, setNewTask] = useState<DayTask | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
-  // The tour opens by itself the first time you visit (on this device).
-  const [tourOpen, setTourOpen] = useState(() => typeof window !== "undefined" && !tourSeen());
+  // The tour opens by itself the first time you visit (on this device) — but not once the log has
+  // routines or logged time (an account already in use on another device). The ? opens it any time.
+  const [tourChoice, setTourChoice] = useState<boolean | null>(null);
   // "Share your progress" is the app-wide dialog (`PracticeLogGlobal`).
   const setSharingKind = (kind: ProgressCardKind) => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: kind }));
   const { isAuthenticated } = useConvexAuth();
@@ -101,6 +103,20 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   const [picked, setPicked] = useState<string | null>(isDateKey(initialDate) ? initialDate : null);
   const today = mounted ? todayKey() : null;
   const selected = picked ?? today;
+  const logInUse = data.routines.length > 0 || lifetimeMinutes(data) > 0;
+  const tourOpen = tourChoice ?? (mounted && ready && !logInUse && !tourSeen());
+  // Phones: the day panel comes first, so picking a day in the month below brings it back into
+  // view (only when its top has scrolled away under the top bar).
+  const dayRef = useRef<HTMLDivElement>(null);
+  const pickFromCalendar = (date: string) => {
+    setPicked(date);
+    const el = dayRef.current;
+    if (!el || window.matchMedia("(min-width: 1024px)").matches) return;
+    if (el.getBoundingClientRect().top < 72) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }
+  };
 
   const range = useMemo(() => {
     if (!selected) return null;
@@ -152,7 +168,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, (view === "day" ? 1 : 7) * n));
   const unit = view === "month" ? "month" : view === "day" ? "day" : "week";
   const viewSwitch = (
-    <div className="w-[10.5rem] shrink-0 sm:w-56">
+    <div className="order-last w-full shrink-0 sm:order-none sm:w-56">
       <Segmented
         label="Calendar view"
         onPage
@@ -182,7 +198,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
             <span className="truncate">Shed Log</span>
             <button
               type="button"
-              onClick={() => setTourOpen(true)}
+              onClick={() => setTourChoice(true)}
               aria-label="How the Shed Log works"
               title="How the Shed Log works"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
@@ -192,16 +208,22 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           </h1>
           <TodaySummary data={data} today={today} onGoal={() => setGoalOpen(true)} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setStatsOpen(true)} className={SECONDARY}>
-            <ChartIcon className="h-4 w-4 text-muted" /> Stats
+        {/* Phones: one row under the title — the secondary actions as icons, New on the right. */}
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:flex-wrap">
+          <button type="button" onClick={() => setStatsOpen(true)} title="Stats" aria-label="Stats" className={SECONDARY}>
+            <ChartIcon className="h-4 w-4 text-muted" /> <span className="hidden sm:inline">Stats</span>
           </button>
           <button type="button" onClick={() => setSharingKind("year")} title="Share progress" aria-label="Share progress" className={SECONDARY}>
             <ShareIcon className="h-4 w-4 text-muted" /> <span className="hidden sm:inline">Share</span>
           </button>
-          <Link href="/shed-log/routines" title="Routines" className={SECONDARY}>
-            <ListIcon className="h-4 w-4 text-muted" /> Routines
-            {data.routines.length > 0 && <span className="tabular-nums text-muted">{data.routines.length}</span>}
+          <Link
+            href="/shed-log/routines"
+            title="Routines"
+            aria-label={data.routines.length ? `Routines (${data.routines.length})` : "Routines"}
+            className={SECONDARY}
+          >
+            <ListIcon className="h-4 w-4 text-muted" /> <span className="hidden sm:inline">Routines</span>
+            {data.routines.length > 0 && <span className="hidden tabular-nums text-muted sm:inline">{data.routines.length}</span>}
           </Link>
           <button
             type="button"
@@ -218,7 +240,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 ],
               });
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+            className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
           >
             <SlidersIcon className="h-4 w-4" />
           </button>
@@ -237,7 +259,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 ],
               });
             }}
-            className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+            className="ml-auto flex h-10 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:ml-0 sm:h-9"
           >
             <PlusIcon className="h-4 w-4" /> New
           </button>
@@ -250,8 +272,8 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         className={`grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0 ${dayHidden ? "lg:grid-cols-[minmax(0,1fr)]" : "lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)]"}`}
         style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
       >
-        <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
-          <div className="flex items-center gap-1 sm:gap-2">
+        <div className="order-2 flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
+          <div className="flex flex-wrap items-center gap-1 gap-y-2 sm:flex-nowrap sm:gap-2">
             {/* Desktop: fold the day panel away so the calendar gets the whole width. */}
             <button
               type="button"
@@ -278,7 +300,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
             {viewSwitch}
           </div>
           {view === "month" ? (
-            <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={setPicked} clipsByDate={clipsByDate} />
+            <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={pickFromCalendar} clipsByDate={clipsByDate} />
           ) : view === "day" ? (
             <DayView
               log={log}
@@ -307,7 +329,12 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           )}
           {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
         </div>
-        <div className={`min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 ${dayHidden ? "lg:hidden" : ""}`}>
+        {/* Its scrollbar stays out of sight until the pointer is over the day, so the page doesn't
+            show two scrollbars side by side. */}
+        <div
+          ref={dayRef}
+          className={`order-1 min-w-0 scroll-mt-20 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 lg:[&::-webkit-scrollbar-thumb]:bg-transparent lg:hover:[&::-webkit-scrollbar-thumb]:bg-foreground/15 lg:[&::-webkit-scrollbar-thumb:hover]:bg-foreground/30 ${dayHidden ? "lg:hidden" : ""}`}
+        >
           <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
         </div>
         {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
@@ -346,7 +373,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         </div>
       </div>
       {addMenu && <ContextMenu menu={addMenu} onClose={() => setAddMenu(null)} />}
-      {tourOpen && <ShedLogTour onClose={() => setTourOpen(false)} />}
+      {tourOpen && <ShedLogTour onClose={() => setTourChoice(false)} />}
       {goalOpen && <GoalDialog data={data} onSave={log.setPrefs} onClose={() => setGoalOpen(false)} />}
       {statsOpen && (
         <StatsDialog
@@ -376,7 +403,8 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   );
 }
 
-const SECONDARY = "flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
+/** Secondary header buttons: an icon-only 40px square on phones, icon and label from `sm`. */
+const SECONDARY = "flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] text-sm font-medium hover:bg-surface-hover sm:h-9 sm:w-auto sm:px-3";
 
 /** One quiet line under the title: today's minutes against the goal (a thin bar; press it to
     change the goal) and the streak. */

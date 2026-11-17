@@ -1497,6 +1497,14 @@ export default function IntervalTrainer() {
             >
               {mainLabel}
             </h1>
+            {/* Before the first round, say what's about to happen. */}
+            {!round && !running && (
+              <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">
+                {listenMode
+                  ? "Press Start, then play each interval. The mic checks it."
+                  : "Press Start, then play each interval shown."}
+              </p>
+            )}
           </div>
           {showNext && nextRound && running && (
             <span

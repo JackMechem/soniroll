@@ -220,7 +220,7 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">{children}</p>;
 }
 
-const LEVEL_BG = ["var(--surface-hover)", "#0e4429", "#006d32", "#26a641", "#39d353"];
+const LEVEL_BG = ["var(--surface-hover)", "var(--heat-1)", "var(--heat-2)", "var(--heat-3)", "var(--heat-4)"];
 
 /** Their Shed Log, as far as a profile shows it: the streak (and best), hours, days, goal days,
     the last 26 weeks of practice, and the milestones reached. */

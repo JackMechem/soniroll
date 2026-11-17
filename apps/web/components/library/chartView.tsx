@@ -97,8 +97,8 @@ export function RoundButton({ label, onClick, disabled, active, children }: { la
       aria-label={label}
       title={label}
       aria-pressed={active}
-      className={`flex h-10 w-10 items-center justify-center rounded-md border transition-colors disabled:opacity-30 sm:h-9 sm:w-9 ${
-        active ? "border-transparent bg-accent text-accent-foreground" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"
+      className={`flex h-10 w-10 items-center justify-center rounded-md transition-colors disabled:opacity-30 sm:h-9 sm:w-9 ${
+        active ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {children}

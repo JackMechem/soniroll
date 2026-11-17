@@ -5,7 +5,8 @@ import { useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { BackButton, PageHeader, PageShell } from "@/components/library/shared";
+import { BackButton } from "@/components/library/shared";
+import ToolLayout from "@/components/ToolLayout";
 import { SAVE_LABEL, downloadJson, safeFilename, useAutosave } from "@/components/bassgenius/TranscriptionEditor";
 import ScoreEditor from "@/components/notation/ScoreEditor";
 import { DotsVerticalIcon, DownloadIcon, PlusIcon, ScoreIcon, TrashIcon, UploadIcon } from "@/components/tools";
@@ -68,22 +69,18 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
   }
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Score Writer"
-        subtitle="Write music in notation: notes, rests, chords, any key and time. Play it back as you go."
-        helpTopic="score-writer"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => fileInput.current?.click()} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
-              <UploadIcon className="h-4 w-4" /> Import
-            </button>
-            <button type="button" onClick={() => void make()} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
-              <PlusIcon className="h-4 w-4" /> New score
-            </button>
-          </div>
-        }
-      />
+    <ScoreShell
+      actions={
+        <>
+          <button type="button" onClick={() => fileInput.current?.click()} className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
+            <UploadIcon className="h-4 w-4" /> Import
+          </button>
+          <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+            <PlusIcon className="h-4 w-4" /> New score
+          </button>
+        </>
+      }
+    >
       <input
         ref={fileInput}
         type="file"
@@ -156,7 +153,17 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           onCancel={() => setDeleting(null)}
         />
       )}
-    </PageShell>
+    </ScoreShell>
+  );
+}
+
+/** Score Writer's pages in the same frame as the other tools: the compact header bar with the
+    tool's icon, name and ? (desktop), or the row under the app's top bar (phones). */
+function ScoreShell({ actions, children }: { actions?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <ToolLayout title="Score Writer" layout="stacked" topAligned options={null} actions={actions}>
+      <div className="flex w-full flex-col gap-6 text-left lg:px-2">{children}</div>
+    </ToolLayout>
   );
 }
 
@@ -164,19 +171,19 @@ function ScorePage({ id, onBack }: { id: string; onBack: () => void }) {
   const score = useScore(id);
   if (score === undefined) {
     return (
-      <PageShell>
+      <ScoreShell>
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
-      </PageShell>
+      </ScoreShell>
     );
   }
   if (score === null) {
     return (
-      <PageShell>
+      <ScoreShell>
         <BackButton onClick={onBack} label="Scores" />
         <p className="text-sm text-muted">This score isn&apos;t there any more.</p>
-      </PageShell>
+      </ScoreShell>
     );
   }
   return <OpenScore id={id} loaded={score} onBack={onBack} />;
@@ -192,7 +199,7 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
 
   const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
   return (
-    <PageShell>
+    <ScoreShell>
       <ScoreEditor
         initial={initial}
         onChange={change}
@@ -242,6 +249,6 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
           onCancel={() => setDeleting(false)}
         />
       )}
-    </PageShell>
+    </ScoreShell>
   );
 }

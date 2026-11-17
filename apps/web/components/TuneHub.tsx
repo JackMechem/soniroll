@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ChordChart from "@/components/ChordChart";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { menuPosition } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import TuneEditorModal from "@/components/TuneEditorModal";
@@ -18,7 +20,7 @@ import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
 import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
-import { ChordChartIcon, LinkIcon, PencilIcon, ShareIcon, TrashIcon } from "@/components/tools";
+import { ChordChartIcon, DotsVerticalIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { makeId, type Tune } from "@/lib/types";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
@@ -53,9 +55,10 @@ function isMinorKey(value: string) {
  * saved as you type. Edit opens the usual tune form; the tune can be moved between Tunes I Know
  * and Tunes to Learn, or deleted. Linked from every tune in the account's tune lists.
  */
-/** Phones: whether a tune's chart fits the screen (else full size, scrolling sideways). */
+/** Phones: whether a tune's chart fits the screen (else full size, scrolling sideways). Fits by
+    default, so nothing's cut off on the right; "Full size" is remembered once picked. */
 const CHART_VIEW_KEY = "jam-practice-tune-chart-view";
-const CHART_VIEW_DEFAULTS = { fit: false };
+const CHART_VIEW_DEFAULTS = { fit: true };
 
 export default function TuneHub({ id, list: listParam }: { id: string; list?: string }) {
   const router = useRouter();
@@ -129,6 +132,7 @@ function Hub({
   const [editing, setEditing] = useState(false);
   const [picking, setPicking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
 
   function patch(update: Partial<Tune>) {
     setTunes((prev) =>
@@ -203,6 +207,7 @@ function Hub({
 
   const firstKey = tune.keys.find((k) => k.enabled)?.value ?? (chart?.key || null);
   const btn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
+  const iconBtn = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9";
 
   return (
     <LibraryPage>
@@ -223,15 +228,23 @@ function Hub({
           <>
             <Pill icon={PencilIcon} label="Edit" onClick={() => setEditing(true)} />
             {isAuthenticated && <Pill icon={ShareIcon} label="Share" onClick={() => setSharing(true)} />}
-            {(other === "tunes" || canUseLearn) && <Pill label={`Move to ${LIST_LABEL[other]}`} onClick={() => moveTo(other)} />}
+            {/* The rarer actions in a ⋮, so the header stays one row on phones. */}
             <button
               type="button"
-              onClick={() => setConfirmDelete(true)}
-              aria-label="Delete tune"
-              title="Delete tune"
-              className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-danger sm:h-9 sm:w-9"
+              onClick={(e) =>
+                setMenu({
+                  ...menuPosition(e),
+                  items: [
+                    ...(other === "tunes" || canUseLearn ? [{ label: `Move to ${LIST_LABEL[other]}`, icon: <RepeatIcon className="h-4 w-4 text-muted" />, onSelect: () => moveTo(other) }] : []),
+                    { label: "Delete tune", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: () => setConfirmDelete(true) },
+                  ],
+                })
+              }
+              aria-label="More for this tune"
+              title="More"
+              className={iconBtn}
             >
-              <TrashIcon className="h-4 w-4" />
+              <DotsVerticalIcon className="h-4 w-4" />
             </button>
           </>
         }
@@ -264,11 +277,22 @@ function Hub({
                     <button type="button" onClick={openInChordCharts} className={btn}>
                       Open
                     </button>
-                    <button type="button" onClick={() => setPicking(true)} className={btn}>
-                      Change
-                    </button>
-                    <button type="button" onClick={() => patch({ chordChartId: undefined })} className={btn}>
-                      Unlink
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        setMenu({
+                          ...menuPosition(e),
+                          items: [
+                            { label: "Link a different chart", icon: <LinkIcon className="h-4 w-4 text-muted" />, onSelect: () => setPicking(true) },
+                            { label: "Unlink the chart", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: () => patch({ chordChartId: undefined }) },
+                          ],
+                        })
+                      }
+                      aria-label="More for the chart"
+                      title="More"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+                    >
+                      <DotsVerticalIcon className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -379,6 +403,7 @@ function Hub({
         </div>
       </div>
 
+      {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
       {sharing && <TuneShareDialog tuneId={tune.id} tuneName={tune.name} hasChart={!!chart} onClose={() => setSharing(false)} />}
       {editing && <TuneEditorModal initial={tune} isNew={false} onSave={(t) => { patch(t); setEditing(false); }} onClose={() => setEditing(false)} />}
       {picking && (

@@ -19,6 +19,13 @@ function formatUse(ms: number) {
   return formatMinutesShort(Math.floor(ms / 60_000));
 }
 
+/** The header chip's reading: whole minutes ("0 min", "12 min"), so a newcomer reads it as time
+    spent, not a stray "0 s". Seconds only while it's counting, so you can see it tick. */
+function formatChip(ms: number, running: boolean) {
+  if (ms < 60_000) return running ? `${Math.floor(ms / 1000)} s` : ms >= 1000 ? "<1 min" : "0 min";
+  return formatMinutesShort(Math.floor(ms / 60_000));
+}
+
 /**
  * A tool's own stats beside its title, kept small: one button with today's time (ticking while it
  * runs) and the streak, which opens the rest (best streak, this week, in total, the history), and
@@ -66,13 +73,13 @@ export default function ToolStats({ href }: { href: string }) {
       <SettingChip
         icon={StopwatchIcon}
         label="History"
-        title={`${link?.label ?? "Tool"} history`}
+        title={`Your time in ${link?.label ?? "this tool"}`}
         trigger={{
           className: CHIP,
           content: (
-            <>
+            <span className="flex items-center gap-1.5" title="Your time on this tool today. Click for your streak and history.">
               <StopwatchIcon className="h-4 w-4 shrink-0 text-muted" />
-              <span className="whitespace-nowrap tabular-nums">{formatUse(todayMs)}</span>
+              <span className="whitespace-nowrap tabular-nums">{formatChip(todayMs, running)}</span>
               <span className="whitespace-nowrap text-muted">{running ? "counting" : "today"}</span>
               {running && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />}
               {s > 0 && (
@@ -81,7 +88,7 @@ export default function ToolStats({ href }: { href: string }) {
                   {s}
                 </span>
               )}
-            </>
+            </span>
           ),
         }}
       >
@@ -101,7 +108,7 @@ export default function ToolStats({ href }: { href: string }) {
           ))}
         </div>
         <p className="text-xs text-muted">
-          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
+          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to go until ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
           minute of real use.
         </p>
         {history.length === 0 ? (

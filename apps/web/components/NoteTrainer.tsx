@@ -1339,6 +1339,14 @@ export default function NoteTrainer() {
             >
               {mainLabel}
             </h1>
+            {/* Before the first round, say what's about to happen. */}
+            {!note && !running && (
+              <p className="absolute inset-x-0 bottom-0 z-10 text-sm text-muted sm:bottom-3">
+                {listenMode
+                  ? "Press Start, then play each note. The mic checks it."
+                  : "Press Start, then play each note shown."}
+              </p>
+            )}
           </div>
           {showNext && nextNote && running && (
             <span

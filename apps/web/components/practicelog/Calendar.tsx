@@ -82,8 +82,10 @@ export function MonthView({
           const goalMet = goal > 0 && minutes >= goal;
           const heat = minutes > 0 ? 6 + 16 * Math.min(1, goal > 0 ? minutes / goal : 1) : 0;
           // A past day: green with a check when everything was done, yellow with a dash when
-          // some of it was (or time was logged), red with an X when nothing was.
+          // some of it was (or time was logged), a small red X by the date when nothing was (no
+          // red wash, so a run of missed days doesn't turn the month red).
           const status = dayStatus(data, key, today);
+          const tint = status && status !== "missed" ? status : null;
           return (
             <button
               key={key}
@@ -95,8 +97,8 @@ export function MonthView({
                 isSel ? "ring-2 ring-inset ring-accent" : "hover:bg-surface-hover/50"
               } ${inMonth ? "" : "opacity-60"}`}
               style={
-                status
-                  ? { background: `color-mix(in srgb, ${STATUS_COLOR[status]} ${status === "partial" ? 18 : status === "done" ? 16 : 12}%, transparent)` }
+                tint
+                  ? { background: `color-mix(in srgb, ${STATUS_COLOR[tint]} ${tint === "partial" ? 14 : 16}%, transparent)` }
                   : heat
                     ? { background: `color-mix(in srgb, var(--accent) ${heat}%, transparent)` }
                     : undefined
@@ -193,10 +195,6 @@ function RoutineChip({ item, status = null, fill = false }: { item: DayRoutine; 
       <span className="truncate">{item.routine.name || "Untitled routine"}</span>
       {complete ? (
         <CheckIcon className="ml-auto h-3 w-3 shrink-0" />
-      ) : status === "missed" ? (
-        <span className="ml-auto flex shrink-0 items-center gap-0.5 font-medium text-red-500" title={item.occurrence.skipped ? "Skipped" : "Missed"}>
-          <CloseIcon className="h-3 w-3" />
-        </span>
       ) : status === "partial" ? (
         <span className="ml-auto flex shrink-0 items-center gap-0.5 font-medium text-amber-600 dark:text-amber-400" title="Partly done">
           {!fill && <span className="tabular-nums">{done}/{total}</span>}

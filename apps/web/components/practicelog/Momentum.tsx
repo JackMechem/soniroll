@@ -70,11 +70,16 @@ export default function Momentum({
       <GoalCard minutes={minutes} goal={goal} progress={progress} onEdit={() => setEditingGoal(true)} />
       {editingGoal && <GoalDialog data={data} onSave={onPrefs} onClose={() => setEditingGoal(false)} />}
 
-      <Card label="Streak" action={<ShareButton onClick={() => onShare("streak")} />}>
-        <div className="flex items-center gap-2">
-          <Value value={s} unit={s === 1 ? "day" : "days"} />
-          <FlameIcon className={`h-5 w-5 ${practicedToday ? "log-flame text-orange-500" : s > 0 ? "text-orange-500/60" : "text-muted"}`} />
-        </div>
+      <Card
+        label="Streak"
+        action={<ShareButton onClick={() => onShare("streak")} />}
+        value={
+          <span className="flex items-baseline gap-2">
+            <Value value={s} unit={s === 1 ? "day" : "days"} />
+            <FlameIcon className={`h-5 w-5 self-center ${practicedToday ? "log-flame text-orange-500" : s > 0 ? "text-orange-500/60" : "text-muted"}`} />
+          </span>
+        }
+      >
         <Note warn={!practicedToday && s > 0}>
           {practicedToday
             ? s >= best && s > 1
@@ -98,14 +103,13 @@ export default function Momentum({
             </span>
           )
         }
+        value={<Value value={formatMinutesShort(Math.round(weekTotal))} />}
       >
-        <Value value={formatMinutesShort(Math.round(weekTotal))} />
         <WeekBars week={week} today={today} />
         <Note>{goalDays > 0 ? `Goal hit ${daysHit} of ${goalDays} days` : "Set a daily goal to track your week"}</Note>
       </Card>
 
-      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />}>
-        <Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />
+      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />} value={<Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />}>
         <Bar frac={Math.max(0.03, Math.min(1, (hours - ms.from) / (ms.to - ms.from)))} />
         <Note>
           {hours === 0 ? "Your first hour starts with one session" : `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to ${ms.to} hour${ms.to === 1 ? "" : "s"}`}
@@ -129,23 +133,46 @@ function ShareButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** One stat: a small label (with an action on the right), then its number and details. */
-function Card({ label, action, children, wide = false }: { label: string; action?: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
+/** One stat, laid out the same in every card so they line up side by side: a small label (with an
+    action on the right), the big number on one baseline (with an `aside` on the right), and the
+    details (a bar, the week, a note) pinned to the bottom. */
+function Card({
+  label,
+  action,
+  value,
+  aside,
+  children,
+  wide = false,
+}: {
+  label: string;
+  action?: React.ReactNode;
+  value: React.ReactNode;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
   return (
-    <section className={`flex min-w-0 flex-col justify-between gap-3 rounded-lg bg-surface p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
+    <section className={`flex min-w-0 flex-col gap-3 rounded-lg bg-surface p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
       <div className="flex h-5 items-center justify-between gap-2">
         <h3 className="truncate text-xs font-medium text-muted">{label}</h3>
         {action}
       </div>
-      {children}
+      <div className="flex h-8 items-baseline justify-between gap-2">
+        {value}
+        {aside}
+      </div>
+      <div className="mt-auto flex flex-col gap-3">{children}</div>
     </section>
   );
 }
 
-function Value({ value, unit }: { value: React.ReactNode; unit?: React.ReactNode }) {
+/** The big number. Words inside it ("1 h 24 min") and the `unit` are small and muted, so every
+    card's number reads at the same size. */
+function Value({ value, unit }: { value: string | number; unit?: React.ReactNode }) {
+  const parts = String(value).split(/([\d.:]+)/).filter(Boolean);
   return (
-    <div className="text-2xl font-semibold tracking-tight tabular-nums">
-      {value}
+    <div className="whitespace-nowrap text-2xl font-semibold leading-8 tracking-tight tabular-nums">
+      {parts.map((p, i) => (/^[\d.:]+$/.test(p) ? <span key={i}>{p}</span> : <span key={i} className="text-sm font-normal text-muted">{p}</span>))}
       {unit && <span className="text-sm font-normal text-muted"> {unit}</span>}
     </div>
   );
@@ -189,11 +216,9 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
           {goal > 0 ? "Change" : "Set a goal"}
         </button>
       }
+      value={<Value value={Math.round(minutes)} unit={goal > 0 ? `/ ${goal} min` : "min"} />}
+      aside={goal > 0 && <span className="text-xs font-medium tabular-nums text-muted">{Math.round(frac * 100)}%</span>}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <Value value={Math.round(minutes)} unit={goal > 0 ? `/ ${goal} min` : "min"} />
-        {goal > 0 && <span className="text-xs font-medium tabular-nums text-muted">{Math.round(frac * 100)}%</span>}
-      </div>
       {goal > 0 && <Bar frac={frac} done={met} />}
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <Note good={met}>{message}</Note>
@@ -207,26 +232,33 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
   );
 }
 
+/** The week as seven bars, each on its own faint track so empty days still read as days; filled
+    with the accent (green once the day's goal is hit), with the goal as a dashed line. */
 function WeekBars({ week, today }: { week: { key: string; minutes: number; goal: number }[]; today: string }) {
   const max = Math.max(...week.map((d) => d.goal), ...week.map((d) => d.minutes), 1);
   const same = week.every((d) => d.goal === week[0].goal);
+  const TRACK = 44;
   return (
-    <div className="relative flex h-14 items-end gap-1.5">
-      {same && week[0].goal > 0 && <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-foreground/25" style={{ bottom: 14 + (week[0].goal / max) * 42 }} />}
+    <div className="relative flex items-end gap-1.5">
+      {same && week[0].goal > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground/40" style={{ bottom: 18 + (week[0].goal / max) * TRACK }} />
+      )}
       {week.map((d) => {
         const hit = d.goal > 0 && d.minutes >= d.goal;
         const future = d.key > today;
+        const isToday = d.key === today;
         return (
-          <div key={d.key} className="flex flex-1 flex-col items-center gap-0.5">
-            <div className="relative flex h-[42px] w-full items-end">
-              {!same && d.goal > 0 && <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-foreground/30" style={{ bottom: `${(d.goal / max) * 100}%` }} />}
-              <div
-                className={`w-full rounded-sm transition-[height] duration-700 ${hit ? "bg-emerald-500" : d.minutes > 0 ? "bg-accent/60" : "bg-foreground/10"}`}
-                style={{ height: `${Math.max(d.minutes > 0 ? 12 : 6, (d.minutes / max) * 100)}%`, opacity: future ? 0.4 : 1 }}
-                title={`${formatMinutesShort(Math.round(d.minutes))}`}
-              />
+          <div key={d.key} className="flex flex-1 flex-col items-center gap-1" title={`${WEEKDAY_LETTER[weekdayOf(d.key)]} · ${formatMinutesShort(Math.round(d.minutes))}`}>
+            <div className={`relative w-full overflow-hidden rounded-sm ${future ? "bg-foreground/[0.04]" : "bg-foreground/[0.08]"}`} style={{ height: TRACK }}>
+              {!same && d.goal > 0 && <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground/40" style={{ bottom: `${(d.goal / max) * 100}%` }} />}
+              {d.minutes > 0 && (
+                <div
+                  className={`absolute inset-x-0 bottom-0 rounded-sm transition-[height] duration-700 ${hit ? "bg-emerald-500" : "bg-accent"}`}
+                  style={{ height: `${Math.max(10, (d.minutes / max) * 100)}%` }}
+                />
+              )}
             </div>
-            <span className={`h-[12px] text-[10px] font-medium leading-[12px] ${d.key === today ? "text-foreground" : "text-muted"}`}>{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
+            <span className={`h-3.5 text-[11px] leading-[14px] ${isToday ? "font-semibold text-foreground" : "font-medium text-muted"}`}>{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
           </div>
         );
       })}

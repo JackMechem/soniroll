@@ -882,7 +882,12 @@ export default function FindTheRoot() {
             </CollapsiblePanel>
 
             {answerMode === "sing" && (
-              <CollapsiblePanel id="root-listen" title="Listen" icon={MicIcon}>
+              <CollapsiblePanel
+                id="root-listen"
+                title="Microphone"
+                icon={MicIcon}
+                summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen input") : "Default input"}
+              >
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-muted">Audio input</span>
                   <Select

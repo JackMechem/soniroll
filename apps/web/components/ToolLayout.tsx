@@ -36,6 +36,7 @@ export default function ToolLayout({
   sidePanel,
   credit,
   presets,
+  actions,
   children,
 }: {
   title: string;
@@ -58,6 +59,9 @@ export default function ToolLayout({
       the top of the page (phones). Build it with `toolPresets(id, settings, update)`
       (`lib/toolPresets.ts`). */
   presets?: ToolPresets;
+  /** Page-level buttons (e.g. Score Writer's Import / New score): on the right of the header bar
+      (desktop), or in the row at the top of the page (phones). */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const stacked = layout === "stacked";
@@ -79,22 +83,23 @@ export default function ToolLayout({
         <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 px-8 lg:flex">
           <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
             {TitleIcon && <TitleIcon className="h-[18px] w-[18px] shrink-0 text-muted" />}
-            <span className="truncate">{title}</span>
+            <span className="truncate" title={title}>{title}</span>
           </h1>
           {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
           {help && <div className="ml-1">{help}</div>}
           {titleExtra && <div className="ml-3 pr-4">{titleExtra}</div>}
-          {(presets || statsHref) && (
+          {(presets || statsHref || actions) && (
             <div className="ml-auto flex shrink-0 items-center gap-2">
               {presets && <PresetsButton tool={presets} />}
               {statsHref && <ToolStats href={statsHref} />}
+              {actions}
             </div>
           )}
         </div>
 
         {/* Phones: the same row, pinned just under the app's top bar. */}
         <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.25rem)] sm:inset-x-6 lg:hidden">
-          <PhoneBar href={statsHref} presets={presets} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
+          <PhoneBar href={statsHref} presets={presets} actions={actions} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
         </div>
 
         {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
@@ -167,12 +172,13 @@ function TopChips({ children }: { children: React.ReactNode }) {
 
 /** Below `lg`, a small row at the top of the page: presets, the tool's stats and Log button, and
     its ?. */
-function PhoneBar({ href, presets, intro, help }: { href: string | null; presets?: ToolPresets; intro: React.ReactNode; help?: React.ReactNode }) {
-  if (!href && !presets && !intro && !help) return null;
+function PhoneBar({ href, presets, actions, intro, help }: { href: string | null; presets?: ToolPresets; actions?: React.ReactNode; intro: React.ReactNode; help?: React.ReactNode }) {
+  if (!href && !presets && !actions && !intro && !help) return null;
   return (
     <div className="flex w-full items-center gap-2 text-left lg:hidden">
       {presets && <PresetsButton tool={presets} />}
       {href && <ToolStats href={href} />}
+      {actions}
       <div className="ml-auto flex items-center gap-1">
         {help}
         {intro}

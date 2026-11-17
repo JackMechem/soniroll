@@ -152,8 +152,8 @@ export default function FeedbackForm({
               type="button"
               aria-pressed={kind === k.id}
               onClick={() => setKind(k.id)}
-              className={`flex flex-col items-start gap-1.5 rounded-md border p-3 text-left transition-colors ${
-                kind === k.id ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background hover:border-foreground/30"
+              className={`flex flex-col items-start gap-1.5 rounded-md p-3 text-left transition-colors ${
+                kind === k.id ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] hover:bg-surface-hover"
               }`}
             >
               <k.Icon className="h-4 w-4" />

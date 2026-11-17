@@ -429,10 +429,10 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           type="button"
           onClick={() => updateSettings({ sustain: !sustain })}
           aria-pressed={sustain}
-          className={`pointer-events-auto rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+          className={`pointer-events-auto rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             sustain
-              ? "border-accent bg-accent text-accent-foreground"
-              : "border-foreground/15 bg-background text-muted hover:text-foreground"
+              ? "bg-accent text-accent-foreground hover:bg-accent-hover"
+              : "bg-foreground/[0.07] text-muted hover:bg-surface-hover hover:text-foreground"
           }`}
         >
           Sustain
@@ -547,9 +547,8 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
       )}
 
       {tuning.strings.length > 0 && !openTake && (
-        <div className="flex w-full flex-col gap-2">
-          <p className="text-xs font-medium text-muted">Tap a string to hear its pitch</p>
-          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+        <div className="-mt-3 flex w-full flex-col gap-2">
+          <div role="group" aria-label="Tap a string to hear its pitch" className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
             {tuning.strings.map((s, i) => {
               const midi = stringMidis[i];
               const isHeard = reading?.target === midi;
@@ -560,14 +559,15 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
                   type="button"
                   onClick={() => playMidi(midi)}
                   aria-pressed={isPlaying}
-                  className={`h-10 min-w-12 rounded-md border px-3 sm:min-w-14 text-sm font-medium tabular-nums transition-colors ${
+                  title={`Hear ${s}`}
+                  className={`h-10 min-w-12 rounded-md px-3 sm:min-w-14 text-sm font-medium tabular-nums transition-colors ${
                     isPlaying
-                      ? "border-accent bg-accent text-accent-foreground"
-                      : "border-foreground/15 bg-surface hover:bg-surface-hover"
+                      ? "bg-accent text-accent-foreground hover:bg-accent-hover"
+                      : "bg-foreground/[0.05] hover:bg-surface-hover"
                   }`}
                   style={
                     isHeard && !isPlaying
-                      ? { background: color, borderColor: color, color: "var(--background)" }
+                      ? { background: color, color: "var(--background)" }
                       : undefined
                   }
                 >

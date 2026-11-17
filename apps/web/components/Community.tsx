@@ -10,15 +10,23 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { PostListItem } from "@/components/CommunityTunes";
+import LikedPosts from "@/components/LikedPosts";
 import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader, menuPosition } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
-import { CalendarIcon, NoteIcon, PlusIcon, SetlistIcon } from "@/components/tools";
+import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon } from "@/components/tools";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useSetlists } from "@/lib/useSetlists";
 import { SIGN_IN_PATH } from "@/lib/landing";
 
-type Feed = "latest" | "following" | "popular";
+type Feed = "latest" | "following" | "popular" | "liked";
+const FEEDS: { value: Feed; label: string }[] = [
+  { value: "latest", label: "Latest" },
+  { value: "following", label: "Following" },
+  { value: "popular", label: "Popular" },
+  { value: "liked", label: "Liked" },
+];
+const SEARCH_ID = "community-search";
 type KindFilter = "all" | "tunes" | "setlist" | "routine" | "milestone";
 
 const KIND_FILTERS: { value: KindFilter; label: string }[] = [
@@ -100,6 +108,14 @@ export default function Community() {
     return out.slice(0, 5);
   }, [posts, followingNames]);
 
+  /** The empty Following feed's way out: the search box (people show up as you type), with the
+      suggestions under it. */
+  function findPeople() {
+    const input = document.getElementById(SEARCH_ID);
+    input?.scrollIntoView({ block: "center", behavior: "smooth" });
+    input?.focus({ preventScroll: true });
+  }
+
   function openNewMenu(e: React.MouseEvent) {
     if (!isAuthenticated) {
       router.push(SIGN_IN_PATH);
@@ -180,7 +196,7 @@ export default function Community() {
               <SignedOutHero />
             )}
 
-            <SearchBox value={query} onChange={setQuery} placeholder="Search people and posts…" />
+            <SearchBox id={SEARCH_ID} value={query} onChange={setQuery} placeholder="Search people and posts…" />
 
             {trimmed ? (
               <>
@@ -219,43 +235,58 @@ export default function Community() {
               <>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-5 border-b border-foreground/10">
-                    {(["latest", "following", "popular"] as Feed[]).map((f) => (
+                    {FEEDS.map((f) => (
                       <button
-                        key={f}
+                        key={f.value}
                         type="button"
-                        onClick={() => setFeed(f)}
-                        aria-pressed={feed === f}
-                        className={`-mb-px flex h-10 items-center border-b-2 text-sm transition-colors ${feed === f ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
+                        onClick={() => setFeed(f.value)}
+                        aria-pressed={feed === f.value}
+                        className={`-mb-px flex h-10 items-center border-b-2 text-sm transition-colors ${feed === f.value ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
                       >
-                        {f === "latest" ? "Latest" : f === "following" ? "Following" : "Popular"}
+                        {f.label}
                       </button>
                     ))}
                   </div>
-                  <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
-                    {KIND_FILTERS.map((k) => (
-                      <button
-                        key={k.value}
-                        type="button"
-                        onClick={() => setKind(k.value)}
-                        aria-pressed={kind === k.value}
-                        className={`h-8 shrink-0 rounded-md border px-3 text-sm transition-colors ${kind === k.value ? "border-foreground/30 bg-surface-hover font-medium text-foreground" : "border-foreground/10 text-muted hover:text-foreground"}`}
-                      >
-                        {k.label}
-                      </button>
-                    ))}
-                  </div>
+                  {feed !== "liked" && (
+                    <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+                      {KIND_FILTERS.map((k) => (
+                        <button
+                          key={k.value}
+                          type="button"
+                          onClick={() => setKind(k.value)}
+                          aria-pressed={kind === k.value}
+                          className={`h-8 shrink-0 rounded-md px-3 text-sm transition-colors ${kind === k.value ? "bg-foreground font-medium text-background" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                        >
+                          {k.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {feedPosts === undefined ? (
+                {feed === "liked" ? (
+                  <LikedPosts />
+                ) : feedPosts === undefined ? (
                   <Spinner />
                 ) : feedPosts.length === 0 ? (
                   <EmptyCard>
-                    {feed === "following" && counts.following === 0
-                      ? "Follow people to see their posts here — try the suggestions, or search for someone you know."
-                      : feed === "following"
-                        ? "Nothing from people you follow yet."
-                        : kind !== "all"
-                          ? "Nothing of that kind yet."
-                          : "Nobody's posted yet — be the first with New post."}
+                    {feed === "following" ? (
+                      <div className="flex flex-col items-start gap-3">
+                        <span>
+                          {counts.following === 0
+                            ? "Follow people to see their posts here."
+                            : kind !== "all"
+                              ? "Nothing of that kind from people you follow yet."
+                              : "Nothing from people you follow yet."}
+                        </span>
+                        <button type="button" onClick={findPeople} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover">
+                          <SearchIcon className="h-4 w-4" /> Find people to follow
+                        </button>
+                      </div>
+                    ) : kind !== "all" ? (
+                      "Nothing of that kind yet."
+                    ) : (
+                      "Nobody's posted yet — be the first with New post."
+                    )}
                   </EmptyCard>
                 ) : (
                   postList(feedPosts)

@@ -28,7 +28,7 @@ export type HelpTopic = {
   shot?: string;
 };
 
-export const HELP_GROUPS = ["Getting started", "Your library", "Play along", "Time & rhythm", "Ear training", "On your instrument", "Drums", "Practice tools"];
+export const HELP_GROUPS = ["Getting started", "Your library", "People", "Play along", "Time & rhythm", "Ear training", "On your instrument", "Drums", "Practice tools"];
 
 export const HELP_TOPICS: HelpTopic[] = [
   // ---------------------------------------------------------------- getting started
@@ -181,7 +181,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Saved sessions", "Pomodoro with named work cycles", "Alarm mode that waits for you", "Keeps running across pages and reloads"],
     options: [
-      { name: "New session", text: "Opens the editor. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
+      { name: "Quick timer", text: "Type the minutes and press Start for one plain countdown. Nothing is saved." },
+      { name: "New session", text: "Opens the editor. Start now runs it without saving. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
       { name: "Pomodoro cycles", text: "Set number stops after the work cycles you choose; Keep going runs until you stop it. Long break every N cycles sets when the longer break comes. Each work cycle can have its own name." },
       { name: "Sound", text: "Which tone plays when a step ends, and whether it plays at all." },
       { name: "Alarm mode", text: "Instead of moving on by itself, the timer waits and keeps ringing until you press Continue." },
@@ -243,7 +244,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: "community",
     title: "Community",
-    group: "Your library",
+    group: "People",
     href: "/community",
     tagline: "Find musicians and what they're working on.",
     purpose: "Search public profiles, follow people, and browse posted tunes, setlists, routines and progress.",
@@ -345,7 +346,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: "lessons",
     title: "Lessons",
-    group: "Getting started",
+    group: "People",
     href: "/lessons",
     tagline: "For teachers and their students.",
     purpose: "Each student's lessons, one page per lesson — its notes, assignments (they hand in files, text or links), PDFs and charts — plus Shed Log routines and their practice, day by day.",
@@ -565,8 +566,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Answer with", text: "Roman numerals (ii7 V7 I^7) or chord names (Dm7 G7 Cmaj7)." },
       { name: "Type chord qualities", text: "On, the whole chord is graded. Off, only the root (or numeral) and major vs. minor count." },
       { name: "Progressions", text: "Which progressions can come up: jazz, pop and rock, minor, cadences and blues." },
-      { name: "Key", text: "A random key every round or one fixed key, and whether the key's tonic chord plays first so you know where home is." },
-      { name: "Sound", text: "Chord length, block or arpeggiated, piano or Rhodes." },
+      { name: "Key & sound", text: "A random key every round or one fixed key, and whether the key's tonic chord plays first so you know where home is. Also chord length, block or arpeggiated, piano or Rhodes." },
       { name: "Timing", text: "Max time to answer, time between rounds, number of rounds or drill every progression." },
       { name: "Practice / Learn", text: "Learn walks you through levels, starting from I–IV–V–I." },
     ],
@@ -591,13 +591,13 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Roots", text: "Which roots can come up, and how high the voicing sits." },
       { name: "Voicing", text: "The chord on top in root position, in any inversion, or as left-hand A (from the 3rd) and B (from the 7th) voicings. Also whether to show the voicing's own name, and piano or Rhodes." },
       { name: "Rounds", text: "How many rounds, whether the next one starts by itself, and half credit when you find the root after a wrong note." },
-      { name: "Listen", text: "Which mic, whether to listen while the chord is still sounding (use headphones), and how fussy the pitch check is." },
+      { name: "Microphone", text: "Which mic, whether to listen while the chord is still sounding (use headphones), and how fussy the pitch check is." },
       { name: "Struggles and History", text: "Which chords you miss most, with a Shed weak chords run, and your past scores." },
     ],
     tips: [
       "Without the voicing's name it's harder: you have to hear what the notes are, not just work it out.",
       "A 7♭9 voicing is a diminished 7th, which fits four roots a minor 3rd apart. Any of them counts.",
-      "Sing with headphones on, or turn off Listen while it plays, so the mic doesn't hear the piano.",
+      "Sing with headphones on, or turn off listening while it plays (Microphone), so the mic doesn't hear the piano.",
     ],
   },
   {

@@ -12,7 +12,7 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import TunesPanel from "@/components/TunesPanel";
-import { StopwatchIcon } from "@/components/tools";
+import { PlusIcon, StopwatchIcon } from "@/components/tools";
 import { STANDARDS, standardToTune } from "@/lib/standards";
 import { CountOff, parseBeatsPerBar, playCountOff } from "@/lib/metronome";
 import type { BeatLevel } from "@/lib/clickEngine";
@@ -42,6 +42,8 @@ export default function JamPractice() {
   const [tunes, setTunes] = useSyncedTunes();
   const [pick, setPick] = useState<PickResult | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  // The tune search, opened from the Tunes I Know chip or the empty state below.
+  const [adding, setAdding] = useState(false);
   const [isCounting, setIsCounting] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
   // Counts as practice in the Shed Log while a tune's up (and the tab's in view).
@@ -78,7 +80,7 @@ export default function JamPractice() {
     stopCountOff();
 
     if (!pickFromStandards && tunes.length === 0) {
-      setPickError("Add at least one tune to get started, or turn on all jazz standards.");
+      setPickError("Add a tune or use the jazz standards first.");
       setPick(null);
       return;
     }
@@ -173,6 +175,8 @@ export default function JamPractice() {
             onClearAll={handleClearTunes}
             pickFromStandards={pickFromStandards}
             onPickFromStandardsChange={(checked) => updateSettings({ pickFromStandards: checked })}
+            addOpen={adding}
+            onAddOpenChange={setAdding}
           />
 
           <CollapsiblePanel id="jam-countoff" title="Count-off" icon={StopwatchIcon} summary={`${countOffBars} bars`}>
@@ -211,11 +215,33 @@ export default function JamPractice() {
             <p className="text-sm text-muted">Now practicing</p>
             <h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">{pick.tune.name}</h1>
           </>
+        ) : tunes.length === 0 && !pickFromStandards ? (
+          // Nothing to pick from yet: offer both ways in, right here.
+          <div className="flex w-[min(24rem,calc(100vw-2rem))] flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
+            <p>Your tune list is empty. Add the tunes you know, or pick from {STANDARDS.length} jazz standards.</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 font-medium text-foreground transition-colors hover:bg-surface-hover"
+              >
+                <PlusIcon className="h-4 w-4" /> Add a tune
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateSettings({ pickFromStandards: true });
+                  setPickError(null);
+                }}
+                className="flex h-10 items-center rounded-md bg-foreground/[0.05] px-3 font-medium text-foreground transition-colors hover:bg-surface-hover"
+              >
+                Use the jazz standards
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="w-[min(24rem,calc(100vw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
-            {tunes.length === 0 && !pickFromStandards && !pickError
-              ? "Add some tunes in the Tunes I Know chip, then pick one at random."
-              : "No tune picked yet."}
+            No tune picked yet.
           </div>
         )}
         {pick && (
@@ -263,13 +289,15 @@ export default function JamPractice() {
         )}
       </div>
 
-      {pickError && <p className="text-sm text-danger">{pickError}</p>}
+      {pickError && tunes.length === 0 && !pickFromStandards && <p className="text-sm text-danger">{pickError}</p>}
 
-      <p className="-mb-3 text-sm text-muted">
-        {pickFromStandards
-          ? `Random picks come from all ${STANDARDS.length} built-in standards, not just your list.`
-          : "Random picks come from the tunes in your list."}
-      </p>
+      {(pickFromStandards || tunes.length > 0) && (
+        <p className="-mb-3 text-sm text-muted">
+          {pickFromStandards
+            ? `Random picks come from all ${STANDARDS.length} built-in standards, not just your list.`
+            : "Random picks come from the tunes in your list."}
+        </p>
+      )}
 
       <button
         type="button"

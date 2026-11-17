@@ -297,6 +297,17 @@ export default function RandomMetricModulation() {
             id="modulation"
             title="Modulation"
             icon={ShuffleIcon}
+            summary={`${
+              matchToRealignment
+                ? "When tempos realign"
+                : `Every ${minBarsPerModulation} bar${minBarsPerModulation === 1 ? "" : "s"}`
+            } · ${
+              enabledRatios.length === 0 || enabledRatios.length === MODULATIONS.length
+                ? "all ratios"
+                : enabledRatios.length === 1
+                  ? shortRatio(MODULATIONS.find((m) => m.id === enabledRatios[0])!.label)
+                  : `${enabledRatios.length} ratios`
+            }`}
           >
             <SteppedField
               label={

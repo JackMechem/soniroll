@@ -287,7 +287,7 @@ export default function Home() {
       case "favorites":
         return (
           <Card title={favoriteTools.length ? "Favorites" : "Get started"} detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}>
-            <div className="grid auto-rows-fr content-start gap-2 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+            <div className="grid auto-rows-fr content-start gap-2 max-sm:gap-1.5 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
               {pinned.map((item) => (
                 <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} canStar={canStar} onToggle={() => toggleFavorite(item.href)} />
               ))}
@@ -641,22 +641,23 @@ function Star({ label, favorited, onToggle, small }: { label: string; favorited:
   );
 }
 
-/** A card for a favorite (or starter) tool: icon, name, what it does. */
+/** A card for a favorite (or starter) tool: icon, name, what it does. On phones it's a slim row
+    (icon and name, no description), so Today's practice isn't pushed far down. */
 function ToolTile({ item, favorited, canStar, onToggle }: { item: ToolLink; favorited: boolean; canStar: boolean; onToggle: () => void }) {
   return (
     <div className="relative h-full">
       <Link
         href={item.href}
-        className="group flex h-full items-start gap-3 rounded-md bg-foreground/[0.05] p-3 transition-colors hover:border-foreground/25 hover:bg-surface-hover/40"
+        className="group flex h-full items-start gap-3 rounded-md bg-foreground/[0.05] p-3 transition-colors hover:bg-surface-hover/40 max-sm:items-center max-sm:py-2.5"
       >
-        <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-foreground" />
+        <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-foreground max-sm:mt-0" />
         <span className={`min-w-0 flex-1 ${canStar ? "pr-6" : ""}`}>
           <span className="block truncate text-sm font-medium">{item.label}</span>
-          {item.description && <span className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">{item.description}</span>}
+          {item.description && <span className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted max-sm:hidden">{item.description}</span>}
         </span>
       </Link>
       {canStar && (
-        <div className="absolute right-1.5 top-1.5">
+        <div className="absolute right-1.5 top-1.5 max-sm:top-1/2 max-sm:-translate-y-1/2">
           <Star small label={item.label} favorited={favorited} onToggle={onToggle} />
         </div>
       )}

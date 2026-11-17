@@ -30,6 +30,8 @@ export default function TunesPanel({
   onClearAll,
   pickFromStandards,
   onPickFromStandardsChange,
+  addOpen,
+  onAddOpenChange,
 }: {
   onDeleteTune: (id: string) => void;
   onClearAll: () => void;
@@ -41,9 +43,14 @@ export default function TunesPanel({
       anything where it's reused. */
   pickFromStandards?: boolean;
   onPickFromStandardsChange?: (value: boolean) => void;
+  /** Optionally control the add-a-tune search from outside (Jam Practice's empty state opens it). */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
 }) {
   const [tunes, setTunes] = useSyncedTunes();
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [ownPickerOpen, setOwnPickerOpen] = useState(false);
+  const pickerOpen = addOpen ?? ownPickerOpen;
+  const setPickerOpen = onAddOpenChange ?? setOwnPickerOpen;
   const [managerOpen, setManagerOpen] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);

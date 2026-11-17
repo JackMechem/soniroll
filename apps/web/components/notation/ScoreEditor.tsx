@@ -518,8 +518,8 @@ export default function ScoreEditor({
   const cap = measureCapacity(t);
 
   const btn = (active = false) =>
-    `flex h-9 min-w-9 items-center justify-center gap-1 rounded-md border px-2 text-sm font-medium transition-colors disabled:opacity-40 ${
-      active ? "border-accent bg-accent text-accent-foreground" : "border-foreground/10 bg-background text-foreground hover:bg-surface-hover"
+    `flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+      active ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-background text-foreground hover:bg-surface-hover"
     }`;
 
   const keyOptions = Object.entries(KEY_NAMES)
@@ -573,8 +573,10 @@ export default function ScoreEditor({
       <div ref={editorRef} tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
         {/* Palette */}
         <div className="sticky top-2 z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex gap-0.5 rounded-md bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
+          {/* On phones the tools are one row that scrolls sideways, so the palette (which stays
+              stuck at the top) doesn't cover half the screen. */}
+          <div className="-mx-2.5 flex items-center gap-1.5 overflow-x-auto px-2.5 [mask-image:linear-gradient(to_right,black_88%,transparent)] [scrollbar-width:none] sm:mx-0 sm:[mask-image:none] sm:flex-wrap sm:overflow-visible sm:px-0">
+            <div className="flex shrink-0 gap-0.5 rounded-md bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
               {(
                 [
                   ["select", "Select", "Clicks only select a note, or a whole bar (Shift+click for a range). Esc"],
@@ -598,7 +600,7 @@ export default function ScoreEditor({
               {loadingSound ? <LoadingSpinner size="sm" inline label="Loading sound" /> : playing ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
               {playing ? "Stop" : "Play"}
             </button>
-            <span className="mx-1 h-6 w-px bg-foreground/10" />
+            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
             {(["w", "h", "q", "8", "16"] as NoteValue[]).map((v) => (
               <button key={v} type="button" onClick={() => pickValue(v)} className={btn(picked && selected ? selected.value === v : value === v)} title={`${NOTE_VALUE_NAMES[v]} (${Object.keys(VALUE_KEYS).find((k) => VALUE_KEYS[k] === v)})`} aria-label={NOTE_VALUE_NAMES[v]}>
                 <NoteValueIcon value={VALUE_ICON[v]} className="h-6 w-3" />
@@ -610,7 +612,7 @@ export default function ScoreEditor({
             <button type="button" onClick={toggleTriplet} className={btn(picked && selected ? !!selected.triplet : triplet)} title="Triplet (T)">
               3
             </button>
-            <span className="mx-1 h-6 w-px bg-foreground/10" />
+            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
             <button type="button" onClick={() => addNote(null)} className={btn()} title="Rest (0 or R)">
               Rest
             </button>
@@ -623,7 +625,7 @@ export default function ScoreEditor({
             <button type="button" onClick={addChordAtCursor} className={btn(!!chordEdit)} title="Add a chord symbol above the selected note (Ctrl+K)">
               + Chord
             </button>
-            <span className="mx-1 h-6 w-px bg-foreground/10" />
+            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
             <button type="button" onClick={() => setAlter(1)} disabled={!selected?.pitch} className={btn(selected?.pitch?.alter === 1)} title="Sharp (#)">
               ♯
             </button>
@@ -639,7 +641,7 @@ export default function ScoreEditor({
             <button type="button" onClick={() => transpose(-12)} disabled={!selected?.pitch} className={btn()} title="Octave down (Shift+↓)">
               8vb
             </button>
-            <span className="mx-1 h-6 w-px bg-foreground/10" />
+            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
             <button type="button" onClick={undo} disabled={!past.length} className={btn()} title="Undo (Ctrl+Z)">
               Undo
             </button>
@@ -747,10 +749,10 @@ export default function ScoreEditor({
         {/* Measure tools */}
         <div className="flex justify-end gap-2">
           <div className="flex gap-1.5">
-            <button type="button" onClick={addMeasureAfter} className={btn()}>
+            <button type="button" onClick={addMeasureAfter} className="flex h-9 items-center justify-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
               + Bar after
             </button>
-            <button type="button" onClick={deleteMeasure} className={`${btn()} hover:text-danger`}>
+            <button type="button" onClick={deleteMeasure} className="flex h-9 items-center justify-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover hover:text-danger">
               Delete bar
             </button>
           </div>

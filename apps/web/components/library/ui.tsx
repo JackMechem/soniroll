@@ -68,7 +68,7 @@ export function Chip({ children, accent = false, title }: { children: ReactNode;
   return (
     <span
       title={title}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-px text-[11px] font-medium ${accent ? "border-accent/40 text-accent" : "border-foreground/10 text-muted"}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-[11px] font-medium ${accent ? "bg-accent/10 text-accent" : "bg-foreground/[0.05] text-muted"}`}
     >
       {children}
     </span>
@@ -222,7 +222,8 @@ export function Hero({
           {leading}
           <div className={`min-w-0 ${titleExtra ? "max-sm:flex-1" : "flex-1"}`}>
             <div className="flex min-w-0 items-center gap-1">
-              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
+              {/* With tabs (Library's own pages), phones already show the name in the top bar. */}
+              <h1 className={`flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight ${tabs ? "max-lg:sr-only" : ""}`}>
                 {!leading && ShownIcon && (
                   <span className={`shrink-0 ${color ? "" : "text-muted"}`} style={color ? { color } : undefined}>
                     <ShownIcon className="h-5 w-5" />
@@ -373,6 +374,7 @@ function RowShell({
   onMenu,
   menuLabel,
   trailing,
+  reserveMenu = false,
 }: {
   href: string;
   leading?: ReactNode;
@@ -382,6 +384,8 @@ function RowShell({
   onMenu?: (e: React.MouseEvent) => void;
   menuLabel?: string;
   trailing?: ReactNode;
+  /** No ⋮ on this row, but keep its space so `trailing` lines up with rows that have one. */
+  reserveMenu?: boolean;
 }) {
   return (
     <div className="group flex items-center gap-1 transition-colors hover:bg-surface-hover">
@@ -396,10 +400,12 @@ function RowShell({
         </span>
         {trailing}
       </Link>
-      {onMenu && (
+      {onMenu ? (
         <div className="pr-1.5">
           <MenuButton label={menuLabel ?? `Options for ${title}`} onClick={onMenu} />
         </div>
+      ) : (
+        reserveMenu && <div aria-hidden className="w-8 shrink-0 box-content pr-1.5" />
       )}
     </div>
   );
@@ -470,6 +476,7 @@ export function PlaylistItem({ name, count, href, onMenu, all = false }: { name:
         </span>
       }
       onMenu={onMenu}
+      reserveMenu={all}
     />
   );
 }

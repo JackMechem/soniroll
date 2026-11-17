@@ -927,7 +927,7 @@ export default function GuessTheProgression() {
 
           <CollapsiblePanel
             id="progression-key"
-            title="Key"
+            title="Key & sound"
             icon={NoteIcon}
             summary={keyChoice === "random" ? `Random · ${register.label}` : `${KEY_OPTIONS.find((k) => k.value === keyChoice)?.label} · ${register.label}`}
           >
@@ -958,6 +958,34 @@ export default function GuessTheProgression() {
               disabled={running}
               hint="Plays the key's tonic chord, then a beat of rest, before the progression — handy for one that doesn't start on I."
             />
+            <AdvancedSlider
+              label="Chord length"
+              value={chordSeconds}
+              unit="s"
+              min={MIN_CHORD_SECONDS}
+              max={MAX_CHORD_SECONDS}
+              step={0.1}
+              onChange={(v) => updateSettings({ chordSeconds: v })}
+              hint="How long each chord lasts before the next — shorter is faster and harder."
+            />
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-muted">Playback style</span>
+              <Select
+                value={playbackStyle}
+                onChange={(v) => updateSettings({ playbackStyle: v })}
+                options={PLAYBACK_STYLES}
+              />
+            </label>
+            <Hint>Whether each chord&apos;s notes play all at once or as a quick rolled arpeggio.</Hint>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-muted">Tone</span>
+              <Select
+                value={toneId}
+                onChange={(v) => updateSettings({ toneId: v })}
+                options={EAR_TRAINING_TONES.map((tone) => ({ value: tone.id, label: tone.label }))}
+              />
+            </label>
+            <Hint>Which sound plays the chords.</Hint>
           </CollapsiblePanel>
 
           <CollapsiblePanel id="progression-timing" title="Timing" icon={StopwatchIcon}>
@@ -1012,37 +1040,6 @@ export default function GuessTheProgression() {
                 hint="How many progressions make up one session."
               />
             )}
-          </CollapsiblePanel>
-
-          <CollapsiblePanel id="progression-sound" title="Sound" icon={SlidersIcon}>
-            <AdvancedSlider
-              label="Chord length"
-              value={chordSeconds}
-              unit="s"
-              min={MIN_CHORD_SECONDS}
-              max={MAX_CHORD_SECONDS}
-              step={0.1}
-              onChange={(v) => updateSettings({ chordSeconds: v })}
-              hint="How long each chord lasts before the next — shorter is faster and harder."
-            />
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Playback style</span>
-              <Select
-                value={playbackStyle}
-                onChange={(v) => updateSettings({ playbackStyle: v })}
-                options={PLAYBACK_STYLES}
-              />
-            </label>
-            <Hint>Whether each chord&apos;s notes play all at once or as a quick rolled arpeggio.</Hint>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Tone</span>
-              <Select
-                value={toneId}
-                onChange={(v) => updateSettings({ toneId: v })}
-                options={EAR_TRAINING_TONES.map((tone) => ({ value: tone.id, label: tone.label }))}
-              />
-            </label>
-            <Hint>Which sound plays the chords.</Hint>
           </CollapsiblePanel>
         </>
         )

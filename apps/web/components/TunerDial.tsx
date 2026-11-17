@@ -61,7 +61,7 @@ export default function TunerDial({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[380px]">
+    <div className="relative mx-auto aspect-square w-full max-w-[380px] [@media(min-width:1024px)_and_(max-height:960px)]:max-w-[330px]">
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="h-full w-full"

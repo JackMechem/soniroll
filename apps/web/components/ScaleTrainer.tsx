@@ -1460,6 +1460,14 @@ export default function ScaleTrainer() {
             >
               {mainLabel}
             </h1>
+            {/* Before the first round, say what's about to happen. */}
+            {!round && !running && (
+              <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">
+                {listenMode
+                  ? "Press Start, then play each scale. The mic follows along."
+                  : "Press Start, then play each scale shown."}
+              </p>
+            )}
           </div>
           {showNext && nextRound && running && (
             <span

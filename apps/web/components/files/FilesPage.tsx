@@ -413,12 +413,12 @@ function FilterChip({ active, onClick, label, count, small = false }: { active: 
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-md border font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
-        active ? "border-foreground/30 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:bg-surface-hover hover:text-foreground"
+      className={`inline-flex items-center gap-1.5 rounded-md font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
+        active ? "bg-foreground text-background" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {label}
-      {count != null && <span className="text-xs tabular-nums text-muted">{count}</span>}
+      {count != null && <span className={`text-xs tabular-nums ${active ? "text-background/70" : "text-muted"}`}>{count}</span>}
     </button>
   );
 }

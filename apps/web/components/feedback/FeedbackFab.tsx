@@ -1,6 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { BugIcon, CloseIcon } from "@/components/tools";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { useSiteStatus } from "@/lib/useSiteStatus";
@@ -59,9 +60,19 @@ function subscribe(cb: () => void) {
 export default function FeedbackFab() {
   const hidden = useSyncExternalStore(subscribe, read, () => true);
   const site = useSiteStatus();
-  if (hidden || site?.feedbackPaused) return null;
+  const atEnd = useScrolledToEnd();
+  const pathname = usePathname();
+  // Not on the feedback page itself: it would only sit over its Send button.
+  if (hidden || site?.feedbackPaused || pathname === "/feedback") return null;
+  // z-[35]: above the page, but under the phone menu (z-40), option sheets (z-40 and up), menus
+  // and dialogs, so it never sits on top of their rows. On phones it also steps aside at the end
+  // of a page, where it would cover the footer links and the last row's ⋮.
   return (
-    <div className="group fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[45] flex items-center print:hidden">
+    <div
+      className={`group fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[35] flex items-center transition-[opacity,translate] duration-200 print:hidden ${
+        atEnd ? "max-lg:pointer-events-none max-lg:translate-y-4 max-lg:opacity-0" : ""
+      }`}
+    >
       <button
         type="button"
         onClick={() => openFeedback({ kind: "bug" })}
@@ -85,4 +96,32 @@ export default function FeedbackFab() {
       </button>
     </div>
   );
+}
+
+/** Phones: whether the page's own scroll box (the one that scrolled last) is at its end, so the
+    button can get out of the way of what's down there. A short page that doesn't scroll counts as
+    not at the end. Resets on every new page (the scroll box changes). */
+function useScrolledToEnd(): boolean {
+  const pathname = usePathname();
+  // Remembered with the page it was measured on, so a new page starts with the button showing.
+  const [end, setEnd] = useState<{ path: string; atEnd: boolean }>({ path: "", atEnd: false });
+  useEffect(() => {
+    let frame = 0;
+    function onScroll(e: Event) {
+      const el = e.target instanceof Element ? e.target : document.scrollingElement;
+      // Only the page itself, not a little list or a chart scrolling sideways inside it.
+      if (!el || el.clientHeight < window.innerHeight * 0.6) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const scrollable = el.scrollHeight - el.clientHeight > 80;
+        setEnd({ path: window.location.pathname, atEnd: scrollable && el.scrollHeight - el.scrollTop - el.clientHeight < 72 });
+      });
+    }
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("scroll", onScroll, { capture: true });
+    };
+  }, []);
+  return end.atEnd && end.path === pathname;
 }

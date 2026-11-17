@@ -96,11 +96,47 @@ export default function PracticeTimer() {
   function closeEditor() {
     setDraft(null);
     setEditorOpen(false);
+    setNameMissing(false);
   }
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Set when Save is pressed with no name: we ask for one instead of saving "Untitled session".
+  const [nameMissing, setNameMissing] = useState(false);
+  // The quick timer's length: a plain countdown, no session needed. Not saved.
+  const [quickMinutes, setQuickMinutes] = useState(10);
 
   function startSession(session: PracticeSession) {
     start(session, soundEnabled, toneId, alarmMode, fullScreenAlert);
+  }
+
+  function startQuickTimer() {
+    startSession({
+      id: "quick-timer",
+      name: "",
+      type: "custom",
+      segments: [{ ...newSegment(), title: "Timer", minutes: quickMinutes }],
+      updatedAt: 0,
+    });
+  }
+
+  /** Runs what's in the editor right now, without saving it. */
+  function startDraft() {
+    if (!draft) return;
+    const name = draft.name.trim();
+    startSession(
+      draft.type === "custom"
+        ? {
+            id: draft.id ?? "unsaved-session",
+            name,
+            type: "custom",
+            segments: draft.segments.map((seg, i) => ({
+              ...seg,
+              title: seg.title.trim() || (draft.segments.length === 1 ? "Timer" : `Part ${i + 1}`),
+            })),
+            updatedAt: 0,
+          }
+        : { id: draft.id ?? "unsaved-session", name, type: "pomodoro", pomodoro: normalizePomodoro(draft.pomodoro), updatedAt: 0 },
+    );
+    setEditorOpen(false);
   }
 
   // Full-screen alert only means anything while alarm mode is also on (there's no "alarming, held
@@ -143,7 +179,12 @@ export default function PracticeTimer() {
 
   async function saveDraft() {
     if (!draft) return;
-    const name = draft.name.trim() || "Untitled session";
+    const name = draft.name.trim();
+    if (!name) {
+      setNameMissing(true);
+      return;
+    }
+    setNameMissing(false);
     if (draft.id === null) {
       const input: SessionInput =
         draft.type === "custom"
@@ -193,10 +234,18 @@ export default function PracticeTimer() {
                 <input
                   type="text"
                   value={draft.name}
-                  onChange={(e) => updateDraft({ name: e.target.value })}
+                  onChange={(e) => {
+                    updateDraft({ name: e.target.value });
+                    if (e.target.value.trim()) setNameMissing(false);
+                  }}
                   placeholder="e.g. Morning warmup"
-                  className="w-full h-9 rounded-md bg-foreground/[0.05] px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/40"
+                  aria-invalid={nameMissing}
+                  autoFocus={nameMissing}
+                  className={`w-full h-9 rounded-md bg-foreground/[0.05] px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/40 ${nameMissing ? "ring-2 ring-danger/50" : ""}`}
                 />
+                {nameMissing && (
+                  <span className="text-xs text-danger">Give it a name to save it, or press Start now to just run it.</span>
+                )}
               </label>
 
               <Segmented
@@ -283,6 +332,14 @@ export default function PracticeTimer() {
                   className="h-9 flex-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
                 >
                   Save
+                </button>
+                <button
+                  type="button"
+                  onClick={startDraft}
+                  title="Run it now without saving"
+                  className="h-9 flex-1 whitespace-nowrap rounded-md bg-foreground/[0.05] px-2 text-sm font-medium transition-colors hover:bg-surface-hover"
+                >
+                  Start now
                 </button>
                 <button
                   type="button"
@@ -401,11 +458,31 @@ export default function PracticeTimer() {
         </div>
       ) : (
         <div className="flex w-full flex-col items-center gap-3 text-center">
+          {/* The quick way: one plain countdown, nothing to build or save. */}
+          <div className="flex w-full max-w-sm items-center gap-2 rounded-lg bg-surface py-2 pl-3 pr-2 text-left">
+            <span className="min-w-0 flex-1 text-sm font-medium">Quick timer</span>
+            <NumberField
+              value={quickMinutes}
+              min={1}
+              max={180}
+              onChange={setQuickMinutes}
+              label="Quick timer minutes"
+              className="h-9 w-14 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
+            />
+            <span className="shrink-0 text-xs text-muted">min</span>
+            <button
+              type="button"
+              onClick={startQuickTimer}
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
+            >
+              <PlayIcon className="h-3.5 w-3.5" /> Start
+            </button>
+          </div>
           {loading ? (
             <LoadingSpinner />
           ) : sessions.length === 0 ? (
             <p className="w-full max-w-sm rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
-              Use New session below to chain timers back to back, or run a Pomodoro.
+              To chain timers back to back or run a Pomodoro, use New session below.
             </p>
           ) : (
             <>

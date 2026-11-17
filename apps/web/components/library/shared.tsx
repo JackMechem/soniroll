@@ -26,7 +26,7 @@ export function PageShell({ children, wide = false, fullWidth = true }: { childr
 /** The "back" control above a page title (and in the setlist chart reader's header): a chevron +
     label. Pass `href` to make it a link instead of a button. */
 export function BackButton({ onClick, href, label = "Back", className = "" }: { onClick?: () => void; href?: string; label?: string; className?: string }) {
-  const cls = `-ml-2 inline-flex h-8 items-center gap-1 self-start rounded-md pl-1.5 pr-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${className}`;
+  const cls = `inline-flex h-8 items-center gap-1 self-start rounded-full bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${className}`;
   const inner = (
     <>
       <ChevronLeftIcon className="h-4 w-4" />
@@ -83,11 +83,12 @@ export function PageHeader({
   );
 }
 
-export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+export function SearchBox({ value, onChange, placeholder, id }: { value: string; onChange: (v: string) => void; placeholder: string; id?: string }) {
   return (
     <label className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 transition-colors focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
       <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
       <input
+        id={id}
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -51,7 +51,9 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
   const isToday = date === todayKey();
   if (!isToday && ms === 0) return null;
   return (
-    <div className={`flex items-center gap-3 rounded-lg border ${running ? "border-accent/40 bg-accent/5" : "border-foreground/10 bg-surface"} ${compact ? "px-3 py-2" : "px-4 py-3"}`}>
+    // Filled, no outline: the faint row fill inside a card (the dashboard's compact one), the card
+    // fill on the page (the Shed Log's day panel); an accent tint while it runs.
+    <div className={`flex items-center gap-3 ${running ? "bg-accent/10" : compact ? "bg-foreground/[0.05]" : "bg-surface"} ${compact ? "rounded-md px-3 py-2" : "rounded-lg px-4 py-3"}`}>
       <StopwatchIcon className={`h-5 w-5 shrink-0 ${running ? "animate-pulse text-accent" : "text-muted"}`} />
       <div className="min-w-0 flex-1">
         <div className={`font-semibold tabular-nums ${compact ? "text-lg" : "text-xl"}`}>{formatStopwatch(ms)}</div>

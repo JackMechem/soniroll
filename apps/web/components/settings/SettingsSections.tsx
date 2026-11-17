@@ -20,7 +20,7 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
-/** A settings section: a bordered panel with a title, an optional line under it, and a "?" that
+/** A settings section: a filled panel with a title, an optional line under it, and a "?" that
     shows each option's description; then its controls. `footer` is a strip along the bottom (a
     note and a button), like a form's save row. Also used by the account page's own sections. */
 export function SettingsCard({
@@ -40,7 +40,7 @@ export function SettingsCard({
 }) {
   const [showHints, setShowHints] = useState(false);
   return (
-    <section className={`overflow-hidden rounded-lg border bg-surface text-left ${danger ? "border-danger/40" : "border-foreground/10"}`}>
+    <section className="overflow-hidden rounded-lg bg-surface text-left">
       <div className="flex flex-col gap-4 p-4 sm:p-5">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`h-8 rounded-md border px-2.5 text-xs font-medium transition-colors ${on ? "border-foreground/20 bg-background text-foreground hover:bg-surface-hover" : "border-dashed border-foreground/15 text-muted line-through hover:text-foreground"}`}
+      className={`h-8 rounded-md px-2.5 text-xs font-medium transition-colors ${on ? "bg-foreground/[0.08] text-foreground hover:bg-surface-hover" : "text-muted line-through hover:bg-surface-hover hover:text-foreground"}`}
     >
       {children}
     </button>

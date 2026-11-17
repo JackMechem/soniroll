@@ -68,10 +68,13 @@ export default function LearningPath({
   const summary = summarizeTrack(track, progress);
   const listRef = useRef<HTMLOListElement | null>(null);
 
-  // Bring the level being worked on into view when the path first shows.
+  // Bring the level being worked on into view when the path first shows. Only the list scrolls:
+  // `scrollIntoView` would scroll the page too, opening it part-way down.
   useEffect(() => {
-    const el = listRef.current?.querySelector<HTMLElement>(`[data-level="${Math.min(current, levels.length - 1)}"]`);
-    el?.scrollIntoView({ block: "center" });
+    const list = listRef.current;
+    const el = list?.querySelector<HTMLElement>(`[data-level="${Math.min(current, levels.length - 1)}"]`);
+    if (!list || !el) return;
+    list.scrollTop = el.offsetTop - (list.clientHeight - el.offsetHeight) / 2;
   }, [current, levels.length]);
 
   const done = summary.passed === summary.total;
@@ -99,7 +102,7 @@ export default function LearningPath({
         </p>
       </div>
 
-      <ol ref={listRef} className="relative flex max-h-[26rem] flex-col items-center gap-1 overflow-y-auto py-3">
+      <ol ref={listRef} className="relative flex max-h-60 flex-col items-center gap-1 overflow-y-auto py-3">
         {levels.map((level, i) => {
           const passed = isPassed(progress, level.id);
           const unlocked = i <= current;

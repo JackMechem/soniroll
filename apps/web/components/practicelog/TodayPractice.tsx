@@ -28,7 +28,7 @@ import {
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
 const noop = () => () => {};
-const LEVEL_BG = ["var(--surface-hover)", "#0e4429", "#006d32", "#26a641", "#39d353"];
+const LEVEL_BG = ["var(--surface-hover)", "var(--heat-1)", "var(--heat-2)", "var(--heat-3)", "var(--heat-4)"];
 
 /** The dashboard's "Goal and streak" card: the Shed Log's goal ring, streak, week and hours. Shows
     nothing signed out (the "Today's practice" card asks you to start a Shed Log). */

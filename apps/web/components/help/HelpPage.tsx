@@ -200,9 +200,14 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
 
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:min-h-0 lg:px-8 lg:pb-0 lg:pt-8">
-      <div className={`items-center gap-2 ${showDetail ? "hidden lg:flex" : "flex"}`}>
-        <h1 className="text-2xl font-semibold tracking-tight">Help</h1>
-      </div>
+      {/* Like the other pages' headers: icon, title, one line about it, a rule under it. */}
+      <header className={`flex-col gap-0.5 border-b border-foreground/10 pb-4 ${showDetail ? "hidden lg:flex" : "flex"}`}>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+          <HelpIcon className="h-5 w-5 shrink-0 text-muted" />
+          Help
+        </h1>
+        <p className="text-sm text-muted">How every tool and page works.</p>
+      </header>
       <div className="grid gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
         <aside className={`flex-col gap-3 lg:flex lg:min-h-0 ${showDetail ? "hidden" : "flex"}`}>
           <div className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">

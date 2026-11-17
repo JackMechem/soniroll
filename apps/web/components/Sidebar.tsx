@@ -1062,7 +1062,8 @@ function MobileBarTitle({ path }: { path: string }) {
       <span className="text-foreground/30">/</span>
       <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
         <Icon className="h-4 w-4 shrink-0 text-muted" />
-        <span className="truncate">{link.label}</span>
+        {/* Only very long names use the short one: "Chords" alone would be unclear up here. */}
+        <span className="truncate">{link.label.length > 24 && link.short ? link.short : link.label}</span>
       </span>
     </div>
   );
