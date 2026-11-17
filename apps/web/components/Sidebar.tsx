@@ -612,7 +612,7 @@ export default function Sidebar() {
   const { isAuthenticated } = useConvexAuth();
   const openSettings = () => (isAuthenticated ? router.push("/account?tab=general") : setThemeOpen(true));
   const settingsIcon = isAuthenticated ? GearIcon : PaletteIcon;
-  const settingsLabel = isAuthenticated ? "Settings" : "Theme";
+  const settingsLabel = isAuthenticated ? "Settings" : "Theme and display";
   const onHelp = currentPath === "/help";
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });

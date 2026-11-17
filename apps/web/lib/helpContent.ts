@@ -263,10 +263,10 @@ export const HELP_TOPICS: HelpTopic[] = [
   },
   {
     id: "tunes",
-    title: "Tunes & setlists",
+    title: "Library",
     group: "Your library",
     href: "/tunes",
-    tagline: "Every tune you know, and the ones you're learning.",
+    tagline: "Your tunes, setlists, chord charts and files.",
     purpose: "Keep your repertoire with keys, tempos, notes and linked charts, and put tunes in order for a gig.",
     steps: [
       { title: "Add tunes", text: "Pick from 600+ jazz standards or add your own." },

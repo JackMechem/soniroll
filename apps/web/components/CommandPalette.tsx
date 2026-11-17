@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CATEGORY_COLORS, SearchIcon, filterLinks, groupByCategory, svgProps } from "@/components/tools";
+import { CATEGORY_COLORS, NoteIcon, SearchIcon, filterLinks, groupByCategory, svgProps } from "@/components/tools";
+import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import {
   applyPendingSplit,
   clearPendingSplit,
@@ -28,7 +29,18 @@ function Palette({ onClose }: { onClose: () => void }) {
   const listRef = useRef<HTMLUListElement>(null);
 
   const results = filterLinks(query);
-  const groups = groupByCategory(results);
+  // Your tunes too (both lists), after the tools, so one search finds everything.
+  const lists = useTuneLists();
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const tuneItems = words.length
+    ? (["tunes", "learn"] as TuneListId[])
+        .flatMap((list) => lists[list].tunes.filter((t) => words.every((w) => t.name.toLowerCase().includes(w))).map((t) => ({ href: tuneHref(list, t.id), label: t.name, icon: NoteIcon })))
+        .slice(0, 6)
+    : [];
+  const groups: { category: string; items: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] }[] = [
+    ...groupByCategory(results),
+    ...(tuneItems.length ? [{ category: "Your tunes", items: tuneItems }] : []),
+  ];
   // The order results actually render in — grouped by category, not `results`' own flat order
   // (`filterLinks` returns matches in `NAV_LINKS`' declaration order, which isn't the same as
   // `CATEGORIES`' display order `groupByCategory` reorders them into). `go`/`activeIndex`/arrow-key
@@ -103,14 +115,14 @@ function Palette({ onClose }: { onClose: () => void }) {
               setQuery(e.target.value);
               setActive(0);
             }}
-            placeholder={pendingSplit ? "Pick a tool to tile…" : "Search..."}
+            placeholder={pendingSplit ? "Pick a tool to tile…" : "Search tools and your tunes…"}
             aria-label="Search tools"
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
           />
         </div>
 
         <ul ref={listRef} role="listbox" className="max-h-96 overflow-y-auto p-1.5">
-          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">No tools match that. Try another word, like “chords” or “tempo”.</li>}
+          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches that. Try another word, like “chords”, “tempo” or a tune’s name.</li>}
           {(() => {
             let index = -1;
             return groups.map(({ category, items }) => (
@@ -134,7 +146,7 @@ function Palette({ onClose }: { onClose: () => void }) {
                           i === activeIndex ? "bg-surface-hover" : ""
                         }`}
                       >
-                        <span className="flex shrink-0" style={{ color: CATEGORY_COLORS[category] }}>
+                        <span className="flex shrink-0" style={{ color: CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS] ?? "var(--accent)" }}>
                           <Icon className="h-4 w-4" />
                         </span>
                         <span className="flex-1 truncate">{label}</span>

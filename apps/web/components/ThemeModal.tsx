@@ -3,7 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
-import { DISPLAY_DEFAULTS, DISPLAY_KEY } from "@/lib/display";
+import { DISPLAY_DEFAULTS, DISPLAY_KEY, TEXT_SIZES } from "@/lib/display";
+import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import ThemeSearchModal from "@/components/ThemeSearchModal";
 import { SearchIcon } from "@/components/tools";
@@ -225,6 +226,27 @@ export function ClassicLookSwitch() {
   );
 }
 
+/** Text size, less motion and Classic look — the device settings, here for people who aren't
+    signed in (signed in, they're on Account → Settings → Appearance). */
+function DisplayControls() {
+  const [display, setDisplay] = usePersistedSettings(DISPLAY_KEY, DISPLAY_DEFAULTS);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-medium text-muted">Text size</span>
+        <Segmented label="Text size" value={display.textSize} onChange={(textSize) => setDisplay({ textSize })} options={TEXT_SIZES.map((t) => ({ value: t.value, label: t.label }))} />
+      </div>
+      <SwitchRow
+        label="Less motion"
+        checked={display.lessMotion}
+        onChange={(lessMotion) => setDisplay({ lessMotion })}
+        hint="Turns off animations and sliding. If your device is already set to reduce motion, soniroll follows it either way."
+      />
+      <ClassicLookSwitch />
+    </div>
+  );
+}
+
 export default function ThemeModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -241,12 +263,12 @@ export default function ThemeModal({ onClose }: { onClose: () => void }) {
     >
       <div
         role="dialog"
-        aria-label="Theme"
+        aria-label="Theme and display"
         className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 pt-5 sm:px-6">
-          <h2 className="text-lg font-semibold">Theme</h2>
+          <h2 className="text-lg font-semibold">Theme and display</h2>
           <button
             type="button"
             onClick={onClose}
@@ -260,7 +282,7 @@ export default function ThemeModal({ onClose }: { onClose: () => void }) {
             through the React tree, so the stopPropagation above keeps a click in it from closing this. */}
         <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
           <ThemePicker />
-          <ClassicLookSwitch />
+          <DisplayControls />
         </div>
       </div>
     </div>

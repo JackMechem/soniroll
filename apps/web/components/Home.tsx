@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SUPPORT_PATH, SupportCard, useSupportCardHidden } from "@/components/support/SupportParts";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "convex/react";
@@ -92,6 +93,7 @@ const GRID_WEEKS: Record<CardSize, number> = { small: 18, medium: 26, large: 40,
  */
 export default function Home() {
   const { isAuthenticated } = useConvexAuth();
+  const router = useRouter();
   const isDesktop = useIsDesktop();
   const today = useToday();
   const [query, setQuery] = useState("");
@@ -459,6 +461,12 @@ export default function Home() {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter opens the top result: the first tool, else the first tune.
+                    if (e.key !== "Enter") return;
+                    const first = toolMatches[0]?.href ?? (tuneMatches[0] ? tuneHref(tuneMatches[0].list, tuneMatches[0].tune.id) : null);
+                    if (first) router.push(first);
+                  }}
                   placeholder="Search tools and tunes…"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
                 />
