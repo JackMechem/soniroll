@@ -47,10 +47,10 @@ export default function PromptDialog({
       <div
         role="dialog"
         aria-label={title}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-base font-semibold">{title}</h2>
         <input
           autoFocus
           value={value}
@@ -64,13 +64,13 @@ export default function PromptDialog({
             e.preventDefault();
             submit();
           }}
-          className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+          className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
         />
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+            className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
           >
             Cancel
           </button>
@@ -78,7 +78,7 @@ export default function PromptDialog({
             type="button"
             onClick={submit}
             disabled={!allowEmpty && !value.trim()}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+            className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
           >
             {confirmLabel}
           </button>

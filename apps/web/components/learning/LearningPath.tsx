@@ -79,17 +79,17 @@ export default function LearningPath({
 
   return (
     <section aria-label="Learning path" className="flex w-full max-w-sm flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-left">
+      <div className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-left">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-sm font-semibold">
+          <p className="text-sm font-medium">
             {done ? "Path complete!" : `Level ${current + 1} of ${levels.length}`}
           </p>
-          <p className="flex items-center gap-1 text-sm font-semibold tabular-nums text-amber-500">
+          <p className="flex items-center gap-1 text-sm font-medium tabular-nums text-amber-500">
             ★ {summary.stars}
             <span className="font-normal text-muted">/ {summary.maxStars}</span>
           </p>
         </div>
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-background">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
           <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${pct}%` }} />
         </div>
         <p className="text-xs text-muted">
@@ -112,7 +112,7 @@ export default function LearningPath({
               {i > 0 && (
                 <span
                   aria-hidden
-                  className={`mb-1 h-5 w-1 rounded-full ${unlocked ? "bg-accent/50" : "bg-foreground/10"}`}
+                  className={`mb-1 h-5 w-0.5 rounded-full ${unlocked ? "bg-accent/50" : "bg-foreground/10"}`}
                 />
               )}
               <div className="flex items-center gap-3">
@@ -122,18 +122,18 @@ export default function LearningPath({
                   onClick={() => (isSelected && unlocked ? onStart() : onSelect(i))}
                   aria-label={`Level ${i + 1}: ${level.title}${passed ? ", passed" : unlocked ? "" : ", locked"}`}
                   aria-pressed={isSelected}
-                  className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-bold transition-transform outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-base font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     passed
-                      ? "bg-accent text-accent-foreground shadow-[0_4px_0_0_color-mix(in_srgb,var(--accent)_60%,black)] hover:-translate-y-0.5"
+                      ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
                       : isCurrent
-                        ? "level-pulse bg-surface text-accent ring-4 ring-accent hover:-translate-y-0.5"
-                        : "bg-surface text-muted/60"
-                  } ${isSelected && unlocked ? "scale-110" : ""}`}
+                        ? "border-2 border-accent bg-surface text-accent hover:bg-surface-hover"
+                        : "border-foreground/10 bg-surface text-muted/60"
+                  } ${isSelected && unlocked ? "ring-2 ring-accent/40 ring-offset-2 ring-offset-background" : ""}`}
                 >
-                  {passed ? <CheckIcon className="h-6 w-6" /> : unlocked ? i + 1 : <LockIcon className="h-5 w-5" />}
+                  {passed ? <CheckIcon className="h-5 w-5" /> : unlocked ? i + 1 : <LockIcon className="h-4 w-4" />}
                 </button>
                 <div className="flex w-36 flex-col items-start text-left">
-                  <span className={`text-sm font-semibold ${unlocked ? "" : "text-muted/60"}`}>{level.title}</span>
+                  <span className={`text-sm font-medium ${unlocked ? "" : "text-muted/60"}`}>{level.title}</span>
                   {passed ? (
                     <Stars count={stars} />
                   ) : isCurrent ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { ChartPaper } from "@/components/library/chartView";
-import { Chip, Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
+import { Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
 import { displayKey } from "@jam-practice/core/setlistKeys";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
@@ -202,7 +202,7 @@ function Hub({
   }, [tune.id]);
 
   const firstKey = tune.keys.find((k) => k.enabled)?.value ?? (chart?.key || null);
-  const btn = "inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold hover:bg-surface-hover";
+  const btn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
 
   return (
     <LibraryPage>
@@ -211,17 +211,14 @@ function Hub({
         color={keyColor(firstKey)}
         back={() => router.back()}
         leading={<KeyBadge label={firstKey} size="lg" />}
-        subtitle={
-          <span className="mt-1 flex flex-wrap gap-1">
-            <Chip accent>{LIST_LABEL[list]}</Chip>
-            {tune.timeSignature && <Chip>{tune.timeSignature}</Chip>}
-            {tempos.map((t, i) => (
-              <Chip key={i}>{t} BPM</Chip>
-            ))}
-            <Chip>{knownPcs.size} of 12 keys</Chip>
-            {chart && <Chip>Chart in {chart.key ? displayKey(chart.key) : "—"}</Chip>}
-          </span>
-        }
+        subtitle={[
+          LIST_LABEL[list],
+          tune.timeSignature || null,
+          ...tempos.map((t) => `${t} BPM`),
+          chart ? `Chart in ${chart.key ? displayKey(chart.key) : "—"}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <>
             <Pill icon={PencilIcon} label="Edit" onClick={() => setEditing(true)} />
@@ -232,7 +229,7 @@ function Hub({
               onClick={() => setConfirmDelete(true)}
               aria-label="Delete tune"
               title="Delete tune"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-danger"
+              className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-danger sm:h-9 sm:w-9"
             >
               <TrashIcon className="h-4 w-4" />
             </button>
@@ -244,13 +241,13 @@ function Hub({
         <div className="flex min-w-0 flex-col gap-4">
           {/* Chord chart */}
           <ChartPaper
-            className="max-sm:-mx-4 max-sm:rounded-none max-sm:ring-0"
+            className="max-sm:-mx-4 max-sm:rounded-none max-sm:border-x-0"
             top={
               <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                <h2 className="flex items-center gap-2 font-bold">
-                  <ChordChartIcon className="h-4 w-4 text-accent" />
+                <h2 className="flex items-center gap-2 text-sm font-medium">
+                  <ChordChartIcon className="h-4 w-4 text-muted" />
                   Chord chart
-                  {chart && <span className="text-sm font-medium text-muted">{chart.title !== tune.name ? `· ${chart.title}` : ""}</span>}
+                  {chart && <span className="text-sm font-normal text-muted">{chart.title !== tune.name ? `· ${chart.title}` : ""}</span>}
                 </h2>
                 {chart && (
                   <div className="flex flex-wrap items-center gap-2">
@@ -290,16 +287,16 @@ function Hub({
                   {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : "No chord chart linked yet."}
                 </p>
                 {matches.map((m) => (
-                  <div key={m.song.id} className="flex items-center gap-3 rounded-xl bg-background p-3">
+                  <div key={m.song.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] p-3">
                     <KeyBadge label={m.song.key} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">{m.song.title}</div>
+                      <div className="truncate text-sm font-medium">{m.song.title}</div>
                       <div className="truncate text-xs text-muted">{["Same name", m.playlist].filter(Boolean).join(" · ")}</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => patch({ chordChartId: m.song.id })}
-                      className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                      className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
                     >
                       Link it
                     </button>
@@ -316,19 +313,19 @@ function Hub({
 
           <TuneFiles tuneId={tune.id} tuneName={tuneName} />
 
-          <div className="rounded-2xl bg-surface p-4 sm:p-5">
+          <div className="rounded-lg bg-surface p-4 sm:p-5">
             <TuneRecordings tuneId={tune.id} />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:sticky xl:top-6 xl:grid-cols-1">
           {/* Keys */}
-          <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
+          <section className="flex flex-col gap-3 rounded-lg bg-surface p-4">
             <div className="flex items-baseline justify-between">
-              <h2 className="font-bold">Keys I know it in</h2>
-              <span className="text-sm font-semibold tabular-nums text-muted">{knownPcs.size} / 12</span>
+              <h2 className="text-sm font-medium">Keys I know it in</h2>
+              <span className="text-xs tabular-nums text-muted">{knownPcs.size} / 12</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-background">
+            <div className="h-1 overflow-hidden rounded-full bg-foreground/10">
               <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(knownPcs.size / 12) * 100}%` }} />
             </div>
             <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4">
@@ -342,8 +339,8 @@ function Hub({
                     onClick={() => toggleKey(pc)}
                     aria-pressed={known}
                     title={known ? "Known — click to unmark" : "Click to mark as known"}
-                    className="rounded-xl py-2.5 text-sm font-bold transition-colors"
-                    style={known ? { background: color, color: "var(--accent-foreground)" } : { background: "var(--background)", color: "var(--muted)" }}
+                    className={`rounded-md py-2.5 text-sm font-medium transition-colors ${known ? "" : "bg-foreground/[0.05] hover:bg-surface-hover hover:text-foreground"}`}
+                    style={known ? { background: color, color: "var(--accent-foreground)" } : { color: "var(--muted)" }}
                   >
                     {name}
                     {suffix}
@@ -355,8 +352,8 @@ function Hub({
           </section>
 
           {/* Notes */}
-          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-            <h2 className="font-bold">Notes</h2>
+          <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+            <h2 className="text-sm font-medium">Notes</h2>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -368,14 +365,14 @@ function Hub({
               onBlur={flushNotes}
               placeholder="Form, tricky changes, voicings, recordings to check out…"
               rows={7}
-              className="w-full resize-y rounded-xl bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="w-full resize-y rounded-md bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
             <p className="text-xs text-muted">Saved as you type.</p>
           </section>
 
           {isAuthenticated && (
-            <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-              <h2 className="font-bold">Shed Notes</h2>
+            <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+              <h2 className="text-sm font-medium">Shed Notes</h2>
               <AttachedNotes target={{ kind: "tune", tuneId: tune.id }} label={tune.name || "Untitled tune"} newTitle={tune.name || "Untitled tune"} />
             </section>
           )}

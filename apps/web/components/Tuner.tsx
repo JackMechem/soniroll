@@ -40,6 +40,7 @@ import { TUNER_INSTRUMENTS, getInstrument, getTuning } from "@/lib/tunings";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
+import { startButtonClass } from "@/components/learning/quizUi";
 
 const PANEL_IDS = ["tuner-instrument", "tuner-input", "tuner-tone"];
 const SETTINGS_KEY = "jam-practice-tuner";
@@ -383,7 +384,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
                     <button
                       type="button"
                       onClick={() => updateSettings({ refA: 440 })}
-                      className="rounded-md bg-background px-2 py-0.5 text-xs font-medium text-muted hover:text-foreground"
+                      className="rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium text-muted transition-colors hover:text-foreground"
                     >
                       Reset
                     </button>
@@ -428,10 +429,10 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           type="button"
           onClick={() => updateSettings({ sustain: !sustain })}
           aria-pressed={sustain}
-          className={`pointer-events-auto rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+          className={`pointer-events-auto rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
             sustain
-              ? "bg-accent text-accent-foreground"
-              : "bg-surface text-muted hover:text-foreground"
+              ? "border-accent bg-accent text-accent-foreground"
+              : "border-foreground/15 bg-background text-muted hover:text-foreground"
           }`}
         >
           Sustain
@@ -442,9 +443,9 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             <>
               <span className="flex items-start text-5xl font-bold" style={{ color }}>
                 {noteLetter}
-                <span className="mt-1 text-lg font-semibold text-muted">{noteOctave}</span>
+                <span className="mt-1 text-lg font-medium text-muted">{noteOctave}</span>
               </span>
-              <span className="text-xs font-semibold tabular-nums" style={{ color }}>
+              <span className="text-xs font-medium tabular-nums" style={{ color }}>
                 {reading!.cents > 0 ? "+" : ""}
                 {reading!.cents.toFixed(1)} cents
               </span>
@@ -484,17 +485,17 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               onClick={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}
               disabled={octave <= MIN_OCTAVE}
               aria-label="Octave down"
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-surface text-lg leading-none hover:bg-surface-hover"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
             >
               −
             </button>
-            <span className="w-4 text-xl font-semibold tabular-nums">{octave}</span>
+            <span className="w-4 text-xl font-medium tabular-nums">{octave}</span>
             <button
               type="button"
               onClick={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}
               disabled={octave >= MAX_OCTAVE}
               aria-label="Octave up"
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-surface text-lg leading-none hover:bg-surface-hover"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
             >
               +
             </button>
@@ -504,7 +505,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
 
       <div className="flex w-full flex-col items-center gap-2" aria-live="polite">
         <div
-          className="relative h-2 w-full rounded-full bg-surface"
+          className="relative h-1.5 w-full rounded-full bg-foreground/10"
           role="meter"
           aria-label="Tuning offset in cents"
           aria-valuemin={-50}
@@ -521,7 +522,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
         </div>
         <div className="flex w-full justify-between text-[0.7rem] text-muted">
           <span>♭ flat</span>
-          <span className="font-semibold" style={{ color: reading ? color : undefined }}>
+          <span className="font-medium" style={{ color: reading ? color : undefined }}>
             {verdict}
           </span>
           <span>sharp ♯</span>
@@ -548,7 +549,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
       {tuning.strings.length > 0 && !openTake && (
         <div className="flex w-full flex-col gap-2">
           <p className="text-xs font-medium text-muted">Tap a string to hear its pitch</p>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
             {tuning.strings.map((s, i) => {
               const midi = stringMidis[i];
               const isHeard = reading?.target === midi;
@@ -559,14 +560,14 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
                   type="button"
                   onClick={() => playMidi(midi)}
                   aria-pressed={isPlaying}
-                  className={`min-w-14 rounded-xl px-3 py-2 text-sm font-semibold tabular-nums transition-colors ${
+                  className={`h-10 min-w-12 rounded-md border px-3 sm:min-w-14 text-sm font-medium tabular-nums transition-colors ${
                     isPlaying
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-surface hover:bg-surface-hover"
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : "border-foreground/15 bg-surface hover:bg-surface-hover"
                   }`}
                   style={
                     isHeard && !isPlaying
-                      ? { background: color, color: "var(--background)" }
+                      ? { background: color, borderColor: color, color: "var(--background)" }
                       : undefined
                   }
                 >
@@ -587,9 +588,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           <button
             type="button"
             onClick={listening ? stopListening : () => void startListening()}
-            className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-              listening ? "bg-surface hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-            }`}
+            className={startButtonClass(listening)}
           >
             {listening ? "Stop" : "Start listening"}
           </button>
@@ -599,7 +598,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           onClick={recording ? () => void stopRecording() : () => void startRecording()}
           disabled={rec.phase === "starting" || rec.phase === "finishing"}
           aria-label={recording ? "Stop recording" : "Record a take"}
-          className="flex items-center gap-2 rounded-full bg-surface px-5 py-3 text-base font-semibold transition-colors hover:bg-surface-hover disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-5 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-60"
         >
           {recording ? (
             <>
@@ -618,7 +617,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           <button
             type="button"
             onClick={stopTone}
-            className="rounded-full bg-surface px-5 py-3 text-base font-semibold hover:bg-surface-hover"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-5 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-60"
           >
             Stop tone
           </button>

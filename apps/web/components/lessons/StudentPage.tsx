@@ -57,7 +57,7 @@ export default function StudentPage({ id }: { id: string }) {
   if (!data) {
     return (
       <LibraryPage>
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Student not found" body="They may have been removed." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
       </LibraryPage>
@@ -118,18 +118,18 @@ export default function StudentPage({ id }: { id: string }) {
         }
       >
         {!data.joined && (
-          <div className="grid gap-4 rounded-2xl bg-background p-4 lg:grid-cols-2">
+          <div className="grid gap-4 rounded-lg bg-surface p-4 lg:grid-cols-2 lg:gap-6">
             <div className="flex flex-col gap-2">
-              <p className="text-sm font-bold">Email {data.name} their invite</p>
+              <p className="text-sm font-medium">Email {data.name} their invite</p>
               <EmailInviteForm lessonId={lessonId} name={data.name} initialEmail={data.inviteEmail ?? ""} sentTo={data.inviteEmail} sentAt={data.invitedAt} />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="text-sm font-bold">…or send the link yourself</p>
+              <p className="text-sm font-medium">…or send the link yourself</p>
               <p className="text-xs text-muted">
                 They sign in (or sign up, free) and join — everything you add here is waiting for them, and your routines go straight into their Shed Log.
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded-xl bg-surface px-3 py-2 text-xs">{inviteUrl}</code>
+                <code className="flex h-9 min-w-0 flex-1 items-center truncate rounded-md bg-background px-3 text-xs">{inviteUrl}</code>
                 <Pill icon={ShareIcon} label="Share link" onClick={() => void copyInvite()} />
               </div>
               {linkNote && <p className="text-xs text-muted">{linkNote}</p>}
@@ -143,21 +143,21 @@ export default function StudentPage({ id }: { id: string }) {
           <SessionList lessonId={lessonId} otherName={data.name} />
           {features.routines && (
             <section className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2 px-1">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-bold">Practice routines</h2>
+                  <h2 className="text-sm font-medium">Practice routines</h2>
                   <p className="text-xs text-muted">In {data.name}&apos;s Shed Log, not tied to one lesson. Open one for its practice report.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAdding({ kind: "routine" })}
-                  className="flex items-center gap-1 text-sm font-semibold text-accent hover:underline"
+                  className="flex shrink-0 items-center gap-1 text-xs text-muted transition-colors hover:text-foreground"
                 >
-                  <PlusIcon className="h-4 w-4" /> Assign a routine
+                  <PlusIcon className="h-3.5 w-3.5" /> Assign a routine
                 </button>
               </div>
               {routineItems.length === 0 ? (
-                <p className="rounded-2xl bg-surface p-4 text-sm text-muted">No routines yet. Assign one of yours and see every day of it here.</p>
+                <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">No routines yet. Assign one of yours and see every day of it here.</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {routineItems.map((item) => (
@@ -178,30 +178,34 @@ export default function StudentPage({ id }: { id: string }) {
 
         <aside className="flex flex-col gap-4 xl:sticky xl:top-6">
           <ScheduleCard lessonId={lessonId} />
-          <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-            <h2 className="font-bold">Practice</h2>
+          <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
+            <div className="flex h-11 items-center px-4">
+              <h2 className="text-sm font-medium">Practice</h2>
+            </div>
+            <div className="flex flex-col gap-3 p-4">
             {!data.joined ? (
               <p className="text-sm text-muted">You&apos;ll see their Shed Log once they join.</p>
             ) : !p ? (
               <p className="text-sm text-muted">No practice logged yet.</p>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2">
-                  <Tile label="Day streak" value={`🔥 ${p.streak}`} />
+                <dl className="-my-1 flex flex-col divide-y divide-foreground/10 text-sm">
+                  <Tile label="Day streak" value={String(p.streak)} />
                   <Tile label="Best streak" value={String(p.best)} />
                   <Tile label="This week" value={`${Math.round(p.weekHours * 10) / 10} h`} />
                   <Tile label="All time" value={`${Math.round(p.hours)} h`} />
                   <Tile label="Days, last year" value={String(p.days)} />
                   <Tile label="Goal days, last 30" value={String(p.goalDays)} />
-                </div>
+                </dl>
                 <p className="text-xs text-muted">
                   Last practiced {data.lastPracticed ? (data.lastPracticed === today ? "today" : dateLabel(data.lastPracticed)) : "—"}.
                 </p>
               </>
             )}
+            </div>
           </section>
           {data.joined && (
-            <button type="button" onClick={() => void copyInvite()} className="flex items-center gap-2 self-start text-xs font-semibold text-muted hover:text-foreground">
+            <button type="button" onClick={() => void copyInvite()} className="flex items-center gap-2 self-start text-xs text-muted transition-colors hover:text-foreground">
               <LinkIcon className="h-3.5 w-3.5" /> Copy their invite link
             </button>
           )}
@@ -260,9 +264,9 @@ export default function StudentPage({ id }: { id: string }) {
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-background p-2.5">
-      <div className="text-lg font-extrabold tabular-nums">{value}</div>
-      <div className="text-[11px] font-semibold text-muted">{label}</div>
+    <div className="flex items-center justify-between gap-3 py-2">
+      <dt className="text-muted">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   );
 }

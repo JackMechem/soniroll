@@ -5,7 +5,7 @@ import BeatIndicator from "@/components/BeatIndicator";
 import { HintsButton } from "@/components/CollapsiblePanel";
 import Hint from "@/components/Hint";
 import KeyHint from "@/components/KeyHint";
-import { TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
+import { BIG_PRIMARY, BIG_SECONDARY, TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
 import {
   OptionGroup,
   SUB_LABELS,
@@ -312,8 +312,8 @@ export default function TimeTest() {
       options={null}
       titleExtra={
         recording && countInLeft === null ? (
-          <span className="hidden items-center gap-2 rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums sm:flex">
-            <span className="h-2.5 w-2.5 rounded-full bg-danger motion-safe:animate-pulse" aria-hidden />
+          <span className="hidden h-8 items-center gap-2 rounded-md bg-foreground/[0.05] px-2.5 text-sm font-medium tabular-nums sm:flex">
+            <span className="h-2 w-2 rounded-full bg-danger motion-safe:animate-pulse" aria-hidden />
             Recording {Math.floor(elapsed / 60)}:{String(Math.floor(elapsed % 60)).padStart(2, "0")}
           </span>
         ) : null
@@ -357,20 +357,20 @@ export default function TimeTest() {
                 <button
                   type="button"
                   onClick={stopAndAnalyze}
-                  className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                  className={BIG_PRIMARY}
                 >
                   <StopIcon className="h-4 w-4" />
                   Stop and analyze
                 </button>
               ) : calibrating ? (
-                <button type="button" disabled className="rounded-full bg-surface px-8 py-3 text-base font-semibold opacity-70">
+                <button type="button" disabled className={BIG_SECONDARY}>
                   Calibrating… stay quiet
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={record}
-                  className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                  className={BIG_PRIMARY}
                 >
                   <RecordIcon className="h-4 w-4" />
                   Record
@@ -408,7 +408,7 @@ export default function TimeTest() {
                       onPick={() => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
                       className="h-14"
                     >
-                      <span className="flex flex-col items-center text-base font-extrabold leading-[0.95] tabular-nums">
+                      <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
                         <span>{b}</span>
                         <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
                         <span>{u}</span>
@@ -458,8 +458,8 @@ export default function TimeTest() {
                 {TOLERANCES.map((t) => (
                   <RewardCard key={t} id={`tolerance:${t}`} on={settings.toleranceMs === t} label={`±${t} ms`} onPick={() => update({ toleranceMs: t })} className="h-14">
                     <span className="flex flex-col items-center leading-tight">
-                      <span className="text-base font-extrabold tabular-nums">±{t}</span>
-                      <span className="text-[11px] font-semibold opacity-70">ms</span>
+                      <span className="text-base font-semibold tabular-nums">±{t}</span>
+                      <span className="text-[11px] opacity-70">ms</span>
                     </span>
                   </RewardCard>
                 ))}

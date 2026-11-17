@@ -89,11 +89,11 @@ function Palette({ onClose }: { onClose: () => void }) {
       <div
         role="dialog"
         aria-label="Search tools"
-        className="w-full max-w-3xl overflow-hidden rounded-2xl bg-surface text-foreground shadow-2xl shadow-black/30 ring-1 ring-foreground/10"
+        className="w-full max-w-2xl overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-foreground shadow-2xl shadow-black/30"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div className="flex items-center gap-4 border-b border-surface-hover px-6 py-5">
+        <div className="flex items-center gap-3 border-b border-foreground/10 px-4 py-3.5">
           <SearchIcon className="h-5 w-5 shrink-0 text-muted" />
           <input
             autoFocus
@@ -105,17 +105,17 @@ function Palette({ onClose }: { onClose: () => void }) {
             }}
             placeholder={pendingSplit ? "Pick a tool to tile…" : "Search..."}
             aria-label="Search tools"
-            className="min-w-0 flex-1 bg-transparent text-lg outline-none placeholder:text-muted"
+            className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
           />
         </div>
 
-        <ul ref={listRef} role="listbox" className="max-h-80 overflow-y-auto p-2">
+        <ul ref={listRef} role="listbox" className="max-h-96 overflow-y-auto p-1.5">
           {ordered.length === 0 && <li className="px-4 py-3 text-muted">No tools found</li>}
           {(() => {
             let index = -1;
             return groups.map(({ category, items }) => (
               <li key={category} role="presentation">
-                <p className="px-4 pb-1 pt-3 text-xs font-semibold text-muted first:pt-1">
+                <p className="px-3 pb-1 pt-3 text-xs font-medium text-muted first:pt-1">
                   {category}
                 </p>
                 <ul role="presentation">
@@ -130,17 +130,17 @@ function Palette({ onClose }: { onClose: () => void }) {
                         data-index={i}
                         onPointerMove={() => setActive(i)}
                         onClick={() => go(i)}
-                        className={`flex cursor-pointer items-center gap-4 rounded-xl px-4 py-3 ${
+                        className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm ${
                           i === activeIndex ? "bg-surface-hover" : ""
                         }`}
                       >
-                        <Icon className="h-5 w-5 shrink-0 text-muted" />
+                        <Icon className="h-4 w-4 shrink-0 text-muted" />
                         <span className="flex-1 truncate">{label}</span>
                         {i === activeIndex && (
                           <span className="flex items-center gap-2 text-sm text-muted">
                             Open
-                            <span className="flex h-6 w-6 items-center justify-center rounded bg-foreground/20 text-foreground">
-                              <EnterIcon className="h-4 w-4" />
+                            <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-foreground/[0.05] text-foreground">
+                              <EnterIcon className="h-3.5 w-3.5" />
                             </span>
                           </span>
                         )}

@@ -94,7 +94,7 @@ function SectionCard({
   }
 
   const beats = (
-    <div className={`flex flex-col items-center gap-2 rounded-xl p-3 ${modern ? "bg-background" : "bg-surface"}`}>
+    <div className="flex flex-col items-center gap-2 rounded-md bg-foreground/[0.05] p-3">
       <BeatIndicator
         accents={accents}
         currentBeat={isPlaying ? playingBeat : null}
@@ -112,13 +112,10 @@ function SectionCard({
 
   if (modern) {
     return (
-      <div className={`rounded-2xl ring-1 ${expanded ? "ring-foreground/15" : "ring-foreground/[0.08]"}`}>
-        <button type="button" onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 px-4 py-3 text-left">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-sm font-bold text-accent">
-            {(section.name || "?").slice(0, 2)}
-          </span>
+      <div className={`overflow-hidden rounded-lg border ${expanded ? "border-foreground/15" : "border-foreground/10"}`}>
+        <button type="button" onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover">
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-semibold">{section.name || "Untitled"}</span>
+            <span className="block truncate text-sm font-medium">{section.name || "Untitled"}</span>
             <span className="block text-xs text-muted">
               {section.bars} bar{section.bars === 1 ? "" : "s"} of {section.beatsPerBar}/{section.beatUnit}
             </span>
@@ -126,14 +123,14 @@ function SectionCard({
           <ChevronIcon open={expanded} />
         </button>
         {expanded && (
-          <div className="flex flex-col gap-5 px-4 pb-4 pt-1">
+          <div className="flex flex-col gap-5 border-t border-foreground/10 p-3">
             <input
               type="text"
               value={section.name}
               onChange={(e) => patch({ name: e.target.value })}
               placeholder="Section name"
               aria-label="Section name"
-              className="rounded-xl bg-background px-3 py-2.5 font-semibold outline-none focus:ring-2 focus:ring-accent"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
             <OptionGroup title="Length">
               <StepperPill label="Bars" unit={["bar", "bars"]} value={section.bars} min={1} max={MAX_BEATS} onChange={(bars) => patch({ bars })} />
@@ -161,15 +158,15 @@ function SectionCard({
   }
 
   return (
-    <div className="rounded-xl bg-background">
+    <div className="overflow-hidden rounded-lg bg-foreground/[0.05]">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
       >
         <div className="min-w-0">
-          <p className="truncate font-semibold">{section.name || "Untitled"}</p>
+          <p className="truncate text-sm font-medium">{section.name || "Untitled"}</p>
           <p className="text-xs text-muted">
             {section.bars} bar{section.bars === 1 ? "" : "s"} · {section.beatsPerBar}/
             {section.beatUnit}
@@ -179,15 +176,15 @@ function SectionCard({
       </button>
 
       {expanded && (
-        <div className="flex flex-col gap-4 border-t border-surface-hover px-4 py-4">
+        <div className="flex flex-col gap-4 border-t border-foreground/10 p-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Name</span>
+            <span className="text-xs font-medium text-muted">Name</span>
             <input
               type="text"
               value={section.name}
               onChange={(e) => patch({ name: e.target.value })}
               placeholder="e.g. A"
-              className="rounded-lg bg-surface px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
           </label>
 
@@ -201,7 +198,7 @@ function SectionCard({
             hint="How many bars this section lasts each time it comes up in the form."
           />
 
-          <div className="border-t border-surface-hover" />
+          <div className="border-t border-foreground/10" />
 
           <MeterOptions
             beatsPerBar={section.beatsPerBar}
@@ -351,7 +348,7 @@ export default function StructureEditor({
         </span>
       </div>
 
-      <div className="flex min-h-12 flex-wrap items-center gap-1.5 rounded-xl bg-background p-2">
+      <div className="flex min-h-12 flex-wrap items-center gap-1.5 rounded-md bg-background p-2">
         {structure.form.length === 0 ? (
           <p className="px-2 py-1.5 text-sm text-muted">
             {structure.sections.length === 0
@@ -380,9 +377,9 @@ export default function StructureEditor({
                     ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`, zIndex: 10 }
                     : undefined
                 }
-                className={`flex touch-none select-none items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5 text-sm font-semibold transition-colors ${
+                className={`flex touch-none select-none items-center gap-1.5 rounded-md border py-1 pl-3 pr-1 text-sm font-medium transition-colors ${
                   dragging ? "cursor-grabbing shadow-lg" : "cursor-grab"
-                } ${active ? "bg-accent text-accent-foreground" : "bg-surface-hover text-foreground"}`}
+                } ${active ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 bg-surface text-foreground"}`}
               >
                 {section?.name ?? "?"}
                 <button
@@ -390,7 +387,7 @@ export default function StructureEditor({
                   onClick={() => onChange(removeFormEntry(structure, i))}
                   aria-label={`Remove ${section?.name ?? "this"} from the form`}
                   title="Remove from form"
-                  className="flex h-6 w-6 items-center justify-center rounded opacity-70 hover:text-danger hover:opacity-100"
+                  className="flex h-6 w-6 items-center justify-center rounded-sm opacity-70 hover:text-danger hover:opacity-100"
                 >
                   <CloseIcon className="h-3 w-3" />
                 </button>
@@ -408,7 +405,7 @@ export default function StructureEditor({
               key={s.id}
               type="button"
               onClick={() => onChange(appendToForm(structure, s.id))}
-              className="rounded-lg border border-dashed border-muted/40 px-3 py-1 text-sm font-medium text-muted transition-colors hover:border-foreground/40 hover:text-foreground"
+              className="h-8 rounded-md border border-dashed border-foreground/20 px-3 text-sm font-medium text-muted transition-colors hover:border-foreground/40 hover:text-foreground"
             >
               + {s.name}
             </button>
@@ -450,7 +447,7 @@ export default function StructureEditor({
         <button
           type="button"
           onClick={() => onChange(addSection(structure))}
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-muted/40 px-4 py-3 text-sm font-medium text-muted transition-colors hover:border-foreground/40 hover:text-foreground"
+          className="flex h-10 items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/20 px-4 text-sm font-medium text-muted transition-colors hover:border-foreground/40 hover:text-foreground"
         >
           <PlusIcon className="h-4 w-4" /> New section
         </button>

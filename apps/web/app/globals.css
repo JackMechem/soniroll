@@ -27,6 +27,10 @@
   --danger: #e8848f;
 }
 
+/* Native scrollbars and form controls follow the theme's light/dark mode. */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+
 /* Tool-category colors (the sidebar's icon tiles). Fallback: fixed hues. Where the browser can,
    they're the theme's own accent turned around the color wheel at the same lightness and
    saturation (OKLCH), so every theme gets its own harmonious set; a floor on the chroma keeps
@@ -100,6 +104,15 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-overlay: var(--overlay);
   --color-danger: var(--danger);
+  /* Corners a little tighter than Tailwind's defaults (which run 4px → 24px): small controls
+     6px, cards 10px, dialogs 12–16px; the big main buttons stay fully round (rounded-full). */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   /* Drives components/LoadingSpinner.tsx's dots — each one uses this same animation, staggered
@@ -150,14 +163,14 @@ input[type="range"].slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     var(--accent) var(--progress, 0%),
-    var(--background) var(--progress, 0%)
+    color-mix(in oklab, var(--foreground) 12%, transparent) var(--progress, 0%)
   );
 }
 
 input[type="range"].slider::-moz-range-track {
   height: 6px;
   border-radius: 9999px;
-  background: var(--background);
+  background: color-mix(in oklab, var(--foreground) 12%, transparent);
 }
 
 input[type="range"].slider::-moz-range-progress {
@@ -168,23 +181,23 @@ input[type="range"].slider::-moz-range-progress {
 
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  height: 20px;
-  width: 20px;
-  margin-top: -7px;
+  height: 16px;
+  width: 16px;
+  margin-top: -5px;
   border-radius: 9999px;
   border: 0;
   background: var(--foreground);
-  box-shadow: 0 0 0 3px var(--surface), 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
 
 input[type="range"].slider::-moz-range-thumb {
-  height: 20px;
-  width: 20px;
+  height: 16px;
+  width: 16px;
   border-radius: 9999px;
   border: 0;
   background: var(--foreground);
-  box-shadow: 0 0 0 3px var(--surface), 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
 
@@ -396,39 +409,39 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
 }
 
 input[type="range"].slider.slider-reward::-webkit-slider-runnable-track, .reward-scope input[type="range"].slider::-webkit-slider-runnable-track {
-  height: 10px;
+  height: 6px;
   background: linear-gradient(
     to right,
     color-mix(in srgb, var(--reward, var(--accent)) 55%, var(--accent)) 0%,
     var(--reward, var(--accent)) var(--progress, 0%),
-    var(--background) var(--progress, 0%)
+    color-mix(in oklab, var(--foreground) 12%, transparent) var(--progress, 0%)
   );
 }
-input[type="range"].slider.slider-reward::-moz-range-track, .reward-scope input[type="range"].slider::-moz-range-track { height: 10px; }
+input[type="range"].slider.slider-reward::-moz-range-track, .reward-scope input[type="range"].slider::-moz-range-track { height: 6px; }
 input[type="range"].slider.slider-reward::-moz-range-progress, .reward-scope input[type="range"].slider::-moz-range-progress {
-  height: 10px;
+  height: 6px;
   background: linear-gradient(to right, color-mix(in srgb, var(--reward, var(--accent)) 55%, var(--accent)), var(--reward, var(--accent)));
 }
 input[type="range"].slider.slider-reward::-webkit-slider-thumb, .reward-scope input[type="range"].slider::-webkit-slider-thumb {
-  height: 24px;
-  width: 24px;
-  margin-top: -7px;
+  height: 16px;
+  width: 16px;
+  margin-top: -5px;
   background: var(--reward, var(--accent));
-  box-shadow: 0 0 0 4px var(--surface), 0 2px 10px color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 input[type="range"].slider.slider-reward::-moz-range-thumb, .reward-scope input[type="range"].slider::-moz-range-thumb {
-  height: 24px;
-  width: 24px;
+  height: 16px;
+  width: 16px;
   background: var(--reward, var(--accent));
-  box-shadow: 0 0 0 4px var(--surface), 0 2px 10px color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 input[type="range"].slider.slider-reward:not(:disabled):active::-webkit-slider-thumb, .reward-scope input[type="range"].slider:not(:disabled):active::-webkit-slider-thumb {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 7px color-mix(in srgb, var(--reward, var(--accent)) 20%, transparent);
 }
 input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb, .reward-scope input[type="range"].slider:not(:disabled):active::-moz-range-thumb {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 7px color-mix(in srgb, var(--reward, var(--accent)) 20%, transparent);
 }
 
 /* Scrollbars (mouse and trackpad): an 8px rounded pill, a faint tint of the theme's text colour on a clear track, no arrow
@@ -503,15 +516,15 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
 .note-doc input[type="checkbox"] { margin-right: 0.45em; accent-color: var(--accent); }
 .note-doc blockquote { border-left: 3px solid var(--accent); padding-left: 1em; color: var(--muted); }
 .note-doc code { font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.9em; background: var(--surface); border-radius: 6px; padding: 0.1em 0.35em; }
-.note-doc pre { background: var(--surface); border-radius: 12px; padding: 0.8em 1em; overflow-x: auto; }
+.note-doc pre { background: var(--surface); border-radius: 6px; padding: 0.8em 1em; overflow-x: auto; }
 .note-doc pre code { background: none; padding: 0; }
 .note-doc hr { border: 0; border-top: 1px solid color-mix(in oklab, var(--foreground) 15%, transparent); margin: 1.5em 0; }
 .note-doc mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 0.15em; }
-.note-doc img { max-width: 100%; border-radius: 10px; }
+.note-doc img { max-width: 100%; border-radius: 6px; }
 .note-doc table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
 .note-doc th, .note-doc td { border: 1px solid color-mix(in oklab, var(--foreground) 15%, transparent); padding: 0.4em 0.7em; text-align: left; vertical-align: top; }
 .note-doc th { font-weight: 700; background: var(--surface); }
-.note-doc-wikilink { text-decoration: none !important; display: inline-block; border-radius: 999px; background: color-mix(in oklab, var(--accent) 15%, transparent); color: var(--accent); font-weight: 600; padding: 0 0.55em; font-size: 0.95em; }
+.note-doc-wikilink { text-decoration: none !important; display: inline-block; border-radius: 4px; background: color-mix(in oklab, var(--accent) 15%, transparent); color: var(--accent); font-weight: 500; padding: 0 0.4em; font-size: 0.95em; }
 .note-doc a.note-doc-wikilink-open:hover { background: color-mix(in oklab, var(--accent) 25%, transparent); }
 .note-doc-wikilink-closed { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 15%, transparent); }
 .note-doc-score, .note-doc-abc, .note-doc .note-file { break-inside: avoid; margin: 1em 0; }

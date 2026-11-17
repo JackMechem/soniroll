@@ -8,9 +8,9 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader } from "@/components/files/FileParts";
 import { MenuButton } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { LibraryIcon, ChevronRightIcon, FileIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
@@ -168,23 +168,21 @@ export default function FilesPage() {
           titleExtra={<StoragePill />}
           helpTopic="files"
           tabs={<LibraryTabs active="files" />}
-          subtitle={
-            storage ? `${items.length} item${items.length === 1 ? "" : "s"} · drop files anywhere here to upload` : "Everything stored with your account"
-          }
-          actions={
-            isAuthenticated ? (
+        >
+          {isAuthenticated && (
+            <Toolbar>
+              <HeroSearch value={query} onChange={setQuery} placeholder="Search files and tunes" />
               <button
                 type="button"
                 onClick={uploader.pick}
                 disabled={!!uploader.progress}
-                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+                title="Or drop files anywhere on this page"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50 sm:h-9"
               >
                 <UploadIcon className="h-4 w-4" /> Upload
               </button>
-            ) : undefined
-          }
-        >
-          {isAuthenticated && <HeroSearch value={query} onChange={setQuery} placeholder="Search files and tunes" />}
+            </Toolbar>
+          )}
         </Hero>
 
         {isLoading || (isAuthenticated && storage === undefined) ? (
@@ -192,14 +190,12 @@ export default function FilesPage() {
             <LoadingSpinner />
           </div>
         ) : !isAuthenticated ? (
-          <div className="rounded-2xl bg-surface">
-            <EmptyState
-              icon={FileIcon}
-              title="Keep your files with your account"
-              body="Upload PDFs, lead sheets, images, audio and video — on their own or attached to a tune — and open them on any device."
-              action={<SignInButtons />}
-            />
-          </div>
+          <EmptyState
+            boxed
+            title="Keep your files with your account"
+            body="Upload PDFs, lead sheets, images, audio and video — on their own or attached to a tune — and open them on any device."
+            action={<SignInButtons />}
+          />
         ) : (
           <>
             {(used >= quota || uploader.progress || uploader.error) && (
@@ -237,31 +233,31 @@ export default function FilesPage() {
               </div>
             </div>
 
-            <section className="flex flex-col rounded-2xl bg-surface pb-1.5">
+            <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
               {/* Title, or what's ticked and what to do with it. */}
-              <div className="flex min-h-14 flex-wrap items-center gap-2 px-4 py-2.5">
+              <div className="flex min-h-11 flex-wrap items-center gap-2 py-1.5 pl-4 pr-2">
                 {picked.length > 0 ? (
                   <>
-                    <span className="font-semibold">{picked.length} selected</span>
-                    <span className="text-sm tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
+                    <span className="text-sm font-medium">{picked.length} selected</span>
+                    <span className="text-xs tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
                     <div className="ml-auto flex items-center gap-1.5">
-                      <button type="button" onClick={deletePicked} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold text-danger hover:bg-surface-hover">
+                      <button type="button" onClick={deletePicked} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-danger hover:bg-surface-hover">
                         <TrashIcon className="h-4 w-4" /> Delete
                       </button>
-                      <button type="button" onClick={clearSelection} className="inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-muted hover:bg-background hover:text-foreground">
+                      <button type="button" onClick={clearSelection} className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
                         Cancel
                       </button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <h2 className="font-bold">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
-                    <span className="text-sm tabular-nums text-muted">{shown.length}</span>
+                    <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
+                    <span className="text-xs tabular-nums text-muted">{shown.length}</span>
                     {shown.length > 0 && (
                       <button
                         type="button"
                         onClick={() => (selecting ? clearSelection() : setSelecting(true))}
-                        className="ml-auto inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold text-accent hover:bg-background sm:hidden"
+                        className="ml-auto inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden"
                       >
                         {selecting ? "Done" : "Select"}
                       </button>
@@ -273,21 +269,20 @@ export default function FilesPage() {
               {shown.length === 0 ? (
                 items.length === 0 ? (
                   <EmptyState
-                    icon={UploadIcon}
                     title="Nothing here yet"
-                    body="Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes."
+                    body="Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes. You can drop files anywhere on this page."
                     action={
-                      <button type="button" onClick={uploader.pick} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+                      <button type="button" onClick={uploader.pick} className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                         Upload files
                       </button>
                     }
                   />
                 ) : (
-                  <p className="px-4 pb-4 text-sm text-muted">Nothing matches.</p>
+                  <p className="px-4 py-4 text-sm text-muted">Nothing matches.</p>
                 )
               ) : (
-                <div role="table" aria-label="Your files" className="flex flex-col px-1.5">
-                  <div role="row" className={`hidden items-center border-b border-foreground/[0.06] pb-1.5 text-xs font-semibold text-muted sm:grid ${COLUMNS}`}>
+                <div role="table" aria-label="Your files" className="flex flex-col divide-y divide-foreground/10">
+                  <div role="row" className={`hidden h-9 items-center px-1.5 text-xs font-medium text-muted sm:grid ${COLUMNS}`}>
                     <span role="columnheader" className="flex justify-center">
                       <Checkbox
                         checked={allPicked}
@@ -311,7 +306,7 @@ export default function FilesPage() {
                         role="row"
                         aria-selected={isPicked}
                         onContextMenu={(e) => actions.contextMenu(item, e)}
-                        className={`group grid items-center rounded-xl ${showChecks ? "grid-cols-[2.25rem_minmax(0,1fr)_2.5rem]" : "grid-cols-[minmax(0,1fr)_2.5rem]"} ${COLUMNS} ${
+                        className={`group grid items-center px-1.5 ${showChecks ? "grid-cols-[2.25rem_minmax(0,1fr)_2.5rem]" : "grid-cols-[minmax(0,1fr)_2.5rem]"} ${COLUMNS} ${
                           isPicked ? "bg-accent/10" : "hover:bg-surface-hover"
                         }`}
                       >
@@ -332,9 +327,9 @@ export default function FilesPage() {
                           <FileTypeIcon kind={fileKind(item.mimeType, item.name)} />
                           <span className="min-w-0 flex-1">
                             <span className="flex min-w-0 items-center gap-1.5">
-                              <span className="truncate font-semibold">{item.name}</span>
+                              <span className="truncate text-sm font-medium">{item.name}</span>
                               {item.sharedId && (
-                                <span title="Shared by link" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                                <span title="Shared by link" className="inline-flex shrink-0 items-center gap-1 rounded-md bg-foreground/[0.05] px-1.5 py-px text-[11px] font-medium text-muted">
                                   <LinkIcon className="h-3 w-3" />
                                   <span className="hidden lg:inline">Shared</span>
                                 </span>
@@ -371,7 +366,7 @@ export default function FilesPage() {
                   })}
                 </div>
               )}
-              {actions.error && <p className="px-4 pb-3 text-sm text-danger">{actions.error}</p>}
+              {actions.error && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error}</p>}
             </section>
           </>
         )}
@@ -418,12 +413,12 @@ function FilterChip({ active, onClick, label, count, small = false }: { active: 
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors ${small ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm"} ${
-        active ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:text-foreground"
+      className={`inline-flex items-center gap-1.5 rounded-md border font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
+        active ? "border-foreground/30 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {label}
-      {count != null && <span className={`tabular-nums ${active ? "opacity-80" : "opacity-70"}`}>{count}</span>}
+      {count != null && <span className="text-xs tabular-nums text-muted">{count}</span>}
     </button>
   );
 }

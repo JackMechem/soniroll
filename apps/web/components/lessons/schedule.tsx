@@ -7,7 +7,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CalendarIcon, CheckIcon, CloseIcon, DownloadIcon, LinkIcon, PlusIcon } from "@/components/tools";
-import { Dialog, errorText, field } from "@/components/lessons/parts";
+import { Dialog, btnPrimary as btnMain, btnSecondary, errorText, field } from "@/components/lessons/parts";
 import { shareLink } from "@/lib/shareLink";
 import { durationLabel, googleCalendarUrl, lessonIcs, LESSON_LENGTHS, zoneName, type LessonEvent, type Slot } from "@jam-practice/core/lessonSchedule";
 import { siteOrigin } from "@/lib/siteOrigin";
@@ -71,13 +71,13 @@ export function SlotGrid({
     }
     return out;
   }, [slots]);
-  if (days.length === 0) return <p className="rounded-2xl bg-background p-4 text-center text-sm text-muted">{emptyText}</p>;
+  if (days.length === 0) return <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">{emptyText}</p>;
   const shown = maxDays && !showAll ? days.slice(0, maxDays) : days;
   return (
     <div className="flex flex-col gap-3">
       {shown.map((d) => (
         <div key={d.key} className="flex flex-col gap-1.5">
-          <p className="text-xs font-bold text-muted">{d.label}</p>
+          <p className="text-xs font-medium text-muted">{d.label}</p>
           <div className="flex flex-wrap gap-1.5">
             {d.slots.map((s) => {
               const on = selected.includes(s.start);
@@ -89,12 +89,12 @@ export function SlotGrid({
                   disabled={off}
                   onClick={() => onToggle(s)}
                   aria-pressed={on}
-                  className={`rounded-full px-3.5 py-2 text-sm font-semibold tabular-nums transition-colors ${
+                  className={`h-9 rounded-md border px-3 text-sm font-medium tabular-nums transition-colors ${
                     on
-                      ? "bg-accent text-accent-foreground"
+                      ? "border-accent bg-accent text-accent-foreground"
                       : off
-                        ? "bg-background text-muted line-through opacity-50"
-                        : "bg-background ring-1 ring-foreground/10 hover:bg-surface-hover hover:ring-accent"
+                        ? "border-foreground/10 text-muted line-through opacity-50"
+                        : "border-foreground/15 bg-background hover:border-foreground/30 hover:bg-surface-hover"
                   }`}
                 >
                   {timeFmt.format(s.start)}
@@ -105,7 +105,7 @@ export function SlotGrid({
         </div>
       ))}
       {maxDays && days.length > maxDays && (
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="self-start text-xs font-semibold text-accent hover:underline">
+        <button type="button" onClick={() => setShowAll((v) => !v)} className="self-start text-xs font-medium text-muted hover:text-foreground">
           {showAll ? "Show fewer days" : `Show ${days.length - maxDays} more days`}
         </button>
       )}
@@ -128,8 +128,8 @@ function downloadIcs(ev: LessonEvent) {
 /** Google Calendar + a downloadable .ics (Apple Calendar, Outlook). */
 export function AddToCalendar({ ev, compact = false }: { ev: LessonEvent; compact?: boolean }) {
   const cls = compact
-    ? "flex items-center gap-1 rounded-full bg-background px-2.5 py-1 text-xs font-semibold hover:bg-surface-hover"
-    : "flex items-center gap-1.5 rounded-full bg-background px-3.5 py-2 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover";
+    ? "flex h-8 items-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
+    : "flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover";
   return (
     <div className="flex flex-wrap gap-1.5">
       <a href={googleCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className={cls}>
@@ -151,17 +151,17 @@ export function DateTile({ ms, muted = false }: { ms: number; muted?: boolean })
   const d = new Date(ms);
   return (
     <span
-      className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl leading-none ${muted ? "bg-background text-muted" : "bg-accent/12 text-accent"}`}
+      className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md bg-background leading-none ${muted ? "text-muted" : ""}`}
     >
-      <span className="text-[10px] font-bold">{d.toLocaleDateString(undefined, { month: "short" })}</span>
-      <span className="text-lg font-extrabold tabular-nums">{d.getDate()}</span>
+      <span className="text-[10px] text-muted">{d.toLocaleDateString(undefined, { month: "short" })}</span>
+      <span className="text-base font-semibold tabular-nums">{d.getDate()}</span>
     </span>
   );
 }
 
-const btn = "rounded-full px-3.5 py-1.5 text-xs font-bold disabled:opacity-40";
+const btn = "inline-flex h-8 shrink-0 items-center justify-center rounded-md px-2.5 text-xs font-medium transition-colors disabled:opacity-40";
 const btnPrimary = `${btn} bg-accent text-accent-foreground hover:bg-accent-hover`;
-const btnPlain = `${btn} bg-background hover:bg-surface-hover`;
+const btnPlain = `${btn} bg-foreground/[0.05] hover:bg-surface-hover`;
 
 type Booking = {
   id: Id<"lessonBookings">;
@@ -182,32 +182,32 @@ export function BookingRow({ b, role, other, now, href }: { b: Booking; role: "t
   const rel = relDay(b.start, now);
   const live = b.start <= now && b.end > now;
   return (
-    <li className="flex flex-col gap-2 rounded-2xl bg-background p-3">
+    <li className="flex flex-col gap-2 rounded-md bg-background p-3">
       <div className="flex items-center gap-3">
         <DateTile ms={b.start} muted={b.status !== "confirmed"} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">
-            {timeFmt.format(b.start)} – {timeFmt.format(b.end)} <span className="font-semibold text-muted">· {durationLabel(b)}</span>
+          <p className="truncate text-sm font-medium">
+            {timeFmt.format(b.start)} – {timeFmt.format(b.end)} <span className="font-normal text-muted">· {durationLabel(b)}</span>
           </p>
           <p className="truncate text-xs text-muted">
             {href ? (
-              <Link href={href} className="font-semibold text-foreground hover:underline">
+              <Link href={href} className="font-medium text-foreground hover:underline">
                 {other}
               </Link>
             ) : (
               other
             )}
             {" · "}
-            {live ? <span className="font-bold text-emerald-600 dark:text-emerald-400">Now</span> : (rel ?? shortDayFmt.format(b.start))}
+            {live ? <span className="font-medium text-emerald-600 dark:text-emerald-400">Now</span> : (rel ?? shortDayFmt.format(b.start))}
           </p>
         </div>
         {b.status === "requested" && (
-          <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+          <span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
             {role === "teacher" ? "Requested" : "Waiting"}
           </span>
         )}
       </div>
-      {b.note && <p className="rounded-xl bg-surface px-3 py-2 text-xs italic text-muted">“{b.note}”</p>}
+      {b.note && <p className="border-l-2 border-foreground/15 pl-2 text-xs italic text-muted">“{b.note}”</p>}
       <div className="flex flex-wrap items-center gap-1.5">
         {b.status === "requested" && role === "teacher" && (
           <>
@@ -273,7 +273,7 @@ function BookingDialog({ b, kind, other, onClose }: { b: Booking; kind: "accept"
   }
   return (
     <Dialog title={title} onClose={onClose}>
-      <p className="rounded-xl bg-background px-3.5 py-3 text-sm font-bold">{slotLabel(b)}</p>
+      <p className="rounded-md bg-background px-3 py-2.5 text-sm font-medium">{slotLabel(b)}</p>
       <p className="text-sm text-muted">
         {kind === "accept"
           ? `${other} gets an email with a calendar invite, and so do you.`
@@ -281,7 +281,7 @@ function BookingDialog({ b, kind, other, onClose }: { b: Booking; kind: "accept"
             ? `${other} gets an email and can pick another time.`
             : `${other} gets an email${b.status === "confirmed" ? " (and a calendar update that removes it)" : ""}.`}
       </p>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         A message <span className="font-normal text-muted">(optional, goes in the email)</span>
         <textarea
           value={msg}
@@ -300,14 +300,14 @@ function BookingDialog({ b, kind, other, onClose }: { b: Booking; kind: "accept"
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+        <button type="button" onClick={onClose} className={btnSecondary}>
           Back
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={() => void go()}
-          className={`rounded-full px-5 py-2 text-sm font-bold disabled:opacity-40 ${kind === "accept" ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-danger text-white hover:opacity-90"}`}
+          className={kind === "accept" ? btnMain : "inline-flex h-9 items-center justify-center rounded-md bg-danger px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"}
         >
           {busy ? "Sending…" : label}
         </button>
@@ -329,7 +329,7 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
 
   if (data === undefined)
     return (
-      <section className="flex justify-center rounded-2xl bg-surface p-6">
+      <section className="flex justify-center rounded-lg bg-surface p-6">
         <LoadingSpinner size="sm" />
       </section>
     );
@@ -345,10 +345,10 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-bold">
-          <CalendarIcon className="h-4 w-4 text-accent" /> Booking
+    <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
+      <div className="flex h-11 items-center justify-between gap-2 pl-4 pr-2">
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <CalendarIcon className="h-4 w-4 text-muted" /> Booking
         </h2>
         {teacher ? (
           <button type="button" onClick={() => setDialog("offer")} className={`${btnPrimary} flex items-center gap-1`}>
@@ -362,10 +362,11 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
           )
         )}
       </div>
+      <div className="flex flex-col gap-3 p-4">
 
       {requests.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-bold text-muted">{teacher ? "Asked for" : "Your requests"}</p>
+          <p className="text-xs font-medium text-muted">{teacher ? "Asked for" : "Your requests"}</p>
           <ul className="flex flex-col gap-1.5">
             {requests.map((b) => (
               <BookingRow key={b.id} b={b} role={data.role} other={other} now={now} />
@@ -376,7 +377,7 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
 
       {booked.length > 0 ? (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-bold text-muted">Booked times</p>
+          <p className="text-xs font-medium text-muted">Booked times</p>
           <ul className="flex flex-col gap-1.5">
             {booked.map((b) => (
               <BookingRow key={b.id} b={b} role={data.role} other={other} now={now} />
@@ -398,10 +399,10 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
 
       {data.offers.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-bold text-muted">{teacher ? "Times you offered" : "Times offered to you"}</p>
+          <p className="text-xs font-medium text-muted">{teacher ? "Times you offered" : "Times offered to you"}</p>
           {data.offers.map((o) => (
-            <div key={o.id} className="flex flex-col gap-2 rounded-2xl bg-background p-3">
-              <p className="text-sm font-semibold">
+            <div key={o.id} className="flex flex-col gap-2 rounded-md bg-background p-3">
+              <p className="text-sm font-medium">
                 {o.slots.length} time{o.slots.length === 1 ? "" : "s"}
                 <span className="font-normal text-muted"> · first {slotLabel(o.slots[0])}</span>
               </p>
@@ -439,7 +440,7 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
 
       {data.past.length > 0 && (
         <details className="text-xs text-muted">
-          <summary className="cursor-pointer font-semibold">Past lessons</summary>
+          <summary className="cursor-pointer font-medium hover:text-foreground">Past lessons</summary>
           <ul className="mt-1 flex flex-col gap-0.5">
             {data.past.map((b) => (
               <li key={b.id}>{slotLabel(b)}</li>
@@ -449,11 +450,12 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
       )}
 
       {teacher && !data.hasAvailability && (
-        <Link href="/lessons/settings#hours" className="text-xs font-semibold text-accent hover:underline">
+        <Link href="/lessons/settings#hours" className="text-xs font-medium text-accent hover:underline">
           Set your teaching hours so students can request lessons →
         </Link>
       )}
 
+      </div>
       {dialog === "offer" && <OfferTimesDialog lessonId={lessonId} name={data.studentName} defaultEmail={data.studentEmail ?? ""} onClose={() => setDialog(null)} />}
       {dialog === "request" && <RequestLessonDialog lessonId={lessonId} teacherName={data.teacher.name} onClose={() => setDialog(null)} />}
     </section>
@@ -512,14 +514,14 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
             <>Send {name} this link — they pick a time and it&apos;s booked.</>
           )}
         </p>
-        <div className="flex items-center gap-2 rounded-xl bg-background p-2 pl-3">
+        <div className="flex items-center gap-2 rounded-md bg-background p-1 pl-3">
           <code className="min-w-0 flex-1 truncate text-xs">{link}</code>
           <button type="button" onClick={() => void shareLink("Pick a lesson time", link)} className={btnPrimary}>
             Copy
           </button>
         </div>
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground">
+          <button type="button" onClick={onClose} className={btnMain}>
             Done
           </button>
         </div>
@@ -531,9 +533,9 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
     <Dialog title={`Offer ${name} lesson times`} onClose={onClose} wide>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">Pick a few times — {name} chooses one.</p>
-        <label className="flex items-center gap-2 text-sm font-semibold">
+        <label className="flex items-center gap-2 text-sm font-medium">
           Length
-          <select value={len} onChange={(e) => setLengthMin(Number(e.target.value))} className="rounded-lg bg-background px-2 py-1.5 text-sm ring-1 ring-foreground/10">
+          <select value={len} onChange={(e) => setLengthMin(Number(e.target.value))} className="h-9 rounded-md bg-background px-2 text-sm">
             {LESSON_LENGTHS.map((m) => (
               <option key={m} value={m}>
                 {m} min
@@ -545,24 +547,24 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
       {free === undefined ? (
         <LoadingSpinner size="sm" />
       ) : free && free.slots.length > 0 ? (
-        <div className="max-h-72 overflow-y-auto rounded-2xl pr-1">
+        <div className="max-h-72 overflow-y-auto pr-1">
           <SlotGrid slots={free.slots} selected={picked.map((p) => p.start)} onToggle={toggle} maxDays={7} />
         </div>
       ) : (
-        <p className="rounded-2xl bg-background p-3 text-sm text-muted">
+        <p className="rounded-lg border border-dashed border-foreground/15 p-4 text-sm text-muted">
           No open times from your hours.{" "}
-          <Link href="/lessons/settings#hours" className="font-semibold text-accent hover:underline">
+          <Link href="/lessons/settings#hours" className="font-medium text-accent hover:underline">
             Set your teaching hours
           </Link>{" "}
           or add times below.
         </p>
       )}
       <div className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+        <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           Another day
           <input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className={field.replace("w-full", "w-auto")} />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
+        <label className="flex flex-col gap-1 text-xs font-medium text-muted">
           At
           <input type="time" value={customTime} onChange={(e) => setCustomTime(e.target.value)} className={field.replace("w-full", "w-auto")} />
         </label>
@@ -570,21 +572,21 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
           type="button"
           onClick={addCustom}
           disabled={!customDate || !customTime}
-          className="rounded-full bg-background px-4 py-2.5 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover disabled:opacity-40"
+          className={btnSecondary}
         >
           Add time
         </button>
       </div>
       {picked.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-bold text-muted">
+          <p className="text-xs font-medium text-muted">
             Offering {picked.length} time{picked.length === 1 ? "" : "s"} ({zoneName(localTz())})
           </p>
           <div className="flex flex-wrap gap-1.5">
             {picked.map((s) => (
-              <span key={s.start} className="flex items-center gap-1 rounded-full bg-accent/12 py-1 pl-3 pr-1 text-xs font-semibold text-accent">
+              <span key={s.start} className="flex h-7 items-center gap-1 rounded-md bg-background pl-2.5 pr-1 text-xs font-medium">
                 {slotLabel(s)}
-                <button type="button" onClick={() => toggle(s)} aria-label="Remove" className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-accent/20">
+                <button type="button" onClick={() => toggle(s)} aria-label="Remove" className="flex h-5 w-5 items-center justify-center rounded-sm text-muted hover:bg-foreground/10 hover:text-foreground">
                   <CloseIcon className="h-3 w-3" />
                 </button>
               </span>
@@ -592,11 +594,11 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
           </div>
         </div>
       )}
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Email it to <span className="font-normal text-muted">(leave empty to just get a link)</span>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`${name}'s email`} className={field} />
       </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         A note <span className="font-normal text-muted">(optional)</span>
         <textarea
           value={message}
@@ -609,14 +611,14 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+        <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
         <button
           type="button"
           disabled={picked.length === 0 || busy}
           onClick={() => void send()}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnMain}
         >
           {busy ? "Sending…" : email.trim() ? "Email these times" : "Make the link"}
         </button>
@@ -652,10 +654,10 @@ function RequestLessonDialog({ lessonId, teacherName, onClose }: { lessonId: Id<
   if (sent && picked)
     return (
       <Dialog title="Request sent" onClose={onClose}>
-        <p className="rounded-xl bg-background px-3.5 py-3 text-sm font-bold">{slotLabel(picked)}</p>
+        <p className="rounded-md bg-background px-3 py-2.5 text-sm font-medium">{slotLabel(picked)}</p>
         <p className="text-sm text-muted">{teacherName} gets an email to accept it. When they do, you&apos;ll get a confirmation with a calendar invite.</p>
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground">
+          <button type="button" onClick={onClose} className={btnMain}>
             Done
           </button>
         </div>
@@ -680,7 +682,7 @@ function RequestLessonDialog({ lessonId, teacherName, onClose }: { lessonId: Id<
           />
         </div>
       )}
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         A note <span className="font-normal text-muted">(optional)</span>
         <textarea
           value={note}
@@ -693,15 +695,15 @@ function RequestLessonDialog({ lessonId, teacherName, onClose }: { lessonId: Id<
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex items-center justify-end gap-2">
-        {picked && <span className="mr-auto text-sm font-semibold">{slotLabel(picked)}</span>}
-        <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+        {picked && <span className="mr-auto text-sm font-medium">{slotLabel(picked)}</span>}
+        <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
         <button
           type="button"
           disabled={!picked || busy}
           onClick={() => void send()}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnMain}
         >
           {busy ? "Sending…" : "Send request"}
         </button>
@@ -719,17 +721,20 @@ export function ScheduleOverview() {
   const requests = data.asTeacher.filter((b) => b.status === "requested");
   if (requests.length === 0 && data.offers.length === 0) return null;
   return (
-    <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4 ring-1 ring-accent/30">
-      <h2 className="font-bold">Needs you</h2>
-      <ul className="flex flex-col gap-1.5">
+    <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
+      <div className="flex h-11 items-center gap-2 px-4">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+        <h2 className="text-sm font-medium">Needs you</h2>
+      </div>
+      <ul className="flex flex-col gap-1.5 p-4">
         {requests.map((b) => (
           <BookingRow key={b.id} b={b} role="teacher" other={b.studentName} now={now} href={`/lessons/student?id=${b.lessonId}`} />
         ))}
         {data.offers.map((o) => (
-          <li key={o.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
-            <CalendarIcon className="h-5 w-5 shrink-0 text-accent" />
+          <li key={o.id} className="flex items-center gap-3 rounded-md bg-background p-3">
+            <CalendarIcon className="h-4 w-4 shrink-0 text-muted" />
             <span className="min-w-0 flex-1 text-sm">
-              <b>{o.teacher.name}</b> offered you {o.count} lesson time{o.count === 1 ? "" : "s"}
+              <b className="font-medium">{o.teacher.name}</b> offered you {o.count} lesson time{o.count === 1 ? "" : "s"}
             </span>
             <Link href={`/lessons/book?offer=${o.token}`} className={btnPrimary}>
               Pick a time

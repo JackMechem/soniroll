@@ -66,7 +66,7 @@ export default function FeedbackFab() {
         type="button"
         onClick={() => openFeedback({ kind: "bug" })}
         aria-label="Report a bug"
-        className="flex h-10 items-center rounded-full bg-background/80 px-3 text-sm font-semibold text-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur transition-colors hover:bg-background/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex h-10 items-center rounded-md ring-1 ring-foreground/[0.06] bg-foreground/[0.05]/80 px-3 text-sm font-medium text-foreground shadow-lg backdrop-blur transition-colors hover:bg-background/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <BugIcon className="h-4 w-4 shrink-0" />
         {/* The label only opens out on hover / keyboard focus; phones just get the icon. */}

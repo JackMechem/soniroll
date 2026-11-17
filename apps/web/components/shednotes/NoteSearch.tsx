@@ -63,9 +63,9 @@ export default function NoteSearch({ notes, onOpen, onClose }: { notes: NoteMeta
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onMouseDown={onClose}>
-      <div role="dialog" aria-label="Search notes" className="flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface text-foreground shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Search notes" className="flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-foreground shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-foreground/10 px-4">
-          <SearchIcon className="h-5 w-5 shrink-0 text-muted" />
+          <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             autoFocus
             value={q}
@@ -90,20 +90,20 @@ export default function NoteSearch({ notes, onOpen, onClose }: { notes: NoteMeta
               }
             }}
             placeholder="Search your notes (or #tag)"
-            className="min-w-0 flex-1 bg-transparent py-4 text-base outline-none"
+            className="min-w-0 flex-1 bg-transparent py-3.5 text-base outline-none"
           />
-          <kbd className="hidden shrink-0 rounded-md bg-background px-1.5 py-0.5 font-mono text-[11px] text-muted sm:block">Esc</kbd>
+          <kbd className="hidden shrink-0 rounded-sm bg-foreground/[0.05] px-1.5 py-0.5 font-mono text-[11px] text-muted sm:block">Esc</kbd>
         </div>
         <ul ref={list} className="min-h-0 overflow-y-auto p-2" role="listbox">
-          {!query && <li className="px-3 pb-1 pt-1 text-xs font-semibold text-muted">Recent</li>}
+          {!query && <li className="px-3 pb-1 pt-1 text-xs font-medium text-muted">Recent</li>}
           {hits.map((h, i) => (
             <li key={`${h.where}:${h.id}`} data-row={i} role="option" aria-selected={i === at}>
-              {i === firstText && <p className="px-3 pb-1 pt-3 text-xs font-semibold text-muted">In the text</p>}
-              <button type="button" onMouseEnter={() => setActive(i)} onClick={() => onOpen(h.id)} className={`flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left ${i === at ? "bg-accent/15" : ""}`}>
+              {i === firstText && <p className="px-3 pb-1 pt-3 text-xs font-medium text-muted">In the text</p>}
+              <button type="button" onMouseEnter={() => setActive(i)} onClick={() => onOpen(h.id)} className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left ${i === at ? "bg-surface-hover" : ""}`}>
                 <DocumentIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
-                    <span className="truncate text-sm font-semibold">
+                    <span className="truncate text-sm font-medium">
                       <Marked text={h.title} q={query} />
                     </span>
                     {h.folder && <span className="shrink-0 truncate text-xs text-muted">{h.folder}</span>}

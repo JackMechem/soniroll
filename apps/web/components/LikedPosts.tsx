@@ -27,7 +27,7 @@ export default function LikedPosts() {
           <LoadingSpinner />
         </div>
       ) : posts.length === 0 ? (
-        <p className="rounded-2xl bg-surface p-5 text-center text-sm text-muted">
+        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
           Nothing here yet — tap the heart on a post to save it here.
         </p>
       ) : (

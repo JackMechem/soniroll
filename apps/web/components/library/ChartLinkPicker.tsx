@@ -31,11 +31,11 @@ export default function ChartLinkPicker({
   }, [songs, q]);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Link a chord chart" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
+      <div role="dialog" aria-label="Link a chord chart" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your chord charts" className="min-w-0 flex-1 bg-transparent outline-none" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your chord charts" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
         </div>
         <ul className="flex flex-col gap-0.5 overflow-y-auto">
           {rows.length === 0 ? (

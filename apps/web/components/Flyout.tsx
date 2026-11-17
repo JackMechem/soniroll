@@ -95,7 +95,7 @@ export default function Flyout({
         aria-expanded={open}
         className={
           buttonClassName ??
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         }
       >
         <Icon className="h-4 w-4" />
@@ -108,7 +108,7 @@ export default function Flyout({
             data-flyout
             role="menu"
             style={{ position: "fixed", top: pos.top, left: pos.left, width: MENU_WIDTH }}
-            className="z-[70] flex flex-col gap-0.5 rounded-xl bg-surface p-1.5 text-sm shadow-lg ring-1 ring-foreground/10"
+            className="z-[70] flex flex-col gap-px rounded-lg bg-surface p-1 text-sm shadow-lg ring-1 ring-foreground/10"
           >
             {children(close)}
           </div>,
@@ -143,7 +143,7 @@ export function FlyoutItem({
       role={checked === undefined ? "menuitem" : "menuitemcheckbox"}
       onClick={onSelect}
       aria-checked={checked}
-      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-hover ${
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-surface-hover ${
         danger ? "text-danger" : ""
       }`}
     >

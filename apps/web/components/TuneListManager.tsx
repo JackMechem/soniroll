@@ -6,7 +6,7 @@ import { ReactNode, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import StandardsPicker from "@/components/StandardsPicker";
 import TuneEditorModal from "@/components/TuneEditorModal";
-import { Hero, HeroSearch, KeyBadge, Pill } from "@/components/library/ui";
+import { Hero, HeroSearch, KeyBadge, Pill, Toolbar } from "@/components/library/ui";
 import { CheckIcon, ChordChartIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
@@ -160,11 +160,11 @@ export default function TuneListManager({
       ) : shown.length === 0 ? (
         <p className={`text-sm text-muted ${variant === "page" ? "px-3 py-10 text-center" : ""}`}>No tunes match “{trimmedQuery}”.</p>
       ) : (
-        <ul className={variant === "page" ? "flex flex-col divide-y divide-foreground/[0.06]" : "flex max-h-[32rem] flex-col gap-1.5 overflow-y-auto pr-1"}>
+        <ul className={variant === "page" ? "flex flex-col divide-y divide-foreground/10" : "flex max-h-[32rem] flex-col gap-1.5 overflow-y-auto pr-1"}>
           {shown.map((tune) => {
             const isSelected = selected.has(tune.id);
             return (
-              <li key={tune.id} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isSelected ? "bg-background" : "hover:bg-background/60"}`}>
+              <li key={tune.id} className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${variant === "page" ? "" : "rounded-md"} ${isSelected ? "bg-accent/10" : "hover:bg-surface-hover"}`}>
                 <button
                   type="button"
                   role="checkbox"
@@ -180,9 +180,9 @@ export default function TuneListManager({
                 {variant === "page" && <KeyBadge label={tune.keys.find((k) => k.enabled)?.value} />}
                 {listId ? (
                   <Link href={`/tunes/tune?list=${listId}&id=${encodeURIComponent(tune.id)}`} className="min-w-0 flex-1 text-left">
-                    <div className={`truncate hover:text-accent ${variant === "page" ? "font-semibold" : "text-sm font-medium"}`}>
+                    <div className="truncate text-sm font-medium hover:underline">
                       {tune.name}
-                      {variant === "page" && tune.chordChartId && <ChordChartIcon className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-accent" />}
+                      {variant === "page" && tune.chordChartId && <ChordChartIcon className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-muted" />}
                     </div>
                     <div className="truncate text-xs text-muted">{summary(tune)}</div>
                   </Link>
@@ -197,7 +197,7 @@ export default function TuneListManager({
                   onClick={() => setEditing({ tune, isNew: false })}
                   aria-label={`Edit ${tune.name}`}
                   title="Edit"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-foreground/[0.08] hover:text-foreground"
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
@@ -206,7 +206,7 @@ export default function TuneListManager({
                   onClick={() => deleteTune(tune.id)}
                   aria-label={`Delete ${tune.name}`}
                   title="Delete"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-foreground/[0.08] hover:text-danger"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>
@@ -218,33 +218,33 @@ export default function TuneListManager({
     </>
   );
   const footer = (
-    <div className="flex flex-wrap items-center gap-2 border-t border-background pt-3 text-sm">
+    <div className={`flex flex-wrap items-center gap-2 border-t border-foreground/10 text-sm ${variant === "page" ? "px-3 py-2.5" : "pt-3"}`}>
       <button
         type="button"
         onClick={toggleAllShown}
         disabled={shown.length === 0}
-        className="rounded-lg px-2 py-1.5 font-medium text-muted hover:text-foreground disabled:opacity-50"
+        className="h-8 rounded-md px-2 font-medium text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
       >
         {allShownSelected ? "Deselect all" : "Select all"}
       </button>
       <span className="text-muted">{chosen.length} selected</span>
-      <div className="ml-auto flex gap-2">
+      <div className="ml-auto flex flex-wrap gap-2 [&>button]:whitespace-nowrap">
         <button
           type="button"
           onClick={() => downloadTunesCsv(chosen.length > 0 ? chosen : tunes, `${exportFilenamePrefix}${chosen.length > 0 ? "-selected" : ""}.csv`)}
           disabled={tunes.length === 0}
-          className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover disabled:opacity-50"
+          className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium hover:bg-surface-hover disabled:opacity-50"
         >
           {chosen.length > 0 ? `Export ${chosen.length}` : "Export all"}
         </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover">
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium hover:bg-surface-hover">
           Import CSV
         </button>
         <button
           type="button"
           onClick={() => setConfirmingDelete(true)}
           disabled={chosen.length === 0}
-          className="rounded-lg bg-background px-3 py-1.5 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
+          className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
         >
           Delete selected
         </button>
@@ -290,13 +290,15 @@ export default function TuneListManager({
           backHref="/tunes"
           backLabel="Tunes"
           subtitle={`${tunes.length} tune${tunes.length === 1 ? "" : "s"} · ${chartCount} with a chord chart`}
-          actions={<Pill primary icon={PlusIcon} label="Add tune" onClick={openAdd} iconOnlyOnPhone />}
         >
-          <HeroSearch value={query} onChange={setQuery} placeholder={searchPlaceholder} />
+          <Toolbar>
+            <HeroSearch value={query} onChange={setQuery} placeholder={searchPlaceholder} />
+            <Pill primary icon={PlusIcon} label="Add tune" onClick={openAdd} iconOnlyOnPhone />
+          </Toolbar>
         </Hero>
-        <section className="flex flex-col rounded-2xl bg-surface p-2 text-left">
-          <div className="px-1">{list}</div>
-          <div className="px-3 pb-1">{footer}</div>
+        <section className="flex flex-col overflow-hidden rounded-lg bg-surface text-left">
+          {list}
+          {footer}
         </section>
 
         {dialogs}
@@ -306,10 +308,10 @@ export default function TuneListManager({
 
   return (
     <>
-      <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
+      <section className="flex flex-col gap-4 rounded-lg bg-surface p-4 text-left">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Icon className="h-5 w-5 text-muted" />
+          <h2 className="flex items-center gap-2 text-sm font-medium">
+            <Icon className="h-4 w-4 text-muted" />
             {title}
             {tunes.length ? ` (${tunes.length})` : ""}
           </h2>
@@ -318,7 +320,7 @@ export default function TuneListManager({
             onClick={openAdd}
             aria-label={allowStandards ? "Add tune" : "New tune"}
             title={allowStandards ? "Add tune" : "New tune"}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground hover:bg-accent-hover"
           >
             <PlusIcon className="h-4 w-4" />
           </button>
@@ -326,7 +328,7 @@ export default function TuneListManager({
 
         {infoBlurb && <p className="text-xs text-muted">{infoBlurb}</p>}
 
-        <div className="flex items-center gap-3 rounded-xl bg-background px-3 py-2">
+        <div className="flex h-9 items-center gap-3 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             type="text"

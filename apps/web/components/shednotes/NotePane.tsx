@@ -41,7 +41,7 @@ const SAVE_LABEL = { saved: "Saved", saving: "Saving…", unsaved: "Editing", er
 
 /** Formatting buttons — for phones and anyone who'd rather click. */
 export const FORMAT: { label: string; title: string; command: string; className?: string }[] = [
-  { label: "B", title: "Bold", command: "editor:toggle-bold", className: "font-extrabold" },
+  { label: "B", title: "Bold", command: "editor:toggle-bold", className: "font-bold" },
   { label: "I", title: "Italic", command: "editor:toggle-italic", className: "italic font-serif" },
   { label: "S", title: "Strikethrough", command: "editor:toggle-strikethrough", className: "line-through" },
   { label: "H1", title: "Heading 1", command: "editor:set-heading-1" },
@@ -62,8 +62,8 @@ export function PanelButton({ side, open, onClick, className = "", keys }: { sid
   // The chevron points the way the panel will move.
   const chevron = side === "left" ? (open ? "m15 10-2 2 2 2" : "m13 10 2 2-2 2") : open ? "m9 10 2 2-2 2" : "m11 10-2 2 2 2";
   return (
-    <button type="button" onClick={onClick} aria-label={label} aria-pressed={open} title={title} className={`shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground ${className}`}>
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <button type="button" onClick={onClick} aria-label={label} aria-pressed={open} title={title} className={`shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${className}`}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <rect x="3" y="4" width="18" height="16" rx="2.5" />
         <path d={`M${x} 4v16`} />
         <path d={chevron} />
@@ -80,7 +80,7 @@ export function VimSwitch({ on, onChange, keys }: { on: boolean; onChange: (on: 
       aria-checked={on}
       onClick={() => onChange(!on)}
       title={`${on ? "Vim keys are on" : "Vim keys are off"}${keys ? ` (${keys})` : ""}`}
-      className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold ${on ? "bg-accent/15 text-accent" : "bg-surface text-muted hover:text-foreground"}`}
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors hover:bg-surface-hover ${on ? "text-foreground" : "text-muted hover:text-foreground"}`}
     >
       <span className={`relative h-3.5 w-6 rounded-full transition-colors ${on ? "bg-accent" : "bg-foreground/20"}`}>
         <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-background transition-[left] ${on ? "left-3" : "left-0.5"}`} />
@@ -229,7 +229,7 @@ export default function NotePane({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-24 text-center">
         <p className="text-sm text-muted">This note isn&apos;t there any more.</p>
-        <button type="button" onClick={onBackToList} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+        <button type="button" onClick={onBackToList} className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
           All notes
         </button>
       </div>
@@ -314,7 +314,7 @@ export default function NotePane({
     const keys = keysFor(command, config.keybindings);
     return keys ? `${title} (${keys})` : title;
   };
-  const iconBtn = "shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent";
+  const iconBtn = "shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent";
 
   return (
     // A container: the links sit beside the note only when this pane has room for both (not by
@@ -323,7 +323,7 @@ export default function NotePane({
     <div className={`flex min-h-0 flex-1 flex-col gap-3 ${linksOpen ? "@4xl:flex-row @4xl:gap-6" : ""}`}>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <button type="button" onClick={onBackToList} className="flex shrink-0 items-center gap-1 rounded-full bg-surface py-1.5 pl-2 pr-3 text-sm font-semibold hover:bg-surface-hover lg:hidden">
+          <button type="button" onClick={onBackToList} className="flex h-9 shrink-0 items-center gap-1 rounded-md bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden">
             <ChevronLeftIcon className="h-4 w-4" /> Notes
           </button>
           <PanelButton side="left" open={listOpen} onClick={onToggleList} keys={keysFor("view:toggle-note-list", config.keybindings)} className="hidden lg:block" />
@@ -336,7 +336,7 @@ export default function NotePane({
           <span className="hidden min-w-0 truncate text-xs text-muted @2xl:inline">{note.folder ? `${note.folder.replace(/\//g, " / ")} /` : ""}</span>
           <span className="flex-1" />
           {!mine && (
-            <span className="min-w-0 truncate rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted" title={`Shared with you by @${note.owner ?? "someone"}`}>
+            <span className="min-w-0 truncate rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs text-muted" title={`Shared with you by @${note.owner ?? "someone"}`}>
               @{note.owner ?? "someone"} · {canEdit ? "can edit" : "view only"}
             </span>
           )}
@@ -367,20 +367,20 @@ export default function NotePane({
           }}
           aria-label="Note title"
           readOnly={!mine}
-          className="w-full resize-none overflow-hidden bg-transparent text-2xl leading-tight font-extrabold tracking-tight outline-none sm:text-3xl"
+          className="w-full resize-none overflow-hidden bg-transparent text-2xl leading-tight font-semibold tracking-tight outline-none sm:text-3xl"
           style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto" }), ...(fontStack ? { fontFamily: fontStack } : {}) }}
         />
 
-        <div className={`${canEdit ? "flex" : "hidden"} items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] ${canEdit ? "sm:flex-wrap" : ""} [&::-webkit-scrollbar]:hidden`} style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
+        <div className={`${canEdit ? "flex" : "hidden"} items-center gap-0.5 overflow-x-auto border-b border-foreground/10 pb-1.5 [scrollbar-width:none] ${canEdit ? "sm:flex-wrap" : ""} [&::-webkit-scrollbar]:hidden`} style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
           {FORMAT.map((f) => (
-            <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`shrink-0 rounded-lg bg-surface px-2.5 py-1 text-xs text-foreground hover:bg-surface-hover ${f.className ?? "font-semibold"}`}>
+            <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`h-7 min-w-7 shrink-0 rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${f.className ?? "font-medium"}`}>
               {f.label}
             </button>
           ))}
-          {mine && <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
+          {mine && <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
           </button>}
-          {canEdit && <button type="button" title={withKeys("Insert a file or picture (or paste one)", "editor:insert-file")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex shrink-0 items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-surface-hover">
+          {canEdit && <button type="button" title={withKeys("Insert a file or picture (or paste one)", "editor:insert-file")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <ImageIcon className="h-3.5 w-3.5" /> File
           </button>}
         </div>
@@ -388,26 +388,26 @@ export default function NotePane({
         {mine && (empty ?? !note.body.trim()) && (
           // An empty note: start it from a template.
           <div className="flex flex-wrap items-center gap-1.5 text-xs" style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
-            <span className="font-semibold text-muted">Start from a template:</span>
+            <span className="font-medium text-muted">Start from a template:</span>
             {templates.slice(0, 6).map((t) => (
-              <button key={t.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => actions.applyTemplate?.(t.id)} className="rounded-full bg-accent/15 px-2.5 py-1 font-semibold text-accent hover:bg-accent/25">
+              <button key={t.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => actions.applyTemplate?.(t.id)} className="h-7 rounded-md bg-foreground/[0.05] px-2 font-medium transition-colors hover:bg-surface-hover">
                 {t.name}
               </button>
             ))}
             {templates.length > 6 && (
-              <button type="button" onClick={() => actions.applyTemplate?.()} className="rounded-full bg-surface px-2.5 py-1 font-semibold hover:bg-surface-hover">
+              <button type="button" onClick={() => actions.applyTemplate?.()} className="h-7 rounded-md px-2 font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
                 More…
               </button>
             )}
             {templates.length === 0 && (
-              <button type="button" onClick={() => actions.openTemplates?.()} className="rounded-full bg-surface px-2.5 py-1 font-semibold hover:bg-surface-hover">
+              <button type="button" onClick={() => actions.openTemplates?.()} className="h-7 rounded-md px-2 font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
                 Make a template
               </button>
             )}
           </div>
         )}
 
-        <div className="relative min-h-[55vh] rounded-2xl lg:min-h-0 lg:flex-1">
+        <div className="relative min-h-[55vh] rounded-lg lg:min-h-0 lg:flex-1">
           <NoteEditor
             key={id}
             initialText={note.body}

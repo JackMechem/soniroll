@@ -51,7 +51,7 @@ export default function TemplateFillDialog({
       <form
         role="dialog"
         aria-label={`Fill in ${template.name}`}
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-3xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-foreground shadow-xl sm:rounded-3xl sm:pb-5"
+        className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-foreground shadow-xl sm:rounded-xl sm:pb-5"
         onMouseDown={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
@@ -59,36 +59,36 @@ export default function TemplateFillDialog({
         }}
       >
         <div>
-          <h2 className="text-lg font-bold">{template.name}</h2>
+          <h2 className="text-base font-semibold">{template.name}</h2>
           <p className="text-sm text-muted">{vars.length ? "Fill in the blanks for the new note." : "This template has nothing to fill in."}</p>
         </div>
         {askTitle && (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">Title</span>
-            <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className="h-10 rounded-xl bg-background px-3 text-sm outline-none ring-accent focus:ring-2" />
+            <span className="text-xs font-medium text-muted">Title</span>
+            <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-accent/40" />
           </label>
         )}
         {vars.map((name, i) => (
           <label key={name} className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">{name}</span>
+            <span className="text-xs font-medium text-muted">{name}</span>
             <input
               autoFocus={!askTitle && i === 0}
               value={values[name] ?? ""}
               onChange={(e) => setValues((v) => ({ ...v, [name]: e.target.value }))}
-              className="h-10 rounded-xl bg-background px-3 text-sm outline-none ring-accent focus:ring-2"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-accent/40"
             />
           </label>
         ))}
         {!askTitle && template.title.trim() && (
           <p className="text-xs text-muted">
-            Title: <span className="font-semibold text-foreground">{filledTitle || "Untitled"}</span>
+            Title: <span className="font-medium text-foreground">{filledTitle || "Untitled"}</span>
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="h-10 rounded-full bg-background px-4 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={onCancel} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover">
             Cancel
           </button>
-          <button type="submit" autoFocus={!askTitle && !vars.length} disabled={!ready} className="h-10 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
+          <button type="submit" autoFocus={!askTitle && !vars.length} disabled={!ready} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50">
             {confirmLabel}
           </button>
         </div>

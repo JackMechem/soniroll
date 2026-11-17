@@ -16,7 +16,7 @@ import PhraseDialog from "@/components/bassgenius/PhraseDialog";
 import DrumSettingsDialog from "@/components/bassgenius/DrumSettingsDialog";
 import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
 import { GrooveScore, KIT_PARTS, PART_DEFAULT, PartFader, partGain, useStyleVoices } from "@/components/rhythmsection/kit";
-import { TempoHero } from "@/components/MeterFields";
+import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import {
   BassIcon,
@@ -737,7 +737,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
   const needTune = <p className="text-xs text-muted">Pick a chart or type chords to add it.</p>;
 
   const panel = (
-    <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-2xl">
+    <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-lg lg:border lg:border-foreground/10">
       <PresetsSection id="presets" tool={presets} />
       <PanelSection id="tempo" title="Tempo" icon={MetronomeIcon} summary={`${bpm} BPM`}>
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={ts.top} beatUnit={ts.bottom} onTap={tap} />
@@ -769,7 +769,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                 autoCapitalize="off"
                 autoCorrect="off"
                 placeholder="Dm7 G7 | Cmaj7 | %   or   ii7 V7 | Imaj7"
-                className="w-full resize-y rounded-lg bg-background px-3 py-2 font-mono text-sm outline-none ring-accent focus:ring-2"
+                className="w-full resize-y rounded-md bg-foreground/[0.05] px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-accent/40"
                 aria-label="Chord progression"
               />
             </Field>
@@ -779,7 +779,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                   key={p.label}
                   type="button"
                   onClick={() => update({ typedText: p.text })}
-                  className="rounded-full bg-background px-2.5 py-1 text-xs font-semibold text-muted hover:bg-surface-hover hover:text-foreground"
+                  className="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                 >
                   {p.label}
                 </button>
@@ -810,13 +810,13 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
             <button
               type="button"
               onClick={() => setPicking(true)}
-              className="flex items-center gap-3 rounded-xl bg-background px-3 py-2.5 text-left hover:bg-surface-hover"
+              className="flex items-center gap-3 rounded-md bg-background px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{meta?.title ?? (loading ? "Loading your charts…" : "Pick a chart")}</span>
+                <span className="block truncate text-sm font-medium">{meta?.title ?? (loading ? "Loading your charts…" : "Pick a chart")}</span>
                 {meta && <span className="block truncate text-xs text-muted">{[meta.key, meta.style].filter(Boolean).join(" · ")}</span>}
               </span>
-              <span className="shrink-0 text-xs font-semibold text-accent">{meta ? "Change" : "Choose"}</span>
+              <span className="shrink-0 text-xs text-muted">{meta ? "Change" : "Choose"}</span>
             </button>
             <Field label="Key">
               <Select
@@ -861,7 +861,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                   type="button"
                   onClick={() => setStyle(s.id)}
                   aria-pressed={s.id === style.id}
-                  className={`rounded-full px-3 py-1.5 text-sm font-semibold ${s.id === style.id ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"}`}
+                  className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors ${s.id === style.id ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 bg-background hover:bg-surface-hover"}`}
                 >
                   {s.name}
                 </button>
@@ -917,7 +917,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
           <button
             type="button"
             onClick={() => setDrumSettingsOpen(true)}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-background px-3 py-2 text-sm font-semibold hover:bg-surface-hover"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-md bg-background px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
           >
             <SlidersIcon className="h-4 w-4" /> Drum settings
           </button>
@@ -1168,18 +1168,16 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
           type="button"
           onClick={toggle}
           disabled={styleLoading}
-          className={`flex min-w-40 items-center justify-center gap-2 rounded-full px-8 py-3 text-lg font-semibold disabled:opacity-50 ${
-            running || downloading ? "bg-surface text-foreground hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-          }`}
+          className={running || downloading ? BIG_SECONDARY : BIG_PRIMARY}
         >
-          {running || downloading ? <StopIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+          {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           {running || downloading ? "Stop" : "Play"}
         </button>
         <button
           type="button"
           onClick={() => setOptionsOpen(true)}
           aria-label="Options"
-          className="flex h-12 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover lg:hidden"
+          className="flex h-11 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden"
         >
           <SlidersIcon className="h-4 w-4" /> Options
         </button>
@@ -1191,10 +1189,10 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
   );
 
   const drumsCard = drumsOn && (
-    <div className="min-w-0 rounded-2xl bg-surface p-3 text-left sm:p-5">
+    <div className="min-w-0 rounded-lg bg-surface p-3 text-left sm:p-5">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2 px-1">
         <div className="min-w-0">
-          <h2 className={song ? "text-sm font-semibold" : "text-lg font-bold"}>
+          <h2 className={song ? "text-sm font-medium" : "text-base font-semibold"}>
             {song ? "Drums" : style.name}
             <span className="ml-2 text-sm font-normal text-muted">{song ? style.name : countryOf(style.country)}</span>
             {claveDirectionMatters(style, grooveOpts) && <span className="ml-2 text-sm font-normal text-muted">· {clave} clave</span>}
@@ -1205,9 +1203,9 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
           <button
             type="button"
             onClick={() => setGrooveSeed(newSeed())}
-            className="flex items-center gap-1 rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover"
+            className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
           >
-            <ShuffleIcon className="h-3.5 w-3.5" /> New groove
+            <ShuffleIcon className="h-4 w-4 text-muted" /> New groove
           </button>
         )}
       </div>
@@ -1241,24 +1239,24 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
         <BassPlayersTab />
       ) : (
         <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-          <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:overflow-y-auto lg:rounded-2xl">
+          <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:overflow-y-auto lg:rounded-lg">
             {panel}
           </aside>
           <div className="grid min-w-0 gap-6">
             {!noTune && (
               <div className={`grid min-w-0 gap-6 ${scored && song && settings.showChart ? "xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start" : ""}`}>
                 {scored && (
-                  <div ref={scoreBoxRef} className="bass-line-score w-full rounded-2xl bg-surface p-3 text-left sm:p-5">
+                  <div ref={scoreBoxRef} className="bass-line-score w-full rounded-lg bg-surface p-3 text-left sm:p-5">
                     <style>{`.bass-line-score g.bass-now{fill:var(--accent);stroke:var(--accent);color:var(--accent)}`}</style>
                     <div className="mb-1 flex flex-wrap items-center justify-between gap-2 px-1">
-                      <h3 className="text-sm font-semibold">Bass line{live && <span className="ml-2 font-normal text-muted">Chorus {viewed + 1}</span>}</h3>
+                      <h3 className="text-sm font-medium">Bass line{live && <span className="ml-2 font-normal text-muted">Chorus {viewed + 1}</span>}</h3>
                       <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
                         <button
                           type="button"
                           onClick={() => update({ showChart: !settings.showChart })}
                           aria-pressed={settings.showChart}
                           title={settings.showChart ? "Hide the chord chart" : "Show the chord chart"}
-                          className="flex items-center gap-1 rounded-full bg-background px-2.5 py-1 font-semibold text-foreground hover:bg-surface-hover"
+                          className="flex h-7 items-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 font-medium text-foreground transition-colors hover:bg-surface-hover"
                         >
                           {settings.showChart ? <EyeOffIcon className="h-3.5 w-3.5" /> : <EyeIcon className="h-3.5 w-3.5" />}
                           {settings.showChart ? "Hide chart" : "Show chart"}
@@ -1270,7 +1268,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                               setOpened(null);
                               setSeed(newSeed());
                             }}
-                            className="flex items-center gap-1 rounded-full bg-background px-2.5 py-1 font-semibold text-foreground hover:bg-surface-hover"
+                            className="flex h-7 items-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 font-medium text-foreground transition-colors hover:bg-surface-hover"
                           >
                             <ShuffleIcon className="h-3.5 w-3.5" /> New line
                           </button>
@@ -1288,11 +1286,11 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                               type="button"
                               onClick={() => setOpened({ chorus: viewed, index: i })}
                               title="How this phrase was made"
-                              className={`flex flex-col items-start rounded-lg px-2.5 py-1 text-left text-xs transition-colors ${
-                                i === playingPhrase ? "bg-accent text-accent-foreground" : openPhrase === i ? "bg-surface-hover" : "bg-background hover:bg-surface-hover"
+                              className={`flex flex-col items-start rounded-md border px-2.5 py-1 text-left text-xs transition-colors ${
+                                i === playingPhrase ? "border-accent bg-accent text-accent-foreground" : openPhrase === i ? "border-foreground/30 bg-surface-hover" : "border-foreground/15 bg-background hover:bg-surface-hover"
                               }`}
                             >
-                              <span className="font-semibold">{b ? (b.from === b.to ? `Bar ${b.from + 1}` : `Bars ${b.from + 1}–${b.to + 1}`) : "Phrase"}</span>
+                              <span className="font-medium">{b ? (b.from === b.to ? `Bar ${b.from + 1}` : `Bars ${b.from + 1}–${b.to + 1}`) : "Phrase"}</span>
                               <span className={i === playingPhrase ? "opacity-80" : "text-muted"}>
                                 {src ? `${src.title} ${Math.floor(src.startBeat / 4) + 1}–${Math.ceil((src.startBeat + p.length) / 4)}` : p.learned ? "New, in their style" : "Computer"}
                               </span>
@@ -1318,29 +1316,29 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                   <div className="min-w-0 xl:sticky xl:top-4">
                     {typed ? (
                       song ? (
-                        <div className="w-full rounded-2xl bg-surface p-2 text-left sm:p-6">
+                        <div className="w-full rounded-lg bg-surface p-2 text-left sm:p-6">
                           <ChordChart song={song} hideHeader activeBar={activeBar} />
                         </div>
                       ) : (
-                        <p className="rounded-2xl bg-surface p-6 text-center text-sm text-muted">Type some chords to play over.</p>
+                        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">Type some chords to play over.</p>
                       )
                     ) : !loading && allSongs.length === 0 ? (
-                      <div className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-center text-sm text-muted">
+                      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">
                         <p>You don&apos;t have any chord charts yet — the drums play on their own until you pick one.</p>
-                        <Link href="/tunes?tab=charts" className="font-semibold text-accent hover:underline">
+                        <Link href="/tunes?tab=charts" className="font-medium text-accent hover:underline">
                           Import or make one in Chord Charts
                         </Link>
                       </div>
                     ) : !chartId ? (
-                      <button type="button" onClick={() => setPicking(true)} className="w-full rounded-2xl bg-surface p-6 text-sm text-muted hover:bg-surface-hover">
+                      <button type="button" onClick={() => setPicking(true)} className="w-full rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground">
                         Pick one of your chord charts to play over. Until then, the drums play on their own.
                       </button>
                     ) : selectedSongLoading || (!song && loading) ? (
                       <LoadingSpinner label="Loading chart…" showLabel />
                     ) : song ? (
-                      <div className="w-full rounded-2xl bg-surface p-2 text-left sm:p-6">
+                      <div className="w-full rounded-lg bg-surface p-2 text-left sm:p-6">
                         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 px-2 sm:px-0">
-                          <h2 className="text-xl font-bold">{song.title}</h2>
+                          <h2 className="text-lg font-semibold tracking-tight">{song.title}</h2>
                           <p className="text-sm text-muted">
                             {[song.composer ? formatComposer(song.composer) : null, song.style || null, song.key, `${song.timeSignature.top}/${song.timeSignature.bottom}`]
                               .filter(Boolean)

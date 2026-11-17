@@ -44,7 +44,7 @@ export function PlayInfoLine({ info, timeSignature }: { info: ReturnType<typeof 
   return (
     <span className="block truncate text-sm text-muted">
       {parts.map((p, i) => (
-        <span key={i} className={p.changed ? "font-bold text-accent" : undefined}>
+        <span key={i} className={p.changed ? "font-semibold text-accent" : undefined}>
           {i ? " · " : ""}
           {p.text}
         </span>
@@ -165,12 +165,12 @@ export function TunePickerModal({ exclude, onAdd, onClose }: { exclude: string[]
               setPicked((prev) => prev.filter((k) => k !== row.key));
             } else toggle(row.key);
           }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-background">
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-surface-hover">
           <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${on ? "bg-accent text-accent-foreground" : "border-2 border-muted"}`}>
             {on && <CheckIcon className="h-3.5 w-3.5" />}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold">{title}</span>
+            <span className="block truncate text-sm font-medium">{title}</span>
             <span className="block truncate text-xs text-muted">{subtitle}</span>
           </span>
         </button>
@@ -178,38 +178,38 @@ export function TunePickerModal({ exclude, onAdd, onClose }: { exclude: string[]
     );
   };
 
-  const header = (label: string) => <li className="px-3 pb-1 pt-3 text-base font-bold first:pt-0">{label}</li>;
+  const header = (label: string) => <li className="px-3 pb-1 pt-3 text-xs font-medium text-muted first:pt-0">{label}</li>;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[8vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Add tunes" className="flex max-h-[80vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onClick={onClose}>
+      <div role="dialog" aria-label="Add tunes" className="flex max-h-[80vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <h2 className="flex-1 text-lg font-bold">Add tunes</h2>
-          <button type="button" onClick={onClose} className="rounded-full px-3 py-1.5 text-sm text-muted hover:bg-background hover:text-foreground">
+          <h2 className="flex-1 text-base font-semibold">Add tunes</h2>
+          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-muted hover:bg-surface-hover hover:text-foreground">
             Cancel
           </button>
           <button
             type="button"
             disabled={picked.length === 0}
             onClick={add}
-            className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
           >
             {picked.length ? `Add ${picked.length}` : "Add"}
           </button>
         </div>
-        <label className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
+        <label className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input ref={searchRef} autoFocus onKeyDown={(e) => e.key === "Enter" && canCreate && query.trim() && createTune()} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your tunes and standards…" className="min-w-0 flex-1 bg-transparent outline-none" />
+          <input ref={searchRef} autoFocus onKeyDown={(e) => e.key === "Enter" && canCreate && query.trim() && createTune()} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your tunes and standards…" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
         </label>
         <ul className="flex flex-col gap-0.5 overflow-y-auto">
           {canCreate && (
             <li>
-              <button type="button" onClick={createTune} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-background">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-background text-accent">
+              <button type="button" onClick={createTune} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-surface-hover">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted">
                   <PlusIcon className="h-3.5 w-3.5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-accent">{query.trim() ? `Create “${query.trim()}”` : "Create a new tune"}</span>
+                  <span className="block truncate text-sm font-medium">{query.trim() ? `Create “${query.trim()}”` : "Create a new tune"}</span>
                   <span className="block truncate text-xs text-muted">{query.trim() ? "A tune of your own, added to Tunes I Know" : "Type its name in the search box"}</span>
                 </span>
               </button>
@@ -269,22 +269,22 @@ export function SetlistTuneDialog({
     onClose();
   }
 
-  const pill = (selected: boolean) => `rounded-xl py-2 text-sm font-semibold ${selected ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"}`;
+  const pill = (selected: boolean) => `rounded-md py-2 text-sm font-medium ${selected ? "bg-accent text-accent-foreground" : "hover:bg-surface-hover"}`;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[8vh]" onClick={onClose}>
-      <div role="dialog" aria-label={`Key and tempo for ${tuneName}`} className="flex w-full max-w-md flex-col gap-4 rounded-2xl bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onClick={onClose}>
+      <div role="dialog" aria-label={`Key and tempo for ${tuneName}`} className="flex w-full max-w-md flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold">{tuneName}</h2>
+            <h2 className="truncate text-base font-semibold">{tuneName}</h2>
             <p className="text-xs text-muted">Key and tempo in this setlist only — the tune itself doesn&apos;t change.</p>
           </div>
-          <button type="button" onClick={save} className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={save} className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             Done
           </button>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-muted">Key</span>
+          <span className="text-xs font-medium text-muted">Key</span>
           <button type="button" onClick={() => setKey(undefined)} className={pill(!key)}>
             Default{defaultKey ? ` (${defaultKey})` : ""}
           </button>
@@ -298,19 +298,19 @@ export function SetlistTuneDialog({
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-muted">Tempo</span>
+          <span className="text-xs font-medium text-muted">Tempo</span>
           <div className="flex items-center gap-2">
             {[-5, -1].map((d) => (
-              <button key={d} type="button" onClick={() => bump(d)} className="h-11 w-11 rounded-xl bg-background font-bold hover:bg-surface-hover">
+              <button key={d} type="button" onClick={() => bump(d)} className="h-11 w-11 rounded-md bg-foreground/[0.05] font-medium hover:bg-surface-hover">
                 {d}
               </button>
             ))}
             <div className="flex flex-1 flex-col items-center">
-              <span className={`text-3xl font-extrabold tabular-nums ${tempo != null ? "text-accent" : ""}`}>{shownTempo}</span>
+              <span className={`text-3xl font-semibold tabular-nums ${tempo != null ? "text-accent" : ""}`}>{shownTempo}</span>
               <span className="text-xs text-muted">BPM</span>
             </div>
             {[1, 5].map((d) => (
-              <button key={d} type="button" onClick={() => bump(d)} className="h-11 w-11 rounded-xl bg-background font-bold hover:bg-surface-hover">
+              <button key={d} type="button" onClick={() => bump(d)} className="h-11 w-11 rounded-md bg-foreground/[0.05] font-medium hover:bg-surface-hover">
                 +{d}
               </button>
             ))}

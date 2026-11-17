@@ -1,6 +1,6 @@
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded bg-surface px-1.5 py-0.5 font-sans text-[0.7rem] font-medium text-foreground">
+    <kbd className="rounded-sm bg-foreground/[0.05] px-1.5 py-0.5 font-sans text-[0.7rem] font-medium text-foreground">
       {children}
     </kbd>
   );

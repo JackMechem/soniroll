@@ -170,7 +170,7 @@ export default function BassPlayersTab() {
     </>
   );
   const noticeEl = notice && (
-    <div className={`flex items-start gap-3 rounded-xl px-4 py-2 text-left text-sm ${notice.error ? "bg-danger/10 text-danger" : "bg-accent/10 text-foreground"}`} role="status">
+    <div className={`flex items-start gap-3 rounded-md border px-4 py-2 text-left text-sm ${notice.error ? "border-danger/30 text-danger" : "border-foreground/15 text-foreground"}`} role="status">
       <p className="flex-1">{notice.text}</p>
       <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="text-muted hover:text-foreground">
         ×
@@ -215,14 +215,14 @@ export default function BassPlayersTab() {
           <BackButton onClick={() => setView({ kind: "players" })} label="Bass players" className="mb-2" />
           <div className="flex flex-wrap items-center justify-between gap-3">
             {player.builtIn ? (
-              <h2 className="text-3xl font-extrabold tracking-tight">{player.name}</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">{player.name}</h2>
             ) : (
               <button
                 type="button"
                 onClick={() =>
                   setPrompt({ title: "Rename player", initial: player.name, confirm: "Rename", onSubmit: (name) => void lib.updatePlayer(player.id, { name }) })
                 }
-                className="text-left text-3xl font-extrabold tracking-tight hover:text-accent"
+                className="text-left text-2xl font-semibold tracking-tight hover:text-accent"
                 title="Rename"
               >
                 {player.name}
@@ -233,22 +233,22 @@ export default function BassPlayersTab() {
                 <button
                   type="button"
                   onClick={() => setPatterns({ transcriptionId: null })}
-                  className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover"
+                  className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
                   title={`Patterns across all of ${player.name}'s transcriptions`}
                 >
                   <WaveIcon className="h-4 w-4" /> Patterns
                 </button>
               )}
               {player.builtIn ? (
-                <button type="button" onClick={() => void copyBuiltIn(player.id)} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+                <button type="button" onClick={() => void copyBuiltIn(player.id)} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
                   Make it my own
                 </button>
               ) : (
-                <button type="button" onClick={() => pickImport(player.id)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+                <button type="button" onClick={() => pickImport(player.id)} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                   Import
                 </button>
               )}
-              <button type="button" onClick={() => void exportPlayer(player.id, player.name, player.description)} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+              <button type="button" onClick={() => void exportPlayer(player.id, player.name, player.description)} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                 <DownloadIcon className="h-4 w-4" /> Export player
               </button>
               {!player.builtIn && (
@@ -266,7 +266,7 @@ export default function BassPlayersTab() {
                   })
                 }
                 aria-label="Delete player"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-muted hover:text-danger"
+                className="flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors hover:bg-surface-hover hover:text-danger"
               >
                 <TrashIcon className="h-4 w-4" />
               </button>
@@ -275,7 +275,7 @@ export default function BassPlayersTab() {
           </div>
         </div>
         {player.builtIn ? (
-          <p className="rounded-xl bg-surface px-4 py-3 text-sm text-muted">
+          <p className="rounded-lg bg-foreground/[0.05] px-4 py-3 text-sm text-muted">
             {player.description} It&apos;s read-only — <strong>Make it my own</strong> copies it into your players to edit and add to.
           </p>
         ) : (
@@ -284,32 +284,32 @@ export default function BassPlayersTab() {
           onBlur={(e) => e.target.value !== player.description && void lib.updatePlayer(player.id, { description: e.target.value })}
           placeholder="About this player — their sound, the records you're transcribing…"
           rows={2}
-          className="rounded-xl bg-surface px-4 py-3 text-sm outline-none ring-accent focus:ring-2"
+          className="rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           aria-label="About this player"
         />
         )}
         {noticeEl}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Transcriptions</h2>
+          <h2 className="text-sm font-medium">Transcriptions</h2>
           {!player.builtIn && (
-          <button type="button" onClick={() => void newTranscription(player.id)} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={() => void newTranscription(player.id)} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
             <PlusIcon className="h-4 w-4" /> New transcription
           </button>
           )}
         </div>
         {items.length === 0 ? (
-          <p className="rounded-2xl bg-surface p-6 text-center text-sm text-muted">No transcriptions yet. Start one, or import a MusicXML (.musicxml, .mxl) or a bass transcription .json file.</p>
+          <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">No transcriptions yet. Start one, or import a MusicXML (.musicxml, .mxl) or a bass transcription .json file.</p>
         ) : (
-          <ul className="flex flex-col gap-1 rounded-2xl bg-surface p-2">
+          <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
             {items.map((t) => (
-              <li key={t.id} className="flex items-center gap-1">
+              <li key={t.id} className="flex items-center gap-1 pr-2">
                 <button
                   type="button"
                   onClick={() => setView({ kind: "transcription", playerId: player.id, transcriptionId: t.id })}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-background"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{t.title}</span>
+                    <span className="block truncate text-sm font-medium">{t.title}</span>
                     <span className="block text-xs text-muted">
                       {t.measureCount} bar{t.measureCount === 1 ? "" : "s"} · {isBuiltInId(t.id) ? "built in" : `edited ${new Date(t.updatedAt).toLocaleDateString()}`}
                     </span>
@@ -319,7 +319,7 @@ export default function BassPlayersTab() {
                 <button
                   type="button"
                   onClick={() => setPatterns({ transcriptionId: t.id })}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-muted hover:bg-background hover:text-foreground"
+                  className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                   title="Patterns in this transcription"
                 >
                   <WaveIcon className="h-4 w-4" /> <span className="hidden sm:inline">Patterns</span>
@@ -341,36 +341,34 @@ export default function BassPlayersTab() {
     <div className="flex w-full max-w-3xl flex-col gap-4 text-left">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight">Bass players</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Bass players</h2>
           <p className="text-sm text-muted">Transcribe the players you love. The bass in Rhythm Section learns to play like them from what you write here.</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={() => pickImport(null)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={() => pickImport(null)} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             Import
           </button>
-          <button type="button" onClick={newPlayer} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={newPlayer} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
             <PlusIcon className="h-4 w-4" /> New player
           </button>
         </div>
       </div>
       {!lib.signedIn && (
-        <p className="rounded-xl bg-surface px-4 py-2 text-sm text-muted">You&apos;re signed out, so these are only saved in this browser. Sign in to keep them in your account.</p>
+        <p className="rounded-md bg-foreground/[0.05] px-4 py-2 text-sm text-muted">You&apos;re signed out, so these are only saved in this browser. Sign in to keep them in your account.</p>
       )}
       {noticeEl}
       {lib.players.length === 0 ? (
-        <button type="button" onClick={newPlayer} className="rounded-2xl bg-surface p-8 text-sm text-muted hover:bg-surface-hover">
+        <button type="button" onClick={newPlayer} className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground">
           Add your first bass player — Ray Brown, Paul Chambers, Ron Carter…
         </button>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2">
+        <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
           {lib.players.map((p) => (
             <li key={p.id}>
-              <button type="button" onClick={() => setView({ kind: "player", playerId: p.id })} className="flex w-full items-center gap-3 rounded-2xl bg-surface p-4 text-left hover:bg-surface-hover">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
-                  <BassIcon className="h-5 w-5" />
-                </span>
+              <button type="button" onClick={() => setView({ kind: "player", playerId: p.id })} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover">
+                <BassIcon className="h-4 w-4 shrink-0 text-muted" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{p.name}</span>
+                  <span className="block truncate text-sm font-medium">{p.name}</span>
                   <span className="block text-xs text-muted">
                     {countFor(p.id)} transcription{countFor(p.id) === 1 ? "" : "s"}
                     {p.builtIn ? " · built in" : ""}
@@ -413,17 +411,17 @@ function TranscriptionView({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <BackButton onClick={onBack} label={playerName} className="mb-2" />
-            <h2 className="text-2xl font-extrabold tracking-tight">{initial.title}</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{initial.title}</h2>
             <p className="text-sm text-muted">{[initial.tune, initial.source].filter(Boolean).join(" · ")}</p>
           </div>
           {onCopy && (
-            <button type="button" onClick={onCopy} className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+            <button type="button" onClick={onCopy} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
               Make it my own
             </button>
           )}
         </div>
-        {initial.comments && <p className="rounded-xl bg-surface px-4 py-3 text-sm">{initial.comments}</p>}
-        <div className="rounded-2xl bg-surface p-3 sm:p-5">
+        {initial.comments && <p className="rounded-lg bg-foreground/[0.05] px-4 py-3 text-sm">{initial.comments}</p>}
+        <div className="rounded-lg bg-surface p-3 sm:p-5">
           <TranscriptionScore transcription={initial} cursor={null} playing={null} mode="select" onSelect={noop} onAdd={noop} onReplace={noop} onChordClick={noop} />
         </div>
         <p className="text-xs text-muted">Built in and read-only — make it your own to get an editable copy.</p>

@@ -6,8 +6,8 @@ import { MAX_BEATS, MAX_BEAT_UNIT, SIGNATURE_PRESETS, parseMeter } from "@/lib/m
 import { Key, Tempo, makeId } from "@/lib/types";
 
 const pill = (on: boolean) =>
-  `rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
-    on ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"
+  `rounded-md border px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
+    on ? "border-transparent bg-accent text-accent-foreground" : "border-foreground/15 hover:bg-surface-hover"
   }`;
 
 function Chevron({ open }: { open: boolean }) {
@@ -62,7 +62,7 @@ export function MeterPicker({
           type="button"
           onClick={() => setCustomOpen((o) => !o)}
           aria-expanded={customOpen}
-          className="flex items-center gap-1 self-start rounded-lg py-1 text-sm font-medium text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+          className="flex items-center gap-1 self-start rounded-md py-1 text-sm font-medium text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
         >
           Custom meter
           <Chevron open={customOpen} />
@@ -70,7 +70,7 @@ export function MeterPicker({
         {customOpen && (
           <div className="grid grid-cols-2 gap-4 px-1 pt-3">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Beats per bar</span>
+              <span className="text-xs font-medium text-muted">Beats per bar</span>
               <NumberField
                 label="Beats per bar"
                 value={meter.beats}
@@ -80,7 +80,7 @@ export function MeterPicker({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Beat unit</span>
+              <span className="text-xs font-medium text-muted">Beat unit</span>
               <NumberField
                 label="Beat unit"
                 value={meter.unit}
@@ -150,13 +150,13 @@ export function TempoPicker({
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
           placeholder={`Other BPM (${MIN_TEMPO}–${MAX_TEMPO})`}
           aria-label="Custom tempo"
-          className="w-44 rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+          className="h-9 w-44 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
         />
         <button
           type="button"
           onClick={addCustom}
           disabled={!customValid}
-          className="rounded-lg bg-background px-3 py-2 font-medium hover:bg-surface-hover disabled:opacity-50"
+          className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
         >
           Add
         </button>
@@ -220,7 +220,7 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
         <div
           role="radiogroup"
           aria-label="Key quality"
-          className="flex rounded-lg bg-background p-0.5"
+          className="flex rounded-md bg-foreground/[0.05] p-0.5"
         >
           {[
             { label: "Major", value: false },
@@ -232,7 +232,7 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
               role="radio"
               aria-checked={minor === option.value}
               onClick={() => setMinor(option.value)}
-              className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              className={`rounded-sm px-3 py-1 text-sm font-medium transition-colors ${
                 minor === option.value ? "bg-accent text-accent-foreground" : "text-muted"
               }`}
             >
@@ -243,7 +243,7 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
         <button
           type="button"
           onClick={toggleAll}
-          className="rounded-lg px-2 py-1 text-sm font-medium text-muted hover:text-foreground"
+          className="rounded-md px-2 py-1 text-sm font-medium text-muted hover:text-foreground"
         >
           {allSelected ? "Clear all" : "Select all 12"}
         </button>
@@ -271,7 +271,7 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
           {others.map((k) => (
             <span
               key={k.id}
-              className="flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
+              className="flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
             >
               {k.value}
               <button
@@ -294,13 +294,13 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
           placeholder="Other key (e.g. F# dorian)"
           aria-label="Custom key"
-          className="w-44 rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+          className="h-9 w-44 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
         />
         <button
           type="button"
           onClick={addCustom}
           disabled={!custom.trim()}
-          className="rounded-lg bg-background px-3 py-2 font-medium hover:bg-surface-hover disabled:opacity-50"
+          className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
         >
           Add
         </button>

@@ -85,7 +85,7 @@ function PresetsList({ state }: { state: PresetsState }) {
             return (
               <li
                 key={p.id}
-                className={`flex items-center rounded-xl transition-colors ${on ? "bg-accent/15" : "hover:bg-background"}`}
+                className={`flex items-center rounded-md transition-colors ${on ? "bg-surface-hover" : "hover:bg-surface-hover/60"}`}
                 onContextMenu={(e) => {
                   // (React bubbles events from the portaled menu up to here; ignore those.)
                   if (!e.currentTarget.contains(e.target as Node)) return;
@@ -98,7 +98,7 @@ function PresetsList({ state }: { state: PresetsState }) {
                   onClick={() => state.apply(p)}
                   aria-pressed={on}
                   title={on ? "Your options match this preset" : `Use “${p.name}”`}
-                  className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-2.5 pl-3 pr-2 text-left text-sm font-medium"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-2 pl-2.5 pr-2 text-left text-sm font-medium"
                 >
                   <span className="min-w-0 flex-1 truncate">{p.name}</span>
                   {on && <CheckIcon className="h-4 w-4 shrink-0 text-accent" />}
@@ -111,7 +111,7 @@ function PresetsList({ state }: { state: PresetsState }) {
                     const r = e.currentTarget.getBoundingClientRect();
                     openMenu(p, r.right - 240, r.bottom + 4);
                   }}
-                  className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+                  className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
                 >
                   <DotsVerticalIcon className="h-4 w-4" />
                 </button>
@@ -123,7 +123,7 @@ function PresetsList({ state }: { state: PresetsState }) {
       <button
         type="button"
         onClick={() => setDialog({ kind: "save" })}
-        className="flex items-center gap-1.5 self-start rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+        className="flex h-9 items-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
       >
         <PlusIcon className="h-4 w-4" />
         Save current options

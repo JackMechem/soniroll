@@ -353,8 +353,8 @@ export default function StickControlStave({
 	return (
 		<div
 			ref={wrapperRef}
-			className={`flex w-full flex-col gap-3 rounded-xl p-2 ${
-				background === "background" ? "bg-background" : "bg-surface"
+			className={`flex w-full flex-col gap-3 rounded-lg border p-2 ${
+				background === "background" ? "border-dashed border-foreground/15" : "border-foreground/10 bg-surface"
 			}`}
 		>
 			{rows.map((rowBars, rowIndex) => {

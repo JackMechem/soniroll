@@ -76,7 +76,7 @@ export default function TranscriptionEditor({
   onDelete: () => void;
 }) {
   const { change, saveState } = useAutosave(onSave);
-  const btn = "flex h-10 min-w-10 items-center justify-center gap-1 rounded-lg bg-background px-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover";
+  const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
   return (
     <ScoreEditor
       initial={initial}
@@ -91,7 +91,7 @@ export default function TranscriptionEditor({
                 value={t.title}
                 onChange={(e) => setMeta({ title: e.target.value })}
                 aria-label="Title"
-                className="w-full min-w-0 rounded-lg bg-transparent text-2xl font-extrabold tracking-tight outline-none ring-accent focus:ring-2"
+                className="w-full min-w-0 rounded-md bg-transparent text-xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -107,16 +107,16 @@ export default function TranscriptionEditor({
             </div>
           </div>
 
-          <details className="rounded-xl bg-surface px-4 py-2 text-sm">
-            <summary className="cursor-pointer py-1 font-semibold text-muted">Details</summary>
+          <details className="rounded-lg bg-surface px-4 py-2 text-sm">
+            <summary className="cursor-pointer py-1 font-medium text-muted">Details</summary>
             <div className="grid gap-3 py-2 sm:grid-cols-3">
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted">Tune</span>
-                <input value={t.tune} onChange={(e) => setMeta({ tune: e.target.value })} placeholder="All the Things You Are" className="rounded-lg bg-background px-3 py-2 outline-none ring-accent focus:ring-2" />
+                <input value={t.tune} onChange={(e) => setMeta({ tune: e.target.value })} placeholder="All the Things You Are" className="h-9 rounded-md bg-foreground/[0.05] px-3 outline-none focus:ring-2 focus:ring-accent/40" />
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted">Recording</span>
-                <input value={t.source} onChange={(e) => setMeta({ source: e.target.value })} placeholder="Album, track, year, time" className="rounded-lg bg-background px-3 py-2 outline-none ring-accent focus:ring-2" />
+                <input value={t.source} onChange={(e) => setMeta({ source: e.target.value })} placeholder="Album, track, year, time" className="h-9 rounded-md bg-foreground/[0.05] px-3 outline-none focus:ring-2 focus:ring-accent/40" />
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-muted">Tempo (BPM)</span>
@@ -127,12 +127,12 @@ export default function TranscriptionEditor({
                   value={t.tempo ?? ""}
                   onChange={(e) => setMeta({ tempo: e.target.value ? Math.max(20, Math.min(400, Math.round(Number(e.target.value)))) : null })}
                   placeholder="120"
-                  className="rounded-lg bg-background px-3 py-2 outline-none ring-accent focus:ring-2"
+                  className="h-9 rounded-md bg-foreground/[0.05] px-3 outline-none focus:ring-2 focus:ring-accent/40"
                 />
               </label>
               <label className="flex flex-col gap-1 sm:col-span-3">
                 <span className="text-xs font-medium text-muted">Notes</span>
-                <textarea value={t.comments} onChange={(e) => setMeta({ comments: e.target.value })} rows={2} className="rounded-lg bg-background px-3 py-2 outline-none ring-accent focus:ring-2" />
+                <textarea value={t.comments} onChange={(e) => setMeta({ comments: e.target.value })} rows={2} className="rounded-md bg-foreground/[0.05] px-3 py-2 outline-none focus:ring-2 focus:ring-accent/40" />
               </label>
             </div>
           </details>

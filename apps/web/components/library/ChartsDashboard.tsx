@@ -6,10 +6,9 @@ import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { menuPosition } from "@/components/library/shared";
-import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, PlaylistCard, RecentStrip, Rows } from "@/components/library/ui";
+import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, PlaylistItem, RecentList, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
-import { useTuneLists } from "@/components/library/useTuneActions";
-import { LibraryIcon, ChordChartIcon, DownloadIcon, PlusIcon } from "@/components/tools";
+import { LibraryIcon, DownloadIcon, PlusIcon } from "@/components/tools";
 import { formatComposer } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { sortByText } from "@jam-practice/core/sortText";
@@ -21,8 +20,8 @@ export const playlistHref = (id: string) => `/chord-charts/playlist?id=${encodeU
 
 /**
  * The Chord Charts page — modeled on the mobile app's Chord Charts tab: search across every chart,
- * counts (charts / playlists / charts linked to one of your tunes), the charts you opened most
- * recently, and your playlists as folders (each opens its own page; ⋮ to delete). The + makes a
+ * the charts you opened most recently, and your playlists as rows (each opens its own page; ⋮ to
+ * delete). The + makes a
  * new chart or playlist, or imports. A chart opens on its own page (`ChartViewPage`); every chart
  * row has the chart ⋮ menu (`useChartActions`).
  */
@@ -31,7 +30,6 @@ export default function ChartsDashboard() {
   const { playlists: raw, allSongs, totalSongs, loading, createPlaylist } = useChordChartsLibrary(null);
   const { openSongMenu, openPlaylistMenu, element } = useChartActions();
   const recent = useRecentCharts();
-  const lists = useTuneLists();
   const [query, setQuery] = useState("");
   const [addMenu, setAddMenu] = useState<MenuState | null>(null);
   const [naming, setNaming] = useState(false);
@@ -54,7 +52,6 @@ export default function ChartsDashboard() {
     );
   }, [q, index]);
 
-  const linked = new Set([...lists.tunes.tunes, ...lists.learn.tunes].map((t) => t.chordChartId).filter((id): id is string => !!id && index.has(id))).size;
   const recentCards = recent.ids
     .map((id) => index.get(id))
     .filter((x) => x !== undefined)
@@ -69,7 +66,6 @@ export default function ChartsDashboard() {
         { label: "Import charts", onSelect: () => router.push("/chord-charts/import") },
       ],
     });
-  const sortedTitles = (songs: { title: string }[]) => sortByText(songs, (x) => x.title).map((x) => x.title);
 
   return (
     <LibraryPage>
@@ -79,23 +75,12 @@ export default function ChartsDashboard() {
         titleExtra={<StoragePill />}
         helpTopic="chord-charts"
         tabs={<LibraryTabs active="charts" />}
-        subtitle={
-          loading ? (
-            "Loading…"
-          ) : (
-            <>
-              {totalSongs} chart{totalSongs === 1 ? "" : "s"} · {playlists.length} playlist{playlists.length === 1 ? "" : "s"} · {linked} linked to your tunes
-            </>
-          )
-        }
-        actions={
-          <>
-            <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
-            <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} />
-          </>
-        }
       >
-        <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts by title, composer or style…`} />
+        <Toolbar>
+          <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts…`} />
+          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
+          <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} iconOnlyOnPhone />
+        </Toolbar>
       </Hero>
 
       {loading ? (
@@ -105,7 +90,7 @@ export default function ChartsDashboard() {
       ) : hits ? (
         <Panel title="Results" detail={hits.length} flush>
           {hits.length === 0 ? (
-            <EmptyState icon={ChordChartIcon} title={`No charts match “${query}”`} body="Try part of a title, a composer or a style." />
+            <EmptyState title={`No charts match “${query}”`} body="Try part of a title, a composer or a style." />
           ) : (
             <Rows>
               {hits.slice(0, 200).map((h) => (
@@ -121,51 +106,40 @@ export default function ChartsDashboard() {
           )}
         </Panel>
       ) : totalSongs === 0 && playlists.length === 0 ? (
-        <div className="rounded-2xl bg-surface">
-          <EmptyState
-            icon={ChordChartIcon}
-            title="No chord charts yet"
-            body="Build a chart bar by bar, or import a chart link or a whole playlist."
-            action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <Pill primary icon={PlusIcon} label="New chord chart" href="/chord-charts/new" />
-                <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
-              </div>
-            }
-          />
-        </div>
+        <EmptyState
+          boxed
+          title="No chord charts yet"
+          body="Build a chart bar by bar, or import a chart link or a whole playlist."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Pill primary icon={PlusIcon} label="New chord chart" href="/chord-charts/new" />
+              <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
+            </div>
+          }
+        />
       ) : (
-        <>
+        <div className="grid items-start gap-4 lg:grid-cols-2">
           {recentCards.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <h2 className="px-1 text-sm font-bold text-muted">Jump back in</h2>
-              <RecentStrip items={recentCards} />
-            </section>
+            <Panel title="Jump back in" flush>
+              <RecentList items={recentCards.slice(0, 6)} />
+            </Panel>
           )}
 
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <h2 className="text-lg font-bold">Playlists</h2>
-              <button type="button" onClick={() => setNaming(true)} className="flex items-center gap-1 text-sm font-semibold text-accent hover:underline">
-                <PlusIcon className="h-4 w-4" />
-                New playlist
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1900px]:grid-cols-6">
-              <PlaylistCard featured name="All charts" count={totalSongs} href={playlistHref(ALL_CHARTS_ID)} titles={sortedTitles(allSongs).slice(0, 3)} />
+          <Panel title="Playlists" detail={playlists.length || undefined} onAdd={() => setNaming(true)} addLabel="New playlist" flush className={recentCards.length ? "" : "lg:col-span-2"}>
+            <Rows>
+              <PlaylistItem all name="All charts" count={totalSongs} href={playlistHref(ALL_CHARTS_ID)} />
               {playlists.map((p) => (
-                <PlaylistCard
+                <PlaylistItem
                   key={p.id}
                   name={p.name}
                   count={p.songs.length}
                   href={playlistHref(p.id)}
-                  titles={sortedTitles(p.songs).slice(0, 3)}
                   onMenu={(e) => openPlaylistMenu(e, { id: p.id, name: p.name, count: p.songs.length })}
                 />
               ))}
-            </div>
-          </section>
-        </>
+            </Rows>
+          </Panel>
+        </div>
       )}
 
       {element}

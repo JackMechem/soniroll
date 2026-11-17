@@ -47,7 +47,7 @@ export default function Palette({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[12vh]" onMouseDown={onClose}>
-      <div role="dialog" aria-label={placeholder} className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-surface text-foreground shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={placeholder} className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-foreground shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-foreground/10 px-4">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
@@ -84,13 +84,13 @@ export default function Palette({
                 type="button"
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(i)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${i === at ? "bg-accent/15" : ""}`}
+                className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left ${i === at ? "bg-surface-hover" : ""}`}
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{it.label}</span>
+                  <span className="block truncate text-sm font-medium">{it.label}</span>
                   {it.detail && <span className="block truncate text-xs text-muted">{it.detail}</span>}
                 </span>
-                {it.hint && <kbd className="shrink-0 rounded-md bg-background px-1.5 py-0.5 font-mono text-[11px] text-muted">{it.hint}</kbd>}
+                {it.hint && <kbd className="shrink-0 rounded-sm bg-foreground/[0.05] px-1.5 py-0.5 font-mono text-[11px] text-muted">{it.hint}</kbd>}
               </button>
             </li>
           ))}
@@ -100,10 +100,10 @@ export default function Palette({
                 type="button"
                 onMouseEnter={() => setActive(rows.hits.length)}
                 onClick={() => pick(rows.hits.length)}
-                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${at === rows.hits.length ? "bg-accent/15" : ""}`}
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${at === rows.hits.length ? "bg-surface-hover" : ""}`}
               >
                 <span className="text-muted">New note</span>
-                <span className="truncate font-semibold">{rows.create}</span>
+                <span className="truncate font-medium">{rows.create}</span>
               </button>
             </li>
           )}

@@ -113,37 +113,37 @@ export default function LevelComplete({
         </div>
       )}
 
-      <div className="level-rise relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-surface p-6 text-center shadow-[0_24px_60px_-16px_rgba(0,0,0,0.45)]">
-        <p className="text-xs font-semibold text-muted">
+      <div className="level-rise relative flex w-full max-w-sm flex-col items-center gap-4 rounded-xl bg-surface p-6 text-center shadow-[0_16px_40px_-12px_rgba(0,0,0,0.35)]">
+        <p className="text-xs font-medium text-muted">
           Level {result.levelNumber} · {result.levelTitle}
         </p>
 
         {passed ? (
           <>
-            <div className="flex gap-2 text-5xl leading-none">
+            <div className="flex gap-2 text-4xl leading-none">
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className={`star-pop ${i < result.stars ? "text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" : "text-foreground/15"}`}
+                  className={`star-pop ${i < result.stars ? "text-amber-400" : "text-foreground/15"}`}
                   style={{ "--delay": `${0.25 + i * 0.25}s` } as React.CSSProperties}
                 >
                   ★
                 </span>
               ))}
             </div>
-            <h2 className="text-3xl font-bold text-accent">
+            <h2 className="text-2xl font-semibold tracking-tight">
               {result.pathDone && result.firstPass ? "Path complete!" : praise}
             </h2>
             <p className="text-base">
-              <span className="font-semibold tabular-nums">
+              <span className="font-medium tabular-nums">
                 {result.correct % 1 === 0 ? result.correct : result.correct.toFixed(1)} / {result.total}
               </span>{" "}
               {result.stars === 3 ? "— a perfect run." : "correct."}
             </p>
             {result.firstPass && result.unlocked && (
-              <div className="w-full rounded-2xl bg-accent/10 px-4 py-3">
-                <p className="text-xs font-semibold text-accent">Unlocked</p>
-                <p className="text-lg font-semibold">
+              <div className="w-full rounded-md bg-foreground/[0.05] px-4 py-3">
+                <p className="text-xs font-medium text-muted">Unlocked</p>
+                <p className="text-base font-medium">
                   Level {result.unlocked.number}: {result.unlocked.title}
                 </p>
               </div>
@@ -157,14 +157,14 @@ export default function LevelComplete({
           </>
         ) : (
           <>
-            <div className="text-5xl" aria-hidden>
+            <div className="text-4xl" aria-hidden>
               {result.score >= PASS_SCORE - 0.25 ? "🔥" : "💪"}
             </div>
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-2xl font-semibold tracking-tight">
               {result.score >= PASS_SCORE - 0.25 ? "So close!" : "Keep at it!"}
             </h2>
             <p className="text-base">
-              <span className="font-semibold tabular-nums">
+              <span className="font-medium tabular-nums">
                 {result.correct % 1 === 0 ? result.correct : result.correct.toFixed(1)} / {result.total}
               </span>{" "}
               — you need {needed} to pass.
@@ -177,21 +177,21 @@ export default function LevelComplete({
           {passed ? (
             // Any pass — 1, 2 or 3 stars — can go straight on or replay the level for a better score.
             <div className="flex w-full gap-2">
-              <button type="button" onClick={onRetry} autoFocus={!result.unlocked} className="flex-1 rounded-full bg-background px-4 py-3 text-base font-semibold hover:bg-surface-hover">
+              <button type="button" onClick={onRetry} autoFocus={!result.unlocked} className="h-10 flex-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover">
                 Restart level
               </button>
               {result.unlocked && (
-                <button type="button" onClick={onNext} autoFocus className="flex-1 rounded-full bg-accent px-4 py-3 text-base font-semibold text-accent-foreground hover:bg-accent-hover">
+                <button type="button" onClick={onNext} autoFocus className="h-10 flex-1 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
                   Next level
                 </button>
               )}
             </div>
           ) : (
-            <button type="button" onClick={onRetry} autoFocus className="rounded-full bg-accent px-6 py-3 text-base font-semibold text-accent-foreground hover:bg-accent-hover">
+            <button type="button" onClick={onRetry} autoFocus className="h-10 rounded-md bg-accent px-6 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
               Try again
             </button>
           )}
-          <button type="button" onClick={onClose} className="rounded-full px-6 py-2 text-sm font-medium text-muted hover:bg-background hover:text-foreground">
+          <button type="button" onClick={onClose} className="h-9 rounded-md px-6 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             Back to the path
           </button>
         </div>

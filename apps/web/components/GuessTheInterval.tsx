@@ -64,6 +64,7 @@ import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learnin
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
+import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -700,7 +701,7 @@ export default function GuessTheInterval() {
             summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
           >
             {bestMs !== null && (
-              <p className="text-sm font-semibold tabular-nums">
+              <p className="text-sm font-medium tabular-nums">
                 Best {formatDuration(bestMs)}
               </p>
             )}
@@ -709,13 +710,13 @@ export default function GuessTheInterval() {
                 No attempts yet with these settings.
               </p>
             ) : (
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              <div className={PANEL_LIST}>
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                      className={PANEL_ROW}
                     >
                       <div className="flex flex-col">
                         <span className="font-medium tabular-nums">
@@ -753,7 +754,7 @@ export default function GuessTheInterval() {
                     ),
                   })
                 }
-                className="self-start text-sm font-medium text-muted hover:text-danger"
+                className={TEXT_BUTTON_DANGER}
               >
                 Clear these times
               </button>
@@ -771,11 +772,11 @@ export default function GuessTheInterval() {
                 No struggles tracked yet — a wrong guess adds it here.
               </p>
             ) : (
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              <div className={PANEL_LIST}>
                 {weakEntries.map((entry) => (
                   <div
                     key={entry.key}
-                    className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                    className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.interval.label}</span>
                     <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
@@ -796,7 +797,7 @@ export default function GuessTheInterval() {
               type="button"
               onClick={() => void start("weak")}
               disabled={running || weakEntries.length === 0}
-              className="self-start rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+              className={PRIMARY_BUTTON_SM}
             >
               Shed weak intervals{weakEntries.length > 0 && ` (${weakEntries.length})`}
             </button>
@@ -805,7 +806,7 @@ export default function GuessTheInterval() {
                 type="button"
                 onClick={clearIntervalStats}
                 disabled={running}
-                className="self-start text-sm font-medium text-muted hover:text-danger disabled:opacity-50"
+                className={TEXT_BUTTON_DANGER}
               >
                 Clear stats
               </button>
@@ -854,7 +855,7 @@ export default function GuessTheInterval() {
               {INTERVALS.map((interval) => {
                 const selected = settings.intervalIds.includes(interval.id);
                 return (
-                  <PoolPill key={interval.id} on={selected} onClick={() => toggleInterval(interval.id)} disabled={running} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
+                  <PoolPill key={interval.id} on={selected} onClick={() => toggleInterval(interval.id)} disabled={running} plainClassName="rounded-md px-3 py-1.5 text-xs font-medium">
                     {interval.label}
                   </PoolPill>
                 );
@@ -901,7 +902,7 @@ export default function GuessTheInterval() {
                   onChange={(e) => setCustomRange(e.target.value)}
                   disabled={running}
                   placeholder="A1-A6"
-                  className="rounded-lg bg-background px-3 py-2 text-foreground disabled:opacity-60"
+                  className="h-9 rounded-md bg-foreground/[0.05] px-3 text-foreground outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60"
                 />
               </label>
             )}
@@ -1046,17 +1047,17 @@ export default function GuessTheInterval() {
       )}
       <div className="flex flex-col items-center gap-3">
         {activeLevel !== null && running && (
-          <p className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+          <p className={LEVEL_LABEL}>
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold text-muted">
+            <span className="text-xs font-medium text-muted">
               Next interval in
             </span>
             <span
-              className="text-3xl font-bold tabular-nums sm:text-4xl"
+              className="text-3xl font-semibold tabular-nums sm:text-4xl"
               style={{ color: GRADE_COLOR[status] }}
             >
               <CountdownLabel active={running} timerRef={noteTimerRef} />
@@ -1067,14 +1068,13 @@ export default function GuessTheInterval() {
         <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <h1
-            className={`relative z-10 font-bold transition-[color,text-shadow] duration-200 ${
+            className={`relative z-10 font-bold transition-colors duration-200 ${
               mainLabelLong ? "text-xl sm:text-2xl" : "text-4xl sm:text-5xl"
             }`}
             style={
               glow
                 ? {
                     color: glow,
-                    textShadow: `0 0 12px ${glow}, 0 0 32px ${glow}, 0 0 64px ${glow}`,
                   }
                 : undefined
             }
@@ -1088,7 +1088,7 @@ export default function GuessTheInterval() {
           <button
             type="button"
             onClick={() => playIntervalSound(round.notes)}
-            className="flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover"
+            className={SECONDARY_BUTTON}
           >
             <PlayIcon className="h-3.5 w-3.5" />
             Replay
@@ -1120,21 +1120,8 @@ export default function GuessTheInterval() {
                   type="button"
                   onClick={() => submitGuess(interval.id)}
                   disabled={answered}
-                  style={
-                    color
-                      ? {
-                          color,
-                          background: `color-mix(in srgb, ${color} 15%, transparent)`,
-                        }
-                      : undefined
-                  }
-                  className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                    color
-                      ? ""
-                      : answered
-                        ? "bg-background text-muted opacity-50"
-                        : "bg-background hover:bg-surface-hover"
-                  }`}
+                  style={answerButtonStyle(color)}
+                  className={answerButtonClass(color, answered)}
                 >
                   {interval.label}
                 </button>
@@ -1147,7 +1134,7 @@ export default function GuessTheInterval() {
           <button
             type="button"
             onClick={() => submitGuess(null)}
-            className="text-sm font-medium text-muted hover:text-foreground"
+            className={TEXT_BUTTON}
           >
             I don&apos;t know
           </button>
@@ -1165,20 +1152,20 @@ export default function GuessTheInterval() {
       {summary && !running && !learnMode && (
         <section
           aria-label="Results"
-          className="flex w-full flex-col gap-4 rounded-2xl bg-surface p-4 text-left sm:p-6"
+          className={RESULTS_PANEL}
         >
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-muted">Results</p>
-              <p className="text-4xl font-bold tabular-nums">
+              <p className="text-sm font-medium text-muted">Results</p>
+              <p className="text-3xl font-semibold tabular-nums">
                 {score % 1 === 0 ? score : score.toFixed(1)}
-                <span className="text-xl font-semibold text-muted">
+                <span className="text-lg font-medium text-muted">
                   {" "}
                   / {summary.results.length}
                 </span>
               </p>
             </div>
-            <p className="text-2xl font-semibold tabular-nums text-muted">
+            <p className="text-xl font-medium tabular-nums text-muted">
               {summary.results.length
                 ? Math.round((score / summary.results.length) * 100)
                 : 0}
@@ -1201,16 +1188,16 @@ export default function GuessTheInterval() {
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             {(["correct", "incorrect"] as const).map((grade) => (
-              <div key={grade} className="rounded-xl bg-background px-2 py-3">
+              <div key={grade} className="flex items-baseline gap-1.5">
                 <p
-                  className="text-2xl font-bold tabular-nums"
+                  className="font-semibold tabular-nums"
                   style={{ color: GRADE_COLOR[grade] }}
                 >
                   {tally(grade)}
                 </p>
-                <p className="text-xs text-muted">{GRADE_LABEL[grade]}</p>
+                <p className="text-muted">{GRADE_LABEL[grade]}</p>
               </div>
             ))}
           </div>
@@ -1220,7 +1207,7 @@ export default function GuessTheInterval() {
               <span
                 key={i}
                 title={GRADE_LABEL[summary.results[i]]}
-                className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                className={GRADE_TAG}
                 style={{
                   color: GRADE_COLOR[summary.results[i]],
                   background: `color-mix(in srgb, ${GRADE_COLOR[summary.results[i]]} 15%, transparent)`,
@@ -1234,14 +1221,14 @@ export default function GuessTheInterval() {
             <button
               type="button"
               onClick={() => void start(lastMode)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className={PRIMARY_BUTTON}
             >
               Try again
             </button>
             <button
               type="button"
               onClick={() => setSummary(null)}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className={SECONDARY_BUTTON}
             >
               Close
             </button>
@@ -1254,11 +1241,7 @@ export default function GuessTheInterval() {
       <button
         type="button"
         onClick={running ? stop : () => void start(learnMode ? "learn" : "normal")}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-          running
-            ? "bg-surface hover:bg-surface-hover"
-            : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={startButtonClass(running)}
       >
         {running ? "Stop" : learnMode ? `Start level ${learn.selected + 1}` : "Start"}
       </button>

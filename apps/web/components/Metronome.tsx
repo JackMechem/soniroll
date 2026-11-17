@@ -3,6 +3,8 @@
 import { useEffect, useSyncExternalStore } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import {
+  BIG_PRIMARY,
+  BIG_SECONDARY,
   TempoHero,
   TempoNoteConversionHint,
   TempoNoteValuePicker,
@@ -239,7 +241,7 @@ export default function Metronome() {
           </p>
         )}
         {useStructure && !activeSection ? (
-          <p className="rounded-xl bg-surface px-4 py-3 text-center text-sm text-muted">
+          <p className="rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
             Open Sections to add sections and arrange a form.
           </p>
         ) : (
@@ -261,11 +263,7 @@ export default function Metronome() {
         onClick={running ? stop : start}
         disabled={!running && !canStart}
         title={!running && !canStart ? "Add sections and a form first" : undefined}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          running
-            ? "bg-surface hover:bg-surface-hover"
-            : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={running ? BIG_SECONDARY : BIG_PRIMARY}
       >
         {running ? "Stop" : "Start"}
       </button>
@@ -289,7 +287,7 @@ export default function Metronome() {
           />
         </div>
         {useStructure && (
-          <div className="w-[min(30rem,calc(100vw-2rem))] rounded-3xl bg-surface p-4 text-left">
+          <div className="w-[min(30rem,calc(100vw-2rem))] rounded-lg bg-surface p-4 text-left">
             <StructureEditor
               show="form"
               structure={structure}
@@ -345,7 +343,7 @@ export default function Metronome() {
                         }}
                         className="h-14"
                       >
-                        <span className="flex flex-col items-center text-base font-extrabold leading-[0.95] tabular-nums">
+                        <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
                           <span>{b}</span>
                           <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
                           <span>{u}</span>

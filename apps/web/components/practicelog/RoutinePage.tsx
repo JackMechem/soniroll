@@ -112,61 +112,59 @@ export default function RoutinePage({ id }: { id: string }) {
     router.push(`/shed-log?date=${today}`);
   }
 
+  const recCount = recordings?.length ?? 0;
+
   return (
     <PageShell>
-      <BackButton href="/shed-log" label="Shed Log" />
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2.5 text-3xl font-extrabold tracking-tight">
-            <RoutineIcon icon={routine.icon} color={routine.color} size="lg" />
-            <span className="truncate">{routine.name || "Untitled routine"}</span>
-          </h1>
-          <p className="text-sm text-muted">
-            {describeRepeat(routine.repeat)}
-            {start !== null ? ` · ${formatTime(start)}` : ""} · {formatMinutesShort(totalMinutes(routine))}
-          </p>
-          {routine.assigned && (
-            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent">
-              From {routine.assigned.teacher} · they see how it goes
+      <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
+        <BackButton href="/shed-log" label="Shed Log" />
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="flex min-w-0 items-center gap-2.5 text-2xl font-semibold tracking-tight">
+              <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
+              <span className="truncate">{routine.name || "Untitled routine"}</span>
+            </h1>
+            <p className="text-sm text-muted">
+              {describeRepeat(routine.repeat)}
+              {start !== null ? ` · ${formatTime(start)}` : ""} · {formatMinutesShort(totalMinutes(routine))}
             </p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setSharing(true)} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-            <ShareIcon className="h-4 w-4" /> Share
-          </button>
-          {/* A teacher's routine is theirs to change (edits here would be overwritten by theirs). */}
-          {!routine.assigned && (
-            <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-              <PencilIcon className="h-4 w-4" /> Edit
-            </Link>
-          )}
-          {!running && routine.tasks.some((t) => t.minutes > 0) && (
-            <button type="button" onClick={startToday} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
-              <PlayIcon className="h-4 w-4" /> Start today
+            {/* What's been done with it, as one quiet line. */}
+            <p className="text-xs tabular-nums text-muted">
+              {completed} day{completed === 1 ? "" : "s"} completed · {formatMinutesShort(Math.round(minutes))} practiced
+              {isAuthenticated && recordings !== undefined ? ` · ${recCount} recording${recCount === 1 ? "" : "s"}` : ""}
+            </p>
+            {routine.assigned && <p className="text-xs text-muted">From {routine.assigned.teacher} · they see how it goes</p>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setSharing(true)} className={SECONDARY}>
+              <ShareIcon className="h-4 w-4 text-muted" /> Share
             </button>
-          )}
+            {/* A teacher's routine is theirs to change (edits here would be overwritten by theirs). */}
+            {!routine.assigned && (
+              <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className={SECONDARY}>
+                <PencilIcon className="h-4 w-4 text-muted" /> Edit
+              </Link>
+            )}
+            {!running && routine.tasks.some((t) => t.minutes > 0) && (
+              <button type="button" onClick={startToday} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+                <PlayIcon className="h-4 w-4" /> Start today
+              </button>
+            )}
+          </div>
         </div>
       </div>
       {routine.description && <p className="whitespace-pre-wrap text-sm">{routine.description}</p>}
 
-      <div className="grid grid-cols-3 gap-3">
-        <Stat value={String(completed)} label={`Day${completed === 1 ? "" : "s"} completed`} />
-        <Stat value={formatMinutesShort(Math.round(minutes))} label="Practiced" />
-        <Stat value={String(recordings?.length ?? 0)} label={`Recording${recordings?.length === 1 ? "" : "s"}`} />
-      </div>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="px-1 text-lg font-bold">Tasks</h2>
+      <Section title="Tasks">
         {routine.tasks.length === 0 ? (
           <EmptyCard>No tasks yet — Edit to add some.</EmptyCard>
         ) : (
-          <ol className="flex flex-col divide-y divide-surface-hover rounded-2xl bg-surface">
+          <ol className={LIST}>
             {schedule.map(({ task, start }, i) => (
-              <li key={task.id} className="flex gap-3 p-3">
-                <span className="w-5 shrink-0 pt-0.5 text-center text-sm font-bold tabular-nums text-muted">{i + 1}</span>
+              <li key={task.id} className="flex gap-3 px-4 py-3">
+                <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium">{task.title || "Untitled task"}</div>
+                  <div className="text-sm font-medium">{task.title || "Untitled task"}</div>
                   <div className="text-xs text-muted">
                     {start !== null ? `${formatTime(start)} · ` : ""}
                     {formatMinutesShort(task.minutes)}
@@ -182,32 +180,29 @@ export default function RoutinePage({ id }: { id: string }) {
             ))}
           </ol>
         )}
-      </section>
+      </Section>
 
       {routine.attachments.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="px-1 text-lg font-bold">Attached</h2>
+        <Section title="Attached">
           <AttachmentList items={routine.attachments} />
-        </section>
+        </Section>
       )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="px-1 text-lg font-bold">Coming up</h2>
+      <Section title="Coming up">
         {upcoming.length === 0 ? (
           <EmptyCard>Nothing coming up{routine.repeat.end ? ` — it ended ${formatShortDate(routine.repeat.end)}` : ""}.</EmptyCard>
         ) : (
           <div className="flex flex-wrap gap-2">
             {upcoming.map((date) => (
-              <Link key={date} href={`/shed-log?date=${date}`} className="rounded-full bg-surface px-3 py-1.5 text-sm font-medium hover:bg-surface-hover">
+              <Link key={date} href={`/shed-log?date=${date}`} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
                 {date === today ? "Today" : formatShortDate(date)}
               </Link>
             ))}
           </div>
         )}
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="px-1 text-lg font-bold">Recordings</h2>
+      <Section title="Recordings">
         {!isAuthenticated ? (
           <EmptyCard>Sign in to record clips — recordings are saved to your account.</EmptyCard>
         ) : recordings === undefined ? (
@@ -217,7 +212,7 @@ export default function RoutinePage({ id }: { id: string }) {
         ) : (
           byDate.map(([date, list]) => (
             <div key={date || "none"} className="flex flex-col gap-2">
-              <Link href={date ? `/shed-log?date=${date}` : "/shed-log"} className="px-1 text-sm font-semibold text-muted hover:text-foreground">
+              <Link href={date ? `/shed-log?date=${date}` : "/shed-log"} className="self-start text-xs font-medium text-muted hover:text-foreground">
                 {date ? formatLongDate(date) : "No day"}
               </Link>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -228,29 +223,28 @@ export default function RoutinePage({ id }: { id: string }) {
             </div>
           ))
         )}
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="px-1 text-lg font-bold">History</h2>
+      <Section title="History">
         {history.length === 0 ? (
           <EmptyCard>Nothing logged yet.</EmptyCard>
         ) : (
-          <ul className="flex flex-col divide-y divide-surface-hover rounded-2xl bg-surface">
+          <ul className={LIST}>
             {history.map(({ date, occ }) => {
               const p = progressOf(routine, occ);
               const complete = p.total > 0 && p.done === p.total;
               const m = minutesFor(routine, occ);
               return (
                 <li key={date}>
-                  <Link href={`/shed-log?date=${date}`} className="flex items-start gap-3 p-3 hover:bg-surface-hover/50">
+                  <Link href={`/shed-log?date=${date}`} className="flex items-start gap-3 px-4 py-3 hover:bg-surface-hover">
                     <span
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${complete ? "text-white" : "border-2 border-surface-hover"}`}
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${complete ? "text-white" : "border-[1.5px] border-foreground/25"}`}
                       style={complete ? { background: color } : undefined}
                     >
-                      {complete && <CheckIcon className="h-3 w-3" />}
+                      {complete && <CheckIcon className="h-2.5 w-2.5" />}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium">{formatLongDate(date)}</div>
+                      <div className="text-sm font-medium">{formatLongDate(date)}</div>
                       <div className="text-xs text-muted">
                         {occ.skipped ? "Skipped" : `${p.done}/${p.total} tasks${m > 0 ? ` · ${formatMinutesShort(Math.round(m))}` : ""}`}
                       </div>
@@ -262,17 +256,20 @@ export default function RoutinePage({ id }: { id: string }) {
             })}
           </ul>
         )}
-      </section>
+      </Section>
       {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
     </PageShell>
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+const SECONDARY = "flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
+const LIST = "flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface";
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl bg-surface p-4">
-      <div className="truncate text-2xl font-extrabold tabular-nums">{value}</div>
-      <div className="text-xs font-semibold text-muted">{label}</div>
-    </div>
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-medium">{title}</h2>
+      {children}
+    </section>
   );
 }

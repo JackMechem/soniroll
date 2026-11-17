@@ -440,10 +440,10 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         style={{ "--list-w": `${shownListWidth}px` } as React.CSSProperties}
         className={`relative min-h-0 flex-col gap-3 lg:w-[var(--list-w)] lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
         <div className="flex items-center gap-2">
-          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-xl">
-            <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7 lg:h-5 lg:w-5" /> <span className="truncate">Shed Notes</span>
+          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-semibold tracking-tight lg:text-base">
+            <DocumentIcon className="hidden h-[18px] w-[18px] shrink-0 text-muted lg:block" /> <span className="truncate">Shed Notes</span>
           </h1>
-          <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Alt-f")})`} className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground">
+          <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Alt-f")})`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <SearchIcon className="h-4 w-4" />
           </button>
           <button
@@ -461,11 +461,11 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
             }}
             aria-label="Export or import notes"
             title="Export or import notes"
-            className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
           >
             <DownloadIcon className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => open(SETTINGS_ID)} aria-label="Settings file" title="Settings file" className={`shrink-0 rounded-full p-2 ${current === SETTINGS_ID ? "bg-accent/15 text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}>
+          <button type="button" onClick={() => open(SETTINGS_ID)} aria-label="Settings file" title="Settings file" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${current === SETTINGS_ID ? "bg-surface-hover text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}>
             <GearIcon className="h-4 w-4" />
           </button>
         </div>
@@ -478,7 +478,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           <TemplatesPane templates={templates ?? []} notes={notes.map((n) => ({ title: n.title, folder: n.folder }))} config={cfg.config} actions={actions} onBack={() => open(back.length ? back[back.length - 1] : null)} onNotice={setNotice} />
         ) : current === SETTINGS_ID ? (
           <>
-            <button type="button" onClick={() => open(null)} className="mb-3 self-start rounded-full bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-surface-hover lg:hidden">
+            <button type="button" onClick={() => open(null)} className="mb-3 flex h-9 items-center self-start rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden">
               ‹ Notes
             </button>
             <SettingsPane text={cfg.text} setText={cfg.setText} config={cfg.config} errors={cfg.errors} broken={cfg.broken} actions={actions} />
@@ -509,23 +509,22 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
             onToggleLinks={() => setPanels({ linksHidden: !linksHidden })}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-foreground/10 p-10 text-center">
-            <DocumentIcon className="h-10 w-10 text-accent" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
             <div>
-              <p className="text-lg font-bold">{notes.length ? "Pick a note, or start a new one" : "Your first note"}</p>
+              <p className="text-sm font-medium">{notes.length ? "Pick a note, or start a new one" : "Your first note"}</p>
               <p className="mt-1 max-w-sm text-sm text-muted">Notes are markdown. Link them with [[Title]], write notation, and attach them to your routines and tunes.</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              <button type="button" onClick={() => void createNote()} className="flex items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+              <button type="button" onClick={() => void createNote()} className="flex h-9 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
                 <PlusIcon className="h-4 w-4" /> New note
               </button>
               {(templates?.length ?? 0) > 0 && (
-                <button type="button" onClick={() => actions.newFromTemplate?.(null)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+                <button type="button" onClick={() => actions.newFromTemplate?.(null)} className="h-9 rounded-md px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                   From a template
                 </button>
               )}
               {notes.length > 0 && (
-                <button type="button" onClick={() => setPalette({ mode: "notes", items: noteItems() })} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+                <button type="button" onClick={() => setPalette({ mode: "notes", items: noteItems() })} className="h-9 rounded-md px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                   Open a note
                 </button>
               )}
@@ -666,7 +665,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         />
       )}
       {notice && (
-        <div role="status" className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
+        <div role="status" className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
           {notice}
         </div>
       )}

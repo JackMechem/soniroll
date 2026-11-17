@@ -348,25 +348,25 @@ export default function ChordChartEditor({
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{editing ? `Edit "${initial?.title}"` : "Create a chord chart"}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{editing ? `Edit "${initial?.title}"` : "Create a chord chart"}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+          className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
         >
           Close
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-2xl bg-surface p-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
         {!editing && (
           <div className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="font-medium text-muted">Playlist</span>
+            <span className="text-xs font-medium text-muted">Playlist</span>
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={playlist}
                 onChange={(e) => setPlaylist(e.target.value)}
-                className="rounded-lg bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
               >
                 <option value={NO_PLAYLIST}>No playlist (All charts only)</option>
                 {playlists.map((name) => (
@@ -381,48 +381,48 @@ export default function ChordChartEditor({
                   value={newPlaylist}
                   onChange={(e) => setNewPlaylist(e.target.value)}
                   placeholder="New playlist name"
-                  className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
                 />
               )}
             </div>
           </div>
         )}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Title</span>
+          <span className="text-xs font-medium text-muted">Title</span>
           <input
             autoFocus={!editing}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Tune name"
-            className="rounded-lg bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Composer</span>
+          <span className="text-xs font-medium text-muted">Composer</span>
           <input
             value={composer}
             onChange={(e) => setComposer(e.target.value)}
             placeholder="Optional"
-            className="rounded-lg bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Style</span>
+          <span className="text-xs font-medium text-muted">Style</span>
           <input
             value={style}
             onChange={(e) => setStyle(e.target.value)}
             placeholder="Optional — e.g. Medium Swing"
-            className="rounded-lg bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
           />
         </label>
         <div className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Key &amp; time signature</span>
+          <span className="text-xs font-medium text-muted">Key &amp; time signature</span>
           <div className="flex items-center gap-2">
             <input
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="Key — e.g. Bb"
-              className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
             <NumberField
               label="Beats per bar"
@@ -430,7 +430,7 @@ export default function ChordChartEditor({
               min={1}
               max={32}
               onChange={setTop}
-              className="w-14 rounded-lg bg-background px-2 py-2 text-center tabular-nums outline-none focus:ring-2 focus:ring-accent"
+              className="h-9 w-14 rounded-md bg-foreground/[0.05] px-2 text-center text-base tabular-nums outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
             <span className="text-muted">/</span>
             <NumberField
@@ -439,7 +439,7 @@ export default function ChordChartEditor({
               min={1}
               max={32}
               onChange={setBottom}
-              className="w-14 rounded-lg bg-background px-2 py-2 text-center tabular-nums outline-none focus:ring-2 focus:ring-accent"
+              className="h-9 w-14 rounded-md bg-foreground/[0.05] px-2 text-center text-base tabular-nums outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function ChordChartEditor({
                     }}
                     placeholder="Intro"
                     aria-label={`Bar ${globalIndex + 1} section`}
-                    className="absolute left-0.5 top-0.5 h-[1.6em] min-w-[1.6em] max-w-[8rem] rounded bg-accent px-1 text-left font-bold leading-none text-accent-foreground outline-none placeholder:text-accent-foreground/60"
+                    className="absolute left-0.5 top-0.5 h-[1.6em] min-w-[1.6em] max-w-[8rem] rounded bg-accent px-1 text-left font-semibold leading-none text-accent-foreground outline-none placeholder:text-accent-foreground/60"
                     // The HTML `size` attribute this used before is only a rough, per-browser
                     // approximation (historically based on the width of several "0" characters
                     // plus its own baked-in slack) — not nearly tight enough, which is exactly
@@ -543,7 +543,7 @@ export default function ChordChartEditor({
         <button
           type="button"
           onClick={addBar}
-          className="flex items-center gap-1.5 self-start rounded-lg px-2 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+          className="flex items-center gap-1.5 self-start rounded-md px-2 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
         >
           <PlusIcon className="h-4 w-4" />
           Add bar
@@ -551,9 +551,9 @@ export default function ChordChartEditor({
       )}
 
       {activeBar && (
-        <div className="flex flex-col gap-3 rounded-xl bg-surface p-2.5">
+        <div className="flex flex-col gap-3 rounded-lg bg-surface p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-muted">Bar {activeIndex + 1}</span>
+            <span className="shrink-0 text-xs font-medium text-muted">Bar {activeIndex + 1}</span>
             {activeBar.hasSection ? (
               <BarToggle
                 label="Remove section"
@@ -567,7 +567,7 @@ export default function ChordChartEditor({
                 onClick={() => updateBar(activeIndex, { hasSection: true })}
               />
             )}
-            <span aria-hidden className="h-5 w-px shrink-0 bg-background" />
+            <span aria-hidden className="h-5 w-px shrink-0 bg-foreground/10" />
             <BarToggle
               label="Start repeat"
               active={activeBar.startRepeat}
@@ -597,7 +597,7 @@ export default function ChordChartEditor({
               onClick={() => removeBar(activeIndex)}
               disabled={bars.length <= 1}
               aria-label={`Remove bar ${activeIndex + 1}`}
-              className="ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-background hover:text-danger disabled:opacity-30"
+              className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-danger disabled:opacity-30"
             >
               <TrashIcon className="h-3.5 w-3.5" />
               Remove bar
@@ -616,7 +616,7 @@ export default function ChordChartEditor({
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="rounded-lg bg-background px-3 py-1 text-xs font-medium hover:bg-surface-hover"
+              className="rounded-md bg-foreground/[0.05] px-3 py-1 text-xs font-medium hover:bg-surface-hover"
             >
               {copied ? "Copied!" : "Copy"}
             </button>
@@ -626,16 +626,16 @@ export default function ChordChartEditor({
             value={exported}
             rows={3}
             onFocus={(e) => e.currentTarget.select()}
-            className="w-full resize-y rounded-lg bg-background p-2 text-left font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="w-full resize-y rounded-md bg-background p-2 text-left font-mono text-xs outline-none focus:ring-2 focus:ring-accent/40"
           />
         </div>
       )}
 
-      <div className="flex flex-wrap justify-end gap-2 border-t border-surface pt-4">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-foreground/10 pt-4">
         <button
           type="button"
           onClick={handleExport}
-          className="rounded-lg bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+          className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
         >
           Export as chart link
         </button>
@@ -643,7 +643,7 @@ export default function ChordChartEditor({
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40"
+          className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40"
         >
           {saving ? "Saving…" : editing ? "Save changes" : "Save to library"}
         </button>
@@ -709,8 +709,8 @@ function BarToggle({
         onClick={onClick}
         aria-pressed={active}
         title={label}
-        className={`flex flex-col items-center gap-0.5 rounded-lg px-2 py-1.5 transition-colors ${
-          active ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"
+        className={`flex flex-col items-center gap-0.5 rounded-md border px-2 py-1.5 transition-colors ${
+          active ? "border-transparent bg-accent text-accent-foreground" : "border-foreground/15 hover:bg-surface-hover"
         }`}
       >
         <span className="flex h-4 items-center justify-center">
@@ -731,10 +731,10 @@ function BarToggle({
       onClick={onClick}
       aria-pressed={active}
       title={label}
-      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+      className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
         active
-          ? "bg-accent text-accent-foreground"
-          : "bg-background text-muted hover:bg-surface-hover hover:text-foreground"
+          ? "border-transparent bg-accent text-accent-foreground"
+          : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {label}

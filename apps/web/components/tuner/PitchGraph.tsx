@@ -158,7 +158,7 @@ export default function PitchGraph({
         width="100%"
         height={HEIGHT}
         viewBox={`0 0 ${Math.max(1, width)} ${HEIGHT}`}
-        className="block w-full cursor-pointer touch-pan-y select-none rounded-xl bg-background outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="block w-full cursor-pointer touch-pan-y select-none rounded-md bg-background outline-none focus-visible:ring-2 focus-visible:ring-accent"
         role="slider"
         tabIndex={0}
         aria-label="Pitch over time. Drag to move the playhead"
@@ -241,7 +241,7 @@ export default function PitchGraph({
           width="100%"
           height={OVERVIEW_H}
           viewBox={`0 0 ${Math.max(1, width)} ${OVERVIEW_H}`}
-          className="block w-full cursor-pointer touch-pan-y select-none rounded-lg bg-background"
+          className="block w-full cursor-pointer touch-pan-y select-none rounded-md bg-background"
           aria-hidden
           {...overview.handlers((clientX, rect) => overviewTimeAt(clientX, rect), 0)}
         >

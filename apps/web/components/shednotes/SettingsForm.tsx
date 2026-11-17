@@ -46,7 +46,7 @@ export default function SettingsForm({ text, setText, config, broken }: { text: 
 
   if (broken) {
     return (
-      <div className="rounded-2xl bg-danger/10 p-4 text-sm text-danger">
+      <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
         The JSON has a mistake in it, so these settings can&apos;t be changed here until it&apos;s fixed. Open the JSON tab to see where.
       </div>
     );
@@ -80,32 +80,32 @@ export default function SettingsForm({ text, setText, config, broken }: { text: 
 
       <Section title="Vim">
         <label className="flex flex-col gap-1 sm:max-w-sm">
-          <span className="text-xs font-semibold text-muted">Leader key</span>
+          <span className="text-xs font-medium text-muted">Leader key</span>
           <input
             value={config.vim.leader}
             onChange={(e) => e.target.value && write(setVimValue(text, "leader", e.target.value))}
-            className="h-10 rounded-xl bg-background px-3 font-mono text-sm outline-none ring-accent focus:ring-2"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 font-mono text-sm outline-none transition-colors focus:ring-2 focus:ring-accent/40"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-muted">Mappings, one per line</span>
+          <span className="text-xs font-medium text-muted">Mappings, one per line</span>
           <textarea
             value={config.vim.mappings.join("\n")}
             onChange={(e) => write(setVimValue(text, "mappings", e.target.value.split("\n")))}
             rows={Math.max(3, config.vim.mappings.length + 1)}
             spellCheck={false}
             placeholder="imap jk <Esc>"
-            className="rounded-xl bg-background px-3 py-2 font-mono text-sm outline-none ring-accent focus:ring-2"
+            className="rounded-md bg-foreground/[0.05] px-3 py-2 font-mono text-sm outline-none transition-colors focus:ring-2 focus:ring-accent/40"
           />
           <span className="text-xs text-muted">map, nmap, imap, vmap, noremap, nnoremap, inoremap, vnoremap or unmap.</span>
         </label>
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-muted">Your : commands</span>
+          <span className="text-xs font-medium text-muted">Your : commands</span>
           {Object.keys(config.vim.exCommands).length ? (
             <ul className="flex flex-col gap-1 text-sm">
               {Object.entries(config.vim.exCommands).map(([name, id]) => (
                 <li key={name} className="flex flex-wrap items-baseline gap-x-2">
-                  <code className="font-semibold text-accent">:{name}</code>
+                  <code className="font-medium text-foreground">:{name}</code>
                   <span className="text-muted">{COMMAND_BY_ID.get(id)?.name ?? id}</span>
                 </li>
               ))}
@@ -115,8 +115,8 @@ export default function SettingsForm({ text, setText, config, broken }: { text: 
           )}
           <span className="text-xs text-muted">Add or change these in the JSON tab, under &quot;vim&quot; → &quot;exCommands&quot;.</span>
         </div>
-        <details className="group rounded-xl bg-background p-3">
-          <summary className="cursor-pointer select-none text-sm font-semibold text-accent">How to write mappings</summary>
+        <details className="group rounded-md bg-background p-3">
+          <summary className="cursor-pointer select-none text-sm font-medium">How to write mappings</summary>
           <div className="pt-3">
             <VimGuide leader={config.vim.leader} />
           </div>
@@ -128,12 +128,12 @@ export default function SettingsForm({ text, setText, config, broken }: { text: 
 
 function Section({ title, children, aside }: { title: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-      <div className="flex items-center gap-2">
-        <h3 className="min-w-0 flex-1 text-base font-bold">{title}</h3>
+    <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
+      <div className="flex min-h-11 items-center gap-2 px-4 py-1.5">
+        <h3 className="min-w-0 flex-1 text-sm font-medium">{title}</h3>
         {aside}
       </div>
-      {children}
+      <div className="flex flex-col gap-3 p-4">{children}</div>
     </section>
   );
 }
@@ -188,7 +188,7 @@ function KeysSection({ text, config, write }: { text: string; config: ShedNotesC
     <Section
       title="Keyboard shortcuts"
       aside={
-        <label className="flex w-40 items-center gap-1.5 rounded-full bg-background px-3 py-1 focus-within:ring-2 focus-within:ring-accent sm:w-56">
+        <label className="flex h-8 w-40 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2.5 transition-colors focus-within:ring-2 focus-within:ring-accent/40 sm:w-56">
           <SearchIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a command" aria-label="Find a command" className="min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm" />
         </label>
@@ -199,7 +199,7 @@ function KeysSection({ text, config, write }: { text: string; config: ShedNotesC
           const keys = keysOf.get(c.id) ?? [];
           const isRec = recording === c.id;
           return (
-            <li key={c.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-2 py-1.5 ${isRec ? "bg-accent/10" : "hover:bg-surface-hover"}`}>
+            <li key={c.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 py-1.5 transition-colors ${isRec ? "bg-surface-hover" : "hover:bg-surface-hover"}`}>
               <span className="min-w-0 flex-1 text-sm">
                 {c.name}
                 {changed(c.id) && <span className="ml-1.5 text-xs text-accent">changed</span>}
@@ -216,19 +216,19 @@ function KeysSection({ text, config, write }: { text: string; config: ShedNotesC
                         setRecording(null);
                         setCaptured(null);
                       }}
-                      className="rounded-full bg-accent px-3 py-1 font-semibold text-accent-foreground hover:bg-accent-hover"
+                      className="h-7 rounded-md bg-accent px-2.5 font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
                     >
                       Save
                     </button>
-                    <button type="button" onClick={() => setCaptured(null)} className="rounded-full bg-background px-3 py-1 font-semibold hover:bg-surface-hover">
+                    <button type="button" onClick={() => setCaptured(null)} className="h-7 rounded-md bg-foreground/[0.05] px-2.5 font-medium transition-colors hover:bg-background">
                       Again
                     </button>
-                    <button type="button" onClick={() => { setRecording(null); setCaptured(null); }} className="rounded-full px-2 py-1 font-semibold text-muted hover:text-foreground">
+                    <button type="button" onClick={() => { setRecording(null); setCaptured(null); }} className="h-7 rounded-md px-2 font-medium text-muted transition-colors hover:text-foreground">
                       Cancel
                     </button>
                   </span>
                 ) : (
-                  <span className="text-xs font-semibold text-accent">Press the keys… (Esc to stop)</span>
+                  <span className="text-xs font-medium text-foreground">Press the keys… (Esc to stop)</span>
                 )
               ) : (
                 <span className="flex flex-wrap items-center gap-1">
@@ -261,12 +261,12 @@ function KeysSection({ text, config, write }: { text: string; config: ShedNotesC
 }
 
 function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded-md bg-background px-1.5 py-0.5 font-mono text-xs text-foreground ring-1 ring-foreground/10">{children}</kbd>;
+  return <kbd className="rounded-sm bg-background px-1.5 py-0.5 font-mono text-xs text-foreground">{children}</kbd>;
 }
 
 function IconBtn({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} title={label} className="rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
+    <button type="button" onClick={onClick} aria-label={label} title={label} className="rounded-md p-1.5 text-muted transition-colors hover:bg-background hover:text-foreground">
       {children}
     </button>
   );

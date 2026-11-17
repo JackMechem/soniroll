@@ -1,7 +1,7 @@
 "use client";
 
 import { useAction, useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CloseIcon } from "@/components/tools";
@@ -19,62 +19,91 @@ type Flags = {
 };
 type BoolFlag = "maintenance" | "communityOff" | "postingPaused" | "signupsPaused" | "uploadsPaused" | "feedbackPaused";
 
-const SWITCHES: { key: BoolFlag; title: string; what: string; when: string; severity: "red" | "orange" | "amber" }[] = [
+const SWITCHES: { key: BoolFlag; title: string; what: string; when: string }[] = [
   {
     key: "communityOff",
     title: "Community off",
     what: "Hides the feed, posts, public profiles, people search and shared setlist / routine links. Nothing is deleted; flip it back and it's all there.",
     when: "Someone's posting something awful and you can't clean it up right now.",
-    severity: "orange",
   },
   {
     key: "postingPaused",
     title: "Pause posting",
     what: "Nobody can make new Community posts. Existing posts stay up. (Everyone's already limited to 10 posts a day.)",
     when: "A flood of spam posts, or a bug in posting.",
-    severity: "amber",
   },
   {
     key: "signupsPaused",
     title: "Pause sign-ups",
     what: "No new accounts, by email or Google. Existing accounts sign in as usual, and every tool still works without an account.",
     when: "Bots are making accounts, or you've hit the email limit.",
-    severity: "amber",
   },
   {
     key: "uploadsPaused",
     title: "Pause uploads",
     what: "No new files: recordings, songs, pictures, banners, lesson files, hand-ins, screenshots. Files already uploaded still play and show.",
     when: "Storage is filling up fast, or someone's uploading things they shouldn't.",
-    severity: "amber",
   },
   {
     key: "feedbackPaused",
     title: "Pause feedback",
     what: "Closes the feedback form and hides the bug button. (Signed-out feedback is already capped at 30 an hour site-wide.)",
     when: "The inbox is being spammed.",
-    severity: "amber",
   },
 ];
 
-const TONE = {
-  red: { on: "bg-rose-600", ring: "ring-rose-500/50", glow: "shadow-[0_0_40px_-8px_rgba(225,29,72,0.6)]", text: "text-rose-600 dark:text-rose-400" },
-  orange: { on: "bg-orange-500", ring: "ring-orange-500/50", glow: "shadow-[0_0_40px_-8px_rgba(249,115,22,0.55)]", text: "text-orange-600 dark:text-orange-400" },
-  amber: { on: "bg-amber-500", ring: "ring-amber-500/50", glow: "shadow-[0_0_40px_-8px_rgba(245,158,11,0.5)]", text: "text-amber-600 dark:text-amber-400" },
-};
-
-function BigSwitch({ on, onClick, disabled, color }: { on: boolean; onClick: () => void; disabled: boolean; color: string }) {
+function BigSwitch({ on, onClick, disabled, danger = false, label }: { on: boolean; onClick: () => void; disabled: boolean; danger?: boolean; label: string }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className={`relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${on ? color : "bg-foreground/15"}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${on ? (danger ? "bg-danger" : "bg-accent") : "bg-foreground/15"}`}
     >
-      <span className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow transition-all ${on ? "left-8" : "left-1"}`} />
+      <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-background shadow-sm transition-transform ${on ? "translate-x-5" : ""}`} />
     </button>
+  );
+}
+
+/** One bordered setting, Vercel-style: a title and what it does on the left, its control on the
+    right, and an optional footer strip with a hint and buttons. */
+function Setting({
+  title,
+  on,
+  onLabel = "On",
+  description,
+  control,
+  footer,
+  children,
+}: {
+  title: string;
+  on?: boolean;
+  onLabel?: string;
+  description: ReactNode;
+  control?: ReactNode;
+  footer?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className={`flex min-w-0 flex-col overflow-hidden rounded-lg border bg-surface ${on ? "border-foreground/30" : "border-foreground/10"}`}>
+      <div className="flex flex-col gap-3 p-4 sm:p-5">
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <h3 className="flex items-center gap-2 text-sm font-medium">
+              {title}
+              {on && <span className="rounded-sm bg-foreground px-1.5 text-[11px] font-medium text-background">{onLabel}</span>}
+            </h3>
+            <div className="mt-1 text-sm text-muted">{description}</div>
+          </div>
+          {control}
+        </div>
+        {children}
+      </div>
+      {footer && <div className="flex flex-wrap items-center gap-2 border-t border-foreground/10 bg-background/40 px-4 py-2.5 text-xs text-muted sm:px-5">{footer}</div>}
+    </section>
   );
 }
 
@@ -106,16 +135,15 @@ export default function Mayday() {
   const bannerDraft = banner ?? f.banner;
   const maintDraft = maintText ?? f.maintenanceMessage;
 
+  const textarea = "w-full resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60";
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {/* Status strip */}
-      <div className={`flex flex-wrap items-center gap-3 rounded-3xl p-4 ring-1 ${anyOn ? "bg-rose-500/10 ring-rose-500/30" : "bg-emerald-500/10 ring-emerald-500/25"}`}>
-        <span className="relative flex h-3 w-3">
-          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${anyOn ? "bg-rose-500" : "bg-emerald-500"}`} />
-          <span className={`relative inline-flex h-3 w-3 rounded-full ${anyOn ? "bg-rose-500" : "bg-emerald-500"}`} />
-        </span>
+      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-surface px-4 py-3">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${anyOn ? "bg-danger" : "bg-accent"}`} aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="font-extrabold">{anyOn ? "Mayday measures are on" : "All systems normal"}</p>
+          <p className="text-sm font-medium">{anyOn ? "Mayday measures are on" : "All systems normal"}</p>
           <p className="text-xs text-muted">
             {data.updatedAt
               ? `Last changed ${new Date(data.updatedAt).toLocaleString()}${data.updatedBy ? ` by ${data.updatedBy}` : ""}`
@@ -124,196 +152,186 @@ export default function Mayday() {
           </p>
         </div>
         {anyOn && owner && (
-          <button type="button" onClick={() => void reset()} className="rounded-full bg-foreground px-4 py-2 text-sm font-bold text-background hover:opacity-90">
+          <button type="button" onClick={() => void reset()} className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             Everything back to normal
           </button>
         )}
       </div>
       {msg && (
-        <p className="flex items-center justify-between rounded-2xl bg-danger/10 px-4 py-2 text-sm text-danger">
+        <p className="flex items-center justify-between gap-2 rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">
           {msg}
-          <button type="button" onClick={() => setMsg(null)} aria-label="Dismiss">
+          <button type="button" onClick={() => setMsg(null)} aria-label="Dismiss" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md hover:bg-surface-hover">
             <CloseIcon className="h-4 w-4" />
           </button>
         </p>
       )}
 
       {/* The big one */}
-      <section
-        className={`relative overflow-hidden rounded-3xl p-5 ring-1 transition-shadow sm:p-6 ${
-          f.maintenance ? `bg-zinc-950 text-white ring-rose-500/60 ${TONE.red.glow}` : "bg-surface ring-foreground/5"
-        }`}
-      >
-        {f.maintenance && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-20"
-            style={{ background: "repeating-linear-gradient(135deg, #e11d48 0 14px, transparent 14px 28px)" }}
-          />
-        )}
-        <div className="relative flex flex-wrap items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <p className={`text-xs font-bold ${f.maintenance ? "text-rose-300" : TONE.red.text}`}>The big red switch</p>
-            <h2 className="text-2xl font-extrabold">Maintenance mode</h2>
-            <p className={`mt-1 max-w-2xl text-sm ${f.maintenance ? "text-white/70" : "text-muted"}`}>
-              The whole site shows a &quot;Back soon&quot; screen to everyone except admins (you can still sign in from it). The tools, Community, everything. Nothing is
-              lost; flip it off and people carry on.
-            </p>
+      <section className={`flex min-w-0 flex-col overflow-hidden rounded-lg border bg-surface ${f.maintenance ? "border-danger" : "border-danger/40"}`}>
+        <div className="flex flex-col gap-3 p-4 sm:p-5">
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-danger">The big red switch</p>
+              <h2 className="mt-0.5 flex items-center gap-2 text-base font-semibold">
+                Maintenance mode
+                {f.maintenance && <span className="rounded-sm bg-danger px-1.5 text-[11px] font-medium text-background">On</span>}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted">
+                The whole site shows a &quot;Back soon&quot; screen to everyone except admins (you can still sign in from it). The tools, Community, everything. Nothing is
+                lost; flip it off and people carry on.
+              </p>
+            </div>
+            <BigSwitch
+              on={f.maintenance}
+              disabled={!owner}
+              danger
+              label="Maintenance mode"
+              onClick={() =>
+                f.maintenance
+                  ? flip({ maintenance: false })
+                  : setConfirm({
+                      title: "Take the whole site down?",
+                      body: "Everyone who isn't an admin sees the maintenance screen until you switch it off.",
+                      word: "maintenance",
+                      action: () => set({ patch: { maintenance: true, maintenanceMessage: maintDraft } }),
+                    })
+              }
+            />
           </div>
-          <BigSwitch
-            on={f.maintenance}
-            disabled={!owner}
-            color={TONE.red.on}
-            onClick={() =>
-              f.maintenance
-                ? flip({ maintenance: false })
-                : setConfirm({
-                    title: "Take the whole site down?",
-                    body: "Everyone who isn't an admin sees the maintenance screen until you switch it off.",
-                    word: "maintenance",
-                    action: () => set({ patch: { maintenance: true, maintenanceMessage: maintDraft } }),
-                  })
-            }
-          />
-        </div>
-        <div className="relative mt-4 flex flex-col gap-2">
           <textarea
             value={maintDraft}
             onChange={(e) => setMaintText(e.target.value)}
             disabled={!owner}
             rows={2}
             maxLength={500}
+            aria-label="Maintenance message"
             placeholder="soniroll is down for a little maintenance. Your stuff is safe — check back in a bit."
-            className={`w-full resize-y rounded-2xl px-4 py-3 text-sm outline-none ring-1 focus:ring-2 focus:ring-rose-500 ${
-              f.maintenance ? "bg-white/10 text-white ring-white/15 placeholder:text-white/40" : "bg-background ring-foreground/5"
-            }`}
+            className={textarea}
           />
-          {owner && maintText !== null && maintText !== f.maintenanceMessage && (
+        </div>
+        {owner && maintText !== null && maintText !== f.maintenanceMessage && (
+          <div className="flex items-center justify-end gap-2 border-t border-foreground/10 bg-background/40 px-4 py-2.5 sm:px-5">
             <button
               type="button"
               onClick={() => {
                 flip({ maintenanceMessage: maintText });
                 setMaintText(null);
               }}
-              className="self-start rounded-full bg-rose-600 px-4 py-1.5 text-xs font-bold text-white"
+              className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover"
             >
               Save message
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Smaller switches */}
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {SWITCHES.map((sw) => {
           const on = f[sw.key];
-          const t = TONE[sw.severity];
           return (
-            <section
+            <Setting
               key={sw.key}
-              className={`flex flex-col gap-3 rounded-3xl bg-surface p-5 ring-1 transition-shadow ${on ? `${t.ring} ${t.glow}` : "ring-foreground/5"}`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="min-w-0 flex-1">
-                  <h3 className="flex items-center gap-2 text-lg font-extrabold">
-                    {sw.title}
-                    {on && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${t.on}`}>On</span>}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted">{sw.what}</p>
-                </div>
-                <BigSwitch on={on} disabled={!owner} color={t.on} onClick={() => flip({ [sw.key]: !on })} />
-              </div>
-              <p className="text-xs text-muted">
-                <span className="font-semibold text-foreground">Use it when:</span> {sw.when}
-              </p>
-            </section>
+              title={sw.title}
+              on={on}
+              description={sw.what}
+              control={<BigSwitch on={on} disabled={!owner} label={sw.title} onClick={() => flip({ [sw.key]: !on })} />}
+              footer={
+                <span>
+                  <span className="font-medium text-foreground">Use it when:</span> {sw.when}
+                </span>
+              }
+            />
           );
         })}
 
         {/* Banner */}
-        <section className={`flex flex-col gap-3 rounded-3xl bg-surface p-5 ring-1 ${f.banner ? "ring-sky-500/50" : "ring-foreground/5"}`}>
-          <div>
-            <h3 className="flex items-center gap-2 text-lg font-extrabold">
-              Announcement banner
-              {f.banner && <span className="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-bold text-white">Showing</span>}
-            </h3>
-            <p className="mt-1 text-sm text-muted">A message across the top of every page, e.g. &quot;Maintenance tonight at 9pm&quot;. People can close it.</p>
-          </div>
+        <Setting
+          title="Announcement banner"
+          on={!!f.banner}
+          onLabel="Showing"
+          description={<>A message across the top of every page, e.g. &quot;Maintenance tonight at 9pm&quot;. People can close it.</>}
+          footer={
+            owner ? (
+              <>
+                <div role="radiogroup" aria-label="Banner tone" className="flex gap-0.5 rounded-md bg-surface p-0.5">
+                  {(["info", "warning"] as const).map((tone) => (
+                    <button
+                      key={tone}
+                      type="button"
+                      role="radio"
+                      aria-checked={f.bannerTone === tone}
+                      onClick={() => flip({ bannerTone: tone })}
+                      className={`rounded-sm px-2.5 py-1 text-xs font-medium transition-colors ${f.bannerTone === tone ? "bg-surface-hover text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      {tone === "info" ? "Info" : "Warning"}
+                    </button>
+                  ))}
+                </div>
+                <div className="ml-auto flex gap-2">
+                  {f.banner && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        flip({ banner: "" });
+                        setBanner(null);
+                      }}
+                      className="h-8 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+                    >
+                      Take it down
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={!bannerDraft.trim() || bannerDraft.trim() === f.banner}
+                    onClick={() => {
+                      flip({ banner: bannerDraft });
+                      setBanner(null);
+                    }}
+                    className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+                  >
+                    {f.banner ? "Update" : "Show it"}
+                  </button>
+                </div>
+              </>
+            ) : undefined
+          }
+        >
           <textarea
             value={bannerDraft}
             onChange={(e) => setBanner(e.target.value)}
             disabled={!owner}
             rows={2}
             maxLength={300}
+            aria-label="Banner message"
             placeholder="Heads up: …"
-            className="w-full resize-y rounded-2xl bg-background px-4 py-3 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+            className={textarea}
           />
-          {owner && (
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex rounded-full bg-background p-1">
-                {(["info", "warning"] as const).map((tone) => (
-                  <button
-                    key={tone}
-                    type="button"
-                    onClick={() => flip({ bannerTone: tone })}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${f.bannerTone === tone ? "bg-foreground text-background" : "text-muted"}`}
-                  >
-                    {tone === "info" ? "Info" : "Warning"}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                disabled={!bannerDraft.trim() || bannerDraft.trim() === f.banner}
-                onClick={() => {
-                  flip({ banner: bannerDraft });
-                  setBanner(null);
-                }}
-                className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-40"
-              >
-                {f.banner ? "Update" : "Show it"}
-              </button>
-              {f.banner && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    flip({ banner: "" });
-                    setBanner(null);
-                  }}
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold hover:bg-background"
-                >
-                  Take it down
-                </button>
-              )}
-            </div>
-          )}
-        </section>
+        </Setting>
       </div>
 
       {/* One-shot buttons */}
-      <section className="flex flex-wrap items-center gap-4 rounded-3xl bg-surface p-5 ring-1 ring-foreground/5">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-extrabold">Sign everyone out</h3>
-          <p className="mt-1 text-sm text-muted">
-            Ends every session on every device, except yours. For when an account or password might have leaked. People just sign in again; no data is touched.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={!owner}
-          onClick={() =>
-            setConfirm({
-              title: "Sign everyone out?",
-              body: "Every account (except yours) is signed out on every device right now.",
-              word: "sign out",
-              action: async () => setMsg(`Signed out ${await signOutAll()} session(s).`),
-            })
-          }
-          className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-40"
-        >
-          Sign everyone out
-        </button>
-      </section>
+      <Setting
+        title="Sign everyone out"
+        description="Ends every session on every device, except yours. For when an account or password might have leaked. People just sign in again; no data is touched."
+        control={
+          <button
+            type="button"
+            disabled={!owner}
+            onClick={() =>
+              setConfirm({
+                title: "Sign everyone out?",
+                body: "Every account (except yours) is signed out on every device right now.",
+                word: "sign out",
+                action: async () => setMsg(`Signed out ${await signOutAll()} session(s).`),
+              })
+            }
+            className="h-9 shrink-0 rounded-md border border-danger/40 px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-40"
+          >
+            Sign everyone out
+          </button>
+        }
+      />
 
       {confirm && <TypedConfirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
@@ -329,23 +347,23 @@ function TypedConfirm({ title, body, word, action, onClose }: { title: string; b
       <div
         role="dialog"
         aria-label={title}
-        className="flex w-full flex-col gap-4 rounded-t-3xl bg-surface p-5 shadow-2xl sm:max-w-md sm:rounded-3xl"
+        className="flex w-full flex-col gap-4 rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 shadow-2xl shadow-black/20 sm:max-w-md sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-extrabold">{title}</h2>
+        <h2 className="text-base font-semibold">{title}</h2>
         <p className="text-sm text-muted">{body}</p>
-        <label className="flex flex-col gap-1 text-sm font-semibold">
-          Type <code className="self-start rounded bg-background px-1.5">{word}</code> to confirm
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+          Type <code className="self-start rounded-sm bg-background px-1.5">{word}</code> to confirm
           <input
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             autoFocus
-            className="rounded-xl bg-background px-3.5 py-2.5 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-rose-500"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-normal outline-none focus:ring-2 focus:ring-accent/40"
           />
         </label>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+          <button type="button" onClick={onClose} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover">
             Cancel
           </button>
           <button
@@ -361,7 +379,7 @@ function TypedConfirm({ title, body, word, action, onClose }: { title: string; b
                 setBusy(false);
               }
             }}
-            className="rounded-full bg-rose-600 px-5 py-2 text-sm font-bold text-white disabled:opacity-40"
+            className="h-9 rounded-md bg-danger px-4 text-sm font-medium text-background hover:opacity-90 disabled:opacity-40"
           >
             {busy ? "Working…" : "Do it"}
           </button>

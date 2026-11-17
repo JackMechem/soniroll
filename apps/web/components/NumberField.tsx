@@ -47,7 +47,7 @@ export default function NumberField({
       }}
       className={`${
         className ??
-        "w-full rounded-lg bg-background px-3 py-2 tabular-nums outline-none focus:ring-2 focus:ring-accent"
+        "w-full rounded-lg bg-foreground/[0.05] px-3 py-2 tabular-nums outline-none focus:ring-2 focus:ring-accent"
       } ${valid ? "" : "text-danger"}`}
     />
   );

@@ -69,7 +69,7 @@ export default function SharedTunePage({ id }: { id: string }) {
   return (
     <Shell>
       <header className="flex flex-col gap-3">
-        <p className="flex items-center gap-2 text-sm font-semibold text-muted">
+        <p className="flex items-center gap-2 text-sm text-muted">
           Tune
           {shared.ownerUsername && (
             <>
@@ -83,7 +83,7 @@ export default function SharedTunePage({ id }: { id: string }) {
         <div className="flex items-center gap-4">
           <KeyBadge label={firstKey} size="lg" />
           <div className="min-w-0 flex-1">
-            <h1 className="break-words text-3xl font-extrabold tracking-tight sm:text-4xl">{tune.name}</h1>
+            <h1 className="break-words text-2xl font-semibold tracking-tight">{tune.name}</h1>
             <div className="mt-1.5 flex flex-wrap gap-1">
               {tune.timeSignature && <Chip>{tune.timeSignature}</Chip>}
               {tune.tempos.filter((t) => t.enabled).map((t) => (
@@ -94,7 +94,7 @@ export default function SharedTunePage({ id }: { id: string }) {
           </div>
         </div>
         {shared.isMine ? (
-          <Link href={`/tunes/tune?id=${encodeURIComponent(shared.ownTuneId ?? "")}`} className="self-start rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <Link href={`/tunes/tune?id=${encodeURIComponent(shared.ownTuneId ?? "")}`} className="self-start rounded-md bg-foreground/[0.05] px-3 py-2 text-sm font-medium hover:bg-surface-hover">
             This is your tune — open it
           </Link>
         ) : (
@@ -106,8 +106,8 @@ export default function SharedTunePage({ id }: { id: string }) {
       <ChartPaper
         top={
           <div className="flex w-full flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 font-bold">
-              <ChordChartIcon className="h-4 w-4 text-accent" />
+            <h2 className="flex items-center gap-2 text-sm font-medium">
+              <ChordChartIcon className="h-4 w-4 text-muted" />
               Chord chart
             </h2>
             {chart && (
@@ -126,9 +126,9 @@ export default function SharedTunePage({ id }: { id: string }) {
       )}
 
       {files.length > 0 && (
-        <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-          <h2 className="flex items-center gap-2 font-bold">
-            <FileIcon className="h-4 w-4 text-accent" /> Files <span className="text-sm font-semibold tabular-nums text-muted">{files.length}</span>
+        <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+          <h2 className="flex items-center gap-2 text-sm font-medium">
+            <FileIcon className="h-4 w-4 text-muted" /> Files <span className="text-xs tabular-nums text-muted">{files.length}</span>
           </h2>
           <div className="flex flex-col">
             {files.map((f) => (
@@ -140,7 +140,7 @@ export default function SharedTunePage({ id }: { id: string }) {
                 onOpen={() => setOpen(f)}
                 trailing={
                   f.url ? (
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" download={f.name} aria-label={`Download ${f.name}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" download={f.name} aria-label={`Download ${f.name}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
                       <DownloadIcon className="h-4 w-4" />
                     </a>
                   ) : null
@@ -152,14 +152,14 @@ export default function SharedTunePage({ id }: { id: string }) {
       )}
 
       {recordings.length > 0 && (
-        <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-          <h2 className="flex items-center gap-2 font-bold">
-            <MicIcon className="h-4 w-4 text-accent" /> Recordings <span className="text-sm font-semibold tabular-nums text-muted">{recordings.length}</span>
+        <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+          <h2 className="flex items-center gap-2 text-sm font-medium">
+            <MicIcon className="h-4 w-4 text-muted" /> Recordings <span className="text-xs tabular-nums text-muted">{recordings.length}</span>
           </h2>
           <ul className="flex flex-col gap-2">
             {recordings.map((r) => (
-              <li key={r.id} className="flex flex-col gap-1 rounded-xl bg-background p-2.5">
-                <span className="truncate text-sm font-semibold">
+              <li key={r.id} className="flex flex-col gap-1 rounded-md bg-foreground/[0.05] p-2.5">
+                <span className="truncate text-sm font-medium">
                   {r.name} <span className="font-normal text-muted">· {formatDuration(r.durationSec)}</span>
                 </span>
                 {r.url && <audio controls preload="none" src={r.url} className="h-9 w-full" />}
@@ -227,7 +227,7 @@ function SaveTune({ shareId, tune, chart, fileCount }: { shareId: string; tune: 
   if (saved) {
     return (
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/tunes/tune?id=${encodeURIComponent(saved.tuneId)}`} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+        <Link href={`/tunes/tune?id=${encodeURIComponent(saved.tuneId)}`} className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
           <CheckIcon className="h-4 w-4" /> Saved — open it
         </Link>
         <span className="text-sm text-muted">{saved.note}</span>
@@ -241,14 +241,14 @@ function SaveTune({ shareId, tune, chart, fileCount }: { shareId: string; tune: 
           type="button"
           onClick={() => void save()}
           disabled={saving}
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
         >
           {saving ? <LoadingSpinner size="sm" inline label="Saving" /> : <DownloadIcon className="h-4 w-4" />}
           {saving ? "Saving…" : "Save to my tunes"}
         </button>
         {fileCount > 0 && !isAuthenticated && (
           <span className="text-sm text-muted">
-            <Link href={SIGN_IN_PATH} className="font-semibold text-accent hover:underline">
+            <Link href={SIGN_IN_PATH} className="font-medium text-accent hover:underline">
               Sign in
             </Link>{" "}
             to copy its files too.

@@ -54,7 +54,7 @@ function sliderStyle(value: number, min: number, max: number) {
 }
 
 const zoomButton =
-  "rounded-lg bg-surface px-2.5 py-1 text-sm font-semibold hover:bg-surface-hover disabled:opacity-40";
+  "flex h-8 min-w-8 items-center justify-center rounded-md bg-foreground/[0.05] px-2 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
 
 const CONTROL_HINTS: [string, string][] = [
   ["Drag", "pan"],
@@ -84,10 +84,10 @@ function TransportButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex items-center justify-center rounded-full transition-colors ${
+      className={`flex items-center justify-center transition-colors ${
         primary
-          ? "h-14 w-14 bg-accent text-accent-foreground hover:bg-accent-hover"
-          : "h-11 min-w-11 bg-surface px-3 text-sm font-semibold hover:bg-surface-hover"
+          ? "h-14 w-14 rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
+          : "h-11 min-w-11 rounded-md px-3 text-sm font-medium tabular-nums hover:bg-surface-hover"
       }`}
     >
       {children}
@@ -448,7 +448,7 @@ export default function SlowDowner() {
             <Hint>How fast the file plays back, as a percentage of its original speed.</Hint>
             <div className="flex flex-wrap gap-2">
               {SPEED_PRESETS.map((preset) => (
-                <PoolPill key={preset} on={speed === preset} onClick={() => updateSettings({ speed: preset })} plainClassName="rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums">
+                <PoolPill key={preset} on={speed === preset} onClick={() => updateSettings({ speed: preset })} plainClassName="rounded-md px-3 py-1.5 text-sm font-medium tabular-nums">
                   {preset}%
                 </PoolPill>
               ))}
@@ -487,18 +487,18 @@ export default function SlowDowner() {
                 No markers yet. Right-click the waveform to add one at that spot.
               </p>
             ) : (
-              <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
+              <ul className="flex max-h-96 flex-col divide-y divide-foreground/10 overflow-y-auto pr-1">
                 {markers.map((marker) => (
                   <li
                     key={marker.id}
-                    className="flex flex-col gap-1.5 rounded-xl bg-background/60 p-2 text-sm"
+                    className="flex flex-col gap-1.5 py-2 text-sm first:pt-0"
                   >
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => seek(marker.time)}
                         title="Jump to marker"
-                        className="w-16 shrink-0 rounded-lg bg-background px-2 py-1.5 text-left tabular-nums hover:bg-surface-hover"
+                        className="h-8 w-16 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-left tabular-nums transition-colors hover:bg-surface-hover"
                       >
                         {formatTime(marker.time)}
                       </button>
@@ -506,13 +506,13 @@ export default function SlowDowner() {
                         value={marker.label}
                         onChange={(e) => updateMarker(marker.id, { label: e.target.value })}
                         aria-label="Marker name"
-                        className="min-w-0 flex-1 rounded-lg bg-background px-2 py-1.5 outline-none focus:ring-2 focus:ring-accent"
+                        className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 outline-none focus:ring-2 focus:ring-accent/40"
                       />
                       <button
                         type="button"
                         onClick={() => setMarkers((prev) => prev.filter((m) => m.id !== marker.id))}
                         aria-label={`Delete ${marker.label}`}
-                        className="rounded-lg px-2 py-1.5 text-muted hover:text-danger"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                       >
                         ✕
                       </button>
@@ -523,7 +523,7 @@ export default function SlowDowner() {
                       placeholder="Add notes…"
                       aria-label={`Notes for ${marker.label}`}
                       rows={2}
-                      className="w-full resize-y rounded-lg bg-background px-2 py-1.5 text-sm outline-none placeholder:text-muted focus:ring-2 focus:ring-accent"
+                      className="w-full resize-y rounded-md bg-foreground/[0.05] px-2 py-1.5 text-sm outline-none placeholder:text-muted focus:ring-2 focus:ring-accent/40"
                     />
                   </li>
                 ))}
@@ -533,7 +533,7 @@ export default function SlowDowner() {
               type="button"
               onClick={() => addMarker(time)}
               disabled={!file}
-              className="rounded-lg bg-background px-3 py-1.5 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+              className="inline-flex h-8 items-center justify-center self-start rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50"
             >
               Add marker at playhead
             </button>
@@ -592,11 +592,11 @@ export default function SlowDowner() {
               const dropped = e.dataTransfer.files?.[0];
               if (dropped) loadFile(dropped);
             }}
-            className={`flex w-full flex-col items-center gap-4 rounded-2xl border-2 border-dashed px-6 py-14 transition-colors ${
-              dragOver ? "border-accent bg-accent/10" : "border-surface-hover bg-surface"
+            className={`flex w-full flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-14 transition-colors ${
+              dragOver ? "border-accent bg-accent/10" : "border-foreground/15"
             }`}
           >
-            <p className="text-lg font-semibold">Drop an audio or video file here</p>
+            <p className="text-base font-medium">Drop an audio or video file here</p>
             <p className="max-w-xs text-sm text-muted">
               MP3, WAV, M4A, FLAC, MP4 and more. For video files only the audio is used. Nothing is
               uploaded — files are saved in this browser so they&apos;re here next time.
@@ -604,7 +604,7 @@ export default function SlowDowner() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className="mt-1 inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
             >
               Choose a file
             </button>
@@ -614,12 +614,12 @@ export default function SlowDowner() {
               aria-label="Saved files"
               className="flex w-full max-w-2xl flex-col gap-2 text-left"
             >
-              <h2 className="text-sm font-semibold text-muted">Saved in this browser</h2>
-              <ul className="flex flex-col gap-1.5">
+              <h2 className="text-sm font-medium">Saved in this browser</h2>
+              <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
                 {library.map((entry) => (
                   <li
                     key={entry.id}
-                    className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-sm"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface-hover"
                   >
                     <button
                       type="button"
@@ -634,7 +634,7 @@ export default function SlowDowner() {
                       onClick={() => void removeSaved(entry)}
                       aria-label={`Remove ${entry.name}`}
                       title="Remove from this browser"
-                      className="rounded-lg px-2 py-1 text-muted hover:text-danger"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-background hover:text-danger"
                     >
                       ✕
                     </button>
@@ -675,9 +675,9 @@ export default function SlowDowner() {
             />
           </div>
 
-          <p className="text-5xl font-bold tabular-nums">
+          <p className="text-5xl font-semibold tabular-nums tracking-tight">
             {formatTime(time)}
-            <span className="text-xl font-semibold text-muted"> / {formatTime(duration)}</span>
+            <span className="text-xl font-medium text-muted"> / {formatTime(duration)}</span>
           </p>
 
           <div className={`relative w-full ${maximized ? "min-h-64 flex-1" : ""}`}>
@@ -706,10 +706,10 @@ export default function SlowDowner() {
                 aria-pressed={loopOn}
                 aria-label={loopOn ? "Looping — click to turn off" : "Loop off — click to turn on"}
                 title={loopOn ? "Looping — click to turn off" : "Loop off — click to turn on"}
-                className={`absolute right-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full shadow transition-colors ${
+                className={`absolute right-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
                   loopOn
-                    ? "bg-accent text-accent-foreground hover:bg-accent-hover"
-                    : "bg-surface-hover text-muted hover:text-foreground"
+                    ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
+                    : "border-foreground/15 bg-surface text-muted hover:text-foreground"
                 }`}
               >
                 <RepeatIcon className="h-4 w-4" />
@@ -742,7 +742,7 @@ export default function SlowDowner() {
               >
                 ▶
               </button>
-              <span className="mx-1 h-5 w-px bg-surface-hover" />
+              <span className="mx-1 h-5 w-px bg-foreground/10" />
               <button
                 type="button"
                 onClick={() => zoom(1.5)}
@@ -772,17 +772,17 @@ export default function SlowDowner() {
               >
                 Fit
               </button>
-              <span className="mx-1 h-5 w-px bg-surface-hover" />
+              <span className="mx-1 h-5 w-px bg-foreground/10" />
               <button
                 type="button"
                 onClick={() => updateSettings({ maximized: !maximized })}
                 aria-pressed={maximized}
                 aria-label={maximized ? "Shrink waveform" : "Maximise waveform height"}
                 title={maximized ? "Shrink waveform" : "Maximise waveform height"}
-                className={`rounded-lg px-2.5 py-1 text-sm font-semibold transition-colors ${
+                className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
                   maximized
-                    ? "bg-accent text-accent-foreground hover:bg-accent-hover"
-                    : "bg-surface hover:bg-surface-hover"
+                    ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
+                    : "border-foreground/15 hover:bg-surface-hover"
                 }`}
               >
                 {maximized ? (

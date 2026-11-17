@@ -40,9 +40,9 @@ export function RecordingCard({
 }) {
   const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec), tuneName].filter(Boolean).join(" · ");
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-surface p-3">
+    <div className="flex flex-col gap-2 rounded-lg bg-surface p-3">
       <Link href={`/recordings/view?id=${recording._id}`} className="min-w-0 hover:underline">
-        <div className="truncate font-semibold">{recording.name}</div>
+        <div className="truncate text-sm font-medium">{recording.name}</div>
         <div className="truncate text-xs text-muted">{detail}</div>
       </Link>
       {recording.url &&
@@ -74,11 +74,11 @@ export function TuneSelectDialog({ onPick, onClose }: { onPick: (tuneId: string)
     return sortByText(all, (r) => r.tune.name);
   }, [byId, query]);
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Link to a tune" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
+      <div role="dialog" aria-label="Link to a tune" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your tunes" className="min-w-0 flex-1 bg-transparent outline-none" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your tunes" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
         </div>
         <ul className="flex flex-col gap-0.5 overflow-y-auto">
           {rows.length === 0 ? (
@@ -86,7 +86,7 @@ export function TuneSelectDialog({ onPick, onClose }: { onPick: (tuneId: string)
           ) : (
             rows.slice(0, 300).map((r) => (
               <li key={r.tune.id}>
-                <button type="button" onClick={() => onPick(r.tune.id)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-background">
+                <button type="button" onClick={() => onPick(r.tune.id)} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-surface-hover">
                   <LinkIcon className="h-4 w-4 shrink-0 text-muted" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{r.tune.name}</span>
@@ -122,11 +122,11 @@ export function RecordingSelectDialog({
     return (recordings ?? []).filter((r) => r.tuneId !== excludeTuneId && (!q || r.name.toLowerCase().includes(q)));
   }, [recordings, excludeTuneId, query]);
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Link a recording" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
+      <div role="dialog" aria-label="Link a recording" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search recordings" className="min-w-0 flex-1 bg-transparent outline-none" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search recordings" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
         </div>
         <ul className="flex flex-col gap-0.5 overflow-y-auto">
           {recordings === undefined ? (
@@ -140,7 +140,7 @@ export function RecordingSelectDialog({
               const other = r.tuneId ? byId.get(r.tuneId)?.tune.name : null;
               return (
                 <li key={r._id}>
-                  <button type="button" onClick={() => onPick(r)} className="flex w-full flex-col rounded-lg px-3 py-2 text-left hover:bg-background">
+                  <button type="button" onClick={() => onPick(r)} className="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-surface-hover">
                     <span className="truncate text-sm font-medium">{r.name}</span>
                     <span className="truncate text-xs text-muted">
                       {[formatRecordedAt(r.createdAt), formatDuration(r.durationSec), other ? `linked to ${other}` : null].filter(Boolean).join(" · ")}
@@ -226,12 +226,12 @@ export function SaveTakeDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[8vh]">
-      <div role="dialog" aria-label="Save recording" className="flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-surface p-5 text-left shadow-xl">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-overlay p-4 pt-[8vh]">
+      <div role="dialog" aria-label="Save recording" className="flex w-full max-w-lg flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left shadow-xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Save recording</h2>
-          <button type="button" onClick={() => setConfirmDiscard(true)} aria-label="Discard" className="rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
-            <CloseIcon className="h-5 w-5" />
+          <h2 className="text-base font-semibold">Save recording</h2>
+          <button type="button" onClick={() => setConfirmDiscard(true)} aria-label="Discard" className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
         {song?.url ? (
@@ -240,12 +240,12 @@ export function SaveTakeDialog({
           <TakePlayer url={url} durationSec={durationSec} />
         )}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Name</span>
-          <input value={shownName} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+          <span className="text-xs font-medium text-muted">Name</span>
+          <input value={shownName} onChange={(e) => setName(e.target.value)} className="h-10 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:h-9 sm:text-sm" />
         </label>
         {log && log.routines.length > 0 && (
           <div className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Attached to</span>
+            <span className="text-xs font-medium text-muted">Attached to</span>
             <div className="flex flex-wrap gap-1.5">
               {[{ id: null as string | null, name: "Just the day" }, ...log.routines].map((r) => (
                 <button
@@ -253,7 +253,7 @@ export function SaveTakeDialog({
                   type="button"
                   onClick={() => setLogRoutineId(r.id)}
                   aria-pressed={logRoutineId === r.id}
-                  className={`rounded-full px-3 py-1.5 text-sm font-medium ${logRoutineId === r.id ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"}`}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${logRoutineId === r.id ? "bg-accent text-accent-foreground" : "hover:bg-surface-hover"}`}
                 >
                   {r.name}
                 </button>
@@ -262,10 +262,10 @@ export function SaveTakeDialog({
           </div>
         )}
         <div className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Tune</span>
-          <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
-            <LinkIcon className={`h-4 w-4 ${tune ? "text-accent" : "text-muted"}`} />
-            <button type="button" onClick={() => setPicking(true)} className={`min-w-0 flex-1 truncate text-left text-base ${tune ? "" : "text-muted"}`}>
+          <span className="text-xs font-medium text-muted">Tune</span>
+          <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
+            <LinkIcon className="h-4 w-4 text-muted" />
+            <button type="button" onClick={() => setPicking(true)} className={`min-w-0 flex-1 truncate text-left text-base sm:text-sm ${tune ? "" : "text-muted"}`}>
               {tune ? tune.name : "Not linked — click to link a tune"}
             </button>
             {tune && (
@@ -276,35 +276,35 @@ export function SaveTakeDialog({
           </div>
         </div>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-muted">Notes</span>
+          <span className="text-xs font-medium text-muted">Notes</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
             placeholder="How did it go? What to work on…"
-            className="resize-y rounded-xl bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
           />
         </label>
         {error && <p className="text-sm text-danger">{error} Your take is still here — try Save again.</p>}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => setConfirmDiscard(true)} disabled={saving} className="rounded-full px-5 py-2 font-semibold text-danger hover:bg-background disabled:opacity-50">
+          <button type="button" onClick={() => setConfirmDiscard(true)} disabled={saving} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-surface-hover disabled:opacity-50">
             Discard
           </button>
           <button
             type="button"
             onClick={() => void save()}
             disabled={saving}
-            className="flex items-center gap-2 rounded-full bg-accent px-6 py-2 font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
           >
             {saving && <LoadingSpinner size="sm" inline />}
             {saving ? "Uploading…" : "Save"}
           </button>
         </div>
         {confirmDiscard && (
-          <div className="flex flex-col gap-3 rounded-xl bg-background p-3">
+          <div className="flex flex-col gap-3 rounded-md bg-foreground/[0.05] p-3">
             <p className="text-sm">Discard this take? It hasn&apos;t been saved, so it&apos;ll be gone for good.</p>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setConfirmDiscard(false)} className="rounded-full px-4 py-1.5 text-sm font-medium hover:bg-surface">
+              <button type="button" onClick={() => setConfirmDiscard(false)} className="rounded-md px-3 py-1.5 text-sm font-medium hover:bg-surface-hover">
                 Keep it
               </button>
               <button
@@ -313,7 +313,7 @@ export function SaveTakeDialog({
                   URL.revokeObjectURL(url);
                   onDiscard();
                 }}
-                className="rounded-full bg-danger px-4 py-1.5 text-sm font-semibold text-white"
+                className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-white"
               >
                 Discard
               </button>
@@ -345,11 +345,11 @@ export function TuneRecordings({ tuneId }: { tuneId: string }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-bold">Recordings</h2>
-        {recordings && recordings.length > 0 && <span className="text-sm tabular-nums text-muted">{recordings.length}</span>}
+        <h2 className="text-sm font-medium">Recordings</h2>
+        {recordings && recordings.length > 0 && <span className="text-xs tabular-nums text-muted">{recordings.length}</span>}
       </div>
       {!isAuthenticated ? (
-        <p className="rounded-2xl bg-surface p-4 text-sm text-muted">Sign in to record takes of this tune — recordings are saved to your account.</p>
+        <p className="text-sm text-muted">Sign in to record takes of this tune — recordings are saved to your account.</p>
       ) : (
         <>
           <TuneSongPanel tuneId={tuneId} />
@@ -365,10 +365,10 @@ export function TuneRecordings({ tuneId }: { tuneId: string }) {
             )
           )}
           <div className="flex flex-wrap gap-2">
-            <Link href={`/recorder?tuneId=${tuneId}`} className="flex items-center gap-1.5 rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
+            <Link href={`/recorder?tuneId=${tuneId}`} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               <MicIcon className="h-4 w-4" /> Record a take
             </Link>
-            <button type="button" onClick={() => setLinking(true)} className="flex items-center gap-1.5 rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
+            <button type="button" onClick={() => setLinking(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               <LinkIcon className="h-4 w-4" /> Link existing
             </button>
           </div>
@@ -431,7 +431,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-surface p-3">
+    <div className="flex flex-col gap-2 rounded-lg bg-surface p-3">
       <input
         ref={input}
         type="file"
@@ -444,20 +444,18 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
         }}
       />
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background text-accent">
-          <NoteIcon className="h-4 w-4" />
-        </span>
+        <NoteIcon className="h-4 w-4 shrink-0 text-muted" />
         <div className="min-w-0 flex-1">
           {song === undefined ? (
             <LoadingSpinner size="sm" inline />
           ) : song ? (
             <>
-              <div className="truncate text-sm font-semibold">{song.name}</div>
+              <div className="truncate text-sm font-medium">{song.name}</div>
               <div className="text-xs text-muted">Song{song.durationSec ? ` · ${formatDuration(song.durationSec)}` : ""} · plays behind your takes</div>
             </>
           ) : (
             <>
-              <div className="text-sm font-semibold">Add the song</div>
+              <div className="text-sm font-medium">Add the song</div>
               <div className="text-xs text-muted">Upload an audio file of the tune to play behind your takes, with a mixer for each.</div>
             </>
           )}
@@ -466,7 +464,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
           <LoadingSpinner size="sm" label="Uploading the song" />
         ) : (
           <>
-            <button type="button" onClick={() => input.current?.click()} className="rounded-lg bg-background px-3 py-1.5 text-sm font-medium hover:bg-surface-hover">
+            <button type="button" onClick={() => input.current?.click()} className="inline-flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               {song ? "Replace" : "Upload"}
             </button>
             {song && (
@@ -475,7 +473,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
                 onClick={() => setConfirmRemove(true)}
                 aria-label="Remove the song"
                 title="Remove the song"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-background hover:text-danger"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-danger"
               >
                 <TrashIcon className="h-4 w-4" />
               </button>

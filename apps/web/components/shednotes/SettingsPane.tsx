@@ -54,26 +54,28 @@ export default function SettingsPane({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
-          <h2 className="truncate text-xl font-extrabold">Settings</h2>
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-xl font-semibold tracking-tight">Settings</h2>
           <p className="text-xs text-muted">How notes look, your keys and vim. Saved to your account as shed-notes.json.</p>
         </div>
-        <div role="tablist" aria-label="Edit the settings as" className="flex shrink-0 rounded-full bg-surface p-0.5 text-xs font-semibold">
+        <button type="button" onClick={() => setResetting(true)} className="h-8 shrink-0 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium transition-colors hover:bg-surface-hover">
+          Reset to defaults
+        </button>
+      </div>
+      <div className="flex items-center gap-4 border-b border-foreground/10">
+        <div role="tablist" aria-label="Edit the settings as" className="flex gap-4 text-sm">
           {(["form", "json"] as const).map((t) => (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`rounded-full px-3 py-1 ${tab === t ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}>
+            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`-mb-px border-b-2 py-2 font-medium transition-colors ${tab === t ? "border-foreground text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
               {t === "form" ? "Settings" : "JSON"}
             </button>
           ))}
         </div>
         {tab === "json" && (
-          <button type="button" onClick={() => setReference((r) => !r)} aria-pressed={reference} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${reference ? "bg-accent/15 text-accent" : "bg-surface hover:bg-surface-hover"}`}>
+          <button type="button" onClick={() => setReference((r) => !r)} aria-pressed={reference} className={`ml-auto mb-1 h-7 rounded-md px-2 text-xs font-medium transition-colors hover:bg-surface-hover ${reference ? "bg-surface-hover text-foreground" : "text-muted hover:text-foreground"}`}>
             Reference
           </button>
         )}
-        <button type="button" onClick={() => setResetting(true)} className="rounded-full bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
-          Reset to defaults
-        </button>
       </div>
 
       {tab === "form" && (
@@ -83,8 +85,8 @@ export default function SettingsPane({
       )}
 
       {tab === "json" && problems.length > 0 && (
-        <ul className={`flex flex-col gap-1 rounded-xl px-3 py-2 text-xs ${broken ? "bg-danger/10 text-danger" : "bg-surface text-muted"}`}>
-          {broken && <li className="font-semibold">This isn&apos;t valid JSON yet, so the last good settings are still in use.</li>}
+        <ul className={`flex flex-col gap-1 rounded-md border px-3 py-2 text-xs ${broken ? "border-danger/30 bg-danger/10 text-danger" : "border-foreground/10 bg-surface text-muted"}`}>
+          {broken && <li className="font-medium">This isn&apos;t valid JSON yet, so the last good settings are still in use.</li>}
           {problems.map((p) => (
             <li key={p}>{p}</li>
           ))}
@@ -92,27 +94,27 @@ export default function SettingsPane({
       )}
 
       {tab === "json" && reference && (
-        <div className="flex max-h-[45vh] flex-col gap-4 overflow-y-auto rounded-xl bg-surface p-3 text-xs">
+        <div className="flex max-h-[45vh] flex-col gap-4 overflow-y-auto rounded-lg bg-surface p-3 text-xs">
           <div className="flex flex-col gap-1.5">
-            <h3 className="font-semibold text-muted">Settings</h3>
+            <h3 className="font-medium text-muted">Settings</h3>
             {OPTIONS.map(([k, d]) => (
               <p key={k}>
-                <code className="font-semibold text-accent">{k}</code> <span className="text-muted">— {d}</span>
+                <code className="font-medium text-foreground">{k}</code> <span className="text-muted">— {d}</span>
               </p>
             ))}
           </div>
           <div className="flex flex-col gap-1.5">
-            <h3 className="font-semibold text-muted">Vim</h3>
+            <h3 className="font-medium text-muted">Vim</h3>
             <VimGuide leader={config.vim.leader} />
           </div>
           <div className="flex flex-col gap-1">
-            <h3 className="font-semibold text-muted">Commands</h3>
+            <h3 className="font-medium text-muted">Commands</h3>
             <table className="w-full border-separate border-spacing-y-0.5">
               <tbody>
                 {COMMANDS.map((c) => (
                   <tr key={c.id}>
                     <td className="pr-3 align-top">
-                      <code className="text-accent">{c.id}</code>
+                      <code className="text-foreground">{c.id}</code>
                     </td>
                     <td className="pr-3 align-top text-muted">{c.name}</td>
                     <td className="whitespace-nowrap text-right align-top font-mono text-muted">{keyFor(c.id)}</td>
@@ -125,7 +127,7 @@ export default function SettingsPane({
       )}
 
       {tab === "json" && (
-      <div className="min-h-[60vh] overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1">
+      <div className="min-h-[60vh] overflow-hidden rounded-lg bg-surface lg:min-h-0 lg:flex-1">
         <NoteEditor key={version} initialText={text} language="json" config={config} actions={actions} onChange={setText} className="h-full" />
       </div>
       )}

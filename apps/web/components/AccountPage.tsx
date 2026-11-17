@@ -12,18 +12,27 @@ import MyPostsTab from "@/components/MyPostsTab";
 import PublicProfileEditor from "@/components/PublicProfileEditor";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import UserAvatar from "@/components/UserAvatar";
-import ProfileBanner from "@/components/ProfileBanner";
-import { AppearanceSettings, DashboardSettings, GeneralSettings, PracticeSettings, SidebarSettings, ToolSettings } from "@/components/settings/SettingsSections";
+import {
+  AppearanceSettings,
+  BUTTON_PRIMARY,
+  BUTTON_SECONDARY,
+  DashboardSettings,
+  GeneralSettings,
+  INPUT,
+  PracticeSettings,
+  SettingsCard,
+  SidebarSettings,
+  ToolSettings,
+} from "@/components/settings/SettingsSections";
+import Select from "@/components/Select";
 import TunesTab from "@/components/TunesTab";
 import TunesToLearnTab from "@/components/TunesToLearnTab";
 import {
   BookIcon,
   CalendarIcon,
-  ChevronLeftIcon,
   GearIcon,
   HomeIcon,
   SlidersIcon,
-  ChevronRightIcon,
   GoogleIcon,
   ListIcon,
   LogOutIcon,
@@ -40,7 +49,7 @@ import {
 function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <main
-      className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16 ${
+      className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12 ${
         wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-md"
       }`}
     >
@@ -140,37 +149,34 @@ function PasswordSection({ hasPassword, email }: { hasPassword: boolean; email: 
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
-      <div>
-        <h2 className="text-lg font-semibold">
-          {hasPassword ? "Change password" : "Set a password"}
-        </h2>
-        <p className="text-sm text-muted">
-          {step === "code"
-            ? `Enter the code we emailed to ${email ?? "your email"} to finish.`
-            : hasPassword
-              ? "Changing your password signs you out on every other device. We'll email a code to confirm it's really you."
-              : `Lets you also sign in with ${email ?? "your email"} and a password, not just Google. We'll email a code to confirm.`}
-        </p>
-      </div>
-
+    <SettingsCard
+      hints={false}
+      title={hasPassword ? "Change password" : "Set a password"}
+      description={
+        step === "code"
+          ? `Enter the code we emailed to ${email ?? "your email"} to finish.`
+          : hasPassword
+            ? "Changing your password signs you out on every other device. We'll email a code to confirm it's really you."
+            : `Lets you also sign in with ${email ?? "your email"} and a password, not just Google. We'll email a code to confirm.`
+      }
+    >
       {step === "form" ? (
-        <form onSubmit={onSubmitForm} className="flex flex-col gap-3">
+        <form onSubmit={onSubmitForm} className="flex max-w-sm flex-col gap-3">
           {hasPassword && (
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Current password</span>
+              <span className="text-xs font-medium text-muted">Current password</span>
               <input
                 type="password"
                 required
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+                className={INPUT}
               />
             </label>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">New password</span>
+            <span className="text-xs font-medium text-muted">New password</span>
             <input
               type="password"
               required
@@ -178,11 +184,11 @@ function PasswordSection({ hasPassword, email }: { hasPassword: boolean; email: 
               autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className={INPUT}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Confirm new password</span>
+            <span className="text-xs font-medium text-muted">Confirm new password</span>
             <input
               type="password"
               required
@@ -190,7 +196,7 @@ function PasswordSection({ hasPassword, email }: { hasPassword: boolean; email: 
               autoComplete="new-password"
               value={confirmNewPassword}
               onChange={(e) => setConfirmNewPassword(e.target.value)}
-              className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className={INPUT}
             />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -202,15 +208,15 @@ function PasswordSection({ hasPassword, email }: { hasPassword: boolean; email: 
           <button
             type="submit"
             disabled={submitting}
-            className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+            className={`self-start ${BUTTON_PRIMARY}`}
           >
             {hasPassword ? "Send confirmation code" : "Send code to set password"}
           </button>
         </form>
       ) : (
-        <form onSubmit={onSubmitCode} className="flex flex-col gap-3">
+        <form onSubmit={onSubmitCode} className="flex max-w-sm flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Confirmation code</span>
+            <span className="text-xs font-medium text-muted">Confirmation code</span>
             <input
               type="text"
               inputMode="numeric"
@@ -218,7 +224,7 @@ function PasswordSection({ hasPassword, email }: { hasPassword: boolean; email: 
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className={INPUT}
             />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -226,21 +232,21 @@ function PasswordSection({ hasPassword, email }: { hasPassword: boolean; email: 
             <button
               type="button"
               onClick={reset}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className={BUTTON_SECONDARY}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || !code}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+              className={BUTTON_PRIMARY}
             >
               {hasPassword ? "Confirm password change" : "Confirm and set password"}
             </button>
           </div>
         </form>
       )}
-    </section>
+    </SettingsCard>
   );
 }
 
@@ -338,18 +344,14 @@ function SignInMethodsSection({
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl bg-surface p-5 text-left">
-      <div>
-        <h2 className="text-lg font-semibold">Sign-in methods</h2>
-        <p className="text-sm text-muted">
-          {hasGoogle
-            ? "Google is connected to this account."
-            : "Connect a Google account so you can also sign in with it."}
-        </p>
-      </div>
+    <SettingsCard
+      hints={false}
+      title="Sign-in methods"
+      description={hasGoogle ? "Google is connected to this account." : "Connect a Google account so you can also sign in with it."}
+    >
 
       {warning && (
-        <div className="flex flex-col gap-1 rounded-lg bg-background p-3 text-xs text-muted">
+        <div className="flex flex-col gap-1 rounded-md bg-background p-3 text-xs text-muted">
           <p>{warning}</p>
           <button
             type="button"
@@ -375,7 +377,7 @@ function SignInMethodsSection({
             type="button"
             onClick={() => void onDisconnect()}
             disabled={!hasPassword || submitting}
-            className="flex items-center justify-center gap-2 self-start rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+            className={`self-start ${BUTTON_SECONDARY}`}
           >
             <GoogleIcon className="h-4 w-4" />
             Disconnect Google
@@ -391,14 +393,14 @@ function SignInMethodsSection({
           <button
             type="button"
             onClick={() => void onConnect()}
-            className="flex items-center justify-center gap-2 self-start rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+            className={`self-start ${BUTTON_SECONDARY}`}
           >
             <GoogleIcon className="h-4 w-4" />
             Connect Google
           </button>
         </>
       )}
-    </section>
+    </SettingsCard>
   );
 }
 
@@ -495,11 +497,11 @@ function DeleteAccountModal({
       <div
         role="alertdialog"
         aria-label="Delete account"
-        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-lg font-semibold">Delete your account</h2>
+          <h2 className="text-base font-semibold">Delete your account</h2>
           <p className="text-sm text-muted">
             {step === "code"
               ? `Enter the code we emailed to ${email ?? "your email"} to finish.`
@@ -510,18 +512,18 @@ function DeleteAccountModal({
         {step === "form" ? (
           requiresPassword ? (
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Enter your password to confirm</span>
+              <span className="text-xs font-medium text-muted">Enter your password to confirm</span>
               <input
                 type="password"
                 autoFocus
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+                className={INPUT}
               />
             </label>
           ) : (
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">
+              <span className="text-xs font-medium text-muted">
                 Type <span className="font-semibold text-foreground">DELETE</span> to confirm
               </span>
               <input
@@ -529,20 +531,20 @@ function DeleteAccountModal({
                 autoFocus
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
-                className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+                className={INPUT}
               />
             </label>
           )
         ) : (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Confirmation code</span>
+            <span className="text-xs font-medium text-muted">Confirmation code</span>
             <input
               type="text"
               inputMode="numeric"
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className={INPUT}
             />
           </label>
         )}
@@ -551,7 +553,7 @@ function DeleteAccountModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+            className={BUTTON_SECONDARY}
           >
             Cancel
           </button>
@@ -560,7 +562,7 @@ function DeleteAccountModal({
               type="button"
               onClick={() => void onConfirmForm()}
               disabled={!canSubmitForm || submitting}
-              className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
+              className="h-9 rounded-md bg-danger px-4 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
             >
               {requiresPassword ? "Send confirmation code" : "Delete my account"}
             </button>
@@ -569,7 +571,7 @@ function DeleteAccountModal({
               type="button"
               onClick={() => void onConfirmCode()}
               disabled={!code || submitting}
-              className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
+              className="h-9 rounded-md bg-danger px-4 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
             >
               Delete my account
             </button>
@@ -639,12 +641,12 @@ const NAV: { group: string; items: NavItem[] }[] = [
 const ALL_VIEWS = NAV.flatMap((g) => g.items.map((i) => i.id));
 const isView = (v: string | null | undefined): v is AccountView => !!v && (ALL_VIEWS as string[]).includes(v);
 
-/** The account settings page (`/account[?tab=…]`). A header card (picture, @username, email,
+/** The account settings page (`/account[?tab=…]`). A header (picture, @username, email,
     public/private, sign-in methods, View profile, Sign out), then settings grouped in a left nav —
     You (profile), Library (Tunes I Know / to Learn), Community (posts, following), Settings
     (site-wide: features, theme, sidebar, dashboard, tools, the Shed Log — `components/settings/`;
     `/settings` redirects here), Account (password and Google, delete). On a
-    phone the nav is a list you tap into, with a back button. The section is kept in the address
+    phone the nav is a dropdown above the section. The section is kept in the address
     bar (`?tab=`), so other pages can link straight to one. Signed out it says so (no redirect). */
 export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -655,8 +657,6 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [view, setView] = useState<AccountView>(isView(initialTab) ? initialTab : "profile");
-  // Phones: the list of sections first, then one section with a back button.
-  const [mobileOpen, setMobileOpen] = useState(isView(initialTab));
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -676,10 +676,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   if (!isAuthenticated) {
     return (
       <PageShell>
-        <div className="flex flex-col items-start gap-3 rounded-3xl bg-surface p-6 text-left">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-            <UserIcon className="h-6 w-6 text-accent" /> Account
-          </h1>
+        <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-5 text-left">
+          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
           <p className="text-sm text-muted">You&apos;re not signed in. Sign in to manage your profile, library and settings.</p>
           <SignInButtons />
         </div>
@@ -699,77 +697,64 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
 
   function pick(id: AccountView) {
     setView(id);
-    setMobileOpen(true);
     window.scrollTo({ top: 0 });
   }
 
+  const methods = [hasPassword ? "Password" : null, hasGoogle ? "Google" : null].filter(Boolean).join(" and ");
+
   return (
     <PageShell wide>
-      <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-        <UserIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> Account
-      </h1>
-
-      {/* Who you are. */}
-      <section className={`overflow-hidden rounded-3xl bg-surface ${mobileOpen ? "hidden sm:block" : ""}`}>
-        <ProfileBanner banner={profile?.banner} className="h-24 sm:h-32" />
-        <div className="-mt-12 flex flex-col gap-3 px-5 pb-5">
-          <div className="flex items-start gap-3">
-            <span className="relative z-10 rounded-full ring-[6px] ring-surface">
-              <UserAvatar url={profile?.avatarUrl ?? null} size="xl" />
-            </span>
-            <div className="ml-auto flex shrink-0 gap-2 pt-14">
-              {username && profile?.isPublic && (
-                <Link href={`/u/${username}`} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-                  View profile
-                </Link>
-              )}
-              <button type="button" onClick={handleSignOut} aria-label="Sign out" className="flex items-center gap-1.5 rounded-full bg-background px-3 py-2 text-sm font-semibold hover:bg-surface-hover sm:px-4">
-                <LogOutIcon className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
-              </button>
-            </div>
-          </div>
+      {/* Who you are, like the dashboard's header: name and email on the left, actions on the right. */}
+      <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <UserAvatar url={profile?.avatarUrl ?? null} />
           <div className="min-w-0">
-            <div className="truncate text-2xl font-extrabold tracking-tight">{username ? `@${username}` : user?.name || "Your account"}</div>
-            <div className="truncate text-sm text-muted">{user?.email ?? ""}</div>
-            <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
-              <span className={`rounded-full px-2.5 py-0.5 ${profile?.isPublic ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-background text-muted"}`}>
-                {profile?.isPublic ? "Public profile" : "Private profile"}
-              </span>
-              {hasPassword && <span className="rounded-full bg-background px-2.5 py-0.5 text-muted">Password</span>}
-              {hasGoogle && (
-                <span className="flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-muted">
-                  <GoogleIcon className="h-3 w-3" /> Google
-                </span>
-              )}
-            </div>
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{username ? `@${username}` : user?.name || "Account"}</h1>
+            <p className="truncate text-sm text-muted">
+              {[user?.email, profile?.isPublic ? "Public profile" : "Private profile", methods ? `Signs in with ${methods}` : null].filter(Boolean).join(" · ")}
+            </p>
           </div>
         </div>
-      </section>
+        <div className="flex shrink-0 gap-2">
+          {username && profile?.isPublic && (
+            <Link href={`/u/${username}`} className={BUTTON_SECONDARY}>
+              View profile
+            </Link>
+          )}
+          <button type="button" onClick={handleSignOut} className={BUTTON_SECONDARY}>
+            <LogOutIcon className="h-4 w-4" /> Sign out
+          </button>
+        </div>
+      </header>
 
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-        <nav aria-label="Account sections" className={`flex w-full flex-col gap-4 sm:sticky sm:top-6 sm:w-56 sm:shrink-0 ${mobileOpen ? "hidden sm:flex" : ""}`}>
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
+        {/* Phones: one dropdown for the section. */}
+        <div className="md:hidden">
+          <Select
+            value={view}
+            onChange={pick}
+            className="w-full"
+            options={NAV.flatMap((g) => g.items).map((item) => ({ value: item.id, label: item.label, icon: <item.icon className="h-4 w-4 text-muted" /> }))}
+          />
+        </div>
+        <nav aria-label="Account sections" className="hidden w-52 shrink-0 flex-col gap-5 md:sticky md:top-6 md:flex">
           {NAV.map((g) => (
             <div key={g.group}>
-              <h2 className="mb-1 px-3 text-xs font-semibold text-muted">{g.group}</h2>
-              <div className="flex flex-col overflow-hidden rounded-2xl bg-surface sm:gap-0.5 sm:bg-transparent">
-                {g.items.map((item, i) => {
+              <h2 className="mb-1 px-3 text-xs font-medium text-muted">{g.group}</h2>
+              <div className="flex flex-col gap-0.5">
+                {g.items.map((item) => {
                   const on = view === item.id;
-                  const Icon = item.icon;
                   return (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => pick(item.id)}
                       aria-current={on ? "page" : undefined}
-                      className={`flex items-center gap-3 px-3 py-3 text-left text-sm font-semibold transition-colors sm:rounded-xl sm:py-2 ${i ? "border-t border-background sm:border-0" : ""} ${
-                        on ? "sm:bg-accent/10 sm:text-accent" : item.danger ? "text-danger hover:bg-surface-hover" : "hover:bg-surface-hover sm:text-muted sm:hover:text-foreground"
+                      className={`flex h-9 items-center rounded-md px-3 text-left text-sm transition-colors ${
+                        on ? "bg-surface-hover font-medium text-foreground" : item.danger ? "text-danger hover:bg-surface-hover" : "text-muted hover:bg-surface-hover hover:text-foreground"
                       }`}
                     >
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-auto sm:w-auto sm:bg-transparent ${item.danger ? "bg-danger/10" : "bg-accent/10 text-accent sm:text-current"}`}>
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="flex-1">{item.label}</span>
-                      <ChevronRightIcon className="h-4 w-4 text-muted sm:hidden" />
+                      {item.label}
                     </button>
                   );
                 })}
@@ -778,11 +763,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           ))}
         </nav>
 
-        <div className={`min-w-0 flex-1 flex-col gap-6 ${mobileOpen ? "flex" : "hidden sm:flex"}`}>
-          <button type="button" onClick={() => setMobileOpen(false)} className="-ml-1 flex items-center gap-1 self-start rounded-full px-2 py-1 text-sm font-semibold text-muted hover:bg-surface hover:text-foreground sm:hidden">
-            <ChevronLeftIcon className="h-4 w-4" /> Account
-          </button>
-          <h2 className="text-xl font-extrabold tracking-tight sm:hidden">{current.label}</h2>
+        <div className="flex min-w-0 flex-1 flex-col gap-6">
+          <h2 className="hidden text-xl font-semibold tracking-tight md:block">{current.label}</h2>
 
           {view === "profile" && <PublicProfileEditor />}
 
@@ -814,17 +796,17 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           )}
 
           {view === "danger" && (
-            <section className="flex flex-col gap-3 rounded-2xl bg-surface p-5 text-left ring-1 ring-danger/30">
-              <div>
-                <h2 className="text-lg font-semibold text-danger">Delete your account</h2>
-                <p className="text-sm text-muted">
-                  Permanently deletes your account, your profile and posts, your Shed Log, recordings and everything synced. This can&apos;t be undone.
-                </p>
-              </div>
-              <button type="button" onClick={() => setDeleteOpen(true)} className="self-start rounded-full bg-danger px-4 py-2 text-sm font-semibold text-background hover:opacity-90">
-                Delete my account
-              </button>
-            </section>
+            <SettingsCard
+              danger
+              hints={false}
+              title="Delete your account"
+              description="Permanently deletes your account, your profile and posts, your Shed Log, recordings and everything synced. This can't be undone."
+              footer={
+                <button type="button" onClick={() => setDeleteOpen(true)} className="ml-auto h-9 rounded-md bg-danger px-4 text-sm font-medium text-background hover:opacity-90">
+                  Delete my account
+                </button>
+              }
+            />
           )}
         </div>
       </div>

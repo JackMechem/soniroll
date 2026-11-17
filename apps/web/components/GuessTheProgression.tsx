@@ -60,6 +60,7 @@ import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
+import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -718,18 +719,18 @@ export default function GuessTheProgression() {
             summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
           >
             {bestMs !== null && (
-              <p className="text-sm font-semibold tabular-nums">Best {formatDuration(bestMs)}</p>
+              <p className="text-sm font-medium tabular-nums">Best {formatDuration(bestMs)}</p>
             )}
             {matchingHistory.length === 0 ? (
               <p className="text-sm text-muted">No attempts yet with these settings.</p>
             ) : (
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              <div className={PANEL_LIST}>
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                      className={PANEL_ROW}
                     >
                       <div className="flex flex-col">
                         <span className="font-medium tabular-nums">{formatDuration(entry.elapsedMs)}</span>
@@ -753,7 +754,7 @@ export default function GuessTheProgression() {
                 onClick={() =>
                   updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })
                 }
-                className="self-start text-sm font-medium text-muted hover:text-danger"
+                className={TEXT_BUTTON_DANGER}
               >
                 Clear these times
               </button>
@@ -771,11 +772,11 @@ export default function GuessTheProgression() {
                 No struggles tracked yet — a wrong or missed answer adds it here.
               </p>
             ) : (
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              <div className={PANEL_LIST}>
                 {weakEntries.map((entry) => (
                   <div
                     key={entry.key}
-                    className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                    className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.progression.name}</span>
                     <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
@@ -795,7 +796,7 @@ export default function GuessTheProgression() {
               type="button"
               onClick={() => start("weak")}
               disabled={running || weakEntries.length === 0}
-              className="self-start rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+              className={PRIMARY_BUTTON_SM}
             >
               Shed weak progressions{weakEntries.length > 0 && ` (${weakEntries.length})`}
             </button>
@@ -804,7 +805,7 @@ export default function GuessTheProgression() {
                 type="button"
                 onClick={clearStats}
                 disabled={running}
-                className="self-start text-sm font-medium text-muted hover:text-danger disabled:opacity-50"
+                className={TEXT_BUTTON_DANGER}
               >
                 Clear stats
               </button>
@@ -876,12 +877,12 @@ export default function GuessTheProgression() {
             <Hint>Which progressions can be picked for a round. At least one must stay selected.</Hint>
             {PROGRESSION_CATEGORIES.map((category) => (
               <div key={category} className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-muted">{category}</span>
+                <span className="text-xs font-medium text-muted">{category}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
                     const selected = settings.progressionIds.includes(p.id);
                     return (
-                      <PoolPill key={p.id} on={selected} onClick={() => toggleProgression(p.id)} disabled={running} title={p.chords.map((c) => prettyNumeral(c.numeral)).join(" ")} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
+                      <PoolPill key={p.id} on={selected} onClick={() => toggleProgression(p.id)} disabled={running} title={p.chords.map((c) => prettyNumeral(c.numeral)).join(" ")} plainClassName="rounded-md px-3 py-1.5 text-xs font-medium">
                         {p.name}
                       </PoolPill>
                     );
@@ -1059,14 +1060,14 @@ export default function GuessTheProgression() {
       <div className="flex w-full flex-col items-center gap-3">
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold text-muted">Next progression in</span>
-            <span className="text-3xl font-bold tabular-nums sm:text-4xl" style={{ color: GRADE_COLOR[status] }}>
+            <span className="text-xs font-medium text-muted">Next progression in</span>
+            <span className="text-3xl font-semibold tabular-nums sm:text-4xl" style={{ color: GRADE_COLOR[status] }}>
               <CountdownLabel active={running} timerRef={noteTimerRef} />
             </span>
           </div>
         )}
         {activeLevel !== null && running && (
-          <p className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+          <p className={LEVEL_LABEL}>
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
@@ -1074,10 +1075,10 @@ export default function GuessTheProgression() {
         <div className="relative flex h-36 w-36 items-center justify-center p-4 text-center sm:h-44 sm:w-44">
           <CountdownRing active={running} timerRef={noteTimerRef} />
           <span
-            className="relative z-10 text-3xl font-bold tabular-nums transition-[color,text-shadow] duration-200 sm:text-4xl"
+            className="relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200 sm:text-4xl"
             style={
               glow
-                ? { color: glow, textShadow: `0 0 12px ${glow}, 0 0 32px ${glow}, 0 0 64px ${glow}` }
+                ? { color: glow }
                 : undefined
             }
           >
@@ -1096,8 +1097,8 @@ export default function GuessTheProgression() {
                 return (
                   <div
                     key={i}
-                    className={`flex min-w-14 flex-col items-center rounded-xl px-2.5 py-2 transition-colors ${
-                      playingIndex === i ? "bg-accent/20 ring-2 ring-accent" : "bg-surface"
+                    className={`flex min-w-14 flex-col items-center rounded-md border px-2.5 py-2 transition-colors ${
+                      playingIndex === i ? "border-accent bg-accent/10" : "border-foreground/15 bg-surface"
                     }`}
                   >
                     <span
@@ -1125,7 +1126,7 @@ export default function GuessTheProgression() {
             <button
               type="button"
               onClick={() => void playProgression(round)}
-              className="flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover"
+              className={SECONDARY_BUTTON}
             >
               <PlayIcon className="h-3.5 w-3.5" />
               Replay
@@ -1184,19 +1185,19 @@ export default function GuessTheProgression() {
                     ? "e.g. D-7 G7 C^7"
                     : "e.g. D- G C"
               }
-              className="w-full max-w-[20rem] rounded-lg bg-background px-3 py-2 text-center text-lg text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="h-11 w-full max-w-[20rem] rounded-md bg-foreground/[0.05] px-3 text-center text-lg text-foreground outline-none focus:ring-2 focus:ring-accent/40"
             />
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                className={PRIMARY_BUTTON}
               >
                 Submit
               </button>
               <button
                 type="button"
                 onClick={gradeAndReveal}
-                className="rounded-full bg-surface px-4 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+                className={SECONDARY_BUTTON}
               >
                 I don&apos;t know
               </button>
@@ -1205,7 +1206,9 @@ export default function GuessTheProgression() {
         )}
 
         {!running && !learnMode && (
-          <p className="max-w-xs text-xs text-muted">
+          <details className="max-w-xs text-xs text-muted">
+            <summary className="cursor-pointer select-none font-medium hover:text-foreground">How to type your answer</summary>
+            <p className="mt-2">
             {answerMode === "numerals" ? (
               <>
                 One numeral per chord, separated by spaces: upper case is major, lower case minor
@@ -1233,7 +1236,8 @@ export default function GuessTheProgression() {
                 . You&apos;re given the first chord&apos;s root.
               </>
             )}
-          </p>
+            </p>
+          </details>
         )}
 
         {running && progress && (
@@ -1246,16 +1250,16 @@ export default function GuessTheProgression() {
       </div>
 
       {summary && !running && !learnMode && (
-        <section aria-label="Results" className="flex w-full flex-col gap-4 rounded-2xl bg-surface p-4 text-left sm:p-6">
+        <section aria-label="Results" className={RESULTS_PANEL}>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-muted">Results</p>
-              <p className="text-4xl font-bold tabular-nums">
+              <p className="text-sm font-medium text-muted">Results</p>
+              <p className="text-3xl font-semibold tabular-nums">
                 {score % 1 === 0 ? score : score.toFixed(1)}
-                <span className="text-xl font-semibold text-muted"> / {summary.results.length}</span>
+                <span className="text-lg font-medium text-muted"> / {summary.results.length}</span>
               </p>
             </div>
-            <p className="text-2xl font-semibold tabular-nums text-muted">
+            <p className="text-xl font-medium tabular-nums text-muted">
               {summary.results.length ? Math.round((score / summary.results.length) * 100) : 0}%
             </p>
           </div>
@@ -1272,25 +1276,25 @@ export default function GuessTheProgression() {
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             {(["correct", "partial", "incorrect"] as const).map((grade) => (
-              <div key={grade} className="rounded-xl bg-background px-2 py-3">
-                <p className="text-2xl font-bold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
+              <div key={grade} className="flex items-baseline gap-1.5">
+                <p className="font-semibold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
                   {tally(grade)}
                 </p>
-                <p className="text-xs text-muted">{GRADE_LABEL[grade]}</p>
+                <p className="text-muted">{GRADE_LABEL[grade]}</p>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col divide-y divide-foreground/10 rounded-md bg-foreground/[0.05]">
             {summary.rounds.map((r, i) => (
-              <div key={i} className="flex flex-col gap-0.5 rounded-lg bg-background px-3 py-1.5 text-sm">
+              <div key={i} className="flex flex-col gap-0.5 px-3 py-2 text-sm">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   {r.progression.chords.map((_, j) => (
                     <span
                       key={j}
-                      className="font-semibold"
+                      className="font-medium"
                       style={{ color: summary.marks[i]?.[j] ? GRADE_COLOR.correct : GRADE_COLOR.incorrect }}
                     >
                       {answerFor(r, j)}
@@ -1311,14 +1315,14 @@ export default function GuessTheProgression() {
             <button
               type="button"
               onClick={() => start(lastMode)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className={PRIMARY_BUTTON}
             >
               Try again
             </button>
             <button
               type="button"
               onClick={() => setSummary(null)}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className={SECONDARY_BUTTON}
             >
               Close
             </button>
@@ -1331,9 +1335,7 @@ export default function GuessTheProgression() {
       <button
         type="button"
         onClick={running ? stop : () => start(learnMode ? "learn" : "normal")}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-          running ? "bg-surface hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={startButtonClass(running)}
       >
         {running ? "Stop" : learnMode ? `Start level ${learn.selected + 1}` : "Start"}
       </button>

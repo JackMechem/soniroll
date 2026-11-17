@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
-import { TempoHero } from "@/components/MeterFields";
+import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
 import { PresetsSection } from "@/components/PresetsChip";
@@ -269,7 +269,7 @@ export default function Syncopation() {
   const familyNames = RHYTHM_FAMILIES.filter((f) => families.includes(f.id)).map((f) => f.short);
 
   const panel = (
-    <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-2xl">
+    <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-lg lg:border lg:border-foreground/10">
       <PresetsSection id="syn-presets" tool={toolPresets("syncopation", settings, update)} />
       <PanelSection id="syn-tempo" title="Tempo" icon={MetronomeIcon} summary={`${settings.bpm} BPM`}>
         <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
@@ -290,7 +290,7 @@ export default function Syncopation() {
                   type="button"
                   onClick={() => toggleFamily(f.id)}
                   aria-pressed={on}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold ${on ? "bg-accent text-accent-foreground" : "bg-background text-muted hover:bg-surface-hover"}`}
+                  className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors ${on ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background text-muted hover:bg-surface-hover hover:text-foreground"}`}
                 >
                   <RhythmGlyph family={f.id} />
                   {f.label}
@@ -347,18 +347,16 @@ export default function Syncopation() {
           <button
             type="button"
             onClick={toggle}
-            className={`flex min-w-40 items-center justify-center gap-2 rounded-full px-8 py-3 text-lg font-semibold ${
-              running || downloading ? "bg-surface text-foreground hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-            }`}
+            className={running || downloading ? BIG_SECONDARY : BIG_PRIMARY}
           >
-            {running || downloading ? <StopIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+            {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
             {running || downloading ? "Stop" : "Play"}
           </button>
           <button
             type="button"
             onClick={() => setOptionsOpen(true)}
             aria-label="Options"
-            className="flex h-12 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover lg:hidden"
+            className="flex h-11 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden"
           >
             <SlidersIcon className="h-4 w-4" /> Options
           </button>
@@ -369,13 +367,13 @@ export default function Syncopation() {
       </div>
 
       <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-        <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-2xl">
+        <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-lg">
           {panel}
         </aside>
-        <div ref={cardRef} className="min-w-0 rounded-2xl bg-surface p-3 sm:p-5">
+        <div ref={cardRef} className="min-w-0 rounded-lg bg-surface p-3 sm:p-5">
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2 px-1">
             <div className="min-w-0">
-              <h2 className="text-lg font-bold">
+              <h2 className="text-base font-semibold">
                 {live ? `Exercise ${Math.min(shown, played.length - 1) + 1}` : "Exercise"}
                 <span className="ml-2 text-sm font-normal text-muted">{familyNames.join(" · ")}</span>
               </h2>
@@ -387,9 +385,9 @@ export default function Syncopation() {
               <button
                 type="button"
                 onClick={() => setSeed(newSeed())}
-                className="flex items-center gap-1 rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover"
+                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
               >
-                <ShuffleIcon className="h-3.5 w-3.5" /> New exercise
+                <ShuffleIcon className="h-4 w-4 text-muted" /> New exercise
               </button>
             )}
           </div>

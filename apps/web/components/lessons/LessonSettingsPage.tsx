@@ -2,12 +2,12 @@
 
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SwitchRow from "@/components/SwitchRow";
 import { Hero, LibraryPage } from "@/components/library/ui";
-import { errorText, field } from "@/components/lessons/parts";
+import { btnPrimary, btnSecondary, errorText, field } from "@/components/lessons/parts";
 import { SlotGrid, localTz } from "@/components/lessons/schedule";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { CalendarIcon, CloseIcon, PlusIcon, SlidersIcon } from "@/components/tools";
@@ -131,15 +131,14 @@ export default function LessonSettingsPage() {
     <LibraryPage>
       <Hero title="Lesson settings" icon={SlidersIcon} backHref="/lessons" backLabel="Lessons" subtitle="What your students get, and when they can book." />
 
-      <section className="flex flex-col gap-1 rounded-2xl bg-surface p-4 sm:p-5">
-        <h2 className="text-lg font-bold">Features</h2>
-        <p className="mb-2 text-sm text-muted">
-          For all your students. Turning one off hides it for you and them — nothing is deleted, and turning it back on brings it all back. (Routines that are off leave
-          their Shed Logs; the days they logged stay.)
-        </p>
-        <div className="grid gap-2 md:grid-cols-2">
+      <Section
+        title="Features"
+        description="For all your students. Turning one off hides it for you and them — nothing is deleted, and turning it back on brings it all back. (Routines that are off leave their Shed Logs; the days they logged stay.)"
+        flush
+      >
+        <div className="flex flex-col divide-y divide-foreground/10">
           {FEATURE_INFO.map((f) => (
-            <div key={f.id} className="flex items-start gap-3 rounded-xl bg-background p-3">
+            <div key={f.id} className="flex items-start gap-3 px-4 py-3 sm:px-5">
               <button
                 type="button"
                 role="switch"
@@ -151,22 +150,22 @@ export default function LessonSettingsPage() {
                 <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${features[f.id] ? "left-[1.125rem]" : "left-0.5"}`} />
               </button>
               <span className="min-w-0">
-                <span className={`block text-sm font-bold ${features[f.id] ? "" : "text-muted"}`}>{f.label}</span>
+                <span className={`block text-sm font-medium ${features[f.id] ? "" : "text-muted"}`}>{f.label}</span>
                 <span className="block text-xs text-muted">{f.text}</span>
               </span>
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
       {!features.scheduling ? (
-        <p className="rounded-2xl bg-surface p-4 text-sm text-muted">Lesson booking is off — turn it on above to set your teaching hours.</p>
+        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">Lesson booking is off — turn it on above to set your teaching hours.</p>
       ) : (
         <>
-          <div id="hours" className="flex scroll-mt-6 flex-wrap items-center justify-between gap-3">
+          <div id="hours" className="flex scroll-mt-6 flex-wrap items-center justify-between gap-3 border-t border-foreground/10 pt-6">
             <div>
-              <h2 className="flex items-center gap-2 text-xl font-extrabold">
-                <CalendarIcon className="h-5 w-5 text-accent" /> Teaching hours
+              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                <CalendarIcon className="h-4 w-4 text-muted" /> Teaching hours
               </h2>
               <p className="text-sm text-muted">
                 {windows.length
@@ -178,7 +177,7 @@ export default function LessonSettingsPage() {
               type="button"
               disabled={!dirty || busy}
               onClick={() => void submit()}
-              className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+              className={btnPrimary}
             >
               {busy ? "Saving…" : dirty ? "Save" : "Saved"}
             </button>
@@ -187,17 +186,12 @@ export default function LessonSettingsPage() {
 
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
             <div className="flex flex-col gap-5">
-              <section className="flex flex-col gap-1 rounded-2xl bg-surface p-4 sm:p-5">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-bold">Weekly hours</h2>
-                  <span className="text-xs text-muted">
-                    in {draft.timeZone.replace(/_/g, " ")} ({zoneName(draft.timeZone)})
-                  </span>
-                </div>
+              <Section title="Weekly hours" description={`In ${draft.timeZone.replace(/_/g, " ")} (${zoneName(draft.timeZone)}).`} flush>
+                <div className="flex flex-col divide-y divide-foreground/10">
                 {WEEK.map((wd) => {
                   const mine = dayWindows(wd);
                   return (
-                    <div key={wd} className="flex flex-col gap-2 border-t border-foreground/5 py-3 first:border-t-0 sm:flex-row sm:items-start">
+                    <div key={wd} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:px-5">
                       <div className="flex w-32 shrink-0 items-center gap-2 pt-1.5">
                         <button
                           type="button"
@@ -209,7 +203,7 @@ export default function LessonSettingsPage() {
                         >
                           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${mine.length ? "left-[1.125rem]" : "left-0.5"}`} />
                         </button>
-                        <span className={`text-sm font-bold ${mine.length ? "" : "text-muted"}`}>{WEEKDAYS[wd]}</span>
+                        <span className={`text-sm font-medium ${mine.length ? "" : "text-muted"}`}>{WEEKDAYS[wd]}</span>
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col gap-2">
                         {mine.length === 0 && <p className="pt-1.5 text-sm text-muted">Not teaching</p>}
@@ -236,7 +230,7 @@ export default function LessonSettingsPage() {
                               type="button"
                               onClick={() => setWindows(windows.filter((_, j) => j !== i))}
                               aria-label="Remove these hours"
-                              className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground"
+                              className="flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                             >
                               <CloseIcon className="h-4 w-4" />
                             </button>
@@ -244,11 +238,11 @@ export default function LessonSettingsPage() {
                         ))}
                         {mine.length > 0 && (
                           <div className="flex flex-wrap gap-3">
-                            <button type="button" onClick={() => addRange(wd)} className="flex items-center gap-1 text-xs font-semibold text-accent hover:underline">
+                            <button type="button" onClick={() => addRange(wd)} className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground">
                               <PlusIcon className="h-3.5 w-3.5" /> Add hours
                             </button>
                             {wd >= 1 && wd <= 5 && (
-                              <button type="button" onClick={() => copyToWeekdays(wd)} className="text-xs font-semibold text-muted hover:text-foreground">
+                              <button type="button" onClick={() => copyToWeekdays(wd)} className="text-xs font-medium text-muted hover:text-foreground">
                                 Copy to Mon–Fri
                               </button>
                             )}
@@ -258,11 +252,12 @@ export default function LessonSettingsPage() {
                     </div>
                   );
                 })}
-              </section>
+                </div>
+              </Section>
 
-              <section className="grid gap-4 rounded-2xl bg-surface p-4 sm:grid-cols-2 sm:p-5">
-                <h2 className="text-lg font-bold sm:col-span-2">Booking rules</h2>
-                <label className="flex flex-col gap-1 text-sm font-semibold">
+              <Section title="Booking rules">
+                <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Lesson length
                   <select value={draft.lengthMin} onChange={(e) => patch({ lengthMin: Number(e.target.value) })} className={field}>
                     {LESSON_LENGTHS.map((m) => (
@@ -272,7 +267,7 @@ export default function LessonSettingsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-semibold">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Break after each lesson
                   <select value={draft.bufferMin} onChange={(e) => patch({ bufferMin: Number(e.target.value) })} className={field}>
                     {[0, 5, 10, 15, 30, 45, 60].map((m) => (
@@ -282,7 +277,7 @@ export default function LessonSettingsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-semibold">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Minimum notice
                   <select value={draft.noticeHours} onChange={(e) => patch({ noticeHours: Number(e.target.value) })} className={field}>
                     {[0, 2, 6, 12, 24, 48, 72, 168].map((h) => (
@@ -292,7 +287,7 @@ export default function LessonSettingsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-semibold">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
                   Book up to
                   <select value={draft.aheadDays} onChange={(e) => patch({ aheadDays: Number(e.target.value) })} className={field}>
                     {[7, 14, 21, 28, 42, 60, 90].map((d) => (
@@ -302,7 +297,7 @@ export default function LessonSettingsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-sm font-semibold sm:col-span-2">
+                <label className="flex flex-col gap-1.5 text-sm font-medium sm:col-span-2">
                   Time zone
                   <select value={draft.timeZone} onChange={(e) => patch({ timeZone: e.target.value })} className={field}>
                     {zones.map((z) => (
@@ -316,10 +311,10 @@ export default function LessonSettingsPage() {
                   <SwitchRow label="Let students request lessons from these hours" checked={draft.allowRequests} onChange={(allowRequests) => patch({ allowRequests })} />
                   <p className="mt-1 text-xs text-muted">You accept or decline each request. Off: you can still offer times by email.</p>
                 </div>
-              </section>
+                </div>
+              </Section>
 
-              <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4 sm:p-5">
-                <h2 className="text-lg font-bold">Days off</h2>
+              <Section title="Days off" description="Holidays, gigs, time away — nobody can book these days.">
                 <div className="flex flex-wrap items-center gap-2">
                   <input type="date" value={dayOff} onChange={(e) => setDayOff(e.target.value)} className={timeField} />
                   <button
@@ -329,45 +324,58 @@ export default function LessonSettingsPage() {
                       patch({ blockedDates: [...draft.blockedDates, dayOff].sort() });
                       setDayOff("");
                     }}
-                    className="rounded-full bg-background px-4 py-2.5 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover disabled:opacity-40"
+                    className={btnSecondary}
                   >
                     Add day off
                   </button>
                 </div>
                 {draft.blockedDates.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {draft.blockedDates.map((d) => (
-                      <span key={d} className="flex items-center gap-1 rounded-full bg-background py-1 pl-3 pr-1 text-xs font-semibold">
+                      <span key={d} className="flex h-7 items-center gap-1 rounded-md bg-background pl-2.5 pr-1 text-xs font-medium">
                         {new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
                         <button
                           type="button"
                           onClick={() => patch({ blockedDates: draft.blockedDates.filter((x) => x !== d) })}
                           aria-label="Remove"
-                          className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-surface-hover"
+                          className="flex h-5 w-5 items-center justify-center rounded-sm text-muted hover:bg-foreground/10 hover:text-foreground"
                         >
                           <CloseIcon className="h-3 w-3" />
                         </button>
                       </span>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted">Holidays, gigs, time away — nobody can book these days.</p>
-                )}
-              </section>
+                ) : null}
+              </Section>
             </div>
 
-            <aside className="flex flex-col gap-3 rounded-2xl bg-surface p-4 sm:p-5 xl:sticky xl:top-6">
-              <h2 className="text-lg font-bold">What students see</h2>
-              <p className="text-xs text-muted">
-                The next open times, before any lessons are booked (shown in this browser&apos;s time zone). {draft.allowRequests ? "" : "Requests are off."}
-              </p>
-              <div className="max-h-[60vh] overflow-y-auto pr-1">
-                <SlotGrid slots={preview} selected={[]} onToggle={() => {}} emptyText="Add some weekly hours to open times." maxDays={6} />
-              </div>
+            <aside className="xl:sticky xl:top-6">
+              <Section
+                title="What students see"
+                description={`The next open times, before any lessons are booked (shown in this browser's time zone).${draft.allowRequests ? "" : " Requests are off."}`}
+              >
+                <div className="max-h-[60vh] overflow-y-auto pr-1">
+                  <SlotGrid slots={preview} selected={[]} onToggle={() => {}} emptyText="Add some weekly hours to open times." maxDays={6} />
+                </div>
+              </Section>
             </aside>
           </div>
         </>
       )}
     </LibraryPage>
+  );
+}
+
+/** A settings section: a header with its title (and a line about it) over its controls. `flush`
+    lets rows run edge to edge. */
+function Section({ title, description, flush = false, children }: { title: string; description?: string; flush?: boolean; children: ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-lg bg-surface">
+      <div className="border-b border-foreground/10 px-4 py-3 sm:px-5">
+        <h2 className="text-sm font-medium">{title}</h2>
+        {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
+      </div>
+      <div className={flush ? "" : "p-4 sm:p-5"}>{children}</div>
+    </section>
   );
 }

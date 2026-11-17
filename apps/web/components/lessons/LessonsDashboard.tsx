@@ -83,9 +83,9 @@ export default function LessonsDashboard({ data }: { data: NonNullable<ReturnTyp
 
   const next = upcoming.slice(0, 5);
   return (
-    <div className="grid items-start gap-4 @3xl:grid-cols-3">
-      <div className="flex flex-col gap-2 rounded-3xl bg-surface p-4">
-        <h3 className="text-sm font-semibold text-muted">Coming up</h3>
+    <div className="grid items-start gap-x-6 gap-y-5 @3xl:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-1">
+        <h3 className="text-xs font-medium text-muted">Coming up</h3>
         {next.length === 0 ? (
           <p className="py-3 text-sm text-muted">No lessons scheduled.</p>
         ) : (
@@ -95,14 +95,14 @@ export default function LessonsDashboard({ data }: { data: NonNullable<ReturnTyp
               const timed = d.getHours() !== 0 || d.getMinutes() !== 0 || !!l.end;
               const row = (
                 <>
-                  <span className="flex w-11 shrink-0 flex-col items-center rounded-xl bg-accent py-1 leading-none text-accent-foreground">
-                    <span className="text-[10px] font-bold">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
-                    <span className="text-lg font-extrabold tabular-nums">{d.getDate()}</span>
+                  <span className="flex w-9 shrink-0 flex-col items-center rounded-md bg-foreground/[0.05] py-0.5 leading-none">
+                    <span className="text-[10px] text-muted">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
+                    <span className="text-sm font-semibold tabular-nums">{d.getDate()}</span>
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">{l.title}</span>
+                    <span className="block truncate text-sm font-medium">{l.title}</span>
                     <span className="block truncate text-xs text-muted">
-                      <span className="font-semibold text-foreground/80">{relWhen(l.start, now)}</span>
+                      <span className="text-foreground/80">{relWhen(l.start, now)}</span>
                       {timed ? ` · ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}` : ""}
                       {` · ${l.role === "teacher" ? "with" : "from"} ${l.with}`}
                     </span>
@@ -110,10 +110,10 @@ export default function LessonsDashboard({ data }: { data: NonNullable<ReturnTyp
                 </>
               );
               return (
-                <li key={l.id} className="border-t border-foreground/5 first:border-t-0">
+                <li key={l.id} className="border-t border-foreground/10 first:border-t-0">
                   <Link
                     href={l.role === "teacher" ? `/lessons/student?id=${l.lessonId}` : `/lessons/teacher?id=${l.lessonId}`}
-                    className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover"
+                    className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover"
                   >
                     {row}
                     <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
@@ -124,8 +124,8 @@ export default function LessonsDashboard({ data }: { data: NonNullable<ReturnTyp
           </ul>
         )}
       </div>
-      <div className="flex flex-col gap-2 rounded-3xl bg-surface p-4">
-        <h3 className="text-sm font-semibold text-muted">
+      <div className="flex min-w-0 flex-col gap-1">
+        <h3 className="text-xs font-medium text-muted">
           {students.length && teachers.length ? "Students & teachers" : students.length ? "Your students" : "Your teachers"}
         </h3>
         <ul className="flex flex-col">
@@ -153,11 +153,11 @@ export default function LessonsDashboard({ data }: { data: NonNullable<ReturnTyp
           ]
             .slice(0, 6)
             .map((p) => (
-              <li key={p.key} className="border-t border-foreground/5 first:border-t-0">
-                <Link href={p.href} className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+              <li key={p.key} className="border-t border-foreground/10 first:border-t-0">
+                <Link href={p.href} className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
                   <PersonBadge url={p.avatarUrl} name={p.name} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">{p.name}</span>
+                    <span className="block truncate text-sm font-medium">{p.name}</span>
                     <span className="block truncate text-xs text-muted">{p.line}</span>
                   </span>
                   <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
@@ -166,29 +166,23 @@ export default function LessonsDashboard({ data }: { data: NonNullable<ReturnTyp
             ))}
         </ul>
         {students.length + teachers.length > 6 && (
-          <Link href="/lessons" className="text-xs font-semibold text-accent hover:underline">
+          <Link href="/lessons" className="text-xs text-muted transition-colors hover:text-foreground">
             All {students.length + teachers.length} on the Lessons page
           </Link>
         )}
       </div>
-      <div className="flex flex-col gap-2 rounded-3xl bg-surface p-4">
-        <h3 className="text-sm font-semibold text-muted">To do</h3>
+      <div className="flex min-w-0 flex-col gap-1">
+        <h3 className="text-xs font-medium text-muted">To do</h3>
         {todos.length === 0 ? (
           <p className="py-3 text-sm text-muted">You&apos;re all caught up.</p>
         ) : (
           <ul className="flex flex-col">
             {todos.slice(0, 6).map((t) => (
-              <li key={t.key} className="border-t border-foreground/5 first:border-t-0">
-                <Link href={t.href} className="group -mx-2 flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
-                  <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                      t.tone === "danger" ? "bg-danger/15 text-danger" : t.tone === "accent" ? "bg-accent/15 text-accent" : "bg-background text-muted"
-                    }`}
-                  >
-                    <ClipboardIcon className="h-4 w-4" />
-                  </span>
+              <li key={t.key} className="border-t border-foreground/10 first:border-t-0">
+                <Link href={t.href} className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
+                  <ClipboardIcon className={`h-4 w-4 shrink-0 ${t.tone === "danger" ? "text-danger" : t.tone === "accent" ? "text-accent" : "text-muted"}`} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">{t.title}</span>
+                    <span className="block truncate text-sm font-medium">{t.title}</span>
                     <span className={`block truncate text-xs ${t.tone === "danger" ? "text-danger" : "text-muted"}`}>{t.detail}</span>
                   </span>
                   <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />

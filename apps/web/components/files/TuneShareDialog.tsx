@@ -67,20 +67,20 @@ export default function TuneShareDialog({ tuneId, tuneName, hasChart, onClose }:
       <div
         role="dialog"
         aria-label={`Share ${tuneName}`}
-        className="flex w-full max-w-md flex-col gap-4 rounded-t-3xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-xl sm:rounded-3xl sm:pb-5"
+        className="flex w-full max-w-md flex-col gap-4 rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-xl sm:rounded-xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold">Share {tuneName}</h2>
+            <h2 className="text-base font-semibold">Share {tuneName}</h2>
             <p className="text-sm text-muted">Anyone with the link can see it, no account needed. It always shows the tune as it is now.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
-        <ul className="flex flex-col gap-1.5 rounded-2xl bg-background p-3 text-sm">
+        <ul className="flex flex-col gap-1.5 rounded-lg bg-foreground/[0.05] p-3 text-sm">
           {included.map(({ icon: Icon, text, on }) => (
             <li key={text} className={`flex items-center gap-2.5 ${on ? "" : "text-muted"}`}>
               <Icon className={`h-4 w-4 ${on ? "text-accent" : ""}`} />
@@ -97,15 +97,15 @@ export default function TuneShareDialog({ tuneId, tuneName, hasChart, onClose }:
           <LoadingSpinner />
         ) : shareId ? (
           <>
-            <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2.5">
+            <div className="flex h-10 items-center gap-2 rounded-md bg-background px-3">
               <LinkIcon className="h-4 w-4 shrink-0 text-muted" />
               <input readOnly value={sharedTuneUrl(shareId)} onFocus={(e) => e.target.select()} className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void send(shareId)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+              <button type="button" onClick={() => void send(shareId)} className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                 <ShareIcon className="h-4 w-4" /> Share link
               </button>
-              <a href={`/tune/${shareId}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center rounded-full bg-background px-4 text-sm font-semibold hover:bg-surface-hover">
+              <a href={`/tune/${shareId}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
                 Open
               </a>
               <button
@@ -114,7 +114,7 @@ export default function TuneShareDialog({ tuneId, tuneName, hasChart, onClose }:
                   setStatus(null);
                   void unshare({ tuneId });
                 }}
-                className="ml-auto inline-flex h-10 items-center rounded-full px-3 text-sm font-semibold text-danger hover:bg-background"
+                className="ml-auto inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-surface-hover"
               >
                 Stop sharing
               </button>
@@ -125,7 +125,7 @@ export default function TuneShareDialog({ tuneId, tuneName, hasChart, onClose }:
             type="button"
             onClick={() => void create()}
             disabled={busy}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
           >
             {busy ? <LoadingSpinner size="sm" inline label="Making the link" /> : <LinkIcon className="h-4 w-4" />}
             Make a link

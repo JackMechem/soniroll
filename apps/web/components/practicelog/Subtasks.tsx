@@ -36,21 +36,21 @@ export default function Subtasks({
               aria-checked={done}
               aria-label={`${x.title} done`}
               onClick={() => onToggle(x.id)}
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-[1.5px] ${done ? "log-check border-transparent text-white" : "border-surface-hover hover:border-muted"}`}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border-[1.5px] ${done ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-foreground/50"}`}
               style={done ? { background: color } : undefined}
             >
               {done && <CheckIcon className="h-3 w-3" />}
             </button>
             <span className={`min-w-0 flex-1 truncate ${done ? "text-muted line-through" : ""}`}>{x.title}</span>
             {onRemove && (
-              <button type="button" onClick={() => onRemove(x.id)} aria-label={`Remove ${x.title}`} className="rounded p-1 text-muted hover:text-foreground lg:p-0.5 lg:opacity-0 lg:group-hover/sub:opacity-100">
+              <button type="button" onClick={() => onRemove(x.id)} aria-label={`Remove ${x.title}`} className="rounded-sm p-1 text-muted hover:text-foreground lg:p-0.5 lg:opacity-0 lg:group-hover/sub:opacity-100">
                 <CloseIcon className="h-3 w-3" />
               </button>
             )}
           </div>
         );
       })}
-      {items.length > 1 && <span className="text-[11px] font-semibold tabular-nums text-muted">{doneCount}/{items.length} subtasks</span>}
+      {items.length > 1 && <span className="text-xs tabular-nums text-muted">{doneCount}/{items.length} subtasks</span>}
       {onAdd &&
         (adding ? (
           <input
@@ -68,10 +68,10 @@ export default function Subtasks({
               } else if (e.key === "Escape") setAdding(false);
             }}
             placeholder="Subtask — press Enter"
-            className="w-full rounded-md bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="h-8 w-full rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
         ) : (
-          <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1 self-start text-xs font-semibold text-muted hover:text-foreground">
+          <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground">
             <PlusIcon className="h-3 w-3" /> Subtask
           </button>
         ))}

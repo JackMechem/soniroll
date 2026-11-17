@@ -158,7 +158,7 @@ export default function Select<T extends string | number>({
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={onKeyDown}
-        className={`flex items-center justify-between gap-2 rounded-lg bg-background px-3 py-2 text-left text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 ${className}`}
+        className={`flex min-h-9 items-center justify-between gap-2 rounded-md bg-foreground/[0.05] px-3 py-1.5 text-left text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60 ${className}`}
       >
         <span className="flex min-w-0 items-center gap-2">
           {selected?.icon}
@@ -193,7 +193,7 @@ export default function Select<T extends string | number>({
               bottom: pos.bottom,
               maxHeight: pos.maxHeight,
             }}
-            className="z-[100] overflow-auto rounded-xl bg-surface p-1 text-sm shadow-lg ring-1 ring-foreground/10"
+            className="z-[100] overflow-auto rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-1 text-sm shadow-lg"
           >
             {options.map((option, i) => (
               <li
@@ -203,7 +203,7 @@ export default function Select<T extends string | number>({
                 data-index={i}
                 onPointerEnter={() => setActiveIndex(i)}
                 onClick={() => choose(i)}
-                className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 ${
+                className={`flex cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-1.5 ${
                   i === activeIndex ? "bg-surface-hover" : ""
                 } ${option.value === value ? "font-semibold text-accent" : ""}`}
               >

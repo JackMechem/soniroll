@@ -65,11 +65,11 @@ export default function PhraseDialog({
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-overlay p-3 sm:p-8" onClick={onClose}>
-      <div role="dialog" aria-label={`How ${barsLabel.toLowerCase()} were made`} className="w-full max-w-3xl rounded-2xl bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={`How ${barsLabel.toLowerCase()} were made`} className="w-full max-w-3xl rounded-xl ring-1 ring-foreground/[0.06] bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-accent">{barsLabel} · how it was made</p>
-            <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl">
+            <p className="text-xs text-muted">{barsLabel} · how it was made</p>
+            <h2 className="text-xl font-semibold tracking-tight">
               {src
                 ? `From ${src.title}, ${srcBars.from === srcBars.to ? `bar ${srcBars.from}` : `bars ${srcBars.from}–${srcBars.to}`}`
                 : phrase.learned
@@ -77,14 +77,14 @@ export default function PhraseDialog({
                   : "Walked by the Computer"}
             </h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface hover:bg-surface-hover">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
         <div className="flex flex-col gap-4">
-          <section className="rounded-2xl bg-surface p-4">
-            <h3 className="mb-2 font-bold">Why this</h3>
+          <section className="rounded-lg bg-surface p-4">
+            <h3 className="mb-2 text-sm font-semibold">Why this</h3>
             <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm">
               {src ? (
                 <>
@@ -128,26 +128,26 @@ export default function PhraseDialog({
             </ul>
           </section>
 
-          <section className="rounded-2xl bg-surface p-4">
-            <h3 className="mb-2 font-bold">Chords</h3>
+          <section className="rounded-lg bg-surface p-4">
+            <h3 className="mb-2 text-sm font-semibold">Chords</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody>
                   <tr>
-                    <th className="w-28 py-1 pr-3 text-left text-xs font-semibold text-muted">This chart</th>
+                    <th className="w-28 py-1 pr-3 text-left text-xs font-medium text-muted">This chart</th>
                     {chartBars.map((b, i) => (
-                      <td key={i} className="border-l border-surface-hover px-2 py-1 font-semibold">
+                      <td key={i} className="border-l border-foreground/10 px-2 py-1 font-medium">
                         {pretty(b)}
                       </td>
                     ))}
                   </tr>
                   {src && (
                     <tr>
-                      <th className="py-1 pr-3 text-left text-xs font-semibold text-muted">
+                      <th className="py-1 pr-3 text-left text-xs font-medium text-muted">
                         {playerName}&apos;s chords{src.shift ? " (as written)" : ""}
                       </th>
                       {chartBars.map((_, i) => (
-                        <td key={i} className="border-l border-surface-hover px-2 py-1 text-muted">
+                        <td key={i} className="border-l border-foreground/10 px-2 py-1 text-muted">
                           {pretty(srcChordBars[i] ?? "")}
                         </td>
                       ))}
@@ -160,8 +160,8 @@ export default function PhraseDialog({
           </section>
 
           {snippet && (
-            <section className="rounded-2xl bg-surface p-3 sm:p-4">
-              <h3 className="mb-1 px-1 font-bold">
+            <section className="rounded-lg bg-surface p-3 sm:p-4">
+              <h3 className="mb-1 px-1 text-sm font-semibold">
                 In {src!.title} <span className="text-sm font-normal text-muted">(as written{src!.shift ? `, before moving ${INTERVALS[src!.shift]}` : ""})</span>
               </h3>
               <TranscriptionScore transcription={snippet} firstBar={srcBars.from} cursor={null} playing={null} mode="select" onSelect={noop} onAdd={noop} onReplace={noop} onChordClick={noop} />
@@ -169,8 +169,8 @@ export default function PhraseDialog({
           )}
 
           {played && (
-            <section className="rounded-2xl bg-surface p-3 sm:p-4">
-              <h3 className="mb-1 px-1 font-bold">As played here</h3>
+            <section className="rounded-lg bg-surface p-3 sm:p-4">
+              <h3 className="mb-1 px-1 text-sm font-semibold">As played here</h3>
               <TranscriptionScore transcription={played} firstBar={bars.from} cursor={null} playing={null} mode="select" onSelect={noop} onAdd={noop} onReplace={noop} onChordClick={noop} />
             </section>
           )}

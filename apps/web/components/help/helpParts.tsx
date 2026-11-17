@@ -31,23 +31,18 @@ const SHOTS = "v3";
 
 export function Shot({ name, alt }: { name: string; alt: string }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-surface-hover bg-background shadow-lg">
-      <div className="flex items-center gap-1.5 border-b border-surface-hover bg-surface px-3 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
-      </div>
+    <div className="overflow-hidden rounded-lg bg-background">
       <Image src={`/help/${SHOTS}/${name}-light.jpg`} alt={alt} width={1280} height={800} className="block h-auto w-full dark:hidden" />
       <Image src={`/help/${SHOTS}/${name}-dark.jpg`} alt={alt} width={1280} height={800} className="hidden h-auto w-full dark:block" />
     </div>
   );
 }
 
+/** A topic's icon: a plain muted glyph. */
 export function TopicIcon({ topic, size = "md" }: { topic: HelpTopic; size?: "sm" | "md" | "lg" }) {
-  const box = size === "lg" ? "h-14 w-14 rounded-2xl" : size === "md" ? "h-9 w-9 rounded-xl" : "h-7 w-7 rounded-lg";
-  const icon = size === "lg" ? "h-7 w-7" : size === "md" ? "h-5 w-5" : "h-4 w-4";
+  const icon = size === "lg" ? "h-6 w-6" : size === "md" ? "h-5 w-5" : "h-4 w-4";
   return (
-    <span className={`flex shrink-0 items-center justify-center bg-accent/15 text-accent ${box}`}>
+    <span className="flex shrink-0 items-center justify-center text-muted">
       {createElement(ICON_BY_ID[topic.id] ?? HelpIcon, { className: icon })}
     </span>
   );

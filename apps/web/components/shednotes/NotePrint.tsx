@@ -64,15 +64,15 @@ export default function NotePrint({
     <div className="note-print fixed inset-0 z-[90] overflow-y-auto bg-background text-foreground">
       <div className="note-print-bar sticky top-0 z-10 flex items-center gap-2 border-b border-foreground/10 bg-background/95 px-4 py-2 backdrop-blur">
         <p className="min-w-0 flex-1 truncate text-sm text-muted">{ready ? "Choose “Save as PDF” in the print dialog." : "Getting the page ready…"}</p>
-        <button type="button" onClick={() => window.print()} disabled={!ready} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
+        <button type="button" onClick={() => window.print()} disabled={!ready} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50">
           {ready ? <DownloadIcon className="h-4 w-4" /> : <LoadingSpinner size="sm" inline label="Getting ready" />} Save as PDF
         </button>
-        <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground">
+        <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
           <CloseIcon className="h-4 w-4" />
         </button>
       </div>
       <article ref={page} className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-8">
-        <h1 className="text-3xl font-extrabold leading-tight tracking-tight" style={fontFamily ? { fontFamily } : undefined}>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight" style={fontFamily ? { fontFamily } : undefined}>
           {title}
         </h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}

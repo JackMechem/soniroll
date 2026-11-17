@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { chartHref } from "@/components/library/ChartsDashboard";
-import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, nameColor, Pill, Rows, tint } from "@/components/library/ui";
+import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, Pill, Rows } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
 import { ChordChartIcon, DotsVerticalIcon, PlusIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
@@ -41,20 +41,14 @@ export default function PlaylistPage({ id }: { id: string }) {
     }
     return out;
   }, [songs]);
-  const color = isAll ? "var(--accent)" : nameColor(playlist?.name ?? "");
 
   return (
     <LibraryPage>
       <Hero
         title={playlist?.name ?? "Playlist"}
-        color={color}
+        icon={isAll ? ChordChartIcon : FolderIcon}
         backHref="/tunes?tab=charts"
         backLabel="Chord Charts"
-        leading={
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: tint(color, 20), color }}>
-            {isAll ? <ChordChartIcon className="h-7 w-7" /> : <FolderIcon className="h-7 w-7" />}
-          </span>
-        }
         subtitle={playlist ? `${isAll ? "Every chart in your library" : "Playlist"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
         actions={
           playlist ? (
@@ -65,9 +59,9 @@ export default function PlaylistPage({ id }: { id: string }) {
                   type="button"
                   onClick={(e) => openPlaylistMenu(e, { id: playlist.id, name: playlist.name, count: playlist.songs.length })}
                   aria-label={`Options for ${playlist.name}`}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-foreground"
+                  className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
                 >
-                  <DotsVerticalIcon className="h-5 w-5" />
+                  <DotsVerticalIcon className="h-4 w-4" />
                 </button>
               )}
             </>
@@ -81,23 +75,19 @@ export default function PlaylistPage({ id }: { id: string }) {
           <LoadingSpinner />
         </div>
       ) : !playlist ? (
-        <div className="rounded-2xl bg-surface">
-          <EmptyState icon={FolderIcon} title="Playlist not found" body="This playlist isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
-        </div>
+        <EmptyState boxed title="Playlist not found" body="This playlist isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
       ) : songs.length === 0 ? (
-        <div className="rounded-2xl bg-surface">
-          <EmptyState
-            icon={ChordChartIcon}
-            title={q ? `No charts match “${query}”` : "No charts here yet"}
-            body={q ? undefined : isAll ? "Create a chart or import some." : "Create a chart here, or add charts from a chart's ⋮ menu."}
-          />
-        </div>
+        <EmptyState
+          boxed
+          title={q ? `No charts match “${query}”` : "No charts here yet"}
+          body={q ? undefined : isAll ? "Create a chart or import some." : "Create a chart here, or add charts from a chart's ⋮ menu."}
+        />
       ) : (
         <div className="flex gap-3">
-          <div className="min-w-0 flex-1 rounded-2xl bg-surface py-1.5">
+          <div className="min-w-0 flex-1 overflow-hidden rounded-lg bg-surface">
             {sections.map((sec) => (
-              <section key={sec.letter} id={`letter-${sec.letter}`} className="scroll-mt-24">
-                <h2 className="sticky top-0 z-[1] rounded-t-2xl bg-surface/95 px-4 pb-1 pt-3 text-xs font-extrabold text-accent backdrop-blur">{sec.letter}</h2>
+              <section key={sec.letter} id={`letter-${sec.letter}`} className="scroll-mt-24 border-t border-foreground/10 first:border-t-0">
+                <h2 className="sticky top-0 z-[1] border-b border-foreground/10 bg-surface/95 px-3 py-1.5 text-xs font-medium text-muted backdrop-blur">{sec.letter}</h2>
                 <Rows>
                   {sec.songs.map((s) => (
                     <ChartItem key={s.id} song={s} href={chartHref(s.id)} onMenu={(e) => openSongMenu(e, s, isAll ? null : playlist.id)} />
@@ -107,9 +97,9 @@ export default function PlaylistPage({ id }: { id: string }) {
             ))}
           </div>
           {sections.length > 6 && (
-            <nav aria-label="Jump to letter" className="sticky top-6 hidden h-fit flex-col items-center gap-0.5 rounded-full bg-surface px-1 py-2 sm:flex">
+            <nav aria-label="Jump to letter" className="sticky top-6 hidden h-fit flex-col items-center gap-0.5 rounded-md bg-foreground/[0.05] px-0.5 py-1.5 sm:flex">
               {sections.map((sec) => (
-                <a key={sec.letter} href={`#letter-${sec.letter}`} className="flex h-5 w-6 items-center justify-center rounded-full text-[10px] font-bold text-muted hover:bg-accent hover:text-accent-foreground">
+                <a key={sec.letter} href={`#letter-${sec.letter}`} className="flex h-5 w-6 items-center justify-center rounded-sm text-[10px] font-medium text-muted hover:bg-surface-hover hover:text-foreground">
                   {sec.letter}
                 </a>
               ))}

@@ -6,6 +6,7 @@ import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
+import { BIG_PRIMARY } from "@/components/MeterFields";
 import PanelsToggle from "@/components/PanelsToggle";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Select from "@/components/Select";
@@ -176,7 +177,7 @@ export default function JamPractice() {
 
           <CollapsiblePanel id="jam-countoff" title="Count-off" icon={StopwatchIcon} summary={`${countOffBars} bars`}>
             <label className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-muted">Count-off bars</span>
+              <span className="text-muted">Count-off bars</span>
               <Select
                 value={countOffBars}
                 onChange={setCountOffBars}
@@ -205,12 +206,18 @@ export default function JamPractice() {
       }
     >
       <div className="flex flex-col items-center gap-3">
-        {pick && (
-          <p className="text-sm font-medium text-muted">Now practicing</p>
+        {pick ? (
+          <>
+            <p className="text-sm text-muted">Now practicing</p>
+            <h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">{pick.tune.name}</h1>
+          </>
+        ) : (
+          <div className="w-[min(24rem,calc(100vw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
+            {tunes.length === 0 && !pickFromStandards && !pickError
+              ? "Add some tunes below, then pick one at random."
+              : "No tune picked yet."}
+          </div>
         )}
-        <h1 className="break-words text-4xl font-bold sm:text-5xl">
-          {pick ? pick.tune.name : "—"}
-        </h1>
         {pick && (
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-base text-muted sm:gap-x-6 sm:text-lg">
             <span>{pick.tempo ? `${pick.tempo.value} BPM` : "no enabled tempo"}</span>
@@ -221,16 +228,13 @@ export default function JamPractice() {
         {pick?.tune.notes && (
           <p className="max-w-md whitespace-pre-wrap text-sm text-muted">{pick.tune.notes}</p>
         )}
-        {!pick && tunes.length === 0 && !pickFromStandards && !pickError && (
-          <p className="text-muted">Add some tunes below, then pick one at random.</p>
-        )}
         {isCounting && pick?.tempo && (
           <div className="mt-4 flex flex-col items-center gap-4">
             <div className="flex flex-col items-center">
-              <span className="text-6xl font-bold tabular-nums sm:text-7xl">
+              <span className="text-6xl font-bold tracking-tight tabular-nums sm:text-7xl">
                 {pick.tempo.value}
               </span>
-              <span className="text-sm font-medium text-muted">
+              <span className="text-sm text-muted">
                 BPM · {pick.tune.timeSignature}
               </span>
             </div>
@@ -250,7 +254,7 @@ export default function JamPractice() {
               <button
                 type="button"
                 onClick={stopCountOff}
-                className="rounded-full bg-surface px-4 py-2 text-sm hover:bg-surface-hover"
+                className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
               >
                 Stop
               </button>
@@ -270,7 +274,7 @@ export default function JamPractice() {
       <button
         type="button"
         onClick={pickRandom}
-        className="rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+        className={BIG_PRIMARY}
       >
         {pick ? "Pick another" : "Pick a tune"}
       </button>

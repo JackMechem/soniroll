@@ -13,7 +13,7 @@ import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/comp
 import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import Select from "@/components/Select";
-import { ChevronLeftIcon, ChordChartIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
+import { ChevronLeftIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -71,9 +71,7 @@ export default function ChartViewPage({ id }: { id: string }) {
     return (
       <LibraryPage>
         <BackButton onClick={() => router.back()} />
-        <div className="rounded-2xl bg-surface">
-          <EmptyState icon={ChordChartIcon} title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/tunes?tab=charts" />} />
-        </div>
+        <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/tunes?tab=charts" />} />
       </LibraryPage>
     );
   }
@@ -90,13 +88,13 @@ export default function ChartViewPage({ id }: { id: string }) {
           onClick={() => router.back()}
           aria-label="Back"
           title="Back"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-muted ring-1 ring-foreground/5 hover:bg-surface-hover hover:text-foreground"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
         >
-          <ChevronLeftIcon className="h-5 w-5" />
+          <ChevronLeftIcon className="h-4 w-4" />
         </button>
         <KeyBadge label={shown.key} />
         <div className="min-w-0 flex-1 basis-48">
-          <h1 className="line-clamp-2 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">{chart.title}</h1>
+          <h1 className="line-clamp-2 text-2xl font-semibold leading-tight tracking-tight">{chart.title}</h1>
           {chart.composer && <p className="truncate text-sm text-muted">{formatComposer(chart.composer)}</p>}
         </div>
         <div className="flex items-center gap-1.5">
@@ -108,7 +106,7 @@ export default function ChartViewPage({ id }: { id: string }) {
           </RoundButton>
           {meta && (
             <RoundButton label="Chart options" onClick={(e) => openSongMenu(e, meta, null)}>
-              <DotsVerticalIcon className="h-5 w-5" />
+              <DotsVerticalIcon className="h-4 w-4" />
             </RoundButton>
           )}
         </div>
@@ -120,11 +118,11 @@ export default function ChartViewPage({ id }: { id: string }) {
         </ChartPaper>
 
         <aside className="flex flex-col gap-4 xl:sticky xl:top-6">
-          <section className="hidden flex-col gap-3 rounded-2xl bg-surface p-4 xl:flex">
+          <section className="hidden flex-col gap-3 rounded-lg bg-surface p-4 xl:flex">
             <div className="flex items-baseline justify-between">
-              <h2 className="font-bold">Key</h2>
+              <h2 className="text-sm font-medium">Key</h2>
               {transposeKey && (
-                <button type="button" onClick={() => setTransposeKey("")} className="text-xs font-semibold text-accent hover:underline">
+                <button type="button" onClick={() => setTransposeKey("")} className="text-xs text-muted hover:text-foreground">
                   Back to {chart.key ? displayKey(chart.key) : "original"}
                 </button>
               )}
@@ -140,8 +138,8 @@ export default function ChartViewPage({ id }: { id: string }) {
                     onClick={() => setTransposeKey(pc === originalPc ? "" : name)}
                     aria-pressed={on}
                     title={pc === originalPc ? "The key it's written in" : `Transpose to ${name}${minor ? "m" : ""}`}
-                    className="relative rounded-xl py-2 text-sm font-bold transition-colors"
-                    style={on ? { background: color, color: "var(--accent-foreground)" } : { background: "var(--background)", color: "var(--muted)" }}
+                    className={`relative rounded-md py-2 text-sm font-medium transition-colors ${on ? "" : "bg-foreground/[0.05] hover:bg-surface-hover hover:text-foreground"}`}
+                    style={on ? { background: color, color: "var(--accent-foreground)" } : { color: "var(--muted)" }}
                   >
                     {name}
                     {minor ? "m" : ""}
@@ -153,13 +151,13 @@ export default function ChartViewPage({ id }: { id: string }) {
             <p className="text-xs text-muted">Only changes how it&apos;s shown — the chart itself stays in {chart.key ? displayKey(chart.key) : "its key"}.</p>
           </section>
 
-          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-            <h2 className="font-bold">Playlists</h2>
+          <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+            <h2 className="text-sm font-medium">Playlists</h2>
             {meta && meta.playlistIds.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {meta.playlistIds.map((pid) => (
-                  <Link key={pid} href={playlistHref(pid)} className="inline-flex items-center gap-1.5 rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
-                    <FolderIcon className="h-3.5 w-3.5 text-accent" />
+                  <Link key={pid} href={playlistHref(pid)} className="inline-flex items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 py-1.5 text-xs font-medium hover:bg-surface-hover">
+                    <FolderIcon className="h-3.5 w-3.5 text-muted" />
                     {playlists.find((p) => p.id === pid)?.name ?? "Playlist"}
                   </Link>
                 ))}
@@ -169,15 +167,15 @@ export default function ChartViewPage({ id }: { id: string }) {
             )}
           </section>
 
-          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-            <h2 className="font-bold">Your tunes</h2>
+          <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+            <h2 className="text-sm font-medium">Your tunes</h2>
             {linkedTunes.length ? (
               <div className="flex flex-col gap-1">
                 {linkedTunes.map(({ tune, list }) => (
-                  <Link key={tune.id} href={tuneHref(list, tune.id)} className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-background">
+                  <Link key={tune.id} href={tuneHref(list, tune.id)} className="-mx-1.5 flex items-center gap-2.5 rounded-md p-1.5 hover:bg-surface-hover">
                     <KeyBadge label={tune.keys.find((k) => k.enabled)?.value} size="sm" />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{tune.name}</span>
+                      <span className="block truncate text-sm font-medium">{tune.name}</span>
                       <span className="block text-[11px] text-muted">{TUNE_LIST_LABEL[list]}</span>
                     </span>
                   </Link>

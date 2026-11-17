@@ -5,6 +5,8 @@ import BeatIndicator from "@/components/BeatIndicator";
 import PanelsToggle from "@/components/PanelsToggle";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import {
+  BIG_PRIMARY,
+  BIG_SECONDARY,
   SoundOptions,
   SteppedField,
   TempoHero,
@@ -238,7 +240,7 @@ export default function TempoTrainer() {
             ]}
           />
           {useStructure && (
-            <div className="w-[min(30rem,calc(100vw-2rem))] rounded-3xl bg-surface p-4 text-left">
+            <div className="w-[min(30rem,calc(100vw-2rem))] rounded-lg bg-surface p-4 text-left">
               <StructureEditor
                 show="form"
                 structure={structure}
@@ -335,9 +337,9 @@ export default function TempoTrainer() {
         />
         <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
         {silentNow ? (
-          <div className="flex h-16 w-full max-w-xs flex-col items-center justify-center gap-1.5 rounded-xl bg-surface px-4 py-3 text-center">
+          <div className="flex h-16 w-full max-w-xs flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center">
             <EyeOffIcon className="h-5 w-5 text-muted" />
-            <span className="text-sm font-medium text-muted">
+            <span className="text-sm text-muted">
               Keep the tempo going — the click will come back
             </span>
           </div>
@@ -350,7 +352,7 @@ export default function TempoTrainer() {
               </p>
             )}
             {useStructure && !activeSection ? (
-              <p className="rounded-xl bg-surface px-4 py-3 text-center text-sm text-muted">
+              <p className="rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
                 Open Sections to add sections and arrange a form.
               </p>
             ) : (
@@ -373,11 +375,7 @@ export default function TempoTrainer() {
         onClick={running ? stop : start}
         disabled={!running && !canStart}
         title={!running && !canStart ? "Add sections and a form first" : undefined}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          running
-            ? "bg-surface hover:bg-surface-hover"
-            : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={running ? BIG_SECONDARY : BIG_PRIMARY}
       >
         {running ? "Stop" : "Start"}
       </button>

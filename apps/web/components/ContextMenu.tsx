@@ -50,7 +50,7 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState; onClos
     <div
       data-context-menu
       role="menu"
-      className="fixed z-[70] flex flex-col gap-0.5 overflow-y-auto rounded-xl bg-surface p-1.5 text-left text-sm shadow-lg ring-1 ring-foreground/10"
+      className="fixed z-[70] flex flex-col gap-px overflow-y-auto rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-1 text-left text-sm shadow-lg"
       style={{ left, top, width, maxHeight: window.innerHeight - 16 }}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -65,7 +65,7 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState; onClos
               onClose();
               item.onSelect();
             }}
-            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-hover ${
+            className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-surface-hover ${
               item.danger ? "text-danger" : ""
             }`}
           >

@@ -32,10 +32,8 @@ function NotAvailable() {
   if (!isLoading && !isAuthenticated) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-16">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent">
-          <UsersIcon className="h-7 w-7" />
-        </div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Sign in to see this post</h1>
+        <UsersIcon className="h-6 w-6 text-muted" />
+        <h1 className="text-2xl font-semibold tracking-tight">Sign in to see this post</h1>
         <p className="text-sm text-muted">Community posts — tunes, setlists, routines and milestones — are for soniroll members. It&apos;s free.</p>
         <SignInButtons />
       </main>
@@ -137,74 +135,65 @@ function PostPageContent({ id }: { id: string }) {
   const card = post.kind === "milestone" && post.payload && "levels" in post.payload ? post.payload : null;
   const tag =
     post.kind === "setlist"
-      ? { label: "Setlist", icon: SetlistIcon, cls: "bg-accent/15 text-accent" }
+      ? { label: "Setlist", icon: SetlistIcon }
       : routine
-        ? { label: "Routine", icon: CalendarIcon, cls: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" }
+        ? { label: "Routine", icon: CalendarIcon }
         : card
-          ? { label: "Milestone", icon: CalendarIcon, cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400" }
-          : { label: post.tunes.length === 1 ? "Tune" : "Tunes", icon: NoteIcon, cls: "bg-accent/15 text-accent" };
+          ? { label: "Milestone", icon: CalendarIcon }
+          : { label: post.tunes.length === 1 ? "Tune" : "Tunes", icon: NoteIcon };
   const TagIcon = tag.icon;
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-12">
       <BackButton href="/community" label="Community" className="self-start" />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <article className="min-w-0 overflow-hidden rounded-3xl bg-surface">
-          {routine && <div className="h-2" style={{ background: ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length] }} />}
-          <header className="flex flex-col gap-4 p-5 sm:p-7">
+        <article className="min-w-0 overflow-hidden rounded-lg bg-surface">
+          {routine && <div className="h-1" style={{ background: ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length] }} />}
+          <header className="flex flex-col gap-4 p-4 sm:p-6">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {post.authorUsername && (
-                <Link href={`/u/${post.authorUsername}`} className="flex items-center gap-2 font-semibold hover:underline">
-                  <UserAvatar url={post.authorAvatarUrl} />@{post.authorUsername}
+                <Link href={`/u/${post.authorUsername}`} className="flex items-center gap-2 font-medium hover:underline">
+                  <UserAvatar url={post.authorAvatarUrl} size="sm" />@{post.authorUsername}
                 </Link>
               )}
               <span className="text-muted">· {formatDate(post.createdAt)}</span>
               <span className="flex-1" />
               {post.unlisted && (
-                <span className="flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-xs font-semibold text-muted">
+                <span className="flex items-center gap-1 text-xs text-muted">
                   <EyeOffIcon className="h-3.5 w-3.5" /> Unlisted
                 </span>
               )}
-              <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${tag.cls}`}>
+              <span className="flex items-center gap-1 rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs text-muted">
                 <TagIcon className="h-3.5 w-3.5" /> {tag.label}
               </span>
             </div>
             <div className="flex items-start gap-3">
               {routine && <RoutineIcon icon={routine.icon} color={routine.color} size="lg" />}
               <div className="min-w-0">
-                <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{post.title}</h1>
-                {post.description && <p className="mt-2 whitespace-pre-wrap text-base text-muted">{post.description}</p>}
+                <h1 className="text-2xl font-semibold leading-tight tracking-tight">{post.title}</h1>
+                {post.description && <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{post.description}</p>}
               </div>
             </div>
             {routine && (
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  [String(routine.tasks.length), routine.tasks.length === 1 ? "task" : "tasks"],
-                  [formatMinutesShort(routine.tasks.reduce((s2, t) => s2 + t.minutes, 0)), "in total"],
-                  [describePublicRepeat(routine.repeat), "schedule"],
-                ].map(([v, l]) => (
-                  <div key={l} className="flex min-w-0 flex-col rounded-2xl bg-background px-3 py-2.5">
-                    <span className="truncate text-base font-extrabold sm:text-lg" title={v}>{v}</span>
-                    <span className="text-xs font-semibold text-muted">{l}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-muted">
+                {routine.tasks.length} {routine.tasks.length === 1 ? "task" : "tasks"} · {formatMinutesShort(routine.tasks.reduce((s2, t) => s2 + t.minutes, 0))} in total · {describePublicRepeat(routine.repeat)}
+              </p>
             )}
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => void toggleLike({ id: post.id })}
                 aria-label={liked ? "Unlike this post" : "Like this post"}
-                className={`flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors ${liked ? "bg-danger/10 text-danger" : "bg-background hover:bg-surface-hover"}`}
+                className={`flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium tabular-nums transition-colors hover:bg-surface-hover ${liked ? "text-danger" : ""}`}
               >
-                <HeartIcon className="h-5 w-5" filled={liked} /> {post.likeCount}
+                <HeartIcon className="h-4 w-4" filled={liked} /> {post.likeCount}
               </button>
-              <button type="button" onClick={() => void handleShare()} className="flex h-10 items-center gap-1.5 rounded-full bg-background px-4 text-sm font-semibold hover:bg-surface-hover">
+              <button type="button" onClick={() => void handleShare()} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
                 {copied ? <CheckIcon className="h-4 w-4 text-accent" /> : <ShareIcon className="h-4 w-4" />} {copied ? "Link copied" : "Share"}
               </button>
               {routine &&
                 (post.isMine && post.routineId ? (
-                  <Link href={`/shed-log/routine?id=${encodeURIComponent(post.routineId)}`} className="flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+                  <Link href={`/shed-log/routine?id=${encodeURIComponent(post.routineId)}`} className="flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                     Open in your Shed Log
                   </Link>
                 ) : (
@@ -217,19 +206,19 @@ function PostPageContent({ id }: { id: string }) {
                   onClick={() => openFeedback({ kind: "report", target: { type: "post", id: post.id, label: post.title } })}
                   aria-label="Report this post"
                   title="Report this post"
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-danger"
                 >
                   <FlagIcon className="h-4 w-4" />
                 </button>
               )}
               {post.isMine && (
-                <button type="button" onClick={() => setConfirmDelete(true)} aria-label="Delete post" title="Delete post" className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger">
+                <button type="button" onClick={() => setConfirmDelete(true)} aria-label="Delete post" title="Delete post" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-danger">
                   <TrashIcon className="h-4 w-4" />
                 </button>
               )}
             </div>
           </header>
-          <div className="border-t border-background p-5 sm:p-7">
+          <div className="border-t border-foreground/10 p-4 sm:p-6">
             {routine ? (
               <RoutinePreview routine={routine} meta={false} />
             ) : card ? (
@@ -268,26 +257,28 @@ function AuthorColumn({ username, avatarUrl, postId, isMine }: { username: strin
   const more = (posts ?? []).filter((p) => p.id !== postId).slice(0, 4);
   return (
     <aside className="flex flex-col gap-4">
-      <div className="flex flex-col items-center gap-3 rounded-3xl bg-surface p-5 text-center lg:sticky lg:top-6">
-        <UserAvatar url={avatarUrl} size="xl" />
-        <div>
-          <Link href={`/u/${username}`} className="text-lg font-extrabold hover:underline">
+      <div className="flex flex-col gap-3 rounded-lg bg-surface p-4 lg:sticky lg:top-6">
+        <div className="flex items-center gap-3">
+        <UserAvatar url={avatarUrl} />
+        <div className="min-w-0">
+          <Link href={`/u/${username}`} className="block truncate text-sm font-semibold hover:underline">
             @{username}
           </Link>
-          {profile && profile.instruments.length > 0 && <p className="text-xs text-muted">{profile.instruments.join(", ")}</p>}
+          {profile && profile.instruments.length > 0 && <p className="truncate text-xs text-muted">{profile.instruments.join(", ")}</p>}
+        </div>
         </div>
         <div className="flex gap-2">
           {!isMine && viewer && profile && <FollowButton targetUserId={profile.userId as Id<"users">} />}
-          <Link href={`/u/${username}`} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <Link href={`/u/${username}`} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
             Profile
           </Link>
         </div>
         {more.length > 0 && (
-          <div className="flex w-full flex-col gap-1 border-t border-background pt-3 text-left">
-            <h2 className="px-1 text-xs font-semibold text-muted">More from @{username}</h2>
+          <div className="-mx-4 -mb-4 flex flex-col border-t border-foreground/10 pt-3 text-left">
+            <h2 className="px-4 pb-1 text-xs font-medium text-muted">More from @{username}</h2>
             {more.map((p) => (
-              <Link key={p.id} href={`/post/${p.id}`} className="rounded-xl px-2 py-1.5 hover:bg-background">
-                <span className="block truncate text-sm font-semibold">{p.title}</span>
+              <Link key={p.id} href={`/post/${p.id}`} className="px-4 py-2 transition-colors hover:bg-surface-hover">
+                <span className="block truncate text-sm font-medium">{p.title}</span>
                 <span className="block text-xs text-muted">
                   {p.kind === "setlist" ? "Setlist" : p.kind === "routine" ? "Routine" : p.kind === "milestone" ? "Milestone" : `${p.tuneCount} tune${p.tuneCount === 1 ? "" : "s"}`} · {p.likeCount} like{p.likeCount === 1 ? "" : "s"}
                 </span>

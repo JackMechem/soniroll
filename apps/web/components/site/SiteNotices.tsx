@@ -57,18 +57,18 @@ export function MaintenanceScreen({ message }: { message: string }) {
   return (
     <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-5 bg-background px-6 text-center">
       <LogoMark size={56} />
-      <h1 className="text-3xl font-extrabold tracking-tight">Back soon</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Back soon</h1>
       <p className="max-w-md whitespace-pre-wrap text-muted">{message.trim() || "soniroll is down for a little maintenance. Your stuff is safe — check back in a bit."}</p>
       <div className="mt-6 flex flex-col items-center gap-2">
         {isAuthenticated ? (
           <>
             <p className="text-xs text-muted">You&apos;re signed in, but this account isn&apos;t an admin.</p>
-            <button type="button" onClick={() => void signOut()} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover">
+            <button type="button" onClick={() => void signOut()} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
               Sign out to use another account
             </button>
           </>
         ) : (
-          <button type="button" onClick={() => setSignIn(true)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover">
+          <button type="button" onClick={() => setSignIn(true)} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
             Admin sign in
           </button>
         )}
@@ -81,7 +81,7 @@ export function MaintenanceScreen({ message }: { message: string }) {
 function CommunityOff() {
   return (
     <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-      <h1 className="text-2xl font-extrabold">Community is taking a break</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Community is taking a break</h1>
       <p className="max-w-md text-muted">
         Posts, profiles and shared links are switched off for a bit. Everything&apos;s still there and will be back soon. All the tools work as usual.
       </p>
@@ -131,7 +131,7 @@ export function SiteBanner() {
       {banner && (
         <div
           role="status"
-          className={`pointer-events-auto flex max-w-xl items-start gap-2 rounded-2xl px-4 py-2.5 text-sm shadow-lg ring-1 backdrop-blur ${
+          className={`pointer-events-auto flex max-w-xl items-start gap-2 rounded-lg px-4 py-2.5 text-sm shadow-lg ring-1 backdrop-blur ${
             banner.tone === "warning" ? "bg-amber-400/90 text-zinc-900 ring-amber-500/30" : "bg-background/90 text-foreground ring-foreground/10"
           }`}
         >
@@ -145,7 +145,7 @@ export function SiteBanner() {
               } catch {}
               listeners.forEach((l) => l());
             }}
-            className="-mr-1 mt-0.5 shrink-0 rounded-full p-0.5 opacity-60 hover:opacity-100"
+            className="-mr-1 mt-0.5 shrink-0 rounded-sm p-0.5 opacity-60 hover:opacity-100"
           >
             <CloseIcon className="h-3.5 w-3.5" />
           </button>

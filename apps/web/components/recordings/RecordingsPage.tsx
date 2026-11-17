@@ -32,7 +32,7 @@ export default function RecordingsPage() {
         title="My recordings"
         helpTopic="recordings"
         actions={
-          <Link href="/recorder" className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <Link href="/recorder" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             <MicIcon className="h-4 w-4" /> Record
           </Link>
         }

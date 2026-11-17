@@ -102,10 +102,10 @@ export default function DrumSettingsDialog({
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-overlay p-3 sm:p-8" onClick={onClose}>
-      <div role="dialog" aria-label="Drum settings" className="w-full max-w-2xl rounded-2xl bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Drum settings" className="w-full max-w-2xl rounded-xl ring-1 ring-foreground/[0.06] bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-extrabold tracking-tight">Drum settings</h2>
+            <h2 className="text-xl font-semibold tracking-tight">Drum settings</h2>
             <p className="text-sm text-muted">How the drummer plays.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -113,19 +113,19 @@ export default function DrumSettingsDialog({
               type="button"
               onClick={() => onChange({ ...DEFAULT_DRUM_CONFIG })}
               disabled={!changed}
-              className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover disabled:opacity-40"
+              className="h-8 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40 disabled:hover:bg-transparent"
             >
               Reset to defaults
             </button>
-            <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface hover:bg-surface-hover">
+            <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
               <CloseIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
         <div className="flex flex-col gap-4">
           {SECTIONS.map((section) => (
-            <section key={section.title} className="rounded-2xl bg-surface p-4">
-              <h3 className="font-bold">{section.title}</h3>
+            <section key={section.title} className="rounded-lg bg-surface p-4">
+              <h3 className="text-sm font-semibold">{section.title}</h3>
               {section.note && <p className="mb-2 text-xs text-muted">{section.note}</p>}
               <div className="flex flex-col gap-3">
                 {section.rows.map((row) =>
@@ -142,7 +142,7 @@ export default function DrumSettingsDialog({
                                 e.preventDefault();
                                 set(row.key, DEFAULT_DRUM_CONFIG[row.key]);
                               }}
-                              className="text-xs font-semibold text-accent hover:underline"
+                              className="text-xs font-medium text-accent hover:underline"
                               title={`Back to ${row.show(DEFAULT_DRUM_CONFIG[row.key])}`}
                             >
                               reset

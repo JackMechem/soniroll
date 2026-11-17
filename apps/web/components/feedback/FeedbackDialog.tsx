@@ -27,15 +27,15 @@ export default function FeedbackDialog() {
       <div
         role="dialog"
         aria-label={report ? "Report" : "Send feedback"}
-        className="flex max-h-[92dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-2xl sm:max-w-xl sm:rounded-3xl"
+        className="flex max-h-[92dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 shadow-2xl sm:max-w-xl sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold">{report ? "Report" : "Send feedback"}</h2>
+            <h2 className="text-base font-semibold">{report ? "Report" : "Send feedback"}</h2>
             {!report && <p className="text-sm text-muted">Bugs, ideas, complaints — it all goes straight to the person who builds soniroll.</p>}
           </div>
-          <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background text-muted hover:text-foreground">
+          <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>

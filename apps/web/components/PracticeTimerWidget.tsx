@@ -126,7 +126,7 @@ export default function PracticeTimerWidget({
       <Link
         href="/practice-timer"
         aria-label={`Practice Timer running: ${state.current.title}`}
-        className={`fixed right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex max-w-[55vw] items-center gap-1.5 rounded-full bg-surface px-3 py-2 text-xs font-medium shadow-sm ring-1 ring-foreground/10 lg:hidden ${
+        className={`fixed right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 flex h-8 max-w-[55vw] items-center gap-1.5 rounded-md bg-surface px-2.5 text-xs font-medium lg:hidden ${
           state.alarming ? "animate-pulse text-danger" : "text-foreground"
         }`}
       >

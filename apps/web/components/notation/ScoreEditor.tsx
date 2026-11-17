@@ -518,8 +518,8 @@ export default function ScoreEditor({
   const cap = measureCapacity(t);
 
   const btn = (active = false) =>
-    `flex h-10 min-w-10 items-center justify-center gap-1 rounded-lg px-2 text-sm font-semibold transition-colors disabled:opacity-40 ${
-      active ? "bg-accent text-accent-foreground" : "bg-background text-foreground hover:bg-surface-hover"
+    `flex h-9 min-w-9 items-center justify-center gap-1 rounded-md border px-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+      active ? "border-accent bg-accent text-accent-foreground" : "border-foreground/10 bg-background text-foreground hover:bg-surface-hover"
     }`;
 
   const keyOptions = Object.entries(KEY_NAMES)
@@ -543,19 +543,19 @@ export default function ScoreEditor({
       {staffControls && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">Clef</span>
+            <span className="text-xs font-medium text-muted">Clef</span>
             <Select<Clef> value={t.clef ?? "bass8"} options={(Object.keys(CLEF_NAMES) as Clef[]).map((c) => ({ value: c, label: CLEF_NAMES[c] }))} onChange={(clef) => commit({ ...t, clef })} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">Key</span>
+            <span className="text-xs font-medium text-muted">Key</span>
             <Select<number> value={t.key ?? 0} options={keyOptions} onChange={(key) => commit({ ...t, key: key || undefined })} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">Time</span>
+            <span className="text-xs font-medium text-muted">Time</span>
             <Select<string> value={`${t.timeSignature.top}/${t.timeSignature.bottom}`} options={TIME_SIGNATURES.map((v) => ({ value: v, label: v }))} onChange={setTime} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted">Tempo</span>
+            <span className="text-xs font-medium text-muted">Tempo</span>
             <input
               type="number"
               min={20}
@@ -564,17 +564,17 @@ export default function ScoreEditor({
               onChange={(e) => setMeta({ tempo: e.target.value ? Math.max(20, Math.min(400, Math.round(Number(e.target.value)))) : null })}
               placeholder="120"
               aria-label="Tempo (BPM)"
-              className="h-10 rounded-lg bg-surface px-3 text-sm outline-none ring-accent focus:ring-2"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
           </label>
         </div>
       )}
 
-      <div ref={editorRef} tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col gap-3 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
+      <div ref={editorRef} tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
         {/* Palette */}
-        <div className="sticky top-2 z-10 flex flex-col gap-2 rounded-2xl bg-surface p-3 shadow-sm">
+        <div className="sticky top-2 z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex rounded-lg bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
+            <div className="flex gap-0.5 rounded-md bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
               {(
                 [
                   ["select", "Select", "Clicks only select a note, or a whole bar (Shift+click for a range). Esc"],
@@ -588,7 +588,7 @@ export default function ScoreEditor({
                   aria-checked={mode === m}
                   onClick={() => setMode(m)}
                   title={title}
-                  className={`h-9 rounded-md px-3 text-sm font-semibold transition-colors ${mode === m ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+                  className={`h-8 rounded-sm px-3 text-sm font-medium transition-colors ${mode === m ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
                 >
                   {label}
                 </button>
@@ -598,7 +598,7 @@ export default function ScoreEditor({
               {loadingSound ? <LoadingSpinner size="sm" inline label="Loading sound" /> : playing ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
               {playing ? "Stop" : "Play"}
             </button>
-            <span className="mx-1 h-6 w-px bg-background" />
+            <span className="mx-1 h-6 w-px bg-foreground/10" />
             {(["w", "h", "q", "8", "16"] as NoteValue[]).map((v) => (
               <button key={v} type="button" onClick={() => pickValue(v)} className={btn(picked && selected ? selected.value === v : value === v)} title={`${NOTE_VALUE_NAMES[v]} (${Object.keys(VALUE_KEYS).find((k) => VALUE_KEYS[k] === v)})`} aria-label={NOTE_VALUE_NAMES[v]}>
                 <NoteValueIcon value={VALUE_ICON[v]} className="h-6 w-3" />
@@ -610,7 +610,7 @@ export default function ScoreEditor({
             <button type="button" onClick={toggleTriplet} className={btn(picked && selected ? !!selected.triplet : triplet)} title="Triplet (T)">
               3
             </button>
-            <span className="mx-1 h-6 w-px bg-background" />
+            <span className="mx-1 h-6 w-px bg-foreground/10" />
             <button type="button" onClick={() => addNote(null)} className={btn()} title="Rest (0 or R)">
               Rest
             </button>
@@ -623,7 +623,7 @@ export default function ScoreEditor({
             <button type="button" onClick={addChordAtCursor} className={btn(!!chordEdit)} title="Add a chord symbol above the selected note (Ctrl+K)">
               + Chord
             </button>
-            <span className="mx-1 h-6 w-px bg-background" />
+            <span className="mx-1 h-6 w-px bg-foreground/10" />
             <button type="button" onClick={() => setAlter(1)} disabled={!selected?.pitch} className={btn(selected?.pitch?.alter === 1)} title="Sharp (#)">
               ♯
             </button>
@@ -639,7 +639,7 @@ export default function ScoreEditor({
             <button type="button" onClick={() => transpose(-12)} disabled={!selected?.pitch} className={btn()} title="Octave down (Shift+↓)">
               8vb
             </button>
-            <span className="mx-1 h-6 w-px bg-background" />
+            <span className="mx-1 h-6 w-px bg-foreground/10" />
             <button type="button" onClick={undo} disabled={!past.length} className={btn()} title="Undo (Ctrl+Z)">
               Undo
             </button>
@@ -665,7 +665,7 @@ export default function ScoreEditor({
         </div>
 
         {/* Score */}
-        <div className="rounded-2xl bg-surface p-3 sm:p-5" onMouseDown={() => editorRef.current?.focus({ preventScroll: true })}>
+        <div className="rounded-lg bg-surface p-3 sm:p-5" onMouseDown={() => editorRef.current?.focus({ preventScroll: true })}>
           <Score
             handleRef={scoreRef}
             onChordClick={(measure, beat) => openChord(measure, beat)}
@@ -705,7 +705,7 @@ export default function ScoreEditor({
                     autoCapitalize="off"
                     autoCorrect="off"
                     aria-label={`Chord at bar ${chordEdit.measure + 1}, beat ${chordEdit.beat + 1}`}
-                    className="w-28 rounded-lg border-2 border-accent bg-background px-2 py-1 font-mono text-sm text-foreground shadow-lg outline-none"
+                    className="w-28 rounded-md border-2 border-accent bg-foreground/[0.05] px-2 py-1 font-mono text-sm text-foreground shadow-md outline-none"
                   />
                   {chordEdit.error && <span className="rounded bg-background px-1.5 py-0.5 text-xs text-danger shadow">{chordEdit.error}</span>}
                 </div>
@@ -745,7 +745,7 @@ export default function ScoreEditor({
         </div>
 
         {/* Measure tools */}
-        <div className="flex justify-end gap-2 rounded-2xl bg-surface p-3">
+        <div className="flex justify-end gap-2">
           <div className="flex gap-1.5">
             <button type="button" onClick={addMeasureAfter} className={btn()}>
               + Bar after
@@ -756,7 +756,10 @@ export default function ScoreEditor({
           </div>
         </div>
 
-        <p className="px-1 text-xs text-muted">{KEY_HELP}</p>
+        <details className="px-1 text-xs text-muted">
+          <summary className="cursor-pointer select-none font-medium hover:text-foreground">Keyboard and mouse shortcuts</summary>
+          <p className="mt-2">{KEY_HELP}</p>
+        </details>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import Flyout, { FlyoutItem } from "@/components/Flyout";
 import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import ThemeModal from "@/components/ThemeModal";
 import AnimatedLogo from "@/components/AnimatedLogo";
-import { LogoMark } from "@/components/Logo";
+import Logo, { LogoMark } from "@/components/Logo";
 import { APP_VERSION, CHANNEL, VERSION_LABEL } from "@/lib/version";
 import { useChangelogUnseen } from "@/lib/useChangelogUnseen";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
@@ -28,12 +28,14 @@ import {
   ShieldIcon,
   NAV_LINKS,
   SearchIcon,
+  findToolLink,
   StarIcon,
   filterLinks,
   groupByCategory,
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
+import { navIconButtonClass, navIconClass, navRowClass } from "@/components/navRow";
 import { isToolHidden, useSiteSettings } from "@/lib/siteSettings";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
@@ -175,7 +177,7 @@ function SidebarCollapseButton({ collapsed }: { collapsed: boolean }) {
       onClick={() => updateLayout({ collapsed: !collapsed })}
       aria-label={label}
       title={label}
-      className={`flex shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${collapsed ? "mx-auto mb-2 h-8 w-8" : "h-9 w-9"}`}
+      className={`flex shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${collapsed ? "mx-auto mb-2 h-8 w-8" : "h-8 w-8"}`}
     >
       {/* Just a chevron: ‹ hides the sidebar, › brings it back. */}
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -217,17 +219,18 @@ function SearchBox({
         type="button"
         onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
         aria-label="Search tools"
-        className="mb-3 flex w-full items-center gap-2 rounded-full bg-background px-3 py-2 text-left text-sm text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+        className="mb-3 flex h-8 w-full items-center gap-2 rounded-md bg-foreground/[0.05] px-2 text-left text-sm text-muted outline-none transition-colors hover:border-foreground/20 hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
       >
         <SearchIcon className="h-4 w-4 shrink-0" />
-        <span className="truncate">Press / to search</span>
+        <span className="flex-1 truncate">Search</span>
+        <kbd className="rounded-sm bg-foreground/[0.05] px-1.5 font-sans text-[11px] leading-4 text-muted">/</kbd>
       </button>
     );
   }
 
   return (
     <label
-      className={`mb-3 flex items-center gap-2 rounded-full bg-background px-3 text-muted focus-within:ring-2 focus-within:ring-accent ${
+      className={`mb-3 flex items-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-muted focus-within:ring-2 focus-within:ring-accent ${
         large ? "py-2.5 text-base" : "py-2 text-sm"
       }`}
     >
@@ -253,11 +256,8 @@ function isLibraryPath(path: string) {
   return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files";
 }
 
-/** Shared by Favorites and every real category in `NavItems` below — a collapsible section with
-    its own header (icon + title + chevron) and, while expanded, a subtle rounded background
-    behind the whole block. `accent` is the one visual difference Favorites gets: a translucent
-    *accent* tint instead of the plain `surface-hover` tint every other category uses, so it still
-    reads as a distinct, special section rather than just another category. A module-level
+/** Shared by Favorites and every real category in `NavItems` below — a collapsible section: a
+    small muted heading (a star for Favorites; click to fold it away) over its rows. A module-level
     component (not a function defined inside `NavItems`'s own render, which the React Compiler
     correctly flags — a new component identity every render resets state), so everything it needs
     from `NavItems` is passed in explicitly instead of closed over. */
@@ -269,7 +269,6 @@ function CategoryBlock({
   isCollapsed,
   onToggleCollapse,
   renderLink,
-  renderCard,
   star = false,
 }: {
   title: string;
@@ -279,8 +278,6 @@ function CategoryBlock({
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   renderLink: (link: NavLink) => React.ReactNode;
-  /** Shows the items as a two-column grid of cards instead of rows (Favorites). */
-  renderCard?: (link: NavLink) => React.ReactNode;
   star?: boolean;
 }) {
   // A light section: a small heading (click to fold it away), then the tools.
@@ -291,48 +288,33 @@ function CategoryBlock({
         onClick={onToggleCollapse}
         disabled={searching}
         aria-expanded={!isCollapsed}
-        className={`group flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-left font-semibold text-muted transition-colors hover:text-foreground disabled:hover:text-muted ${large ? "text-sm" : "text-xs"}`}
+        className={`group flex w-full items-center gap-1.5 rounded-md px-2 pb-1 text-left font-medium text-muted transition-colors hover:text-foreground disabled:hover:text-muted ${large ? "text-sm" : "text-xs"}`}
       >
-        {star && <StarIcon className="h-3.5 w-3.5 text-accent" filled />}
+        {star && <StarIcon className="h-3 w-3" filled />}
         <span className="flex-1">{title}</span>
         {isCollapsed && <span className="font-medium tabular-nums opacity-70">{items.length}</span>}
         {!searching && (
           <ChevronDownIcon className={`h-3 w-3 shrink-0 transition-all ${isCollapsed ? "-rotate-90" : "opacity-0 group-hover:opacity-100"}`} />
         )}
       </button>
-      {!isCollapsed &&
-        (renderCard ? (
-          <div className="grid grid-cols-2 gap-1.5 pt-0.5">{items.map(renderCard)}</div>
-        ) : (
-          <div className="flex flex-col gap-0.5">{items.map(renderLink)}</div>
-        ))}
+      {!isCollapsed && <div className="flex flex-col gap-px">{items.map(renderLink)}</div>}
     </div>
   );
 }
 
-/** A tool's icon in a small tile tinted with its category's color (solid while it's the page
-    you're on). */
-function ToolTile({ link, active, large }: { link: NavLink; active: boolean; large?: boolean }) {
-  const color = CATEGORY_COLORS[link.category];
+/** A tool's icon, in its category's colour. */
+function ToolTile({ link, large }: { link: NavLink; active?: boolean; large?: boolean }) {
   const Icon = link.icon;
   return (
-    <span
-      className={`flex shrink-0 items-center justify-center rounded-lg transition-colors ${large ? "h-9 w-9" : "h-7 w-7"}`}
-      style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
-    >
+    <span className={navIconClass(large)} style={{ color: CATEGORY_COLORS[link.category] }}>
       <Icon className={large ? "h-5 w-5" : "h-4 w-4"} />
     </span>
   );
 }
 
-/** A sidebar section's heading ("Your shed", "People", "Tools"), with a hairline to the right. */
+/** A sidebar section's heading ("Your shed", "People", "Tools"): small and muted. */
 function SectionHeading({ children, large = false }: { children: React.ReactNode; large?: boolean }) {
-  return (
-    <h2 className={`flex items-center gap-2 px-3 pt-2 font-extrabold text-foreground ${large ? "text-base" : "text-sm"}`}>
-      {children}
-      <span className="h-px flex-1 bg-foreground/10" />
-    </h2>
-  );
+  return <h2 className={`px-2 pb-1 pt-3 font-medium text-muted first:pt-0 ${large ? "text-sm" : "text-xs"}`}>{children}</h2>;
 }
 
 function NavItems({
@@ -420,7 +402,7 @@ function NavItems({
           key={href}
           aria-disabled="true"
           title="Needs a larger screen"
-          className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-3 text-base font-medium text-muted opacity-40"
+          className="flex h-11 cursor-not-allowed items-center gap-2.5 rounded-md px-2 text-base text-muted opacity-50"
         >
           <Icon className="h-5 w-5 shrink-0" />
           <span className="truncate">{label}</span>
@@ -442,9 +424,7 @@ function NavItems({
         onClick={onNavigate}
         title={name !== label ? label : undefined}
         aria-label={label}
-        className={`flex min-w-0 items-center gap-2.5 ${large ? "rounded-xl py-1.5 text-base" : "rounded-lg py-1 text-sm"} w-full px-2 transition-colors ${showsStar ? (large ? "pr-14" : "pr-10") : ""} ${
-          active ? "bg-surface-hover font-semibold text-foreground" : "font-medium text-foreground/80 hover:bg-surface-hover/70 hover:text-foreground"
-        }`}
+        className={`${navRowClass(active, large)} ${showsStar ? (large ? "pr-12" : "pr-8") : ""}`}
       >
         <ToolTile link={linkInfo} active={active} large={large} />
         <span className="truncate">{name}</span>
@@ -469,9 +449,9 @@ function NavItems({
           aria-label={isFavorite ? `Remove ${label} from favorites` : `Add ${label} to favorites`}
           aria-pressed={isFavorite}
           title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          className={`absolute right-1 top-1/2 z-10 flex -translate-y-1/2 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-hover ${
-            large ? "h-10 w-10" : "h-8 w-8"
-          } ${isFavorite ? "text-accent" : "text-muted hover:text-foreground"} ${
+          className={`absolute right-0.5 top-1/2 z-10 flex -translate-y-1/2 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-hover ${
+            large ? "h-10 w-10" : "h-7 w-7"
+          } ${isFavorite ? "text-foreground/70" : "text-muted hover:text-foreground"} ${
             // An already-favorited star always stays visible (so you can see what's starred at a
             // glance); an unfavorited one only shows on hover on desktop (no hover on mobile, so
             // it's always visible there too). focus-visible keeps it reachable by keyboard even
@@ -481,70 +461,22 @@ function NavItems({
               : "opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
           }`}
         >
-          <StarIcon className={large ? "h-5 w-5" : "h-4 w-4"} filled={isFavorite} />
+          <StarIcon className={large ? "h-4 w-4" : "h-3.5 w-3.5"} filled={isFavorite} />
         </button>
       </div>
     );
   }
 
-  // A favorite as a small card: its tile and name on a tint of its category's color, with the
-  // star (always shown, to unstar it) in the corner.
-  function renderFavoriteCard(linkInfo: NavLink) {
-    const { href, label, short } = linkInfo;
-    const active = effectivePathname === href;
-    const color = CATEGORY_COLORS[linkInfo.category];
-    return (
-      <div key={href} className="relative min-w-0">
-        <Link
-          href={href}
-          onClick={onNavigate}
-          aria-label={label}
-          title={short ? label : undefined}
-          className={`flex min-w-0 flex-col items-start gap-2 rounded-xl p-2.5 transition-colors ${large ? "min-h-[5.5rem]" : "min-h-[4.75rem]"}`}
-          style={{
-            background: `color-mix(in srgb, ${color} ${active ? 20 : 9}%, var(--surface))`,
-          }}
-        >
-          <ToolTile link={linkInfo} active={active} large={large} />
-          <span className={`line-clamp-2 w-full pr-1 font-semibold leading-tight text-foreground ${large ? "text-sm" : "text-xs"}`}>{short ?? label}</span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => toggleFavorite(href)}
-          aria-label={`Remove ${label} from favorites`}
-          aria-pressed
-          title="Remove from favorites"
-          className="absolute right-1 top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full text-accent transition-colors hover:bg-surface-hover"
-        >
-          <StarIcon className="h-3.5 w-3.5" filled />
-        </button>
-      </div>
-    );
-  }
-
-  // A main destination (Library, Community, Lessons) as a card; `wide` spans both columns.
-  function renderTile(link: NavLink, wide: boolean) {
+  // A main destination (Library, Community, Lessons): a row like the rest, active on its subpages too.
+  function renderTile(link: NavLink) {
     const { href, label, icon: Icon } = link;
     const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isLibraryPath(effectivePathname));
-    const color = CATEGORY_COLORS[link.category];
     return (
-      <Link
-        key={href}
-        href={href}
-        onClick={onNavigate}
-        className={`@container flex min-w-0 rounded-2xl border px-2 py-2.5 transition-colors ${wide ? "col-span-2" : ""} ${
-          active ? "border-foreground/20 bg-surface-hover shadow-sm" : "border-foreground/5 bg-surface-hover hover:border-foreground/15"
-        }`}
-      >
-        <span className="flex w-full min-w-0 flex-col items-center gap-1 text-center @[7.5rem]:flex-row @[7.5rem]:gap-1.5 @[7.5rem]:text-left">
-          <span
-            className={`flex shrink-0 items-center justify-center rounded-xl ${large ? "h-9 w-9" : "h-8 w-8"}`}
-            style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
-          >
-            <Icon className={large ? "h-[18px] w-[18px]" : "h-4 w-4"} />
-          </span>
-          <span className={`min-w-0 max-w-full truncate font-bold ${large ? "text-sm @[7.5rem]:text-base" : "text-xs @[7.5rem]:text-sm"}`}>{label}</span>
+      <Link key={href} href={href} onClick={onNavigate} className={navRowClass(active, large)}>
+        <span className="flex shrink-0" style={{ color: CATEGORY_COLORS[link.category] }}>
+          <Icon className={navIconClass(large)} />
         </span>
+        <span className="truncate">{label}</span>
       </Link>
     );
   }
@@ -557,28 +489,18 @@ function NavItems({
   }
 
   if (collapsed) {
-    // Icon-only: rounded groups of same-size buttons — the two places to start, your library,
-    // favorites, then a group per tool category (its name on hover).
+    // Icon-only: the same groups as the full sidebar, split by hairlines (each name on hover).
     const iconLink = (link: NavLink) => {
       const { href, label, icon: Icon } = link;
       const active = effectivePathname === href || (href !== "/" && effectivePathname.startsWith(`${href}/`)) || (href === "/tunes" && isLibraryPath(effectivePathname));
-      const color = CATEGORY_COLORS[link.category];
       return (
-        <Link
-          key={href}
-          href={href}
-          onClick={onNavigate}
-          title={label}
-          aria-label={label}
-          className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform hover:scale-105"
-          style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
-        >
-          <Icon className="h-[18px] w-[18px]" />
+        <Link key={href} href={href} onClick={onNavigate} title={label} aria-label={label} className={navIconButtonClass(active)} style={{ color: CATEGORY_COLORS[link.category] }}>
+          <Icon className="h-4 w-4" />
         </Link>
       );
     };
-    const group = (key: string, title: string, children: React.ReactNode, tint = false) => (
-      <div key={key} title={title} className={`flex flex-col items-center gap-1 rounded-2xl p-1 ${tint ? "bg-accent/10" : "bg-surface-hover/50"}`}>
+    const group = (key: string, title: string, children: React.ReactNode) => (
+      <div key={key} title={title} className="flex w-full flex-col items-center gap-px border-t border-foreground/10 pt-2 first:border-t-0 first:pt-0">
         {children}
       </div>
     );
@@ -595,7 +517,7 @@ function NavItems({
           </>,
         )}
         {peopleItems.length > 0 && group("people", "People", peopleItems.map(iconLink))}
-        {favoriteItems.length > 0 && group("favorites", "Favorites", favoriteItems.map(iconLink), true)}
+        {favoriteItems.length > 0 && group("favorites", "Favorites", favoriteItems.map(iconLink))}
         {groups.map(({ category, items }) => group(category, category, items.map(iconLink)))}
         {contextMenu}
       </nav>
@@ -603,12 +525,12 @@ function NavItems({
   }
 
   return (
-    <nav onContextMenu={onNavContextMenu} className="flex overflow-y-auto h-full flex-col gap-3">
+    <nav onContextMenu={onNavContextMenu} className="flex h-full flex-col gap-4 overflow-y-auto [scrollbar-width:thin]">
       {groups.length === 0 && communityItems.length === 0 && (
         <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>No tools found</p>
       )}
       {(!searching || communityItems.length > 0) && (
-        <div className="flex flex-col gap-1.5 pb-1">
+        <div className="flex flex-col gap-px">
           {searching ? (
             communityItems.map((l) => renderLink(l))
           ) : (
@@ -619,19 +541,18 @@ function NavItems({
               <SectionHeading large={large}>Your shed</SectionHeading>
               {site.shedLog && <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />}
               {site.shedNotes && <ShedNotesNavCard active={effectivePathname.startsWith("/shed-notes")} collapsed={collapsed} large={large} onNavigate={onNavigate} />}
-              {shedItems.map((link) => renderTile(link, true))}
+              {shedItems.map((link) => renderTile(link))}
               {/* People: other musicians — Community, and your teachers or students. */}
               {peopleItems.length > 0 && (
                 <>
                   <SectionHeading large={large}>People</SectionHeading>
-                  <div className="grid grid-cols-2 gap-1.5">{peopleItems.map((link, i) => renderTile(link, i === peopleItems.length - 1 && i % 2 === 0))}</div>
+                  {peopleItems.map((link) => renderTile(link))}
                 </>
               )}
             </>
           )}
         </div>
       )}
-      {!searching && <SectionHeading large={large}>Tools</SectionHeading>}
       {favoriteItems.length > 0 && (
         <CategoryBlock
           title="Favorites"
@@ -642,7 +563,6 @@ function NavItems({
           isCollapsed={isSectionCollapsed("Favorites")}
           onToggleCollapse={() => setCategoryCollapsed("Favorites", !isSectionCollapsed("Favorites"))}
           renderLink={renderLink}
-          renderCard={searching ? undefined : renderFavoriteCard}
         />
       )}
       {groups.map(({ category, items }) => (
@@ -738,14 +658,19 @@ export default function Sidebar() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open menu"
-        className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex h-10 w-10 items-center justify-center rounded-full bg-surface hover:bg-surface-hover lg:hidden"
-      >
-        <MenuIcon className="h-5 w-5" />
-      </button>
+      {/* Phones: a top bar with the menu and the logo (pages leave 4.5rem at the top for it). The
+          practice timer's badge, when one runs, sits at its right end. */}
+      <header className="fixed inset-x-0 top-0 z-20 flex h-[calc(env(safe-area-inset-top)+3.5rem)] items-center gap-2 border-b border-foreground/10 bg-background/90 px-2 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+          className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-hover"
+        >
+          <MenuIcon className="h-5 w-5" />
+        </button>
+        <MobileBarTitle path={currentPath} />
+      </header>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 flex flex-col bg-surface px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:hidden">
@@ -770,7 +695,7 @@ export default function Sidebar() {
                 }}
                 aria-label="Send feedback"
                 title="Send feedback"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+                className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 <FeedbackIcon className="h-5 w-5" />
               </button>
@@ -779,7 +704,7 @@ export default function Sidebar() {
               onClick={() => setMobileOpen(false)}
               aria-label="Help"
               title="Help"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
             >
               <HelpIcon className="h-5 w-5" />
             </Link>
@@ -832,7 +757,7 @@ export default function Sidebar() {
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
-                className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-hover"
+                className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-hover"
               >
                 <CloseIcon className="h-5 w-5" />
               </button>
@@ -851,7 +776,7 @@ export default function Sidebar() {
           <div className="min-h-0 flex-1 overflow-y-auto pb-2">
             <NavItems large query={query} onNavigate={() => setMobileOpen(false)} />
           </div>
-          <div className="mt-1 flex flex-col gap-1 p-1 bg-background rounded-2xl">
+          <div className="mt-1 flex flex-col gap-1 border-t border-foreground/10 pt-2">
             <PracticeTimerWidget />
             {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
             <AccountMenu large onNavigate={() => setMobileOpen(false)} />
@@ -863,7 +788,7 @@ export default function Sidebar() {
 
       <aside
         style={{ width: shownWidth }}
-        className={`relative hidden shrink-0 flex-col bg-surface p-2 lg:flex ${
+        className={`relative hidden shrink-0 flex-col border-r border-foreground/10 bg-surface p-2 lg:flex ${
           dragging ? "" : "transition-[width] duration-150"
         }`}
       >
@@ -871,17 +796,17 @@ export default function Sidebar() {
           className={
             collapsed
               ? "mb-4 flex h-10 items-center justify-center"
-              : "mb-4 flex min-h-10 items-center justify-between gap-1 pl-1 pt-3"
+              : "mb-3 flex min-h-10 items-center justify-between gap-1 pl-1 pt-1"
           }
         >
           {collapsed ? (
-            <Link href={LANDING_PATH} aria-label="About soniroll" title={`soniroll ${VERSION_LABEL}`} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-hover">
-              <LogoMark size={30} />
+            <Link href={LANDING_PATH} aria-label="About soniroll" title={`soniroll ${VERSION_LABEL}`} className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-hover">
+              <LogoMark size={28} />
             </Link>
           ) : (
             <div className="min-w-0 flex-1">
               <Link href={LANDING_PATH} aria-label="About soniroll" className="block w-fit rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                <AnimatedLogo height={34} />
+                <AnimatedLogo height={30} />
               </Link>
               <VersionTag />
             </div>
@@ -892,9 +817,9 @@ export default function Sidebar() {
             href="/help"
             aria-label="Help"
             title="Help"
-            className={`flex h-9 w-9 items-center justify-center rounded-full hover:bg-surface-hover hover:text-foreground ${onHelp ? "text-accent" : "text-muted"}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface-hover hover:text-foreground ${onHelp ? "text-foreground" : "text-muted"}`}
           >
-            <HelpIcon className="h-5 w-5" />
+            <HelpIcon className="h-4 w-4" />
           </Link>
           <Flyout
             icon={DotsIcon}
@@ -969,9 +894,9 @@ export default function Sidebar() {
             onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
             aria-label="Search tools"
             title="Search tools"
-            className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-surface-hover/50 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
           >
-            <SearchIcon className="h-[18px] w-[18px]" />
+            <SearchIcon className="h-4 w-4" />
           </button>
         ) : (
           <SearchBox query={query} onChange={setQuery} />
@@ -982,7 +907,7 @@ export default function Sidebar() {
             box squeezed around the profile picture (reported directly, with a screenshot), so
             collapsed drops to a plain unboxed stack instead. */}
         <div
-          className={`mt-1 flex flex-col gap-1 ${collapsed ? "" : "bg-background rounded-2xl p-1"}`}
+          className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
           {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
@@ -1093,6 +1018,32 @@ export default function Sidebar() {
   );
 }
 
+/** The phone top bar's middle: the page you're on (its icon and name), or the logo on pages that
+    aren't in the tool list. Library pages all count as Library. */
+function MobileBarTitle({ path }: { path: string }) {
+  const link = findToolLink(isLibraryPath(path) || path.startsWith("/tunes/") ? "/tunes" : path) ?? NAV_LINKS.find((l) => l.href !== "/" && path.startsWith(`${l.href}/`));
+  if (path === DASHBOARD_PATH || !link) {
+    return (
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex items-center rounded-md px-1 py-1">
+        <Logo height={24} />
+      </Link>
+    );
+  }
+  const Icon = link.icon;
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex shrink-0 items-center rounded-md p-1">
+        <LogoMark size={22} />
+      </Link>
+      <span className="text-foreground/30">/</span>
+      <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+        <Icon className="h-4 w-4 shrink-0 text-muted" />
+        <span className="truncate">{link.label}</span>
+      </span>
+    </div>
+  );
+}
+
 /** The version under the logo: "v0.9.0" and a small Beta tag, linking to what's new (with a dot
     when there's a version this device hasn't seen there yet). */
 function VersionTag({ onNavigate }: { onNavigate?: () => void }) {
@@ -1105,9 +1056,9 @@ function VersionTag({ onNavigate }: { onNavigate?: () => void }) {
       className="mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
     >
       {VERSION_LABEL.replace(/ beta$/, "")}
-      {CHANNEL === "beta" && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent">Beta</span>}
+      {CHANNEL === "beta" && <span className="rounded-sm bg-foreground/[0.05] px-1 py-px text-[9px] font-semibold text-muted">Beta</span>}
       {unseen && (
-        <span className="flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-accent-foreground">
+        <span className="flex items-center gap-1 rounded-sm bg-accent px-1 py-px text-[9px] font-semibold text-accent-foreground">
           <span className="h-1 w-1 rounded-full bg-accent-foreground" /> New
         </span>
       )}

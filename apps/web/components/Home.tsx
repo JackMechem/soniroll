@@ -236,40 +236,19 @@ export default function Home() {
         ) : null;
       case "recent":
         return (
-          <Card title="Pick up where you left off" tone="accent">
+          <Card title="Pick up where you left off">
             {recents.length ? (
-              <>
-                <Link href={recents[0].href} className="group flex items-center gap-4 rounded-2xl bg-surface p-4 transition-colors hover:bg-surface-hover">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-                    {(() => {
-                      const I = recents[0].icon;
-                      return <I className="h-7 w-7" />;
-                    })()}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xl font-bold">{recents[0].title}</span>
-                    <span className="block text-sm text-muted">{recents[0].detail}</span>
-                  </span>
-                  <span className="hidden items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground @md:flex">
-                    Resume <ChevronRightIcon className="h-4 w-4" />
-                  </span>
-                </Link>
-                {recents.length > 1 && (
-                  <div className="grid grid-cols-2 gap-2 @xl:grid-cols-3 @5xl:grid-cols-4">
-                    {recents.slice(1, 7).map((r) => (
-                      <Link key={r.key} href={r.href} className="flex min-w-0 items-center gap-2.5 rounded-xl bg-surface/70 px-3 py-2.5 transition-colors hover:bg-surface">
-                        <r.icon className="h-4 w-4 shrink-0 text-accent" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">{r.title}</span>
-                          <span className="block truncate text-xs text-muted">{r.detail}</span>
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </>
+              <div className="-mx-2 grid gap-px @xl:grid-cols-2">
+                {recents.slice(0, 8).map((r) => (
+                  <Link key={r.key} href={r.href} className="flex min-w-0 items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
+                    <r.icon className="h-4 w-4 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.title}</span>
+                    <span className="shrink-0 text-xs text-muted">{r.detail}</span>
+                  </Link>
+                ))}
+              </div>
             ) : (
-              <p className="rounded-2xl bg-surface p-4 text-sm text-muted">The tools, tunes and charts you open will show up here.</p>
+              <Empty>The tools, tunes and charts you open will show up here.</Empty>
             )}
           </Card>
         );
@@ -279,7 +258,7 @@ export default function Home() {
             {tuneOfDay ? (
               <div className="flex flex-1 flex-col justify-between gap-4">
                 <div>
-                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="block text-2xl font-bold leading-tight tracking-tight hover:underline">
+                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="block text-xl font-semibold leading-tight tracking-tight hover:underline">
                     {tuneOfDay.tune.name}
                   </Link>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -289,10 +268,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="flex items-center justify-center gap-1 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover">
+                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="flex h-9 items-center justify-center gap-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover">
                     Open the tune <ChevronRightIcon className="h-4 w-4" />
                   </Link>
-                  <p className="text-center text-xs text-muted">A new one from Tunes I Know every day.</p>
+                  <p className="text-xs text-muted">A new one from Tunes I Know every day.</p>
                 </div>
               </div>
             ) : (
@@ -306,7 +285,7 @@ export default function Home() {
       case "favorites":
         return (
           <Card title={favoriteTools.length ? "Favorites" : "Get started"} detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}>
-            <div className="grid auto-rows-fr content-start gap-3 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+            <div className="grid auto-rows-fr content-start gap-2 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
               {pinned.map((item) => (
                 <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} canStar={canStar} onToggle={() => toggleFavorite(item.href)} />
               ))}
@@ -321,7 +300,7 @@ export default function Home() {
       case "library":
         return (
           <Card title="Your library">
-            <div className="-mx-2 flex flex-col">
+            <div className="-mx-2 flex flex-col gap-px">
               <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
               <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
               <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
@@ -338,9 +317,9 @@ export default function Home() {
                   .sort((a, b) => b.updatedAt - a.updatedAt)
                   .slice(0, 4)
                   .map((s) => (
-                    <Link key={s.id} href={`/tunes/setlist?id=${encodeURIComponent(s.id)}`} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+                    <Link key={s.id} href={`/tunes/setlist?id=${encodeURIComponent(s.id)}`} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
                       <IconChip icon={SetlistIcon} />
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
                       <span className="text-xs tabular-nums text-muted">{s.tuneIds.length} tunes</span>
                     </Link>
                   ))}
@@ -363,10 +342,10 @@ export default function Home() {
             ) : sessions.length ? (
               <div className="-mx-2 flex flex-col">
                 {sessions.slice(0, 4).map((s) => (
-                  <Link key={s.id} href="/practice-timer" className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+                  <Link key={s.id} href="/practice-timer" className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
                     <IconChip icon={StopwatchIcon} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{s.name || "Untitled session"}</span>
+                      <span className="block truncate text-sm font-medium">{s.name || "Untitled session"}</span>
                       <span className="block truncate text-xs text-muted">{describeSession(s)}</span>
                     </span>
                   </Link>
@@ -391,10 +370,10 @@ export default function Home() {
                   return (
                     <Link key={w.key} href={w.href} className="group flex flex-col gap-1.5">
                       <span className="flex items-baseline justify-between gap-2 text-sm">
-                        <span className="truncate font-semibold group-hover:underline">{w.label}</span>
+                        <span className="truncate font-medium group-hover:underline">{w.label}</span>
                         <span className="shrink-0 text-xs tabular-nums text-muted">{pct}% of {total}</span>
                       </span>
-                      <span className="h-1.5 overflow-hidden rounded-full bg-background">
+                      <span className="h-1 overflow-hidden rounded-full bg-foreground/10">
                         <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(pct, 4)}%` }} />
                       </span>
                     </Link>
@@ -423,7 +402,7 @@ export default function Home() {
             <div className="grid gap-x-6 gap-y-5 @xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5">
               {groupByCategory(tools).map(({ category, items }) => (
                 <div key={category} className="min-w-0">
-                  <h3 className="mb-1.5 px-2 text-xs font-semibold text-muted">{category}</h3>
+                  <h3 className="mb-1 px-2 text-xs font-medium text-muted">{category}</h3>
                   <ToolRows items={items} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
                 </div>
               ))}
@@ -450,41 +429,41 @@ export default function Home() {
     <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-10">
         {editing ? (
-          <div className="sticky top-[calc(env(safe-area-inset-top)+4.5rem)] z-40 flex flex-wrap items-center gap-3 rounded-2xl bg-surface p-3 pl-4 shadow-lg ring-1 ring-accent/30 lg:top-4">
-            <PencilIcon className="h-5 w-5 shrink-0 text-accent" />
+          <div className="sticky top-[calc(env(safe-area-inset-top)+4.5rem)] z-40 flex flex-wrap items-center gap-3 rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-3 pl-4 shadow-lg lg:top-4">
+            <PencilIcon className="h-4 w-4 shrink-0 text-muted" />
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">Editing your dashboard</p>
+              <p className="text-sm font-medium">Editing your dashboard</p>
               <p className="text-xs text-muted">Drag a card to move it, change its size, or take it off. Add more at the bottom.</p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => setConfirmReset(true)} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+              <button type="button" onClick={() => setConfirmReset(true)} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
                 Reset
               </button>
-              <button type="button" onClick={finishEditing} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+              <button type="button" onClick={finishEditing} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                 Done
               </button>
             </div>
           </div>
         ) : (
-          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
-              <h1 className="truncate text-3xl font-bold tracking-tight sm:text-4xl">
+              <p className="text-sm text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
+              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
                 {isAuthenticated ? `${greeting(today)}${name ? `, ${name}` : ""}` : "Your practice space"}
               </h1>
             </div>
             <div className="flex w-full items-center gap-2 md:w-auto">
-              <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full bg-surface pl-4 pr-1 focus-within:ring-2 focus-within:ring-accent md:w-80 md:flex-none">
+              <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-foreground/[0.05] pl-3 pr-1 focus-within:ring-2 focus-within:ring-accent/40 md:w-80 md:flex-none">
                 <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
                 <input
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search tools and tunes…"
-                  className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
-                  <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
+                  <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
                     <CloseIcon className="h-4 w-4" />
                   </button>
                 )}
@@ -496,7 +475,7 @@ export default function Home() {
                   setEditChoice(true);
                 }}
                 title="Choose and arrange your cards"
-                className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover"
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
               >
                 <PencilIcon className="h-4 w-4" /> Edit
               </button>
@@ -513,10 +492,10 @@ export default function Home() {
               {tuneMatches.length ? (
                 <div className="-mx-2 flex flex-col">
                   {tuneMatches.map(({ tune, list }) => (
-                    <Link key={tune.id} href={tuneHref(list, tune.id)} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+                    <Link key={tune.id} href={tuneHref(list, tune.id)} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
                       <IconChip icon={NoteIcon} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{tune.name}</span>
+                        <span className="block truncate text-sm font-medium">{tune.name}</span>
                         <span className="block truncate text-xs text-muted">{[list === "learn" ? "To learn" : "I know", tuneSummary(tune)].filter(Boolean).join(" · ")}</span>
                       </span>
                     </Link>
@@ -538,16 +517,16 @@ export default function Home() {
           />
         )}
         {!editing && layout.every((i) => !available(i.id)) && !q && (
-          <p className="rounded-3xl bg-surface p-5 text-sm text-muted">
+          <p className="rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
             Your dashboard is empty. Press Edit to add cards.
           </p>
         )}
       </main>
 
-      <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-2 pb-6 text-center text-sm text-muted">
+      <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-2 pb-6 text-center text-xs text-muted">
         <span>
           Made by{" "}
-          <a href="https://jackmechem.dev" target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+          <a href="https://jackmechem.dev" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:underline">
             Jack Mechem
           </a>
         </span>
@@ -577,8 +556,8 @@ export default function Home() {
   );
 }
 
-/** A dashboard card: a title row (with an optional detail and link) over its content. `accent`
-    tints it; `plain` has no background of its own (for content made of its own tiles). */
+/** A dashboard card: a bordered panel with its title (and an optional detail and link) on a header
+    row above the content. `plain` has no frame of its own (for content made of its own tiles). */
 function Card({
   title,
   detail,
@@ -589,24 +568,24 @@ function Card({
   title: string;
   detail?: string;
   action?: { label: string; href: string };
-  tone?: "surface" | "accent" | "plain";
+  tone?: "surface" | "plain";
   children: ReactNode;
 }) {
-  const frame = tone === "plain" ? "" : tone === "accent" ? "rounded-3xl bg-accent/10 p-5 ring-1 ring-inset ring-accent/15" : "rounded-3xl bg-surface p-5";
+  const plain = tone === "plain";
   return (
-    <section className={`flex h-full min-w-0 flex-col gap-4 ${frame}`}>
-      <div className={`flex items-center gap-2 ${tone === "plain" ? "px-1" : ""}`}>
-        <h2 className="text-sm font-semibold text-muted">{title}</h2>
-        {detail && <span className="truncate text-xs text-muted/80">· {detail}</span>}
+    <section className={`flex h-full min-w-0 flex-col ${plain ? "gap-3" : "overflow-hidden rounded-lg bg-surface"}`}>
+      <div className={`flex min-w-0 items-center gap-2 ${plain ? "px-1" : "h-11 shrink-0 px-4"}`}>
+        <h2 className="shrink-0 text-sm font-medium">{title}</h2>
+        {detail && <span className="truncate text-xs text-muted">{detail}</span>}
         {action && (
-          <Link href={action.href} className="ml-auto flex shrink-0 items-center gap-0.5 text-xs font-semibold text-accent hover:underline">
+          <Link href={action.href} className="ml-auto flex shrink-0 items-center gap-0.5 text-xs text-muted transition-colors hover:text-foreground">
             {action.label === "New" && <PlusIcon className="h-3.5 w-3.5" />}
             {action.label}
             {action.label !== "New" && <ChevronRightIcon className="h-3.5 w-3.5" />}
           </Link>
         )}
       </div>
-      {children}
+      <div className={`flex flex-1 flex-col gap-4 ${plain ? "" : "p-4"}`}>{children}</div>
     </section>
   );
 }
@@ -616,26 +595,22 @@ function Empty({ children }: { children: ReactNode }) {
 }
 
 function Chip({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return <span className={`rounded-full px-3 py-1 text-sm font-semibold ${muted ? "bg-background text-muted" : "bg-accent/15 text-accent"}`}>{children}</span>;
+  return <span className={`rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium ${muted ? "text-muted" : "text-foreground"}`}>{children}</span>;
 }
 
 function IconChip({ icon: I }: { icon: Icon }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-      <I className="h-4 w-4" />
-    </span>
+    <I className="h-4 w-4 shrink-0 text-muted" />
   );
 }
 
 function StatRow({ icon, label, value, href, detail }: { icon: Icon; label: string; value: number; href: string; detail?: string }) {
   return (
-    <Link href={href} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface-hover">
+    <Link href={href} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
       <IconChip icon={icon} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{label}</span>
-        {detail && <span className="block truncate text-xs text-muted">{detail}</span>}
-      </span>
-      <span className="text-xl font-extrabold tabular-nums">{value}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
+      {detail && <span className="truncate text-xs text-muted">{detail}</span>}
+      <span className="w-8 shrink-0 text-right text-sm tabular-nums text-muted">{value}</span>
     </Link>
   );
 }
@@ -651,7 +626,7 @@ function Star({ label, favorited, onToggle, small }: { label: string; favorited:
       }}
       aria-label={favorited ? `Unfavorite ${label}` : `Favorite ${label}`}
       aria-pressed={favorited}
-      className={`flex shrink-0 items-center justify-center rounded-full hover:bg-background ${small ? "h-7 w-7" : "h-8 w-8"} ${favorited ? "text-accent" : "text-muted hover:text-foreground"}`}
+      className={`flex shrink-0 items-center justify-center rounded-md hover:bg-surface-hover ${small ? "h-7 w-7" : "h-8 w-8"} ${favorited ? "text-foreground/70" : "text-muted hover:text-foreground"}`}
     >
       <StarIcon className={small ? "h-3.5 w-3.5" : "h-4 w-4"} filled={favorited} />
     </button>
@@ -664,18 +639,16 @@ function ToolTile({ item, favorited, canStar, onToggle }: { item: ToolLink; favo
     <div className="relative h-full">
       <Link
         href={item.href}
-        className="group flex h-full items-center gap-4 rounded-2xl bg-background p-4 ring-1 ring-transparent transition hover:ring-accent/30 active:scale-[0.99]"
+        className="group flex h-full items-start gap-3 rounded-md bg-foreground/[0.05] p-3 transition-colors hover:border-foreground/25 hover:bg-surface-hover/40"
       >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent transition group-hover:bg-accent group-hover:text-accent-foreground">
-          <item.icon className="h-6 w-6" />
-        </span>
+        <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-foreground" />
         <span className={`min-w-0 flex-1 ${canStar ? "pr-6" : ""}`}>
-          <span className="block truncate font-semibold">{item.label}</span>
+          <span className="block truncate text-sm font-medium">{item.label}</span>
           {item.description && <span className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">{item.description}</span>}
         </span>
       </Link>
       {canStar && (
-        <div className="absolute right-2 top-2">
+        <div className="absolute right-1.5 top-1.5">
           <Star small label={item.label} favorited={favorited} onToggle={onToggle} />
         </div>
       )}
@@ -690,15 +663,15 @@ function ToolRows({ items, favorites, canStar, isDesktop, onToggle }: { items: T
       {items.map((item) => {
         const disabled = !!item.desktopOnly && !isDesktop;
         return (
-          <div key={item.href} className={`group flex items-center rounded-xl ${disabled ? "opacity-50" : "hover:bg-surface-hover"}`}>
+          <div key={item.href} className={`group flex items-center rounded-md ${disabled ? "opacity-50" : "hover:bg-surface-hover"}`}>
             {disabled ? (
               <span className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-sm" title="Desktop only">
-                <item.icon className="h-4 w-4 shrink-0 text-accent" />
+                <item.icon className="h-4 w-4 shrink-0 text-muted" />
                 <span className="truncate">{item.label}</span>
               </span>
             ) : (
               <Link href={item.href} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-sm">
-                <item.icon className="h-4 w-4 shrink-0 text-accent" />
+                <item.icon className="h-4 w-4 shrink-0 text-muted" />
                 <span className="truncate">{item.label}</span>
               </Link>
             )}

@@ -23,30 +23,30 @@ export default function LiveFeedback({
   const tolPct = (toleranceMs / RANGE_MS) * 50;
 
   return (
-    <div className="flex w-full flex-col items-center gap-3 rounded-3xl bg-surface p-4" aria-live="polite">
+    <div className="flex w-full flex-col items-center gap-3 rounded-lg bg-surface p-4" aria-live="polite">
       {countInLeft !== null ? (
         <div className="flex h-[4.5rem] flex-col items-center justify-center">
-          <span className="text-sm font-medium text-muted">Count-in</span>
-          <span className="text-4xl font-bold tabular-nums">{countInLeft}</span>
+          <span className="text-sm text-muted">Count-in</span>
+          <span className="text-4xl font-semibold tabular-nums">{countInLeft}</span>
         </div>
       ) : last ? (
         <div className="flex h-[4.5rem] flex-col items-center justify-center">
-          <span className="text-4xl font-bold tabular-nums" style={{ color: STATUS_COLOR[statusOf(last.errorMs, toleranceMs)] }}>
+          <span className="text-4xl font-semibold tabular-nums" style={{ color: STATUS_COLOR[statusOf(last.errorMs, toleranceMs)] }}>
             {signedMs(last.errorMs)}
           </span>
-          <span className="text-sm font-medium text-muted">
+          <span className="text-sm text-muted">
             {STATUS_LABEL[statusOf(last.errorMs, toleranceMs)]}
             {Math.abs(last.errorMs) > toleranceMs ? ` · ${last.errorMs > 0 ? "late" : "early"}` : ""}
           </span>
         </div>
       ) : (
-        <div className="flex h-[4.5rem] items-center text-sm font-medium text-muted">Start playing…</div>
+        <div className="flex h-[4.5rem] items-center text-sm text-muted">Start playing…</div>
       )}
 
       <div className="w-full">
-        <div className="relative h-8 w-full rounded-full bg-background">
+        <div className="relative h-8 w-full rounded-md bg-background">
           <div
-            className="absolute inset-y-1 rounded-full"
+            className="absolute inset-y-1 rounded-sm"
             style={{ left: `${50 - tolPct}%`, width: `${tolPct * 2}%`, background: `color-mix(in srgb, ${STATUS_COLOR.good} 20%, transparent)` }}
           />
           <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-muted" />
@@ -58,7 +58,7 @@ export default function LiveFeedback({
             />
           ))}
         </div>
-        <div className="mt-1 flex justify-between text-[11px] font-medium text-muted">
+        <div className="mt-1 flex justify-between text-[11px] text-muted">
           <span>← early</span>
           <span>click</span>
           <span>late →</span>

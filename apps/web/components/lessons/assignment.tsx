@@ -5,7 +5,7 @@ import { useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { CheckIcon, CloseIcon, LinkIcon, PlusIcon } from "@/components/tools";
-import { FileIcon, FileView, ago, errorText, field } from "@/components/lessons/parts";
+import { FileIcon, FileView, ago, btnPrimary, btnSecondary, btnSmall, errorText, field } from "@/components/lessons/parts";
 import {
   FILE_KINDS,
   MAX_SUBMIT_FILES,
@@ -57,9 +57,9 @@ export function SubmitSettings({ value, onChange }: { value: SubmitConfig | null
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-background p-3.5">
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-bold">How they hand it in</p>
+    <div className="flex flex-col gap-3 rounded-lg bg-foreground/[0.05] p-3.5">
+      <div className="flex flex-col gap-1.5">
+        <p className="text-sm font-medium">How they hand it in</p>
         <div className="flex flex-wrap gap-1.5">
           <Toggle on={!on} onClick={() => onChange(null)} label="Just tick it off" />
           <Toggle on={on && c.file} onClick={() => set({ file: !(on && c.file) })} label="Upload a file" />
@@ -72,19 +72,19 @@ export function SubmitSettings({ value, onChange }: { value: SubmitConfig | null
       </div>
       {on && c.file && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-bold text-muted">Files you&apos;ll take</p>
+          <p className="text-xs font-medium text-muted">Files you&apos;ll take</p>
           <div className="flex flex-wrap gap-1.5">
             {FILE_KINDS.map((k) => (
               <Toggle key={k.id} small on={k.id === "any" ? anyFile : c.fileKinds.includes(k.id)} onClick={() => toggleKind(k.id)} label={k.label} />
             ))}
             {c.extensions.map((e) => (
-              <span key={e} className="flex items-center gap-1 rounded-full bg-accent py-1 pl-3 pr-1 text-xs font-semibold text-accent-foreground">
+              <span key={e} className="flex h-7 items-center gap-1 rounded-md border border-foreground/25 bg-surface-hover pl-2.5 pr-1 text-xs font-medium">
                 {e}
                 <button
                   type="button"
                   aria-label={`Remove ${e}`}
                   onClick={() => set({ extensions: c.extensions.filter((x) => x !== e) })}
-                  className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/20"
+                  className="flex h-5 w-5 items-center justify-center rounded-sm text-muted hover:bg-foreground/10 hover:text-foreground"
                 >
                   <CloseIcon className="h-3 w-3" />
                 </button>
@@ -102,13 +102,13 @@ export function SubmitSettings({ value, onChange }: { value: SubmitConfig | null
                 }
               }}
               placeholder="Another type, e.g. .logicx"
-              className={`${field} max-w-56 py-2`}
+              className={`${field} max-w-56`}
             />
             <button
               type="button"
               onClick={addExt}
               disabled={!cleanExtension(ext)}
-              className="rounded-full bg-surface px-3 py-2 text-xs font-semibold ring-1 ring-foreground/10 disabled:opacity-40"
+              className={btnSecondary}
             >
               Add
             </button>
@@ -128,8 +128,8 @@ function Toggle({ on, onClick, label, small = false }: { on: boolean; onClick: (
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`flex items-center gap-1 rounded-full font-semibold transition-colors ${small ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm"} ${
-        on ? "bg-accent text-accent-foreground" : "bg-surface ring-1 ring-foreground/10 hover:ring-accent"
+      className={`flex items-center gap-1 rounded-md border font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
+        on ? "border-foreground/25 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {on && <CheckIcon className="h-3.5 w-3.5" />}
@@ -140,13 +140,13 @@ function Toggle({ on, onClick, label, small = false }: { on: boolean; onClick: (
 
 export const STATUS_LABEL: Record<Submission["status"], string> = { submitted: "Handed in", reviewed: "Reviewed", changes: "Needs changes" };
 const STATUS_CLASS: Record<Submission["status"], string> = {
-  submitted: "bg-accent/15 text-accent",
+  submitted: "bg-foreground/[0.05] text-foreground",
   reviewed: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
   changes: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
 };
 
 export function StatusChip({ status }: { status: Submission["status"] }) {
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</span>;
+  return <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 
 function sizeLabel(bytes: number) {
@@ -157,14 +157,14 @@ function sizeLabel(bytes: number) {
 function SubmissionView({ s }: { s: Submission }) {
   return (
     <div className="flex flex-col gap-2">
-      {s.text && <p className="whitespace-pre-wrap rounded-xl bg-surface px-3.5 py-2.5 text-sm leading-relaxed">{s.text}</p>}
+      {s.text && <p className="whitespace-pre-wrap rounded-md bg-background px-3 py-2 text-sm leading-relaxed">{s.text}</p>}
       {s.links.map((l) => (
         <a
           key={l}
           href={l}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 truncate rounded-xl bg-surface px-3.5 py-2.5 text-sm font-semibold text-accent hover:underline"
+          className="flex items-center gap-2 truncate rounded-md bg-background px-3 py-2 text-sm font-medium text-accent hover:underline"
         >
           <LinkIcon className="h-4 w-4 shrink-0" />
           <span className="truncate">{l}</span>
@@ -173,9 +173,9 @@ function SubmissionView({ s }: { s: Submission }) {
       {s.files.map((f) =>
         f.url ? (
           f.type.startsWith("video/") ? (
-            <div key={f.fileId} className="flex flex-col gap-1 rounded-xl bg-surface p-2.5">
-              <span className="truncate text-xs font-semibold">{f.name}</span>
-              <video controls src={f.url} preload="metadata" className="max-h-80 w-full rounded-lg bg-black" />
+            <div key={f.fileId} className="flex flex-col gap-1 rounded-md bg-background p-2.5">
+              <span className="truncate text-xs font-medium">{f.name}</span>
+              <video controls src={f.url} preload="metadata" className="max-h-80 w-full rounded-md bg-black" />
             </div>
           ) : (
             <FileView key={f.fileId} url={f.url} name={f.name} type={f.type} />
@@ -199,11 +199,11 @@ export function AssignmentWork({ item, teacher, studentName }: { item: Item; tea
   if (!item.submit) return null;
   if (teacher) {
     return (
-      <div className="flex flex-col gap-2 rounded-2xl bg-background p-3">
+      <div className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
         {s ? (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-bold">{studentName ?? "Your student"} handed this in</span>
+              <span className="text-sm font-medium">{studentName ?? "Your student"} handed this in</span>
               <StatusChip status={s.status} />
               <span className="text-xs text-muted">{ago(s.updatedAt)}</span>
             </div>
@@ -218,17 +218,17 @@ export function AssignmentWork({ item, teacher, studentName }: { item: Item; tea
   }
   const open = !s || editing || s.status === "changes";
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-background p-3">
+    <div className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
       {s && (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-bold">Your hand-in</span>
+            <span className="text-sm font-medium">Your hand-in</span>
             <StatusChip status={s.status} />
             <span className="text-xs text-muted">{ago(s.updatedAt)}</span>
           </div>
           {s.feedback && (
-            <blockquote className="rounded-xl border-l-4 border-accent bg-surface px-3.5 py-2.5 text-sm">
-              <span className="mb-0.5 block text-xs font-bold text-muted">Feedback</span>
+            <blockquote className="border-l-2 border-accent py-0.5 pl-3 text-sm">
+              <span className="mb-0.5 block text-xs font-medium text-muted">Feedback</span>
               <span className="whitespace-pre-wrap">{s.feedback}</span>
             </blockquote>
           )}
@@ -255,14 +255,14 @@ function StudentActions({ item, s, onEdit }: { item: Item; s: Submission; onEdit
   const [error, setError] = useState<string | null>(null);
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <button type="button" onClick={onEdit} className="rounded-full bg-surface px-3.5 py-1.5 text-xs font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover">
+      <button type="button" onClick={onEdit} className={btnSmall}>
         {s.status === "reviewed" ? "Hand in again" : "Change your hand-in"}
       </button>
       {s.status === "submitted" && (
         <button
           type="button"
           onClick={() => withdraw({ itemId: item.id }).catch((e) => setError(errorText(e, "Couldn't take it back.")))}
-          className="rounded-full px-3.5 py-1.5 text-xs font-semibold text-muted hover:bg-surface hover:text-foreground"
+          className="inline-flex h-8 items-center rounded-md px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           Take it back
         </button>
@@ -360,7 +360,7 @@ function HandInForm({
           onChange={(e) => setText(e.target.value)}
           rows={4}
           placeholder="Your answer…"
-          className={`${field} resize-y bg-surface`}
+          className={`${field} resize-y`}
           aria-label="Your answer"
         />
       )}
@@ -374,14 +374,14 @@ function HandInForm({
                 onChange={(e) => setLinks((cur) => cur.map((x, j) => (j === i ? e.target.value : x)))}
                 placeholder="https://… (a video, a recording, a doc)"
                 aria-label={`Link ${i + 1}`}
-                className={`${field} bg-surface py-2 ${l.trim() && !cleanLink(l) ? "ring-danger" : ""}`}
+                className={`${field} ${l.trim() && !cleanLink(l) ? "border-danger" : ""}`}
               />
               {links.length > 1 && (
                 <button
                   type="button"
                   aria-label="Remove link"
                   onClick={() => setLinks((cur) => cur.filter((_, j) => j !== i))}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
                 >
                   <CloseIcon className="h-3.5 w-3.5" />
                 </button>
@@ -392,7 +392,7 @@ function HandInForm({
             <button
               type="button"
               onClick={() => setLinks((cur) => [...cur, ""])}
-              className="flex items-center gap-1 self-start text-xs font-semibold text-accent hover:underline"
+              className="flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground"
             >
               <PlusIcon className="h-3.5 w-3.5" /> Another link
             </button>
@@ -405,24 +405,24 @@ function HandInForm({
             ...kept.map((f) => ({ key: f.fileId as string, name: f.name, size: f.size, drop: () => setKept((k) => k.filter((x) => x.fileId !== f.fileId)) })),
             ...files.map((f, i) => ({ key: `new-${i}-${f.name}`, name: f.name, size: f.size, drop: () => setFiles((cur) => cur.filter((_, j) => j !== i)) })),
           ].map((f) => (
-            <div key={f.key} className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2">
-              <FileIcon className="h-4 w-4 shrink-0 text-accent" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{f.name}</span>
+            <div key={f.key} className="flex items-center gap-2 rounded-md bg-background py-1.5 pl-3 pr-1.5">
+              <FileIcon className="h-4 w-4 shrink-0 text-muted" />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{f.name}</span>
               <span className="shrink-0 text-xs text-muted">{sizeLabel(f.size)}</span>
               <button
                 type="button"
                 aria-label={`Remove ${f.name}`}
                 onClick={f.drop}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted hover:bg-background"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 <CloseIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
           {total < MAX_SUBMIT_FILES && (
-            <label className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-foreground/15 p-4 text-center text-sm hover:border-accent">
-              <FileIcon className="h-5 w-5 text-accent" />
-              <span className="font-semibold">{total ? "Add another file" : "Choose a file"}</span>
+            <label className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-foreground/20 p-4 text-center text-sm transition-colors hover:border-foreground/40">
+              <FileIcon className="h-5 w-5 text-muted" />
+              <span className="font-medium">{total ? "Add another file" : "Choose a file"}</span>
               <span className="text-xs text-muted">
                 {describeFiles(config).replace(/^./, (c) => c.toUpperCase())} · up to {MAX_SUBMIT_MB} MB
               </span>
@@ -443,7 +443,7 @@ function HandInForm({
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-surface">
+          <button type="button" onClick={onCancel} className={btnSecondary}>
             Cancel
           </button>
         )}
@@ -451,7 +451,7 @@ function HandInForm({
           type="button"
           disabled={!!busy || !hasSomething || badLink}
           onClick={() => void send()}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnPrimary}
         >
           {busy ?? (previous ? "Hand in again" : "Hand in")}
         </button>
@@ -482,12 +482,12 @@ function ReviewForm({ itemId, s }: { itemId: Id<"lessonItems">; s: Submission })
     return (
       <div className="flex flex-col gap-1.5">
         {s.feedback && (
-          <blockquote className="rounded-xl border-l-4 border-accent bg-surface px-3.5 py-2.5 text-sm">
-            <span className="mb-0.5 block text-xs font-bold text-muted">Your feedback</span>
+          <blockquote className="border-l-2 border-accent py-0.5 pl-3 text-sm">
+            <span className="mb-0.5 block text-xs font-medium text-muted">Your feedback</span>
             <span className="whitespace-pre-wrap">{s.feedback}</span>
           </blockquote>
         )}
-        <button type="button" onClick={() => setOpen(true)} className="self-start text-xs font-semibold text-accent hover:underline">
+        <button type="button" onClick={() => setOpen(true)} className="self-start text-xs font-medium text-accent hover:underline">
           {s.feedback ? "Change feedback" : "Give feedback"}
         </button>
       </div>
@@ -499,7 +499,7 @@ function ReviewForm({ itemId, s }: { itemId: Id<"lessonItems">; s: Submission })
         onChange={(e) => setFeedback(e.target.value)}
         rows={3}
         placeholder="Feedback for them (optional)"
-        className={`${field} resize-y bg-surface`}
+        className={`${field} resize-y`}
         aria-label="Feedback"
       />
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -508,7 +508,7 @@ function ReviewForm({ itemId, s }: { itemId: Id<"lessonItems">; s: Submission })
           type="button"
           disabled={busy}
           onClick={() => void go("changes")}
-          className="rounded-full bg-surface px-4 py-2 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover disabled:opacity-40"
+          className={btnSecondary}
         >
           Ask for changes
         </button>
@@ -516,7 +516,7 @@ function ReviewForm({ itemId, s }: { itemId: Id<"lessonItems">; s: Submission })
           type="button"
           disabled={busy}
           onClick={() => void go("reviewed")}
-          className="flex items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnPrimary}
         >
           <CheckIcon className="h-4 w-4" /> Mark reviewed
         </button>

@@ -72,11 +72,11 @@ export function AttachmentList({
         const Icon = r.icon;
         const chip = (
           <>
-            <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
+            <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
             <span className="truncate">{r.label}</span>
           </>
         );
-        const cls = `flex max-w-[16rem] items-center gap-1.5 rounded-full bg-background ${compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm"} font-medium`;
+        const cls = `flex max-w-[16rem] items-center gap-1.5 rounded-md bg-foreground/[0.05] ${compact ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-sm"} font-medium`;
         return (
           <span key={attachmentKey(a)} className={`${cls} ${r.href ? "" : "text-muted line-through"}`} title={`${r.kindLabel}: ${r.label}${r.href ? "" : " (deleted)"}`}>
             {r.href ? (
@@ -91,7 +91,7 @@ export function AttachmentList({
                 type="button"
                 onClick={() => onChange(items.filter((x) => attachmentKey(x) !== attachmentKey(a)))}
                 aria-label={`Remove ${r.label}`}
-                className="-mr-1 rounded-full p-0.5 text-muted hover:bg-surface-hover hover:text-foreground"
+                className="-mr-1 rounded-sm p-0.5 text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 <CloseIcon className="h-3 w-3" />
               </button>
@@ -103,7 +103,7 @@ export function AttachmentList({
         <button
           type="button"
           onClick={() => setPicking(true)}
-          className={`flex items-center gap-1 rounded-full border border-dashed border-surface-hover ${compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm"} font-medium text-muted hover:border-accent hover:text-foreground`}
+          className={`flex items-center gap-1 rounded-md border border-dashed border-foreground/20 ${compact ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-sm"} font-medium text-muted hover:border-foreground/40 hover:text-foreground`}
         >
           <PlusIcon className="h-3.5 w-3.5" /> {addLabel}
         </button>
@@ -174,12 +174,12 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4 pt-[8vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Attach" className="flex max-h-[80vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Attach</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
-            <CloseIcon className="h-5 w-5" />
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onClick={onClose}>
+      <div role="dialog" aria-label="Attach" className="flex max-h-[80vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">Attach</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1.5 flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
         <Segmented
@@ -196,13 +196,13 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
             { value: "tools", label: "Tools" },
           ]}
         />
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
-          <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className="min-w-0 flex-1 bg-transparent outline-none" />
+        <div className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
+          <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
         </div>
-        <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto">
+        <ul className="min-h-0 flex-1 divide-y divide-foreground/10 overflow-y-auto rounded-md bg-foreground/[0.05]">
           {rows.length === 0 ? (
-            <li className="px-2 py-6 text-center text-sm text-muted">{query ? "Nothing matches." : empty[tab]}</li>
+            <li className="px-3 py-6 text-center text-sm text-muted">{query ? "Nothing matches." : empty[tab]}</li>
           ) : (
             rows.map((r) => {
               const on = keys.has(attachmentKey(r.attachment));
@@ -212,13 +212,13 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
                     type="button"
                     onClick={() => toggle(r.attachment)}
                     aria-pressed={on}
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-background"
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-hover"
                   >
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${on ? "border-accent bg-accent text-accent-foreground" : "border-surface-hover"}`}>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${on ? "border-accent bg-accent text-accent-foreground" : "border-foreground/25"}`}>
                       {on && <CheckIcon className="h-3.5 w-3.5" />}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{r.title}</span>
+                      <span className="block truncate text-sm font-medium">{r.title}</span>
                       {r.detail && <span className="block truncate text-xs text-muted">{r.detail}</span>}
                     </span>
                   </button>
@@ -228,7 +228,7 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
           )}
         </ul>
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={onClose} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             Done
           </button>
         </div>

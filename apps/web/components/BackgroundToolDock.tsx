@@ -52,7 +52,7 @@ function DockCard({
   const link = findToolLink(href);
   const Icon = link?.icon;
   return (
-    <div className="relative flex flex-col gap-2 rounded-2xl bg-surface p-3 shadow-lg">
+    <div className="relative flex flex-col gap-2 rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-3 shadow-lg">
       {/* `pr-6` reserves room for the close button only on this row (its text could otherwise
           run under it) — kept off the card's own padding so the preview row below stays
           symmetric and `justify-center` actually centers it in the card, not in a box already

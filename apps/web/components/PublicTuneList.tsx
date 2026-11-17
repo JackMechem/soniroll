@@ -9,8 +9,8 @@ import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
 
 function chip(enabled: boolean): string {
-  return `rounded-full px-2.5 py-1 text-xs font-medium tabular-nums ${
-    enabled ? "bg-accent/15 text-accent" : "bg-surface text-muted line-through"
+  return `rounded-md px-2.5 py-1 text-xs font-medium tabular-nums ${
+    enabled ? "bg-foreground/[0.05] text-foreground" : "border border-dashed border-foreground/15 text-muted line-through"
   }`;
 }
 
@@ -61,10 +61,10 @@ export default function PublicTuneList({
         const inMyTunes = haveAsTune.has(nameId(tune.name));
         const inTunesToLearn = haveAsLearn.has(nameId(tune.name));
         return (
-          <li key={tune.id} className="flex flex-col gap-2.5 rounded-xl bg-background p-3">
+          <li key={tune.id} className="flex flex-col gap-2.5 rounded-md bg-foreground/[0.05] p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold leading-tight">{tune.name}</p>
+                <p className="truncate text-sm font-medium leading-tight">{tune.name}</p>
                 <p className="mt-0.5 text-xs tabular-nums text-muted">{tune.timeSignature}</p>
               </div>
               {canAdd && (
@@ -74,7 +74,7 @@ export default function PublicTuneList({
                     onClick={() => setMyTunes((prev) => [...prev, toOwnTune(tune)])}
                     disabled={inMyTunes}
                     title="Add to my tunes"
-                    className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface hover:text-foreground disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
                   >
                     {inMyTunes ? (
                       <CheckIcon className="h-3.5 w-3.5" />
@@ -88,7 +88,7 @@ export default function PublicTuneList({
                     onClick={() => setTunesToLearn((prev) => [...prev, toOwnTune(tune)])}
                     disabled={inTunesToLearn}
                     title="Add to my Tunes to Learn list"
-                    className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface hover:text-foreground disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
                   >
                     {inTunesToLearn ? (
                       <CheckIcon className="h-3.5 w-3.5" />

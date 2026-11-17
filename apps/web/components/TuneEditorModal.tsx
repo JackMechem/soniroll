@@ -6,7 +6,7 @@ import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { Tune } from "@/lib/types";
 
-const inputClass = "rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent";
+const inputClass = "rounded-md bg-foreground/[0.05] px-3 py-2 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm";
 
 export default function TuneEditorModal({
   initial,
@@ -45,16 +45,16 @@ export default function TuneEditorModal({
       <div
         role="dialog"
         aria-label={isNew ? "New tune" : "Edit tune"}
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-surface text-left text-foreground shadow-2xl shadow-black/20"
+        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-left text-foreground shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 pt-5 sm:px-6">
-          <h2 className="text-lg font-semibold">{isNew ? "New tune" : "Edit tune"}</h2>
+          <h2 className="text-base font-semibold">{isNew ? "New tune" : "Edit tune"}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-surface-hover sm:h-8 sm:w-8"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground sm:h-8 sm:w-8"
           >
             ✕
           </button>
@@ -62,7 +62,7 @@ export default function TuneEditorModal({
 
         <div className="flex flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-6">
           <label className="flex flex-col gap-2 text-sm">
-            <span className="font-medium">Name</span>
+            <span className="text-xs font-medium text-muted">Name</span>
             <input
               autoFocus
               value={draft.name}
@@ -74,7 +74,7 @@ export default function TuneEditorModal({
           </label>
 
           <div className="flex flex-col gap-2 text-sm">
-            <span className="font-medium">Time signature</span>
+            <span className="text-xs font-medium text-muted">Time signature</span>
             <MeterPicker
               value={draft.timeSignature}
               onChange={(timeSignature) => setDraft((d) => ({ ...d, timeSignature }))}
@@ -82,7 +82,7 @@ export default function TuneEditorModal({
           </div>
 
           <div className="flex flex-col gap-2 text-sm">
-            <span className="font-medium">Tempos (BPM)</span>
+            <span className="text-xs font-medium text-muted">Tempos (BPM)</span>
             <TempoPicker
               tempos={draft.tempos}
               onChange={(tempos) => setDraft((d) => ({ ...d, tempos }))}
@@ -90,12 +90,12 @@ export default function TuneEditorModal({
           </div>
 
           <div className="flex flex-col gap-2 text-sm">
-            <span className="font-medium">Keys</span>
+            <span className="text-xs font-medium text-muted">Keys</span>
             <KeyPicker keys={draft.keys} onChange={(keys) => setDraft((d) => ({ ...d, keys }))} />
           </div>
 
           <label className="flex flex-col gap-2 text-sm">
-            <span className="font-medium">Notes</span>
+            <span className="text-xs font-medium text-muted">Notes</span>
             <textarea
               value={draft.notes}
               onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
@@ -106,7 +106,7 @@ export default function TuneEditorModal({
           </label>
 
           <label className="flex flex-col gap-2 text-sm">
-            <span className="font-medium">Linked chord chart</span>
+            <span className="text-xs font-medium text-muted">Linked chord chart</span>
             <select
               value={draft.chordChartId ?? ""}
               onChange={(e) =>
@@ -141,14 +141,14 @@ export default function TuneEditorModal({
               type="button"
               onClick={save}
               disabled={!draft.name.trim()}
-              className="rounded-lg bg-accent px-4 py-2 font-medium text-accent-foreground hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isNew ? "Add tune" : "Save changes"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-background px-4 py-2 hover:bg-surface-hover"
+              className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
             >
               Cancel
             </button>

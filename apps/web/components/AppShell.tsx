@@ -38,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PracticeLogGlobal />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background lg:my-2 lg:ml-2 lg:mr-2 lg:rounded-3xl">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <TilingLayout />
       </div>
     </>
@@ -75,7 +75,7 @@ function AnimatedPage({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   return (
-    <div ref={pageRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background lg:my-2 lg:ml-2 lg:mr-2 lg:rounded-3xl">
+    <div ref={pageRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
       {children}
     </div>
   );

@@ -52,7 +52,7 @@ export default function RoutineTimePicker({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-background p-2.5">
+    <div className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-2.5">
       {!once && (
         <Segmented
           label="Which days"
@@ -73,7 +73,7 @@ export default function RoutineTimePicker({
               apply(timeString(m));
               onDone();
             }}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${current === timeString(m) ? "bg-accent text-accent-foreground" : "bg-surface hover:bg-surface-hover"}`}
+            className={`h-8 rounded-md border px-2.5 text-xs font-medium transition-colors ${current === timeString(m) ? "border-transparent bg-accent text-accent-foreground" : "border-foreground/15 hover:bg-surface-hover"}`}
           >
             {formatTime(m).replace(/:00(?= )/, "")}
           </button>
@@ -83,7 +83,7 @@ export default function RoutineTimePicker({
           aria-label="Start time"
           defaultValue={current}
           onChange={(e) => parseTime(e.target.value) !== null && apply(e.target.value)}
-          className="min-w-0 rounded-full bg-surface px-3 py-1 text-sm"
+          className="h-8 min-w-0 rounded-md bg-foreground/[0.05] px-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/40"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -94,12 +94,12 @@ export default function RoutineTimePicker({
               apply(null);
               onDone();
             }}
-            className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted hover:bg-surface hover:text-foreground"
+            className="h-8 rounded-md px-2.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground"
           >
             Make it any time
           </button>
         )}
-        <button type="button" onClick={onDone} className="ml-auto rounded-full px-3 py-1.5 text-xs font-semibold hover:bg-surface">
+        <button type="button" onClick={onDone} className="ml-auto h-8 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium hover:bg-surface-hover">
           Done
         </button>
       </div>

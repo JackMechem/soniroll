@@ -26,12 +26,12 @@ function useEscape(onClose: () => void) {
 function Dialog({ label, onClose, wide = false, children }: { label: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
   useEscape(onClose);
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-[6vh]" onClick={onClose}>
-      <div role="dialog" aria-label={label} className={`flex w-full ${wide ? "max-w-2xl" : "max-w-md"} flex-col gap-4 rounded-2xl bg-surface p-5 shadow-xl`} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">{label}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
-            <CloseIcon className="h-5 w-5" />
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-overlay p-4 pt-[6vh]" onClick={onClose}>
+      <div role="dialog" aria-label={label} className={`flex w-full ${wide ? "max-w-2xl" : "max-w-md"} flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-foreground shadow-2xl shadow-black/20`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="min-w-0 truncate text-base font-semibold">{label}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
         {children}
@@ -55,18 +55,18 @@ function usePostGate() {
 
 function PostGateNote({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <p className="rounded-xl bg-background p-3 text-sm text-muted">
+    <p className="rounded-md bg-foreground/[0.05] p-3 text-sm text-muted">
       {isAuthenticated ? (
         <>
           To post to Community, make your profile public in{" "}
-          <Link href="/account" className="font-semibold text-foreground underline">
+          <Link href="/account" className="font-medium text-foreground underline">
             your account
           </Link>
           .
         </>
       ) : (
         <>
-          <Link href={SIGN_IN_PATH} className="font-semibold text-foreground underline">
+          <Link href={SIGN_IN_PATH} className="font-medium text-foreground underline">
             Sign in
           </Link>{" "}
           to post to Community.
@@ -168,14 +168,14 @@ export function ProgressShareDialog({
       <div className="grid gap-2 sm:grid-cols-2">
         <Segmented label="Card" value={kind} onChange={(k) => { setKind(k); setPosted(null); }} options={KIND_OPTIONS} />
         {kind === "day" ? (
-          <div className="flex items-center justify-between gap-1 rounded-full bg-background p-1">
-            <button type="button" onClick={() => { setDate(addDays(date, -1)); setPosted(null); }} aria-label="Day before" className="rounded-full p-1.5 hover:bg-surface-hover">
+          <div className="flex h-9 items-center justify-between gap-1 rounded-md bg-background p-0.5">
+            <button type="button" onClick={() => { setDate(addDays(date, -1)); setPosted(null); }} aria-label="Day before" className="flex h-full w-8 items-center justify-center rounded-sm text-muted hover:bg-surface-hover hover:text-foreground">
               <ChevronLeftIcon className="h-4 w-4" />
             </button>
-            <span className="truncate text-sm font-semibold">
+            <span className="truncate text-sm font-medium">
               {date === today ? "Today" : (() => { const d = fromDateKey(date); return `${WEEKDAY_NAMES[d.getDay()].slice(0, 3)}, ${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getDate()}`; })()}
             </span>
-            <button type="button" onClick={() => { setDate(addDays(date, 1)); setPosted(null); }} disabled={date >= today} aria-label="Day after" className="rounded-full p-1.5 hover:bg-surface-hover disabled:opacity-30">
+            <button type="button" onClick={() => { setDate(addDays(date, 1)); setPosted(null); }} disabled={date >= today} aria-label="Day after" className="flex h-full w-8 items-center justify-center rounded-sm text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-30">
               <ChevronRightIcon className="h-4 w-4" />
             </button>
           </div>
@@ -185,25 +185,25 @@ export function ProgressShareDialog({
       </div>
       <ProgressCardView card={card} username={gate.username} />
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => void shareImage()} disabled={busy !== null} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60">
+        <button type="button" onClick={() => void shareImage()} disabled={busy !== null} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60">
           {busy === "share" ? <LoadingSpinner size="sm" inline /> : <ShareIcon className="h-4 w-4" />} Share image
         </button>
-        <button type="button" onClick={() => void download()} className="flex items-center gap-1.5 rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+        <button type="button" onClick={() => void download()} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover disabled:opacity-60">
           <DownloadIcon className="h-4 w-4" /> Download
         </button>
       </div>
-      <div className="flex flex-col gap-2 border-t border-surface-hover pt-4">
-        <h3 className="flex items-center gap-1.5 text-sm font-bold">
-          <UsersIcon className="h-4 w-4 text-accent" /> Post to Community
+      <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
+        <h3 className="flex items-center gap-1.5 text-sm font-medium">
+          <UsersIcon className="h-4 w-4 text-muted" /> Post to Community
         </h3>
         {gate.loading ? (
           <LoadingSpinner size="sm" />
         ) : !gate.canPost ? (
           <PostGateNote isAuthenticated={gate.isAuthenticated} />
         ) : posted ? (
-          <p className="flex items-center gap-2 rounded-xl bg-background p-3 text-sm">
-            <CheckIcon className="h-4 w-4 text-accent" /> Posted!{" "}
-            <Link href={`/post/${posted}`} className="font-semibold underline">
+          <p className="flex items-center gap-2 rounded-md bg-foreground/[0.05] p-3 text-sm">
+            <CheckIcon className="h-4 w-4 text-muted" /> Posted!{" "}
+            <Link href={`/post/${posted}`} className="font-medium underline">
               View post
             </Link>
           </p>
@@ -214,9 +214,9 @@ export function ProgressShareDialog({
               onChange={(e) => setCaption(e.target.value)}
               rows={2}
               placeholder="Say something (optional) — what's been working, what's next"
-              className="resize-y rounded-xl bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
-            <button type="button" onClick={() => void post()} disabled={busy !== null} className="flex items-center justify-center gap-1.5 self-start rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover disabled:opacity-60">
+            <button type="button" onClick={() => void post()} disabled={busy !== null} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover disabled:opacity-60 self-start">
               {busy === "post" && <LoadingSpinner size="sm" inline />} Post &ldquo;{head.title}&rdquo;
             </button>
           </>
@@ -277,8 +277,8 @@ export function RoutineShareDialog({ routine, onClose }: { routine: Routine; onC
   return (
     <Dialog label={`Share ${routine.name || "this routine"}`} onClose={onClose}>
       {!gate.isAuthenticated ? (
-        <p className="rounded-xl bg-background p-3 text-sm text-muted">
-          <Link href={SIGN_IN_PATH} className="font-semibold text-foreground underline">
+        <p className="rounded-md bg-foreground/[0.05] p-3 text-sm text-muted">
+          <Link href={SIGN_IN_PATH} className="font-medium text-foreground underline">
             Sign in
           </Link>{" "}
           to share routines — the link and posts live on your account.
@@ -286,36 +286,36 @@ export function RoutineShareDialog({ routine, onClose }: { routine: Routine; onC
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <h3 className="flex items-center gap-1.5 text-sm font-bold">
-              <LinkIcon className="h-4 w-4 text-accent" /> Share a link
+            <h3 className="flex items-center gap-1.5 text-sm font-medium">
+              <LinkIcon className="h-4 w-4 text-muted" /> Share a link
             </h3>
             <p className="text-sm text-muted">Anyone with the link can see the routine and add it to their own Shed Log. It always shows your latest version.</p>
             {url && (
-              <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2 text-sm">
+              <div className="flex h-9 items-center gap-2 rounded-md bg-background px-3 text-sm">
                 <span className="min-w-0 flex-1 truncate">{url}</span>
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => void makeLink()} disabled={busy !== null || shareId === undefined} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60">
+              <button type="button" onClick={() => void makeLink()} disabled={busy !== null || shareId === undefined} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60">
                 {busy === "link" ? <LoadingSpinner size="sm" inline /> : <ShareIcon className="h-4 w-4" />} {shareId ? "Share the link" : "Make a link"}
               </button>
               {shareId && (
-                <button type="button" onClick={() => void unshare({ routineId: routine.id })} className="rounded-full px-4 py-2 text-sm font-semibold text-danger hover:bg-background">
+                <button type="button" onClick={() => void unshare({ routineId: routine.id })} className="h-9 rounded-md px-3 text-sm font-medium text-danger hover:bg-surface-hover">
                   Stop sharing
                 </button>
               )}
             </div>
           </div>
-          <div className="flex flex-col gap-2 border-t border-surface-hover pt-4">
-            <h3 className="flex items-center gap-1.5 text-sm font-bold">
-              <UsersIcon className="h-4 w-4 text-accent" /> Post to Community
+          <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
+            <h3 className="flex items-center gap-1.5 text-sm font-medium">
+              <UsersIcon className="h-4 w-4 text-muted" /> Post to Community
             </h3>
             {gate.loading || postId === undefined ? (
               <LoadingSpinner size="sm" />
             ) : postId ? (
-              <p className="flex items-center gap-2 rounded-xl bg-background p-3 text-sm">
-                <CheckIcon className="h-4 w-4 text-accent" /> Posted —{" "}
-                <Link href={`/post/${postId}`} className="font-semibold underline">
+              <p className="flex items-center gap-2 rounded-md bg-foreground/[0.05] p-3 text-sm">
+                <CheckIcon className="h-4 w-4 text-muted" /> Posted —{" "}
+                <Link href={`/post/${postId}`} className="font-medium underline">
                   View post
                 </Link>
               </p>
@@ -328,9 +328,9 @@ export function RoutineShareDialog({ routine, onClose }: { routine: Routine; onC
                   onChange={(e) => setCaption(e.target.value)}
                   rows={2}
                   placeholder="What it's for, how it's helped (optional)"
-                  className="resize-y rounded-xl bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
                 />
-                <button type="button" onClick={() => void post()} disabled={busy !== null} className="flex items-center gap-1.5 self-start rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover disabled:opacity-60">
+                <button type="button" onClick={() => void post()} disabled={busy !== null} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover disabled:opacity-60 self-start">
                   {busy === "post" && <LoadingSpinner size="sm" inline />} Post routine
                 </button>
               </>

@@ -596,7 +596,7 @@ export default function Waveform({
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
       aria-valuenow={Math.round(time)}
-      className={`${fill ? "absolute inset-0" : "relative w-full"} touch-none select-none overflow-hidden ${flush ? "" : "rounded-xl bg-surface"} ${
+      className={`${fill ? "absolute inset-0" : "relative w-full"} touch-none select-none overflow-hidden ${flush ? "" : "rounded-lg bg-surface"} ${
         shift
           ? "cursor-crosshair"
           : mode === "tracks"
@@ -648,7 +648,7 @@ export default function Waveform({
           >
             <div className="absolute inset-y-0 left-1/2 w-px bg-accent" />
             {showMarkerFlags && (
-              <div className="absolute left-1/2 top-0 max-w-28 truncate rounded-br-md bg-accent px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-accent-foreground">
+              <div className="absolute left-1/2 top-0 max-w-28 truncate rounded-br-md bg-accent px-1.5 py-0.5 text-[0.65rem] font-medium leading-none text-accent-foreground">
                 {marker.label}
               </div>
             )}

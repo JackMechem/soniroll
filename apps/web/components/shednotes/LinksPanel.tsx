@@ -20,9 +20,9 @@ export function targetHref(target: string): string | null {
 function Section({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-1.5">
-      <h3 className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+      <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted">
         {title}
-        {count !== undefined && <span className="rounded-full bg-surface px-1.5 tabular-nums">{count}</span>}
+        {count !== undefined && <span className="tabular-nums">· {count}</span>}
       </h3>
       {children}
     </section>
@@ -68,13 +68,13 @@ export default function LinksPanel({
         {note.attached.length === 0 ? (
           <p className="text-xs text-muted">Attach this note to a routine or a day in the Shed Log (Add notes), a tune, or your lessons.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col divide-y divide-foreground/10 rounded-md bg-foreground/[0.05]">
             {note.attached.map((a) => {
               const href = targetHref(a.target);
               const Icon = a.target.startsWith("tune:") ? NoteIcon : a.target.startsWith("lesson:") ? GraduationCapIcon : CalendarIcon;
               return (
-                <li key={a.target} className="group flex items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5">
-                  <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
+                <li key={a.target} className="group flex items-center gap-2 px-2.5 py-1.5">
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
                   {href ? (
                     <Link href={href} className="min-w-0 flex-1 truncate text-sm hover:underline">
                       {a.label}
@@ -87,7 +87,7 @@ export default function LinksPanel({
                     onClick={() => void detach({ noteId: note.id as Id<"shedNotes">, target: a.target })}
                     aria-label={`Take off ${a.label}`}
                     title="Take the note off this (the note stays)"
-                    className="shrink-0 rounded-md p-0.5 text-muted hover:bg-background hover:text-foreground"
+                    className="shrink-0 rounded-md p-0.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                   >
                     <CloseIcon className="h-3.5 w-3.5" />
                   </button>
@@ -102,11 +102,11 @@ export default function LinksPanel({
         {backlinks.length === 0 ? (
           <p className="text-xs text-muted">No notes link here yet. Link to it from another note with [[{note.title}]].</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-px">
             {backlinks.map((n) => (
               <li key={n.id}>
-                <button type="button" onClick={() => onOpen(n.id)} className="flex w-full flex-col rounded-lg px-2.5 py-1.5 text-left hover:bg-surface">
-                  <span className="flex items-center gap-1.5 text-sm font-semibold">
+                <button type="button" onClick={() => onOpen(n.id)} className="flex w-full flex-col rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-surface-hover">
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
                     <DocumentIcon className="h-3.5 w-3.5 shrink-0 text-muted" /> <span className="truncate">{n.title}</span>
                   </span>
                   {n.snippet && <span className="line-clamp-2 text-xs text-muted">{n.snippet}</span>}
@@ -127,7 +127,7 @@ export default function LinksPanel({
                 <button
                   type="button"
                   onClick={() => (f.note ? onOpen(f.note.id) : onOpenTitle(f.title))}
-                  className={`flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-left text-sm hover:bg-surface ${f.note ? "" : "text-muted"}`}
+                  className={`flex w-full items-center gap-1.5 rounded-md px-2.5 py-1 text-left text-sm transition-colors hover:bg-surface-hover ${f.note ? "" : "text-muted"}`}
                   title={f.note ? undefined : "No note with this name yet — open it to make it"}
                 >
                   <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
@@ -144,7 +144,7 @@ export default function LinksPanel({
         <Section title="Tags">
           <div className="flex flex-wrap gap-1">
             {note.tags.map((t) => (
-              <button key={t} type="button" onClick={() => onTag(t)} className="rounded-full bg-accent/12 px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent/20">
+              <button key={t} type="button" onClick={() => onTag(t)} className="rounded-md bg-foreground/[0.05] px-1.5 py-0.5 text-xs font-medium text-foreground/80 transition-colors hover:bg-surface-hover hover:text-foreground">
                 #{t}
               </button>
             ))}

@@ -27,7 +27,7 @@ export default function AttachedNotes({
   target,
   label,
   newTitle,
-  buttonClassName = "rounded-full bg-background px-2.5 py-1 text-xs font-medium hover:bg-surface-hover",
+  buttonClassName = "h-8 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover",
   cardClassName = "bg-background",
   children,
 }: {
@@ -50,10 +50,10 @@ export default function AttachedNotes({
         <ul className="flex flex-col gap-1.5">
           {notes.map((n) => (
             <li key={n.noteId}>
-              <button type="button" onClick={() => setOpenId(n.noteId)} className={`flex w-full items-start gap-2.5 rounded-xl px-3 py-2 text-left hover:bg-surface-hover ${cardClassName}`}>
-                <DocumentIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+              <button type="button" onClick={() => setOpenId(n.noteId)} className={`flex w-full items-start gap-2.5 rounded-md bg-foreground/[0.05] px-3 py-2 text-left transition-colors hover:bg-surface-hover ${cardClassName}`}>
+                <DocumentIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{n.title}</span>
+                  <span className="block truncate text-sm font-medium">{n.title}</span>
                   <span className="line-clamp-2 text-xs text-muted">{n.snippet || "Empty note"}</span>
                 </span>
               </button>
@@ -185,10 +185,10 @@ function AddNotesMenu({
         ref={menu}
         role="dialog"
         aria-label="Add notes"
-        className="log-pop fixed inset-x-0 bottom-0 z-[61] flex max-h-[75dvh] flex-col overflow-hidden rounded-t-2xl bg-surface text-foreground shadow-2xl shadow-black/25 sm:inset-x-auto sm:bottom-auto sm:w-80 sm:rounded-2xl sm:border sm:border-foreground/10"
+        className="log-pop fixed inset-x-0 bottom-0 z-[61] flex max-h-[75dvh] flex-col overflow-hidden rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface text-foreground shadow-2xl shadow-black/25 sm:inset-x-auto sm:bottom-auto sm:w-80 sm:rounded-xl"
       >
-        <button type="button" onClick={() => void makeNew()} className="flex items-center gap-2 border-b border-foreground/10 px-4 py-3 text-left text-sm font-semibold hover:bg-surface-hover">
-          <PlusIcon className="h-4 w-4 text-accent" />
+        <button type="button" onClick={() => void makeNew()} className="flex items-center gap-2 border-b border-foreground/10 px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-surface-hover">
+          <PlusIcon className="h-4 w-4 text-muted" />
           <span className="min-w-0 flex-1 truncate">New note{q.trim() ? `: ${q.trim()}` : ""}</span>
         </button>
         <label className="flex items-center gap-2 px-4 pt-3">
@@ -200,7 +200,7 @@ function AddNotesMenu({
           {all && choices.length === 0 && <li className="px-2 py-3 text-sm text-muted">{all.length ? "No other notes match." : "You don't have any notes yet."}</li>}
           {choices.map((n) => (
             <li key={n.id}>
-              <button type="button" onClick={() => void pick(n.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface-hover">
+              <button type="button" onClick={() => void pick(n.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-hover">
                 <DocumentIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm">{n.title}</span>
@@ -260,10 +260,10 @@ export function LegacyNotes({
         rows={3}
         placeholder={placeholder}
         aria-label="Notes"
-        className={`resize-y rounded-xl px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent lg:text-sm ${className}`}
+        className={`resize-y rounded-md px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:text-sm ${className}`}
       />
       <div className="flex items-center gap-2 text-xs">
-        <button type="button" disabled={busy || !text.trim()} onClick={() => void convert()} className="font-semibold text-accent hover:underline disabled:opacity-50">
+        <button type="button" disabled={busy || !text.trim()} onClick={() => void convert()} className="font-medium text-accent hover:underline disabled:opacity-50">
           Make it a Shed Note
         </button>
         {error && <span className="text-danger">{error}</span>}

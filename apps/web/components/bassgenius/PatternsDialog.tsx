@@ -50,13 +50,13 @@ export default function PatternsDialog({
   // stacking context).
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-overlay p-3 sm:p-8" onClick={onClose}>
-      <div role="dialog" aria-label={`Patterns: ${title}`} className="w-full max-w-3xl rounded-2xl bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={`Patterns: ${title}`} className="w-full max-w-3xl rounded-xl ring-1 ring-foreground/[0.06] bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-accent">Patterns · {playerName}</p>
-            <h2 className="truncate text-2xl font-extrabold tracking-tight">{title}</h2>
+            <p className="text-xs text-muted">Patterns · {playerName}</p>
+            <h2 className="truncate text-xl font-semibold tracking-tight">{title}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface hover:bg-surface-hover">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
@@ -64,10 +64,10 @@ export default function PatternsDialog({
         {!insights ? (
           <LoadingSpinner label="Reading the transcriptions…" showLabel />
         ) : insights.notes === 0 ? (
-          <p className="rounded-xl bg-surface p-5 text-sm text-muted">No notes to look at yet.</p>
+          <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">No notes to look at yet.</p>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-foreground/[0.05] bg-foreground/10 sm:grid-cols-4">
               <Stat label="Bars" value={String(insights.bars)} />
               <Stat label="Notes" value={String(insights.notes)} />
               <Stat label="Range" value={insights.range ? `${noteName(insights.range.low)}–${noteName(insights.range.high)}` : "—"} />
@@ -86,7 +86,7 @@ export default function PatternsDialog({
               <div className="grid gap-3 sm:grid-cols-2">
                 {insights.beats.map((b) => (
                   <div key={b.beat}>
-                    <p className="mb-1 text-xs font-semibold text-muted">Beat {b.beat}</p>
+                    <p className="mb-1 text-xs font-medium text-muted">Beat {b.beat}</p>
                     <Bars shares={b.shares} at={at} compact />
                   </div>
                 ))}
@@ -101,9 +101,9 @@ export default function PatternsDialog({
               <Card title="Across common changes" hint="For the chord changes that come up most: the usual way in, and the line across the bar line (degrees of each chord, | = the change).">
                 <div className="flex flex-col gap-3">
                   {insights.transitions.map((t) => (
-                    <div key={t.change} className="rounded-xl bg-background p-3">
+                    <div key={t.change} className="rounded-md bg-foreground/[0.05] p-3">
                       <div className="mb-2 flex items-baseline justify-between gap-2">
-                        <p className="font-semibold">{t.change}</p>
+                        <p className="text-sm font-medium">{t.change}</p>
                         <span className="text-xs text-muted">{t.count}×</span>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -130,13 +130,13 @@ export default function PatternsDialog({
                 <div className="flex flex-col gap-3">
                   {insights.shapes.map((f) => (
                     <div key={f.family}>
-                      <p className="mb-1 text-xs font-semibold text-muted">
+                      <p className="mb-1 text-xs font-medium text-muted">
                         {f.family} · {f.bars} bar{f.bars === 1 ? "" : "s"}
                       </p>
-                      <ul className="flex flex-col gap-1">
+                      <ul className="flex flex-col divide-y divide-foreground/10 rounded-md bg-foreground/[0.05]">
                         {f.items.map((s) => (
-                          <li key={s.label} className="flex items-baseline gap-3 rounded-lg bg-background px-3 py-1.5 text-sm">
-                            <span className="w-28 shrink-0 font-mono font-semibold">{s.label}</span>
+                          <li key={s.label} className="flex items-baseline gap-3 px-3 py-1.5 text-sm">
+                            <span className="w-28 shrink-0 font-mono font-medium">{s.label}</span>
                             <span className="min-w-0 flex-1 truncate text-muted">{s.kind}</span>
                             <span className="shrink-0 text-xs text-muted">
                               {s.count}× · {at(s.example)}
@@ -168,11 +168,11 @@ export default function PatternsDialog({
 
             {insights.licks.length > 0 && (
               <Card title="Phrases that come back" hint="Five-note figures with the same intervals and rhythm, in any key.">
-                <ul className="flex flex-col gap-1.5">
+                <ul className="flex flex-col divide-y divide-foreground/10 rounded-md bg-foreground/[0.05]">
                   {insights.licks.map((l) => (
-                    <li key={l.intervals + l.rhythm} className="rounded-lg bg-background px-3 py-2 text-sm">
+                    <li key={l.intervals + l.rhythm} className="px-3 py-2 text-sm">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                        <span className="font-semibold">{l.notes}</span>
+                        <span className="font-medium">{l.notes}</span>
                         <span className="text-xs text-muted">{l.count}×</span>
                       </div>
                       <div className="flex flex-wrap gap-x-3 text-xs text-muted">
@@ -201,17 +201,17 @@ export default function PatternsDialog({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-surface px-3 py-2.5">
+    <div className="bg-surface px-3 py-2.5">
       <p className="text-xs text-muted">{label}</p>
-      <p className="truncate font-bold">{value}</p>
+      <p className="truncate font-semibold">{value}</p>
     </div>
   );
 }
 
 function Card({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl bg-surface p-4">
-      <h3 className="font-bold">{title}</h3>
+    <section className="rounded-lg bg-surface p-4">
+      <h3 className="text-sm font-semibold">{title}</h3>
       <p className="mb-3 text-xs text-muted">{hint}</p>
       {children}
     </section>
@@ -229,7 +229,7 @@ function Bars({ shares, at, compact = false }: { shares: Share[]; at: (w?: Where
               {s.pct}%{!compact && s.example ? ` · e.g. ${at(s.example)}` : ""}
             </span>
           </div>
-          <div className="mt-0.5 h-1.5 rounded-full bg-background">
+          <div className="mt-0.5 h-1.5 rounded-full bg-foreground/10">
             <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(2, s.pct)}%` }} />
           </div>
         </li>

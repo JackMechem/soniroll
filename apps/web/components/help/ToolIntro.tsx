@@ -85,9 +85,9 @@ export function IntroButton({ onClick, label }: { onClick: () => void; label: st
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
     >
-      <HelpIcon className="h-5 w-5" />
+      <HelpIcon className="h-4 w-4" />
     </button>
   );
 }
@@ -104,26 +104,26 @@ export default function ToolIntro({ topic, onClose }: { topic: HelpTopic; onClos
       <div
         role="dialog"
         aria-label={`How ${topic.title} works`}
-        className="log-toast flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-3xl bg-surface p-5 text-left shadow-2xl"
+        className="log-toast flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col gap-4 overflow-y-auto rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
-          <TopicIcon topic={topic} />
+          <div className="mt-0.5"><TopicIcon topic={topic} /></div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-extrabold tracking-tight">{topic.title}</h2>
+            <h2 className="text-lg font-semibold tracking-tight">{topic.title}</h2>
             <p className="text-sm text-muted">{topic.tagline}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 -mt-1 rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
-            <CloseIcon className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
         {topic.shot && <Shot name={topic.shot} alt={`${topic.title} screenshot`} />}
-        <ol className="flex flex-col gap-2">
+        <ol className="divide-y divide-foreground/10 rounded-lg bg-foreground/[0.05]">
           {topic.steps.map((s, i) => (
-            <li key={s.title} className="flex gap-3 rounded-2xl bg-background p-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground">{i + 1}</span>
+            <li key={s.title} className="flex gap-3 px-3 py-2.5">
+              <span className="w-4 shrink-0 pt-px text-right text-sm tabular-nums text-muted">{i + 1}</span>
               <div className="min-w-0">
-                <div className="text-sm font-semibold">{s.title}</div>
+                <div className="text-sm font-medium">{s.title}</div>
                 <div className="text-xs text-muted">{s.text}</div>
               </div>
             </li>
@@ -133,11 +133,11 @@ export default function ToolIntro({ topic, onClose }: { topic: HelpTopic; onClos
           <Link
             href={`/help?topic=${topic.id}`}
             onClick={onClose}
-            className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold hover:bg-background"
+            className="flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
           >
             <HelpIcon className="h-4 w-4" /> Full guide{topic.options?.length ? " and every option" : ""}
           </Link>
-          <button type="button" onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={onClose} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             Got it
           </button>
         </div>

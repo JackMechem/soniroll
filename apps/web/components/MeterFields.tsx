@@ -26,16 +26,24 @@ import { Sparkle, useReward } from "@/components/reward/Reward";
 // tools' meter/tempo controls.
 
 export const CIRCLE_BUTTON =
-  "flex h-9 w-9 items-center justify-center rounded-full bg-background text-lg font-semibold leading-none text-foreground hover:bg-surface-hover disabled:opacity-40";
+  "flex h-9 w-9 items-center justify-center rounded-full bg-foreground/[0.05] text-lg leading-none text-foreground transition-colors hover:bg-surface-hover disabled:opacity-40 disabled:hover:bg-transparent";
 export const CIRCLE_INPUT =
-  "h-14 w-14 rounded-full bg-background text-center text-lg font-semibold tabular-nums outline-none focus:ring-2 focus:ring-accent";
+  "h-9 w-14 rounded-md bg-foreground/[0.05] text-center text-base font-medium tabular-nums outline-none focus:ring-2 focus:ring-accent/40";
+
+/** The big Start/Stop (Play, Record) button under a tool's main display: a round-ended pill
+    (the one prominent action on the page), filled while stopped, outlined while running. Shared
+    by every rhythm/time tool so they all look the same. */
+const BIG_BUTTON =
+  "inline-flex h-12 min-w-36 items-center justify-center gap-2 rounded-full px-8 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+export const BIG_PRIMARY = `${BIG_BUTTON} bg-accent text-accent-foreground hover:bg-accent-hover`;
+export const BIG_SECONDARY = `${BIG_BUTTON} bg-foreground/[0.05] text-foreground hover:bg-surface-hover`;
 // A smaller cut of the same two, for the beats-per-bar/beat-unit pair specifically (see
 // `MeterOptions` below) — every other `SteppedField`/`BeatUnitField` caller (Polyrhythm's own
 // "Bars between modulations", a Structure section's "Bars") keeps the full size above.
 const CIRCLE_BUTTON_SM =
-  "flex h-7 w-7 items-center justify-center rounded-full bg-background text-sm font-semibold leading-none text-foreground hover:bg-surface-hover disabled:opacity-40";
+  "flex h-8 w-8 items-center justify-center rounded-full bg-foreground/[0.05] text-sm leading-none text-foreground transition-colors hover:bg-surface-hover disabled:opacity-40 disabled:hover:bg-transparent";
 const CIRCLE_INPUT_SM =
-  "h-10 w-10 rounded-full bg-background text-center text-sm font-semibold tabular-nums outline-none focus:ring-2 focus:ring-accent";
+  "h-8 w-11 rounded-md bg-foreground/[0.05] text-center text-sm font-medium tabular-nums outline-none focus:ring-2 focus:ring-accent/40";
 
 export function StepButton({
   label,
@@ -51,7 +59,7 @@ export function StepButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-xl font-medium hover:bg-surface-hover"
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground/[0.05] text-xl text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
     >
       {children}
     </button>
@@ -419,7 +427,7 @@ export function TempoNoteValuePicker({
         onChange={(v) => onChange(v === TEMPO_NOTE_MATCH ? null : v)}
         options={TEMPO_NOTE_OPTIONS}
       />
-      <span className="text-lg font-semibold text-muted">=</span>
+      <span className="text-lg text-muted">=</span>
     </div>
   );
 }
@@ -492,7 +500,7 @@ export function TempoHero({
         )}
         <div className="flex w-40 flex-col items-center">
           {locked ? (
-            <span className="w-full text-center text-6xl font-bold tabular-nums sm:text-7xl">
+            <span className="w-full text-center text-6xl font-bold tracking-tight tabular-nums sm:text-7xl">
               {whole}
               {tenths !== null && (
                 <span className="text-2xl text-muted">.{tenths}</span>
@@ -505,10 +513,10 @@ export function TempoHero({
               min={MIN_BPM}
               max={MAX_BPM}
               onChange={setBpm}
-              className="w-full rounded-lg bg-transparent text-center text-6xl font-bold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent sm:text-7xl"
+              className="w-full rounded-md bg-transparent text-center text-6xl font-bold tracking-tight tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent/40 sm:text-7xl"
             />
           )}
-          <span className="flex items-center gap-1 text-sm font-medium text-muted">
+          <span className="flex items-center gap-1 text-sm text-muted">
             {reward && <Sparkle show={!locked && bpm % 10 === 0} at={bpm} color={reward.color} />}
             BPM · {beatsPerBar}/{beatUnit}
           </span>
@@ -545,9 +553,9 @@ export function TempoHero({
               setTaps((n) => n + 1);
             }}
             title="Tap along a few times to set the tempo"
-            className="relative flex h-11 items-center gap-2 self-center rounded-full bg-surface px-6 text-sm font-semibold transition-transform hover:bg-surface-hover active:scale-95"
+            className="relative inline-flex h-10 items-center gap-2 self-center rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
           >
-            <MetronomeIcon className="h-4 w-4 text-accent" />
+            <MetronomeIcon className="h-4 w-4 text-muted" />
             Tap tempo
             {/* A ring flashes out from the button on every tap. */}
             {taps > 0 && <span key={taps} aria-hidden className="tap-ring pointer-events-none absolute inset-0 rounded-full opacity-0 ring-2 ring-accent" />}

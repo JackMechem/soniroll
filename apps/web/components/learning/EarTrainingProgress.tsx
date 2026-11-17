@@ -21,15 +21,11 @@ export default function EarTrainingProgress({
         const body = (
           <>
             <span className="flex items-center gap-2">
-              {Icon && (
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                  <Icon className="h-4 w-4" />
-                </span>
-              )}
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{track.label}</span>
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-amber-500">★ {s.stars}</span>
+              {Icon && <Icon className="h-4 w-4 shrink-0 text-muted" />}
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{track.label}</span>
+              <span className="shrink-0 text-xs font-medium tabular-nums text-amber-500">★ {s.stars}</span>
             </span>
-            <span className="h-2 overflow-hidden rounded-full bg-surface">
+            <span className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
               <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(pct, s.passed ? 6 : 0)}%` }} />
             </span>
             <span className="flex items-baseline justify-between gap-2 text-xs text-muted">
@@ -42,7 +38,7 @@ export default function EarTrainingProgress({
             </span>
           </>
         );
-        const className = "flex flex-col gap-2 rounded-2xl bg-background p-3 text-left";
+        const className = "flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3 text-left";
         return links ? (
           <Link key={track.id} href={track.href} className={`${className} transition-colors hover:bg-surface-hover`}>
             {body}

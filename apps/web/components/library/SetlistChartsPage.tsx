@@ -99,17 +99,17 @@ function RunningOrder({ pages, index, onPick }: { pages: ChartPage[]; index: num
             type="button"
             onClick={() => onPick(i)}
             aria-current={i === index ? "true" : undefined}
-            className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${i === index ? "bg-accent/15" : "hover:bg-surface-hover"}`}
+            className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors ${i === index ? "bg-surface-hover" : "hover:bg-surface-hover"}`}
           >
             <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold tabular-nums ${
-                i === index ? "bg-accent text-accent-foreground" : i < index ? "bg-background text-muted/60" : "bg-background text-muted"
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-medium tabular-nums ${
+                i === index ? "bg-accent text-accent-foreground" : i < index ? "text-muted/60" : "text-muted"
               }`}
             >
               {i + 1}
             </span>
             <span className="min-w-0 flex-1">
-              <span className={`block truncate text-sm ${i === index ? "font-bold text-foreground" : i < index ? "text-muted" : "font-medium"}`}>{p.name}</span>
+              <span className={`block truncate text-sm ${i === index ? "font-medium text-foreground" : i < index ? "text-muted" : ""}`}>{p.name}</span>
               {(p.toKey || p.tempo) && (
                 <span className="block truncate text-[11px] text-muted">{[p.toKey ? displayKey(p.toKey) : null, p.tempo ? `${p.tempo} BPM` : null].filter(Boolean).join(" · ")}</span>
               )}
@@ -162,7 +162,7 @@ function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: str
         title={current?.name ?? title}
         subtitle={pages.length ? (
           <>
-            <span className="font-semibold text-foreground/70">{title}</span> · Tune {index + 1} of {pages.length}
+            <span className="font-medium text-foreground/70">{title}</span> · Tune {index + 1} of {pages.length}
           </>
         ) : title}
       >
@@ -179,10 +179,10 @@ function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: str
               </RoundButton>
             </span>
             <RoundButton label="Previous tune" onClick={() => goTo(index - 1)} disabled={index === 0}>
-              <ChevronLeftIcon className="h-5 w-5" />
+              <ChevronLeftIcon className="h-4 w-4" />
             </RoundButton>
             <RoundButton label="Next tune" onClick={() => goTo(index + 1)} disabled={index === pages.length - 1}>
-              <ChevronRightIcon className="h-5 w-5" />
+              <ChevronRightIcon className="h-4 w-4" />
             </RoundButton>
           </>
         )}
@@ -193,8 +193,8 @@ function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: str
       ) : (
         <div className="flex min-h-0 flex-1 gap-3 px-2 pb-2 sm:px-5 sm:pb-3">
           {many && railOpen && (
-            <aside className="hidden w-60 shrink-0 flex-col gap-2 overflow-y-auto rounded-3xl bg-surface p-2 ring-1 ring-foreground/5 lg:flex">
-              <p className="px-2 pt-1 text-xs font-bold text-muted">Running order</p>
+            <aside className="hidden w-60 shrink-0 flex-col gap-2 overflow-y-auto rounded-lg bg-surface p-2 lg:flex">
+              <p className="px-2 pt-1 text-xs font-medium text-muted">Running order</p>
               <RunningOrder pages={pages} index={index} onPick={goTo} />
             </aside>
           )}
@@ -233,7 +233,7 @@ function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: str
           <span className="hidden shrink-0 text-xs text-muted sm:block">
             {next ? (
               <>
-                Up next: <span className="font-semibold text-foreground/80">{next.name}</span>
+                Up next: <span className="font-medium text-foreground/80">{next.name}</span>
               </>
             ) : (
               "Last tune"
@@ -244,8 +244,8 @@ function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: str
 
       {sheetOpen && (
         <div className="fixed inset-0 z-[70] flex flex-col justify-end bg-overlay lg:hidden" onClick={() => setSheetOpen(false)}>
-          <div role="dialog" aria-label="Running order" className="max-h-[75dvh] overflow-y-auto rounded-t-3xl bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" onClick={(e) => e.stopPropagation()}>
-            <p className="px-2 pb-2 pt-1 text-sm font-bold">Running order · {title}</p>
+          <div role="dialog" aria-label="Running order" className="max-h-[75dvh] overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" onClick={(e) => e.stopPropagation()}>
+            <p className="px-2 pb-2 pt-1 text-sm font-medium">Running order · {title}</p>
             <RunningOrder
               pages={pages}
               index={index}
@@ -286,10 +286,8 @@ function NoChart({ name, missing }: { name: string; missing?: boolean }) {
   return (
     <ChartPaper fill>
       <div className="flex h-full flex-col items-center justify-center gap-3 px-10 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-          <ChordChartIcon className="h-7 w-7" />
-        </span>
-        <p className="text-2xl font-extrabold">{name}</p>
+        <ChordChartIcon className="h-6 w-6 text-muted" />
+        <p className="text-xl font-semibold">{name}</p>
         <p className="text-sm text-muted">{missing ? "Couldn't find this tune's chart." : "No chord chart for this tune — play it from memory."}</p>
       </div>
     </ChartPaper>

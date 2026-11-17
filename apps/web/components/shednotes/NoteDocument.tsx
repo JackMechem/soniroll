@@ -132,8 +132,8 @@ function ScoreBlock({ id, context }: { id: string; context?: ScoreContext }) {
   const score = useMemo(() => (data ? cleanScore(data) : row === null ? null : undefined), [data, row]);
   return (
     <figure className="note-doc-score" data-ready={score !== undefined ? "" : undefined}>
-      <figcaption className="flex items-center gap-2 text-sm font-semibold">
-        <ScoreIcon className="h-4 w-4 shrink-0 text-accent" />
+      <figcaption className="flex items-center gap-2 text-sm font-medium">
+        <ScoreIcon className="h-4 w-4 shrink-0 text-muted" />
         {score ? score.title : score === null ? "Score not found" : "Loading…"}
       </figcaption>
       {score && <Score transcription={score} cursor={null} playing={null} mode="select" onSelect={noop} onAdd={noop} onReplace={noop} onChordClick={noop} />}

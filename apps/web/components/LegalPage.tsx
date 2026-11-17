@@ -14,10 +14,10 @@ export function LegalPage({
   children: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16">
-      <div className="flex flex-col gap-1 text-left">
-        <h1 className="text-2xl font-bold text-accent">{title}</h1>
-        <p className="text-xs text-muted">Last updated {updated}</p>
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
+      <div className="flex flex-col gap-1 border-b border-foreground/10 pb-6 text-left">
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="text-sm text-muted">Last updated {updated}</p>
       </div>
       <div className="flex flex-col gap-6 text-left">{children}</div>
     </main>

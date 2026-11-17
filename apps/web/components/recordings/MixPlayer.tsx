@@ -173,7 +173,7 @@ function TrackHeader({
   height: number;
   hint?: string;
 }) {
-  const button = "flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold";
+  const button = "flex h-5 w-5 items-center justify-center rounded text-[10px] font-semibold";
   return (
     <div className="flex flex-col justify-center gap-1 border-b border-surface-hover/60 px-2 last:border-b-0" style={{ height }} title={hint}>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -606,34 +606,32 @@ export default function MixPlayer({
       <button
         type="button"
         onClick={() => setActive(true)}
-        className="flex items-center gap-2 self-start rounded-full bg-accent py-1.5 pl-1.5 pr-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+        className="inline-flex h-9 items-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/15">
-          <PlayIcon className="h-4 w-4" />
-        </span>
+        <PlayIcon className="h-4 w-4" />
         Play with the song
       </button>
     );
   }
   if (!audio) {
     return (
-      <div className="flex h-24 items-center justify-center gap-2 rounded-xl bg-background text-sm text-muted">
+      <div className="flex h-24 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] text-sm text-muted">
         <LoadingSpinner size="sm" inline /> Loading the waveforms…
       </div>
     );
   }
 
-  const smallButton = "flex h-8 min-w-8 items-center justify-center rounded-lg bg-background px-2 text-sm font-semibold hover:bg-surface-hover";
+  const smallButton = "flex h-8 min-w-8 items-center justify-center rounded-md bg-foreground/[0.05] px-2 text-sm font-medium hover:bg-surface-hover";
   return (
     <div className={full ? "fixed inset-0 z-[80] flex flex-col gap-3 bg-background p-3 sm:p-5" : "flex flex-col gap-2"} role={full ? "dialog" : undefined} aria-label={full ? "Editor" : undefined}>
       {full && (
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <div className="truncate text-lg font-bold">{takeName}</div>
+            <div className="truncate text-base font-semibold">{takeName}</div>
             <div className="truncate text-sm text-muted">over {songName}</div>
           </div>
-          <button type="button" onClick={() => setFull(false)} aria-label="Close the editor" title="Close (Esc)" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface hover:bg-surface-hover">
-            <CloseIcon className="h-5 w-5" />
+          <button type="button" onClick={() => setFull(false)} aria-label="Close the editor" title="Close (Esc)" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -650,7 +648,7 @@ export default function MixPlayer({
         >
           {playing ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
         </button>
-        <span className="rounded-lg bg-background px-3 py-1 font-mono text-base tabular-nums">
+        <span className="rounded-md bg-foreground/[0.05] px-3 py-1 font-mono text-sm tabular-nums">
           <span ref={clockRef}>0:00.0</span>
           <span className="text-muted"> / {formatClock(boundsEnd, false)}</span>
         </span>
@@ -669,7 +667,7 @@ export default function MixPlayer({
             onClick={() => setSnapOn((v) => !v)}
             aria-pressed={snapOn}
             title={snapOn ? "Snap on: dragged regions snap to the take, the playhead and the ruler lines (hold Alt to drag freely)" : "Snap off"}
-            className={`${smallButton} ${snapOn ? "!bg-accent text-accent-foreground" : ""}`}
+            className={`${smallButton} ${snapOn ? "!border-transparent !bg-accent text-accent-foreground" : ""}`}
           >
             Snap
           </button>
@@ -688,7 +686,7 @@ export default function MixPlayer({
 
       {/* Tracks */}
       <div ref={tracksAreaRef} className={full ? "min-h-0 flex-1" : ""}>
-      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] overflow-hidden rounded-xl border border-surface-hover bg-surface sm:grid-cols-[11rem_minmax(0,1fr)]">
+      <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] overflow-hidden rounded-lg bg-surface sm:grid-cols-[11rem_minmax(0,1fr)]">
         <div className="border-r border-surface-hover">
           <div className="flex items-center border-b border-surface-hover/60 bg-background px-2 text-[10px] font-semibold text-muted" style={{ height: RULER_H }}>
             Tracks
@@ -772,7 +770,7 @@ export default function MixPlayer({
       </div>
 
       {(!compact || full) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-background p-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-foreground/[0.05] p-3">
           <span className="text-sm">
             <span className="font-medium">Line-up</span>{" "}
             <span className="font-mono tabular-nums">{formatOffset(offset)}</span>{" "}

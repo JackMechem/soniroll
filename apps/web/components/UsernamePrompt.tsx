@@ -65,9 +65,9 @@ export default function UsernamePrompt() {
       aria-label="Choose a username"
       className="fixed inset-0 z-[210] flex items-center justify-center bg-overlay p-4"
     >
-      <div className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20">
+      <div className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20">
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-lg font-semibold">Choose a username</h2>
+          <h2 className="text-base font-semibold">Choose a username</h2>
           <p className="text-sm text-muted">
             Every soniroll account needs a username — it&apos;s how you&apos;ll show up if you ever
             make your profile public, and it&apos;s separate from your email.
@@ -75,7 +75,7 @@ export default function UsernamePrompt() {
         </div>
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Username</span>
+            <span className="text-xs font-medium text-muted">Username</span>
             <input
               type="text"
               value={username}
@@ -83,7 +83,7 @@ export default function UsernamePrompt() {
               placeholder="e.g. johndoe"
               autoFocus
               autoComplete="off"
-              className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
             {formatError ? (
               <p className="text-xs text-danger">{formatError}</p>
@@ -99,7 +99,7 @@ export default function UsernamePrompt() {
           <button
             type="submit"
             disabled={submitting || !username.trim() || !!formatError || taken}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+            className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
           >
             {submitting ? "Saving…" : "Continue"}
           </button>

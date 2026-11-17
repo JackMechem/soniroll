@@ -25,11 +25,11 @@ function Chip({ a }: { a: PublicAttachment }) {
   const Icon = tool?.icon ?? (a.kind === "setlist" ? SetlistIcon : a.kind === "chart" ? ChordChartIcon : NoteIcon);
   const inner = (
     <>
-      <Icon className="h-3.5 w-3.5 text-accent" />
+      <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
       <span className="truncate">{a.label}</span>
     </>
   );
-  const cls = "flex max-w-[16rem] items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-xs font-medium";
+  const cls = "flex h-6 max-w-[16rem] items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2 text-xs font-medium";
   return tool ? (
     <Link href={tool.href} className={`${cls} hover:underline`}>
       {inner}
@@ -69,14 +69,14 @@ export function RoutinePreview({ routine, compact = false, meta = true }: { rout
         </span>
       </div>}
       {!compact && routine.description && <p className="whitespace-pre-wrap text-sm">{routine.description}</p>}
-      <ol className="flex flex-col divide-y divide-surface-hover rounded-xl bg-background">
+      <ol className="flex flex-col divide-y divide-foreground/10 rounded-lg bg-foreground/[0.05]">
         {tasks.map(({ t, start }, i) => (
-          <li key={i} className="flex gap-3 px-3 py-2">
-            <span className="w-5 shrink-0 pt-0.5 text-center text-sm font-bold tabular-nums" style={{ color }}>
+          <li key={i} className="flex gap-3 px-3 py-2.5">
+            <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums" style={{ color }}>
               {i + 1}
             </span>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-medium">{t.title || "Task"}</div>
+              <div className="truncate text-sm font-medium">{t.title || "Task"}</div>
               <div className="text-xs text-muted">
                 {start !== null ? `${formatTime(start)} · ` : ""}
                 {formatMinutesShort(t.minutes)}
@@ -114,7 +114,7 @@ export function AddRoutineButton({ routine }: { routine: PublicRoutine }) {
   const [added, setAdded] = useState(false);
   if (!isLoading && !isAuthenticated) {
     return (
-      <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
+      <div className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
         <p className="text-sm">Sign in to add this routine to your Shed Log.</p>
         <SignInButtons size="sm" />
       </div>
@@ -130,7 +130,7 @@ export function AddRoutineButton({ routine }: { routine: PublicRoutine }) {
         setAdded(true);
         router.push(`/shed-log/routine/edit?id=${encodeURIComponent(mine.id)}`);
       }}
-      className="flex items-center gap-1.5 self-start rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
+      className="flex h-9 items-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
     >
       {added ? <CheckIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />} {added ? "Added" : "Add to my Shed Log"}
     </button>

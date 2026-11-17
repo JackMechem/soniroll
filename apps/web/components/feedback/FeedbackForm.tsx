@@ -99,11 +99,11 @@ export default function FeedbackForm({
   if (sent)
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
           <CheckIcon className="h-7 w-7" />
         </span>
-        <p className="text-lg font-extrabold">{report ? "Thanks — we'll take a look" : "Thanks for telling us!"}</p>
-        {sentNumber !== null && <p className="rounded-full bg-background px-3 py-1 font-mono text-xs font-bold">FB-{sentNumber}</p>}
+        <p className="text-base font-semibold">{report ? "Thanks — we'll take a look" : "Thanks for telling us!"}</p>
+        {sentNumber !== null && <p className="rounded-md bg-foreground/[0.05] px-2 py-0.5 font-mono text-xs font-medium">FB-{sentNumber}</p>}
         <p className="max-w-sm text-sm text-muted">
           {report
             ? "Reports go straight to the person who runs soniroll."
@@ -119,12 +119,12 @@ export default function FeedbackForm({
               setMessage("");
               setShot(null);
             }}
-            className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background"
+            className="h-9 rounded-md px-4 text-sm font-medium hover:bg-surface-hover"
           >
             Send another
           </button>
           {onDone && (
-            <button type="button" onClick={onDone} className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
+            <button type="button" onClick={onDone} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
               Done
             </button>
           )}
@@ -133,12 +133,12 @@ export default function FeedbackForm({
     );
 
   if (site?.feedbackPaused)
-    return <p className="rounded-2xl bg-amber-500/15 px-4 py-6 text-center text-sm font-semibold text-amber-700 dark:text-amber-300">Feedback is paused for a bit. Try again later — thanks for wanting to help!</p>;
+    return <p className="rounded-lg bg-amber-500/15 px-4 py-6 text-center text-sm font-medium text-amber-700 dark:text-amber-300">Feedback is paused for a bit. Try again later — thanks for wanting to help!</p>;
 
   return (
     <form onSubmit={send} className="flex flex-col gap-4">
       {report ? (
-        <div className="flex items-center gap-3 rounded-2xl bg-danger/10 p-3 text-sm">
+        <div className="flex items-center gap-3 rounded-md bg-danger/10 p-3 text-sm">
           <FlagIcon className="h-5 w-5 shrink-0 text-danger" />
           <span>
             Reporting {target?.type === "profile" ? "the profile" : "the post"} <b>{target?.label}</b>. Tell us what&apos;s wrong (optional).
@@ -152,12 +152,12 @@ export default function FeedbackForm({
               type="button"
               aria-pressed={kind === k.id}
               onClick={() => setKind(k.id)}
-              className={`flex flex-col items-start gap-1.5 rounded-2xl p-3 text-left transition-colors ${
-                kind === k.id ? "bg-accent text-accent-foreground shadow-sm" : "bg-background ring-1 ring-foreground/5 hover:ring-accent"
+              className={`flex flex-col items-start gap-1.5 rounded-md border p-3 text-left transition-colors ${
+                kind === k.id ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background hover:border-foreground/30"
               }`}
             >
-              <k.Icon className="h-5 w-5" />
-              <span className="text-sm font-bold leading-tight">{k.label}</span>
+              <k.Icon className="h-4 w-4" />
+              <span className="text-sm font-medium leading-tight">{k.label}</span>
               {!compact && <span className={`text-xs ${kind === k.id ? "opacity-85" : "text-muted"}`}>{k.hint}</span>}
             </button>
           ))}
@@ -171,22 +171,22 @@ export default function FeedbackForm({
         autoFocus
         placeholder={report ? "Spam, something offensive, someone else's work…" : current?.placeholder}
         aria-label="Your message"
-        className="w-full resize-y rounded-2xl bg-background px-4 py-3 text-sm leading-relaxed outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+        className="w-full resize-y rounded-md bg-foreground/[0.05] px-3 py-2.5 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-accent/40"
       />
       {!report && (
         <div className="flex flex-wrap items-center gap-3">
           {isAuthenticated ? (
             shot && shotUrl ? (
-              <span className="flex items-center gap-2 rounded-xl bg-background p-1.5 pr-2">
+              <span className="flex items-center gap-2 rounded-md bg-foreground/[0.05] p-1.5 pr-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local preview */}
                 <img src={shotUrl} alt="" className="h-10 w-14 rounded-lg object-cover" />
                 <span className="max-w-40 truncate text-xs font-semibold">{shot.name}</span>
-                <button type="button" aria-label="Remove screenshot" onClick={() => setShot(null)} className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:bg-surface">
+                <button type="button" aria-label="Remove screenshot" onClick={() => setShot(null)} className="flex h-6 w-6 items-center justify-center rounded-sm text-muted hover:bg-surface-hover">
                   <CloseIcon className="h-3.5 w-3.5" />
                 </button>
               </span>
             ) : (
-              <label className="cursor-pointer rounded-full bg-background px-3.5 py-2 text-xs font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover">
+              <label className="flex h-8 cursor-pointer items-center rounded-md bg-foreground/[0.05] px-3 text-xs font-medium hover:bg-surface-hover">
                 Attach a screenshot
                 <input
                   type="file"
@@ -207,7 +207,7 @@ export default function FeedbackForm({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email, if you'd like a reply (optional)"
               aria-label="Your email (optional)"
-              className="min-w-0 flex-1 rounded-xl bg-background px-3.5 py-2.5 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+              className="h-9 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
           )}
           <span className="text-xs text-muted">The page you&apos;re on is included.</span>
@@ -216,14 +216,14 @@ export default function FeedbackForm({
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+          <button type="button" onClick={onCancel} className="h-9 rounded-md px-4 text-sm font-medium hover:bg-surface-hover">
             Cancel
           </button>
         )}
         <button
           type="submit"
           disabled={busy || (!message.trim() && !report)}
-          className={`rounded-full px-5 py-2.5 text-sm font-bold disabled:opacity-40 ${report ? "bg-danger text-white hover:opacity-90" : "bg-accent text-accent-foreground hover:bg-accent-hover"}`}
+          className={`h-9 rounded-md px-4 text-sm font-medium disabled:opacity-40 ${report ? "bg-danger text-white hover:opacity-90" : "bg-accent text-accent-foreground hover:bg-accent-hover"}`}
         >
           {busy ? "Sending…" : report ? "Send report" : "Send"}
         </button>

@@ -80,7 +80,7 @@ export default function StandardsPicker({
       <div
         role="dialog"
         aria-label="Add jazz standards"
-        className="w-full max-w-3xl overflow-hidden rounded-2xl bg-surface text-left text-foreground shadow-2xl shadow-black/30 ring-1 ring-foreground/10"
+        className="w-full max-w-3xl overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-left text-foreground shadow-xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
@@ -101,7 +101,7 @@ export default function StandardsPicker({
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+            className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
           >
             Done
           </button>
@@ -121,7 +121,7 @@ export default function StandardsPicker({
                 data-index={i}
                 onPointerMove={() => setActive(i)}
                 onClick={() => add([standard])}
-                className={`flex cursor-pointer items-center gap-4 rounded-xl px-4 py-3 ${
+                className={`flex cursor-pointer items-center gap-4 rounded-md px-4 py-3 ${
                   i === activeIndex ? "bg-surface-hover" : ""
                 }`}
               >
@@ -144,7 +144,7 @@ export default function StandardsPicker({
                     }`}
                   >
                     Add
-                    <span className="flex h-6 w-6 items-center justify-center rounded bg-foreground/20 text-foreground">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-foreground/[0.05] text-foreground">
                       <PlusIcon className="h-4 w-4" />
                     </span>
                   </span>
@@ -159,7 +159,7 @@ export default function StandardsPicker({
               data-index={shown.length}
               onPointerMove={() => setActive(shown.length)}
               onClick={() => onCreateCustom(typed)}
-              className={`flex cursor-pointer items-center gap-4 rounded-xl px-4 py-3 ${
+              className={`flex cursor-pointer items-center gap-4 rounded-md px-4 py-3 ${
                 activeIndex === shown.length ? "bg-surface-hover" : ""
               }`}
             >

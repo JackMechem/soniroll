@@ -73,16 +73,18 @@ export default function ToolLayout({
   const page = (
     <LayoutContext.Provider value={layout}>
       <div className={`relative flex min-h-full flex-1 flex-col bg-background text-foreground ${rewardOn ? "reward-scope" : ""}`}>
-        <div className="absolute left-0 right-0 top-[calc(env(safe-area-inset-top)+0.75rem)] flex h-10 items-center pl-16 pr-4 sm:pl-[4.5rem] lg:top-3 lg:pl-8">
-          <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {TitleIcon && <TitleIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" />}
+        {/* The header bar (desktop). On phones the title is in the app's top bar, and the ? and the
+            stats sit at the top of the page instead. */}
+        <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 px-8 lg:flex">
+          <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
+            {TitleIcon && <TitleIcon className="h-[18px] w-[18px] shrink-0 text-muted" />}
             <span className="truncate">{title}</span>
           </h1>
-          {topic && <div className="ml-1.5"><IntroButton onClick={intro.show} label={`How ${title} works`} /></div>}
-          {help && <div className="ml-3">{help}</div>}
-          {titleExtra && <div className="ml-4 pr-4">{titleExtra}</div>}
+          {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
+          {help && <div className="ml-1">{help}</div>}
+          {titleExtra && <div className="ml-3 pr-4">{titleExtra}</div>}
           {statsHref && (
-            <div className="ml-4 hidden min-w-0 flex-1 lg:block">
+            <div className="ml-auto flex shrink-0">
               <ToolStats href={statsHref} />
             </div>
           )}
@@ -97,23 +99,23 @@ export default function ToolLayout({
         )}
 
         {stacked ? (
-          <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16">
+          <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
             <section
               className={`flex w-full min-w-0 flex-1 flex-col items-center gap-6 text-center ${
                 topAligned ? "justify-start" : "justify-center"
               }`}
             >
-              {statsHref && <PhoneStats href={statsHref} />}
+              <PhoneBar href={statsHref} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
               {children}
             </section>
             {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
           </main>
         ) : (
-          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16 xl:max-w-5xl">
+          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-24 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
-                {statsHref && <PhoneStats href={statsHref} />}
+                <PhoneBar href={statsHref} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
                 {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
                 {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
@@ -167,11 +169,16 @@ function TopChips({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Below `lg` the stats pills sit at the top of the page, a row you swipe sideways. */
-function PhoneStats({ href }: { href: string }) {
+/** Below `lg`, a small row at the top of the page: the tool's stats and Log button, and its ?. */
+function PhoneBar({ href, intro, help }: { href: string | null; intro: React.ReactNode; help?: React.ReactNode }) {
+  if (!href && !intro && !help) return null;
   return (
-    <div className="w-full max-w-[100vw] text-left lg:hidden">
-      <ToolStats href={href} />
+    <div className="flex w-full items-center gap-2 text-left lg:hidden">
+      {href && <ToolStats href={href} />}
+      <div className="ml-auto flex items-center gap-1">
+        {help}
+        {intro}
+      </div>
     </div>
   );
 }

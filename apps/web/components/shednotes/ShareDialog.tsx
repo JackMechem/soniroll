@@ -106,21 +106,21 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
       <div
         role="dialog"
         aria-label={`Share ${title}`}
-        className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-3xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-xl sm:rounded-3xl sm:pb-5"
+        className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-xl sm:rounded-xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold">Share a note</h2>
+            <h2 className="text-base font-semibold">Share a note</h2>
             <p className="truncate text-sm text-muted">{title}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="share-username" className="text-xs font-semibold text-muted">
+          <label htmlFor="share-username" className="text-xs font-medium text-muted">
             Add people by username
           </label>
           <div className="flex gap-2">
@@ -148,20 +148,20 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
                   }
                 }}
                 placeholder="@username"
-                className="h-10 w-full rounded-xl bg-background px-3 text-sm outline-none ring-accent focus:ring-2"
+                className="h-9 w-full rounded-md bg-foreground/[0.05] px-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-accent/40"
               />
               {name.trim() && shown.length > 0 && (
-                <ul role="listbox" className="absolute inset-x-0 top-full z-10 mt-1 flex flex-col gap-0.5 rounded-xl bg-surface p-1 shadow-lg ring-1 ring-foreground/10">
+                <ul role="listbox" className="absolute inset-x-0 top-full z-10 mt-1 flex flex-col gap-0.5 rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-1 shadow-lg">
                   {shown.map((s, i) => (
                     <li key={s.username} role="option" aria-selected={i === active}>
                       <button
                         type="button"
                         onMouseEnter={() => setActive(i)}
                         onClick={() => void add(s.username!)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${i === active ? "bg-accent/15" : "hover:bg-surface-hover"}`}
+                        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${i === active ? "bg-surface-hover" : "hover:bg-surface-hover"}`}
                       >
                         <UserAvatar url={s.avatarUrl} size="sm" />
-                        <span className="truncate font-semibold">@{s.username}</span>
+                        <span className="truncate font-medium">@{s.username}</span>
                       </button>
                     </li>
                   ))}
@@ -176,7 +176,7 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
               type="button"
               disabled={busy || !name.trim()}
               onClick={() => void add(name)}
-              className="inline-flex h-9 shrink-0 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+              className="inline-flex h-9 shrink-0 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40"
             >
               {busy ? <LoadingSpinner size="sm" inline label="Sharing" /> : "Share"}
             </button>
@@ -189,21 +189,21 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
           <>
             {sharing && sharing.people.length > 0 && (
               <div className="flex flex-col gap-1">
-                <p className="text-xs font-semibold text-muted">Shared with</p>
-                <ul className="flex flex-col gap-1">
+                <p className="text-xs font-medium text-muted">Shared with</p>
+                <ul className="flex flex-col divide-y divide-foreground/10 rounded-md bg-foreground/[0.05]">
                   {sharing.people.map((p) => {
                     const label = p.username ? `@${p.username}` : p.name ?? "Someone";
                     return (
-                      <li key={p.userId} className="flex items-center gap-2 rounded-xl bg-background px-2 py-1.5">
+                      <li key={p.userId} className="flex items-center gap-2 px-2 py-1.5">
                         <UserAvatar url={p.avatarUrl} size="sm" />
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{label}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
                         <Select value={p.role} options={ROLES} onChange={(r) => void setRole({ noteId: id, userId: p.userId, role: r }).catch((e) => setError(errorText(e)))} className="w-32 shrink-0" />
                         <button
                           type="button"
                           onClick={() => void unshare({ noteId: id, userId: p.userId }).catch((e) => setError(errorText(e)))}
                           aria-label={`Stop sharing with ${label}`}
                           title="Stop sharing with them"
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-danger"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                         >
                           <CloseIcon className="h-4 w-4" />
                         </button>
@@ -239,14 +239,14 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
                 )}
                 {sharing.shareLinked && sharing.linked.length > 0 && (
                   <p className="text-xs text-muted">
-                    Also shared: <span className="font-semibold text-foreground">{sharing.linked.join(", ")}</span>
+                    Also shared: <span className="font-medium text-foreground">{sharing.linked.join(", ")}</span>
                   </p>
                 )}
               </div>
             )}
 
             <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
-              <p className="text-xs font-semibold text-muted">Link</p>
+              <p className="text-xs font-medium text-muted">Link</p>
               <Select
                 value={access}
                 options={LINK}
@@ -269,11 +269,11 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
               </p>
               {sharing?.link && (
                 <div className="flex items-center gap-2">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-background px-3 py-2">
+                  <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-background px-3">
                     <LinkIcon className="h-4 w-4 shrink-0 text-muted" />
                     <input readOnly value={noteLinkUrl(sharing.link.token)} onFocus={(e) => e.target.select()} aria-label="The note's link" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
                   </div>
-                  <button type="button" onClick={() => void copy(sharing.link!.token)} className="inline-flex h-9 shrink-0 items-center rounded-full bg-background px-4 text-sm font-semibold hover:bg-surface-hover">
+                  <button type="button" onClick={() => void copy(sharing.link!.token)} className="inline-flex h-9 shrink-0 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                     Copy
                   </button>
                 </div>
