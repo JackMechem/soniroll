@@ -9,8 +9,8 @@ export default function SignIn({ initialFlow = "signIn" }: { initialFlow?: "sign
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-10 text-foreground">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <Logo height={44} className="self-center" />
-        <div className="flex flex-col gap-4 rounded-3xl bg-surface p-6 shadow-sm">
+        <Logo height={36} className="self-center" />
+        <div className="flex flex-col gap-4 rounded-xl bg-surface p-6">
           <AuthForm onClose={done} initialFlow={initialFlow} />
         </div>
       </div>
