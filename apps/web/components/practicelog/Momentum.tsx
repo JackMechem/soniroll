@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import GoalDialog from "@/components/practicelog/GoalDialog";
-import { ShareIcon } from "@/components/tools";
+import { ChevronLeftIcon, ChevronRightIcon, ShareIcon } from "@/components/tools";
 import {
   type PracticeLogData,
   type PracticeLogPrefs,
@@ -14,6 +14,8 @@ import {
   bestStreak,
   dayProgress,
   formatMinutesShort,
+  formatShortDate,
+  fromDateKey,
   goalOn,
   hourMilestone,
   lifetimeMinutes,
@@ -34,11 +36,14 @@ export default function Momentum({
   today,
   onPrefs,
   onShare,
+  browseWeeks = false,
 }: {
   data: PracticeLogData;
   today: string;
   onPrefs: (patch: Partial<PracticeLogPrefs>) => void;
   onShare: (kind: ProgressCardKind) => void;
+  /** The week card gets ‹ › to look back at earlier weeks (as far back as there's practice). */
+  browseWeeks?: boolean;
 }) {
   const goal = goalOn(data, today);
   const [editingGoal, setEditingGoal] = useState(false);
@@ -50,7 +55,24 @@ export default function Momentum({
   const best = Math.max(s, bestStreak(data));
   const practicedToday = minutes > 0;
 
-  const weekStart = startOfWeek(today);
+  // 0 = this week, -1 = last week, …
+  const [weekOffset, setWeekOffset] = useState(0);
+  const thisWeek = startOfWeek(today);
+  const weekStart = addDays(thisWeek, weekOffset * 7);
+  // The first day with practice: the week card doesn't go back past its week.
+  const firstDay = useMemo(() => {
+    if (!browseWeeks) return null;
+    let first: string | null = null;
+    for (const k of Object.keys(data.days)) if ((first === null || k < first) && minutesOn(data, k) > 0) first = k;
+    return first;
+  }, [browseWeeks, data]);
+  const canGoBack = firstDay !== null && addDays(weekStart, -1) >= firstDay;
+  const weekLabel =
+    weekOffset === 0
+      ? "This week"
+      : weekOffset === -1
+        ? "Last week"
+        : `${formatShortDate(weekStart)} – ${fromDateKey(weekStart).getMonth() === fromDateKey(addDays(weekStart, 6)).getMonth() ? fromDateKey(addDays(weekStart, 6)).getDate() : formatShortDate(addDays(weekStart, 6))}`;
   const week = Array.from({ length: 7 }, (_, i) => {
     const key = addDays(weekStart, i);
     return { key, minutes: minutesOn(data, key), goal: goalOn(data, key) };
@@ -92,16 +114,28 @@ export default function Momentum({
       </Card>
 
       <Card
-        label="This week"
+        label={weekLabel}
         action={
-          weekChange !== null && (
-            <span
-              className={`whitespace-nowrap text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-emerald-500" : "text-muted"}`}
-              title="Compared with last week"
-            >
-              {weekChange >= 0 ? "▲" : "▼"} {Math.abs(weekChange)}%
-            </span>
-          )
+          <span className="flex items-center gap-1">
+            {weekChange !== null && (
+              <span
+                className={`whitespace-nowrap text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-emerald-500" : "text-muted"}`}
+                title="Compared with the week before"
+              >
+                {weekChange >= 0 ? "▲" : "▼"} {Math.abs(weekChange)}%
+              </span>
+            )}
+            {browseWeeks && (canGoBack || weekOffset < 0) && (
+              <span className="-my-1.5 -mr-1.5 flex">
+                <StepButton label="The week before" disabled={!canGoBack} onClick={() => setWeekOffset((o) => o - 1)}>
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </StepButton>
+                <StepButton label="The week after" disabled={weekOffset >= 0} onClick={() => setWeekOffset((o) => Math.min(0, o + 1))}>
+                  <ChevronRightIcon className="h-4 w-4" />
+                </StepButton>
+              </span>
+            )}
+          </span>
         }
         value={<Value value={formatMinutesShort(Math.round(weekTotal))} />}
       >
@@ -116,6 +150,21 @@ export default function Momentum({
         </Note>
       </Card>
     </div>
+  );
+}
+
+function StepButton({ label, disabled, onClick, children }: { label: string; disabled: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+    >
+      {children}
+    </button>
   );
 }
 

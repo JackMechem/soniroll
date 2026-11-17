@@ -28,6 +28,7 @@ import {
   newDayTask,
   addDays,
   addMonths,
+  formatMinutesShort,
   formatShortDate,
   fromDateKey,
   goalOn,
@@ -106,17 +107,28 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   const selected = picked ?? today;
   const logInUse = data.routines.length > 0 || lifetimeMinutes(data) > 0;
   const tourOpen = tourChoice ?? (mounted && ready && !logInUse && !tourSeen());
-  // Phones: the day panel comes first, so picking a day in the month below brings it back into
-  // view (only when its top has scrolled away under the top bar).
-  const dayRef = useRef<HTMLDivElement>(null);
+  // Phones and tablets (below lg) show one pane at a time, switched by the tabs under the header:
+  // the day (first, by default) or the calendar. Desktop shows both side by side.
+  const [pane, setPane] = useState<"day" | "calendar">("day");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const showPane = (p: "day" | "calendar") => {
+    setPane(p);
+    // The tabs stick under the top bar: if the page has scrolled past them, go back to the top of
+    // the pane so it starts at its beginning.
+    const tabs = tabsRef.current;
+    const anchor = tabs?.previousElementSibling;
+    if (!tabs || !anchor) return;
+    const stuckAt = tabs.getBoundingClientRect().top;
+    const natural = anchor.getBoundingClientRect().bottom + 12; // main's gap-5, less the tabs' -mt-2
+    if (natural < stuckAt - 1) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      (scrollParent(tabs) ?? window).scrollBy({ top: natural - stuckAt, behavior: reduce ? "auto" : "smooth" });
+    }
+  };
+  // Picking a day in the calendar opens it (below lg, where only one pane shows at a time).
   const pickFromCalendar = (date: string) => {
     setPicked(date);
-    const el = dayRef.current;
-    if (!el || window.matchMedia("(min-width: 1024px)").matches) return;
-    if (el.getBoundingClientRect().top < 72) {
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-    }
+    if (!window.matchMedia("(min-width: 1024px)").matches) showPane("day");
   };
 
   const range = useMemo(() => {
@@ -166,6 +178,26 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           const sameMonth = fromDateKey(from).getMonth() === fromDateKey(to).getMonth();
           return `${formatShortDate(from)} – ${sameMonth ? fromDateKey(to).getDate() : formatShortDate(to)}${fromDateKey(to).getFullYear() !== new Date().getFullYear() ? `, ${fromDateKey(to).getFullYear()}` : ""}`;
         })();
+  // Week view: the week's total and how many days met the goal, beside its dates.
+  const weekSummary = (() => {
+    if (view !== "week") return null;
+    const from = startOfWeek(selected);
+    if (from > today) return null;
+    let total = 0;
+    let goalDays = 0;
+    let hit = 0;
+    for (let i = 0; i < 7; i++) {
+      const key = addDays(from, i);
+      const mins = minutesOn(data, key);
+      const goal = goalOn(data, key);
+      total += mins;
+      if (goal > 0) {
+        goalDays++;
+        if (mins >= goal) hit++;
+      }
+    }
+    return `${total > 0 ? formatMinutesShort(Math.round(total)) : "0 min"}${goalDays > 0 ? ` · goal met ${hit} of ${goalDays} days` : ""}`;
+  })();
   const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, (view === "day" ? 1 : 7) * n));
   const unit = view === "month" ? "month" : view === "day" ? "day" : "week";
   // The app's mode switch in its lively look (the selected side lit with the accent gradient), as
@@ -197,7 +229,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
     <Shell>
       {/* The title with today's goal and streak in one line under it, and the actions on the right
           (on phones they wrap under the title). The full stats are behind Stats. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-foreground/10 pb-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 lg:border-b lg:border-foreground/10 lg:pb-5">
         <div className="min-w-0">
           <h1 className="flex items-center gap-1.5 text-2xl font-semibold tracking-tight">
             <span className="truncate">Shed Log</span>
@@ -272,13 +304,40 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         </div>
       </div>
 
+      {/* Below lg: the day or the calendar, one at a time. The tabs stay under the top bar while the
+          page scrolls, so the other pane is always a tap away. */}
+      <div
+        ref={tabsRef}
+        role="tablist"
+        aria-label="Show"
+        className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-4 -mt-2 flex gap-5 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden"
+      >
+        {(
+          [
+            ["day", selected === today ? "Today" : `${WEEKDAY_SHORT[d.getDay()]}, ${formatShortDate(selected)}`],
+            ["calendar", "Calendar"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={pane === id}
+            onClick={() => showPane(id)}
+            className={`-mb-px flex h-11 shrink-0 items-center border-b-2 text-sm transition-colors ${pane === id ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
           (right) fills the rest; the page itself only scrolls if the window's too short for it. */}
       <div
         className={`grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0 ${dayHidden ? "lg:grid-cols-[minmax(0,1fr)]" : "lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)]"}`}
         style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
       >
-        <div className="order-2 flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
+        <div className={`order-2 flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0 ${pane === "calendar" ? "" : "max-lg:hidden"}`}>
           <div className="flex flex-wrap items-center gap-1 gap-y-2 sm:flex-nowrap sm:gap-2">
             {/* Desktop: fold the day panel away so the calendar gets the whole width. */}
             <button
@@ -301,7 +360,14 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
             <button type="button" onClick={() => step(1)} aria-label={`Next ${unit}`} className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
               <ChevronRightIcon className="h-5 w-5" />
             </button>
-            <h2 className="min-w-0 flex-1 truncate text-base font-semibold sm:text-lg">{title}</h2>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <h2 className="truncate text-base font-semibold sm:text-lg">{title}</h2>
+              {weekSummary && (
+                <p className="truncate text-xs tabular-nums text-muted" title="Practiced this week">
+                  {weekSummary}
+                </p>
+              )}
+            </div>
             {todayButton}
             {viewSwitch}
           </div>
@@ -322,6 +388,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
               log={log}
               selected={selected}
               onSelect={setPicked}
+              onPickDay={pickFromCalendar}
               onStep={step}
               onOpenDay={(date) => {
                 setPicked(date);
@@ -338,8 +405,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         {/* Its scrollbar stays out of sight until the pointer is over the day, so the page doesn't
             show two scrollbars side by side. */}
         <div
-          ref={dayRef}
-          className={`order-1 min-w-0 scroll-mt-20 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 lg:[&::-webkit-scrollbar-thumb]:bg-transparent lg:hover:[&::-webkit-scrollbar-thumb]:bg-foreground/15 lg:[&::-webkit-scrollbar-thumb:hover]:bg-foreground/30 ${dayHidden ? "lg:hidden" : ""}`}
+          className={`order-1 min-w-0 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 lg:[&::-webkit-scrollbar-thumb]:bg-transparent lg:hover:[&::-webkit-scrollbar-thumb]:bg-foreground/15 lg:[&::-webkit-scrollbar-thumb:hover]:bg-foreground/30 ${dayHidden ? "lg:hidden" : ""} ${pane === "day" ? "" : "max-lg:hidden"}`}
         >
           <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
         </div>
@@ -407,6 +473,15 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
       )}
     </Shell>
   );
+}
+
+/** The element the page scrolls in (the app shell's pane, not the window). */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const oy = getComputedStyle(p).overflowY;
+    if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;
 }
 
 /** Secondary header buttons: on phones an icon over a short label, sharing the row; from `sm` the

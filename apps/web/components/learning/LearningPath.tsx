@@ -68,13 +68,20 @@ export default function LearningPath({
   const summary = summarizeTrack(track, progress);
   const listRef = useRef<HTMLOListElement | null>(null);
 
-  // Bring the level being worked on into view when the path first shows. Only the list scrolls:
+  // Bring the level being worked on into view when the path first shows, in the middle of three
+  // whole levels: the view starts on the level before it (at its connector line, or the list's top
+  // padding for the first level), so no node is cut by the fades. Only the list scrolls:
   // `scrollIntoView` would scroll the page too, opening it part-way down.
   useEffect(() => {
     const list = listRef.current;
-    const el = list?.querySelector<HTMLElement>(`[data-level="${Math.min(current, levels.length - 1)}"]`);
-    if (!list || !el) return;
-    list.scrollTop = el.offsetTop - (list.clientHeight - el.offsetHeight) / 2;
+    const above = Math.min(current, levels.length - 1) - 1;
+    if (!list) return;
+    if (above < 1) {
+      list.scrollTop = 0;
+      return;
+    }
+    const el = list.querySelector<HTMLElement>(`[data-level="${above}"]`);
+    if (el) list.scrollTop = el.offsetTop;
   }, [current, levels.length]);
 
   const done = summary.passed === summary.total;
@@ -102,11 +109,13 @@ export default function LearningPath({
         </p>
       </div>
 
-      {/* The trail scrolls inside itself, with no scrollbar: its top and bottom fade out instead
-          of cutting a node in half. */}
+      {/* The trail scrolls inside itself, with no scrollbar. Its height is exactly three levels
+          (each 4.75rem: a 1.5rem connector and a 3rem node, then a 0.25rem gap) plus one
+          connector, so the opening view shows whole nodes and only connector lines sit in the
+          top and bottom fades. */}
       <ol
         ref={listRef}
-        className="relative flex max-h-72 flex-col items-center gap-1 overflow-y-auto py-6 [mask-image:linear-gradient(to_bottom,transparent,black_3rem,black_calc(100%-3rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="relative flex max-h-[15.75rem] flex-col items-center gap-1 overflow-y-auto py-6 [mask-image:linear-gradient(to_bottom,transparent,black_1.5rem,black_calc(100%-1.5rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {levels.map((level, i) => {
           const passed = isPassed(progress, level.id);

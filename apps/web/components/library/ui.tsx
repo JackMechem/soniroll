@@ -122,14 +122,16 @@ export function libraryHref(tab: LibraryTab): string {
   return tab === "tunes" ? "/tunes" : `/tunes?tab=${tab}`;
 }
 
-/** Tunes · Setlists · Chord Charts · Files — Library's tabs, under its title. They swap the
-    `?tab=` query in place (replace, no scroll) rather than going to another page. */
-export function LibraryTabs({ active }: { active: LibraryTab }) {
+/** Tunes · Setlists · Chord Charts · Files · Recordings — Library's tabs, under its title. They
+    swap the `?tab=` query in place (replace, no scroll) rather than going to another page;
+    Recordings is its own page (`/recordings`) but sits here too, so it's found from the Library. */
+export function LibraryTabs({ active }: { active: LibraryTab | "recordings" }) {
   const tabs = [
     { id: "tunes", label: "Tunes", href: libraryHref("tunes") },
     { id: "setlists", label: "Setlists", href: libraryHref("setlists") },
     { id: "charts", label: "Chord Charts", short: "Charts", href: libraryHref("charts") },
     { id: "files", label: "Files", href: libraryHref("files") },
+    { id: "recordings", label: "Recordings", href: "/recordings" },
   ] as const;
   return (
     <nav className="flex max-w-full gap-1 overflow-x-auto border-b border-foreground/10 [scrollbar-width:none] sm:gap-2" aria-label="Library">

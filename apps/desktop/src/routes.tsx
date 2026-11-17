@@ -104,7 +104,7 @@ const ROUTES: Route[] = [
     path: "/rhythm-section",
     render: (_, query) => (
       <NativeTool>
-        <RhythmSection initialTab={opt(query, "tab")} initialPlay={opt(query, "play")} />
+        <RhythmSection initialTab={opt(query, "tab")} initialPlay={opt(query, "play")} initialChart={opt(query, "chart")} initialKey={opt(query, "key")} />
       </NativeTool>
     ),
   },

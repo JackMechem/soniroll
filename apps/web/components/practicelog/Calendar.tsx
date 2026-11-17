@@ -969,10 +969,13 @@ export function WeekView({
   onStep,
   onOpenDay,
   onAddTask,
+  onPickDay = onSelect,
 }: {
   log: Log;
   selected: string;
   onSelect: (date: string) => void;
+  /** A date tapped in the phone list: the page shows that day. */
+  onPickDay?: (date: string) => void;
   /** -1 / +1: the week before / after. */
   onStep: (n: number) => void;
   /** Opens the day on its own (day view). */
@@ -1010,7 +1013,7 @@ export function WeekView({
           const isSel = key === selected;
           return (
             <li key={key} className={`flex gap-3 px-2.5 py-2.5 transition-colors ${isSel ? "bg-accent/10" : ""}`}>
-              <button type="button" onClick={() => onSelect(key)} aria-pressed={isSel} aria-label={fromDateKey(key).toDateString()} className="flex w-11 shrink-0 flex-col items-center gap-1 pt-0.5">
+              <button type="button" onClick={() => onPickDay(key)} aria-pressed={isSel} aria-label={fromDateKey(key).toDateString()} className="flex w-11 shrink-0 flex-col items-center gap-1 pt-0.5">
                 <span className={`text-[11px] font-medium ${isSel ? "text-accent" : "text-muted"}`}>{WEEKDAY_SHORT[weekdayOf(key)]}</span>
                 <DayNumber dayKey={key} today={today} status={status} />
                 <DayGoal dayKey={key} today={today} minutes={minutes} pct={goalPct} status={status} />
@@ -1194,16 +1197,12 @@ function ProgressMark({ done, total, color, status }: { done: number; total: num
         <CheckIcon className="h-3 w-3" />
       </span>
     );
-  if (status === "missed")
-    return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-muted">
-        <CloseIcon className="h-3 w-3" />
-      </span>
-    );
+  // A missed routine keeps its empty ring (the day's "Missed" says the rest): an X in a circle
+  // here read as a button to remove it.
   const r = 8;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 -rotate-90" aria-label={`${done} of ${total} done`}>
+    <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 -rotate-90" role="img" aria-label={status === "missed" ? `Missed · ${done} of ${total} done` : `${done} of ${total} done`}>
       <circle cx="10" cy="10" r={r} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground/15" />
       {done > 0 && <circle cx="10" cy="10" r={r} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={`${(done / total) * c} ${c}`} />}
     </svg>

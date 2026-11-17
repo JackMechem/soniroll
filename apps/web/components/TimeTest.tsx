@@ -484,7 +484,7 @@ export default function TimeTest() {
               wide
               open={micOpen}
               onOpenChange={setMicOpen}
-              value={calibrated ? `${latencyMs.toFixed(1)} ms` : "Calibrate"}
+              value={calibrated ? `${latencyMs.toFixed(1)} ms` : micSettings.inputDeviceId ? "Chosen input" : "Default input"}
               headerExtra={<HintsButton on={micHints} onToggle={() => setMicHints((on) => !on)} />}
             >
               <HintsContext.Provider value={micHints}>

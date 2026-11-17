@@ -39,10 +39,10 @@ export default function SupportPage() {
         Support soniroll
       </h1>
       <section
-        className="relative flex flex-col items-center gap-4 overflow-hidden rounded-3xl px-6 py-8 text-center sm:py-10"
+        className="relative flex flex-col items-start gap-4 overflow-hidden rounded-3xl px-5 py-6 text-left sm:items-center sm:px-6 sm:py-10 sm:text-center"
         style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${HEART} 16%, var(--surface)) 0%, var(--surface) 80%)` }}
       >
-        <p className="max-w-xl text-base text-muted">
+        <p className="max-w-xl text-sm text-muted sm:text-base">
           soniroll is free, with no ads and no tool behind a paywall. It&apos;s made by one person, Jack Mechem, a musician and developer. Keeping it
           running costs money every month — if soniroll helps your practice, chipping in keeps it going.
         </p>

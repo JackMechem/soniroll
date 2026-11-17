@@ -57,7 +57,8 @@ type Drag =
 
 /**
  * Waveform with a playhead. Drag to pan, click to seek, Shift+drag to select a loop,
- * drag a loop's edges to adjust it, scroll to zoom, right-click for markers.
+ * drag a loop's edges to adjust it, scroll to zoom, right-click for markers. On a touch screen
+ * (no Shift key) a drag selects a loop instead of panning; a tap still moves the playhead.
  */
 export default function Waveform({
   peaks,
@@ -432,7 +433,7 @@ export default function Waveform({
     }
     const edge = (e.target as HTMLElement).dataset.edge as "start" | "end" | undefined;
     if (edge) dragRef.current = { kind: "handle", edge };
-    else if (e.shiftKey) {
+    else if (e.shiftKey || (mode === "pan" && e.pointerType === "touch")) {
       dragRef.current = {
         kind: "select",
         anchorX: e.clientX,

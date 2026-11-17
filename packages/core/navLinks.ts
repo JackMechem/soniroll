@@ -239,7 +239,7 @@ const SEARCH_WORDS: Record<string, string> = {
   "/slow-downer": "transcribe slow down speed loop",
   "/practice-timer": "pomodoro countdown",
   "/rhythm-section": "backing band bass drums play along",
-  "/tunes": "library tunes setlists charts files",
+  "/tunes": "library tunes setlists charts files recordings",
 };
 
 /** The tools a search matches: every word has to appear somewhere in the tool's name, its short

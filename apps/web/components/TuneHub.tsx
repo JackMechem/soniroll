@@ -17,12 +17,14 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
+import { playAlongHref } from "@/components/library/usePlayAlong";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
 import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
-import { ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
+import { BassIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { makeId, type Tune } from "@/lib/types";
+import { STANDARDS, nameId } from "@/lib/standards";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import { useRecentTunes } from "@/lib/recents";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
@@ -182,6 +184,8 @@ function Hub({
     return out.slice(0, 3);
   }, [chart, libraryLoading, tune.name, allSongs]);
 
+  const isStandard = useMemo(() => STANDARDS.some((st) => nameId(st.name) === nameId(tune.name)), [tune.name]);
+
   const shownChart = useMemo(() => {
     if (!chart || !previewKey) return chart;
     const semis = (KEY_NAMES.indexOf(previewKey) - keyPitchClass(chart.key) + 12) % 12;
@@ -227,6 +231,10 @@ function Hub({
           .join(" · ")}
         actions={
           <>
+            {/* With a chart: the band (Rhythm Section) plays it, in the key shown. */}
+            {chart && tune.chordChartId && (
+              <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(tune.chordChartId!, previewKey))} />
+            )}
             <Pill icon={PencilIcon} label="Edit" onClick={() => setEditing(true)} />
             {isAuthenticated && <Pill icon={ShareIcon} label="Share" onClick={() => setSharing(true)} />}
             {/* The rarer actions in a ⋮, so the header stays one row on phones. */}
@@ -311,9 +319,11 @@ function Hub({
                 <p className="px-1 text-sm text-muted">
                   {tune.chordChartId
                     ? "The linked chart isn't in your chord charts anymore."
-                    : allSongs.length === 0
-                      ? "No chord chart yet. Write one, or import charts (from iReal Pro, for example)."
-                      : "No chord chart linked yet."}
+                    : matches.length > 0
+                      ? "No chord chart linked yet."
+                      : // Tunes added from the jazz standards list are a name, key and tempo — no
+                        // chords come with them (none are bundled), so say how to get a chart.
+                        `No chord chart yet${isStandard ? " — the standards list adds a tune's name, key and tempo, not its chords" : ""}. Write the chart, or import yours: one called “${tune.name}” shows up here to link.`}
                   {matches.length > 0 && ` ${matches.length === 1 ? "This one has" : "These have"} the same name:`}
                 </p>
                 {matches.map((m) => (
@@ -339,8 +349,15 @@ function Hub({
                       <LinkIcon className="h-4 w-4" /> {matches.length ? "Link a different chart" : "Link a chart"}
                     </button>
                   )}
-                  <Link href="/chord-charts/new" className={btn}>
-                    <PencilIcon className="h-4 w-4" /> Write a chart
+                  <Link
+                    href="/chord-charts/new"
+                    className={
+                      matches.length || allSongs.length
+                        ? btn
+                        : "inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+                    }
+                  >
+                    <PencilIcon className="h-4 w-4" /> Write the chart
                   </Link>
                   <Link href="/chord-charts/import" className={btn}>
                     <DownloadIcon className="h-4 w-4" /> Import charts

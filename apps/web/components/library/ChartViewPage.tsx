@@ -12,8 +12,9 @@ import { EmptyState, FolderIcon, KeyBadge, LibraryPage, Pill } from "@/component
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
+import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { ChevronLeftIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
+import { BassIcon, ChevronLeftIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -97,7 +98,9 @@ export default function ChartViewPage({ id }: { id: string }) {
           <h1 className="line-clamp-2 text-2xl font-semibold leading-tight tracking-tight">{chart.title}</h1>
           {chart.composer && <p className="truncate text-sm text-muted">{formatComposer(chart.composer)}</p>}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* The band (Rhythm Section) plays this chart, in the key shown. */}
+          <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(id, transposeKey))} />
           <span className="xl:hidden">
             <Select value={transposeKey} onChange={setTransposeKey} options={keyOptions} className="min-w-32" />
           </span>

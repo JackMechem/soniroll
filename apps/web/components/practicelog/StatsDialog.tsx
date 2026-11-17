@@ -55,7 +55,7 @@ export default function StatsDialog({
           </button>
         </div>
         <div className="flex flex-col gap-3 p-3 sm:gap-4 sm:p-5">
-          <Momentum data={data} today={today} onPrefs={onPrefs} onShare={onShare} />
+          <Momentum data={data} today={today} onPrefs={onPrefs} onShare={onShare} browseWeeks />
           <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
             <HeatGrid className="lg:col-span-7" />
             <section className="flex min-w-0 flex-col rounded-lg bg-surface lg:col-span-5">

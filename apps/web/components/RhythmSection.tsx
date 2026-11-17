@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { PresetsSection } from "@/components/PresetsChip";
 import { toolPresets } from "@/lib/toolPresets";
 import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -268,7 +267,18 @@ const PICKABLE = DRUM_STYLES.filter((s) => s.id !== "swing-comping");
  * bass players modelled on transcriptions) over a jazz drummer; the other styles play the groove
  * with a bass part that fits it. Replaced Bass Genius and the Drum Generator.
  */
-export default function RhythmSection({ initialTab, initialPlay }: { initialTab?: string; initialPlay?: string }) {
+export default function RhythmSection({
+  initialTab,
+  initialPlay,
+  initialChart,
+  initialKey,
+}: {
+  initialTab?: string;
+  initialPlay?: string;
+  /** Play along from the library: open this chart (in `initialKey`, a `KEY_NAMES` entry, if given). */
+  initialChart?: string;
+  initialKey?: string;
+}) {
   const [settings, update, bandReady] = useSyncedSettings(BAND_KEY, BAND_DEFAULTS);
   const [grooveSettings, updateGroove] = useSyncedSettings(GROOVE_KEY, GROOVE_DEFAULTS);
   // One preset covers both stores: the band (bass, chords, mix — not the tune) and the groove.
@@ -289,12 +299,15 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
   const closeOptions = useCallback(() => setOptionsOpen(false), []);
 
   // Old links: /bass-genius?tab=players opens the Bass players tab; /drum-generator plays the
-  // drums on their own.
+  // drums on their own. ?chart= (Play along from a tune or chart page) picks that chart. Waits for
+  // the settings to load, so the write merges into them rather than into the defaults.
   useEffect(() => {
+    if (!bandReady) return;
     if (initialTab === "players" || initialTab === "play") update({ tab: initialTab });
     if (initialPlay === "drums") update({ source: "none", tab: "play" });
-    if ((initialTab || initialPlay) && window.location.pathname === "/rhythm-section") window.history.replaceState(window.history.state, "", "/rhythm-section");
-  }, [initialTab, initialPlay, update]);
+    if (initialChart) update({ tab: "play", source: "chart", chartId: initialChart, transposeKey: initialKey && KEY_NAMES.includes(initialKey) ? initialKey : "" });
+    if ((initialTab || initialPlay || initialChart) && window.location.pathname === "/rhythm-section") window.history.replaceState(window.history.state, "", "/rhythm-section");
+  }, [bandReady, initialTab, initialPlay, initialChart, initialKey, update]);
 
   // ——— The tune ———
   const { isLoading: authLoading } = useConvexAuth();
@@ -744,7 +757,6 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
 
   const panel = (
     <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-lg lg:border lg:border-foreground/10">
-      <PresetsSection id="presets" tool={presets} />
       <PanelSection id="tempo" title="Tempo" icon={MetronomeIcon} summary={`${bpm} BPM`}>
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={ts.top} beatUnit={ts.bottom} onTap={tap} />
         {style.meter.bottom === 8 && <p className="-mt-2 text-center text-xs text-muted">Dotted quarter = {bpm}</p>}
@@ -867,7 +879,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                   type="button"
                   onClick={() => setStyle(s.id)}
                   aria-pressed={s.id === style.id}
-                  className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors ${s.id === style.id ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 bg-background hover:bg-surface-hover"}`}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${s.id === style.id ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] hover:bg-surface-hover"}`}
                 >
                   {s.name}
                 </button>
@@ -1227,6 +1239,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
       layout="stacked"
       topAligned
       options={null}
+      presets={presets}
     >
       <Segmented
         onPage
@@ -1237,7 +1250,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
           update({ tab: v });
         }}
         options={[
-          { value: "play", label: "Play" },
+          { value: "play", label: "Band" },
           { value: "players", label: "Bass players" },
         ]}
       />
@@ -1293,8 +1306,8 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
                               type="button"
                               onClick={() => setOpened({ chorus: viewed, index: i })}
                               title="How this phrase was made"
-                              className={`flex flex-col items-start rounded-md border px-2.5 py-1 text-left text-xs transition-colors ${
-                                i === playingPhrase ? "border-accent bg-accent text-accent-foreground" : openPhrase === i ? "border-foreground/30 bg-surface-hover" : "border-foreground/15 bg-background hover:bg-surface-hover"
+                              className={`flex flex-col items-start rounded-md px-2.5 py-1 text-left text-xs transition-colors ${
+                                i === playingPhrase ? "bg-accent text-accent-foreground" : openPhrase === i ? "bg-foreground/[0.12]" : "bg-foreground/[0.05] hover:bg-surface-hover"
                               }`}
                             >
                               <span className="font-medium">{b ? (b.from === b.to ? `Bar ${b.from + 1}` : `Bars ${b.from + 1}–${b.to + 1}`) : "Phrase"}</span>

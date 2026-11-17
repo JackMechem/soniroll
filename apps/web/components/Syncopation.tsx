@@ -7,7 +7,6 @@ import ToolLayout from "@/components/ToolLayout";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
-import { PresetsSection } from "@/components/PresetsChip";
 import { toolPresets } from "@/lib/toolPresets";
 import SyncopationScore from "@/components/syncopation/SyncopationScore";
 import { DrumIcon, MetronomeIcon, NoteIcon, PlayIcon, ShuffleIcon, SlidersIcon, SpeakerIcon, StopIcon } from "@/components/tools";
@@ -270,7 +269,6 @@ export default function Syncopation() {
 
   const panel = (
     <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-lg lg:border lg:border-foreground/10">
-      <PresetsSection id="syn-presets" tool={toolPresets("syncopation", settings, update)} />
       <PanelSection id="syn-tempo" title="Tempo" icon={MetronomeIcon} summary={`${settings.bpm} BPM`}>
         <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
       </PanelSection>
@@ -341,7 +339,7 @@ export default function Syncopation() {
   );
 
   return (
-    <ToolLayout title="Syncopation" layout="stacked" topAligned options={null}>
+    <ToolLayout title="Syncopation" layout="stacked" topAligned options={null} presets={toolPresets("syncopation", settings, update)}>
       <div className="flex flex-col items-center gap-1.5">
         <div className="flex items-center gap-2">
           <button

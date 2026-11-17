@@ -412,6 +412,17 @@ export function RecordIcon({ className }: { className?: string }) {
   );
 }
 
+/** The Recorder tool: an outlined record button (a ring round a dot), matching the other tool
+    icons. `RecordIcon` stays the solid dot used inside Record buttons. */
+export function RecorderIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function StopIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)} fill="currentColor" stroke="none">
@@ -760,7 +771,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/slow-downer": WaveIcon,
   "/chord-charts": ChordChartIcon,
   "/tunes": LibraryIcon,
-  "/recorder": RecordIcon,
+  "/recorder": RecorderIcon,
   "/random-sticking-warmup": DrumIcon,
   "/time-test": TimeTestIcon,
   "/syncopation": SyncopationIcon,

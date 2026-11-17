@@ -111,7 +111,7 @@ export default function TunerDial({
               />
               <text
                 x={tx}
-                y={alt ? ty - 4 : ty}
+                y={alt ? ty - 7 : ty}
                 textAnchor="middle"
                 dominantBaseline="central"
                 className={`select-none text-[26px] font-semibold ${
@@ -123,11 +123,11 @@ export default function TunerDial({
               {alt && (
                 <text
                   x={tx}
-                  y={ty + 18}
+                  y={ty + 17}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className={`select-none text-[15px] ${
-                    isDetected ? "fill-background" : "fill-muted"
+                  className={`select-none text-[19px] font-medium ${
+                    isDetected ? "fill-background" : "fill-foreground/75"
                   }`}
                 >
                   {glyphs(alt)}

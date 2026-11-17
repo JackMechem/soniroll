@@ -46,7 +46,8 @@ import {
 export const OPEN_PALETTE_EVENT = "open-command-palette";
 
 type Icon = React.ComponentType<{ className?: string }>;
-type Item = { href: string; label: string; detail?: string; icon: Icon };
+export type SearchItem = { href: string; label: string; detail?: string; icon: Icon };
+type Item = SearchItem;
 
 /** Pages and settings the palette finds besides the tools: `words` are what people might type
     for them ("theme", "dark mode", "goal"). `account` ones only show signed in. */
@@ -56,7 +57,7 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Pages", href: "/tunes/list?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
   { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library", words: "library gig set list", icon: SetlistIcon },
   { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents", icon: FileIcon, account: true },
-  { group: "Pages", href: "/recordings", label: "Recordings", words: "takes audio recorded clips", icon: MicIcon, account: true },
+  { group: "Pages", href: "/recordings", label: "Recordings", detail: "Library", words: "library takes audio recorded clips", icon: MicIcon, account: true },
   { group: "Pages", href: "/community/new", label: "New post", detail: "Community", words: "community post share", icon: PlusIcon, account: true },
   { group: "Pages", href: "/community/liked", label: "Liked posts", detail: "Community", words: "community likes hearts saved favorites", icon: HeartIcon, account: true },
   { group: "Pages", href: "/community/following", label: "Following and followers", detail: "Community", words: "community people friends follow", icon: UsersIcon, account: true },
@@ -88,6 +89,63 @@ const SIGNED_OUT_APPEARANCE: (typeof PAGES)[number] = {
 /** Words that ask for help ("help metronome", "how tuner"): the rest of the query picks topics. */
 const HELP_WORDS = new Set(["help", "how", "?"]);
 
+/**
+ * What a search finds besides the tools — shared by the / palette and the phone menu's search, so
+ * both reach the same things: pages and settings (once something's typed), "help <tool>" topics,
+ * your tunes (both lists, each saying which) and your chord charts by title (a few at most; a
+ * library can hold 1,500+). `charts: false` leaves the charts out (picking a tool for a split pane).
+ */
+export function useSearchExtras(query: string, { charts: withCharts = true }: { charts?: boolean } = {}) {
+  const { isAuthenticated } = useConvexAuth();
+  const lists = useTuneLists();
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const tunes: Item[] = words.length
+    ? (["tunes", "learn"] as TuneListId[])
+        .flatMap((list) =>
+          lists[list].tunes
+            .filter((t) => words.every((w) => t.name.toLowerCase().includes(w)))
+            .map((t) => ({ href: tuneHref(list, t.id), label: t.name, detail: TUNE_LIST_LABEL[list], icon: NoteIcon })),
+        )
+        .slice(0, 6)
+    : [];
+  const chartTitles = useChartTitles();
+  const charts: Item[] = (withCharts ? searchCharts(chartTitles, query, 5) : []).map((c) => ({
+    href: chartHref(c.id),
+    label: c.title,
+    detail: c.key ? `Chart in ${displayKey(c.key)}` : "Chart",
+    icon: ChordChartIcon,
+  }));
+  // Pages and settings, only once something's typed (an empty search lists the tools).
+  const pageItems = words.length
+    ? filterNavLinks(
+        PAGES.filter((p) => isAuthenticated || !p.account)
+          .concat(isAuthenticated ? [] : [SIGNED_OUT_APPEARANCE])
+          .map((p) => ({ ...p, description: `${p.detail ?? ""} ${p.words}` })),
+        query,
+      )
+    : [];
+  const pageGroups = (["Pages", "Settings"] as const)
+    .map((g) => ({
+      category: g as string,
+      items: pageItems
+        .filter((p) => p.group === g)
+        .map((p): Item => ({ href: p.href, label: p.label, detail: p.detail === p.group ? undefined : p.detail, icon: p.icon })),
+    }))
+    .filter((g) => g.items.length);
+  // "help <tool>": that tool's (or page's) help topic.
+  const helpRest = words.filter((w) => !HELP_WORDS.has(w));
+  const help: Item[] =
+    words.some((w) => HELP_WORDS.has(w)) && helpRest.length
+      ? filterNavLinks(
+          HELP_TOPICS.map((t) => ({ label: t.title, description: t.tagline, id: t.id })),
+          helpRest.join(" "),
+        )
+          .slice(0, 5)
+          .map((t) => ({ href: `/help?topic=${t.id}`, label: t.label, icon: ICON_BY_ID[t.id] ?? HelpIcon }))
+      : [];
+  return { words, tunes, charts, pageGroups, help };
+}
+
 function EnterIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -103,51 +161,8 @@ function Palette({ onClose }: { onClose: () => void }) {
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const { isAuthenticated } = useConvexAuth();
   const results = filterLinks(query);
-  // Your tunes too (both lists), after the tools, so one search finds everything. Each says which
-  // list it's in, since a tune can be in both.
-  const lists = useTuneLists();
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const tuneItems: Item[] = words.length
-    ? (["tunes", "learn"] as TuneListId[])
-        .flatMap((list) =>
-          lists[list].tunes
-            .filter((t) => words.every((w) => t.name.toLowerCase().includes(w)))
-            .map((t) => ({ href: tuneHref(list, t.id), label: t.name, detail: TUNE_LIST_LABEL[list], icon: NoteIcon })),
-        )
-        .slice(0, 6)
-    : [];
-  // Your chord charts by title (a library can hold 1,500+), a few at most, after everything else
-  // (not when picking a tool for a split pane).
-  const charts = useChartTitles();
-  const chartItems: Item[] = (pendingSplit ? [] : searchCharts(charts, query, 5)).map((c) => ({
-    href: chartHref(c.id),
-    label: c.title,
-    detail: c.key ? `Chart in ${displayKey(c.key)}` : "Chart",
-    icon: ChordChartIcon,
-  }));
-  // Pages and settings, only once something's typed (an empty search lists the tools).
-  const pageItems = words.length
-    ? filterNavLinks(
-        PAGES.filter((p) => isAuthenticated || !p.account)
-          .concat(isAuthenticated ? [] : [SIGNED_OUT_APPEARANCE])
-          .map((p) => ({ ...p, description: `${p.detail ?? ""} ${p.words}` })),
-        query,
-      )
-    : [];
-  // "help <tool>": that tool's (or page's) help topic.
-  const helpRest = words.filter((w) => !HELP_WORDS.has(w));
-  const helpItems: Item[] =
-    words.some((w) => HELP_WORDS.has(w)) && helpRest.length
-      ? filterNavLinks(
-          HELP_TOPICS.map((t) => ({ label: t.title, description: t.tagline, id: t.id })),
-          helpRest.join(" "),
-        )
-          .slice(0, 5)
-          .map((t) => ({ href: `/help?topic=${t.id}`, label: t.label, icon: ICON_BY_ID[t.id] ?? HelpIcon }))
-      : [];
-  const toItem = (p: (typeof pageItems)[number]): Item => ({ href: p.href, label: p.label, detail: p.detail === p.group ? undefined : p.detail, icon: p.icon });
+  const { words, help: helpItems, pageGroups, tunes: tuneItems, charts: chartItems } = useSearchExtras(query, { charts: !pendingSplit });
   // How many of the typed words are in a result's name — groups are ordered by their best one,
   // so "theme" or "files" put the page first, while a tool's name keeps the tool on top (ties
   // keep the tools first).
@@ -157,9 +172,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     // than a tool that only mentions it.
     ...groupByCategory(results).sort((x, y) => results.indexOf(x.items[0]) - results.indexOf(y.items[0])),
     ...(helpItems.length ? [{ category: "Help", items: helpItems }] : []),
-    ...(["Pages", "Settings"] as const)
-      .map((g) => ({ category: g, items: pageItems.filter((p) => p.group === g).map(toItem) }))
-      .filter((g) => g.items.length),
+    ...pageGroups,
     ...(tuneItems.length ? [{ category: "Your tunes", items: tuneItems }] : []),
   ]
     .map((g, i) => ({ g, i, score: words.length ? Math.max(...g.items.map((it) => nameScore(it.label))) : 0 }))

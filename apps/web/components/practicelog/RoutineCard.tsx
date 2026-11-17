@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import { AttachmentList } from "@/components/practicelog/Attachments";
@@ -58,6 +60,7 @@ export default function RoutineCard({
   const { routine, occurrence, added } = item;
   const { engine, startRoutine, runningTask } = useRoutineTimer();
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [confirming, setConfirming] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [editingTime, setEditingTime] = useState(false);
   const [logging, setLogging] = useState<{ target: LogTarget; minutes?: number } | null>(null);
   const today = todayKey();
@@ -99,7 +102,24 @@ export default function RoutineCard({
           ? { label: "Uncheck every task", onSelect: () => log.setAllTasks(date, routine.id, false) }
           : { label: "Check every task", onSelect: () => log.setAllTasks(date, routine.id, true) },
         added
-          ? { label: "Remove from this day", danger: true, onSelect: () => log.removeFromDay(date, routine.id) }
+          ? {
+              label: "Remove from this day",
+              danger: true,
+              onSelect: () => {
+                // Ask first when it would take ticks, time or notes with it.
+                const o = occurrence;
+                const hasWork =
+                  (o.done?.length ?? 0) > 0 || (o.subDone?.length ?? 0) > 0 || Object.values(o.spentMs ?? {}).some((ms) => ms > 0) || !!o.notes?.trim() || (o.extraTasks?.length ?? 0) > 0;
+                const remove = () => log.removeFromDay(date, routine.id);
+                if (!hasWork) return remove();
+                setConfirming({
+                  title: "Remove it from this day?",
+                  message: `${routine.name || "This routine"} comes off ${formatShortDate(date)}, with what you checked off, timed and noted for it there.`,
+                  label: "Remove",
+                  run: remove,
+                });
+              },
+            }
           : skipped
             ? { label: "Don't skip this day", onSelect: () => log.updateOccurrence(date, routine.id, (o) => ({ ...o, skipped: false })) }
             : { label: "Skip this day", onSelect: () => log.updateOccurrence(date, routine.id, (o) => ({ ...o, skipped: true })) },
@@ -310,7 +330,17 @@ export default function RoutineCard({
                 {extraIds.has(task.id) && (
                   <button
                     type="button"
-                    onClick={() => setExtra((list) => list.filter((t) => t.id !== task.id))}
+                    onClick={() => {
+                      const remove = () => setExtra((list) => list.filter((t) => t.id !== task.id));
+                      // Ticked or timed: ask first, it takes that with it.
+                      if (!(occurrence.done ?? []).includes(task.id) && !((occurrence.spentMs ?? {})[task.id] > 0)) return remove();
+                      setConfirming({
+                        title: "Remove this task?",
+                        message: `"${task.title || "Task"}" comes off ${routine.name || "this routine"} for ${formatShortDate(date)}, with the time logged on it.`,
+                        label: "Remove",
+                        run: remove,
+                      });
+                    }}
                     aria-label={`Remove ${task.title || "this task"} from today`}
                     title="Remove from today"
                     className="shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-danger"
@@ -367,6 +397,21 @@ export default function RoutineCard({
       </AttachedNotes>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
       {logging && <LogTimeDialog date={date} log={log} initial={logging.target} initialMinutes={logging.minutes} onClose={() => setLogging(null)} />}
+      {/* On <body>: a skipped card is faded, and the fade would carry into the dialog. */}
+      {confirming &&
+        createPortal(
+          <ConfirmDialog
+            title={confirming.title}
+            message={confirming.message}
+            confirmLabel={confirming.label}
+            onCancel={() => setConfirming(null)}
+            onConfirm={() => {
+              confirming.run();
+              setConfirming(null);
+            }}
+          />,
+          document.body,
+        )}
     </article>
   );
 }

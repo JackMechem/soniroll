@@ -1448,9 +1448,9 @@ export default function ScaleTrainer() {
         <div className="relative">
           <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
-            <h1
+            <p
               title={round?.mode.aka}
-              className={`relative z-10 font-bold transition-colors duration-200 ${
+              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
                 mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
               }`}
               style={
@@ -1462,7 +1462,7 @@ export default function ScaleTrainer() {
               }
             >
               {mainLabel}
-            </h1>
+            </p>
             {/* Before the first round, say what's about to happen. */}
             {!round && !running && (
               <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">

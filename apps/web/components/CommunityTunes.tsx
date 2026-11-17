@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import { Id } from "@jam-practice/convex/_generated/dataModel";
 import UserAvatar from "@/components/UserAvatar";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import {
   CalendarIcon,
   ChordChartIcon,
   CheckIcon,
+  DotsVerticalIcon,
   EyeOffIcon,
   HeartIcon,
   NoteIcon,
@@ -22,8 +25,10 @@ import { shareLink } from "@/lib/shareLink";
 import { type ProgressCard, type PublicRoutine, formatMinutesShort } from "@/lib/practiceLog";
 import { ProgressCardView } from "@/components/practicelog/ProgressCard";
 
+/** "Oct 17", with the year only when it isn't this year (keeps a post's top line on one row on phones). */
 function formatDate(ms: number) {
-  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const thisYear = new Date(ms).getFullYear() === new Date().getFullYear();
+  return new Date(ms).toLocaleDateString(undefined, thisYear ? { month: "short", day: "numeric" } : { year: "numeric", month: "short", day: "numeric" });
 }
 
 export type TunePostSummary = {
@@ -89,6 +94,7 @@ export function PostListItem({
   const router = useRouter();
   const toggleLike = useMutation(api.communityTunes.toggleLike);
   const [copied, setCopied] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
   const isSetlist = post.kind === "setlist";
   const routine = post.kind === "routine" && post.payload && "tasks" in post.payload ? post.payload : null;
   const card = post.kind === "milestone" && post.payload && "levels" in post.payload ? post.payload : null;
@@ -109,6 +115,7 @@ export function PostListItem({
   }
 
   return (
+    <>
     <li
       role="link"
       tabIndex={0}
@@ -126,13 +133,13 @@ export function PostListItem({
           <Link
             href={`/u/${post.authorUsername}`}
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-2 font-medium hover:underline"
+            className="flex min-w-0 items-center gap-2 font-medium hover:underline"
           >
             <UserAvatar url={post.authorAvatarUrl ?? null} />
-            {post.authorUsername}
+            <span className="truncate">{post.authorUsername}</span>
           </Link>
         )}
-        <span className="text-muted">
+        <span className="shrink-0 whitespace-nowrap text-muted">
           {post.authorUsername ? "· " : ""}
           {timeAgo(post.createdAt)}
         </span>
@@ -149,6 +156,25 @@ export function PostListItem({
             <CalendarIcon className="h-3.5 w-3.5" />
             {routine ? "Routine" : "Milestone"}
           </span>
+        )}
+        {/* Your own post: Delete sits in a ⋮ menu (it asks first), away from Like and Share. */}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              setMenu({ x: r.right - 208, y: r.bottom + 4, items: [{ label: "Delete post", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: onDelete }] });
+            }}
+            // Enter/Space press this button, not the card (Escape still reaches the menu).
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.stopPropagation()}
+            aria-label="More for this post"
+            aria-haspopup="menu"
+            title="More"
+            className="-my-2 -mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
+          >
+            <DotsVerticalIcon className="h-4 w-4" />
+          </button>
         )}
       </div>
 
@@ -198,20 +224,6 @@ export function PostListItem({
           </span>
         )}
         <span className="flex-1" />
-        {onDelete && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            aria-label="Delete post"
-            title="Delete post"
-            className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-surface-hover hover:text-danger"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
-        )}
         <button
           type="button"
           onClick={(e) => void handleShare(e)}
@@ -235,5 +247,8 @@ export function PostListItem({
         </button>
       </div>
     </li>
+    {/* Outside the card (and the list), so a pick in the menu doesn't also open the post. */}
+    {menu && createPortal(<ContextMenu menu={menu} onClose={() => setMenu(null)} />, document.body)}
+    </>
   );
 }

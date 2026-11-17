@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import RecordClip from "@/components/practicelog/RecordClip";
@@ -270,6 +272,14 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
   const [title, setTitle] = useState("");
   const [editing, setEditing] = useState<{ task: DayTask; isNew: boolean } | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  // A task with something on it (ticked, timed, notes, subtasks, attachments) asks before it goes;
+  // a bare one is deleted at once.
+  const [deleting, setDeleting] = useState<DayTask | null>(null);
+  const askDelete = (t: DayTask) => {
+    const hasWork = t.done || (t.spentMs ?? 0) > 0 || !!t.notes?.trim() || (t.subtasks?.length ?? 0) > 0 || (t.attachments?.length ?? 0) > 0;
+    if (hasWork) setDeleting(t);
+    else log.removeDayTask(date, t.id);
+  };
   const sorted = [...tasks].sort((a, b) => {
     const ta = parseTime(a.time);
     const tb = parseTime(b.time);
@@ -389,7 +399,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       items: [
                         { label: "Edit", onSelect: () => setEditing({ task: t, isNew: false }) },
                         { label: "Move to the next day", onSelect: () => log.moveDayTask(date, addDays(date, 1), { ...t, done: false }) },
-                        { label: "Delete", danger: true, onSelect: () => log.removeDayTask(date, t.id) },
+                        { label: "Delete", danger: true, onSelect: () => askDelete(t) },
                       ],
                     });
                   }}
@@ -443,11 +453,26 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
             log.moveDayTask(date, to, task);
             if (editing.isNew) setTitle("");
           }}
-          onDelete={editing.isNew ? undefined : () => log.removeDayTask(date, editing.task.id)}
+          onDelete={editing.isNew ? undefined : () => askDelete(editing.task)}
           onClose={() => setEditing(null)}
         />
       )}
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {deleting &&
+        createPortal(
+          <ConfirmDialog
+            title="Delete this task?"
+            message={`"${deleting.title || "Task"}" comes off ${formatShortDate(date)}, along with anything logged or noted on it.`}
+            confirmLabel="Delete"
+            onCancel={() => setDeleting(null)}
+            onConfirm={() => {
+              log.removeDayTask(date, deleting.id);
+              setDeleting(null);
+            }}
+          />,
+          document.body,
+        )}
+
       {logging && <LogTimeDialog date={date} log={log} initial={logging.target} initialMinutes={logging.minutes} onClose={() => setLogging(null)} />}
     </div>
     </DaySection>

@@ -1326,8 +1326,8 @@ export default function NoteTrainer() {
         <div className="relative">
           <div className="relative flex h-40 w-40 items-center justify-center sm:h-48 sm:w-48">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
-            <h1
-              className={`relative z-10 font-bold tabular-nums transition-colors duration-200 ${
+            <p
+              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
                 mainLabelIsDouble
                   ? "text-3xl sm:text-4xl"
                   : "text-6xl sm:text-7xl"
@@ -1341,7 +1341,7 @@ export default function NoteTrainer() {
               }
             >
               {mainLabel}
-            </h1>
+            </p>
             {/* Before the first round, say what's about to happen. */}
             {!note && !running && (
               <p className="absolute inset-x-0 bottom-0 z-10 text-sm text-muted sm:bottom-3">

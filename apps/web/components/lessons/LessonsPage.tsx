@@ -134,11 +134,6 @@ export default function LessonsPage() {
               <h2 className="text-sm font-medium">
                 Your students{students!.length > 0 && <span className="font-normal text-muted"> · {students!.length}</span>}
               </h2>
-              {students!.length > 0 && (
-                <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1 text-xs text-muted transition-colors hover:text-foreground">
-                  <PlusIcon className="h-3.5 w-3.5" /> Add a student
-                </button>
-              )}
             </div>
             {students!.length === 0 ? (
               <div className="rounded-lg border border-dashed border-foreground/15">

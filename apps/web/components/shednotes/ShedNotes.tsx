@@ -10,7 +10,7 @@ import { titleKey } from "@jam-practice/core/shedNotes";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
-import { DocumentIcon, DownloadIcon, GearIcon, PlusIcon, SearchIcon } from "@/components/tools";
+import { DocumentIcon, DownloadIcon, GearIcon, PlusIcon } from "@/components/tools";
 import { notesZip, saveBlob } from "@/lib/exportNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
@@ -440,12 +440,11 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         style={{ "--list-w": `${shownListWidth}px` } as React.CSSProperties}
         className={`relative min-h-0 flex-col gap-3 lg:w-[var(--list-w)] lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
         <div className="flex items-center gap-2">
-          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-semibold tracking-tight lg:text-base">
-            <DocumentIcon className="hidden h-[18px] w-[18px] shrink-0 text-muted lg:block" /> <span className="truncate">Shed Notes</span>
+          {/* The page title, as on other pages (the list's search box below is the one search;
+              / or Alt+F still opens the search menu). */}
+          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-semibold tracking-tight">
+            <DocumentIcon className="h-5 w-5 shrink-0 text-accent" /> <span className="truncate">Shed Notes</span>
           </h1>
-          <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Alt-f")})`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
-            <SearchIcon className="h-4 w-4" />
-          </button>
           <button
             type="button"
             onClick={(e) => {

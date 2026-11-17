@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import AccountMenu from "@/components/AccountMenu";
-import { OPEN_PALETTE_EVENT } from "@/components/CommandPalette";
+import { OPEN_PALETTE_EVENT, useSearchExtras, type SearchItem } from "@/components/CommandPalette";
 import Flyout, { FlyoutItem } from "@/components/Flyout";
 import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import ThemeModal from "@/components/ThemeModal";
@@ -28,7 +28,6 @@ import {
   ShieldIcon,
   NAV_LINKS,
   SearchIcon,
-  NoteIcon,
   findToolLink,
   StarIcon,
   filterLinks,
@@ -36,12 +35,11 @@ import {
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
-import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { navIconButtonClass, navIconClass, navRowClass } from "@/components/navRow";
 import { isToolHidden, useSiteSettings } from "@/lib/siteSettings";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
-import { showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
+import { FeedbackBarButton, showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { collectLeaves } from "@/lib/tilingLayout";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
@@ -242,8 +240,8 @@ function SearchBox({
         value={query}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder={large ? "Search tools" : "Press / to search"}
-        aria-label="Search tools"
+        placeholder={large ? "Search tools, tunes, charts…" : "Press / to search"}
+        aria-label="Search tools, tunes, charts, pages and settings"
         className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted"
       />
     </label>
@@ -252,10 +250,10 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-/** The library's other pages (chord charts, the setlist chart reader, files), which the sidebar
-    files under Library (`/tunes`). */
+/** The library's other pages (chord charts, the setlist chart reader, files, recordings), which
+    the sidebar files under Library (`/tunes`). */
 function isLibraryPath(path: string) {
-  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files";
+  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files" || path === "/recordings" || path.startsWith("/recordings/");
 }
 
 /** Shared by Favorites and every real category in `NavItems` below — a collapsible section: a
@@ -347,15 +345,17 @@ function NavItems({
       ? collectLeaves(tilingState.tree).find((l) => l.id === tilingState.activePaneId)?.href
       : undefined;
   const effectivePathname = activePaneHref ?? pathname;
+  const navRef = useRef<HTMLElement>(null);
+  // Bring the page you're on into view in a long list (the sidebar, or the phone menu as it
+  // opens), so you can see where you are and what's next to it. Only when it's out of sight.
+  useEffect(() => {
+    const row = navRef.current?.querySelector('[aria-current="page"]');
+    if (!row) return;
+    const r = row.getBoundingClientRect();
+    if (r.top < 96 || r.bottom > window.innerHeight - 140) row.scrollIntoView({ block: "center" });
+  }, [effectivePathname, collapsed]);
   const [site] = useSiteSettings();
   const searching = query.trim().length > 0;
-  const tuneLists = useTuneLists();
-  const queryWords = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const tuneMatches = queryWords.length
-    ? (["tunes", "learn"] as TuneListId[])
-        .flatMap((list) => tuneLists[list].tunes.filter((t) => queryWords.every((w) => t.name.toLowerCase().includes(w))).map((t) => ({ href: tuneHref(list, t.id), label: t.name })))
-        .slice(0, 6)
-    : [];
   // Settings: tools you've hidden stay out of the lists (a search still finds them), and so do
   // Community and Lessons when they're turned off.
   const filtered = filterLinks(query).filter(
@@ -434,6 +434,7 @@ function NavItems({
         onClick={onNavigate}
         title={name !== label ? label : undefined}
         aria-label={label}
+        aria-current={active ? "page" : undefined}
         className={`${navRowClass(active, large)} ${showsStar ? (large ? "pr-12" : "pr-8") : ""}`}
       >
         <ToolTile link={linkInfo} active={active} large={large} />
@@ -482,7 +483,7 @@ function NavItems({
     const { href, label, icon: Icon } = link;
     const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isLibraryPath(effectivePathname));
     return (
-      <Link key={href} href={href} onClick={onNavigate} className={navRowClass(active, large)}>
+      <Link key={href} href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={navRowClass(active, large)}>
         <span data-nav-icon className="flex shrink-0" style={{ color: CATEGORY_COLORS[link.category] }}>
           <Icon className={navIconClass(large)} />
         </span>
@@ -504,7 +505,7 @@ function NavItems({
       const { href, label, icon: Icon } = link;
       const active = effectivePathname === href || (href !== "/" && effectivePathname.startsWith(`${href}/`)) || (href === "/tunes" && isLibraryPath(effectivePathname));
       return (
-        <Link key={href} href={href} onClick={onNavigate} title={label} aria-label={label} className={navIconButtonClass(active)} style={{ color: CATEGORY_COLORS[link.category] }}>
+        <Link key={href} href={href} onClick={onNavigate} title={label} aria-label={label} aria-current={active ? "page" : undefined} className={navIconButtonClass(active)} style={{ color: CATEGORY_COLORS[link.category] }}>
           <Icon className="h-4 w-4" />
         </Link>
       );
@@ -515,7 +516,7 @@ function NavItems({
       </div>
     );
     return (
-      <nav onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {group("start", "Dashboard", <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />)}
         {group(
           "shed",
@@ -535,10 +536,7 @@ function NavItems({
   }
 
   return (
-    <nav onContextMenu={onNavContextMenu} className="flex h-full flex-col gap-4 overflow-y-auto [scrollbar-width:thin]">
-      {groups.length === 0 && communityItems.length === 0 && tuneMatches.length === 0 && (
-        <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>Nothing matches that</p>
-      )}
+    <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col gap-4 overflow-y-auto [scrollbar-width:thin]">
       {(!searching || communityItems.length > 0) && (
         <div className="flex flex-col gap-px">
           {searching ? (
@@ -587,22 +585,45 @@ function NavItems({
           renderLink={renderLink}
         />
       ))}
-      {/* While searching, your tunes too (the same search as the / palette). */}
-      {tuneMatches.length > 0 && (
-        <div className="flex flex-col gap-px">
-          <SectionHeading large={large}>Your tunes</SectionHeading>
-          {tuneMatches.map((t) => (
-            <Link key={t.href} href={t.href} onClick={onNavigate} className={navRowClass(false, large)}>
-              <span data-nav-icon className="flex shrink-0 text-accent">
-                <NoteIcon className={navIconClass(large)} />
+      {/* Searching (the phone menu): pages, settings, your tunes and charts after the tools, as
+          in the / palette — mounted only while searching, so the chart list isn't loaded otherwise. */}
+      {searching && <SearchExtras query={query} large={large} toolsFound={groups.length + communityItems.length} onNavigate={onNavigate} />}
+      {contextMenu}
+    </nav>
+  );
+}
+
+/** The search's other results, under the tools (`useSearchExtras`, the / palette's own search). */
+function SearchExtras({ query, large, toolsFound, onNavigate }: { query: string; large?: boolean; toolsFound: number; onNavigate?: () => void }) {
+  const { help, pageGroups, tunes, charts } = useSearchExtras(query);
+  const groups: { title: string; items: SearchItem[]; accent?: boolean }[] = [
+    { title: "Help", items: help },
+    ...pageGroups.map((g) => ({ title: g.category, items: g.items })),
+    { title: "Your tunes", items: tunes, accent: true },
+    { title: "Your chord charts", items: charts, accent: true },
+  ].filter((g) => g.items.length);
+  if (toolsFound === 0 && groups.length === 0) {
+    return <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>Nothing matches that</p>;
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      {groups.map((g) => (
+        <div key={g.title} className="flex flex-col gap-px">
+          <SectionHeading large={large}>{g.title}</SectionHeading>
+          {g.items.map(({ href, label, detail, icon: Icon }) => (
+            <Link key={href} href={href} onClick={onNavigate} className={navRowClass(false, large)}>
+              <span data-nav-icon className={`flex shrink-0 ${g.accent ? "text-accent" : "text-muted"}`}>
+                <Icon className={navIconClass(large)} />
               </span>
-              <span className="truncate">{t.label}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {label}
+                {detail && <span className={`ml-2 text-muted ${large ? "text-sm" : "text-xs"}`}>{detail}</span>}
+              </span>
             </Link>
           ))}
         </div>
-      )}
-      {contextMenu}
-    </nav>
+      ))}
+    </div>
   );
 }
 
@@ -694,6 +715,7 @@ export default function Sidebar() {
           <MenuIcon className="h-5 w-5" />
         </button>
         <MobileBarTitle path={currentPath} />
+        <FeedbackBarButton />
       </header>
 
       {mobileOpen && (
@@ -1070,11 +1092,17 @@ function MobileBarTitle({ path }: { path: string }) {
         <LogoMark size={22} />
       </Link>
       <span className="text-foreground/30">/</span>
-      <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+      {/* The section's name goes to the section (Library → /tunes, a tool → the tool), so from a
+          tune, a chart or a Shed Log day one tap gets you back to its start. */}
+      <Link
+        href={link.href}
+        aria-current={path === link.href ? "page" : undefined}
+        className="-mx-1 flex h-10 min-w-0 items-center gap-1.5 rounded-md px-1 text-sm font-medium hover:bg-surface-hover"
+      >
         <Icon className="h-4 w-4 shrink-0 text-muted" />
         {/* Only very long names use the short one: "Chords" alone would be unclear up here. */}
         <span className="truncate">{link.label.length > 24 && link.short ? link.short : link.label}</span>
-      </span>
+      </Link>
     </div>
   );
 }

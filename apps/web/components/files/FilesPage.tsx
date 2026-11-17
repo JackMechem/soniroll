@@ -48,6 +48,18 @@ const SORT_OPTIONS: { value: string; label: string; sort: Sort }[] = [
   { value: "small", label: "Smallest first", sort: { key: "size", dir: "asc" } },
 ];
 
+/** A kind as a filter. */
+const KIND_FILTER_LABEL: Record<FileKind, string> = {
+  pdf: "PDFs",
+  image: "Images",
+  audio: "Audio",
+  video: "Videos",
+  notation: "Notation",
+  document: "Documents",
+  other: "Other",
+};
+const kindLabel = (k: FileKind) => KIND_FILTER_LABEL[k];
+
 const keyOf = (item: { kind: string; id: string }) => `${item.kind}:${item.id}`;
 
 /** The table's columns from `sm` up: select, name, where, size, added, ⋮. */
@@ -158,6 +170,8 @@ export default function FilesPage() {
   const used = storage?.used ?? 0;
   const quota = storage?.quota ?? 1;
   const phoneSort = SORT_OPTIONS.find((o) => o.sort.key === sort.key && o.sort.dir === sort.dir)?.value ?? "new";
+  // Phones pick one filter at a time (a source or a kind); a kind wins if both are set.
+  const phoneFilter = kind !== "all" ? `kind:${kind}` : `source:${source}`;
 
   return (
     <LibraryPage>
@@ -206,7 +220,34 @@ export default function FilesPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-3">
+            {/* Phones: one row — what to show (where it came from, or what kind) and the order. */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <Select
+                value={phoneFilter}
+                onChange={(v) => {
+                  const [what, value] = v.split(":");
+                  setSource(what === "source" ? (value as Source | "all") : "all");
+                  setKind(what === "kind" ? (value as FileKind) : "all");
+                }}
+                options={[
+                  { value: "source:all", label: `Everything · ${items.length}` },
+                  ...(Object.keys(SOURCE_LABEL) as Source[])
+                    .filter((s) => counts.bySource.get(s))
+                    .map((s) => ({ value: `source:${s}`, label: `${SOURCE_LABEL[s]} · ${counts.bySource.get(s)}` })),
+                  ...(Object.keys(FILE_KIND_LABEL) as FileKind[])
+                    .filter((k) => counts.byKind.get(k))
+                    .map((k) => ({ value: `kind:${k}`, label: `${kindLabel(k)} · ${counts.byKind.get(k)}` })),
+                ]}
+                className="min-w-0 flex-1"
+              />
+              <Select
+                value={phoneSort}
+                onChange={(v) => setSort(SORT_OPTIONS.find((o) => o.value === v)!.sort)}
+                options={SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+                className="min-w-0 flex-1"
+              />
+            </div>
+            <div className="hidden flex-col gap-3 sm:flex">
               <div className="flex flex-wrap items-center gap-1.5">
                 <FilterChip active={source === "all"} onClick={() => setSource("all")} label="Everything" count={items.length} />
                 {(Object.keys(SOURCE_LABEL) as Source[])
@@ -220,16 +261,8 @@ export default function FilesPage() {
                 {(Object.keys(FILE_KIND_LABEL) as FileKind[])
                   .filter((k) => counts.byKind.get(k))
                   .map((k) => (
-                    <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={k === "other" ? "Other" : `${FILE_KIND_LABEL[k]}s`} small />
+                    <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={kindLabel(k)} small />
                   ))}
-                <div className="ml-auto sm:hidden">
-                  <Select
-                    value={phoneSort}
-                    onChange={(v) => setSort(SORT_OPTIONS.find((o) => o.value === v)!.sort)}
-                    options={SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-                    className="min-w-36"
-                  />
-                </div>
               </div>
             </div>
 
