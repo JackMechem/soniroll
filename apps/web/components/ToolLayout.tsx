@@ -92,6 +92,11 @@ export default function ToolLayout({
           )}
         </div>
 
+        {/* Phones: the same row, pinned just under the app's top bar. */}
+        <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.25rem)] sm:inset-x-6 lg:hidden">
+          <PhoneBar href={statsHref} presets={presets} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
+        </div>
+
         {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
 
         {credit && (
@@ -101,24 +106,22 @@ export default function ToolLayout({
         )}
 
         {stacked ? (
-          <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+          <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+7rem)] sm:px-6 lg:pt-20">
             <section
               className={`flex w-full min-w-0 flex-1 flex-col items-center gap-6 text-center ${
                 topAligned ? "justify-start" : "justify-center"
               }`}
             >
-              <PhoneBar href={statsHref} presets={presets} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
               {children}
             </section>
             {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
           </main>
         ) : (
-          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-24 xl:max-w-5xl">
+          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+7rem)] sm:px-6 lg:pt-24 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
-                <PhoneBar href={statsHref} presets={presets} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
-                {sidePanel && <TopChips>{sidePanel}</TopChips>}
+                  {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
                 {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
               </div>

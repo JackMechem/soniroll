@@ -214,7 +214,7 @@ export default function JamPractice() {
         ) : (
           <div className="w-[min(24rem,calc(100vw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
             {tunes.length === 0 && !pickFromStandards && !pickError
-              ? "Add some tunes below, then pick one at random."
+              ? "Add some tunes in the Tunes I Know chip, then pick one at random."
               : "No tune picked yet."}
           </div>
         )}

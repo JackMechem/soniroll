@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { SearchIcon, filterLinks, groupByCategory, svgProps } from "@/components/tools";
+import { CATEGORY_COLORS, SearchIcon, filterLinks, groupByCategory, svgProps } from "@/components/tools";
 import {
   applyPendingSplit,
   clearPendingSplit,
@@ -116,7 +116,7 @@ function Palette({ onClose }: { onClose: () => void }) {
             return groups.map(({ category, items }) => (
               <li key={category} role="presentation">
                 <p className="px-3 pb-1 pt-3 text-xs font-medium text-muted first:pt-1">
-                  {category}
+                  {category === "Community" ? "Library and people" : category}
                 </p>
                 <ul role="presentation">
                   {items.map(({ href, label, icon: Icon }) => {
@@ -134,7 +134,9 @@ function Palette({ onClose }: { onClose: () => void }) {
                           i === activeIndex ? "bg-surface-hover" : ""
                         }`}
                       >
-                        <Icon className="h-4 w-4 shrink-0 text-muted" />
+                        <span className="flex shrink-0" style={{ color: CATEGORY_COLORS[category] }}>
+                          <Icon className="h-4 w-4" />
+                        </span>
                         <span className="flex-1 truncate">{label}</span>
                         {i === activeIndex && (
                           <span className="flex items-center gap-2 text-sm text-muted">

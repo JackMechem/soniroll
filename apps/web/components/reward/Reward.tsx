@@ -143,7 +143,7 @@ export function PoolPill({
   onClick,
   disabled,
   title,
-  plainClassName = "rounded-md px-2.5 py-1.5 text-xs font-medium",
+  plainClassName = "rounded-full px-3 py-1.5 text-xs font-medium",
   children,
 }: {
   on: boolean;
@@ -175,7 +175,7 @@ export function PoolPill({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex items-center gap-1 rounded-md border py-1.5 text-sm font-medium tabular-nums transition-colors disabled:opacity-60 ${
+      className={`relative flex items-center gap-1 rounded-full border py-1.5 text-sm font-medium tabular-nums transition-colors disabled:opacity-60 ${
         on ? "pl-2 pr-3 text-accent-foreground" : "border-foreground/15 bg-background px-3 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
       style={on ? { background: reward.color, borderColor: reward.color } : undefined}

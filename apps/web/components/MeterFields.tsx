@@ -573,7 +573,7 @@ export function TempoHero({
                 setTaps((n) => n + 1);
               }}
               title="Tap along a few times to set the tempo"
-              className="relative mx-1 inline-flex h-10 items-center gap-2 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+              className="relative mx-1 inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
             >
               <MetronomeIcon className="h-4 w-4 text-muted" />
               Tap tempo

@@ -598,7 +598,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           onClick={recording ? () => void stopRecording() : () => void startRecording()}
           disabled={rec.phase === "starting" || rec.phase === "finishing"}
           aria-label={recording ? "Stop recording" : "Record a take"}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-5 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-60"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-foreground/[0.05] px-6 text-base font-semibold transition-colors hover:bg-surface-hover disabled:opacity-60"
         >
           {recording ? (
             <>
@@ -617,7 +617,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           <button
             type="button"
             onClick={stopTone}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-5 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-60"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-foreground/[0.05] px-6 text-base font-semibold transition-colors hover:bg-surface-hover disabled:opacity-60"
           >
             Stop tone
           </button>
