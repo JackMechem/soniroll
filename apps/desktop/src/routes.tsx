@@ -203,6 +203,7 @@ function redirectFor(pathname: string, query: Query): string | null {
   if (pathname === "/tunes/setlists") return "/tunes?tab=setlists";
   if (pathname === "/chord-charts") return "/tunes?tab=charts";
   if (pathname === "/files") return "/tunes?tab=files";
+  if (pathname === "/library") return "/tunes";
   if (pathname === "/settings") return `/account?tab=${encodeURIComponent(query.get("tab") || "general")}`;
   if (pathname === "/lessons/availability") return "/lessons/settings#hours";
   // Bass Genius and the Drum Generator became Rhythm Section.

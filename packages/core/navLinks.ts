@@ -228,9 +228,37 @@ export function currentToolHref(href: string): string {
 /** Case-insensitive substring match on `label`, same rule `apps/web/components/tools.tsx`'s own
     `filterLinks` already used before this moved here — kept generic over the link shape so both
     apps can call it with their own richer type (web's includes an `icon`, mobile's doesn't). */
-export function filterNavLinks<T extends { label: string }>(links: T[], query: string): T[] {
-  const q = query.trim().toLowerCase();
-  return q ? links.filter((link) => link.label.toLowerCase().includes(q)) : links;
+/** Extra words people search with that aren't in a tool's name or description. */
+const SEARCH_WORDS: Record<string, string> = {
+  "/metronome": "bpm click tempo beat time signature",
+  "/tuner": "pitch intonation a440",
+  "/guess-the-interval": "ear",
+  "/guess-the-chord": "ear quality",
+  "/guess-the-progression": "ear changes ii v i",
+  "/find-the-root": "ear root",
+  "/slow-downer": "transcribe slow down speed loop",
+  "/practice-timer": "pomodoro countdown",
+  "/rhythm-section": "backing band bass drums play along",
+  "/tunes": "library tunes setlists charts files",
+};
+
+/** The tools a search matches: every word has to appear somewhere in the tool's name, its short
+    sidebar name, its category, its description or its extra search words, in any order ("guess
+    interval", "ear", "bpm"). Matches in the name come first. */
+export function filterNavLinks<T extends { label: string; href?: string; short?: string; category?: string; description?: string }>(links: T[], query: string): T[] {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return links;
+  const scored: { link: T; score: number; i: number }[] = [];
+  links.forEach((link, i) => {
+    const name = `${link.label} ${link.short ?? ""}`.toLowerCase();
+    const rest = `${link.category ?? ""} ${link.description ?? ""} ${(link.href && SEARCH_WORDS[link.href]) ?? ""}`.toLowerCase();
+    // In the name a word can match anywhere; elsewhere only at the start of a word ("ear" shouldn't
+    // find every description that says "hear").
+    const inRest = (w: string) => new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(rest);
+    if (!words.every((w) => name.includes(w) || inRest(w))) return;
+    scored.push({ link, score: words.filter((w) => name.includes(w)).length, i });
+  });
+  return scored.sort((a, b) => b.score - a.score || a.i - b.i).map((s) => s.link);
 }
 
 /** Buckets a (possibly filtered) list of links by category, in `CATEGORIES` order. */

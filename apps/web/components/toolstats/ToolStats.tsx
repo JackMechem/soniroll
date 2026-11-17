@@ -132,7 +132,8 @@ export default function ToolStats({ href }: { href: string }) {
       </SettingChip>
 
       {/* Log today's time into the Shed Log; "Logged" once it's all in. */}
-      {unlogged >= 1000 ? (
+      {/* Signed out there's no Shed Log to log into, so no button. */}
+      {!isAuthenticated ? null : unlogged >= 1000 ? (
         <button
           ref={logRef}
           type="button"
