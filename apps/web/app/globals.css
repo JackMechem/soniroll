@@ -27,6 +27,26 @@
   --danger: #e8848f;
 }
 
+/* Settings → Classic look (lib/display.ts): the rounder look from before the 2026-11 refresh.
+   Bigger corners everywhere (same utility names, bigger values), the sidebar's icons on tiles
+   tinted with their own colour, and bolder page titles. */
+:root.classic-look {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+}
+.classic-look [data-nav-icon] {
+  box-sizing: content-box;
+  padding: 6px;
+  margin: -6px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.classic-look h1 { font-weight: 800; }
+
 /* Native scrollbars and form controls follow the theme's light/dark mode. */
 :root { color-scheme: light; }
 .dark { color-scheme: dark; }
@@ -93,6 +113,19 @@
   }
 }
 
+/* Not `inline`, so the utilities read these variables and Classic look (below) can change them. */
+@theme {
+  /* Corners a little tighter than Tailwind's defaults (which run 4px → 24px): small controls
+     6px, cards 10px, dialogs 12–16px; the big main buttons stay fully round (rounded-full). */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
@@ -104,15 +137,6 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-overlay: var(--overlay);
   --color-danger: var(--danger);
-  /* Corners a little tighter than Tailwind's defaults (which run 4px → 24px): small controls
-     6px, cards 10px, dialogs 12–16px; the big main buttons stay fully round (rounded-full). */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-3xl: 20px;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   /* Drives components/LoadingSpinner.tsx's dots — each one uses this same animation, staggered

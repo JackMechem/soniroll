@@ -307,7 +307,7 @@ function CategoryBlock({
 function ToolTile({ link, large }: { link: NavLink; active?: boolean; large?: boolean }) {
   const Icon = link.icon;
   return (
-    <span className={navIconClass(large)} style={{ color: CATEGORY_COLORS[link.category] }}>
+    <span data-nav-icon className="flex shrink-0" style={{ color: CATEGORY_COLORS[link.category] }}>
       <Icon className={large ? "h-5 w-5" : "h-4 w-4"} />
     </span>
   );
@@ -474,7 +474,7 @@ function NavItems({
     const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isLibraryPath(effectivePathname));
     return (
       <Link key={href} href={href} onClick={onNavigate} className={navRowClass(active, large)}>
-        <span className="flex shrink-0" style={{ color: CATEGORY_COLORS[link.category] }}>
+        <span data-nav-icon className="flex shrink-0" style={{ color: CATEGORY_COLORS[link.category] }}>
           <Icon className={navIconClass(large)} />
         </span>
         <span className="truncate">{label}</span>

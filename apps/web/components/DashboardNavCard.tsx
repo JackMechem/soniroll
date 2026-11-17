@@ -17,7 +17,9 @@ export default function DashboardNavCard({ active, collapsed, large, onNavigate 
 
   return (
     <Link href={DASHBOARD_PATH} onClick={onNavigate} className={navRowClass(active, large)}>
-      <HomeIcon className={`${navIconClass(large)} text-foreground`} />
+      <span data-nav-icon className="flex shrink-0 text-foreground">
+        <HomeIcon className={navIconClass(large)} />
+      </span>
       <span className="truncate">Dashboard</span>
     </Link>
   );

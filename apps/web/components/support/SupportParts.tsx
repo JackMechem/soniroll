@@ -35,7 +35,7 @@ export function SupportRow({ collapsed = false, large = false, active = false, o
   }
   return (
     <Link href={SUPPORT_PATH} onClick={onNavigate} className={`group ${navRowClass(active, large)}`}>
-      <span className="shrink-0" style={{ color: HEART }}>
+      <span data-nav-icon className="flex shrink-0" style={{ color: HEART }}>
         <HeartIcon className={`${large ? "h-5 w-5" : "h-4 w-4"} transition-transform group-hover:scale-110`} filled />
       </span>
       <span className="min-w-0 flex-1 truncate">Support soniroll</span>

@@ -16,7 +16,9 @@ export default function ShedNotesNavCard({ active, collapsed, large, onNavigate 
 
   return (
     <Link href="/shed-notes" onClick={onNavigate} className={navRowClass(active, large)}>
-      <DocumentIcon className={`${navIconClass(large)} text-accent`} />
+      <span data-nav-icon className="flex shrink-0 text-accent">
+        <DocumentIcon className={navIconClass(large)} />
+      </span>
       <span className="truncate">Shed Notes</span>
     </Link>
   );

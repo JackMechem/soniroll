@@ -10,7 +10,7 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { VIEW_DEFAULTS, VIEW_KEY } from "@/components/PracticeLog";
 import GoalDialog from "@/components/practicelog/GoalDialog";
 import SwitchRow from "@/components/SwitchRow";
-import { ThemePicker } from "@/components/ThemeModal";
+import { ClassicLookSwitch, ThemePicker } from "@/components/ThemeModal";
 import { NAV_LINKS, groupByCategory } from "@/components/tools";
 import { DISPLAY_DEFAULTS, DISPLAY_KEY, TEXT_SIZES } from "@/lib/display";
 import { HintsContext } from "@/lib/hints";
@@ -161,6 +161,7 @@ export function AppearanceSettings() {
           onChange={(lessMotion) => setDisplay({ lessMotion })}
           hint="Turns off animations and sliding. If your device is already set to reduce motion, soniroll follows it either way."
         />
+        <ClassicLookSwitch />
       </SettingsCard>
     </>
   );

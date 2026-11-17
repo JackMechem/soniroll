@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Select from "@/components/Select";
+import SwitchRow from "@/components/SwitchRow";
+import { DISPLAY_DEFAULTS, DISPLAY_KEY } from "@/lib/display";
+import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import ThemeSearchModal from "@/components/ThemeSearchModal";
 import { SearchIcon } from "@/components/tools";
 import {
@@ -209,6 +212,19 @@ export function ThemePicker() {
   );
 }
 
+/** "Classic look": the rounder look from before the refresh. Also in the Theme dialog (signed out). */
+export function ClassicLookSwitch() {
+  const [display, setDisplay] = usePersistedSettings(DISPLAY_KEY, DISPLAY_DEFAULTS);
+  return (
+    <SwitchRow
+      label="Classic look"
+      checked={display.classicLook}
+      onChange={(classicLook) => setDisplay({ classicLook })}
+      hint="The look from before November 2026: rounder corners and buttons, icons on coloured tiles in the sidebar, bolder page titles. Pages are laid out the same either way."
+    />
+  );
+}
+
 export default function ThemeModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -242,8 +258,9 @@ export default function ThemeModal({ onClose }: { onClose: () => void }) {
         </div>
         {/* `ThemePicker`'s "See all" overlay portals to <body>, but React bubbles portal events
             through the React tree, so the stopPropagation above keeps a click in it from closing this. */}
-        <div className="overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
+        <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
           <ThemePicker />
+          <ClassicLookSwitch />
         </div>
       </div>
     </div>

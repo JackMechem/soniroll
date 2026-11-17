@@ -51,7 +51,9 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
 
   return (
     <Link href="/shed-log" onClick={onNavigate} className={navRowClass(active, large)}>
-      <CalendarIcon className={`${navIconClass(large)} text-accent`} />
+      <span data-nav-icon className="flex shrink-0 text-accent">
+        <CalendarIcon className={navIconClass(large)} />
+      </span>
       <span className="min-w-0 flex-1 truncate">Shed Log</span>
       {timerDot}
       {show && goal > 0 && (
