@@ -5,12 +5,13 @@ import {
   type Category,
   type NavLinkInfo,
   NAV_LINKS_DATA,
+  currentToolHref,
   filterNavLinks,
   groupByCategory,
 } from "@jam-practice/core/navLinks";
 
 // Shared by the sidebar and the command palette.
-export { CATEGORIES, groupByCategory };
+export { CATEGORIES, currentToolHref, groupByCategory };
 export type { Category };
 
 export function svgProps(className?: string) {
@@ -247,6 +248,18 @@ export function ChordIcon({ className }: { className?: string }) {
       <ellipse cx="7" cy="13.5" rx="3" ry="2.2" />
       <ellipse cx="7" cy="8" rx="3" ry="2.2" />
       <path d="M10 19V4M10 4l6 1.5" />
+    </svg>
+  );
+}
+
+/** Find the Root: a stack of notes with the bottom one (the root) left as a dashed outline. */
+export function RootlessIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <ellipse cx="7" cy="19" rx="3" ry="2.2" strokeDasharray="2 2" />
+      <ellipse cx="7" cy="13.5" rx="3" ry="2.2" />
+      <ellipse cx="7" cy="8" rx="3" ry="2.2" />
+      <path d="M10 13.5V4M10 4l6 1.5" />
     </svg>
   );
 }
@@ -645,6 +658,15 @@ export function LogOutIcon({ className }: { className?: string }) {
 }
 
 /** The sidebar's favorite/star toggle — `filled` for a favorited tool, outline otherwise. */
+/** A bookmark ribbon — a tool's saved presets. */
+export function BookmarkIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M6.5 3.5h11v17L12 16.5l-5.5 4z" />
+    </svg>
+  );
+}
+
 export function StarIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
     <svg {...svgProps(className)} fill={filled ? "currentColor" : "none"}>
@@ -718,13 +740,14 @@ export const CATEGORY_COLORS: Record<Category, string> = {
     separately-ordered list that could drift out of sync with it. */
 const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JSX.Element> = {
   "/jam-practice": ShuffleIcon,
-  "/bass-genius": BassIcon,
+  "/rhythm-section": BassIcon,
   "/note-trainer": NoteIcon,
   "/scale-trainer": ScaleIcon,
   "/interval-trainer": IntervalIcon,
   "/guess-the-interval": EarIcon,
   "/guess-the-chord": ChordIcon,
   "/guess-the-progression": ProgressionIcon,
+  "/find-the-root": RootlessIcon,
   "/lessons": GraduationCapIcon,
   "/practice-timer": StopwatchIcon,
   "/shed-log": CalendarIcon,
@@ -739,7 +762,6 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/tunes": LibraryIcon,
   "/recorder": RecordIcon,
   "/random-sticking-warmup": DrumIcon,
-  "/drum-generator": DrumIcon,
   "/time-test": TimeTestIcon,
   "/syncopation": SyncopationIcon,
   "/community": UsersIcon,
@@ -750,6 +772,13 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
     component via `NAV_LINK_ICONS`. */
 export const NAV_LINKS: (NavLinkInfo & { icon: (props: { className?: string }) => React.JSX.Element })[] =
   NAV_LINKS_DATA.map((link) => ({ ...link, icon: NAV_LINK_ICONS[link.href] }));
+
+/** The tool at `href` — a retired tool's href (Bass Genius, Drum Generator) finds the tool that
+    replaced it, so old Shed Log entries, stats and links still get a name and icon. */
+export function findToolLink(href: string | undefined) {
+  const current = href && currentToolHref(href);
+  return current ? NAV_LINKS.find((l) => l.href === current) : undefined;
+}
 
 export function filterLinks(query: string) {
   return filterNavLinks(NAV_LINKS, query);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { RETIRED_TOOL_HREFS } from "@jam-practice/core/navLinks";
 import { usePersistedSettings, writeSettings } from "@/lib/usePersistedSettings";
 import type { DashboardItem } from "@/lib/dashboardLayout";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
@@ -56,6 +57,24 @@ export const SITE_DEFAULTS = {
   shedLogOpenOn: "last" as ShedLogOpenOn,
 };
 export type SiteSettings = typeof SITE_DEFAULTS;
+
+/** The tools a tool replaced (Rhythm Section: Bass Genius and the Drum Generator). */
+const replacedBy = (href: string) => Object.keys(RETIRED_TOOL_HREFS).filter((old) => RETIRED_TOOL_HREFS[old] === href);
+
+/** Whether a tool is hidden (`hiddenTools`): hidden itself, or — for a tool that replaced others —
+    every tool it replaced was hidden. */
+export function isToolHidden(hidden: string[], href: string): boolean {
+  if (hidden.includes(href)) return true;
+  const old = replacedBy(href);
+  return old.length > 0 && old.every((h) => hidden.includes(h));
+}
+
+/** `hidden` with a tool hidden or shown (showing it also forgets the tools it replaced). */
+export function withToolHidden(hidden: string[], href: string, hide: boolean): string[] {
+  const old = replacedBy(href);
+  const rest = hidden.filter((h) => h !== href && !old.includes(h));
+  return hide ? [...rest, href] : rest;
+}
 
 /** The site settings, and a way to change them. The third value is true once the real values are in. */
 export function useSiteSettings(): [SiteSettings, (patch: Partial<SiteSettings>) => void, boolean] {

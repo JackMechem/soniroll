@@ -7,6 +7,8 @@ import ToolLayout from "@/components/ToolLayout";
 import { TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { PresetsSection } from "@/components/PresetsChip";
+import { toolPresets } from "@/lib/toolPresets";
 import SyncopationScore from "@/components/syncopation/SyncopationScore";
 import { DrumIcon, MetronomeIcon, NoteIcon, PlayIcon, ShuffleIcon, SlidersIcon, SpeakerIcon, StopIcon } from "@/components/tools";
 import { drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from "@/lib/drumSounds";
@@ -268,6 +270,7 @@ export default function Syncopation() {
 
   const panel = (
     <div className="shrink-0 overflow-hidden bg-surface text-left lg:rounded-2xl">
+      <PresetsSection id="syn-presets" tool={toolPresets("syncopation", settings, update)} />
       <PanelSection id="syn-tempo" title="Tempo" icon={MetronomeIcon} summary={`${settings.bpm} BPM`}>
         <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
       </PanelSection>

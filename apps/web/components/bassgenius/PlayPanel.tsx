@@ -8,15 +8,16 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 // The building blocks of Bass Genius's properties panel: collapsible sections (open or closed is
 // remembered on this device), labelled fields and level sliders.
 
-type Collapsed = { closed: string[] };
+type Collapsed = { closed: string[]; opened: string[] };
 const COLLAPSED_KEY = "jam-practice-bass-genius-panel";
-const COLLAPSED_DEFAULTS: Collapsed = { closed: [] };
+const COLLAPSED_DEFAULTS: Collapsed = { closed: [], opened: [] };
 
 export function PanelSection({
   id,
   title,
   icon: Icon,
   summary,
+  defaultOpen = true,
   children,
 }: {
   id: string;
@@ -24,15 +25,21 @@ export function PanelSection({
   icon: React.ComponentType<{ className?: string }>;
   /** Shown beside the title while the section is closed. */
   summary?: string;
+  /** Closed until opened the first time (then remembered like the rest). */
+  defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
   const [state, update] = usePersistedSettings(COLLAPSED_KEY, COLLAPSED_DEFAULTS);
-  const open = !state.closed.includes(id);
+  const open = defaultOpen ? !state.closed.includes(id) : state.opened.includes(id);
+  const toggle = () =>
+    defaultOpen
+      ? update({ closed: open ? [...state.closed, id] : state.closed.filter((x) => x !== id) })
+      : update({ opened: open ? state.opened.filter((x) => x !== id) : [...state.opened, id] });
   return (
     <section className="border-b border-foreground/10 last:border-b-0">
       <button
         type="button"
-        onClick={() => update({ closed: open ? [...state.closed, id] : state.closed.filter((x) => x !== id) })}
+        onClick={toggle}
         aria-expanded={open}
         className="flex w-full items-center gap-2.5 px-4 py-3 text-left hover:bg-surface-hover/60"
       >

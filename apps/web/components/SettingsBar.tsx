@@ -12,9 +12,11 @@ export const ChipsModeContext = createContext(false);
 export const useChipsMode = () => useContext(ChipsModeContext);
 
 /** True when a click/keypress belongs to a floating menu or listbox (a `Select`'s options, a
-    `Flyout`/`ContextMenu`), which are portaled outside the popover but belong to it. */
+    `Flyout`/`ContextMenu`) or a dialog opened from the popover (marked `data-popover-child`, e.g.
+    the presets' rename and delete dialogs), which are portaled outside the popover but belong
+    to it. */
 function inFloatingMenu(target: EventTarget | null) {
-  return target instanceof Element && !!target.closest('[role="listbox"], [role="menu"]');
+  return target instanceof Element && !!target.closest('[role="listbox"], [role="menu"], [data-popover-child]');
 }
 
 /** A row of setting chips. Each chip shows the setting's current value and opens a popover (a

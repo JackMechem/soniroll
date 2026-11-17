@@ -4,14 +4,20 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
+import { toolPresets } from "@/lib/toolPresets";
 import { InstrumentIcon } from "@/components/InstrumentIcons";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
 import TunerDial from "@/components/TunerDial";
-import { MicIcon, SlidersIcon, TunerIcon } from "@/components/tools";
+import TakePanel from "@/components/tuner/TakePanel";
+import TakesChip from "@/components/tuner/TakesChip";
+import { useTakePlayback } from "@/components/tuner/useTakePlayback";
+import { MicIcon, RecordIcon, SlidersIcon, StopIcon, TunerIcon } from "@/components/tools";
 import { InputDevice, SENSITIVITY, listAudioInputs } from "@/lib/audioInput";
 import { midiToNote, parseNote } from "@/lib/noteRange";
+import { centsColor, readingAt } from "@/lib/pitchTrack";
+import { formatDuration } from "@/lib/recordings";
 import { startTone, ToneHandle } from "@/lib/toneGenerator";
 import {
   getTunerServerSnapshot,
@@ -22,6 +28,14 @@ import {
   subscribeTuner,
   updateTunerConfig,
 } from "@/lib/tunerEngine";
+import {
+  getTunerRecorderServerSnapshot,
+  getTunerRecorderSnapshot,
+  startTunerRecording,
+  stopTunerRecording,
+  subscribeTunerRecorder,
+} from "@/lib/tunerRecorder";
+import { type TunerTake, extensionFor, listTakes, nameOfFile, nextTakeName, saveTake, useTunerTakes } from "@/lib/tunerTakes";
 import { TUNER_INSTRUMENTS, getInstrument, getTuning } from "@/lib/tunings";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
@@ -38,6 +52,8 @@ const DEFAULT_SETTINGS = {
   inputDeviceId: "",
   sustain: false,
   octave: 3,
+  /** Seconds the take's pitch graph shows at once. */
+  takeZoom: 6,
 };
 
 const MIN_REF = 415;
@@ -53,15 +69,6 @@ const WAVEFORMS: { value: OscillatorType; label: string }[] = [
   { value: "square", label: "Square" },
 ];
 
-const IN_TUNE = "#22c55e";
-const CLOSE = "#f59e0b";
-const OFF = "#ef4444";
-
-function centsColor(cents: number) {
-  const abs = Math.abs(cents);
-  return abs <= 8 ? IN_TUNE : abs <= 25 ? CLOSE : OFF;
-}
-
 type Playing = { midi: number };
 
 function freqOfMidi(midi: number, refA: number) {
@@ -72,7 +79,8 @@ function sliderStyle(value: number, min: number, max: number) {
   return { "--progress": `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties;
 }
 
-export default function Tuner() {
+/** `openTakeId`: a take to open straight away (a recording sent here with "Open in Tuner"). */
+export default function Tuner({ openTakeId }: { openTakeId?: string }) {
   const [settings, updateSettings] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const instrument = getInstrument(settings.instrumentId);
   const tuning = getTuning(instrument, settings.tuningId);
@@ -92,11 +100,23 @@ export default function Tuner() {
   // push settings in, read the live detected pitch back out. The tone generator below stays
   // local — it's a momentary action, not a session worth keeping alive across navigation.
   const tunerState = useSyncExternalStore(subscribeTuner, getTunerSnapshot, getTunerServerSnapshot);
-  const { listening, error, reading } = tunerState;
+  const { listening, error, reading: liveReading } = tunerState;
   const [playing, setPlaying] = useState<Playing | null>(null);
+  // Takes (kept on this device): recording one, the list, and the one open in the tuner.
+  const rec = useSyncExternalStore(subscribeTunerRecorder, getTunerRecorderSnapshot, getTunerRecorderServerSnapshot);
+  const recording = rec.phase !== "idle";
+  const takes = useTunerTakes();
+  const playback = useTakePlayback();
+  const openTake = playback.open;
+  const [takeError, setTakeError] = useState<string | null>(null);
+  /** Whether Record started the listening (so Stop ends it again). */
+  const listenedForTake = useRef(false);
   // Counts as practice in the Shed Log while it runs.
-  useToolActivity("/tuner", listening || playing !== null);
+  useToolActivity("/tuner", listening || playing !== null || recording || playback.playing);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
+  const minRms = (SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).rms;
+  // With a take open, the needle follows the take where the playhead is (any note, chromatic).
+  const reading = openTake ? (openTake.track ? readingAt(openTake.track, playback.pos, refA, minRms) : null) : liveReading;
 
   const toneRef = useRef<ToneHandle | null>(null);
   const mountedRef = useRef(true);
@@ -140,13 +160,83 @@ export default function Tuner() {
     : "";
 
   async function startListening() {
+    playback.close();
     const ok = await startTunerListening(inputDeviceId);
     if (ok) void listAudioInputs().then(setInputs);
+    return ok;
   }
 
-  const stopListening = stopTunerListening;
+  function stopListening() {
+    listenedForTake.current = false;
+    stopTunerListening();
+  }
 
-  useSpaceToggle(listening ? stopListening : () => void startListening());
+  /** Opens a take in the tuner. The mic stops: the needle follows the take now. */
+  function showTake(take: TunerTake) {
+    setTakeError(null);
+    // Read fresh (this also runs at the end of an await, after a take is saved).
+    if (getTunerSnapshot().listening && getTunerRecorderSnapshot().phase === "idle") stopListening();
+    void playback.openTake(take);
+  }
+
+  async function startRecording() {
+    setTakeError(null);
+    playback.close();
+    stopTone();
+    // The needle follows what you play while it records.
+    if (!listening) listenedForTake.current = await startListening();
+    await startTunerRecording(inputDeviceId);
+    if (getTunerRecorderSnapshot().phase === "idle" && listenedForTake.current) stopListening();
+  }
+
+  async function stopRecording() {
+    const take = await stopTunerRecording();
+    if (listenedForTake.current) stopListening();
+    if (!take) return;
+    const all = await listTakes();
+    const id = await saveTake(take.blob, nextTakeName(all), {
+      source: "take",
+      durationSec: take.durationSec,
+      ext: extensionFor(take.blob.type),
+    });
+    if (!id) {
+      setTakeError("This browser wouldn't keep the take. It may be out of space.");
+      return;
+    }
+    const saved = (await listTakes()).find((t) => t.id === id);
+    if (saved) showTake(saved);
+  }
+
+  async function openFile(file: File) {
+    const id = await saveTake(file, nameOfFile(file.name), {
+      source: "file",
+      durationSec: 0,
+      ext: extensionFor(file.type, file.name),
+    });
+    if (!id) {
+      setTakeError("This browser wouldn't keep the file. It may be out of space.");
+      return;
+    }
+    const saved = (await listTakes()).find((t) => t.id === id);
+    if (saved) showTake(saved);
+  }
+
+  // A take sent here from elsewhere ("Open in Tuner" on a recording's page).
+  const openedFromLink = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openTakeId || openedFromLink.current === openTakeId) return;
+    openedFromLink.current = openTakeId;
+    void listTakes().then((all) => {
+      const take = all.find((t) => t.id === openTakeId);
+      if (take) showTake(take);
+    });
+    // Only when the link changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTakeId]);
+
+  useSpaceToggle(
+    openTake ? playback.toggle : recording ? () => void stopRecording() : listening ? stopListening : () => void startListening(),
+  );
 
   function stopTone() {
     toneRef.current?.stop();
@@ -202,6 +292,18 @@ export default function Tuner() {
   return (
     <ToolLayout
       title="Tuner"
+      presets={toolPresets("tuner", settings, updateSettings, ["takeZoom"])}
+      sidePanel={
+        <TakesChip
+          takes={takes}
+          openId={openTake?.take.id ?? null}
+          onOpen={showTake}
+          onOpenFile={(file) => void openFile(file)}
+          onDeleted={(id) => {
+            if (openTake?.take.id === id) playback.close();
+          }}
+        />
+      }
       options={
         <>
           <PanelsToggle ids={PANEL_IDS} />
@@ -361,7 +463,13 @@ export default function Tuner() {
             </>
           ) : (
             <span className="px-2 text-xs text-muted">
-              {listening ? "Play a note…" : "Press Start to listen, or tap a note to hear it"}
+              {openTake
+                ? playback.playing
+                  ? "No note here"
+                  : "Press Play to watch the take"
+                : listening
+                  ? "Play a note…"
+                  : "Press Start to listen, or tap a note to hear it"}
             </span>
           )}
         </div>
@@ -420,7 +528,24 @@ export default function Tuner() {
         </div>
       </div>
 
-      {tuning.strings.length > 0 && (
+      {openTake && (
+        <TakePanel
+          open={openTake}
+          name={takes?.find((t) => t.id === openTake.take.id)?.name ?? openTake.take.name}
+          pos={playback.pos}
+          playing={playback.playing}
+          zoom={settings.takeZoom}
+          onZoom={(takeZoom) => updateSettings({ takeZoom })}
+          refA={refA}
+          minRms={minRms}
+          transpose={transpose}
+          onToggle={playback.toggle}
+          onSeek={playback.seek}
+          onClose={playback.close}
+        />
+      )}
+
+      {tuning.strings.length > 0 && !openTake && (
         <div className="flex w-full flex-col gap-2">
           <p className="text-xs font-medium text-muted">Tap a string to hear its pitch</p>
           <div className="flex flex-wrap justify-center gap-2">
@@ -454,18 +579,40 @@ export default function Tuner() {
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
+      {(rec.error || takeError) && <p className="text-sm text-danger">{takeError ?? rec.error}</p>}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {/* While a take records the tuner listens too, so there's only the one Stop. */}
+        {!recording && (
+          <button
+            type="button"
+            onClick={listening ? stopListening : () => void startListening()}
+            className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
+              listening ? "bg-surface hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
+            }`}
+          >
+            {listening ? "Stop" : "Start listening"}
+          </button>
+        )}
         <button
           type="button"
-          onClick={listening ? stopListening : () => void startListening()}
-          className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-            listening
-              ? "bg-surface hover:bg-surface-hover"
-              : "bg-accent text-accent-foreground hover:bg-accent-hover"
-          }`}
+          onClick={recording ? () => void stopRecording() : () => void startRecording()}
+          disabled={rec.phase === "starting" || rec.phase === "finishing"}
+          aria-label={recording ? "Stop recording" : "Record a take"}
+          className="flex items-center gap-2 rounded-full bg-surface px-5 py-3 text-base font-semibold transition-colors hover:bg-surface-hover disabled:opacity-60"
         >
-          {listening ? "Stop" : "Start listening"}
+          {recording ? (
+            <>
+              <StopIcon className="h-4 w-4 text-danger" />
+              Stop recording
+              {rec.startedAt !== null && <RecordClock startedAt={rec.startedAt} />}
+            </>
+          ) : (
+            <>
+              <RecordIcon className="h-4 w-4 text-danger" />
+              Record
+            </>
+          )}
         </button>
         {playing && (
           <button
@@ -478,8 +625,18 @@ export default function Tuner() {
         )}
       </div>
       <KeyHint>
-        Press <KeyHint.Key>Space</KeyHint.Key> to start or stop listening
+        Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : "start or stop listening"}
       </KeyHint>
     </ToolLayout>
   );
+}
+
+/** How long the take has been recording, ticking. */
+function RecordClock({ startedAt }: { startedAt: number }) {
+  const [now, setNow] = useState(startedAt);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
+  return <span className="tabular-nums text-muted">{formatDuration((now - startedAt) / 1000)}</span>;
 }

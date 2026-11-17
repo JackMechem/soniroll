@@ -25,6 +25,7 @@
 
 import { type BeatLevel, CLICK_SOUNDS, mainBeatClick, scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
+import { setSteadyInterval } from "@/lib/steadyTimer";
 import {
   CELL_BEAT_FRACTION,
   CONCRETE_ROLL_TYPES,
@@ -101,7 +102,7 @@ let currentBarIndex: number | null = null;
 let currentRepeat = 0;
 let currentBeat: number | null = null;
 
-let timerId: ReturnType<typeof setInterval> | null = null;
+let stopTimer: (() => void) | null = null;
 const timeouts = new Set<ReturnType<typeof setTimeout>>();
 
 const SCHEDULER_INTERVAL_MS = 25;
@@ -167,8 +168,8 @@ export function regenerateStickControlPattern() {
 }
 
 function stopInterval() {
-  if (timerId !== null) clearInterval(timerId);
-  timerId = null;
+  stopTimer?.();
+  stopTimer = null;
   for (const t of timeouts) clearTimeout(t);
   timeouts.clear();
 }
@@ -229,7 +230,7 @@ function beginScheduling() {
   let nextTime = ctx.currentTime + 0.06;
   let stopRequested = false;
 
-  timerId = setInterval(() => {
+  stopTimer = setSteadyInterval(() => {
     while (!stopRequested && nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
       const bpm = Math.max(1, settings.bpm);
       const beatDuration = 60 / bpm;
@@ -345,9 +346,9 @@ function beginScheduling() {
         }
       }
     }
-    if (stopRequested && timerId !== null) {
-      clearInterval(timerId);
-      timerId = null;
+    if (stopRequested && stopTimer !== null) {
+      stopTimer();
+      stopTimer = null;
     }
   }, SCHEDULER_INTERVAL_MS);
 }

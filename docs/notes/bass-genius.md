@@ -513,3 +513,10 @@ now the shared `components/notation/Score.tsx` and `ScoreEditor.tsx`, which Scor
 Notes use too. `bassgenius/TranscriptionEditor.tsx` is a wrapper with the same props. A
 transcription with no `clef` is `bass8` (written an octave up), so nothing changed here. See
 `score-writer.md`.
+
+
+**Now part of Rhythm Section (2026-11-16):** Bass Genius and the Drum Generator became one tool,
+`/rhythm-section` (`/bass-genius` redirects there; `?tab=players` opens Bass players). The Play tab,
+bass players, the walking line and the swing drummer are its swing styles; settings still live under
+`jam-practice-bass-genius`. `lib/bassGeniusEngine.ts` was replaced by `lib/rhythmSectionEngine.ts`.
+See `rhythm-section.md`.

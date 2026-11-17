@@ -15,6 +15,8 @@ function PaneLoading() {
   );
 }
 
+const RhythmSectionPane = dynamic(() => import("@/components/RhythmSection"), { loading: PaneLoading });
+
 /** href -> that tool's own component, lazily imported. A hand-written mapping, not derived from
     `NAV_LINKS` automatically — `next/dynamic`'s `import()` needs a static, literal path for
     webpack/Next's bundler to code-split correctly, so it can't be built from a variable the way
@@ -33,6 +35,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   "/guess-the-progression": dynamic(() => import("@/components/GuessTheProgression"), {
     loading: PaneLoading,
   }),
+  "/find-the-root": dynamic(() => import("@/components/FindTheRoot"), { loading: PaneLoading }),
   "/practice-timer": dynamic(() => import("@/components/PracticeTimer"), { loading: PaneLoading }),
   "/lessons": dynamic(() => import("@/components/lessons/LessonsPage"), { loading: PaneLoading }),
   "/shed-log": dynamic(() => import("@/components/practicelog/GatedPracticeLog"), { loading: PaneLoading }),
@@ -47,12 +50,14 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   "/slow-downer": dynamic(() => import("@/components/SlowDowner"), { loading: PaneLoading }),
   "/chord-charts": dynamic(() => import("@/components/library/LibraryHub").then((m) => m.ChartsPane), { loading: PaneLoading }),
   "/tunes": dynamic(() => import("@/components/library/LibraryHub").then((m) => m.LibraryPane), { loading: PaneLoading }),
-  "/bass-genius": dynamic(() => import("@/components/BassGenius"), { loading: PaneLoading }),
+  "/rhythm-section": RhythmSectionPane,
+  // Old panes saved with Bass Genius or the Drum Generator open show Rhythm Section.
+  "/bass-genius": RhythmSectionPane,
+  "/drum-generator": RhythmSectionPane,
   "/recorder": dynamic(() => import("@/components/Recorder"), { loading: PaneLoading }),
   "/random-sticking-warmup": dynamic(() => import("@/components/StickControl"), {
     loading: PaneLoading,
   }),
-  "/drum-generator": dynamic(() => import("@/components/DrumGenerator"), { loading: PaneLoading }),
   "/syncopation": dynamic(() => import("@/components/Syncopation"), { loading: PaneLoading }),
   "/time-test": dynamic(() => import("@/components/TimeTest"), { loading: PaneLoading }),
   "/community": dynamic(() => import("@/components/Community"), { loading: PaneLoading }),

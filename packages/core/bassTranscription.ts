@@ -624,5 +624,5 @@ export function readImportFile(text: string): ImportedFile {
     const list = Array.isArray(f.transcriptions) ? f.transcriptions : [];
     return { kind: "player", name: str(player.name, 120) || "Imported player", description: str(player.description), transcriptions: list.map(cleanTranscription) };
   }
-  throw new Error("That isn't a Bass Genius transcription or player file.");
+  throw new Error("That isn't a bass transcription or bass player file.");
 }

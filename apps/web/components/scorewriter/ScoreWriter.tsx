@@ -63,7 +63,7 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
       const data = raw.format === FILE_FORMAT ? raw.score : raw.transcription ?? raw;
       await make(cleanScore(data));
     } catch {
-      setError("That file isn't a score exported from Score Writer or Bass Genius.");
+      setError("That file isn't a score exported from Score Writer or Rhythm Section's bass players.");
     }
   }
 

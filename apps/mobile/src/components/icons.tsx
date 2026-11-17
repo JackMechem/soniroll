@@ -120,7 +120,7 @@ export function HeartIcon({ color, size = 18, filled }: IconProps & { filled?: b
 export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/jam-practice': ShuffleIcon,
   '/note-trainer': NoteIcon,
-  '/bass-genius': BassIcon,
+  '/rhythm-section': BassIcon,
   '/scale-trainer': ScaleIcon,
   '/interval-trainer': IntervalIcon,
   '/guess-the-interval': EarIcon,
@@ -138,7 +138,6 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/tunes': MusicNoteIcon,
   '/recorder': RecordIcon,
   '/random-sticking-warmup': DrumIcon,
-  '/drum-generator': DrumIcon,
   '/syncopation': DrumIcon,
   '/community': UsersIcon,
 };

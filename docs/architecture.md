@@ -28,8 +28,8 @@ Every tool works without an account.
   copy so it works offline.
 - **Things with their own tables:** the chord-chart library (one row per song, bars separate),
   Community posts, profiles and follows, recordings, tune songs and uploaded files (Convex file
-  storage, 100 MB per account), setlists, tunes and files shared by link, routines, Lessons (students, lessons, items, hand-ins, bookings), Bass Genius
-  players and transcriptions, feedback, admin roles, site flags, usage counts.
+  storage, 100 MB per account), setlists, tunes and files shared by link, routines, Lessons (students, lessons, items, hand-ins, bookings), Rhythm Section
+  bass players and transcriptions, feedback, admin roles, site flags, usage counts.
 
 ## Audio
 

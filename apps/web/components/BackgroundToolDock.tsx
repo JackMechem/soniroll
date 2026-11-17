@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import { useSidebarShownWidth } from "@/components/Sidebar";
-import { NAV_LINKS, svgProps } from "@/components/tools";
+import { findToolLink, svgProps } from "@/components/tools";
 import {
   getMetricModServerSnapshot,
   getMetricModSnapshot,
@@ -19,6 +19,7 @@ import {
   subscribeMetronome,
 } from "@/lib/metronomeEngine";
 import { midiToNote } from "@/lib/noteRange";
+import { centsColor } from "@/lib/pitchTrack";
 import {
   getTunerServerSnapshot,
   getTunerSnapshot,
@@ -35,15 +36,6 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
-const IN_TUNE = "#22c55e";
-const CLOSE = "#f59e0b";
-const OFF = "#ef4444";
-
-function centsColor(cents: number) {
-  const abs = Math.abs(cents);
-  return abs <= 8 ? IN_TUNE : abs <= 25 ? CLOSE : OFF;
-}
-
 /** The card shell shared by every preview below — label/icon (from `NAV_LINKS`) link back to the
     tool, a close button (sibling of the `<Link>`, not nested inside it — a button inside an
     anchor is invalid HTML) stops it the same way its own Stop/Pause control would, and
@@ -57,7 +49,7 @@ function DockCard({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const link = NAV_LINKS.find((l) => l.href === href);
+  const link = findToolLink(href);
   const Icon = link?.icon;
   return (
     <div className="relative flex flex-col gap-2 rounded-2xl bg-surface p-3 shadow-lg">

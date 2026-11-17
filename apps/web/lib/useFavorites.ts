@@ -1,4 +1,6 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
+import { useMemo } from "react";
+import { currentToolHref } from "@jam-practice/core/navLinks";
 import { useSyncedSettings } from "./useSyncedSettings";
 
 const FAVORITES_KEY = "jam-practice-favorites";
@@ -17,11 +19,14 @@ const DEFAULT_FAVORITES = { hrefs: [] as string[] };
  */
 export function useFavorites() {
   const { isAuthenticated } = useConvexAuth();
-  const [{ hrefs }, updateFavorites] = useSyncedSettings(FAVORITES_KEY, DEFAULT_FAVORITES);
+  const [{ hrefs: stored }, updateFavorites] = useSyncedSettings(FAVORITES_KEY, DEFAULT_FAVORITES);
+  // A starred tool that was folded into another (Bass Genius, Drum Generator) stars the tool that
+  // replaced it.
+  const hrefs = useMemo(() => [...new Set(stored.map(currentToolHref))], [stored]);
 
   function toggleFavorite(href: string) {
     updateFavorites({
-      hrefs: hrefs.includes(href) ? hrefs.filter((h) => h !== href) : [...hrefs, href],
+      hrefs: hrefs.includes(href) ? stored.filter((h) => currentToolHref(h) !== href) : [...stored, href],
     });
   }
 

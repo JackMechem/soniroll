@@ -187,7 +187,7 @@ export default function PatternsDialog({
             )}
 
             {insights.suspectBars.length > 0 && (
-              <Card title="Bars that don't fit their chord symbol" hint="The line here doesn't sit on the written chord — often a chord symbol in the wrong bar. These patterns (and Bass Genius's matching) read the chords as written.">
+              <Card title="Bars that don't fit their chord symbol" hint="The line here doesn't sit on the written chord — often a chord symbol in the wrong bar. These patterns (and the bass's matching) read the chords as written.">
                 <p className="text-sm">{groupBars(insights.suspectBars, single)}</p>
               </Card>
             )}

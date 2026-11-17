@@ -1,4 +1,5 @@
 import { getAudioContext } from "@/lib/metronome";
+import { lookahead, setSteadyInterval } from "@/lib/steadyTimer";
 
 /** A click's level: 0 = muted, 3 = soft, 1 = normal, 2 = accent (each higher pitched than the last).
     Soft came later and got the next free number, so settings saved before it keep their meaning;
@@ -94,6 +95,10 @@ export type ClickEngine = {
 
 const SCHEDULER_INTERVAL_MS = 25;
 const LOOKAHEAD_SEC = 0.12;
+/** How far after the scheduler's first run the first click plays. */
+const START_LEAD_SEC = 0.06;
+/** If the first click is closer than this when the scheduler first runs, it starts later. */
+const MIN_LEAD_SEC = 0.02;
 
 export function scheduleClick(
   ctx: AudioContext,
@@ -166,10 +171,13 @@ export type ClickTrack = {
     at a time on that clock. The website uses Web Audio; the desktop app passes its native engine. */
 export type ClickOutput = {
   now: () => number;
-  play: (time: number, wave: OscillatorType, freq: number, gain: number, length: number) => void;
+  /** Returns the click's source when it can be cut short (so `stop` silences clicks queued ahead). */
+  play: (time: number, wave: OscillatorType, freq: number, gain: number, length: number) => { stop: (when?: number) => void } | void;
   /** Seconds between a click's scheduled time and it being heard (default 0), so the beat
       display can wait for it. */
   latency?: () => number;
+  /** Called once, with the time the first click plays, when the scheduler first runs. */
+  onStart?: (firstClickTime: number) => void;
 };
 
 /**
@@ -183,23 +191,38 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngine {
   if (ctx.state === "suspended") void ctx.resume();
   return runClickScheduler(tracks, {
     now: () => ctx.currentTime,
-    play: (time, wave, freq, gain, length) => {
-      scheduleClick(ctx, time, wave, freq, gain, length);
-    },
+    play: (time, wave, freq, gain, length) => scheduleClick(ctx, time, wave, freq, gain, length),
   });
 }
 
 /** `startClickEngine`'s scheduler, for any `ClickOutput`. */
 export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): ClickEngine {
-  const startAt = output.now() + 0.06;
+  let startAt = output.now() + START_LEAD_SEC;
   const state = tracks.map(() => ({ nextTime: startAt, beat: 0, sub: 0 }));
   const timeouts = new Set<ReturnType<typeof setTimeout>>();
+  // Clicks queued but not yet finished, so stopping can cut them off.
+  let queued: { source: { stop: (when?: number) => void }; start: number; end: number }[] = [];
+  let started = false;
 
-  const id = setInterval(() => {
+  const tick = () => {
+    const now = output.now();
+    if (!started) {
+      // Opening the mic or waking the audio device can hold things up long enough that the first
+      // click's time has already gone by when this first runs — a click scheduled in the past
+      // plays silently, so a 4-beat count-in was heard as 3. Start the grid from now instead.
+      started = true;
+      if (startAt < now + MIN_LEAD_SEC) {
+        startAt = now + START_LEAD_SEC;
+        for (const st of state) st.nextTime = startAt;
+      }
+      output.onStart?.(startAt);
+    }
+    queued = queued.filter((q) => q.end > now);
+    const horizon = now + lookahead(LOOKAHEAD_SEC);
     for (let i = 0; i < tracks.length; i++) {
       const { getSettings, onBeat, onSchedule } = tracks[i];
       const st = state[i];
-      while (st.nextTime < output.now() + LOOKAHEAD_SEC) {
+      while (st.nextTime < horizon) {
         const s = getSettings(st.beat, st.sub);
         if (st.beat >= s.beatsPerBar) st.beat = 0;
         if (st.sub >= s.subdivision) st.sub = 0;
@@ -216,7 +239,10 @@ export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): Cl
               ? (s.subAccents[st.beat * subSlots + (st.sub - 1)] ?? 1)
               : 0;
         const click = st.sub === 0 ? mainBeatClick(level, sound, vol) : subClick(level, sound, vol);
-        if (click) output.play(st.nextTime, sound.wave, click.freq, click.gain, click.length);
+        if (click) {
+          const source = output.play(st.nextTime, sound.wave, click.freq, click.gain, click.length);
+          if (source) queued.push({ source, start: st.nextTime, end: st.nextTime + click.length });
+        }
         onSchedule?.({ time: st.nextTime, beat: st.beat, sub: st.sub, level, settings: s });
 
         const shownBeat = st.beat;
@@ -237,13 +263,25 @@ export function runClickScheduler(tracks: ClickTrack[], output: ClickOutput): Cl
         }
       }
     }
-  }, SCHEDULER_INTERVAL_MS);
+  };
+  const stopTimer = setSteadyInterval(tick, SCHEDULER_INTERVAL_MS);
 
   return {
     stop: () => {
-      clearInterval(id);
+      stopTimer();
       for (const t of timeouts) clearTimeout(t);
       timeouts.clear();
+      // While the tab is hidden clicks are queued seconds ahead; don't let them play on.
+      const now = output.now();
+      for (const q of queued) {
+        if (q.start <= now) continue; // already sounding: let it ring out
+        try {
+          q.source.stop(now);
+        } catch {
+          // already stopped
+        }
+      }
+      queued = [];
     },
   };
 }

@@ -38,7 +38,7 @@ import { useFavorites } from "@/lib/useFavorites";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { usePracticeSessions } from "@/lib/usePracticeSessions";
 import { useSetlists } from "@/lib/useSetlists";
-import { useSiteSettings } from "@/lib/siteSettings";
+import { isToolHidden, useSiteSettings } from "@/lib/siteSettings";
 import { cardDef, resolveLayout, type CardSize, type DashboardItem } from "@/lib/dashboardLayout";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
@@ -161,7 +161,7 @@ export default function Home() {
     const feature = (cardDef(id) as { feature?: "shedLog" | "lessons" } | undefined)?.feature;
     return !feature || site[feature];
   };
-  const tools = TOOLS.filter((t) => !site.hiddenTools.includes(t.href));
+  const tools = TOOLS.filter((t) => !isToolHidden(site.hiddenTools, t.href));
   const favoriteTools = tools.filter((t) => favorites.includes(t.href));
   const pinned = favoriteTools.length ? favoriteTools : tools.filter((t) => STARTER_HREFS.includes(t.href));
   const canStar = isAuthenticated;

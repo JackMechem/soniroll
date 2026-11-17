@@ -234,7 +234,7 @@ export default function BassPlayersTab() {
                   type="button"
                   onClick={() => setPatterns({ transcriptionId: null })}
                   className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover"
-                  title={`What Bass Genius notices across all of ${player.name}'s transcriptions`}
+                  title={`Patterns across all of ${player.name}'s transcriptions`}
                 >
                   <WaveIcon className="h-4 w-4" /> Patterns
                 </button>
@@ -298,7 +298,7 @@ export default function BassPlayersTab() {
           )}
         </div>
         {items.length === 0 ? (
-          <p className="rounded-2xl bg-surface p-6 text-center text-sm text-muted">No transcriptions yet. Start one, or import a MusicXML (.musicxml, .mxl) or Bass Genius .json file.</p>
+          <p className="rounded-2xl bg-surface p-6 text-center text-sm text-muted">No transcriptions yet. Start one, or import a MusicXML (.musicxml, .mxl) or a bass transcription .json file.</p>
         ) : (
           <ul className="flex flex-col gap-1 rounded-2xl bg-surface p-2">
             {items.map((t) => (
@@ -320,7 +320,7 @@ export default function BassPlayersTab() {
                   type="button"
                   onClick={() => setPatterns({ transcriptionId: t.id })}
                   className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-muted hover:bg-background hover:text-foreground"
-                  title="What Bass Genius notices in this transcription"
+                  title="Patterns in this transcription"
                 >
                   <WaveIcon className="h-4 w-4" /> <span className="hidden sm:inline">Patterns</span>
                 </button>
@@ -342,7 +342,7 @@ export default function BassPlayersTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight">Bass players</h2>
-          <p className="text-sm text-muted">Transcribe the players you love. Bass Genius will learn to play like them from what you write here.</p>
+          <p className="text-sm text-muted">Transcribe the players you love. The bass in Rhythm Section learns to play like them from what you write here.</p>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => pickImport(null)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">

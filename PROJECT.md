@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.1 beta** (see versioning).
+**v0.10.4 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -152,6 +152,10 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - Tailwind `translate-*` and `hover:translate-*` on one element fight (both set
   `--tw-translate-y`); put centering on a wrapper.
 - The dev server reads `next.config.ts` only at startup (restart to see a new version number).
+- A tool's href lives on in saved data (Shed Log sessions, attachments, usage stats, favorites,
+  recents, hidden tools, split-screen panes). When tools are merged or renamed, add the old href to
+  `RETIRED_TOOL_HREFS` (`packages/core/navLinks.ts`), redirect it (`next.config.ts` and the desktop
+  router), and look tools up with `findToolLink`, not `NAV_LINKS.find`. Keep the old settings keys.
 
 **Mobile**
 - Color does **not** go through NativeWind classNames: `vars()` CSS variables never update on
@@ -204,6 +208,11 @@ Web (`apps/web`):
   become chips automatically. `optionsMode` holds a mode switch above the chips; `sidePanel`s
   (History, Struggles) are chips above the main display. The title must match the tool's
   `NAV_LINKS` label (icon and intro lookup).
+- Presets (`lib/toolPresets.ts`, `components/PresetsChip.tsx`) — every tool with options gets
+  them: `presets={toolPresets("<href-slug>", settings, update, [non-option fields])}` on
+  `ToolLayout`, or `<PresetsChip tool={…} />` in a tool's own `SettingsBar`, or
+  `<PresetsSection id tool />` in a `PanelSection` panel. Only option fields are saved/applied
+  (history, `…Stats`, `inputDeviceId` always left out). A new tool with options should opt in.
 - `packages/core/navLinks.ts` + `components/tools.tsx` — the tool list, categories, icons,
   `CATEGORY_COLORS`; the source for the sidebar, ⌘K palette and Help.
 - `lib/useSyncedSettings.ts` (returns `[settings, update, ready]`), `lib/useSyncedTunes.ts`,
@@ -211,8 +220,11 @@ Web (`apps/web`):
 - Meter/tempo: `lib/meterControls.ts`, `components/MeterFields.tsx`,
   `components/metronome/MetronomeOptions.tsx`, `StructureEditor`, `BeatIndicator`.
 - Audio: `lib/clickEngine.ts` (run simultaneous clicks as tracks of **one** `startClickEngine`),
+  `lib/steadyTimer.ts` (`setSteadyInterval` for any audio scheduler, so it keeps time in a background tab),
   `lib/tones.ts` (`playNote`, `playNotesTogether`, `prepare`), `lib/sampledTones.ts`,
-  `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`.
+  `lib/uprightBass.ts`, `lib/drumSounds.ts`, `lib/compSounds.ts`, `lib/iosAudio.ts`;
+  `lib/rhythmSectionEngine.ts` (bass, chords and drums on one clock — add a part there rather than
+  starting a second engine beside it).
 - Dialogs and inputs: `Select`, `SwitchRow`, `ConfirmDialog`, `PromptDialog`, `NumberField`,
   `ContextMenu`, `Flyout`, `LoadingSpinner`, `Hint`, `HelpButton`.
 - Library pages: `components/library/ui.tsx` (`Hero`, `KeyBadge`, `Panel`, cards),
@@ -257,11 +269,13 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Landing page, `/dashboard` routing, forgot password | `landing-and-password-reset.md`; newer shots/teaching section in `launch-admin-analytics.md` |
 | Page transitions, Metronome options, setting chips everywhere, Pomodoro editor | `web-ui-patterns.md` |
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
-| Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
-| Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
+| Find the Root (`/find-the-root`): rootless voicings, sing/play or pick the root; the theory table in `lib/rootlessVoicings.ts` (7♭9's four right roots, spelling) | `find-the-root.md` |
+| Rhythm Section (`/rhythm-section`, 2026-11-16: Bass Genius and the Drum Generator in one tool): the style decides the band, one engine/clock, style bass parts, old keys and hrefs kept | `rhythm-section.md` |
+| Bass Genius history (bass lines, players, transcriptions, comping, the swing drummer) — now Rhythm Section's bass | `bass-genius.md` |
+| Drum Generator history (styles, kit, notation) — now Rhythm Section's drums; Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |
 | Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
-| Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Bass Genius; clefs, key signatures, re-barring | `score-writer.md` |
+| Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Rhythm Section's bass players; clefs, key signatures, re-barring | `score-writer.md` |
 | Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
@@ -269,12 +283,13 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
+| Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
-| Metric modulation, Tuner, Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
+| Metric modulation, Tuner (and its takes: record, pitch graph, kept on this device), Note/Scale/Interval Trainer, Guess the Interval/Chord | `tools-trainers.md` |
 | Practice Timer | `tools-practice-timer.md` |
 | Chord Charts (parser, renderer, fonts, editor, transpose, `sheddex://` links) | `tools-chord-charts.md` |
 | Random Sticking Warmup | `tools-sticking-warmup.md` |
@@ -296,7 +311,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
   `/credits`.
 - **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
   native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
-  placeholder. Web-only so far: Bass Genius, Drum Generator, Syncopation, the Shed Log, Lessons and
+  placeholder. Web-only so far: Rhythm Section, Syncopation, the Shed Log, Lessons and
   Files / tune and file share links.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches

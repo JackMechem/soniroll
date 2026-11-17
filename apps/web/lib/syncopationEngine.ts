@@ -1,5 +1,6 @@
 import { getAudioContext } from "./metronome";
 import { playDrum } from "./drumSounds";
+import { setSteadyInterval } from "./steadyTimer";
 import type { DrumVoice } from "./drums";
 import { BAR_TICKS, BEATS_PER_BAR, barHits, TICKS_PER_BEAT, type Ostinato, type SyncopationBar } from "./syncopation";
 
@@ -108,19 +109,19 @@ export function startSyncopation(opts: SyncopationStart): SyncopationRun {
       endTimer = setTimeout(() => {
         if (!stopped) {
           stopped = true;
-          clearInterval(timer);
+          stopTimer();
           opts.onEnd();
         }
       }, Math.max(0, (timeOf(endBeat) - ctx.currentTime) * 1000 + 150));
     }
   };
-  const timer = setInterval(tick, TICK_MS);
+  const stopTimer = setSteadyInterval(tick, TICK_MS);
   tick();
 
   return {
     stop: () => {
       stopped = true;
-      clearInterval(timer);
+      stopTimer();
       if (endTimer) clearTimeout(endTimer);
     },
     setBpm: (next) => {

@@ -53,6 +53,23 @@
   }
 }
 
+/* The Tuner's colours for how far off a note is: in tune (within 8 cents), close (within 25) and
+   off. Fallback: fixed green, amber and red. Where the browser can, "off" is the theme's own danger
+   colour and the other two are it turned to amber and green (OKLCH), so they suit every theme. */
+:root {
+  --tune-in: #22c55e;
+  --tune-close: #f59e0b;
+  --tune-off: #ef4444;
+}
+@supports (color: oklch(from red l c h)) {
+  :root,
+  .dark {
+    --tune-off: var(--danger);
+    --tune-close: oklch(from var(--danger) max(l, 0.72) max(c, 0.12) calc(h + 50));
+    --tune-in: oklch(from var(--danger) max(l, 0.6) max(c, 0.12) calc(h + 125));
+  }
+}
+
 /* Key colours for the Tunes / Chord Charts pages: one hue per key, keys a fifth apart next to each
    other, taken from the theme's accent (like the category colours). */
 @supports (color: oklch(from red l c h)) {

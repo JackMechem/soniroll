@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckIcon, ChordChartIcon, NoteIcon, PlusIcon, RepeatIcon, SetlistIcon, NAV_LINKS } from "@/components/tools";
+import { CheckIcon, ChordChartIcon, NoteIcon, PlusIcon, RepeatIcon, SetlistIcon, findToolLink } from "@/components/tools";
 import {
   type PublicAttachment,
   type PublicRoutine,
@@ -21,7 +21,7 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 
 function Chip({ a }: { a: PublicAttachment }) {
-  const tool = a.kind === "tool" ? NAV_LINKS.find((l) => l.href === a.href) : undefined;
+  const tool = a.kind === "tool" ? findToolLink(a.href) : undefined;
   const Icon = tool?.icon ?? (a.kind === "setlist" ? SetlistIcon : a.kind === "chart" ? ChordChartIcon : NoteIcon);
   const inner = (
     <>

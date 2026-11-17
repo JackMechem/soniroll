@@ -83,3 +83,11 @@ to the overview above 4M visible samples). Status colours are the trainers' `GRA
 Not verified: a real mic and a real practice pad (by anyone but Jack), anything by ear, iOS
 Safari / Firefox AudioWorklet behaviour, Bluetooth headphones, signed-in history sync, long takes
 (memory: ~11 MB a minute of float samples, capped at 30 minutes), macOS/Windows desktop.
+
+## 2026-11-16 — moving the playhead (FB-18)
+
+The playhead is now always drawn on the waveform (lighter while stopped, where Play starts from),
+with a handle at the top. Dragging within 8 px of it scrubs (`Waveform`'s `scrub` state; seeks on
+release, `onScrub` keeps the time readout following); clicking or dragging the overview strip also
+moves it. Checked headless with a fake-mic take; not on a touch screen. The count-in bug (FB-19,
+3 clicks for 4) was the shared click scheduler, see `tools-jam-practice-and-metronome.md`.
