@@ -23,7 +23,7 @@ Jack's devices. Report honestly: what was checked, how, and what wasn't.
 Playwright's own Chromium doesn't run here, but Chromium from nix does:
 
 ```bash
-nix shell nixpkgs#chromium --command chromium --headless --no-sandbox --disable-gpu \
+nix shell nixpkgs#chromium --command chromium --headless --no-sandbox --disable-gpu --mute-audio \
   --remote-debugging-port=9222 about:blank &
 ```
 
@@ -50,7 +50,8 @@ await page.close();
 - **Signed in:** sign in through `/?auth=login` inside the same script (sessions don't survive
   between CDP connections). Use the **dev** deployment. Never write a password into a file; pass it
   in an environment variable. Remove test data afterwards and say so.
-- Audio can't be heard here. Say "not heard" rather than implying it sounds right.
+- Audio can't be heard here — and keep it that way: always pass `--mute-audio`, or the headless
+  browser plays through Jack's speakers. Say "not heard" rather than implying it sounds right.
 
 ## The mobile app
 
