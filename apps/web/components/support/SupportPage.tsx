@@ -31,10 +31,10 @@ export default function SupportPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
-      <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">
+      <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
         <span className="shrink-0" style={{ color: HEART }}>
-          <HeartIcon className="h-6 w-6 sm:h-7 sm:w-7" filled />
+          <HeartIcon className="h-5 w-5" filled />
         </span>
         Support soniroll
       </h1>

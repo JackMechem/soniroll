@@ -5,7 +5,7 @@ import { NoteValueIcon } from "@/components/MeterFields";
 import ContextMenu, { type MenuItem, type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
-import { PlayIcon, StopIcon } from "@/components/tools";
+import { ChevronRightIcon, PlayIcon, StopIcon } from "@/components/tools";
 import Score, { type ScoreHandle } from "@/components/notation/Score";
 import {
   CLEF_NAMES,
@@ -130,6 +130,8 @@ export default function ScoreEditor({
   const [cursor, setCursor] = useState<Cursor>({ measure: 0, note: initial.measures[0]?.notes.length ? initial.measures[0].notes.length - 1 : -1 });
   const [value, setValue] = useState<NoteValue>("q");
   const [dotted, setDotted] = useState(false);
+  // Phones: the less-used tools hide behind "More" so the palette stays two rows.
+  const [moreTools, setMoreTools] = useState(false);
   const [triplet, setTriplet] = useState(false);
   const [past, setPast] = useState<Transcription[]>([]);
   const [future, setFuture] = useState<Transcription[]>([]);
@@ -573,9 +575,11 @@ export default function ScoreEditor({
       <div ref={editorRef} tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
         {/* Palette */}
         <div className="sticky top-2 z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5">
-          {/* On phones the tools are one row that scrolls sideways, so the palette (which stays
-              stuck at the top) doesn't cover half the screen. */}
-          <div className="-mx-2.5 flex items-center gap-1.5 overflow-x-auto px-2.5 [mask-image:linear-gradient(to_right,black_88%,transparent)] [scrollbar-width:none] sm:mx-0 sm:[mask-image:none] sm:flex-wrap sm:overflow-visible sm:px-0">
+          {/* On phones the less-used tools (tie, ghost, chord, accidentals, octaves, redo) hide
+              behind "More", and Undo and More move up beside Play (CSS order), so the palette (which
+              stays stuck at the top) is two rows plus the note names and doesn't cover half the
+              screen. Undo always shows. */}
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             <div className="flex shrink-0 gap-0.5 rounded-md bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
               {(
                 [
@@ -600,22 +604,23 @@ export default function ScoreEditor({
               {loadingSound ? <LoadingSpinner size="sm" inline label="Loading sound" /> : playing ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
               {playing ? "Stop" : "Play"}
             </button>
-            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
+            <span className="mx-1 hidden h-6 w-px shrink-0 bg-foreground/10 sm:block" />
             {(["w", "h", "q", "8", "16"] as NoteValue[]).map((v) => (
-              <button key={v} type="button" onClick={() => pickValue(v)} className={btn(picked && selected ? selected.value === v : value === v)} title={`${NOTE_VALUE_NAMES[v]} (${Object.keys(VALUE_KEYS).find((k) => VALUE_KEYS[k] === v)})`} aria-label={NOTE_VALUE_NAMES[v]}>
+              <button key={v} type="button" onClick={() => pickValue(v)} className={`${btn(picked && selected ? selected.value === v : value === v)} max-sm:order-1`} title={`${NOTE_VALUE_NAMES[v]} (${Object.keys(VALUE_KEYS).find((k) => VALUE_KEYS[k] === v)})`} aria-label={NOTE_VALUE_NAMES[v]}>
                 <NoteValueIcon value={VALUE_ICON[v]} className="h-6 w-3" />
               </button>
             ))}
-            <button type="button" onClick={toggleDot} className={btn(picked && selected ? !!selected.dots : dotted)} title="Dotted (.)" aria-label="Dotted">
+            <button type="button" onClick={toggleDot} className={`${btn(picked && selected ? !!selected.dots : dotted)} max-sm:order-1`} title="Dotted (.)" aria-label="Dotted">
               <span className="text-xl leading-none">·</span>
             </button>
-            <button type="button" onClick={toggleTriplet} className={btn(picked && selected ? !!selected.triplet : triplet)} title="Triplet (T)">
+            <button type="button" onClick={toggleTriplet} className={`${btn(picked && selected ? !!selected.triplet : triplet)} max-sm:order-1`} title="Triplet (T)">
               3
             </button>
-            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
-            <button type="button" onClick={() => addNote(null)} className={btn()} title="Rest (0 or R)">
+            <span className="mx-1 hidden h-6 w-px shrink-0 bg-foreground/10 sm:block" />
+            <button type="button" onClick={() => addNote(null)} className={`${btn()} max-sm:order-1`} title="Rest (0 or R)">
               Rest
             </button>
+            <div className={`${moreTools ? "contents" : "hidden"} sm:contents max-sm:*:order-2`}>
             <button type="button" onClick={toggleTie} disabled={!selected?.pitch} className={btn(!!selected?.tie)} title="Tie to the next note (+)">
               Tie
             </button>
@@ -625,7 +630,7 @@ export default function ScoreEditor({
             <button type="button" onClick={addChordAtCursor} className={btn(!!chordEdit)} title="Add a chord symbol above the selected note (Ctrl+K)">
               + Chord
             </button>
-            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
+            <span className="mx-1 hidden h-6 w-px shrink-0 bg-foreground/10 sm:block" />
             <button type="button" onClick={() => setAlter(1)} disabled={!selected?.pitch} className={btn(selected?.pitch?.alter === 1)} title="Sharp (#)">
               ♯
             </button>
@@ -641,17 +646,27 @@ export default function ScoreEditor({
             <button type="button" onClick={() => transpose(-12)} disabled={!selected?.pitch} className={btn()} title="Octave down (Shift+↓)">
               8vb
             </button>
-            <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
+            </div>
+            <span className="mx-1 hidden h-6 w-px shrink-0 bg-foreground/10 sm:block" />
             <button type="button" onClick={undo} disabled={!past.length} className={btn()} title="Undo (Ctrl+Z)">
               Undo
             </button>
-            <button type="button" onClick={redo} disabled={!future.length} className={btn()} title="Redo (Ctrl+Shift+Z)">
+            <button type="button" onClick={redo} disabled={!future.length} className={`${btn()} max-sm:order-2 ${moreTools ? "" : "max-sm:hidden"}`} title="Redo (Ctrl+Shift+Z)">
               Redo
             </button>
+            <button
+              type="button"
+              onClick={() => setMoreTools((on) => !on)}
+              aria-expanded={moreTools}
+              className={`${btn(moreTools)} sm:hidden`}
+            >
+              {moreTools ? "Less" : "More"}
+              <ChevronRightIcon className={`h-3.5 w-3.5 ${moreTools ? "-rotate-90" : "rotate-90"}`} />
+            </button>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             {(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map((s) => (
-              <button key={s} type="button" onClick={() => addStep(s)} className={`${btn()} w-10 text-base`} title={`Add ${s} (${s})`}>
+              <button key={s} type="button" onClick={() => addStep(s)} className={`${btn()} w-9 text-base sm:w-10`} title={`Add ${s} (${s})`}>
                 {s}
               </button>
             ))}

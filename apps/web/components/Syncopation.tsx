@@ -6,7 +6,7 @@ import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
-import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
 import { PresetsSection } from "@/components/PresetsChip";
 import { toolPresets } from "@/lib/toolPresets";
 import SyncopationScore from "@/components/syncopation/SyncopationScore";
@@ -361,6 +361,7 @@ export default function Syncopation() {
             <SlidersIcon className="h-4 w-4" /> Options
           </button>
         </div>
+        <OptionsSummaryChip summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
         <p className="min-h-5 text-center text-sm text-muted" aria-live="polite">
           {status}
         </p>

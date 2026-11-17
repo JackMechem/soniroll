@@ -102,7 +102,12 @@ export default function LearningPath({
         </p>
       </div>
 
-      <ol ref={listRef} className="relative flex max-h-60 flex-col items-center gap-1 overflow-y-auto py-3">
+      {/* The trail scrolls inside itself, with no scrollbar: its top and bottom fade out instead
+          of cutting a node in half. */}
+      <ol
+        ref={listRef}
+        className="relative flex max-h-72 flex-col items-center gap-1 overflow-y-auto py-6 [mask-image:linear-gradient(to_bottom,transparent,black_3rem,black_calc(100%-3rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {levels.map((level, i) => {
           const passed = isPassed(progress, level.id);
           const unlocked = i <= current;

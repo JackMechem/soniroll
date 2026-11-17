@@ -175,7 +175,7 @@ export default function SharedTunePage({ id }: { id: string }) {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">{children}</main>;
+  return <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">{children}</main>;
 }
 
 type SharedTune = NonNullable<FunctionReturnType<typeof filesApi.getSharedTune>>["tune"];

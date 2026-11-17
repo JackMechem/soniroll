@@ -206,6 +206,16 @@ export default function RandomMetricModulation() {
   useToolActivity("/random-metric-modulation", running);
   const tap = useTapTempo(setBpm);
 
+  // What Start will do, in one line on the main display ("Tempo changes every 4 bars · 3:2, 2:3,
+  // 4:3…"),
+  // so the tool doesn't look like a plain metronome before it runs.
+  const pool = enabledRatios.length ? MODULATIONS.filter((m) => enabledRatios.includes(m.id)) : MODULATIONS;
+  const plan = `${
+    matchToRealignment
+      ? "Tempo changes once the tempos realign"
+      : `Tempo changes every ${minBarsPerModulation === 1 ? "bar" : `${minBarsPerModulation} bars`}`
+  } · ${pool.slice(0, 3).map((m) => shortRatio(m.label)).join(", ")}${pool.length > 3 ? "…" : ""}${returnToOriginal ? " · back to your tempo in between" : ""}`;
+
   function changeBeats(n: number) {
     updateSettings({ beatsPerBar: n, accents: defaultAccents(n, accents) });
   }
@@ -461,11 +471,10 @@ export default function RandomMetricModulation() {
           onCycleSub={cycleSub}
         />
 
-        {running && (
-          <p className="text-sm text-muted tabular-nums">
-            Bar {barsIntoInterval + 1} of {effectiveBars}
-          </p>
-        )}
+        <p className="text-sm text-muted tabular-nums">
+          {plan}
+          {running && <span className="block">Bar {barsIntoInterval + 1} of {effectiveBars}</span>}
+        </p>
 
         {running && nextPreview && (
           <div className="flex flex-col items-center gap-1 rounded-lg bg-surface px-6 py-3">

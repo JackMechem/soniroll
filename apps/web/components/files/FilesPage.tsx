@@ -253,11 +253,17 @@ export default function FilesPage() {
                   <>
                     <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
                     <span className="text-xs tabular-nums text-muted">{shown.length}</span>
+                    {/* Recordings have their own page (playback, takes per tune). */}
+                    {source === "recording" && (
+                      <Link href="/recordings" className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
+                        All recordings <ChevronRightIcon className="h-4 w-4" />
+                      </Link>
+                    )}
                     {shown.length > 0 && (
                       <button
                         type="button"
                         onClick={() => (selecting ? clearSelection() : setSelecting(true))}
-                        className="ml-auto inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden"
+                        className={`${source === "recording" ? "" : "ml-auto"} inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden`}
                       >
                         {selecting ? "Done" : "Select"}
                       </button>
@@ -414,11 +420,11 @@ function FilterChip({ active, onClick, label, count, small = false }: { active: 
       onClick={onClick}
       aria-pressed={active}
       className={`inline-flex items-center gap-1.5 rounded-md font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
-        active ? "bg-foreground text-background" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+        active ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {label}
-      {count != null && <span className={`text-xs tabular-nums ${active ? "text-background/70" : "text-muted"}`}>{count}</span>}
+      {count != null && <span className={`text-xs tabular-nums ${active ? "text-accent/80" : "text-muted"}`}>{count}</span>}
     </button>
   );
 }

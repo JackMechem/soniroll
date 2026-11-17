@@ -12,7 +12,8 @@ import RoutineTimePicker from "@/components/practicelog/RoutineTime";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import Subtasks from "@/components/practicelog/Subtasks";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
-import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon } from "@/components/tools";
+import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
   type DayRoutine,
   type RoutineTask,
@@ -39,7 +40,8 @@ import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 type Log = ReturnType<typeof usePracticeLog>;
 
 /** One routine on one day: its tasks to check off (with when each one is), Start (runs it on the
-    Practice Timer), what's attached, notes for the day, and the clips recorded for it that day. */
+    Practice Timer), what's attached, notes for the day, and the clips recorded for it that day.
+    On a day that's gone, there's nothing to start: Log time puts time on it instead. */
 export default function RoutineCard({
   date,
   item,
@@ -57,6 +59,10 @@ export default function RoutineCard({
   const { engine, startRoutine, runningTask } = useRoutineTimer();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [editingTime, setEditingTime] = useState(false);
+  const [logging, setLogging] = useState<{ target: LogTarget; minutes?: number } | null>(null);
+  const today = todayKey();
+  const past = date < today;
+  const logTask = (task: RoutineTask) => setLogging({ target: { kind: "routine", routineId: routine.id, taskId: task.id }, minutes: task.minutes || undefined });
   const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
   const { done, total } = progressOf(routine, occurrence);
   const complete = total > 0 && done === total;
@@ -132,8 +138,8 @@ export default function RoutineCard({
               )}
             </span>
             {skipped && <span className="font-semibold text-foreground">· Skipped</span>}
-            {!skipped && routineStatus(item, date, todayKey()) === "missed" && <span className="font-semibold text-red-500">· Missed</span>}
-            {routineStatus(item, date, todayKey()) === "partial" && <span className="font-semibold text-amber-600 dark:text-amber-400">· Partly done</span>}
+            {!skipped && routineStatus(item, date, today) === "missed" && <span className="text-muted">· Missed</span>}
+            {routineStatus(item, date, today) === "partial" && <span className="font-semibold text-amber-600 dark:text-amber-400">· Partly done</span>}
           </div>
         </div>
         <span
@@ -191,7 +197,17 @@ export default function RoutineCard({
         </div>
       ) : (
         !skipped &&
-        firstOpen && (
+        firstOpen &&
+        (past ? (
+          <button
+            type="button"
+            onClick={() => logTask(firstOpen)}
+            className="flex h-9 items-center justify-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+          >
+            <StopwatchIcon className="h-4 w-4" />
+            Log time
+          </button>
+        ) : (
           <button
             type="button"
             onClick={() => startRoutine(routine, date, done > 0 ? firstOpen.id : undefined, false, occurrence)}
@@ -200,7 +216,7 @@ export default function RoutineCard({
             <PlayIcon className="h-4 w-4" />
             {done > 0 ? `Continue from ${firstOpen.title || "the next task"}` : "Start routine"}
           </button>
-        )
+        ))
       )}
 
       {allTasks.length > 0 && (
@@ -269,7 +285,18 @@ export default function RoutineCard({
                     </div>
                   )}
                 </div>
-                {!skipped && task.minutes > 0 && !isNow && (
+                {!skipped && past && !checked && (
+                  <button
+                    type="button"
+                    onClick={() => logTask(task)}
+                    aria-label={`Log time on ${task.title || "this task"}`}
+                    title="Log time on this task"
+                    className="shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
+                  >
+                    <StopwatchIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {!skipped && !past && task.minutes > 0 && !isNow && (
                   <button
                     type="button"
                     onClick={() => startRoutine(routine, date, task.id, true, occurrence)}
@@ -308,7 +335,7 @@ export default function RoutineCard({
                 setNewTitle("");
               }
             }}
-            placeholder="Add a task to this routine, just for today"
+            placeholder={`Add a task to this routine, just for ${date === today ? "today" : formatShortDate(date)}`}
             className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none"
           />
         </div>
@@ -339,6 +366,7 @@ export default function RoutineCard({
         <RecordClip date={date} routineId={routine.id} routines={dayRoutines} compact />
       </AttachedNotes>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {logging && <LogTimeDialog date={date} log={log} initial={logging.target} initialMinutes={logging.minutes} onClose={() => setLogging(null)} />}
     </article>
   );
 }

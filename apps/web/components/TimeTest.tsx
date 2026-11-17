@@ -136,6 +136,8 @@ export default function TimeTest() {
 
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The Mic chip's popover (where Calibrate is), also opened from the "Calibrate first" note.
+  const [micOpen, setMicOpen] = useState(false);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [recStart, setRecStart] = useState(0);
   const [now, setNow] = useState(0);
@@ -382,7 +384,17 @@ export default function TimeTest() {
             </KeyHint>
           </div>
           {!calibrated && phase === "idle" && (
-            <p className="max-w-sm text-center text-xs text-muted">Calibrate first (Mic → Calibrate) so your setup&apos;s delay doesn&apos;t skew the results.</p>
+            <div className="flex max-w-sm flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center text-xs text-muted">
+              <span>Calibrate first so your setup&apos;s delay doesn&apos;t skew the results.</span>
+              <button
+                type="button"
+                onClick={() => setMicOpen(true)}
+                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+              >
+                <MicIcon className="h-3.5 w-3.5 text-muted" />
+                Calibrate…
+              </button>
+            </div>
           )}
           {error && <p className="max-w-sm text-center text-sm text-danger">{error}</p>}
         </div>
@@ -470,6 +482,8 @@ export default function TimeTest() {
               label="Mic"
               title="Mic and latency"
               wide
+              open={micOpen}
+              onOpenChange={setMicOpen}
               value={calibrated ? `${latencyMs.toFixed(1)} ms` : "Calibrate"}
               headerExtra={<HintsButton on={micHints} onToggle={() => setMicHints((on) => !on)} />}
             >

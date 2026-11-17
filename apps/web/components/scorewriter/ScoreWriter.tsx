@@ -101,7 +101,11 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
         </div>
       ) : scores.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
-          <p className="max-w-sm text-sm text-muted">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</p>
+          <p className="max-w-sm text-sm text-muted">
+            {/* Touch screens have no keyboard to type notes with. */}
+            <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</span>
+            <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap the note names (C to B) to add notes, or switch to Write and tap the staff.</span>
+          </p>
           <button type="button" onClick={() => void make()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             New score
           </button>

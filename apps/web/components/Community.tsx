@@ -164,6 +164,8 @@ export default function Community() {
     liked: likedIds?.length ?? 0,
   };
   const username = profile?.username || null;
+  // The empty Following feed shows the people to follow right there (not in the side column too).
+  const followingEmpty = isAuthenticated && !trimmed && feed === "following" && feedPosts?.length === 0;
 
   return (
     <PageShell wide fullWidth={false}>
@@ -255,7 +257,7 @@ export default function Community() {
                           type="button"
                           onClick={() => setKind(k.value)}
                           aria-pressed={kind === k.value}
-                          className={`h-8 shrink-0 rounded-md px-3 text-sm transition-colors ${kind === k.value ? "bg-foreground font-medium text-background" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                          className={`h-8 shrink-0 rounded-md px-3 text-sm transition-colors ${kind === k.value ? "bg-accent/15 font-medium text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
                         >
                           {k.label}
                         </button>
@@ -268,26 +270,29 @@ export default function Community() {
                 ) : feedPosts === undefined ? (
                   <Spinner />
                 ) : feedPosts.length === 0 ? (
-                  <EmptyCard>
-                    {feed === "following" ? (
-                      <div className="flex flex-col items-start gap-3">
-                        <span>
-                          {counts.following === 0
-                            ? "Follow people to see their posts here."
-                            : kind !== "all"
-                              ? "Nothing of that kind from people you follow yet."
-                              : "Nothing from people you follow yet."}
-                        </span>
-                        <button type="button" onClick={findPeople} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover">
-                          <SearchIcon className="h-4 w-4" /> Find people to follow
-                        </button>
-                      </div>
-                    ) : kind !== "all" ? (
-                      "Nothing of that kind yet."
-                    ) : (
-                      "Nobody's posted yet — be the first with New post."
-                    )}
-                  </EmptyCard>
+                  <>
+                    <EmptyCard>
+                      {feed === "following" ? (
+                        <div className="flex flex-col items-start gap-3">
+                          <span>
+                            {counts.following === 0
+                              ? "Follow people to see their posts here."
+                              : kind !== "all"
+                                ? "Nothing of that kind from people you follow yet."
+                                : "Nothing from people you follow yet."}
+                          </span>
+                          <button type="button" onClick={findPeople} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover">
+                            <SearchIcon className="h-4 w-4" /> Find people to follow
+                          </button>
+                        </div>
+                      ) : kind !== "all" ? (
+                        "Nothing of that kind yet."
+                      ) : (
+                        "Nobody's posted yet — be the first with New post."
+                      )}
+                    </EmptyCard>
+                    {followingEmpty && suggestions.length > 0 && <Suggestions people={suggestions} title="People posting lately" />}
+                  </>
                 ) : (
                   postList(feedPosts)
                 )}
@@ -300,11 +305,11 @@ export default function Community() {
             <aside className="hidden flex-col gap-4 xl:flex">
               <div className="sticky top-6 flex flex-col gap-4">
                 <MeCard username={username} avatarUrl={profile?.avatarUrl ?? null} isPublic={!!profile?.isPublic} counts={counts} column />
-                {suggestions.length > 0 && <Suggestions people={suggestions} />}
+                {suggestions.length > 0 && !followingEmpty && <Suggestions people={suggestions} />}
               </div>
             </aside>
           )}
-          {isAuthenticated && suggestions.length > 0 && !trimmed && (
+          {isAuthenticated && suggestions.length > 0 && !trimmed && !followingEmpty && (
             <div className="xl:hidden">
               <Suggestions people={suggestions} />
             </div>
@@ -376,11 +381,11 @@ function MeCard({
   );
 }
 
-function Suggestions({ people }: { people: { username: string; avatarUrl: string | null; posts: number }[] }) {
+function Suggestions({ people, title = "People to follow" }: { people: { username: string; avatarUrl: string | null; posts: number }[]; title?: string }) {
   return (
     <div className="overflow-hidden rounded-lg bg-surface">
       <div className="flex h-11 items-center px-4">
-        <h2 className="text-sm font-medium">People to follow</h2>
+        <h2 className="text-sm font-medium">{title}</h2>
       </div>
       <div className="divide-y divide-foreground/10">
         {people.map((p) => (

@@ -7,6 +7,7 @@ import { filterNavLinks } from "@jam-practice/core/navLinks";
 import {
   BookIcon,
   CalendarIcon,
+  ChordChartIcon,
   EyeIcon,
   CATEGORY_COLORS,
   FeedbackIcon,
@@ -31,6 +32,8 @@ import {
   svgProps,
 } from "@/components/tools";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
+import { chartHref, searchCharts, useChartTitles } from "@/components/library/useChartSearch";
+import { displayKey } from "@jam-practice/core/setlistKeys";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { HELP_TOPICS } from "@/lib/helpContent";
 import {
@@ -115,6 +118,15 @@ function Palette({ onClose }: { onClose: () => void }) {
         )
         .slice(0, 6)
     : [];
+  // Your chord charts by title (a library can hold 1,500+), a few at most, after everything else
+  // (not when picking a tool for a split pane).
+  const charts = useChartTitles();
+  const chartItems: Item[] = (pendingSplit ? [] : searchCharts(charts, query, 5)).map((c) => ({
+    href: chartHref(c.id),
+    label: c.title,
+    detail: c.key ? `Chart in ${displayKey(c.key)}` : "Chart",
+    icon: ChordChartIcon,
+  }));
   // Pages and settings, only once something's typed (an empty search lists the tools).
   const pageItems = words.length
     ? filterNavLinks(
@@ -152,7 +164,8 @@ function Palette({ onClose }: { onClose: () => void }) {
   ]
     .map((g, i) => ({ g, i, score: words.length ? Math.max(...g.items.map((it) => nameScore(it.label))) : 0 }))
     .sort((a, b) => b.score - a.score || a.i - b.i)
-    .map(({ g }) => g);
+    .map(({ g }) => g)
+    .concat(chartItems.length ? [{ category: "Your chord charts", items: chartItems }] : []);
   // The order results actually render in — grouped by category, not `results`' own flat order
   // (`filterLinks` returns matches in `NAV_LINKS`' declaration order, which isn't the same as
   // `CATEGORIES`' display order `groupByCategory` reorders them into). `go`/`activeIndex`/arrow-key
@@ -227,7 +240,7 @@ function Palette({ onClose }: { onClose: () => void }) {
               setQuery(e.target.value);
               setActive(0);
             }}
-            placeholder={pendingSplit ? "Pick a tool to tile…" : "Search tools, tunes, pages and settings…"}
+            placeholder={pendingSplit ? "Pick a tool to tile…" : "Search tools, tunes, charts, pages and settings…"}
             aria-label="Search tools"
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
           />

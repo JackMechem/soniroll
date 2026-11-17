@@ -13,7 +13,7 @@ import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import Subtasks from "@/components/practicelog/Subtasks";
-import LogTimeDialog from "@/components/practicelog/LogTimeDialog";
+import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import DayTimer, { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { CheckIcon, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MicIcon, findToolLink, PencilIcon, PlayIcon, PlusIcon, RepeatIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
 import {
@@ -25,6 +25,7 @@ import {
   newSubtask,
   parseTime,
   formatLongDate,
+  formatShortDate,
   formatMinutesShort,
   formatTime,
   minutesOn,
@@ -63,6 +64,8 @@ export default function DayPanel({
   const minutes = minutesOn(data, date, watch.liveMs);
   const progress = dayProgress(data, date);
   const isToday = date === todayKey();
+  // A day that's gone: nothing to start, so logging time for it comes first.
+  const past = date < todayKey();
   const dayRoutines = items.map((i) => ({ id: i.routine.id, name: i.routine.name || "Untitled routine" }));
   const dayRecordings = recordings?.filter((r) => r.logDate === date) ?? [];
   const loose = dayRecordings.filter((r) => !r.routineId || !items.some((i) => i.routine.id === r.routineId));
@@ -112,6 +115,12 @@ export default function DayPanel({
     </DaySection>
   );
 
+  const logTimeSection = (
+    <DaySection icon={<StopwatchIcon className="h-4 w-4" />} title="Log time">
+      <LogTimeCard date={date} log={log} minutes={minutes} onMore={() => setLogging(true)} />
+    </DaySection>
+  );
+
   return (
     <section className={`flex flex-col gap-5 ${wide ? "mx-auto w-full max-w-6xl" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -144,6 +153,8 @@ export default function DayPanel({
       </div>
 
       {progressSection}
+
+      {past && logTimeSection}
 
       <div className={wide ? "grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8" : "contents"}>
       <div className={wide ? "flex min-w-0 flex-col gap-6" : "contents"}>
@@ -203,9 +214,7 @@ export default function DayPanel({
         </DaySection>
       )}
 
-      <DaySection icon={<StopwatchIcon className="h-4 w-4" />} title="Log time">
-        <LogTimeCard date={date} log={log} minutes={minutes} onMore={() => setLogging(true)} />
-      </DaySection>
+      {!past && logTimeSection}
 
       <DaySection icon={<PencilIcon className="h-4 w-4" />} title="Notes">
         <div className="flex flex-col gap-3 rounded-lg bg-surface p-4">
@@ -255,6 +264,9 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
   const tasks = log.data.days[date]?.tasks ?? [];
   const { engine, startDayTasks, runningTask } = useRoutineTimer();
   const running = runningTask("day", date);
+  // A day that's gone: its tasks get time logged, not timed.
+  const past = date < todayKey();
+  const [logging, setLogging] = useState<{ target: LogTarget; minutes?: number } | null>(null);
   const [title, setTitle] = useState("");
   const [editing, setEditing] = useState<{ task: DayTask; isNew: boolean } | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -280,7 +292,8 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
       count={tasks.length ? `${tasks.filter((t) => t.done).length}/${tasks.length}` : undefined}
       action={
         open.length > 1 &&
-        !running && (
+        !running &&
+        !past && (
           <button type="button" onClick={() => startDayTasks(date, tasks)} className="flex h-7 items-center gap-1 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover">
             <PlayIcon className="h-3.5 w-3.5" /> Start all
           </button>
@@ -340,8 +353,19 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                 {isNow && engine ? (
                   <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[11px] font-medium text-accent-foreground">{engine.paused ? "Paused" : "Timing"}</span>
                 ) : (
-                  t.minutes > 0 &&
-                  !t.done && (
+                  !t.done &&
+                  (past ? (
+                    <button
+                      type="button"
+                      onClick={() => setLogging({ target: { kind: "task", taskId: t.id }, minutes: t.minutes || undefined })}
+                      aria-label={`Log time on ${t.title}`}
+                      title="Log time on this task"
+                      className="shrink-0 rounded-md bg-foreground/[0.05] p-2 text-muted hover:text-foreground lg:border-transparent lg:p-1.5 lg:opacity-0 lg:hover:bg-surface-hover lg:group-hover:opacity-100"
+                    >
+                      <StopwatchIcon className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                  t.minutes > 0 && (
                     <button
                       type="button"
                       onClick={() => startDayTasks(date, tasks, t.id)}
@@ -352,6 +376,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       <PlayIcon className="h-3.5 w-3.5" />
                     </button>
                   )
+                  ))
                 )}
                 <button
                   type="button"
@@ -423,6 +448,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
         />
       )}
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {logging && <LogTimeDialog date={date} log={log} initial={logging.target} initialMinutes={logging.minutes} onClose={() => setLogging(null)} />}
     </div>
     </DaySection>
   );
@@ -443,7 +469,7 @@ function LogTimeCard({ date, log, minutes, onMore }: { date: string; log: Log; m
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-surface px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm text-muted">Practiced without the timer? Add it to the day.</p>
+        <p className="text-sm text-muted">{date < todayKey() ? `Practiced on ${formatShortDate(date)}? Add the time to that day.` : "Practiced without the timer? Add it to the day."}</p>
         <span className="shrink-0 text-sm font-medium tabular-nums">{minutes > 0 ? formatMinutesShort(Math.round(minutes)) : "0 min"}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">

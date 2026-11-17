@@ -12,6 +12,9 @@ import SwitchRow from "@/components/SwitchRow";
 import PomodoroEditor, { normalizePomodoro } from "@/components/PomodoroEditor";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { BIG_PRIMARY } from "@/components/MeterFields";
+import { RewardProvider } from "@/components/reward/Reward";
+import { useSiteSettings } from "@/lib/siteSettings";
 import { toolPresets } from "@/lib/toolPresets";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import {
@@ -89,6 +92,7 @@ export default function PracticeTimer() {
     DEFAULT_SOUND_SETTINGS,
   );
   const { soundEnabled, toneId, alarmMode, fullScreenAlert } = settings;
+  const [{ rewardChips }] = useSiteSettings();
   const [draft, setDraft] = useState<Draft | null>(null);
   // The session editor is the "New session" chip's popover; an Edit button on a saved session
   // opens it too. Closing it keeps an unsaved draft (Save / Cancel are what end it).
@@ -212,7 +216,9 @@ export default function PracticeTimer() {
       title="Practice Timer"
       presets={toolPresets("practice-timer", settings, updateSoundSettings)}
       options={
-        <>
+        // The same round option chips as the other tools (ToolLayout only gives them to tools on
+        // the Shed Log's Log button, and this one logs itself).
+        <OptionChipLook on={rewardChips}>
           <PanelsToggle ids={PANEL_IDS} />
 
           <CollapsiblePanel
@@ -385,7 +391,7 @@ export default function PracticeTimer() {
               hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a sound. Only applies while alarm mode is on."
             />
           </CollapsiblePanel>
-        </>
+        </OptionChipLook>
       }
     >
       {engineState ? (
@@ -458,24 +464,23 @@ export default function PracticeTimer() {
         </div>
       ) : (
         <div className="flex w-full flex-col items-center gap-3 text-center">
-          {/* The quick way: one plain countdown, nothing to build or save. */}
-          <div className="flex w-full max-w-sm items-center gap-2 rounded-lg bg-surface py-2 pl-3 pr-2 text-left">
-            <span className="min-w-0 flex-1 text-sm font-medium">Quick timer</span>
-            <NumberField
-              value={quickMinutes}
-              min={1}
-              max={180}
-              onChange={setQuickMinutes}
-              label="Quick timer minutes"
-              className="h-9 w-14 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
-            />
-            <span className="shrink-0 text-xs text-muted">min</span>
-            <button
-              type="button"
-              onClick={startQuickTimer}
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
-            >
-              <PlayIcon className="h-3.5 w-3.5" /> Start
+          {/* The quick way: one plain countdown, nothing to build or save. Its Start is the page's
+              main button, the same round pill as other tools'. */}
+          <div className="flex w-full max-w-sm flex-col items-center gap-4 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Quick timer</span>
+              <NumberField
+                value={quickMinutes}
+                min={1}
+                max={180}
+                onChange={setQuickMinutes}
+                label="Quick timer minutes"
+                className="h-9 w-14 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
+              />
+              <span className="text-sm text-muted">min</span>
+            </div>
+            <button type="button" onClick={startQuickTimer} className={BIG_PRIMARY}>
+              <PlayIcon className="h-4 w-4" /> Start
             </button>
           </div>
           {loading ? (
@@ -547,5 +552,15 @@ export default function PracticeTimer() {
         />
       )}
     </ToolLayout>
+  );
+}
+
+function OptionChipLook({ on, children }: { on: boolean; children: React.ReactNode }) {
+  return on ? (
+    <RewardProvider href="/practice-timer" color="var(--accent)">
+      {children}
+    </RewardProvider>
+  ) : (
+    <>{children}</>
   );
 }

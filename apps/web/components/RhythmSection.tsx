@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { PresetsSection } from "@/components/PresetsChip";
 import { toolPresets } from "@/lib/toolPresets";
@@ -14,7 +15,7 @@ import BassPlayersTab from "@/components/bassgenius/BassPlayersTab";
 import TranscriptionScore from "@/components/notation/Score";
 import PhraseDialog from "@/components/bassgenius/PhraseDialog";
 import DrumSettingsDialog from "@/components/bassgenius/DrumSettingsDialog";
-import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
 import { GrooveScore, KIT_PARTS, PART_DEFAULT, PartFader, partGain, useStyleVoices } from "@/components/rhythmsection/kit";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
@@ -74,8 +75,9 @@ import { useToolActivity } from "@/lib/toolTime";
 type BandSettings = {
   /** Play along, or manage bass players and their transcriptions. */
   tab: "play" | "players";
-  /** No chart (the drums on their own), one of your charts, or a progression typed in. */
-  source: "none" | "chart" | "typed";
+  /** No chart (the drums on their own), one of your charts, or a progression typed in. "" = never
+      picked: "A chart", or "No chart" for someone with no charts. */
+  source: "" | "none" | "chart" | "typed";
   chartId: string;
   /** The typed progression — chord names or roman numerals, "|" between bars. */
   typedText: string;
@@ -128,7 +130,7 @@ type BandSettings = {
 const BAND_KEY = "jam-practice-bass-genius";
 const BAND_DEFAULTS: BandSettings = {
   tab: "play",
-  source: "chart",
+  source: "",
   chartId: "",
   typedText: "ii7 | V7 | Imaj7 | %",
   typedKey: "C",
@@ -267,7 +269,7 @@ const PICKABLE = DRUM_STYLES.filter((s) => s.id !== "swing-comping");
  * with a bass part that fits it. Replaced Bass Genius and the Drum Generator.
  */
 export default function RhythmSection({ initialTab, initialPlay }: { initialTab?: string; initialPlay?: string }) {
-  const [settings, update] = useSyncedSettings(BAND_KEY, BAND_DEFAULTS);
+  const [settings, update, bandReady] = useSyncedSettings(BAND_KEY, BAND_DEFAULTS);
   const [grooveSettings, updateGroove] = useSyncedSettings(GROOVE_KEY, GROOVE_DEFAULTS);
   // One preset covers both stores: the band (bass, chords, mix — not the tune) and the groove.
   const presets = useMemo(() => {
@@ -278,7 +280,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
       if (patch.groove) updateGroove(patch.groove);
     });
   }, [settings, grooveSettings, update, updateGroove]);
-  const { tab, source, chartId, typedText, typedKey, typedMeter, player, playerMode, feel, touch, choruses, click, swing, volume, room, transposeKey, chordStyle, chordVolume, clickVolume, roomAmount, drumsVolume } = settings;
+  const { tab, source: storedSource, chartId, typedText, typedKey, typedMeter, player, playerMode, feel, touch, choruses, click, swing, volume, room, transposeKey, chordStyle, chordVolume, clickVolume, roomAmount, drumsVolume } = settings;
   const countIn = settings.countIn && grooveSettings.countIn;
   const drumConfig = useMemo(() => drumConfigOf(settings.drumConfig), [settings.drumConfig]);
   const [drumSettingsOpen, setDrumSettingsOpen] = useState(false);
@@ -295,9 +297,13 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
   }, [initialTab, initialPlay, update]);
 
   // ——— The tune ———
+  const { isLoading: authLoading } = useConvexAuth();
+  const { selectedSong, selectedSongLoading, allSongs, loading } = useChordChartsLibrary((storedSource === "chart" || storedSource === "") && chartId ? chartId : null);
+  // Never picked: "A chart", except for someone with no charts yet, who starts on "No chart"
+  // (decided once the settings and the library have loaded, so nothing jumps).
+  const source = storedSource || (bandReady && !authLoading && !loading && allSongs.length === 0 ? "none" : "chart");
   const typed = source === "typed";
   const noTune = source === "none";
-  const { selectedSong, selectedSongLoading, allSongs, loading } = useChordChartsLibrary(source === "chart" && chartId ? chartId : null);
   const meta = allSongs.find((s) => s.id === chartId) ?? null;
   const chartSong = useMemo(() => {
     if (!selectedSong || !transposeKey) return selectedSong;
@@ -1182,6 +1188,7 @@ export default function RhythmSection({ initialTab, initialPlay }: { initialTab?
           <SlidersIcon className="h-4 w-4" /> Options
         </button>
       </div>
+      <OptionsSummaryChip summary={`${bpm} BPM · ${style.name}`} onOpen={() => setOptionsOpen(true)} />
       <p className="min-h-5 text-center text-sm text-muted tabular-nums" aria-live="polite">
         {status}
       </p>

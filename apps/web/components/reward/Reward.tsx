@@ -19,9 +19,13 @@ import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
 type Reward = {
   color: string;
-  /** Whether a choice (an id like "sound:wood") has been tried — false shows a "New" badge. */
+  /** Whether a choice (an id like "sound:wood") gets a "New" badge: not tried yet, in a pool the
+      visitor has started exploring (see `poolStarted`). */
   isNew: (id: string) => boolean;
-  /** Marks a choice as tried; the first time, a burst of sparkles comes out of `el`. */
+  /** Whether a choice hasn't been tried (or seen as the current one) yet, badge or not. */
+  unseen: (id: string) => boolean;
+  /** Marks a choice as tried; the first time, and if it was showing "New", a burst of sparkles
+      comes out of `el`. */
   tried: (id: string, el?: Element | null) => void;
 };
 
@@ -31,6 +35,20 @@ export const useReward = () => useContext(RewardContext);
 const TRIED_KEY = "jam-practice-tried-options";
 const DEFAULT_TRIED: { tools: Record<string, string[]> } = { tools: {} };
 
+/** The pool a choice belongs to: "sound" for "sound:wood", "meter" for "meter:3/4". */
+function poolOf(id: string) {
+  const i = id.indexOf(":");
+  return i < 0 ? id : id.slice(0, i);
+}
+
+/** "New" badges only show in a pool once the visitor has tried something in it besides what they
+    started on (which is marked as tried just by being the current choice). So a first visit shows
+    none, instead of "New" on nearly every option. */
+function poolStarted(list: string[], id: string) {
+  const pool = poolOf(id);
+  return list.filter((x) => poolOf(x) === pool).length >= 2;
+}
+
 export function RewardProvider({ href, color, children }: { href: string; color: string; children: ReactNode }) {
   const [stored, update, ready] = useSyncedSettings(TRIED_KEY, DEFAULT_TRIED);
   const value = useMemo<Reward>(() => {
@@ -38,10 +56,11 @@ export function RewardProvider({ href, color, children }: { href: string; color:
     return {
       color,
       // Until the list has loaded, nothing is "New" (so badges don't flash on and off).
-      isNew: (id) => ready && !list.includes(id),
+      isNew: (id) => ready && !list.includes(id) && poolStarted(list, id),
+      unseen: (id) => ready && !list.includes(id),
       tried: (id, el) => {
         if (!ready || list.includes(id)) return;
-        if (el) burstAt(el, color);
+        if (el && poolStarted(list, id)) burstAt(el, color);
         update({ tools: { ...stored.tools, [href]: [...list, id].slice(-200) } });
       },
     };
@@ -96,7 +115,7 @@ export function RewardCard({
   const color = reward?.color ?? "var(--accent)";
   const fresh = !on && !!reward?.isNew(id);
   // What you're already using counts as tried (no dot, no burst).
-  const unseenCurrent = on && !!reward?.isNew(id);
+  const unseenCurrent = on && !!reward?.unseen(id);
   useEffect(() => {
     if (unseenCurrent) reward?.tried(id);
   }, [unseenCurrent, reward, id]);

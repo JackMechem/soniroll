@@ -14,6 +14,7 @@ import ShedLogTour, { tourSeen } from "@/components/practicelog/ShedLogTour";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
+import { RewardProvider } from "@/components/reward/Reward";
 import { DayView, MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
 import { HelpIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
@@ -167,8 +168,11 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         })();
   const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, (view === "day" ? 1 : 7) * n));
   const unit = view === "month" ? "month" : view === "day" ? "day" : "week";
+  // The app's mode switch in its lively look (the selected side lit with the accent gradient), as
+  // on the tools that log to the Shed Log.
   const viewSwitch = (
-    <div className="order-last w-full shrink-0 sm:order-none sm:w-56">
+    <div className="order-last w-full shrink-0 sm:order-none sm:w-auto">
+      <RewardProvider href="/shed-log" color="var(--accent)">
       <Segmented
         label="Calendar view"
         onPage
@@ -180,6 +184,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           { value: "day", label: "Day" },
         ]}
       />
+      </RewardProvider>
     </div>
   );
   const todayButton = selected !== today && (
@@ -208,13 +213,14 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           </h1>
           <TodaySummary data={data} today={today} onGoal={() => setGoalOpen(true)} />
         </div>
-        {/* Phones: one row under the title — the secondary actions as icons, New on the right. */}
+        {/* Phones: one row under the title — the secondary actions as an icon over a short label,
+            New on the right. From sm: icon and label side by side. */}
         <div className="flex w-full items-center gap-2 sm:w-auto sm:flex-wrap">
           <button type="button" onClick={() => setStatsOpen(true)} title="Stats" aria-label="Stats" className={SECONDARY}>
-            <ChartIcon className="h-4 w-4 text-muted" /> <span className="hidden sm:inline">Stats</span>
+            <ChartIcon className="h-4 w-4 text-muted" /> <span>Stats</span>
           </button>
           <button type="button" onClick={() => setSharingKind("year")} title="Share progress" aria-label="Share progress" className={SECONDARY}>
-            <ShareIcon className="h-4 w-4 text-muted" /> <span className="hidden sm:inline">Share</span>
+            <ShareIcon className="h-4 w-4 text-muted" /> <span>Share</span>
           </button>
           <Link
             href="/shed-log/routines"
@@ -222,7 +228,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
             aria-label={data.routines.length ? `Routines (${data.routines.length})` : "Routines"}
             className={SECONDARY}
           >
-            <ListIcon className="h-4 w-4 text-muted" /> <span className="hidden sm:inline">Routines</span>
+            <ListIcon className="h-4 w-4 text-muted" /> <span>Routines</span>
             {data.routines.length > 0 && <span className="hidden tabular-nums text-muted sm:inline">{data.routines.length}</span>}
           </Link>
           <button
@@ -240,9 +246,9 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 ],
               });
             }}
-            className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
+            className={SETTINGS}
           >
-            <SlidersIcon className="h-4 w-4" />
+            <SlidersIcon className="h-4 w-4 text-muted" /> <span className="sm:hidden">Settings</span>
           </button>
           <button
             type="button"
@@ -259,7 +265,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 ],
               });
             }}
-            className="ml-auto flex h-10 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:ml-0 sm:h-9"
+            className="flex h-12 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:h-9"
           >
             <PlusIcon className="h-4 w-4" /> New
           </button>
@@ -403,8 +409,13 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   );
 }
 
-/** Secondary header buttons: an icon-only 40px square on phones, icon and label from `sm`. */
-const SECONDARY = "flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] text-sm font-medium hover:bg-surface-hover sm:h-9 sm:w-auto sm:px-3";
+/** Secondary header buttons: on phones an icon over a short label, sharing the row; from `sm` the
+    icon and label side by side. */
+const SECONDARY =
+  "flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1 text-[11px] font-medium hover:bg-surface-hover sm:h-9 sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3 sm:text-sm";
+/** The settings button: the same on phones, an icon-only square from `sm`. */
+const SETTINGS =
+  "flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1 text-[11px] font-medium hover:bg-surface-hover sm:h-9 sm:w-9 sm:flex-none";
 
 /** One quiet line under the title: today's minutes against the goal (a thin bar; press it to
     change the goal) and the streak. */

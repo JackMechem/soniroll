@@ -162,7 +162,7 @@ export function LibraryTabs({ active }: { active: LibraryTab }) {
 
 export function LibraryPage({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-8">
       {children}
     </main>
   );
@@ -222,8 +222,7 @@ export function Hero({
           {leading}
           <div className={`min-w-0 ${titleExtra ? "max-sm:flex-1" : "flex-1"}`}>
             <div className="flex min-w-0 items-center gap-1">
-              {/* With tabs (Library's own pages), phones already show the name in the top bar. */}
-              <h1 className={`flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight ${tabs ? "max-lg:sr-only" : ""}`}>
+              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
                 {!leading && ShownIcon && (
                   <span className={`shrink-0 ${color ? "" : "text-muted"}`} style={color ? { color } : undefined}>
                     <ShownIcon className="h-5 w-5" />

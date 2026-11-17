@@ -803,6 +803,15 @@ export default function Sidebar() {
           <div className="mt-1 flex flex-col gap-1 border-t border-foreground/10 pt-2">
             <PracticeTimerWidget />
             {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
+            <SettingsRow
+              large
+              signedIn={isAuthenticated}
+              onOpenTheme={() => {
+                setMobileOpen(false);
+                setThemeOpen(true);
+              }}
+              onNavigate={() => setMobileOpen(false)}
+            />
             <AccountMenu large onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
@@ -935,6 +944,7 @@ export default function Sidebar() {
         >
           <PracticeTimerWidget collapsed={collapsed} />
           {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
+          <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
           {collapsed && (
             <div className="flex flex-col items-center gap-1 pb-1">
               <Flyout icon={DotsIcon} label="Sidebar options" align="start">
@@ -1065,6 +1075,66 @@ function MobileBarTitle({ path }: { path: string }) {
         {/* Only very long names use the short one: "Chords" alone would be unclear up here. */}
         <span className="truncate">{link.label.length > 24 && link.short ? link.short : link.label}</span>
       </span>
+    </div>
+  );
+}
+
+/** The sidebar footer's "Settings" row, always in view (the ⋮ menus have it too), with a palette
+    button at its end that goes straight to Appearance (theme, text size). Signed out there are no
+    account settings, so it's one "Theme and display" row opening the theme dialog. Collapsed: one
+    icon button. */
+function SettingsRow({
+  collapsed = false,
+  large = false,
+  signedIn,
+  onOpenTheme,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  large?: boolean;
+  signedIn: boolean;
+  onOpenTheme: () => void;
+  onNavigate?: () => void;
+}) {
+  const iconCls = navIconClass(large);
+  if (!signedIn) {
+    return collapsed ? (
+      <button type="button" onClick={onOpenTheme} aria-label="Theme and display" title="Theme and display" className={`${navIconButtonClass(false)} text-muted`}>
+        <PaletteIcon className="h-4 w-4" />
+      </button>
+    ) : (
+      <button type="button" onClick={onOpenTheme} className={navRowClass(false, large)}>
+        <span data-nav-icon className="flex shrink-0 text-muted">
+          <PaletteIcon className={iconCls} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left">Theme and display</span>
+      </button>
+    );
+  }
+  if (collapsed) {
+    return (
+      <Link href="/account?tab=general" onClick={onNavigate} aria-label="Settings" title="Settings" className={`${navIconButtonClass(false)} text-muted`}>
+        <GearIcon className="h-4 w-4" />
+      </Link>
+    );
+  }
+  return (
+    <div className="relative flex items-center">
+      <Link href="/account?tab=general" onClick={onNavigate} className={`${navRowClass(false, large)} ${large ? "pr-14" : "pr-10"}`}>
+        <span data-nav-icon className="flex shrink-0 text-muted">
+          <GearIcon className={iconCls} />
+        </span>
+        <span className="min-w-0 flex-1 truncate">Settings</span>
+      </Link>
+      <Link
+        href="/account?tab=appearance"
+        onClick={onNavigate}
+        aria-label="Theme and appearance"
+        title="Theme and appearance"
+        className={`absolute right-1 flex items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${large ? "h-10 w-10" : "h-7 w-7"}`}
+      >
+        <PaletteIcon className="h-4 w-4" />
+      </Link>
     </div>
   );
 }

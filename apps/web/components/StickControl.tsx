@@ -325,17 +325,19 @@ export default function StickControl() {
         </OptionsCard>
       }
     >
-      <div className="flex w-full flex-col items-center gap-4">
-        <div className="flex w-full max-w-5xl flex-col items-center gap-4">
-          <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
+      {/* On phones Start comes straight after the tempo and beats (CSS order), so it's on screen
+          without scrolling past the patterns; on bigger screens it sits under them. */}
+      <div className="flex w-full max-w-5xl flex-col items-center gap-4">
+        <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
 
-          <BeatIndicator
-            accents={accents}
-            currentBeat={running ? currentBeat : null}
-            onCycle={cycleBeat}
-          />
-        </div>
+        <BeatIndicator
+          accents={accents}
+          currentBeat={running ? currentBeat : null}
+          onCycle={cycleBeat}
+        />
+      </div>
 
+      <div className="flex w-full flex-col items-center gap-4 max-sm:order-1">
         {/* Deliberately NOT capped at max-w-5xl like the controls above: StickControlStave measures
             its own container's real width (via ResizeObserver) to decide how many bars fit on one
             row, and capping that width artificially forces it to wrap sooner than the screen
@@ -354,11 +356,11 @@ export default function StickControl() {
             />
           </div>
         )}
-
-        {phaseLabel && (
-          <p className="text-sm font-medium text-accent">{phaseLabel}</p>
-        )}
       </div>
+
+      {phaseLabel && (
+        <p className="-my-2 text-sm font-medium text-accent">{phaseLabel}</p>
+      )}
 
       <div className="flex items-center gap-3">
         <button

@@ -175,6 +175,15 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
   );
 }
 
+/** The nearest box that scrolls (the app's page area), to jump back to the top on a new topic. */
+function scrollParent(el: HTMLElement | null): HTMLElement | null {
+  for (let p = el?.parentElement; p; p = p.parentElement) {
+    const { overflowY } = getComputedStyle(p);
+    if ((overflowY === "auto" || overflowY === "scroll") && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;
+}
+
 export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
   const [selected, setSelected] = useState(() => topicById(initialTopic).id);
   // Phones show the list or a topic, not both; arriving with ?topic= opens it straight away.
@@ -192,14 +201,16 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
   function pick(id: string) {
     setSelected(id);
     setShowDetail(true);
-    detailRef.current?.scrollTo({ top: 0 });
-    window.scrollTo({ top: 0 });
+    // One scroll for the whole page: back to the top of it (the app's page box, not the window).
+    scrollParent(detailRef.current)?.scrollTo({ top: 0 });
   }
 
   const topic = topicById(selected);
 
   return (
-    <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:min-h-0 lg:px-8 lg:pb-0 lg:pt-8">
+    // The page scrolls as one; on desktop the topic list stays put beside the topic (sticky), and
+    // scrolls on its own only when it's taller than the window (without a second scrollbar).
+    <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:px-8 lg:pt-8">
       {/* Like the other pages' headers: icon, title, one line about it, a rule under it. */}
       <header className={`flex-col gap-0.5 border-b border-foreground/10 pb-4 ${showDetail ? "hidden lg:flex" : "flex"}`}>
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
@@ -208,17 +219,17 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
         </h1>
         <p className="text-sm text-muted">How every tool and page works.</p>
       </header>
-      <div className="grid gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className={`flex-col gap-3 lg:flex lg:min-h-0 ${showDetail ? "hidden" : "flex"}`}>
-          <div className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
+      <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
+        <aside className={`flex-col gap-3 lg:sticky lg:top-6 lg:flex lg:max-h-[calc(100dvh-7rem)] lg:min-h-0 ${showDetail ? "hidden" : "flex"}`}>
+          <div className="flex h-9 shrink-0 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
             <SearchIcon className="h-4 w-4 text-muted" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search help" aria-label="Search help" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
           </div>
-          <div className="lg:-mr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-2">
+          <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
             <TopicList query={query} selected={selected} onPick={pick} />
           </div>
         </aside>
-        <div ref={detailRef} className={`lg:block lg:min-h-0 lg:overflow-y-auto lg:pb-8 ${showDetail ? "block" : "hidden"}`}>
+        <div ref={detailRef} className={`min-w-0 lg:block ${showDetail ? "block" : "hidden"}`}>
           <TopicDetail key={topic.id} topic={topic} onPick={pick} onBack={() => setShowDetail(false)} />
         </div>
       </div>

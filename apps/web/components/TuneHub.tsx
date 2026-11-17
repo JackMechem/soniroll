@@ -20,7 +20,7 @@ import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
 import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
-import { ChordChartIcon, DotsVerticalIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
+import { ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { makeId, type Tune } from "@/lib/types";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
@@ -172,14 +172,15 @@ function Hub({
     else patch({ keys: [...tune.keys, { id: makeId(), value: `${KEY_NAMES[pc]}${suffix}`, enabled: true }] });
   }
 
-  // Charts whose title matches the tune's name — a one-tap link when none is linked.
+  // Charts whose title matches the tune's name — a one-tap link when none is linked, or when the
+  // linked one is gone from the library.
   const matches = useMemo(() => {
-    if (tune.chordChartId) return [];
+    if (chart || libraryLoading) return [];
     const want = titleKey(tune.name);
     const out: { song: LibrarySongMeta; playlist: string }[] = [];
     for (const s of allSongs) if (titleKey(s.title) === want) out.push({ song: s, playlist: s.playlistNames });
     return out.slice(0, 3);
-  }, [tune.chordChartId, tune.name, allSongs]);
+  }, [chart, libraryLoading, tune.name, allSongs]);
 
   const shownChart = useMemo(() => {
     if (!chart || !previewKey) return chart;
@@ -308,28 +309,42 @@ function Hub({
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="px-1 text-sm text-muted">
-                  {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : "No chord chart linked yet."}
+                  {tune.chordChartId
+                    ? "The linked chart isn't in your chord charts anymore."
+                    : allSongs.length === 0
+                      ? "No chord chart yet. Write one, or import charts (from iReal Pro, for example)."
+                      : "No chord chart linked yet."}
+                  {matches.length > 0 && ` ${matches.length === 1 ? "This one has" : "These have"} the same name:`}
                 </p>
                 {matches.map((m) => (
                   <div key={m.song.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] p-3">
                     <KeyBadge label={m.song.key} size="sm" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">{m.song.title}</div>
-                      <div className="truncate text-xs text-muted">{["Same name", m.playlist].filter(Boolean).join(" · ")}</div>
+                      <div className="truncate text-xs text-muted">{[m.song.composer, m.playlist].filter(Boolean).join(" · ") || "In your chord charts"}</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => patch({ chordChartId: m.song.id })}
-                      className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+                      className="inline-flex h-9 shrink-0 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
                     >
                       Link it
                     </button>
                   </div>
                 ))}
-                <div>
-                  <button type="button" onClick={() => setPicking(true)} className={btn}>
-                    <LinkIcon className="h-4 w-4" /> Link a chart
-                  </button>
+                {/* Ways forward: pick another chart, write one, or bring some in. */}
+                <div className="flex flex-wrap gap-2">
+                  {allSongs.length > 0 && (
+                    <button type="button" onClick={() => setPicking(true)} className={btn}>
+                      <LinkIcon className="h-4 w-4" /> {matches.length ? "Link a different chart" : "Link a chart"}
+                    </button>
+                  )}
+                  <Link href="/chord-charts/new" className={btn}>
+                    <PencilIcon className="h-4 w-4" /> Write a chart
+                  </Link>
+                  <Link href="/chord-charts/import" className={btn}>
+                    <DownloadIcon className="h-4 w-4" /> Import charts
+                  </Link>
                 </div>
               </div>
             )}
@@ -375,9 +390,10 @@ function Hub({
             <p className="text-xs text-muted">Jam Practice picks from the keys you mark here.</p>
           </section>
 
-          {/* Notes */}
+          {/* A quick note kept on the tune itself (stored as the tune's `notes`); Shed Notes below
+              are full notes, with links and search, in the Shed Notes tool. */}
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
-            <h2 className="text-sm font-medium">Notes</h2>
+            <h2 className="text-sm font-medium">Quick note</h2>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -391,12 +407,17 @@ function Hub({
               rows={7}
               className="w-full resize-y rounded-md bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
-            <p className="text-xs text-muted">Saved as you type.</p>
+            <p className="text-xs text-muted">
+              {isAuthenticated ? "A few lines kept with the tune, saved as you type. For longer notes, use Shed Notes." : "A few lines kept with the tune, saved as you type."}
+            </p>
           </section>
 
           {isAuthenticated && (
             <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
-              <h2 className="text-sm font-medium">Shed Notes</h2>
+              <div>
+                <h2 className="text-sm font-medium">Shed Notes</h2>
+                <p className="text-xs text-muted">Full notes on this tune, in your Shed Notes.</p>
+              </div>
               <AttachedNotes target={{ kind: "tune", tuneId: tune.id }} label={tune.name || "Untitled tune"} newTitle={tune.name || "Untitled tune"} />
             </section>
           )}

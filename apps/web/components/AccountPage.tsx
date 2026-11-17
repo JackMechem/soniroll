@@ -2,7 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAction, useQuery } from "convex/react";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
@@ -49,7 +49,7 @@ import {
 function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <main
-      className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12 ${
+      className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8 ${
         wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-md"
       }`}
     >
@@ -657,6 +657,15 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [view, setView] = useState<AccountView>(isView(initialTab) ? initialTab : "profile");
+  // A link to another section while you're here (the sidebar's Settings row and its palette
+  // button) only changes `?tab=`, so follow the address. (Picking a section below writes the same
+  // `?tab=` back, so that never fights it.)
+  const urlTab = useSearchParams()?.get("tab") ?? null;
+  const [seenTab, setSeenTab] = useState(urlTab);
+  if (urlTab !== seenTab) {
+    setSeenTab(urlTab);
+    if (isView(urlTab) && urlTab !== view) setView(urlTab);
+  }
 
   useEffect(() => {
     const url = new URL(window.location.href);

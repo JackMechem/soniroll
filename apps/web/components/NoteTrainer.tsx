@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from "@/lib/instruments";
+import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
@@ -347,6 +347,9 @@ export default function NoteTrainer() {
     : isCustom
       ? customRange
       : (INSTRUMENTS.find((i) => i.id === instrumentId)?.range ?? "");
+  // The chip names the instrument too ("Bass · E1–G4"), since the range alone doesn't say what
+  // it's set up for.
+  const rangeSummary = `${instrumentShortName(instrumentId)} · ${ignoreOctave ? "any octave" : rangeInput.replace("-", "–")}`;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -988,7 +991,7 @@ export default function NoteTrainer() {
       options={
         <>
           <PanelsToggle ids={PANEL_IDS} />
-          <CollapsiblePanel id="notes" title="Notes" icon={NoteIcon} summary={rangeInput}>
+          <CollapsiblePanel id="notes" title="Notes" icon={NoteIcon} summary={rangeSummary}>
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}

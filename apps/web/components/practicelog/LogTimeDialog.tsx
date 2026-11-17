@@ -7,18 +7,34 @@ import { formatLongDate, formatMinutesShort, routinesOn, tasksOf } from "@/lib/p
 import type { usePracticeLog } from "@/lib/usePracticeLog";
 
 type Log = ReturnType<typeof usePracticeLog>;
-type Target = { kind: "day" } | { kind: "routine"; routineId: string; taskId: string } | { kind: "task"; taskId: string };
+export type LogTarget = { kind: "day" } | { kind: "routine"; routineId: string; taskId: string } | { kind: "task"; taskId: string };
+
+type Target = LogTarget;
 
 const NUMBER = "h-9 w-16 rounded-md bg-foreground/[0.05] px-3 text-center text-sm font-medium tabular-nums outline-none focus:ring-2 focus:ring-accent/40";
 
 const QUICK = [5, 10, 15, 20, 30, 45, 60, 90];
 
 /** Log practice by hand — for when you forgot the timer: how long, and on the day as a whole or
-    on one of its tasks (which can be checked off at the same time). */
-export default function LogTimeDialog({ date, log, onClose }: { date: string; log: Log; onClose: () => void }) {
-  const [hours, setHours] = useState(0);
-  const [mins, setMins] = useState(15);
-  const [target, setTarget] = useState<Target>({ kind: "day" });
+    on one of its tasks (which can be checked off at the same time). `initial` picks what it's for
+    to begin with (a routine's next task, when opened from its card) and `initialMinutes` how long. */
+export default function LogTimeDialog({
+  date,
+  log,
+  initial,
+  initialMinutes = 15,
+  onClose,
+}: {
+  date: string;
+  log: Log;
+  initial?: LogTarget;
+  initialMinutes?: number;
+  onClose: () => void;
+}) {
+  const start = Math.max(1, Math.min(23 * 60 + 59, Math.round(initialMinutes)));
+  const [hours, setHours] = useState(Math.floor(start / 60));
+  const [mins, setMins] = useState(start % 60);
+  const [target, setTarget] = useState<Target>(initial ?? { kind: "day" });
   const [markDone, setMarkDone] = useState(true);
 
   useEffect(() => {

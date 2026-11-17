@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import TilingLayout from "@/components/TilingLayout";
+import { useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import PracticeLogGlobal from "@/components/practicelog/PracticeLogGlobal";
 import { prefersReducedMotion } from "@/lib/logoAnimation";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -74,8 +75,11 @@ function AnimatedPage({ children }: { children: React.ReactNode }) {
     return () => slide.cancel();
   }, [pathname]);
 
+  // Phones: room under the page for the floating bug-report button (bottom right), so the last
+  // row, a footer link or a tool's option chips can always sit clear of it.
+  const fabHidden = useFeedbackFabHidden();
   return (
-    <div ref={pageRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+    <div ref={pageRef} className={`flex min-w-0 flex-1 flex-col overflow-y-auto bg-background ${fabHidden ? "" : "max-lg:pb-[calc(env(safe-area-inset-bottom)+3.5rem)]"}`}>
       {children}
     </div>
   );

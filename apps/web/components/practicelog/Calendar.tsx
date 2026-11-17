@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { CheckIcon, CloseIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
-import RoutineIcon from "@/components/practicelog/RoutineIcon";
+import RoutineIcon, { routineIconElement } from "@/components/practicelog/RoutineIcon";
 import { hasFixedTimes } from "@/components/practicelog/RoutineTime";
 import WeekPopover, { type WeekTarget } from "@/components/practicelog/WeekPopover";
 import {
@@ -16,6 +16,7 @@ import {
   formatMinutesShort,
   formatTime,
   fromDateKey,
+  dayProgress,
   dayStatus,
   routineStatus,
   type DayStatus,
@@ -41,8 +42,9 @@ const colorOf = (i: number) => ROUTINE_COLORS[i % ROUTINE_COLORS.length];
 /** One-off tasks (not part of a routine) on the calendar. */
 const TASK_COLOR = "#64748b";
 
-/** A month: each day with its routines (a check once every task's done), minutes practiced and
-    how many clips were recorded. Tap a day to open it. */
+/** A month, made to read at a glance: each day's routines as small marks in their colours (filled
+    once done), the minutes practiced, and a green / yellow wash for days done / partly done. Today
+    and the days to come show the routines by name when the cell has room. Tap a day to open it. */
 export function MonthView({
   year,
   month,
@@ -81,19 +83,31 @@ export function MonthView({
           const goal = goalOn(data, key);
           const goalMet = goal > 0 && minutes >= goal;
           const heat = minutes > 0 ? 6 + 16 * Math.min(1, goal > 0 ? minutes / goal : 1) : 0;
-          // A past day: green with a check when everything was done, yellow with a dash when
-          // some of it was (or time was logged), a small red X by the date when nothing was (no
-          // red wash, so a run of missed days doesn't turn the month red).
+          const past = key < today;
+          const { done, total } = dayProgress(data, key);
+          // A past day: green with a check when everything was done, yellow with a dash when some
+          // of it was. A day where nothing was done only gets a quiet muted X by the date — a run
+          // of missed days shouldn't read as a wall of errors.
           const status = dayStatus(data, key, today);
           const tint = status && status !== "missed" ? status : null;
+          // Names only where they tell you something: today and the days to come (what's planned).
+          const named = !past && (items.length > 0 || tasks.length > 0);
+          const label = [
+            d.toDateString(),
+            items.length ? `${items.length} routine${items.length === 1 ? "" : "s"}` : "",
+            status ? STATUS_LABEL[status] : "",
+            minutes > 0 ? `${formatMinutesShort(Math.round(minutes))} practiced` : "",
+          ]
+            .filter(Boolean)
+            .join(", ");
           return (
             <button
               key={key}
               type="button"
               onClick={() => onSelect(key)}
-              aria-label={`${d.toDateString()}${items.length ? `, ${items.length} routine${items.length === 1 ? "" : "s"}` : ""}`}
+              aria-label={label}
               aria-pressed={isSel}
-              className={`relative flex min-h-[4.5rem] flex-col gap-1 border-foreground/10 p-1 text-left transition-colors sm:min-h-[7rem] sm:p-1.5 lg:min-h-0 lg:overflow-hidden ${i % 7 ? "border-l" : ""} ${i >= 7 ? "border-t" : ""} ${
+              className={`@container relative flex min-h-[4.5rem] flex-col gap-1 border-foreground/10 p-1 text-left transition-colors sm:min-h-[7rem] sm:p-1.5 lg:min-h-0 lg:overflow-hidden ${i % 7 ? "border-l" : ""} ${i >= 7 ? "border-t" : ""} ${
                 isSel ? "ring-2 ring-inset ring-accent" : "hover:bg-surface-hover/50"
               } ${inMonth ? "" : "opacity-60"}`}
               style={
@@ -115,36 +129,107 @@ export function MonthView({
                   </span>
                   {status && <StatusBadge status={status} />}
                 </span>
-                <span className="flex items-center gap-1 text-[10px] font-medium tabular-nums text-muted">
+                {/* Not on phones: there's no room beside the date (the wash and the mark say enough). */}
+                <span className="hidden items-center gap-1 text-[10px] font-medium tabular-nums text-muted sm:flex">
                   {goalMet && <StarIcon filled className="h-3.5 w-3.5 text-amber-400" />}
                   {clips > 0 && (
                     <span className="flex items-center gap-0.5" title={`${clips} recording${clips === 1 ? "" : "s"}`}>
                       <MicIcon className="h-3 w-3" />
-                      <span className="hidden sm:inline">{clips}</span>
+                      {clips}
                     </span>
                   )}
-                  {minutes > 0 && <span className="hidden whitespace-nowrap sm:inline">{formatMinutesShort(Math.round(minutes))}</span>}
                 </span>
               </div>
               {/* Phones: a dot per routine. */}
               <div className="flex flex-wrap gap-0.5 px-0.5 sm:hidden">
                 {items.map((it) => (
-                  <RoutineDot key={it.routine.id} item={it} status={routineStatus(it, key, today)} />
+                  <RoutineDot key={it.routine.id} item={it} past={past} />
                 ))}
-                {tasks.length > 0 && <span className="h-1.5 w-1.5 rounded-full" style={tasks.every((t) => t.done) ? { background: TASK_COLOR } : { boxShadow: `inset 0 0 0 1.5px ${TASK_COLOR}` }} />}
+                {tasks.length > 0 && <span className="h-1.5 w-1.5 rounded-full" style={tasks.every((t) => t.done) ? { background: TASK_COLOR } : { boxShadow: `inset 0 0 0 1.5px ${TASK_COLOR}`, opacity: past ? 0.45 : 1 }} />}
               </div>
-              <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
-                {items.slice(0, tasks.length ? 2 : 3).map((it) => (
-                  <RoutineChip key={it.routine.id} item={it} status={routineStatus(it, key, today)} />
-                ))}
-                {items.length > (tasks.length ? 2 : 3) && <span className="px-1 text-[10px] font-medium text-muted">+{items.length - (tasks.length ? 2 : 3)} more</span>}
-                {tasks.length > 0 && <TasksChip tasks={tasks} />}
+              <div className="hidden min-h-0 min-w-0 flex-1 flex-col gap-1 sm:flex">
+                {/* Wide cells: today and the days to come list their routines by name. */}
+                {named && (
+                  <div className="hidden min-w-0 flex-col gap-0.5 @min-[8.5rem]:flex">
+                    {items.slice(0, tasks.length ? 2 : 3).map((it) => (
+                      <RoutineChip key={it.routine.id} item={it} />
+                    ))}
+                    {items.length > (tasks.length ? 2 : 3) && <span className="px-1 text-[10px] font-medium text-muted">+{items.length - (tasks.length ? 2 : 3)} more</span>}
+                    {tasks.length > 0 && <TasksChip tasks={tasks} />}
+                  </div>
+                )}
+                {(items.length > 0 || tasks.length > 0) && (
+                  <div className={`flex min-w-0 flex-wrap gap-1 ${named ? "@min-[8.5rem]:hidden" : ""}`}>
+                    {items.map((it) => (
+                      <RoutineMark key={it.routine.id} item={it} past={past} />
+                    ))}
+                    {tasks.length > 0 && <TasksMark tasks={tasks} past={past} />}
+                  </div>
+                )}
+                {/* What the day came to: minutes practiced, or how much is ticked off. */}
+                {key <= today && (minutes > 0 || done > 0 || key === today) && (
+                  <div className="mt-auto flex min-w-0 flex-wrap items-baseline justify-between gap-x-1.5 leading-tight">
+                    {minutes > 0 && (
+                      <span className={`whitespace-nowrap text-xs font-semibold tabular-nums ${goalMet ? "text-green-700 dark:text-green-400" : ""}`}>{formatMinutesShort(Math.round(minutes))}</span>
+                    )}
+                    {total > 0 && done < total && (done > 0 || key === today) && (
+                      <span className="whitespace-nowrap text-[10px] font-medium tabular-nums text-muted" title={`${done} of ${total} tasks done`}>
+                        {done}/{total} done
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </button>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/** A routine in a month cell: its icon in a ring of its colour, filling as its tasks are done —
+    solid once they all are. Faded on a past day it wasn't finished. */
+function RoutineMark({ item, past }: { item: DayRoutine; past: boolean }) {
+  const { done, total } = progressOf(item.routine, item.occurrence);
+  const name = item.routine.name || "Untitled routine";
+  const skipped = !!item.occurrence.skipped;
+  if (total > 0 && done === total && !skipped)
+    return (
+      <span title={`${name} · done`} className="flex">
+        <RoutineIcon icon={item.routine.icon} color={item.routine.color} size="xs" />
+      </span>
+    );
+  const color = colorOf(item.routine.color);
+  const pct = total > 0 ? (done / total) * 100 : 0;
+  return (
+    <span
+      title={`${name}${skipped ? " · skipped" : total ? ` · ${done}/${total} done` : ""}`}
+      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+      style={{
+        color,
+        boxShadow: `inset 0 0 0 1.5px ${color}`,
+        background: pct > 0 ? `conic-gradient(color-mix(in srgb, ${color} 40%, transparent) ${pct}%, transparent 0)` : undefined,
+        opacity: skipped ? 0.3 : past ? 0.45 : 1,
+      }}
+    >
+      {routineIconElement(item.routine.icon, "h-2.5 w-2.5")}
+    </span>
+  );
+}
+
+/** The day's own tasks in a month cell: one grey mark, solid once they're all done. */
+function TasksMark({ tasks, past }: { tasks: { done: boolean }[]; past: boolean }) {
+  const done = tasks.filter((t) => t.done).length;
+  const all = done === tasks.length;
+  return (
+    <span
+      title={`${tasks.length === 1 ? "1 task" : `${tasks.length} tasks`} · ${done}/${tasks.length} done`}
+      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+      style={all ? { background: TASK_COLOR, color: "white" } : { boxShadow: `inset 0 0 0 1.5px ${TASK_COLOR}`, color: TASK_COLOR, opacity: past ? 0.45 : 1 }}
+    >
+      <CheckIcon className="h-2.5 w-2.5" />
+    </span>
   );
 }
 
@@ -163,14 +248,14 @@ function TasksChip({ tasks }: { tasks: { title: string; done: boolean }[] }) {
   );
 }
 
-function RoutineDot({ item, status = null }: { item: DayRoutine; status?: DayStatus | null }) {
+function RoutineDot({ item, past }: { item: DayRoutine; past: boolean }) {
   const { done, total } = progressOf(item.routine, item.occurrence);
-  const complete = total > 0 && done === total;
-  const color = status && status !== "done" ? STATUS_COLOR[status] : colorOf(item.routine.color);
+  const complete = total > 0 && done === total && !item.occurrence.skipped;
+  const color = colorOf(item.routine.color);
   return (
     <span
       className="h-1.5 w-1.5 rounded-full"
-      style={complete ? { background: color } : { boxShadow: `inset 0 0 0 1.5px ${color}`, opacity: item.occurrence.skipped ? 0.4 : 1 }}
+      style={complete ? { background: color } : { boxShadow: `inset 0 0 0 1.5px ${color}`, opacity: item.occurrence.skipped ? 0.3 : past ? 0.45 : 1 }}
     />
   );
 }
@@ -996,8 +1081,8 @@ function DayNumber({ dayKey, today, status }: { dayKey: string; today: string; s
   const isToday = dayKey === today;
   return (
     <span
-      className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium tabular-nums ${isToday ? "bg-accent text-accent-foreground" : status ? "text-white" : ""}`}
-      style={!isToday && status ? { background: STATUS_COLOR[status] } : undefined}
+      className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium tabular-nums ${isToday ? "bg-accent text-accent-foreground" : status === "missed" ? "text-muted" : status ? "text-white" : ""}`}
+      style={!isToday && status && status !== "missed" ? { background: STATUS_COLOR[status] } : undefined}
       title={status ? STATUS_LABEL[status] : undefined}
     >
       {fromDateKey(dayKey).getDate()}
@@ -1011,7 +1096,7 @@ function DayGoal({ dayKey, today, minutes, pct, status }: { dayKey: string; toda
   const met = pct >= 1;
   return (
     <span className="flex flex-col items-center gap-1">
-      <span className={`flex h-3 items-center gap-0.5 whitespace-nowrap text-[10px] tabular-nums ${status === "missed" && minutes === 0 ? "font-medium text-red-500" : met ? "font-medium text-green-600 dark:text-green-400" : "text-muted"}`}>
+      <span className={`flex h-3 items-center gap-0.5 whitespace-nowrap text-[10px] tabular-nums ${status === "missed" && minutes === 0 ? "text-muted" : met ? "font-medium text-green-600 dark:text-green-400" : "text-muted"}`}>
         {minutes > 0 ? (
           formatMinutesShort(Math.round(minutes))
         ) : status === "missed" ? (
@@ -1111,7 +1196,7 @@ function ProgressMark({ done, total, color, status }: { done: number; total: num
     );
   if (status === "missed")
     return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white" style={{ background: STATUS_COLOR.missed }}>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-muted">
         <CloseIcon className="h-3 w-3" />
       </span>
     );
@@ -1128,11 +1213,18 @@ function ProgressMark({ done, total, color, status }: { done: number; total: num
 const STATUS_COLOR: Record<DayStatus, string> = { done: "#22c55e", partial: "#eab308", missed: "#ef4444" };
 const STATUS_LABEL: Record<DayStatus, string> = { done: "Everything done", partial: "Partly done", missed: "Missed" };
 
-/** The round badge on a past day: a check, a dash or an X. */
+/** The mark by a past day's date: a green check, a yellow dash — or, when nothing was done, just a
+    small muted X (quiet on purpose: a run of missed days shouldn't fill the month with red). */
 function StatusBadge({ status }: { status: DayStatus }) {
+  if (status === "missed")
+    return (
+      <span className="flex h-4 w-4 items-center justify-center text-muted/70" title={STATUS_LABEL[status]}>
+        <CloseIcon className="h-2.5 w-2.5" />
+      </span>
+    );
   return (
     <span className="flex h-4 w-4 items-center justify-center rounded-full text-white" style={{ background: STATUS_COLOR[status] }} title={STATUS_LABEL[status]}>
-      {status === "done" ? <CheckIcon className="h-3 w-3" /> : status === "missed" ? <CloseIcon className="h-2.5 w-2.5" /> : <span className="h-0.5 w-2 rounded-full bg-white" />}
+      {status === "done" ? <CheckIcon className="h-3 w-3" /> : <span className="h-0.5 w-2 rounded-full bg-white" />}
     </span>
   );
 }

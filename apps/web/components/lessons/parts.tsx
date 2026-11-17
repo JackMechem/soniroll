@@ -153,9 +153,9 @@ export function KindFilter({ items, value, onChange }: { items: LessonItem[]; va
             type="button"
             onClick={() => onChange(f.id)}
             aria-pressed={value === f.id}
-            className={`h-8 rounded-md border px-2.5 text-xs font-medium transition-colors ${value === f.id ? "border-foreground/25 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:bg-surface-hover hover:text-foreground"}`}
+            className={`h-8 rounded-md px-2.5 text-xs font-medium transition-colors ${value === f.id ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
           >
-            {f.label} <span className="tabular-nums text-muted">{n}</span>
+            {f.label} <span className={`tabular-nums ${value === f.id ? "text-accent/80" : "text-muted"}`}>{n}</span>
           </button>
         );
       })}

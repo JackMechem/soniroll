@@ -9,8 +9,11 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { tuneSummary } from "@/components/library/shared";
+import { chartHref, searchCharts } from "@/components/library/useChartSearch";
+import { KeyBadge } from "@/components/library/ui";
 import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import {
+  CATEGORY_COLORS,
   ChevronRightIcon,
   ChordChartIcon,
   CloseIcon,
@@ -82,8 +85,10 @@ function urlAsksToEdit() {
   return new URLSearchParams(window.location.search).has("edit");
 }
 
-/** How many weeks the "Days practiced" grid shows at each size. */
-const GRID_WEEKS: Record<CardSize, number> = { small: 18, medium: 26, large: 40, full: 52 };
+/** How many weeks the "Days practiced" grid shows at each size. The squares fill the card's
+    width, so fewer weeks make them bigger: a small card shows a season (13 weeks) with squares big
+    enough to fill it beside Favorites instead of leaving its bottom half empty. */
+const GRID_WEEKS: Record<CardSize, number> = { small: 13, medium: 26, large: 40, full: 52 };
 
 /**
  * Home: the app's dashboard (the sidebar's "Dashboard"; the logo goes to the landing page).
@@ -169,20 +174,21 @@ export default function Home() {
   const canStar = isAuthenticated;
 
   // Where you left off: recent tools, then recent tunes and charts.
-  const recents: { key: string; icon: Icon; title: string; detail: string; href: string }[] = [];
+  // Tools in their category colour (like the sidebar); tunes and charts say what they are.
+  const recents: { key: string; icon: Icon; color: string; title: string; detail?: string; href: string }[] = [];
   for (const href of recentTools) {
     const tool = TOOL_BY_HREF.get(href);
-    if (tool) recents.push({ key: href, icon: tool.icon, title: tool.label, detail: "Tool", href });
+    if (tool) recents.push({ key: href, icon: tool.icon, color: CATEGORY_COLORS[tool.category], title: tool.label, href });
     if (recents.length >= 4) break;
   }
   for (const id of recentTunes.ids.slice(0, 2)) {
     const list = (["tunes", "learn"] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === id));
     const tune = list ? lists[list].tunes.find((t) => t.id === id) : undefined;
-    if (list && tune) recents.push({ key: `t:${id}`, icon: NoteIcon, title: tune.name, detail: "Tune", href: tuneHref(list, id) });
+    if (list && tune) recents.push({ key: `t:${id}`, icon: NoteIcon, color: "var(--accent)", title: tune.name, detail: "Tune", href: tuneHref(list, id) });
   }
   for (const id of recentCharts.ids.slice(0, 2)) {
     const meta = chartMeta.get(id);
-    if (meta) recents.push({ key: `c:${id}`, icon: ChordChartIcon, title: meta.title, detail: meta.key ? `Chart · ${meta.key}` : "Chart", href: `/chord-charts/view?id=${encodeURIComponent(id)}` });
+    if (meta) recents.push({ key: `c:${id}`, icon: ChordChartIcon, color: "var(--accent)", title: meta.title, detail: meta.key ? `Chart · ${meta.key}` : "Chart", href: chartHref(id) });
   }
 
   // Tune of the day: the same one all day, from Tunes I Know.
@@ -214,6 +220,8 @@ export default function Home() {
 
   const name = profile?.username || user?.name?.split(" ")[0];
   const toolMatches = q ? filterNavLinks(TOOLS, q) : [];
+  // Chord charts by title, a few at most (a library can hold 1,500+).
+  const chartMatches = useMemo(() => searchCharts(allSongs, q, 6), [allSongs, q]);
 
   /** One card's content, or null when it has nothing to show right now. */
   const renderCard = ({ id, size }: DashboardItem): ReactNode | null => {
@@ -243,9 +251,14 @@ export default function Home() {
               <div className="-mx-2 grid gap-px @xl:grid-cols-2">
                 {recents.slice(0, 8).map((r) => (
                   <Link key={r.key} href={r.href} className="flex min-w-0 items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
-                    <r.icon className="h-4 w-4 shrink-0 text-muted" />
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{r.title}</span>
-                    <span className="shrink-0 text-xs text-muted">{r.detail}</span>
+                    <span data-nav-icon className="flex shrink-0" style={{ color: r.color }}>
+                      <r.icon className="h-4 w-4" />
+                    </span>
+                    {/* The detail sits right after the name, so a lone row doesn't leave it floating mid-card. */}
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {r.title}
+                      {r.detail && <span className="ml-2 text-xs font-normal text-muted">{r.detail}</span>}
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -429,7 +442,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-10">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-8">
         {editing ? (
           <div className="sticky top-[calc(env(safe-area-inset-top)+4.5rem)] z-40 flex flex-wrap items-center gap-3 rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-3 pl-4 shadow-lg lg:top-4">
             <PencilIcon className="h-4 w-4 shrink-0 text-muted" />
@@ -447,12 +460,13 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-end md:justify-between">
+          <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-center md:justify-between">
+            {/* The title at the same height and size as every other page's; the date under it. */}
             <div className="min-w-0">
-              <p className="text-sm text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
-              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h1 className="truncate text-2xl font-semibold tracking-tight">
                 {isAuthenticated ? `${greeting(today)}${name ? `, ${name}` : ""}` : "Your practice space"}
               </h1>
+              <p className="mt-0.5 text-sm text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
             </div>
             <div className="flex w-full items-center gap-2 md:w-auto">
               <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-foreground/[0.05] pl-3 pr-1 focus-within:ring-2 focus-within:ring-accent/40 md:w-80 md:flex-none">
@@ -462,12 +476,14 @@ export default function Home() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => {
-                    // Enter opens the top result: the first tool, else the first tune.
+                    // Enter opens the top result: the first tool, else the first tune, else chart.
                     if (e.key !== "Enter") return;
-                    const first = toolMatches[0]?.href ?? (tuneMatches[0] ? tuneHref(tuneMatches[0].list, tuneMatches[0].tune.id) : null);
+                    const first =
+                      toolMatches[0]?.href ??
+                      (tuneMatches[0] ? tuneHref(tuneMatches[0].list, tuneMatches[0].tune.id) : chartMatches[0] ? chartHref(chartMatches[0].id) : null);
                     if (first) router.push(first);
                   }}
-                  placeholder="Search tools and tunes…"
+                  placeholder="Search tools, tunes and charts…"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
@@ -492,7 +508,7 @@ export default function Home() {
         )}
 
         {q ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             <Card title="Tools">
               {toolMatches.length ? <ToolRows items={toolMatches} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} /> : <Empty>No tools match “{q}”.</Empty>}
             </Card>
@@ -511,6 +527,23 @@ export default function Home() {
                 </div>
               ) : (
                 <Empty>No tunes match.</Empty>
+              )}
+            </Card>
+            <Card title="Your chord charts">
+              {chartMatches.length ? (
+                <div className="-mx-2 flex flex-col">
+                  {chartMatches.map((c) => (
+                    <Link key={c.id} href={chartHref(c.id)} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
+                      <KeyBadge label={c.key} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{c.title}</span>
+                        <span className="block truncate text-xs text-muted">{c.composer || "Chord chart"}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <Empty>No charts match.</Empty>
               )}
             </Card>
           </div>
@@ -650,7 +683,9 @@ function ToolTile({ item, favorited, canStar, onToggle }: { item: ToolLink; favo
         href={item.href}
         className="group flex h-full items-start gap-3 rounded-md bg-foreground/[0.05] p-3 transition-colors hover:bg-surface-hover/40 max-sm:items-center max-sm:py-2.5"
       >
-        <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-foreground max-sm:mt-0" />
+        <span data-nav-icon className="mt-0.5 flex shrink-0 max-sm:mt-0" style={{ color: CATEGORY_COLORS[item.category] }}>
+          <item.icon className="h-4 w-4" />
+        </span>
         <span className={`min-w-0 flex-1 ${canStar ? "pr-6" : ""}`}>
           <span className="block truncate text-sm font-medium">{item.label}</span>
           {item.description && <span className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted max-sm:hidden">{item.description}</span>}
@@ -675,12 +710,16 @@ function ToolRows({ items, favorites, canStar, isDesktop, onToggle }: { items: T
           <div key={item.href} className={`group flex items-center rounded-md ${disabled ? "opacity-50" : "hover:bg-surface-hover"}`}>
             {disabled ? (
               <span className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-sm" title="Desktop only">
-                <item.icon className="h-4 w-4 shrink-0 text-muted" />
+                <span data-nav-icon className="flex shrink-0" style={{ color: CATEGORY_COLORS[item.category] }}>
+                  <item.icon className="h-4 w-4" />
+                </span>
                 <span className="truncate">{item.label}</span>
               </span>
             ) : (
               <Link href={item.href} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-sm">
-                <item.icon className="h-4 w-4 shrink-0 text-muted" />
+                <span data-nav-icon className="flex shrink-0" style={{ color: CATEGORY_COLORS[item.category] }}>
+                  <item.icon className="h-4 w-4" />
+                </span>
                 <span className="truncate">{item.label}</span>
               </Link>
             )}

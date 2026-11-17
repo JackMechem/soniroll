@@ -111,6 +111,21 @@ export function LevelRow({
   );
 }
 
+/** Phones: a small chip under Play saying what's set (tempo, style…), since the options panel is
+    hidden in a sheet there. Tapping it opens the sheet, like Options. */
+export function OptionsSummaryChip({ summary, onOpen }: { summary: string; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Options: ${summary}`}
+      className="flex h-8 max-w-full items-center rounded-full bg-foreground/[0.05] px-3.5 text-xs font-medium tabular-nums text-muted transition-colors hover:bg-surface-hover hover:text-foreground lg:hidden"
+    >
+      <span className="truncate">{summary}</span>
+    </button>
+  );
+}
+
 /** Phones: the properties panel as a bottom sheet (Esc, the ×, or a tap above it closes it). */
 export function OptionsSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
