@@ -73,7 +73,7 @@ export default function ToolStats({ href }: { href: string }) {
             <>
               <StopwatchIcon className="h-4 w-4 shrink-0 text-muted" />
               <span className="whitespace-nowrap tabular-nums">{formatUse(todayMs)}</span>
-              <span className="whitespace-nowrap text-muted">{running ? "counting" : "today"}</span>
+              <span className="hidden whitespace-nowrap text-muted sm:inline">{running ? "counting" : "today"}</span>
               {running && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />}
               {s > 0 && (
                 <span className={`flex items-center gap-0.5 tabular-nums ${usedToday ? "text-orange-500" : "text-muted"}`} title={`${s}-day streak`}>

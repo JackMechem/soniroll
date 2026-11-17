@@ -30,7 +30,7 @@ function Bar({
   onClick?: () => void;
 }) {
   const rank = LEVEL_RANK[level] ?? 2;
-  const lit = level === 2 ? "bg-accent" : "bg-foreground";
+  const lit = level === 2 ? "bg-accent" : "bg-foreground/40";
   const className = `relative flex ${dim} shrink-0 flex-col-reverse gap-[3px] rounded-md bg-surface p-[3px] ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
     level === 0 ? "opacity-50" : ""
   } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;

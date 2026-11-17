@@ -47,14 +47,14 @@ export default function ShedLogGate({ children }: { children: React.ReactNode })
         <p className="flex items-center gap-2 text-sm font-medium text-muted">
           <CalendarIcon className="h-4 w-4" /> Shed Log
         </p>
-        <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Your practice, every day, adding up.</h1>
+        <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Your practice, every day, adding up.</h1>
         <p className="leading-relaxed text-muted">
           Plan routines that repeat, check off tasks, run them on a timer, and watch your streak, your daily goal and a year of green squares fill in. Everything you do in soniroll&apos;s tools counts.
         </p>
-        <ul className="grid gap-2 text-sm sm:grid-cols-2">
+        <ul className="grid items-start gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           {["Routines with tasks, subtasks and times", "A day timer and a daily goal", "Streaks, with confetti for the wins", "Recordings and notes on every day", "Progress cards to share", "Synced to your account, on every device"].map((t) => (
-            <li key={t} className="flex items-center gap-2">
-              <span className="h-1 w-1 shrink-0 rounded-full bg-muted" />
+            <li key={t} className="flex items-baseline gap-2">
+              <span className="h-1 w-1 shrink-0 translate-y-[-3px] rounded-full bg-muted" />
               {t}
             </li>
           ))}

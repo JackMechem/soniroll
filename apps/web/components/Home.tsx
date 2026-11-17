@@ -268,7 +268,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="flex h-9 items-center justify-center gap-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover">
+                  <Link href={tuneHref("tunes", tuneOfDay.tune.id)} className="flex h-9 items-center justify-center gap-1 self-start rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
                     Open the tune <ChevronRightIcon className="h-4 w-4" />
                   </Link>
                   <p className="text-xs text-muted">A new one from Tunes I Know every day.</p>

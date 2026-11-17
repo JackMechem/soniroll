@@ -110,7 +110,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         </div>
 
         <ul ref={listRef} role="listbox" className="max-h-96 overflow-y-auto p-1.5">
-          {ordered.length === 0 && <li className="px-4 py-3 text-muted">No tools found</li>}
+          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">No tools match that. Try another word, like “chords” or “tempo”.</li>}
           {(() => {
             let index = -1;
             return groups.map(({ category, items }) => (
@@ -152,9 +152,19 @@ function Palette({ onClose }: { onClose: () => void }) {
             ));
           })()}
         </ul>
+        {/* The keys, so they're discoverable. */}
+        <div className="flex items-center gap-4 border-t border-foreground/10 px-4 py-2 text-xs text-muted">
+          <span className="flex items-center gap-1.5"><Key>↑</Key><Key>↓</Key> to move</span>
+          <span className="flex items-center gap-1.5"><Key>Enter</Key> to open</span>
+          <span className="flex items-center gap-1.5"><Key>Esc</Key> to close</span>
+        </div>
       </div>
     </div>
   );
+}
+
+function Key({ children }: { children: React.ReactNode }) {
+  return <kbd className="rounded-sm bg-foreground/[0.08] px-1.5 py-0.5 font-sans text-[11px] text-foreground">{children}</kbd>;
 }
 
 export default function CommandPalette() {

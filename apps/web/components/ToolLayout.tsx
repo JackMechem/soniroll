@@ -167,7 +167,7 @@ function TopChips({ children }: { children: React.ReactNode }) {
 function PhoneBar({ href, presets, intro, help }: { href: string | null; presets?: ToolPresets; intro: React.ReactNode; help?: React.ReactNode }) {
   if (!href && !presets && !intro && !help) return null;
   return (
-    <div className="flex w-full flex-wrap items-center gap-2 text-left lg:hidden">
+    <div className="flex w-full items-center gap-2 text-left lg:hidden">
       {presets && <PresetsButton tool={presets} />}
       {href && <ToolStats href={href} />}
       <div className="ml-auto flex items-center gap-1">

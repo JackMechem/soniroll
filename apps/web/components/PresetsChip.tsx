@@ -46,8 +46,10 @@ export function PresetsButton({ tool }: { tool: ToolPresets }) {
         content: (
           <>
             <BookmarkIcon className="h-4 w-4 shrink-0 text-accent" />
-            <span className="text-muted">Presets</span>
-            <span className="truncate font-medium">{currentLabel(state)}</span>
+            {/* Phones: just the preset in use, or "Presets" while there's none to show. */}
+            <span className={state.active ? "hidden text-muted sm:inline" : "text-muted"}>Presets</span>
+            {(state.active || state.presets.length > 0) && <span className="truncate font-medium">{currentLabel(state)}</span>}
+            {!state.active && state.presets.length === 0 && <span className="hidden truncate font-medium sm:inline">{currentLabel(state)}</span>}
           </>
         ),
       }}
