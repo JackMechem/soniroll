@@ -28,6 +28,7 @@ import {
   ShieldIcon,
   NAV_LINKS,
   SearchIcon,
+  NoteIcon,
   findToolLink,
   StarIcon,
   filterLinks,
@@ -35,6 +36,7 @@ import {
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
+import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { navIconButtonClass, navIconClass, navRowClass } from "@/components/navRow";
 import { isToolHidden, useSiteSettings } from "@/lib/siteSettings";
 import { useConvexAuth } from "@convex-dev/auth/react";
@@ -347,6 +349,13 @@ function NavItems({
   const effectivePathname = activePaneHref ?? pathname;
   const [site] = useSiteSettings();
   const searching = query.trim().length > 0;
+  const tuneLists = useTuneLists();
+  const queryWords = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const tuneMatches = queryWords.length
+    ? (["tunes", "learn"] as TuneListId[])
+        .flatMap((list) => tuneLists[list].tunes.filter((t) => queryWords.every((w) => t.name.toLowerCase().includes(w))).map((t) => ({ href: tuneHref(list, t.id), label: t.name })))
+        .slice(0, 6)
+    : [];
   // Settings: tools you've hidden stay out of the lists (a search still finds them), and so do
   // Community and Lessons when they're turned off.
   const filtered = filterLinks(query).filter(
@@ -527,8 +536,8 @@ function NavItems({
 
   return (
     <nav onContextMenu={onNavContextMenu} className="flex h-full flex-col gap-4 overflow-y-auto [scrollbar-width:thin]">
-      {groups.length === 0 && communityItems.length === 0 && (
-        <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>No tools found</p>
+      {groups.length === 0 && communityItems.length === 0 && tuneMatches.length === 0 && (
+        <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>Nothing matches that</p>
       )}
       {(!searching || communityItems.length > 0) && (
         <div className="flex flex-col gap-px">
@@ -578,6 +587,20 @@ function NavItems({
           renderLink={renderLink}
         />
       ))}
+      {/* While searching, your tunes too (the same search as the / palette). */}
+      {tuneMatches.length > 0 && (
+        <div className="flex flex-col gap-px">
+          <SectionHeading large={large}>Your tunes</SectionHeading>
+          {tuneMatches.map((t) => (
+            <Link key={t.href} href={t.href} onClick={onNavigate} className={navRowClass(false, large)}>
+              <span data-nav-icon className="flex shrink-0 text-accent">
+                <NoteIcon className={navIconClass(large)} />
+              </span>
+              <span className="truncate">{t.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
       {contextMenu}
     </nav>
   );

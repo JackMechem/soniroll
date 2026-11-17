@@ -681,6 +681,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           <p className="text-sm text-muted">You&apos;re not signed in. Sign in to manage your profile, library and settings.</p>
           <SignInButtons />
         </div>
+        {/* Theme, text size and the rest work on this device without an account. */}
+        <AppearanceSettings />
       </PageShell>
     );
   }

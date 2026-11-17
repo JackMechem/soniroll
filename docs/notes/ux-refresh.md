@@ -42,3 +42,24 @@ Verified: `tsc`, `pnpm lint` (one old warning), screenshots signed out at 1440/3
 horizontal overflow. **Not verified:** anything signed in (no test account; creating one on dev was
 blocked) — the Shed Log, account, lessons, admin, Community feed were checked by reading code only.
 Hover states, audio. Help screenshots in `public/help/` still show the old look.
+
+## Follow-ups the same day
+
+- Jack's corrections after the first pass: thin borders everywhere replaced by fills; old option
+  chips restored; main buttons round; sidebar icons coloured; Favorites in an accent panel; presets
+  moved into the tool's top bar (`PresetsButton`); −10/−5/+5/+10 tempo buttons; Space in a number
+  field still starts/stops (`useSpaceToggle`); **Classic look** setting (`lib/display.ts`
+  `classicLook`, `.classic-look` in globals.css: bigger radius variables, tinted sidebar icon
+  tiles via `[data-nav-icon]`, bolder h1). The radius scale lives in a non-inline `@theme` block so
+  that class can change it.
+- Three rounds of context-free UI and UX reviews (separate agents, signed out). Scores: UI 6.5 →
+  6 → 7.5, UX 7 → 7 → 7. Fixed from them: word-by-word tool search with extra keywords
+  (`filterNavLinks` in packages/core), tunes in the / palette and the phone menu search, palette
+  groups ordered by best match, `/library` redirect, signed-out Theme and display (sidebar dialog
+  and /account), Log hidden when signed out, a phone tool row pinned under the app bar, muted
+  beat bars, "New" tags instead of unexplained dots, ♯/♭ on the tuner dial, number fields select
+  on focus. Left for Jack (reviewers kept raising them): short sidebar names, first-visit intros,
+  /8 meters keeping a quarter-note beat, the support card on a first visit, Rhythm Section's own
+  layout, Help's screenshots (need a signed-in retake), Learn mode's inner scroll.
+- The headless browser played the Metronome through Jack's speakers once; it now always runs with
+  `--mute-audio` (docs/guides/testing.md).

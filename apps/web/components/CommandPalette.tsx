@@ -38,7 +38,9 @@ function Palette({ onClose }: { onClose: () => void }) {
         .slice(0, 6)
     : [];
   const groups: { category: string; items: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] }[] = [
-    ...groupByCategory(results),
+    // Groups in the order of their best match, so "shed log" puts the Shed Log first rather than
+    // a tool that only mentions it.
+    ...groupByCategory(results).sort((x, y) => results.indexOf(x.items[0]) - results.indexOf(y.items[0])),
     ...(tuneItems.length ? [{ category: "Your tunes", items: tuneItems }] : []),
   ];
   // The order results actually render in — grouped by category, not `results`' own flat order

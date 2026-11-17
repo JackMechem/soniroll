@@ -38,6 +38,8 @@ export default function NumberField({
         if (/^\d+$/.test(next) && n >= min && n <= max) onChange(n);
       }}
       onBlur={() => setDraft(null)}
+      // Select it all on focus, so typing replaces the number instead of adding to it.
+      onFocus={(e) => e.currentTarget.select()}
       onKeyDown={(e) => {
         if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
         e.preventDefault();

@@ -234,7 +234,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Sign in or sign up", text: "From the bottom of the sidebar — email and password, or Google." },
       { title: "Pick a username", text: "It's how others find you in Community." },
-      { title: "Make it yours", text: "Choose from 30 themes in the sidebar's ⋮ menu → Theme." },
+      { title: "Make it yours", text: "Choose from 30 themes, a text size and the Classic look in the sidebar's ⋮ menu → Settings (Theme and display when you're signed out)." },
     ],
     features: ["Sync across devices", "A public profile (optional)", "Recordings saved to your account", "30 color themes"],
   },

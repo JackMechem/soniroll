@@ -101,7 +101,7 @@ export default function ToolStats({ href }: { href: string }) {
           ))}
         </div>
         <p className="text-xs text-muted">
-          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to ${ms.to} hours.` : ""} A day counts toward the streak after a
+          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
           minute of real use.
         </p>
         {history.length === 0 ? (
