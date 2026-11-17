@@ -11,7 +11,7 @@ import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
 import { bestStreak, historyOf, todayKey, toolStreak, totalMs, useToolUsage, usedMs, weekOf } from "@/lib/toolUsage";
 
 const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
-const CHIP = "flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2.5 text-sm transition-colors hover:bg-surface-hover";
+const CHIP = "flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover";
 
 /** "38 s" under a minute, then "12 min", "1 h 5 min". */
 function formatUse(ms: number) {
@@ -137,7 +137,7 @@ export default function ToolStats({ href }: { href: string }) {
           ref={logRef}
           type="button"
           onClick={log}
-          className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-accent px-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
+          className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
           title={isAuthenticated ? "Add today's time in this tool to your Shed Log" : "Sign in to log your time"}
         >
           <PlusIcon className="h-4 w-4" />

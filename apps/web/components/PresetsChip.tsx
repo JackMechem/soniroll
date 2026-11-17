@@ -11,9 +11,9 @@ import { BookmarkIcon, CheckIcon, DotsVerticalIcon, PencilIcon, PlusIcon, Repeat
 import { usePresets, type Preset, type ToolPresets } from "@/lib/toolPresets";
 
 // A tool's presets UI (the data side is `lib/toolPresets.ts`). A tool gets it one of three ways:
-// `ToolLayout`'s `presets` prop (a chip first in its chips), `PresetsChip` inside a tool's own
-// `SettingsBar` (Metronome, Time Test, the Recorder's metronome), or `PresetsSection` in a
-// properties panel (Bass Genius, Drum Generator, Syncopation).
+// `ToolLayout`'s `presets` prop (`PresetsButton` in the tool's top bar), `PresetsChip` inside a
+// tool's own `SettingsBar` (the Recorder's metronome), or `PresetsSection` in a properties panel
+// (Rhythm Section, Syncopation).
 
 type PresetsState = ReturnType<typeof usePresets>;
 
@@ -28,6 +28,30 @@ export function PresetsChip({ tool }: { tool: ToolPresets }) {
   const state = usePresets(tool);
   return (
     <SettingChip icon={BookmarkIcon} label="Presets" value={<span className="block max-w-[10rem] truncate">{currentLabel(state)}</span>}>
+      <PresetsList state={state} />
+    </SettingChip>
+  );
+}
+
+/** The tool's presets as a small button in its top bar (`ToolLayout`), always in view and out of
+    the way of the option chips: the bookmark, "Presets" and the one in use. */
+export function PresetsButton({ tool }: { tool: ToolPresets }) {
+  const state = usePresets(tool);
+  return (
+    <SettingChip
+      icon={BookmarkIcon}
+      label="Presets"
+      trigger={{
+        className: "flex h-8 max-w-[14rem] shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover",
+        content: (
+          <>
+            <BookmarkIcon className="h-4 w-4 shrink-0 text-accent" />
+            <span className="text-muted">Presets</span>
+            <span className="truncate font-medium">{currentLabel(state)}</span>
+          </>
+        ),
+      }}
+    >
       <PresetsList state={state} />
     </SettingChip>
   );

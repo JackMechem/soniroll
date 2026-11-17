@@ -455,6 +455,21 @@ export function TempoNoteConversionHint({
 }
 
 /** The big BPM number, its +/- steppers, the log-scaled quick-adjust slider and tap tempo. */
+/** A small round "+5" / "−10" button beside Tap tempo. */
+function JumpButton({ amount, onClick }: { amount: number; onClick: () => void }) {
+  const text = `${amount > 0 ? "+" : "−"}${Math.abs(amount)}`;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`${amount > 0 ? "Increase" : "Decrease"} tempo by ${Math.abs(amount)}`}
+      className="flex h-10 w-11 items-center justify-center rounded-full bg-foreground/[0.05] text-sm font-medium tabular-nums text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+    >
+      {text}
+    </button>
+  );
+}
+
 export function TempoHero({
   bpm,
   setBpm,
@@ -546,20 +561,29 @@ export function TempoHero({
             }
             className={`slider h-6 w-full cursor-pointer ${reward ? "slider-reward" : ""}`}
           />
-          <button
-            type="button"
-            onClick={() => {
-              onTap();
-              setTaps((n) => n + 1);
-            }}
-            title="Tap along a few times to set the tempo"
-            className="relative inline-flex h-10 items-center gap-2 self-center rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
-          >
-            <MetronomeIcon className="h-4 w-4 text-muted" />
-            Tap tempo
-            {/* A ring flashes out from the button on every tap. */}
-            {taps > 0 && <span key={taps} aria-hidden className="tap-ring pointer-events-none absolute inset-0 rounded-full opacity-0 ring-2 ring-accent" />}
-          </button>
+          {/* Bigger jumps either side of Tap tempo: −10, −5 … +5, +10. */}
+          <div className="flex items-center justify-center gap-1.5">
+            {[-10, -5].map((n) => (
+              <JumpButton key={n} amount={n} onClick={() => setBpm(Math.max(MIN_BPM, bpm + n))} />
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                onTap();
+                setTaps((n) => n + 1);
+              }}
+              title="Tap along a few times to set the tempo"
+              className="relative mx-1 inline-flex h-10 items-center gap-2 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+            >
+              <MetronomeIcon className="h-4 w-4 text-muted" />
+              Tap tempo
+              {/* A ring flashes out from the button on every tap. */}
+              {taps > 0 && <span key={taps} aria-hidden className="tap-ring pointer-events-none absolute inset-0 rounded-full opacity-0 ring-2 ring-accent" />}
+            </button>
+            {[5, 10].map((n) => (
+              <JumpButton key={n} amount={n} onClick={() => setBpm(Math.min(MAX_BPM, bpm + n))} />
+            ))}
+          </div>
         </div>
       )}
     </div>

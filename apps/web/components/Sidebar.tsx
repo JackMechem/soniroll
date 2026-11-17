@@ -280,17 +280,18 @@ function CategoryBlock({
   renderLink: (link: NavLink) => React.ReactNode;
   star?: boolean;
 }) {
-  // A light section: a small heading (click to fold it away), then the tools.
+  // A light section: a small heading (click to fold it away), then the tools. Favorites stands
+  // out: a soft accent panel with a stronger heading and an accent star.
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className={`flex flex-col gap-0.5 ${star ? "rounded-lg bg-accent/[0.08] p-1.5 pt-2" : ""}`}>
       <button
         type="button"
         onClick={onToggleCollapse}
         disabled={searching}
         aria-expanded={!isCollapsed}
-        className={`group flex w-full items-center gap-1.5 rounded-md px-2 pb-1 text-left font-medium text-muted transition-colors hover:text-foreground disabled:hover:text-muted ${large ? "text-sm" : "text-xs"}`}
+        className={`group flex w-full items-center gap-1.5 rounded-md px-2 pb-1 text-left transition-colors hover:text-foreground disabled:hover:text-muted ${star ? "font-semibold text-foreground" : "font-medium text-muted"} ${large ? "text-sm" : "text-xs"}`}
       >
-        {star && <StarIcon className="h-3 w-3" filled />}
+        {star && <StarIcon className="h-3.5 w-3.5 text-accent" filled />}
         <span className="flex-1">{title}</span>
         {isCollapsed && <span className="font-medium tabular-nums opacity-70">{items.length}</span>}
         {!searching && (
@@ -451,7 +452,7 @@ function NavItems({
           title={isFavorite ? "Remove from favorites" : "Add to favorites"}
           className={`absolute right-0.5 top-1/2 z-10 flex -translate-y-1/2 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-hover ${
             large ? "h-10 w-10" : "h-7 w-7"
-          } ${isFavorite ? "text-foreground/70" : "text-muted hover:text-foreground"} ${
+          } ${isFavorite ? "text-accent" : "text-muted hover:text-foreground"} ${
             // An already-favorited star always stays visible (so you can see what's starred at a
             // glance); an unfavorited one only shows on hover on desktop (no hover on mobile, so
             // it's always visible there too). focus-visible keeps it reachable by keyboard even

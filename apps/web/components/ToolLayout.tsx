@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import { NAV_LINKS } from "@/components/tools";
 import { RewardProvider } from "@/components/reward/Reward";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
-import { PresetsChip } from "@/components/PresetsChip";
+import { PresetsButton } from "@/components/PresetsChip";
 import type { ToolPresets } from "@/lib/toolPresets";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
@@ -54,8 +54,9 @@ export default function ToolLayout({
       decides which chips there are. */
   optionsMode?: React.ReactNode;
   options: React.ReactNode;
-  /** Saved presets of the tool's options: a "Presets" chip first in the chips. Build it with
-      `toolPresets(id, settings, update)` (`lib/toolPresets.ts`). Hidden whenever `options` is. */
+  /** Saved presets of the tool's options: a Presets button in the top bar (desktop) or the row at
+      the top of the page (phones). Build it with `toolPresets(id, settings, update)`
+      (`lib/toolPresets.ts`). */
   presets?: ToolPresets;
   children: React.ReactNode;
 }) {
@@ -83,9 +84,10 @@ export default function ToolLayout({
           {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
           {help && <div className="ml-1">{help}</div>}
           {titleExtra && <div className="ml-3 pr-4">{titleExtra}</div>}
-          {statsHref && (
-            <div className="ml-auto flex shrink-0">
-              <ToolStats href={statsHref} />
+          {(presets || statsHref) && (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {presets && <PresetsButton tool={presets} />}
+              {statsHref && <ToolStats href={statsHref} />}
             </div>
           )}
         </div>
@@ -105,20 +107,20 @@ export default function ToolLayout({
                 topAligned ? "justify-start" : "justify-center"
               }`}
             >
-              <PhoneBar href={statsHref} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
+              <PhoneBar href={statsHref} presets={presets} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
               {children}
             </section>
-            {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
+            {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
           </main>
         ) : (
           <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-24 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
-                <PhoneBar href={statsHref} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
+                <PhoneBar href={statsHref} presets={presets} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
                 {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
-                {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
+                {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
               </div>
             </section>
           </main>
@@ -138,21 +140,12 @@ export default function ToolLayout({
 
 /** A tool's options, as a row of setting chips under its main display (each `CollapsiblePanel` /
     `OptionSection` becomes a chip that opens a popover). Replaces the old hideable options column. */
-function OptionChips({
-  children,
-  mode,
-  presets,
-}: {
-  children: React.ReactNode;
-  mode?: React.ReactNode;
-  presets?: ToolPresets;
-}) {
+function OptionChips({ children, mode }: { children: React.ReactNode; mode?: React.ReactNode }) {
   return (
     <ChipsModeContext.Provider value={true}>
       <div className="flex w-full flex-col items-center gap-3 pt-2">
         {mode}
         <SettingsBar>
-          {presets && <PresetsChip tool={presets} />}
           {children}
         </SettingsBar>
       </div>
@@ -169,11 +162,13 @@ function TopChips({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Below `lg`, a small row at the top of the page: the tool's stats and Log button, and its ?. */
-function PhoneBar({ href, intro, help }: { href: string | null; intro: React.ReactNode; help?: React.ReactNode }) {
-  if (!href && !intro && !help) return null;
+/** Below `lg`, a small row at the top of the page: presets, the tool's stats and Log button, and
+    its ?. */
+function PhoneBar({ href, presets, intro, help }: { href: string | null; presets?: ToolPresets; intro: React.ReactNode; help?: React.ReactNode }) {
+  if (!href && !presets && !intro && !help) return null;
   return (
-    <div className="flex w-full items-center gap-2 text-left lg:hidden">
+    <div className="flex w-full flex-wrap items-center gap-2 text-left lg:hidden">
+      {presets && <PresetsButton tool={presets} />}
       {href && <ToolStats href={href} />}
       <div className="ml-auto flex items-center gap-1">
         {help}

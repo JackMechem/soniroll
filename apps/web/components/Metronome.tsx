@@ -53,7 +53,6 @@ import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
 import { toolPresets } from "@/lib/toolPresets";
-import { PresetsChip } from "@/components/PresetsChip";
 
 const DEFAULT_BPM = 100;
 
@@ -223,6 +222,7 @@ export default function Metronome() {
     <ToolLayout
       title="Metronome"
       options={null}
+      presets={toolPresets("metronome", settings, updateSettings)}
     >
       <div className="flex w-full flex-col items-center gap-4">
         <TempoHero
@@ -300,7 +300,6 @@ export default function Metronome() {
           </div>
         )}
         <SettingsBar>
-          <PresetsChip tool={toolPresets("metronome", settings, updateSettings)} />
           {useStructure ? (
             <SettingChip
               icon={MeterIcon}
