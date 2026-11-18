@@ -33,6 +33,15 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.7",
+    date: "2026-11-18",
+    title: "Piano chords in Rhythm Section",
+    changes: [
+      { kind: "improved", text: "Rhythm Section's chords play on the **piano** for now: the Rhodes is off until we have permission to use its recordings now that soniroll has paid plans. If you'd picked the Rhodes, you'll hear the piano." },
+      { kind: "new", text: "A storage plan can be **given as a gift** — it shows on Account → Storage plan with when it ends, and works just like a paid one." },
+    ],
+  },
+  {
     version: "0.10.6",
     date: "2026-11-17",
     title: "Storage plans, a new Recorder, and the desktop app",

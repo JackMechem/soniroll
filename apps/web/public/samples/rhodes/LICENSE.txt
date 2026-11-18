@@ -1,3 +1,0 @@
-jRhodes3d by Jeff Learman (1977 Rhodes Mark I Stage 73), https://github.com/sfzinstruments/jlearman.jRhodes3d
-Samples licensed CC BY-NC 4.0 (https://creativecommons.org/licenses/by-nc/4.0/). Converted from the mono FLAC set:
-layers 2-4, trimmed to 8 s with a fade, mono MP3. File names: <midi>_<layer>.mp3.

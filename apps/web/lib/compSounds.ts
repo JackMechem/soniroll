@@ -5,13 +5,13 @@ import { roomImpulse } from "@/lib/uprightBass";
 // one sample played louder or softer):
 //   - Piano: the Salamander Grand Piano (Alexander Holm, CC-BY 3.0), the velocity-layered set the
 //     Tone.js Piano project hosts — every minor third, layers 4 / 8 / 12 of 16.
-//   - Rhodes: jRhodes3d (Jeff Learman, CC BY-NC 4.0), a 1977 Rhodes Mark I Stage 73 — every 4th
-//     white key, layers 2 / 3 / 4 of 5, converted to mono mp3 and served from
-//     `public/samples/rhodes/` (`<midi>_<layer>.mp3`).
+//   - (The Rhodes, jRhodes3d by Jeff Learman, is CC BY-NC 4.0 — non-commercial only — so it was
+//     taken out on 2026-11-18 when soniroll started selling storage plans, until there's
+//     permission. Its samples and code are in git history before that date.)
 // Only the comping register is loaded (about A2–C6). Nearest sample, pitch-shifted; through a gentle
 // compressor and the same room as the bass.
 
-export type CompInstrument = "piano" | "rhodes";
+export type CompInstrument = "piano";
 
 type Sample = { midi: number; layer: number; url: string };
 
@@ -29,30 +29,13 @@ function pianoSamples(): Sample[] {
   return out;
 }
 
-const RHODES_FILES: [number, number[]][] = [
-  [45, [2, 3, 4]],
-  [50, [2, 3, 4]],
-  [55, [2, 3, 4]],
-  [59, [2, 3, 4]],
-  [62, [2, 3, 4]],
-  [65, [2, 3, 4]],
-  [71, [2, 4]],
-  [76, [2, 4]],
-  [81, [2, 4]],
-  [86, [2, 4]],
-];
-function rhodesSamples(): Sample[] {
-  return RHODES_FILES.flatMap(([midi, layers]) => layers.map((layer) => ({ midi, layer, url: `/samples/rhodes/${midi}_${layer}.mp3` })));
-}
-
-const SAMPLES: Record<CompInstrument, Sample[]> = { piano: pianoSamples(), rhodes: rhodesSamples() };
+const SAMPLES: Record<CompInstrument, Sample[]> = { piano: pianoSamples() };
 /** Which velocity (0–1) each layer stands for. */
 const LAYER_VELOCITY: Record<CompInstrument, Record<number, number>> = {
   piano: { 4: 0.3, 8: 0.55, 12: 0.8 },
-  rhodes: { 2: 0.3, 3: 0.55, 4: 0.8 },
 };
 /** Level trim so the two sit at the same loudness under the bass. */
-const TRIM: Record<CompInstrument, number> = { piano: 0.55, rhodes: 0.85 };
+const TRIM: Record<CompInstrument, number> = { piano: 0.55 };
 
 const buffers = new Map<string, AudioBuffer>();
 const loading = new Map<CompInstrument, Promise<void>>();
