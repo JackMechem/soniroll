@@ -12,12 +12,13 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { type GitHubIssue, type GitHubItem, issueByRef, recentCommits, recentIssues, recentPulls, repoBranches } from "@/lib/githubWork";
 import { type InboxRow, useInbox } from "@/components/admin/useInbox";
 import { LibraryPage } from "@/components/library/ui";
-import { BugIcon, CloseIcon, FeedbackIcon, FlagIcon, SearchIcon, ShieldIcon, SparkIcon, TrashIcon, UsersIcon } from "@/components/tools";
+import { BugIcon, CloudIcon, CloseIcon, FeedbackIcon, FlagIcon, SearchIcon, ShieldIcon, SparkIcon, TrashIcon, UsersIcon } from "@/components/tools";
 import { VERSION_LABEL } from "@/lib/version";
 import { useSiteStatus } from "@/lib/useSiteStatus";
 import Mayday from "@/components/admin/Mayday";
 import ChangelogAdmin from "@/components/admin/ChangelogAdmin";
 import Analytics from "@/components/admin/Analytics";
+import UserStorageDialog from "@/components/admin/UserStorage";
 
 type Tab = "overview" | "analytics" | "inbox" | "posts" | "users" | "changelog" | "mayday";
 const TABS: { id: Tab; label: string }[] = [
@@ -1071,6 +1072,7 @@ function Users() {
   const [q, setQ] = useState("");
   const [onlyAdmins, setOnlyAdmins] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; body: string; action: () => Promise<void> | void; confirmWord?: string; danger?: boolean } | null>(null);
+  const [storageFor, setStorageFor] = useState<{ id: Id<"users">; label: string } | null>(null);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
     return (rows ?? []).filter((u) => (!onlyAdmins || u.role) && (!t || `${u.username ?? ""} ${u.email ?? ""} ${u.name ?? ""}`.toLowerCase().includes(t)));
@@ -1137,6 +1139,14 @@ function Users() {
                 {u.email ?? "No email"} · joined {ago(u.joined)} · {u.posts} post{u.posts === 1 ? "" : "s"}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setStorageFor({ id: u.id, label: u.username ? `@${u.username}` : (u.email ?? "this account") })}
+              title="Their storage and plan; give them a plan"
+              className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
+            >
+              <CloudIcon className="h-3.5 w-3.5" /> Storage
+            </button>
             {!u.isMe && u.role !== "owner" && (owner || !u.role) && (
               <div className="flex shrink-0 flex-wrap gap-1.5">
                 {owner &&
@@ -1207,6 +1217,7 @@ function Users() {
         ))}
       </div>
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
+      {storageFor && <UserStorageDialog userId={storageFor.id} label={storageFor.label} onClose={() => setStorageFor(null)} />}
     </div>
   );
 }

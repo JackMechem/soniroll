@@ -5,6 +5,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { roleOf, staffMe, type Role } from "./lib/roles";
 import { DEFAULT_FLAGS, siteFlags, type SiteFlags } from "./lib/site";
+import { planFor, storedItems } from "./lib/storage";
+import { polar } from "./billing";
 
 /**
  * The admin panel (/admin): feedback and reports, every community post (remove), every account
@@ -370,5 +372,125 @@ export const deleteSessionsBatch = internalMutation({
       n++;
     }
     return n;
+  },
+});
+
+// ---------------------------------------------------------------- storage plans (troubleshooting)
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/** Adds whole calendar months to a time (Jan 31 + 1 month = the last day of February). */
+function addMonths(time: number, months: number) {
+  const d = new Date(time);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d.getTime();
+}
+
+/** One account's storage, for the admin page: what it keeps online and on devices, its paid plan
+    (from Polar, with a link to the customer there), and its gifts. Staff can see it; only the
+    owner can change gifts. */
+export const userStorage = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const actor = await mustAdmin(ctx);
+    const { plan, gift, cloudBytes } = await planFor(ctx, userId);
+    const items = await storedItems(ctx, userId, false);
+    const customer = await polar.getCustomerByUserId(ctx, userId).catch(() => null);
+    const sub = await polar.getCurrentSubscription(ctx, { userId }).catch(() => null);
+    const sandbox = (process.env.POLAR_SERVER ?? "sandbox") !== "production";
+    const gifts = await ctx.db.query("planGifts").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
+    const giver = new Map<string, string | null>();
+    for (const g of gifts) if (!giver.has(g.grantedBy)) giver.set(g.grantedBy, (await personOf(ctx, g.grantedBy)).username);
+    return {
+      canEdit: actor.role === "owner",
+      quota: cloudBytes,
+      online: items.reduce((s, i) => s + (i.device ? 0 : i.size), 0),
+      onDevices: items.reduce((s, i) => s + (i.device ? i.size : 0), 0),
+      onlineCount: items.filter((i) => !i.device).length,
+      deviceCount: items.filter((i) => i.device).length,
+      plan,
+      subscription: sub ? { status: sub.status, productName: sub.product.name, cancelAtPeriodEnd: sub.cancelAtPeriodEnd, currentPeriodEnd: sub.currentPeriodEnd } : null,
+      polarCustomerUrl: customer ? `https://${sandbox ? "sandbox." : ""}polar.sh/dashboard/soniroll/customers/${customer.id}` : null,
+      activeGiftId: gift?.id ?? null,
+      gifts: gifts
+        .sort((a, b) => b.startsAt - a.startsAt)
+        .map((g) => ({
+          id: g._id,
+          storageGb: g.storageGb,
+          startsAt: g.startsAt,
+          endsAt: g.endsAt,
+          ended: !!g.ended || g.endsAt <= Date.now(),
+          note: g.note ?? null,
+          grantedBy: giver.get(g.grantedBy) ?? null,
+        })),
+    };
+  },
+});
+
+/** Gives an account a storage plan for `months` (owner only). A gift already running is replaced. */
+export const giftPlan = mutation({
+  args: { userId: v.id("users"), storageGb: v.number(), months: v.number(), note: v.optional(v.string()) },
+  handler: async (ctx, { userId, storageGb, months, note }) => {
+    const actor = await mustOwner(ctx);
+    if (!(await ctx.db.get(userId))) throw new Error("That account doesn't exist.");
+    const gb = Math.round(storageGb * 10) / 10;
+    const n = Math.round(months);
+    if (!(gb > 0 && gb <= 1000)) throw new Error("Pick a size between 0.1 and 1000 GB.");
+    if (!(n >= 1 && n <= 36)) throw new Error("Pick between 1 and 36 months.");
+    const now = Date.now();
+    for (const g of await ctx.db.query("planGifts").withIndex("by_user", (q) => q.eq("userId", userId)).collect()) {
+      if (!g.ended && g.endsAt > now) await ctx.db.patch(g._id, { ended: true, endsAt: now });
+    }
+    const endsAt = addMonths(now, n);
+    const id = await ctx.db.insert("planGifts", {
+      userId,
+      storageGb: gb,
+      startsAt: now,
+      endsAt,
+      grantedBy: actor.id,
+      ...(note?.trim() ? { note: note.trim().slice(0, 200) } : {}),
+    });
+    await ctx.scheduler.runAt(endsAt, internal.admin.expireGift, { giftId: id });
+    return id;
+  },
+});
+
+/** Adds months to a running gift (owner only). */
+export const extendGift = mutation({
+  args: { giftId: v.id("planGifts"), months: v.number() },
+  handler: async (ctx, { giftId, months }) => {
+    await mustOwner(ctx);
+    const g = await ctx.db.get(giftId);
+    if (!g || g.ended || g.endsAt <= Date.now()) throw new Error("That gift has already ended. Give a new one.");
+    const n = Math.round(months);
+    if (!(n >= 1 && n <= 36)) throw new Error("Pick between 1 and 36 months.");
+    const endsAt = addMonths(g.endsAt, n);
+    await ctx.db.patch(giftId, { endsAt });
+    await ctx.scheduler.runAt(endsAt, internal.admin.expireGift, { giftId });
+  },
+});
+
+/** Ends a gift now (owner only). Files already online stay there; nothing more goes online
+    beyond the free space (or a paid plan). */
+export const endGift = mutation({
+  args: { giftId: v.id("planGifts") },
+  handler: async (ctx, { giftId }) => {
+    await mustOwner(ctx);
+    const g = await ctx.db.get(giftId);
+    if (g && !g.ended) await ctx.db.patch(giftId, { ended: true, endsAt: Math.min(g.endsAt, Date.now()) });
+  },
+});
+
+/** Runs when a gift's time is up (scheduled for `endsAt`; an extension schedules a later one, and
+    this earlier run then does nothing). Marking it ended refreshes everything that reads the plan. */
+export const expireGift = internalMutation({
+  args: { giftId: v.id("planGifts") },
+  handler: async (ctx, { giftId }) => {
+    const g = await ctx.db.get(giftId);
+    if (g && !g.ended && g.endsAt <= Date.now() + DAY / 24 / 60) await ctx.db.patch(giftId, { ended: true });
   },
 });

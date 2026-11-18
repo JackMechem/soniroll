@@ -284,3 +284,29 @@ sure nothing goes online without a subscription.
 - Not done by Claude: Polar's own account verification and payouts (Jack), a real live purchase,
   the Rhodes license and a refund policy before charging.
 
+## 2026-11-17 — Admin: a user's storage, and giving plans
+
+Jack: manage users' plans from the admin panel to troubleshoot, and give someone some months of a
+plan.
+
+- **Table `planGifts`** (userId, storageGb, startsAt, endsAt, ended, grantedBy, note). `lib/storage.ts`
+  `planFor` now returns `{ plan (Polar), gift, hasPlan, cloudBytes }`: the cloud limit is the biggest
+  of the free 50 MB, the paid plan and a running gift; `hasPlan` (either kind) is what every "can
+  this go online" check uses — `assertPlanForOnline`, `files.storagePlan` (`toMove`), `hasPlanFor`,
+  and on the web `savesOnline` and the Files page / menus / notices. Checkout's own guard
+  (`billing.hasPlan`) still looks only at Polar, so a gifted account can buy a plan.
+- **Admin** (`admin.ts`): `userStorage` (staff: online / on devices, the Polar subscription and a link
+  to the customer in Polar's dashboard — sandbox or live by `POLAR_SERVER` —, gifts with who gave
+  them); owner only: `giftPlan` (GB 0.1–1000, 1–36 calendar months, a note; replaces a running gift),
+  `extendGift`, `endGift`. A job is scheduled for each `endsAt` (`expireGift`, which ignores runs made
+  stale by an extension) and marks the gift ended, so pages update when it runs out. Account deletion
+  deletes the account's gifts.
+- **UI:** Admin → Users → **Storage** on every row (`components/admin/UserStorage.tsx`); the account's
+  own Storage plan section shows a gift ("A gift — nothing to pay · until …"), or a line under a paid
+  plan.
+- Verified on dev from the CLI with identities: a 25 GB / 1 month gift to the demo account → has a
+  plan, 25 GB; +3 months moved the end date; the demo account itself was refused ("Only the owner can
+  do that"); ending it → free, 50 MB. The admin panel opened (read-only) on the demo account's row,
+  no console errors. The test gift stays in the demo account's history on dev. Not checked: a gift
+  running out on its own (the scheduled job), a gifted account buying a plan.
+

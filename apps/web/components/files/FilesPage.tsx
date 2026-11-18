@@ -256,9 +256,9 @@ export default function FilesPage() {
               </p>
             )}
 
-            {((plan?.plan && used >= quota) || uploader.progress || uploader.error) && (
+            {((plan?.hasPlan && used >= quota) || uploader.progress || uploader.error) && (
               <div className="flex flex-col gap-2">
-                {plan?.plan && used >= quota && <p className="text-sm text-danger">Your online storage is full. Delete something to add more.</p>}
+                {plan?.hasPlan && used >= quota && <p className="text-sm text-danger">Your online storage is full. Delete something to add more.</p>}
                 <UploadProgress progress={uploader.progress} />
                 {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
               </div>
@@ -318,7 +318,7 @@ export default function FilesPage() {
                     <span className="text-sm font-medium">{picked.length} selected</span>
                     <span className="text-xs tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
                     <div className="ml-auto flex items-center gap-1.5">
-                      {plan?.plan && picked.some((i) => i.device && i.url) && (
+                      {plan?.hasPlan && picked.some((i) => i.device && i.url) && (
                         <button
                           type="button"
                           onClick={() => void actions.putOnline(picked.filter((i) => i.device && i.url), clearSelection)}
@@ -437,7 +437,7 @@ export default function FilesPage() {
                                   <span className="hidden lg:inline">Shared</span>
                                 </span>
                               )}
-                              <PlaceBadge item={item} paid={!!plan?.plan} />
+                              <PlaceBadge item={item} paid={!!plan?.hasPlan} />
                             </span>
                             {/* Phones: everything in one line under the name. */}
                             <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, where === "Your files" ? null : where)}</span>
@@ -559,16 +559,17 @@ function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean }) {
 /** One line on where new files go: this device (free), or online with the plan. */
 function WhereFilesGo({ storage }: { storage: NonNullable<ReturnType<typeof useStoragePlan>> }) {
   const [settings] = useSiteSettings();
-  const Icon = storage.plan ? CloudIcon : DeviceIcon;
+  const Icon = storage.hasPlan ? CloudIcon : DeviceIcon;
+  const gb = storage.plan?.storageGb ?? storage.gift?.storageGb;
   return (
     <p className="flex items-start gap-2 text-sm text-muted">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
       <span>
-        {storage.plan
-          ? `Your ${storage.plan.storageGb} GB plan: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} online. New files go ${settings.newFilesOnline ? "online" : "on this device"} unless you pick otherwise beside Upload.`
+        {storage.hasPlan
+          ? `Your ${gb} GB ${storage.plan ? "plan" : "gift"}: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} online. New files go ${settings.newFilesOnline ? "online" : "on this device"} unless you pick otherwise beside Upload.`
           : "New files are kept on this device. Every feature works; to have them on all your devices, get a storage plan."}{" "}
         <Link href={PLAN_HREF} className="font-medium text-accent hover:underline">
-          {storage.plan ? "Manage plan" : "Storage plans"}
+          {storage.hasPlan ? "Manage plan" : "Storage plans"}
         </Link>
       </span>
     </p>

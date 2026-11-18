@@ -40,7 +40,7 @@ export function useMoveNotice(): { count: number; bytes: number; dismiss: () => 
   const hidden = useSyncExternalStore(subscribe, readHidden, () => true);
   // Pages that already explain it.
   if (pathname === "/files" || pathname === "/plans" || pathname?.startsWith("/tunes")) return null;
-  if (!storage || storage.plan || storage.toMove.count === 0) return null;
+  if (!storage || storage.hasPlan || storage.toMove.count === 0) return null;
   if (hidden) return null;
   return {
     ...storage.toMove,
@@ -82,7 +82,7 @@ export function StorageMovePanel({ storage, items }: { storage: AccountStorage; 
   const { moveToDevice } = useStorageMoves(storage.userId);
   const [busy, setBusy] = useState<{ what: "zip" | "move"; done: number; total: number } | null>(null);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
-  if (storage.plan || storage.toMove.count === 0) return null;
+  if (storage.hasPlan || storage.toMove.count === 0) return null;
   const toMove = items.filter((i) => isMovable(i) && !i.device && !i.sharedId && !i.keepOnline);
   const plural = storage.toMove.count === 1 ? "" : "s";
 
@@ -195,7 +195,7 @@ export function OnOtherDevice({ label, what = "file" }: { label: string; what?: 
     it on all of them. Nothing with a plan (or while loading). */
 export function KeptHereHint({ what = "Files" }: { what?: string }) {
   const storage = useStoragePlan();
-  if (!storage || storage.plan) return null;
+  if (!storage || storage.hasPlan) return null;
   return (
     <p className="flex items-start gap-1.5 text-xs text-muted">
       <DeviceIcon className="mt-px h-3.5 w-3.5 shrink-0" />

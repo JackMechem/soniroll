@@ -596,6 +596,19 @@ export default defineSchema({
       file without one is just in the account. Private to the owner, except that a tune shared by
       link (`sharedTunes`) shows its attached files. The file lives in Convex file storage (storage
       plans), or only on the device that added it (free accounts). */
+  /** A storage plan given for free (Admin → Users → Storage, owner only): `storageGb` online until
+      `endsAt`. It counts like a paid plan; with both, the bigger wins (`lib/storage.ts` `planFor`).
+      `ended` is set when it runs out (a job scheduled for `endsAt`) or the owner ends it early. */
+  planGifts: defineTable({
+    userId: v.id("users"),
+    storageGb: v.number(),
+    startsAt: v.number(),
+    endsAt: v.number(),
+    ended: v.optional(v.boolean()),
+    grantedBy: v.id("users"),
+    note: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+
   files: defineTable({
     userId: v.id("users"),
     /** In Convex file storage, or (`device`) only on the device that added it. */
