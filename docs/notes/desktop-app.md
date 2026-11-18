@@ -734,3 +734,12 @@ clicked. Couldn't reproduce here (no macOS WebKit; Chromium and the Linux app lo
 `bg-foreground/40`, a `color-mix`). Same look in Chromium. **Not verified on a Mac** — ask Jack to
 check 0.1.9. If other see-through fills turn out missing on his Mac too, the cause is an old macOS
 WebKit without `color-mix` (Tailwind v4 needs Safari 16.4+), and that's a bigger fix.
+
+## 2026-11-18 — The update address served a stale version
+
+Jack's macOS 0.1.7 didn't update to 0.1.8: `/api/desktop-update` still said 0.1.7 well after 0.1.8 was
+published. Two caches stacked: the route cached GitHub's release list for 5 min (Vercel's Data Cache)
+and the CDN kept the answer 5 min plus 10 stale, so a new release took up to ~20 min to show, and
+the app only checks once at launch. Now Stable reads `releases/latest/download/latest.json` from
+github.com uncached (no API rate limit), Unstable still uses the API (60 s cache), and the CDN keeps
+answers for 60 s.
