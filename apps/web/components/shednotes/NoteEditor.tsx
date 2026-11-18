@@ -253,7 +253,7 @@ export default function NoteEditor({
       ? {
           upload: async (file: File, name: string) => {
             try {
-              return await uploadFile(file, () => generateUploadUrl(), (args) => createFile({ ...args, keepOnline: true }), undefined, name);
+              return await uploadFile(file, () => generateUploadUrl({ purpose: "note" }), (args) => createFile({ ...args, keepOnline: true }), undefined, name);
             } catch (e) {
               throw new Error(errorText(e, `Couldn't upload ${name}.`));
             }

@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { deleteOnDevice, deviceFile, saveOnDevice } from "@/lib/deviceFiles";
 import type { StoredEntry } from "@/lib/files";
 import { savesOnline, uploadBlob, useStoragePlan } from "@/lib/storagePlan";
+import { useSiteSettings } from "@/lib/siteSettings";
 import { makeZip, safeName } from "@/lib/zip";
 
 /**
@@ -27,8 +28,10 @@ async function dataOf(item: StoredEntry): Promise<Blob | null> {
 }
 
 /** `moveToDevice(item)`: saves an online item on this device, then deletes the online copy.
-    `moveOnline(item)`: uploads an item kept on this device, then forgets the device copy. Both
-    throw readable messages. `owner` is the account's id (tags the device copy). */
+    `moveOnline(item, purpose?)`: uploads an item kept on this device, then forgets the device copy.
+    Without a plan the backend only allows it for a `purpose` (`share` — the link is made in the
+    same step and its id returned — or `note`). Both throw readable messages. `owner` is the
+    account's id (tags the device copy). */
 export function useStorageMoves(owner: string | undefined) {
   const toDevice = useMutation(api.files.moveToDevice);
   const online = useMutation(api.files.moveOnline);
@@ -51,13 +54,14 @@ export function useStorageMoves(owner: string | undefined) {
   );
 
   const moveOnline = useCallback(
-    async (item: StoredEntry) => {
-      if (!isMovable(item) || !item.device) return;
+    async (item: StoredEntry, purpose?: "share" | "note"): Promise<string | null> => {
+      if (!isMovable(item) || !item.device) return null;
       const blob = await deviceFile(item.device.key);
       if (!blob) throw new Error(`"${item.name}" is on ${item.device.label}, not this device. Put it online from there.`);
-      const storageId = await uploadBlob(blob, () => generateUploadUrl(), item.name);
-      await online({ kind: item.kind, id: item.id, storageId });
+      const storageId = await uploadBlob(blob, () => generateUploadUrl(purpose ? { purpose } : {}), item.name);
+      const shareId = await online({ kind: item.kind, id: item.id, storageId, ...(purpose ? { purpose } : {}) });
       await deleteOnDevice(item.device.key);
+      return shareId;
     },
     [generateUploadUrl, online],
   );
@@ -86,7 +90,9 @@ export function useDeviceCopy() {
     },
     [createOnDevice, storage?.userId],
   );
-  return { toDevice: storage !== undefined && !savesOnline(storage), copyToDevice };
+  // With a plan, follow the default for new files (Account → Storage plan).
+  const [settings] = useSiteSettings();
+  return { toDevice: storage !== undefined && (!savesOnline(storage) || !settings.newFilesOnline), copyToDevice };
 }
 
 /** A file name with the right extension for its type, when its name has none (recordings). */

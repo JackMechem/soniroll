@@ -55,6 +55,11 @@ export const SITE_DEFAULTS = {
 
   /** Which view the Shed Log opens on. */
   shedLogOpenOn: "last" as ShedLogOpenOn,
+
+  /** With a storage plan: where new files, recordings and songs go unless you pick otherwise when
+      adding one — online (on all your devices) or only this device. Free accounts always use the
+      device. */
+  newFilesOnline: true,
 };
 export type SiteSettings = typeof SITE_DEFAULTS;
 

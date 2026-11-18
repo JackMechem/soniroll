@@ -4,6 +4,8 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useSiteSettings } from "@/lib/siteSettings";
 import { type DeviceRef, deleteOnDevice, saveOnDevice } from "@/lib/deviceFiles";
 
 /**
@@ -39,14 +41,35 @@ export async function uploadBlob(blob: Blob, generateUploadUrl: () => Promise<st
   return storageId;
 }
 
-/** Saves a blob where new things go for this account: online with a plan (via
-    `generateUploadUrl`), or on this device. If saving its row then fails, call `unplace` to tidy
-    up a device copy. */
-export async function placeBlob(blob: Blob, name: string, storage: AccountStorage | null | undefined, generateUploadUrl: () => Promise<string>): Promise<Placed> {
+/** Saves a blob online (via `generateUploadUrl`) or on this device: `online` picks (see
+    `useSaveTarget`); online is only possible with a plan. If saving its row then fails, call
+    `unplace` to tidy up a device copy. */
+export async function placeBlob(
+  blob: Blob,
+  name: string,
+  storage: AccountStorage | null | undefined,
+  generateUploadUrl: () => Promise<string>,
+  online = savesOnline(storage),
+): Promise<Placed> {
   if (storage === undefined) throw new Error("One moment — your account is still loading. Try again.");
-  if (savesOnline(storage)) return { storageId: await uploadBlob(blob, generateUploadUrl, name) };
+  if (online && savesOnline(storage)) return { storageId: await uploadBlob(blob, generateUploadUrl, name) };
   return { device: await saveOnDevice(blob, name, storage?.userId), size: blob.size };
 }
+
+/**
+ * Where something you're adding goes. With a plan you can choose (`canChoose`): online or only
+ * this device, starting from your default (`newFilesOnline`, Account → Storage plan). Without one
+ * it's always this device. `setOnline` changes it for this upload / this dialog.
+ */
+export function useSaveTarget() {
+  const storage = useStoragePlan();
+  const [settings] = useSiteSettings();
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const canChoose = savesOnline(storage);
+  return { storage, canChoose, online: canChoose && (choice ?? settings.newFilesOnline), setOnline: setChoice };
+}
+
+export type SaveTarget = ReturnType<typeof useSaveTarget>;
 
 /** Undoes `placeBlob`'s device copy (online uploads are cleaned up by the backend). */
 export async function unplace(placed: Placed) {

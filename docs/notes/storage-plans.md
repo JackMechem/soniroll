@@ -235,3 +235,37 @@ Jack: "a way to back up files that are online and in local storage… download t
   online one and "1 kept on another device isn't included"; the Account row's button → both. Test
   files deleted afterwards.
 
+## 2026-11-17 — Choosing online or this device; online needs a plan (enforced)
+
+Jack: choose not to upload a file online, change the default, put a device file online, and make
+sure nothing goes online without a subscription.
+
+- **Choosing:** `useSaveTarget()` (`lib/storagePlan.ts`): with a plan, `online` starts on the
+  synced site setting **`newFilesOnline`** (default true; Account → Storage plan → "New files go:
+  Online / This device") and `setOnline` changes it for that upload. `SaveWhere`
+  (`components/files/SaveWhere.tsx`, a small Online / This device switch) shows beside Upload on the
+  Files page and a tune's files, in the save-recording dialog and by a tune song's Upload — only
+  with a plan. `useFileUploader(tuneId, target)`, `saveFile(…, online)` and `placeBlob(…, online)`
+  take the choice. Saving someone's shared file follows the default too.
+- **Putting device files online:** "Put online" in the ⋮ menu and, for several, in the selection bar
+  (`useFileActions().putOnline`) — both only with a plan.
+- **Enforced on the server:** without a plan, `files.generateUploadUrl` (unless `purpose` is `note`
+  or `share`) and `recordings.generateUploadUrl` (recordings and songs) refuse, so nothing is
+  uploaded. As a second check `files.create` (unless `keepOnline`), `recordings.create` /
+  `tuneSongs.set` with a `storageId`, `moveOnline` (unless `purpose`), and the server-side copies
+  (`copySharedFile(s)`) refuse too (`assertPlanForOnline`). `moveOnline({purpose: "share"})` makes the
+  link in the same mutation (so a free account can only put a file online by actually sharing it);
+  `purpose: "note"` marks it `keepOnline`. Lessons and profile images are separate paths, unchanged.
+- **Gotcha:** a mutation that throws rolls back everything, including `ctx.storage.delete` of the
+  upload it's refusing — so "delete the upload, then throw" (here and in the older `assertFits`)
+  leaves the file in storage. Refusing at the upload-URL step is what actually prevents orphans.
+  (Two 74-byte test uploads from checking this are left in dev storage.)
+- **Old clients:** the desktop app 0.1.6 and the paused mobile app upload recordings online; on a
+  free account those saves are now refused until they're updated.
+- Verified: with the demo account's identity on the CLI, the upload URL and saves are refused
+  without a plan and the share upload URL is given; in the browser with a plan (embedded checkout,
+  saved test card): the switch beside Upload, one file to This device and one Online, Put online
+  for the ticked device file, the default set to This device (the switch then starts there, the line
+  says so), set back to Online; files deleted and the plan revoked afterwards. Not checked: the
+  switch in the save-recording dialog (needs a mic) and the tune song panel by hand.
+

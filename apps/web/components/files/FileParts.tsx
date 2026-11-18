@@ -31,10 +31,11 @@ import {
   formatFileDate,
   saveFile,
 } from "@/lib/files";
-import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
+import { PLAN_HREF, type SaveTarget, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
 import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
 import { KeptHereHint } from "@/components/files/StorageMove";
+import SaveWhere from "@/components/files/SaveWhere";
 
 // ---------------------------------------------------------------- icons
 
@@ -210,11 +211,11 @@ const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground
  * file chooser, `drop` props make an element a drop target, and `input` must be rendered. They're
  * saved online with a storage plan, or on this device without one (`lib/storagePlan.ts`).
  */
-export function useFileUploader(tuneId?: string) {
+export function useFileUploader(tuneId: string | undefined, target: SaveTarget) {
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
   const create = useMutation(filesApi.create);
   const createOnDevice = useMutation(filesApi.createOnDevice);
-  const storage = useStoragePlan();
+  const { storage, online } = target;
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +229,7 @@ export function useFileUploader(tuneId?: string) {
       const failures: string[] = [];
       for (let i = 0; i < files.length; i++) {
         try {
-          await saveFile(files[i], storage, { generateUploadUrl: () => generateUploadUrl(), create: (args) => create(args), createOnDevice: (args) => createOnDevice(args) }, tuneId);
+          await saveFile(files[i], storage, { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create(args), createOnDevice: (args) => createOnDevice(args) }, tuneId, undefined, online);
         } catch (e) {
           failures.push(errorText(e, `Couldn't upload "${files[i].name}".`));
           // Out of room: the rest won't fit either.
@@ -239,7 +240,7 @@ export function useFileUploader(tuneId?: string) {
       setProgress(null);
       if (failures.length) setError(failures.join(" "));
     },
-    [create, createOnDevice, generateUploadUrl, storage, tuneId],
+    [create, createOnDevice, generateUploadUrl, online, storage, tuneId],
   );
 
   const input = (
@@ -366,7 +367,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
       ...(item.url ? [{ label: "Download", onSelect: () => void downloadFile(item.url!, item.name), icon: <DownloadIcon className="h-4 w-4" /> }] : []),
       // Kept here: put it online (with a plan, or using the free online space). Online on the free
       // plan: keep it on this device instead (frees the online space).
-      ...(isMovable(item) && item.device && item.url ? [{ label: "Put online", onSelect: () => void move(item, "online"), icon: <CloudIcon className="h-4 w-4" /> }] : []),
+      ...(isMovable(item) && item.device && item.url && storage?.plan ? [{ label: "Put online", onSelect: () => void move(item, "online"), icon: <CloudIcon className="h-4 w-4" /> }] : []),
       ...(isMovable(item) && !item.device && !item.keepOnline && storage && !storage.plan
         ? [{ label: "Keep on this device only", onSelect: () => void move(item, "device"), icon: <DeviceIcon className="h-4 w-4" /> }]
         : []),
@@ -498,8 +499,26 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     </>
   );
 
+  /** Puts several files kept on this device online (with a plan), one by one. */
+  async function putOnline(list: StoredEntry[], onDone?: () => void) {
+    setError(null);
+    const failed: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      setMoving(`Putting ${i + 1} of ${list.length} online…`);
+      try {
+        await moves.moveOnline(list[i]);
+      } catch (e) {
+        failed.push(errorText(e, `"${list[i].name}" couldn't be put online.`));
+        if (/room|plan/i.test(failed[failed.length - 1])) break;
+      }
+    }
+    setMoving(null);
+    if (failed.length) setError(failed.join(" "));
+    onDone?.();
+  }
+
   /** `status`: what's happening while a file is being put online or saved here. */
-  return { openMenu, contextMenu, openFile: setOpen, deleteMany, error, status: moving, clearError: () => setError(null), dialogs };
+  return { openMenu, contextMenu, openFile: setOpen, deleteMany, putOnline, error, status: moving, clearError: () => setError(null), dialogs };
 }
 
 // ---------------------------------------------------------------- picking files already uploaded
@@ -564,7 +583,8 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
   const { isAuthenticated } = useConvexAuth();
   const files = useDeviceUrls(useQuery(filesApi.listForTune, isAuthenticated ? { tuneId } : "skip"));
   const update = useMutation(filesApi.update);
-  const uploader = useFileUploader(tuneId);
+  const saveTarget = useSaveTarget();
+  const uploader = useFileUploader(tuneId, saveTarget);
   const actions = useFileActions({ tuneName, hereTuneId: tuneId });
   const [adding, setAdding] = useState(false);
 
@@ -578,6 +598,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
         {files && files.length > 0 && <span className="text-xs tabular-nums text-muted">{files.length}</span>}
         {isAuthenticated && (
           <div className="ml-auto flex flex-wrap gap-2">
+            <SaveWhere target={saveTarget} />
             <button type="button" onClick={uploader.pick} disabled={!!uploader.progress} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50">
               <UploadIcon className="h-4 w-4" /> Upload
             </button>

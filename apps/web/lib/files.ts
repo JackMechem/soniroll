@@ -153,8 +153,8 @@ export async function uploadFile<T>(
   return await create({ storageId, name, ...(tuneId ? { tuneId } : {}) });
 }
 
-/** Saves a new file where new things go (online with a plan, else on this device — see
-    `lib/storagePlan.ts`), optionally attached to a tune, and returns the new file's id. */
+/** Saves a new file online (`online`, which needs a plan) or on this device — see
+    `lib/storagePlan.ts` — optionally attached to a tune, and returns the new file's id. */
 export async function saveFile(
   file: File,
   storage: AccountStorage | null | undefined,
@@ -165,11 +165,12 @@ export async function saveFile(
   },
   tuneId?: string,
   name = file.name,
+  online = savesOnline(storage),
 ): Promise<Id<"files">> {
-  if (savesOnline(storage)) return uploadFile(file, calls.generateUploadUrl, calls.create, tuneId, name);
+  if (online && savesOnline(storage)) return uploadFile(file, calls.generateUploadUrl, calls.create, tuneId, name);
   if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" is over 100 MB.`);
   if (!file.size) throw new Error(`"${file.name}" is empty.`);
-  const placed: Placed = await placeBlob(file, name, storage, calls.generateUploadUrl);
+  const placed: Placed = await placeBlob(file, name, storage, calls.generateUploadUrl, false);
   if (!("device" in placed)) throw new Error("unreachable");
   try {
     return await calls.createOnDevice({ name, mimeType: file.type || "application/octet-stream", size: file.size, device: placed.device, ...(tuneId ? { tuneId } : {}) });

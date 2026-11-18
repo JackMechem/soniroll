@@ -42,6 +42,19 @@ export async function quotaFor(ctx: QueryCtx, userId: Id<"users">): Promise<numb
   return (await planFor(ctx, userId)).cloudBytes;
 }
 
+/** Files, recordings and songs only go online with a storage plan. The exceptions are things
+    other people see — a file shared by link, a picture in a note (`files.moveOnline`'s `purpose`,
+    `files.create`'s `keepOnline`), lesson files, hand-ins and the profile — which use the free
+    online space. Checked when handing out an upload URL (so nothing gets uploaded), and again
+    when saving. NB: a mutation that throws rolls back everything it did, including deleting the
+    upload, so a refused save that already uploaded leaves the file in storage — the upload-URL
+    check is what keeps that from happening in practice. */
+export async function assertPlanForOnline(ctx: MutationCtx, userId: Id<"users">, storageId?: Id<"_storage">) {
+  if ((await planFor(ctx, userId)).plan) return;
+  if (storageId) await ctx.storage.delete(storageId);
+  throw new Error("Keeping files online needs a storage plan. Without one they're kept on this device — every feature still works.");
+}
+
 /** "50 MB", "5 GB". */
 export function sizeLabel(bytes: number) {
   return bytes >= 1024 * MB ? `${Math.round((bytes / (1024 * MB)) * 10) / 10} GB` : `${Math.round(bytes / MB)} MB`;

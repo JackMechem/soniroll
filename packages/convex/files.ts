@@ -7,7 +7,7 @@ import { communityHidden, assertUploadsOpen } from "./lib/site";
 import { resolveLinkedChart } from "./lib/chordCharts";
 import { ownerTune } from "./lib/tunes";
 import { sharedInLesson, sharedInNote } from "./scores";
-import { FREE_CLOUD_BYTES, MAX_FILE_BYTES, assertFits, assertHasRoom, bytesUsed, planFor, quotaFor, storedItems, type DeviceRef, type StoredKind } from "./lib/storage";
+import { FREE_CLOUD_BYTES, MAX_FILE_BYTES, assertFits, assertHasRoom, assertPlanForOnline, bytesUsed, planFor, quotaFor, storedItems, type DeviceRef, type StoredKind } from "./lib/storage";
 import type { PublicRecording, PublicTune } from "@jam-practice/core/profileTunes";
 
 /**
@@ -362,6 +362,7 @@ export const copySharedFile = action({
   handler: async (ctx, { shareId }): Promise<{ id: string }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save files.");
+    if (!(await ctx.runQuery(internal.files.hasPlanFor, { userId }))) throw new Error("Keeping files online needs a storage plan. Save it to this device instead.");
     const source = await ctx.runQuery(internal.files.sharedFileSource, { id: shareId, userId });
     if (!source) throw new Error("That file isn't shared any more.");
     if (source.used + source.size > source.quota) throw new Error("There isn't room for this file in your account. Delete something first.");
@@ -388,12 +389,15 @@ function fileView(row: Doc<"files">, url: string | null) {
   };
 }
 
+/** An upload URL for a file going online. Without a storage plan only for a `purpose` other people
+    need it online for (`note`, `share`; see `moveOnline`). */
 export const generateUploadUrl = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { purpose: v.optional(v.union(v.literal("note"), v.literal("share"))) },
+  handler: async (ctx, { purpose }) => {
     await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
+    if (!purpose) await assertPlanForOnline(ctx, userId);
     await assertHasRoom(ctx, userId);
     return await ctx.storage.generateUploadUrl();
   },
@@ -407,6 +411,8 @@ export const create = mutation({
   handler: async (ctx, { storageId, name, tuneId, keepOnline }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
+    // A picture for a note goes online on any plan (everyone who can open the note sees it).
+    if (!keepOnline) await assertPlanForOnline(ctx, userId, storageId);
     const meta = await assertFits(ctx, userId, storageId);
     const now = Date.now();
     return await ctx.db.insert("files", {
@@ -523,13 +529,15 @@ async function movableRow(ctx: QueryCtx, userId: Id<"users">, kind: "file" | "re
 
 /** Puts a file, recording or song that was only on a device online: the web app uploads its data
     (`generateUploadUrl`) and passes the new `storageId`. Checks it fits the account's online
-    storage (deleting the upload if not). Used to share something, and when someone with a plan
-    moves their device files online. */
+    storage (deleting the upload if not). With a storage plan, for anything. Without one, only for
+    a `purpose` other people need it online for: `share` (the link is made here, in the same step,
+    and its id returned) or `note` (it's marked to stay online). */
 export const moveOnline = mutation({
-  args: { kind: movableKind, id: v.string(), storageId: v.id("_storage") },
-  handler: async (ctx, { kind, id, storageId }) => {
+  args: { kind: movableKind, id: v.string(), storageId: v.id("_storage"), purpose: v.optional(v.union(v.literal("share"), v.literal("note"))) },
+  handler: async (ctx, { kind, id, storageId, purpose }): Promise<string | null> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not signed in.");
+    if (!purpose) await assertPlanForOnline(ctx, userId, storageId);
     const row = await movableRow(ctx, userId, kind, id);
     if (!row) {
       await ctx.storage.delete(storageId);
@@ -538,10 +546,17 @@ export const moveOnline = mutation({
     if (row.storageId) {
       // Already online (another device moved it first).
       await ctx.storage.delete(storageId);
-      return;
+    } else {
+      const meta = await assertFits(ctx, userId, storageId);
+      await ctx.db.patch(row._id, { storageId, device: undefined, ...(kind === "file" ? { size: meta.size } : { size: undefined }) });
     }
-    const meta = await assertFits(ctx, userId, storageId);
-    await ctx.db.patch(row._id, { storageId, device: undefined, ...(kind === "file" ? { size: meta.size } : { size: undefined }) });
+    if (purpose === "note" && !row.keepOnline) await ctx.db.patch(row._id, { keepOnline: true });
+    if (purpose !== "share") return null;
+    const existing = await ctx.db
+      .query("sharedFiles")
+      .withIndex("by_user_item", (q) => q.eq("userId", userId).eq("kind", kind).eq("itemId", id))
+      .first();
+    return existing?._id ?? (await ctx.db.insert("sharedFiles", { userId, kind, itemId: id, createdAt: Date.now() }));
   },
 });
 
@@ -773,6 +788,7 @@ export const copySharedFiles = action({
   handler: async (ctx, { shareId, tuneId }): Promise<{ copied: number; skipped: number }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save files.");
+    if (!(await ctx.runQuery(internal.files.hasPlanFor, { userId }))) throw new Error("Keeping files online needs a storage plan. Save them to this device instead.");
     const id = await ctx.runQuery(internal.files.normalizeShareId, { id: shareId });
     if (!id) throw new Error("That tune isn't shared any more.");
     const shared = await ctx.runQuery(internal.files.sharedTuneFiles, { shareId: id, userId });
@@ -797,6 +813,11 @@ export const copySharedFiles = action({
     }
     return { copied, skipped };
   },
+});
+
+export const hasPlanFor = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => !!(await planFor(ctx, userId)).plan,
 });
 
 export const normalizeShareId = internalQuery({

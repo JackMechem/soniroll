@@ -17,7 +17,9 @@ import StoragePill from "@/components/files/StoragePill";
 import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
 import { StorageMovePanel } from "@/components/files/StorageMove";
 import { useBackup } from "@/lib/storageMove";
-import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
+import { PLAN_HREF, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
+import SaveWhere from "@/components/files/SaveWhere";
+import { useSiteSettings } from "@/lib/siteSettings";
 
 type Source = StoredKind;
 
@@ -82,7 +84,8 @@ export default function FilesPage() {
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
   const tunes = useTuneIndex();
   const tuneName = (id: string) => tunes.get(id)?.tune.name;
-  const uploader = useFileUploader();
+  const saveTarget = useSaveTarget();
+  const uploader = useFileUploader(undefined, saveTarget);
   const actions = useFileActions({ tuneName });
 
   const [query, setQuery] = useState("");
@@ -211,6 +214,7 @@ export default function FilesPage() {
               >
                 <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
               </button>
+              <SaveWhere target={saveTarget} className="h-10 sm:h-9" />
               <button
                 type="button"
                 onClick={uploader.pick}
@@ -314,6 +318,17 @@ export default function FilesPage() {
                     <span className="text-sm font-medium">{picked.length} selected</span>
                     <span className="text-xs tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
                     <div className="ml-auto flex items-center gap-1.5">
+                      {plan?.plan && picked.some((i) => i.device && i.url) && (
+                        <button
+                          type="button"
+                          onClick={() => void actions.putOnline(picked.filter((i) => i.device && i.url), clearSelection)}
+                          disabled={!!actions.status}
+                          title="Put what's ticked and kept on this device online, on all your devices"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+                        >
+                          <CloudIcon className="h-4 w-4" /> Put online
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => void backup.backUp(picked)}
@@ -543,13 +558,14 @@ function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean }) {
 
 /** One line on where new files go: this device (free), or online with the plan. */
 function WhereFilesGo({ storage }: { storage: NonNullable<ReturnType<typeof useStoragePlan>> }) {
+  const [settings] = useSiteSettings();
   const Icon = storage.plan ? CloudIcon : DeviceIcon;
   return (
     <p className="flex items-start gap-2 text-sm text-muted">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
       <span>
         {storage.plan
-          ? `Your ${storage.plan.storageGb} GB plan keeps files online, on all your devices: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} used.`
+          ? `Your ${storage.plan.storageGb} GB plan: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} online. New files go ${settings.newFilesOnline ? "online" : "on this device"} unless you pick otherwise beside Upload.`
           : "New files are kept on this device. Every feature works; to have them on all your devices, get a storage plan."}{" "}
         <Link href={PLAN_HREF} className="font-medium text-accent hover:underline">
           {storage.plan ? "Manage plan" : "Storage plans"}

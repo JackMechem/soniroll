@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { assertUploadsOpen } from "./lib/site";
-import { MAX_FILE_BYTES, assertFits, assertHasRoom } from "./lib/storage";
+import { MAX_FILE_BYTES, assertFits, assertHasRoom, assertPlanForOnline } from "./lib/storage";
 import { cleanDevice } from "./files";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -54,6 +54,8 @@ export const generateUploadUrl = mutation({
     await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save recordings.");
+    // Recordings and songs only go online with a storage plan.
+    await assertPlanForOnline(ctx, userId);
     await assertHasRoom(ctx, userId);
     return await ctx.storage.generateUploadUrl();
   },
@@ -79,6 +81,7 @@ export const create = mutation({
     if (!userId) throw new Error("Sign in to save recordings.");
     let where: { storageId: Id<"_storage"> } | { device: { key: string; label: string }; size: number };
     if (args.storageId) {
+      await assertPlanForOnline(ctx, userId, args.storageId);
       await assertFits(ctx, userId, args.storageId);
       where = { storageId: args.storageId };
     } else if (args.device) {

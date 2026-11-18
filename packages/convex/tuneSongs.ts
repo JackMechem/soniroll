@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
-import { MAX_FILE_BYTES, assertFits } from "./lib/storage";
+import { MAX_FILE_BYTES, assertFits, assertPlanForOnline } from "./lib/storage";
 import { cleanDevice } from "./files";
 import type { Id } from "./_generated/dataModel";
 
@@ -61,6 +61,7 @@ export const set = mutation({
     for (const row of existing) if (row.storageId) replacing += (await ctx.db.system.get(row.storageId))?.size ?? 0;
     let where: { storageId: Id<"_storage"> } | { device: { key: string; label: string }; size: number };
     if (args.storageId) {
+      await assertPlanForOnline(ctx, userId, args.storageId);
       await assertFits(ctx, userId, args.storageId, replacing);
       where = { storageId: args.storageId };
     } else if (args.device) {

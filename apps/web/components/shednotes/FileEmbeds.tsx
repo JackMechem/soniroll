@@ -157,7 +157,7 @@ export function FilePickDialog({ onPick, onUpload, onClose }: { onPick: (ref: st
       if (isMovable(f)) {
         if (f.device) {
           setBusy(`Putting "${f.name}" online…`);
-          await moveOnline(f);
+          await moveOnline(f, "note");
         }
         await keepOnline({ kind: f.kind, id: f.id });
       }

@@ -52,8 +52,8 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
     setBusy(true);
     setError(null);
     try {
-      if (onDevice) await moveOnline(item);
-      const id = await share({ kind: item.kind, id: item.id });
+      // A file kept on this device goes online first; the link comes with it.
+      const id = (onDevice ? await moveOnline(item, "share") : null) ?? (await share({ kind: item.kind, id: item.id }));
       await send(id);
     } catch (e) {
       setError(errorText(e, "Couldn't share the file."));

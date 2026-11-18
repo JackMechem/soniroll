@@ -12,7 +12,7 @@ import TakePlayer from "@/components/recordings/TakePlayer";
 import { CloseIcon, LinkIcon, MicIcon, NoteIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { errorText } from "@/lib/files";
-import { placeBlob, unplace, useStoragePlan } from "@/lib/storagePlan";
+import { placeBlob, unplace, useSaveTarget } from "@/lib/storagePlan";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import {
   type Recording,
@@ -27,6 +27,7 @@ import {
   useTuneSong,
 } from "@/lib/recordings";
 import { KeptHereHint, OnOtherDevice } from "@/components/files/StorageMove";
+import SaveWhere from "@/components/files/SaveWhere";
 
 /** A recording in a list: name (links to its page), date · length (· the tune, a link to it), a ⋮
     menu when `onMenu` is given (rename, share, delete — the Files page's menu), and a player — over
@@ -205,7 +206,8 @@ export function SaveTakeDialog({
   const byId = useTuneIndex();
   const generateUploadUrl = useMutation(recordingsApi.generateUploadUrl);
   const create = useMutation(recordingsApi.create);
-  const storage = useStoragePlan();
+  const saveTarget = useSaveTarget();
+  const storage = saveTarget.storage;
   const forTune = useQuery(recordingsApi.listForTune, initialTuneId ? { tuneId: initialTuneId } : "skip");
   // Released when the dialog is done (saved/discarded) — not in an effect cleanup, which React's
   // dev double-mount runs early and leaves the preview pointing at a revoked URL.
@@ -232,7 +234,7 @@ export function SaveTakeDialog({
     setError(null);
     try {
       // Online with a storage plan, on this device without one.
-      const placed = await placeBlob(blob, shownName, storage, generateUploadUrl);
+      const placed = await placeBlob(blob, shownName, storage, generateUploadUrl, saveTarget.online);
       const id = await create({
         ...placed,
         name: shownName,
@@ -316,7 +318,8 @@ export function SaveTakeDialog({
         </label>
         <KeptHereHint what="Recordings" />
         {error && <p className="text-sm text-danger">{error} Your take is still here — try Save again.</p>}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <SaveWhere target={saveTarget} labels className="mr-auto" />
           <button type="button" onClick={() => setConfirmDiscard(true)} disabled={saving} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-surface-hover disabled:opacity-50">
             Discard
           </button>
@@ -327,7 +330,7 @@ export function SaveTakeDialog({
             className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
           >
             {saving && <LoadingSpinner size="sm" inline />}
-            {saving ? "Uploading…" : "Save"}
+            {saving ? (saveTarget.online ? "Uploading…" : "Saving…") : "Save"}
           </button>
         </div>
         {confirmDiscard && (
@@ -427,7 +430,8 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
   const generateUploadUrl = useMutation(recordingsApi.generateUploadUrl);
   const setSong = useMutation(tuneSongsApi.set);
   const removeSong = useMutation(tuneSongsApi.remove);
-  const storage = useStoragePlan();
+  const saveTarget = useSaveTarget();
+  const storage = saveTarget.storage;
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -447,7 +451,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
     try {
       const durationSec = await audioFileDuration(file);
       const name = file.name.replace(/\.[^.]+$/, "");
-      const placed = await placeBlob(file, name, storage, generateUploadUrl);
+      const placed = await placeBlob(file, name, storage, generateUploadUrl, saveTarget.online);
       await setSong({
         tuneId,
         ...placed,
@@ -499,6 +503,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
           <LoadingSpinner size="sm" label="Uploading the song" />
         ) : (
           <>
+            <SaveWhere target={saveTarget} />
             <button type="button" onClick={() => input.current?.click()} className="inline-flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               {song ? "Replace" : "Upload"}
             </button>

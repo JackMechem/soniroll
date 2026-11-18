@@ -15,6 +15,7 @@ import { useBackup } from "@/lib/storageMove";
 import { errorText, formatBytes } from "@/lib/files";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
+import { useSiteSettings } from "@/lib/siteSettings";
 
 /**
  * Storage plans. Every tool and feature is free; a plan only keeps files, recordings and songs
@@ -202,6 +203,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
             {current.status === "past_due" && <p className="mt-1 text-sm text-danger">The last payment didn&apos;t go through. Update your card below.</p>}
           </div>
           <UsageBar used={storage.used} quota={storage.quota} />
+          <NewFilesDefault />
           {current.cancelAtPeriodEnd && (
             <div className="flex flex-col gap-3 rounded-lg bg-foreground/[0.05] p-3 text-sm sm:flex-row sm:items-center">
               <p className="min-w-0 flex-1 text-muted">
@@ -489,6 +491,29 @@ function Mark({ yes }: { yes: boolean }) {
     <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-label="Yes" />
   ) : (
     <CloseIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-label="No" />
+  );
+}
+
+/** With a plan: where new files go unless you pick otherwise when adding one. */
+function NewFilesDefault() {
+  const [settings, update] = useSiteSettings();
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+      <span className="min-w-0 flex-1">
+        <span className="font-medium">New files go</span>
+        <span className="block text-xs text-muted">You can still pick each time you add a file or save a recording.</span>
+      </span>
+      <Segmented
+        label="New files go"
+        value={settings.newFilesOnline ? "online" : "device"}
+        onChange={(v) => update({ newFilesOnline: v === "online" })}
+        options={[
+          { value: "online", label: "Online" },
+          { value: "device", label: "This device" },
+        ]}
+        onPage
+      />
+    </div>
   );
 }
 
