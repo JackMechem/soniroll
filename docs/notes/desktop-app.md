@@ -705,7 +705,7 @@ there's a new version.
 - **Signing:** every update is signed; the public key is in `tauri.conf.json` (`plugins.updater`).
   The private key was generated with `tauri signer generate` (no password) at
   `~/.tauri/soniroll-updater.key` on Jack's computer — never in the repo — and must be the GitHub
-  secret `TAURI_SIGNING_PRIVATE_KEY` (`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` empty). **Losing it means
+  secret `TAURI_SIGNING_PRIVATE_KEY` (set 2026-11-18 with `gh secret set … < ~/.tauri/soniroll-updater.key`; no `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret — the key has no password, and a missing secret is empty. `gh secret set --body ""` doesn't work: it waits for typed input). **Losing it means
   installed apps can't verify future updates** (they'd need a manual reinstall); keep a copy safe.
 - **Release workflow:** with the secret set, `tauri build` gets `--config {"bundle":
   {"createUpdaterArtifacts":true}}` (a temp file), so CI and the Nix build never need the key. It
