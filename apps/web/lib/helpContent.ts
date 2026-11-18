@@ -346,7 +346,8 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Selecting", text: "Tick files (on a phone, tap Select first) to delete several at once. The Delete key deletes what's ticked; Escape clears it." },
       { name: "Where files are kept", text: "On the free plan, new files, recordings and songs are kept on the device that saved them (this browser, or the desktop app), marked This device. Their names show on your other devices too, but they open only where they're kept. Every feature still works. A storage plan keeps them online instead, on all your devices." },
       { name: "Online space", text: "Free accounts have 50 MB online for what other people see: files you share by link, lesson files, hand-ins and your profile picture. Sharing a file kept on this device puts it online first. A storage plan's size covers everything." },
-      { name: "Keeping files safe", text: "Files kept in a browser are deleted if you clear the site's data, and a browser that runs low on space may clear them (soniroll asks it not to). Download a backup now and then, use the desktop app (its files are kept on your computer), or get a storage plan." },
+      { name: "Keeping files safe", text: "Files kept in a browser are deleted if you clear the site's data, and a browser that runs low on space may clear them (soniroll asks it not to). Back up now and then, use the desktop app (its files are kept on your computer), or get a storage plan." },
+      { name: "Back up", text: "Downloads every file you can open here — online, or kept on this device — as one .zip, in folders by kind. Tick some files and choose Download to back up just those. Files kept on another device aren't included (it says how many); back them up there. One .zip holds up to 2 GB. The same button is in Account → Storage plan." },
     ],
   },
 

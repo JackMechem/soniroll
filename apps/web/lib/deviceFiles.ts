@@ -147,13 +147,19 @@ export async function deleteOnDevice(key: string): Promise<void> {
   emit();
 }
 
+/** How long a file saved here is left alone by `tidyDeviceFiles`: its row is created just after
+    the data is saved, so a tidy-up in between must not take it for a deleted file. */
+const TIDY_GRACE_MS = 10 * 60 * 1000;
+
 /** Deletes `owner`'s files on this device that their account no longer lists (deleted, or moved
-    online, from any device). `liveKeys`: every `device.key` the account's rows still have. */
+    online, from any device). `liveKeys`: every `device.key` the account's rows still have. Files
+    saved in the last few minutes are skipped (their rows may still be on the way). */
 export async function tidyDeviceFiles(owner: string, liveKeys: Set<string>): Promise<void> {
   try {
     const db = await openDb();
     const rows = (await wrap(db.transaction(STORE, "readonly").objectStore(STORE).getAll())) as Stored[];
-    for (const row of rows) if (row.owner === owner && !liveKeys.has(row.key)) await deleteOnDevice(row.key);
+    const cutoff = Date.now() - TIDY_GRACE_MS;
+    for (const row of rows) if (row.owner === owner && !liveKeys.has(row.key) && row.savedAt < cutoff) await deleteOnDevice(row.key);
   } catch {
     // ignore: nothing to tidy
   }

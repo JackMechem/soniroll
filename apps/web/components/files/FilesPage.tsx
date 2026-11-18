@@ -10,12 +10,13 @@ import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUpload
 import { MenuButton } from "@/components/library/shared";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { CloudIcon, DeviceIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
 import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
 import { StorageMovePanel } from "@/components/files/StorageMove";
+import { useBackup } from "@/lib/storageMove";
 import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 
 type Source = StoredKind;
@@ -92,6 +93,7 @@ export default function FilesPage() {
   const [selecting, setSelecting] = useState(false);
 
   const plan = useStoragePlan();
+  const backup = useBackup();
   const withUrls = useDeviceUrls(storage?.items);
   const items = useMemo<StoredEntry[]>(() => withUrls ?? [], [withUrls]);
 
@@ -201,6 +203,16 @@ export default function FilesPage() {
               <HeroSearch value={query} onChange={setQuery} placeholder="Search files and tunes" />
               <button
                 type="button"
+                onClick={() => void backup.backUp(items)}
+                disabled={backup.busy || !items.length}
+                title="Download every file you can open here — online or on this device — as one .zip"
+                aria-label="Back up as a .zip"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
+              >
+                <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
+              </button>
+              <button
+                type="button"
                 onClick={uploader.pick}
                 disabled={!!uploader.progress}
                 title="Or drop files anywhere on this page"
@@ -227,6 +239,18 @@ export default function FilesPage() {
           <>
             {plan && <StorageMovePanel storage={plan} items={items} />}
             {plan && <WhereFilesGo storage={plan} />}
+
+            {(backup.status || backup.message) && (
+              <p className={`flex items-center gap-2 text-sm ${backup.message?.error ? "text-danger" : "text-muted"}`}>
+                {backup.status ? (
+                  <>
+                    <LoadingSpinner size="sm" inline label="Backing up" /> {backup.status}
+                  </>
+                ) : (
+                  backup.message?.text
+                )}
+              </p>
+            )}
 
             {((plan?.plan && used >= quota) || uploader.progress || uploader.error) && (
               <div className="flex flex-col gap-2">
@@ -290,6 +314,15 @@ export default function FilesPage() {
                     <span className="text-sm font-medium">{picked.length} selected</span>
                     <span className="text-xs tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
                     <div className="ml-auto flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => void backup.backUp(picked)}
+                        disabled={backup.busy}
+                        title="Download what's ticked as one .zip"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+                      >
+                        <DownloadIcon className="h-4 w-4" /> Download
+                      </button>
                       <button type="button" onClick={deletePicked} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-danger hover:bg-surface-hover">
                         <TrashIcon className="h-4 w-4" /> Delete
                       </button>

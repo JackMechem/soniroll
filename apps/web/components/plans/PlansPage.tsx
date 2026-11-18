@@ -10,7 +10,8 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { CheckIcon, CloseIcon, CloudIcon, DeviceIcon, DownloadIcon } from "@/components/tools";
-import { askToKeepFiles, filesKept, inDesktopApp } from "@/lib/deviceFiles";
+import { askToKeepFiles, filesKept, inDesktopApp, useDeviceUrls } from "@/lib/deviceFiles";
+import { useBackup } from "@/lib/storageMove";
 import { errorText, formatBytes } from "@/lib/files";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
@@ -327,6 +328,8 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
       </section>
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {storage && <BackupFiles />}
+
       <Comparison desktop={desktop} freeOnline={storage?.freeQuota} />
 
       {!desktop && <KeepFiles />}
@@ -486,6 +489,42 @@ function Mark({ yes }: { yes: boolean }) {
     <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-label="Yes" />
   ) : (
     <CloseIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-label="No" />
+  );
+}
+
+/** Download every file this device can reach (online, or kept here) as one .zip. */
+function BackupFiles() {
+  const stored = useQuery(api.files.storage, {});
+  const items = useDeviceUrls(stored?.items);
+  const backup = useBackup();
+  const onDevice = (items ?? []).filter((i) => i.device && i.url).length;
+  const online = (items ?? []).filter((i) => !i.device).length;
+  return (
+    <section className="flex flex-col gap-3 rounded-xl bg-surface p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <DownloadIcon className="h-5 w-5 shrink-0 text-accent" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">Back up your files</p>
+          <p className="text-muted">
+            {items === undefined
+              ? "Every file you can open here, in one .zip."
+              : `Every file you can open here in one .zip: ${online} online${onDevice ? ` and ${onDevice} on this device` : ""}.`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => items && void backup.backUp(items)}
+          disabled={!items || backup.busy}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+        >
+          {backup.busy && <LoadingSpinner size="sm" inline label="Backing up" />}
+          Download .zip
+        </button>
+      </div>
+      {(backup.status || backup.message) && (
+        <p className={backup.message?.error ? "text-danger" : "text-muted"}>{backup.status ?? backup.message?.text}</p>
+      )}
+    </section>
   );
 }
 

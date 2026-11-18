@@ -216,3 +216,22 @@ should live in the Account page.
 - **Not verified:** typing a new card inside the overlay (the demo account had a saved card), the
   portal's card update, the desktop app's path.
 
+## 2026-11-17 — Back up as a .zip
+
+Jack: "a way to back up files that are online and in local storage… download to zip".
+
+- `useBackup` (`lib/storageMove.ts`): zips every item this device can reach — online, or kept here
+  (rows with a `url` after `useDeviceUrls`) — into "soniroll files YYYY-MM-DD.zip", in folders by
+  kind (Files, Recordings, Songs, Lesson files, Hand-ins, Profile; `downloadEverything` with the
+  existing `lib/zip.ts`). Items kept on another device are left out and counted in the message.
+  Refuses more than 2 GB (`MAX_BACKUP_BYTES`: the zip is built in memory).
+- Where: **Back up** beside Upload on the Files page (icon only on phones), **Download** in the
+  selection bar for what's ticked, and a "Back up your files" row in Account → Storage plan.
+- **Bug found and fixed while testing:** `tidyDeviceFiles` (run by the Files page whenever the list
+  changes) deleted a device file whose data was saved but whose row hadn't arrived yet — uploading
+  two files at once lost the second one's data. It now skips files saved in the last 10 minutes.
+- Verified as the demo account (own contexts): one file online and one on the device → Back up gave a
+  valid zip with both; ticking one → a zip with that one; a second, fresh context → a zip with the
+  online one and "1 kept on another device isn't included"; the Account row's button → both. Test
+  files deleted afterwards.
+

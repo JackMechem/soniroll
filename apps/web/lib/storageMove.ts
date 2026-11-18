@@ -2,7 +2,7 @@
 
 import { api } from "@jam-practice/convex/_generated/api";
 import { useMutation } from "convex/react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { deleteOnDevice, deviceFile, saveOnDevice } from "@/lib/deviceFiles";
 import type { StoredEntry } from "@/lib/files";
 import { savesOnline, uploadBlob, useStoragePlan } from "@/lib/storagePlan";
@@ -98,7 +98,11 @@ function withExtension(name: string, mimeType: string) {
 
 /** Downloads every item this device can reach (online, or kept here) as one .zip, in folders by
     kind. Returns how many were left out (on another device, or failed to download). */
-export async function downloadEverything(items: StoredEntry[], onProgress?: (done: number, total: number) => void): Promise<{ saved: number; skipped: number }> {
+export async function downloadEverything(
+  items: StoredEntry[],
+  onProgress?: (done: number, total: number) => void,
+  zipName = "soniroll files.zip",
+): Promise<{ saved: number; skipped: number }> {
   const folder: Record<string, string> = { file: "Files", recording: "Recordings", song: "Songs", lesson: "Lesson files", handin: "Hand-ins", profile: "Profile" };
   const entries: { path: string; data: Uint8Array; modified: Date }[] = [];
   const used = new Set<string>();
@@ -124,7 +128,7 @@ export async function downloadEverything(items: StoredEntry[], onProgress?: (don
     const href = URL.createObjectURL(makeZip(entries));
     const a = document.createElement("a");
     a.href = href;
-    a.download = "soniroll files.zip";
+    a.download = zipName;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -132,3 +136,52 @@ export async function downloadEverything(items: StoredEntry[], onProgress?: (don
   }
   return { saved: entries.length, skipped };
 }
+
+/** The most one backup .zip holds: it's built in memory, so a browser can't do much more. */
+export const MAX_BACKUP_BYTES = 2 * 1024 ** 3;
+
+/** "soniroll files 2026-11-17.zip". */
+function backupName() {
+  const d = new Date();
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `soniroll files ${day}.zip`;
+}
+
+/**
+ * Backing up files as one .zip: everything this device can reach — online, or kept on this
+ * device (rows with a `url`, after `useDeviceUrls`). Files kept on another device are left out and
+ * counted. `status` is the progress line, `message` the result.
+ */
+export function useBackup() {
+  const [status, setStatus] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
+
+  const backUp = useCallback(async (items: StoredEntry[]) => {
+    setMessage(null);
+    const here = items.filter((i) => i.url);
+    const elsewhere = items.length - here.length;
+    const elsewhereNote = elsewhere ? ` ${elsewhere} kept on another device ${elsewhere === 1 ? "isn't" : "aren't"} included — back ${elsewhere === 1 ? "it" : "them"} up there.` : "";
+    if (!here.length) {
+      setMessage({ text: items.length ? `Nothing to back up on this device.${elsewhereNote}` : "There are no files to back up yet.", error: !!items.length });
+      return;
+    }
+    const bytes = here.reduce((sum, i) => sum + i.size, 0);
+    if (bytes > MAX_BACKUP_BYTES) {
+      setMessage({ text: "That's more than one download can hold (2 GB). Tick some files and download them in parts.", error: true });
+      return;
+    }
+    setStatus(`Backing up 1 of ${here.length}…`);
+    try {
+      const { saved, skipped } = await downloadEverything(here, (done, total) => setStatus(`Backing up ${Math.min(done + 1, total)} of ${total}…`), backupName());
+      const failed = skipped ? ` ${skipped} couldn't be downloaded.` : "";
+      setMessage({ text: `Saved ${saved} file${saved === 1 ? "" : "s"} in one .zip.${failed}${elsewhereNote}`, error: !!skipped });
+    } catch {
+      setMessage({ text: "Couldn't make the backup.", error: true });
+    } finally {
+      setStatus(null);
+    }
+  }, []);
+
+  return { backUp, status, message, busy: status !== null, clear: () => setMessage(null) };
+}
+
