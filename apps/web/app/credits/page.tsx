@@ -49,6 +49,12 @@ export default function CreditsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Find the Root">
+        <p>
+          Find the Root — hearing a rootless voicing and finding the root that completes it — was Rob Moreno&apos;s idea.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Rhythm Section chords">
         <p>
           The piano comping in Rhythm Section uses the velocity-layered{" "}

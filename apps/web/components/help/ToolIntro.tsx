@@ -1,81 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Shot, TopicIcon } from "@/components/help/helpParts";
+import { TopicIcon } from "@/components/help/helpParts";
 import { CloseIcon, HelpIcon } from "@/components/tools";
 import { TOUCH_HIT_ROUND } from "@/components/SettingsBar";
 import type { HelpTopic } from "@/lib/helpContent";
-import { useSiteSettings } from "@/lib/siteSettings";
 
 /**
- * A page's quick intro: the help topic's screenshot, what it's for and its steps, with a link to
- * the full guide on the Help page. Opens by itself the first time a page is visited on this device
- * (remembered per topic in localStorage) and from the ? next to the page title (`IntroButton`).
+ * A page's quick intro: what it's for and its steps, with a link to the full guide on the Help
+ * page. Opens only from the ? next to the page title (`IntroButton`). It used to open by itself on
+ * a page's first visit, with a screenshot; Jack found that outdated and annoying (FB-23), so it
+ * doesn't any more (the old "seen" list in localStorage, `jam-practice-intros-seen`, is unused).
  */
 
-const SEEN_KEY = "jam-practice-intros-seen";
-const listeners = new Set<() => void>();
-let cache: string | null = null;
-
-function readSeen(): string {
-  if (cache === null) {
-    try {
-      cache = window.localStorage.getItem(SEEN_KEY) ?? "";
-    } catch {
-      cache = "*"; // storage unavailable: never pop up by itself
-    }
-  }
-  return cache;
-}
-
-function hasSeen(raw: string, id: string) {
-  return raw === "*" || raw.split(",").includes(id);
-}
-
-function markSeen(id: string) {
-  const raw = readSeen();
-  if (hasSeen(raw, id)) return;
-  cache = raw ? `${raw},${id}` : id;
-  try {
-    window.localStorage.setItem(SEEN_KEY, cache);
-  } catch {
-    // storage unavailable
-  }
-  listeners.forEach((l) => l());
-}
-
-/** Forget which intros were seen, so each page's opens again the next time (Settings → Tools). */
-export function resetIntros() {
-  cache = "";
-  try {
-    window.localStorage.removeItem(SEEN_KEY);
-  } catch {
-    // storage unavailable
-  }
-  listeners.forEach((l) => l());
-}
-
-function subscribe(l: () => void) {
-  listeners.add(l);
-  return () => listeners.delete(l);
-}
-
-/** Whether a page's intro is showing: on the first visit, or after pressing its ? button. */
+/** Whether a page's intro is showing: after pressing its ? button. */
 export function useIntro(topic: HelpTopic | undefined) {
-  const raw = useSyncExternalStore(subscribe, readSeen, () => "*");
   const [asked, setAsked] = useState(false);
-  // Settings → Tools can turn off opening it by itself the first time.
-  const [{ toolIntros }] = useSiteSettings();
-  const open = !!topic && (asked || (toolIntros && !hasSeen(raw, topic.id)));
   return {
-    open,
+    open: !!topic && asked,
     show: () => setAsked(true),
-    close: () => {
-      if (topic) markSeen(topic.id);
-      setAsked(false);
-    },
+    close: () => setAsked(false),
   };
 }
 
@@ -118,12 +64,6 @@ export default function ToolIntro({ topic, onClose }: { topic: HelpTopic; onClos
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-        {/* A desktop screenshot: on a phone its text is too small to read, so it's left out. */}
-        {topic.shot && (
-          <div className="hidden sm:block">
-            <Shot name={topic.shot} alt={`${topic.title} screenshot`} />
-          </div>
-        )}
         <ol className="divide-y divide-foreground/10 rounded-lg bg-foreground/[0.05]">
           {topic.steps.map((s, i) => (
             // A touch-screen-only step is the topic's last, so leaving it out with a mouse keeps the numbering.

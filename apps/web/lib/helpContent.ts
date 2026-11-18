@@ -6,7 +6,7 @@
  * the explaining.
  */
 
-/** `touch`: only for touch screens (the first-visit intro leaves it out with a mouse). */
+/** `touch`: only for touch screens (the page intro leaves it out with a mouse). */
 export type HelpStep = { title: string; text: string; touch?: boolean };
 
 /** One option of a tool, explained. */

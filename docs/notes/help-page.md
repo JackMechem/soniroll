@@ -102,3 +102,16 @@ Verified in nix Chromium: the goal dialog (both modes, rest day, presets, Save w
 and checked; the landing page and the gate page with the portrait sample card; `tsc` (web,
 mobile), `eslint`, `next build`, Convex dev push.
 
+
+## 2026-11-18: intros no longer open by themselves (FB-23)
+
+Jack: "help popups are outdated and annoying, remove them" (screenshot: Community's intro, opened by
+itself, showing an old sheddex-era screenshot). `useIntro` (`components/help/ToolIntro.tsx`) now
+opens only from the ? next to the title; the first-visit auto-open, its "seen" list
+(`jam-practice-intros-seen` in localStorage, now unused) and `resetIntros` are gone, and so are
+Settings → Tools → Help's "Explain a page the first time" switch and "Show them again" button (and
+`toolIntros` in `SITE_DEFAULTS`; old stored values are just ignored). The intro dialog no longer
+shows the topic's screenshot (they were outdated); the Help page still does. Kept the ? intros
+themselves (steps + "Full guide") since they only appear when asked for. Verified: tsc, eslint, a
+fresh signed-out browser no longer gets a popup on /metronome or /random-metric-modulation.
+Not verified: the help screenshots themselves are still old — retaking them is a separate job.

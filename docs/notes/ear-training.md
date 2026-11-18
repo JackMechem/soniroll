@@ -114,3 +114,11 @@ section, and in Interval/Chord learn mode the Options button is hidden while run
 level pill shown; no page errors. Release (preview) APK built — **not installed / not heard on the
 phone yet**.
 
+
+## 2026-11-18: no phone keyboard in Guess the Progression (FB-26)
+
+The keypads type every possible answer, so tapping the answer box no longer brings up the phone's
+keyboard: `onPointerDown` sets the input's `inputMode` to "none" for a touch tap (and back to "text"
+for a mouse/pen), before focus, so the caret still shows and a hardware keyboard still types.
+Guess the Chord keeps the keyboard: its keypad has no root letters. Not verified on a real phone
+(headless Chromium has no on-screen keyboard).

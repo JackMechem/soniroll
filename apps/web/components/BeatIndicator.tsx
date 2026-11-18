@@ -10,7 +10,7 @@ const LEVEL_LABEL: Record<BeatLevel, string> = {
 };
 
 /** A single vertical bar — a main beat (numbered) or a subdivision tick (unnumbered) — shared by
-    both rows below so they look and behave identically apart from the number. Its three segments
+    both rows below so they look and behave identically apart from the number above it. Its three segments
     fill from the bottom with the click's level: all three for an accent (in the accent colour),
     two for normal, one for soft, none when muted. */
 function Bar({
@@ -25,7 +25,7 @@ function Bar({
   level: BeatLevel;
   active: boolean;
   label: string;
-  /** Shown top-left inside the bar; omitted for a subdivision tick. */
+  /** Shown above the bar; omitted for a subdivision tick. */
   number?: number;
   dim: string;
   /** Each segment's own fixed height (see below). */
@@ -46,18 +46,9 @@ function Bar({
       {[2, 1, 0].map((i) => (
         <span key={i} className={`block w-full ${seg} rounded-[3px] ${i > 0 ? "mb-[3px]" : ""} ${i < rank ? lit : "bg-foreground opacity-10"}`} />
       ))}
-      {number !== undefined && (
-        <span
-          className={`absolute left-1.5 top-1 text-xs font-semibold tabular-nums ${
-            rank === 3 ? "text-accent-foreground" : "text-muted"
-          } ${level === 0 ? "line-through" : ""}`}
-        >
-          {number}
-        </span>
-      )}
     </>
   );
-  return onClick ? (
+  const bar = onClick ? (
     <button
       type="button"
       onClick={onClick}
@@ -70,6 +61,20 @@ function Bar({
   ) : (
     <div title={label} className={className}>
       {content}
+    </div>
+  );
+  if (number === undefined) return bar;
+  // The number sits above the bar, in its own row: drawn inside, over the top segment, it looked
+  // muddled on phones (FB-25). Subdivision ticks have none and line up by their bottoms.
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span
+        aria-hidden
+        className={`text-xs font-semibold leading-none tabular-nums ${active ? "text-foreground" : "text-muted"} ${level === 0 ? "line-through" : ""}`}
+      >
+        {number}
+      </span>
+      {bar}
     </div>
   );
 }

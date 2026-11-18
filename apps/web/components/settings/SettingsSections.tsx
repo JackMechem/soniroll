@@ -5,7 +5,6 @@ import { useState, type ReactNode } from "react";
 import { HintsButton } from "@/components/CollapsiblePanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { hideFeedbackFab, showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
-import { resetIntros } from "@/components/help/ToolIntro";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { VIEW_DEFAULTS, VIEW_KEY } from "@/components/PracticeLog";
 import GoalDialog from "@/components/practicelog/GoalDialog";
@@ -244,7 +243,6 @@ export function ToolSettings() {
   const [site, update] = useSiteSettings();
   const [{ hidden: statsHidden }, setStats] = useSyncedSettings(TOOL_STATS_KEY, TOOL_STATS_DEFAULTS);
   const log = usePracticeLog();
-  const [introsReset, setIntrosReset] = useState(false);
   return (
     <>
       <SettingsCard title="Tool pages">
@@ -264,21 +262,6 @@ export function ToolSettings() {
           onChange={(hintsByDefault) => update({ hintsByDefault })}
           hint="Each option's description shows without pressing ?. You can still hide them on any one panel."
         />
-        <SwitchRow label="Explain a page the first time" checked={site.toolIntros} onChange={(toolIntros) => update({ toolIntros })} hint="How a tool or page works, shown the first time you open it. The ? by the title shows it any time." />
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-sm text-muted">{introsReset ? "Done: each page explains itself again next time." : "See every page's explanation again."}</p>
-          <button
-            type="button"
-            onClick={() => {
-              resetIntros();
-              setIntrosReset(true);
-            }}
-            disabled={introsReset}
-            className={BUTTON_SECONDARY}
-          >
-            Show them again
-          </button>
-        </div>
       </SettingsCard>
     </>
   );

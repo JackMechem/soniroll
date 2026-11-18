@@ -597,6 +597,7 @@ export default function FindTheRoot() {
   return (
     <ToolLayout
       title="Find the Root"
+      credit="Idea by Rob Moreno"
       presets={toolPresets("find-the-root", settings, updateSettings)}
       optionsMode={
         <Segmented

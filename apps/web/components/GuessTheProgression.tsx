@@ -1209,10 +1209,15 @@ export default function GuessTheProgression() {
                 <KeypadKey label="⌫" caption="delete" title="Delete" onPress={backspace} />
               </div>
             </fieldset>
+            {/* The keypads above can type every answer, so a tap on the box shows its caret but not
+                the phone's keyboard (FB-26). Set before focus, from the tap itself, so a hardware
+                keyboard or a mouse click still types normally. */}
             <input
               ref={inputElRef}
               type="text"
-              inputMode="text"
+              onPointerDown={(e) => {
+                e.currentTarget.inputMode = e.pointerType === "touch" ? "none" : "text";
+              }}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"

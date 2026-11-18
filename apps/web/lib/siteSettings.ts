@@ -24,8 +24,6 @@ export const SITE_DEFAULTS = {
   clock: "12" as "12" | "24",
   /** Confetti and sparkles when you tick things off, reach a goal or finish a routine. */
   celebrations: true,
-  /** Show a tool's "how it works" the first time you open it. */
-  toolIntros: true,
   /** Option descriptions shown without pressing "?" (until you hide them on a panel). */
   hintsByDefault: false,
   /** The colourful look for tool option chips. */
