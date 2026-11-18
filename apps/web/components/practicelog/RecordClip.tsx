@@ -41,7 +41,7 @@ export default function RecordClip({
     if (!recording) {
       if (busy) return;
       setMine(true);
-      await startRecording(NO_METRONOME, { autoGain: true });
+      await startRecording(NO_METRONOME, { autoGain: true, mono: null, gain: 1 });
       return;
     }
     if (rec.phase === "finishing") return;

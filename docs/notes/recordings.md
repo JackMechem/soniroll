@@ -151,3 +151,45 @@ Play/Pause, a `.slider` scrubber and the times, decoding the file on the first P
 before then). Used on the recording page, the recording cards and the save dialog. Checked in
 headless Chromium with a MediaRecorder WebM made on the page: play, scrub, stop at the end. Not
 checked in Firefox itself.
+
+## 2026-11-17 — The Recorder redesigned: input level, level check, chips
+
+Jack: "redesign the recorder and make it more functional… the auto gain is stupid… it's just a
+mess". Before: a big metronome panel on the left, Auto gain / Mono switches under the button, a tiny
+level bar only while recording, recent recordings below.
+
+- **Layout** (`components/Recorder.tsx`, the normal `ToolLayout`): status, a big timer, a **level
+  trace** (64 bars, about 4.5 s, red where the peak distorted), a hint line ("Too loud — turn the
+  input level down", "Very quiet…", "Check the level before you record"), the beat strip when the
+  metronome is on, then **Check level** beside the record button. Chips: **Input** (microphone —
+  `listAudioInputs`, so the desktop's native list too —, **Input level** 0–400 %, Channels
+  Stereo/Left/Both/Right, Auto gain), **Metronome** (a split chip: switch + the full Metronome
+  settings incl. changing meters), Count-in and Click sound (with the metronome), **Song** (split
+  chip, when the tune has one). **Recent takes** is a chip above the display (last 5 + All
+  recordings). Space starts/stops a take. Presets skip the input fields.
+- **Settings:** `inputDeviceId`, `inputGain`, and `autoGainOn` (default **off**) replacing
+  `autoGain` (default on before; the old field stays in stored settings, unused on web — the paused
+  mobile app still reads it).
+- **Engine** (`lib/recorderEngine.ts`): a `RecorderInput` (deviceId, autoGain, mono, gain). The mic
+  always goes source → gain → (mono) → the recorded stream, meter after the gain. `startMonitor` /
+  `stopMonitor` open the input just to meter it; a take started from there reuses it (no second
+  permission prompt); changing mic/channels/auto gain while checking reopens it; `setRecorderGain`
+  changes the level live (also mid-take). The snapshot has `monitoring` and **`peak`** (the loudest
+  sample): "too loud" = peak ≥ 0.9, not the meter level (that's RMS × 4, which tops out around
+  −12 dBFS, far from distortion).
+- **Desktop** (`apps/desktop/src/native/recorderEngine.ts`, `src-tauri/src/recorder.rs`): the same
+  API. `recorder_open` takes `gain` (applied before auto gain and the soft clipper) and a new
+  `recorder_set_gain` changes it live (an `AtomicU32` shared with the audio thread); the level channel
+  now sends `(level, peak)`. A level check is `recorder_open` without `recorder_begin`. New Rust test
+  `manual_gain_scales_and_changes_live`.
+- The Shed Log's quick recorder (`RecordClip`) passes the new input shape (auto gain on there, as
+  before).
+- Verified: `tsc` (web, desktop), eslint, `cargo test --lib recorder` (10 pass), clippy. In a
+  separate muted headless Chromium with a fake microphone, as the demo account: Check level → the
+  trace moves and (the fake beep peaks at 1.13) "Too loud"; Input level 50 % → the warning cleared
+  live, the chip read "Default mic · 50%"; a 3.5 s take → Recording → the save dialog; Discard; 390 px
+  without overflow; no console errors.
+- Not verified: the desktop app's native path by ear or in the window, a real interface's channels,
+  the Song chip with a real song, the help page's old Recorder screenshot (`shot: "recorder"`) needs
+  retaking.
+

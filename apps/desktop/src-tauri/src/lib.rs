@@ -96,6 +96,7 @@ pub fn run() {
             bridge::wa_analyser,
             recorder::recorder_open,
             recorder::recorder_begin,
+            recorder::recorder_set_gain,
             recorder::recorder_stop,
             recorder::recorder_take,
             recorder::recorder_cancel,
