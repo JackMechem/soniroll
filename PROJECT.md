@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.6 beta** (see versioning).
+**v0.10.7 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -190,8 +190,10 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - **Never name the source the Syncopation exercises were modelled on** (still under copyright),
   anywhere in the site, code, help text or docs. The Random Sticking Warmup likewise doesn't name
   the book its patterns were transcribed from.
-- **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — fine for a free site with credit,
-  not for anything commercial. Every bundled sample/font is credited on `/credits`.
+- **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — not for anything commercial, so
+  since soniroll sells storage plans they're **out** (removed 2026-11-18: Rhythm Section's chords are
+  piano only; samples and code in git history) until Jeff Learman gives permission. Every bundled
+  sample/font is credited on `/credits`. The trainers' "Rhodes" tone is FluidR3 (CC BY 3.0), fine.
 - **Storage:** files, recordings and tune songs live online (`storageId`) or on the device that
   saved them (`device`; the row stays in Convex). Free accounts save on the device and get 50 MB
   online (sharing, Lessons, notes, profile); a storage plan (Polar, `billing.ts`) saves online. Only

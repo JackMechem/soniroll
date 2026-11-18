@@ -104,8 +104,9 @@ type BandSettings = {
   swing: BassSwing;
   volume: number;
   room: boolean;
-  /** Chords under the bass: off, or a piano / Rhodes comping the changes. */
-  chords: "off" | CompInstrument;
+  /** Chords under the bass: off, or a piano comping the changes. ("rhodes" may still be stored
+      from before the Rhodes was taken out; it plays the piano.) */
+  chords: "off" | CompInstrument | "rhodes";
   chordStyle: CompStyle;
   chordVolume: number;
   /** "off" or the drums on ("sticks"; an old saved "brushes" counts as on). Only with a chart —
@@ -263,7 +264,7 @@ const PICKABLE = DRUM_STYLES.filter((s) => s.id !== "swing-comping");
 
 /**
  * Rhythm Section: a band to play along with. Pick a drum style and it plays on its own — or pick
- * one of your chord charts (or type chords) and an upright bass and a piano or Rhodes play the
+ * one of your chord charts (or type chords) and an upright bass and a piano play the
  * changes with the drums, the bass written out as it plays. Swing styles walk (the Computer, or
  * bass players modelled on transcriptions) over a jazz drummer; the other styles play the groove
  * with a bass part that fits it. Replaced Bass Genius and the Drum Generator.
@@ -359,7 +360,7 @@ export default function RhythmSection({
 
   // What plays: with no chart, just the drums.
   const bassOn = !!song && settings.bass;
-  const chords: "off" | CompInstrument = song ? settings.chords : "off";
+  const chords: "off" | CompInstrument = song && settings.chords !== "off" ? "piano" : "off";
   const drumsOn = !song || settings.drums !== "off";
 
   // ——— The bass player ———
@@ -1087,7 +1088,7 @@ export default function RhythmSection({
         id="chords"
         title="Chords"
         icon={ChordIcon}
-        summary={!song ? "Needs a chart" : chords === "off" ? "Off" : `${chords === "piano" ? "Piano" : "Rhodes"} · ${walking && chordStyle === "comp" ? "comping" : "held"}`}
+        summary={!song ? "Needs a chart" : chords === "off" ? "Off" : `Piano · ${walking && chordStyle === "comp" ? "comping" : "held"}`}
       >
         {!song ? (
           needTune
@@ -1100,7 +1101,6 @@ export default function RhythmSection({
               options={[
                 { value: "off", label: "Off" },
                 { value: "piano", label: "Piano" },
-                { value: "rhodes", label: "Rhodes" },
               ]}
             />
             {chords !== "off" && walking && (

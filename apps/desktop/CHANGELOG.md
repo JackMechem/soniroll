@@ -13,7 +13,8 @@ of the GitHub release for its `desktop-v<version>` tag.
   by default.
 - **Files kept on your computer** without a storage plan, and storage plans for having them online
   on all your devices (Account → Storage plan; checkout opens in your browser).
-- Syncopation's swing beat underneath, and everything else in the website's 0.10.6.
+- Syncopation's swing beat underneath, and everything else in the website's 0.10.6 and 0.10.7.
+- Rhythm Section's chords are piano only for now (the Rhodes samples are no longer in the app).
 
 ## [0.1.6] - 2026-11-17
 

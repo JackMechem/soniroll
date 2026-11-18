@@ -129,3 +129,15 @@ hidden on son montuno, every sound (bass, piano, drums) starting on one 16th-not
 hidden tools, 1440 and 390 wide, light and dark, the Options sheet, no console errors or horizontal
 overflow. **Not heard** — the style bass parts especially need Jack's ears. Not checked: signed in
 (Shed Log entries, favorites, synced settings), the desktop app running, a real phone.
+
+## 2026-11-18 — The Rhodes taken out (licence)
+
+jRhodes3d (Jeff Learman) is CC BY-NC 4.0, and soniroll now sells storage plans, so Jack had it
+switched off until he has permission. `lib/compSounds.ts`: `CompInstrument` is just `"piano"` (the
+Rhodes sample table and trims removed); `public/samples/rhodes/` deleted (29 mp3s, so it's neither
+served by the site nor bundled into the desktop app). Rhythm Section's Chords are Off / Piano; a
+stored `chords: "rhodes"` (settings or a preset) plays the piano. Credits, help and PROJECT.md
+updated. To bring it back: restore the files and code from git history before this change.
+The ear trainers' "Rhodes" tone is a different set (FluidR3 "Electric Piano 1", CC BY 3.0, from
+GitHub Pages) and stays.
+

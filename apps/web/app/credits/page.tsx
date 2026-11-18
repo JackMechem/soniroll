@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function CreditsPage() {
   return (
-    <LegalPage title="Credits" updated="September 30, 2026">
+    <LegalPage title="Credits" updated="November 18, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         soniroll&apos;s sounds are almost entirely synthesized in the browser (see the Tone menu in
         the trainers, the metronome, and Guess the Interval/Guess the Chord for the full list) —
@@ -54,11 +54,7 @@ export default function CreditsPage() {
           The piano comping in Rhythm Section uses the velocity-layered{" "}
           <LegalLink href="https://archive.org/details/SalamanderGrandPianoV3">Salamander Grand Piano</LegalLink> (Alexander Holm,{" "}
           <LegalLink href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</LegalLink>), as hosted by the{" "}
-          <LegalLink href="https://github.com/tambien/Piano">Tone.js Piano</LegalLink> project. The Rhodes is{" "}
-          <LegalLink href="https://github.com/sfzinstruments/jlearman.jRhodes3d">jRhodes3d</LegalLink> by Jeff Learman — a 1977 Rhodes Mark I
-          Stage 73 — used under{" "}
-          <LegalLink href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</LegalLink> (non-commercial use, with credit) and
-          served by soniroll itself as trimmed mono mp3s.
+          <LegalLink href="https://github.com/tambien/Piano">Tone.js Piano</LegalLink> project.
         </p>
       </LegalSection>
 
