@@ -2,9 +2,11 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { Polar } from "@convex-dev/polar";
 import { subscriptionsRevoke } from "@polar-sh/sdk/funcs/subscriptionsRevoke.js";
+import { subscriptionsUpdate } from "@polar-sh/sdk/funcs/subscriptionsUpdate.js";
 import { components, internal } from "./_generated/api";
 import type { DataModel, Id } from "./_generated/dataModel";
-import { action, internalAction, internalQuery, query, type QueryCtx } from "./_generated/server";
+import { action, internalAction, internalQuery, query, type ActionCtx, type QueryCtx } from "./_generated/server";
+import { storedItems } from "./lib/storage";
 
 /**
  * Storage plans, sold through Polar (polar.sh, the merchant of record: it handles payments, sales
@@ -124,10 +126,15 @@ function siteUrl(path: string) {
   return `${base}${path}`;
 }
 
-/** Starts a checkout for one of the plans and returns Polar's checkout page to open. */
+/** Where the plan is shown and managed: the Account page's Storage plan section. */
+const PLAN_PATH = "/account?tab=storage";
+
+/** Starts a checkout for one of the plans. The web app shows it in an overlay on the page
+    (Polar's embedded checkout) when it's on `embedOrigin` (the site's own address), and opens the
+    page otherwise (the desktop app, preview builds). */
 export const checkout = action({
   args: { productId: v.string() },
-  handler: async (ctx, { productId }): Promise<{ url: string }> => {
+  handler: async (ctx, { productId }): Promise<{ url: string; embedOrigin: string }> => {
     const user: UserInfo | null = await ctx.runQuery(internal.billing.signedInUser, {});
     if (!user) throw new Error("Sign in to get a storage plan.");
     const known: boolean = await ctx.runQuery(internal.billing.isPlanProduct, { productId });
@@ -140,9 +147,9 @@ export const checkout = action({
         userId: user.userId,
         email: user.email,
         origin: siteUrl(""),
-        successUrl: siteUrl("/plans?welcome=1"),
+        successUrl: siteUrl(`${PLAN_PATH}&welcome=1`),
       });
-      return { url: session.url };
+      return { url: session.url, embedOrigin: new URL(siteUrl("/")).origin };
     } catch (e) {
       console.error("Polar checkout failed", e);
       throw new Error("The checkout couldn't be opened. Try again in a minute, or send feedback if it keeps happening.");
@@ -160,14 +167,86 @@ export const hasPlan = internalQuery({
   handler: async (ctx, { userId }) => (await accountPlan(ctx, userId, 0)).plan !== null,
 });
 
-/** Polar's own page for changing plan, the card, or cancelling. */
+export const currentPlanInfo = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const sub = await polar.getCurrentSubscription(ctx, { userId }).catch(() => null);
+    const plan = sub && PAID_STATUSES.has(sub.status) ? planOf(sub.product) : null;
+    const used = (await storedItems(ctx, userId, false)).reduce((sum, i) => sum + (i.device ? 0 : i.size), 0);
+    return sub && plan ? { subscriptionId: sub.id, productId: sub.productId, storageGb: plan.storageGb, used, cancelAtPeriodEnd: sub.cancelAtPeriodEnd } : { subscriptionId: null, used };
+  },
+});
+
+/** The signed-in account's current plan, for the actions below (throws when there's none). */
+async function currentFor(ctx: ActionCtx) {
+  const user: UserInfo | null = await ctx.runQuery(internal.billing.signedInUser, {});
+  if (!user) throw new Error("Sign in first.");
+  const current = await ctx.runQuery(internal.billing.currentPlanInfo, { userId: user.userId as Id<"users"> });
+  if (!current.subscriptionId) throw new Error("You don't have a storage plan.");
+  return current as Required<typeof current> & { subscriptionId: string; productId: string; storageGb: number; cancelAtPeriodEnd: boolean };
+}
+
+/** Polar's errors become one plain message (the details go to the logs). */
+async function polarCall<T>(what: string, run: () => Promise<{ ok: true; value: T } | { ok: false; error: unknown }>): Promise<T> {
+  const result = await run();
+  if (!result.ok) {
+    console.error(`Polar: couldn't ${what}`, result.error);
+    throw new Error(`Couldn't ${what} just now. Try again in a minute, or send feedback if it keeps happening.`);
+  }
+  return result.value;
+}
+
+/** Switches to another plan (a different size, or monthly ↔ yearly). Polar works out what's owed.
+    Refused when the account already keeps more online than the new plan holds. */
+export const changePlan = action({
+  args: { productId: v.string() },
+  handler: async (ctx, { productId }) => {
+    const current = await currentFor(ctx);
+    if (current.productId === productId) return;
+    const plans: StoragePlan[] = await ctx.runQuery(internal.billing.planList, {});
+    const next = plans.find((p) => p.productId === productId);
+    if (!next) throw new Error("That plan isn't on sale any more. Reload the page and pick another.");
+    if (current.used > next.storageGb * GB) {
+      throw new Error(`You keep more than ${next.storageGb} GB online. Delete some files, or move them to this device, before switching to it.`);
+    }
+    await polarCall("switch your plan", () => subscriptionsUpdate(polar.polar, { id: current.subscriptionId, subscriptionUpdate: { productId } }));
+  },
+});
+
+/** Cancels at the end of the period: the plan keeps working until then. */
+export const cancelPlan = action({
+  args: {},
+  handler: async (ctx) => {
+    const current = await currentFor(ctx);
+    if (current.cancelAtPeriodEnd) return;
+    await polarCall("cancel your plan", () => subscriptionsUpdate(polar.polar, { id: current.subscriptionId, subscriptionUpdate: { cancelAtPeriodEnd: true } }));
+  },
+});
+
+/** Undoes a cancel before the period ends: the plan renews as before. */
+export const resumePlan = action({
+  args: {},
+  handler: async (ctx) => {
+    const current = await currentFor(ctx);
+    if (!current.cancelAtPeriodEnd) return;
+    await polarCall("resume your plan", () => subscriptionsUpdate(polar.polar, { id: current.subscriptionId, subscriptionUpdate: { cancelAtPeriodEnd: false } }));
+  },
+});
+
+export const planList = internalQuery({
+  args: {},
+  handler: async (ctx) => storagePlans(ctx),
+});
+
+/** Polar's own page, now only for the card on file and receipts (plans are changed and cancelled
+    in soniroll). */
 export const portal = action({
   args: {},
   handler: async (ctx): Promise<{ url: string }> => {
     const user: UserInfo | null = await ctx.runQuery(internal.billing.signedInUser, {});
     if (!user) throw new Error("Sign in first.");
     try {
-      return await polar.createCustomerPortalSession(ctx, { userId: user.userId, returnUrl: siteUrl("/plans") });
+      return await polar.createCustomerPortalSession(ctx, { userId: user.userId, returnUrl: siteUrl(PLAN_PATH) });
     } catch (e) {
       console.error("Polar customer portal failed", e);
       throw new Error("Your plan's page couldn't be opened. Try again in a minute, or send feedback if it keeps happening.");

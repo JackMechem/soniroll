@@ -287,7 +287,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
-| Storage plans (Polar, `/plans`), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
+| Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
 | Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |

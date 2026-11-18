@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { CloseIcon, CloudIcon, HeartIcon } from "@/components/tools";
 import { navIconButtonClass, navRowClass } from "@/components/navRow";
+import { PLAN_HREF } from "@/lib/storagePlan";
 
 /**
  * Asking for support (donations), in a few places: the `/support` page, a "Support soniroll" row
@@ -103,7 +104,7 @@ export function SupportCard({ always = false }: { always?: boolean }) {
         <a href={DONATE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
           <HeartIcon className="h-4 w-4" filled /> Buy me a coffee
         </a>
-        <Link href="/plans" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+        <Link href={PLAN_HREF} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
           <CloudIcon className="h-4 w-4 text-accent" /> Storage plans
         </Link>
         <Link href={SUPPORT_PATH} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">

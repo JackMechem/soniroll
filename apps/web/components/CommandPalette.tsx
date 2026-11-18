@@ -75,6 +75,7 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Settings", href: "/account?tab=dashboard", label: "Dashboard", detail: "Settings", words: "settings home cards layout edit", icon: HomeIcon, account: true },
   { group: "Settings", href: "/account?tab=tools", label: "Tools", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
   { group: "Settings", href: "/account?tab=practice", label: "Shed Log", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
+  { group: "Settings", href: "/account?tab=storage", label: "Storage plan", detail: "Account", words: "storage plan subscription subscribe cancel billing payment receipts card upgrade gb cloud", icon: CloudIcon, account: true },
   { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password email google login sign in", icon: ShieldIcon, account: true },
 ];
 

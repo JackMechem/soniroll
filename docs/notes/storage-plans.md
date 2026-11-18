@@ -175,3 +175,44 @@ routes, `.env`) doesn't apply: the webhook and keys live in Convex.
   in the portal, account deletion revoking a real subscription, and the desktop app opening checkout
   in the system browser.
 - The desktop app (its WebView's IndexedDB and opening checkout in the browser), Safari, real phones.
+
+## 2026-11-17 — Plans in the Account page; checkout over the page; plans managed in soniroll
+
+Jack: the payment side should feel like soniroll rather than "just link to Polar", and the plan
+should live in the Account page.
+
+- **Account → Storage plan** (`/account?tab=storage`, in the Account group above Sign-in &
+  security): `StoragePlans` from `components/plans/PlansPage.tsx`. `/plans` sends signed-in people
+  there (keeping `welcome=1`) and stays a page for signed-out visitors (the landing page links it).
+  `PLAN_HREF` (`lib/storagePlan.ts`) is used by every signed-in link (sidebar row and menus, Files
+  page, notices, storage meter, the dashboard card); ⌘K has "Storage plan" under Settings.
+- **Checkout over the page:** `billing.checkout` returns `{url, embedOrigin}`; on the site's own
+  address the web app opens Polar's embedded checkout (an overlay; light/dark from the theme), and
+  on success closes it and stays on the page (the plan appears when the webhook lands). The desktop
+  app and other addresses (preview builds) still open Polar's page. The embed script is **vendored**
+  (`lib/vendor/polarEmbed.js` + `.d.ts`, Apache-2.0, credited on `/credits`, ignored by eslint):
+  pnpm linked the `@polar-sh/checkout` package to a folder that doesn't exist (its Stripe peers),
+  and the script is 4 KB with no imports.
+- **Polar only frames the checkout for listed hosts** (organization `embed_hosts`, Settings →
+  Embedding; otherwise `frame-ancestors 'none'` and a blank overlay). Set on the sandbox through the
+  API: `localhost:3000`, `www.soniroll.com`, `soniroll.com`. **The production organization needs
+  the same** (add any other address the site runs on).
+- **Managed in soniroll:** `billing.changePlan` (any other plan, incl. monthly ↔ yearly; refused
+  when the account keeps more online than the new size; Polar prorates per the organization's
+  setting), `cancelPlan` (at the period's end), `resumePlan`. The section shows the plan, usage,
+  renews/ends, **Keep my plan** after a cancel, **Cancel plan** (confirm: "Keep plan" / "Cancel plan"
+  — `ConfirmDialog` got a `cancelLabel`), **Payment details and receipts** (Polar's portal, now only
+  for the card and receipts) and a **Switch plan** grid (the Monthly/Yearly switch starts on your
+  plan's period; same size reads "Switch to yearly").
+- Fixed a hydration mismatch: the sidebar's plans row decided "active" from `location.search` while
+  rendering; now `PlansRow` reads it after hydrating (`useSyncExternalStore`).
+- **Verified** as the demo account (own browser context, sandbox): `/plans` → the Account section;
+  Get 5 GB → the overlay on the Account page (saved test card) → Subscribe → the overlay closed, the
+  page stayed, "Thanks for subscribing!" and "Your plan: 5 GB · $20 a year"; Switch to 25 GB
+  (monthly) → "Your plan: 25 GB · $5 a month · renews December 17"; Cancel plan → "ends December
+  17" and Keep my plan; Keep my plan → renews again. No console errors after the hydration fix;
+  1440 and 390 wide (no overflow); `/plans` signed out at 390. Jack's own sandbox subscription and the
+  demo's were revoked afterwards (both accounts are free again).
+- **Not verified:** typing a new card inside the overlay (the demo account had a saved card), the
+  portal's card update, the desktop app's path.
+

@@ -7,7 +7,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { CloseIcon, DeviceIcon, DownloadIcon } from "@/components/tools";
 import { type StoredEntry, errorText, formatBytes } from "@/lib/files";
 import { downloadEverything, isMovable, useStorageMoves } from "@/lib/storageMove";
-import { type AccountStorage, moveDateLabel, useStoragePlan } from "@/lib/storagePlan";
+import { type AccountStorage, PLAN_HREF, moveDateLabel, useStoragePlan } from "@/lib/storagePlan";
 
 /**
  * The notice for free accounts that still have files, recordings or songs online from before
@@ -129,7 +129,7 @@ export function StorageMovePanel({ storage, items }: { storage: AccountStorage; 
           <p className="text-sm text-muted">
             From {moveDateLabel()}, free accounts keep files, recordings and songs on the device that saved them instead of online. Nothing else changes:
             every tool and feature still works, and your tunes, notes and Shed Log still sync. Only having these files on all your devices needs a{" "}
-            <Link href="/plans" className="text-accent hover:underline">
+            <Link href={PLAN_HREF} className="text-accent hover:underline">
               storage plan
             </Link>
             .
@@ -160,7 +160,7 @@ export function StorageMovePanel({ storage, items }: { storage: AccountStorage; 
         >
           <DeviceIcon className="h-4 w-4" /> Move to this device
         </button>
-        <Link href="/plans" className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground sm:h-9">
+        <Link href={PLAN_HREF} className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground sm:h-9">
           See storage plans
         </Link>
         {busy && (
@@ -182,7 +182,7 @@ export function OnOtherDevice({ label, what = "file" }: { label: string; what?: 
       <DeviceIcon className="mt-px h-3.5 w-3.5 shrink-0" />
       <span>
         This {what} is kept on {label}, so play it there. A{" "}
-        <Link href="/plans" className="text-accent hover:underline">
+        <Link href={PLAN_HREF} className="text-accent hover:underline">
           storage plan
         </Link>{" "}
         keeps it on all your devices.
@@ -201,7 +201,7 @@ export function KeptHereHint({ what = "Files" }: { what?: string }) {
       <DeviceIcon className="mt-px h-3.5 w-3.5 shrink-0" />
       <span>
         {what} are kept on this device.{" "}
-        <Link href="/plans" className="font-medium text-accent hover:underline">
+        <Link href={PLAN_HREF} className="font-medium text-accent hover:underline">
           Get them on all your devices
         </Link>
       </span>

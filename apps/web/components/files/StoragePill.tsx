@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatBytes } from "@/lib/files";
-import { useStoragePlan } from "@/lib/storagePlan";
+import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 
 /** Online storage used, as a small meter: "20 MB of 5 GB" over a thin bar. It sits beside the
     Library title (signed in only) and opens the storage plans page. On the free plan it's the
@@ -15,7 +15,7 @@ export default function StoragePill() {
   const full = used >= quota;
   return (
     <Link
-      href="/plans"
+      href={PLAN_HREF}
       title={
         storage.plan
           ? `Your plan keeps ${formatBytes(quota)} online, on all your devices.`

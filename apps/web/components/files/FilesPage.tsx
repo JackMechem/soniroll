@@ -16,7 +16,7 @@ import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
 import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
 import { StorageMovePanel } from "@/components/files/StorageMove";
-import { useStoragePlan } from "@/lib/storagePlan";
+import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 
 type Source = StoredKind;
 
@@ -518,7 +518,7 @@ function WhereFilesGo({ storage }: { storage: NonNullable<ReturnType<typeof useS
         {storage.plan
           ? `Your ${storage.plan.storageGb} GB plan keeps files online, on all your devices: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} used.`
           : "New files are kept on this device. Every feature works; to have them on all your devices, get a storage plan."}{" "}
-        <Link href="/plans" className="font-medium text-accent hover:underline">
+        <Link href={PLAN_HREF} className="font-medium text-accent hover:underline">
           {storage.plan ? "Manage plan" : "Storage plans"}
         </Link>
       </span>

@@ -63,3 +63,7 @@ export function moveDateLabel() {
   const [y, m, d] = DEVICE_MOVE_DATE.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
+
+/** Where your plan is shown and managed: the Account page's Storage plan section. (`/plans` shows
+    the plans signed out and sends you here signed in.) */
+export const PLAN_HREF = "/account?tab=storage";

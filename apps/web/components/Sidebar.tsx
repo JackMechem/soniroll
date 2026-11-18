@@ -17,7 +17,8 @@ import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
-import { PlansRow, PLANS_PATH } from "@/components/plans/PlansRow";
+import { PlansRow } from "@/components/plans/PlansRow";
+import { PLAN_HREF } from "@/lib/storagePlan";
 import {
   CATEGORY_COLORS,
   BugIcon,
@@ -786,7 +787,7 @@ export default function Sidebar() {
                       label="Storage plans"
                       onSelect={() => {
                         setMobileOpen(false);
-                        router.push("/plans");
+                        router.push(PLAN_HREF);
                         close();
                       }}
                     />
@@ -838,7 +839,7 @@ export default function Sidebar() {
           </div>
           <div className="mt-1 flex flex-col gap-1 border-t border-foreground/10 pt-2">
             <PracticeTimerWidget />
-            <PlansRow large active={currentPath === PLANS_PATH} onNavigate={() => setMobileOpen(false)} />
+            <PlansRow large path={currentPath} onNavigate={() => setMobileOpen(false)} />
             {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
             <SettingsRow
               large
@@ -926,7 +927,7 @@ export default function Sidebar() {
                   icon={CloudIcon}
                   label="Storage plans"
                   onSelect={() => {
-                    router.push("/plans");
+                    router.push(PLAN_HREF);
                     close();
                   }}
                 />
@@ -988,7 +989,7 @@ export default function Sidebar() {
           className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
-          <PlansRow collapsed={collapsed} active={currentPath === PLANS_PATH} />
+          <PlansRow collapsed={collapsed} path={currentPath} />
           {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
           <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
           {collapsed && (
@@ -1051,7 +1052,7 @@ export default function Sidebar() {
                       icon={CloudIcon}
                       label="Storage plans"
                       onSelect={() => {
-                        router.push("/plans");
+                        router.push(PLAN_HREF);
                         close();
                       }}
                     />

@@ -31,7 +31,7 @@ import {
   formatFileDate,
   saveFile,
 } from "@/lib/files";
-import { useStoragePlan } from "@/lib/storagePlan";
+import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
 import { KeptHereHint } from "@/components/files/StorageMove";
@@ -116,7 +116,7 @@ export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; auto
         <DeviceIcon className="h-8 w-8 text-muted" />
         <p className="text-sm text-muted">
           This file is kept on {file.device.label}, so open it there. A{" "}
-          <Link href="/plans" className="text-accent hover:underline">
+          <Link href={PLAN_HREF} className="text-accent hover:underline">
             storage plan
           </Link>{" "}
           keeps files on all your devices.
