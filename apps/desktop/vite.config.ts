@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import webPkg from "../web/package.json" with { type: "json" };
+import desktopPkg from "./package.json" with { type: "json" };
 
 // The desktop app reuses the website's own components straight out of apps/web (no copies), so
 // it looks exactly the same. Three kinds of alias make that work:
@@ -48,6 +49,8 @@ export default defineConfig({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   define: {
     "process.env.NEXT_PUBLIC_APP_VERSION": JSON.stringify(webPkg.version),
+    // The app's own version, shown instead of the website's (lib/version.ts DESKTOP_VERSION).
+    "process.env.NEXT_PUBLIC_DESKTOP_VERSION": JSON.stringify(desktopPkg.version),
   },
   resolve: {
     alias: [
