@@ -125,7 +125,7 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
       createdAt: r.createdAt,
       url: r.storageId ? await url(r.storageId) : null,
       tuneId: r.tuneId ?? null,
-      href: `/recordings/view?id=${r._id}`,
+      href: `/tunes/recording?id=${r._id}`,
     });
   }
 

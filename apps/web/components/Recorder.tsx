@@ -303,7 +303,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         {recordings.slice(0, 5).map((r) => (
           <RecordingCard key={r._id} recording={r} tuneName={r.tuneId ? byId.get(r.tuneId)?.tune.name : null} />
         ))}
-        <Link href="/recordings" className="self-end text-sm font-medium text-accent hover:underline">
+        <Link href="/tunes?tab=recordings" className="self-end text-sm font-medium text-accent hover:underline">
           All recordings
         </Link>
       </div>
@@ -617,7 +617,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           onSaved={(id) => {
             setTake(null);
             if (tuneId) router.push(`/tunes/tune?id=${tuneId}`);
-            else router.push(`/recordings/view?id=${id}`);
+            else router.push(`/tunes/recording?id=${id}`);
           }}
         />
       )}

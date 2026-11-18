@@ -19,12 +19,12 @@ import { useDeviceUrls } from "@/lib/deviceFiles";
     link) when it's loaded, else one made from the recording. */
 function entryOf(r: Recording, stored: Map<string, StoredEntry>): StoredEntry {
   return (
-    stored.get(r._id) ?? { kind: "recording", id: r._id, name: r.name, mimeType: r.mimeType, size: 0, createdAt: r.createdAt, url: r.url, tuneId: r.tuneId, href: `/recordings/view?id=${r._id}` }
+    stored.get(r._id) ?? { kind: "recording", id: r._id, name: r.name, mimeType: r.mimeType, size: 0, createdAt: r.createdAt, url: r.url, tuneId: r.tuneId, href: `/tunes/recording?id=${r._id}` }
   );
 }
 
-/** `/recordings` — every saved recording, newest first: search by name, notes or tune; play in
-    place; click a name to open it. Shown as the Library's last tab (its header and tabs). */
+/** Library's Recordings tab (`/tunes?tab=recordings`, see LibraryHub) — every saved recording,
+    newest first: search by name, notes or tune; play in place; click a name to open it. */
 export default function RecordingsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : "skip"));

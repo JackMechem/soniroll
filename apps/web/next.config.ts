@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
       { source: "/tunes/setlists", destination: "/tunes?tab=setlists", permanent: false },
       { source: "/chord-charts", destination: "/tunes?tab=charts", permanent: false },
       { source: "/files", destination: "/tunes?tab=files", permanent: false },
+      // Recordings joined them; `?id=` carries over to the recording's new page.
+      { source: "/recordings", destination: "/tunes?tab=recordings", permanent: false },
+      { source: "/recordings/view", destination: "/tunes/recording", permanent: false },
       // The sidebar calls it Library.
       { source: "/library", destination: "/tunes", permanent: false },
       // Bass Genius and the Drum Generator became Rhythm Section (`?tab=players` carries over;

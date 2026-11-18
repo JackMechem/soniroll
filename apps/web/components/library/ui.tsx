@@ -162,8 +162,8 @@ export function useEdgeFade<T extends HTMLElement>() {
   return { attach: setEl, style: mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined };
 }
 
-export type LibraryTab = "tunes" | "setlists" | "charts" | "files";
-export const LIBRARY_TABS: readonly LibraryTab[] = ["tunes", "setlists", "charts", "files"];
+export type LibraryTab = "tunes" | "setlists" | "charts" | "files" | "recordings";
+export const LIBRARY_TABS: readonly LibraryTab[] = ["tunes", "setlists", "charts", "files", "recordings"];
 
 /** Library is one page (`/tunes`); its tabs are a `?tab=` query (none means Tunes). */
 export function libraryHref(tab: LibraryTab): string {
@@ -171,15 +171,14 @@ export function libraryHref(tab: LibraryTab): string {
 }
 
 /** Tunes · Setlists · Chord Charts · Files · Recordings — Library's tabs, under its title. They
-    swap the `?tab=` query in place (replace, no scroll) rather than going to another page;
-    Recordings is its own page (`/recordings`) but sits here too, so it's found from the Library. */
-export function LibraryTabs({ active }: { active: LibraryTab | "recordings" }) {
+    swap the `?tab=` query in place (replace, no scroll) rather than going to another page. */
+export function LibraryTabs({ active }: { active: LibraryTab }) {
   const tabs = [
     { id: "tunes", label: "Tunes", href: libraryHref("tunes") },
     { id: "setlists", label: "Setlists", href: libraryHref("setlists") },
     { id: "charts", label: "Chord Charts", short: "Charts", href: libraryHref("charts") },
     { id: "files", label: "Files", href: libraryHref("files") },
-    { id: "recordings", label: "Recordings", href: "/recordings" },
+    { id: "recordings", label: "Recordings", href: libraryHref("recordings") },
   ] as const;
   const { attach: fadeRef, style: fadeStyle } = useEdgeFade<HTMLElement>();
   return (

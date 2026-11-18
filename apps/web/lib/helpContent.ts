@@ -313,7 +313,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     id: "recordings",
     title: "Recordings",
     group: "Your library",
-    href: "/recordings",
+    href: "/tunes?tab=recordings",
     shot: "recordings",
     tagline: "Every take, linked to a tune.",
     purpose: "Listen back to your takes, line them up over the real song, and keep notes on each.",

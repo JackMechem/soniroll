@@ -193,3 +193,34 @@ level bar only while recording, recent recordings below.
   the Song chip with a real song, the help page's old Recorder screenshot (`shot: "recorder"`) needs
   retaking.
 
+
+## 2026-11-18 — Recordings moved into the Library route (FB-28)
+
+Jack's feedback: Files and Recordings in the Library were separate routes; everything should be on
+the Library's route. Files already was (`/tunes?tab=files`); Recordings now is too.
+
+- **The Recordings tab** is `/tunes?tab=recordings`: `"recordings"` joined `LibraryTab` /
+  `LIBRARY_TABS` (`components/library/ui.tsx`) and `LibraryHub` renders `RecordingsPage` for it.
+  `RecordingsPage` already drew the Library hero and tabs (it was dressed as the last tab while
+  living at `/recordings`), so it's reused unchanged apart from its links. The tab row was already
+  five tabs wide, so nothing changed at 390px (it fits: "Chord Charts" shows as "Charts" there).
+- **One recording** is `/tunes/recording?id=…` (`app/tunes/recording/page.tsx`, title "Recording"),
+  next to `/tunes/tune`. Its Back uses `goBackOr(router, "/tunes?tab=recordings")`, deleting lands
+  on the tab with `router.replace`, and the "doesn't exist anymore" state now has a Back too. The
+  sidebar keeps Library lit there through its `/tunes/` prefix check.
+- **Old addresses:** `app/recordings/**` was deleted. `next.config.ts` redirects `/recordings` →
+  `/tunes?tab=recordings` and `/recordings/view` → `/tunes/recording` (non-permanent; Next passes
+  the query through, so `?id=` carries over — no thin redirect page needed). The desktop router
+  (`apps/desktop/src/routes.tsx`) dropped its two routes, added `/tunes/recording`, and maps both old
+  paths in `redirectFor`. Sidebar's `isLibraryPath` still lists `/recordings` (harmless).
+- **Links updated:** `RecordingParts` (card name), `RecordingsPage`'s ⋮-menu entry, the Recorder's
+  "All recordings" link and its after-save page, the ⌘K palette's Recordings page, Help's Recordings
+  topic, the Files tab's "All recordings" (now an in-place tab switch, `replace`), and the `href`
+  `files.storage` returns for recordings (`packages/convex/lib/storage.ts`, pushed to dev).
+  The paused mobile app has its own native `/recordings` routes, untouched.
+- **Verified** (headless Chromium, signed in on the test account with two seeded device-kept
+  recordings, deleted afterwards): the tab at 1440 and 390, light and dark, no overflow, no console
+  errors; Files tab → Recordings tab click; Files' "All recordings" → the tab; a card's name → the
+  recording page; Back with history and with none (falls back to the tab); delete → the tab; a
+  deleted id's page. `curl` showed both old addresses 307 to the new ones on the dev server. Not
+  checked: the desktop app (types only), playback (device-kept seeds have no audio here).

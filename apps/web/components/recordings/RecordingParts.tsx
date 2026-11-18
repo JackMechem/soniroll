@@ -52,7 +52,7 @@ export function RecordingCard({
     <div className="flex flex-col gap-2 rounded-lg bg-surface p-3" onContextMenu={onContextMenu}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <Link href={`/recordings/view?id=${recording._id}`} className="block truncate text-sm font-medium hover:underline">
+          <Link href={`/tunes/recording?id=${recording._id}`} className="block truncate text-sm font-medium hover:underline">
             {recording.name}
           </Link>
           <div className="truncate text-xs text-muted">

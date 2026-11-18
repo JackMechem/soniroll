@@ -259,8 +259,8 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-/** The library's other pages (chord charts, the setlist chart reader, files, recordings), which
-    the sidebar files under Library (`/tunes`). */
+/** The library's other pages (chord charts, the setlist chart reader, files; old recordings
+    links), which the sidebar files under Library (`/tunes`). */
 function isLibraryPath(path: string) {
   return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files" || path === "/recordings" || path.startsWith("/recordings/");
 }

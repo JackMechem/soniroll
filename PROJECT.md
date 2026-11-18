@@ -313,9 +313,10 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 
 ## Current state at a glance (2026-10-18)
 
-- **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*`, `/chord-charts*`,
+- **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*` (the Library, with
+  tabs for setlists, charts, files and recordings; `/files` and `/recordings` redirect there), `/chord-charts*`,
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
-  `/recordings*`, `/files`, `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
+  `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
   shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, `/file/[id]`, plus `/privacy`, `/terms`,
   `/credits`.
 - **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and

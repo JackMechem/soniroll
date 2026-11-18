@@ -59,7 +59,7 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Pages", href: "/tunes/list?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
   { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library", words: "library gig set list", icon: SetlistIcon },
   { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents", icon: FileIcon, account: true },
-  { group: "Pages", href: "/recordings", label: "Recordings", detail: "Library", words: "library takes audio recorded clips", icon: MicIcon, account: true },
+  { group: "Pages", href: "/tunes?tab=recordings", label: "Recordings", detail: "Library", words: "library takes audio recorded clips", icon: MicIcon, account: true },
   { group: "Pages", href: "/community/new", label: "New post", detail: "Community", words: "community post share", icon: PlusIcon, account: true },
   { group: "Pages", href: "/community/liked", label: "Liked posts", detail: "Community", words: "community likes hearts saved favorites", icon: HeartIcon, account: true },
   { group: "Pages", href: "/community/following", label: "Following and followers", detail: "Community", words: "community people friends follow", icon: UsersIcon, account: true },

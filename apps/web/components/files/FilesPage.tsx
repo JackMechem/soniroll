@@ -358,9 +358,9 @@ export default function FilesPage() {
                   <>
                     <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
                     <span className="text-xs tabular-nums text-muted">{shown.length}</span>
-                    {/* Recordings have their own page (playback, takes per tune). */}
+                    {/* Recordings have their own tab (playback, takes per tune). */}
                     {source === "recording" && (
-                      <Link href="/recordings" className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
+                      <Link href="/tunes?tab=recordings" replace scroll={false} className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
                         All recordings <ChevronRightIcon className="h-4 w-4" />
                       </Link>
                     )}

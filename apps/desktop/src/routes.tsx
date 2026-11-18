@@ -52,7 +52,6 @@ import PublicProfilePage from "@/components/PublicProfilePage";
 import RandomMetricModulation from "@/components/RandomMetricModulation";
 import Recorder from "@/components/Recorder";
 import RecordingPage from "@/components/recordings/RecordingPage";
-import RecordingsPage from "@/components/recordings/RecordingsPage";
 import ResetPassword from "@/components/ResetPassword";
 import RhythmSection from "@/components/RhythmSection";
 import ScaleTrainer from "@/components/ScaleTrainer";
@@ -140,6 +139,7 @@ const ROUTES: Route[] = [
   { path: "/tunes/list", render: (_, query) => <TuneListPage list={query.get("list") === "learn" ? "learn" : "tunes"} /> },
   { path: "/tunes/setlist", render: (_, query) => <SetlistPage id={q(query, "id")} /> },
   { path: "/tunes/tune", render: (_, query) => <TuneHub id={q(query, "id")} list={opt(query, "list")} /> },
+  { path: "/tunes/recording", render: (_, query) => <RecordingPage id={q(query, "id")} /> },
   { path: "/chord-charts/view", render: (_, query) => <ChartViewPage id={q(query, "id")} /> },
   { path: "/chord-charts/edit", render: (_, query) => <ChartEditorPage editId={q(query, "id")} /> },
   { path: "/chord-charts/new", render: (_, query) => <ChartEditorPage playlist={opt(query, "playlist")} /> },
@@ -156,8 +156,6 @@ const ROUTES: Route[] = [
       />
     ),
   },
-  { path: "/recordings", render: () => <RecordingsPage /> },
-  { path: "/recordings/view", render: (_, query) => <RecordingPage id={q(query, "id")} /> },
 
   { path: "/community", render: () => <Community /> },
   { path: "/community/new", render: (_, query) => <NewPostPage setlistId={opt(query, "setlist")} /> },
@@ -207,6 +205,8 @@ function redirectFor(pathname: string, query: Query): string | null {
   if (pathname === "/tunes/setlists") return "/tunes?tab=setlists";
   if (pathname === "/chord-charts") return "/tunes?tab=charts";
   if (pathname === "/files") return "/tunes?tab=files";
+  if (pathname === "/recordings") return "/tunes?tab=recordings";
+  if (pathname === "/recordings/view") return `/tunes/recording?id=${encodeURIComponent(query.get("id") || "")}`;
   if (pathname === "/library") return "/tunes";
   if (pathname === "/setlist-charts" && !query.get("mine") && !query.get("post") && !query.get("shared")) return "/tunes?tab=setlists";
   if (pathname === "/settings") return `/account?tab=${encodeURIComponent(query.get("tab") || "general")}`;

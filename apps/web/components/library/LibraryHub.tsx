@@ -6,9 +6,10 @@ import FilesPage from "@/components/files/FilesPage";
 import ChartsDashboard from "@/components/library/ChartsDashboard";
 import SetlistsPage from "@/components/library/SetlistsPage";
 import TunesDashboard from "@/components/library/TunesDashboard";
+import RecordingsPage from "@/components/recordings/RecordingsPage";
 import { LIBRARY_TABS, type LibraryTab } from "@/components/library/ui";
 
-/** `/tunes` — the Library: Tunes, Setlists, Chord Charts and Files as tabs on one page, picked by
+/** `/tunes` — the Library: Tunes, Setlists, Chord Charts, Files and Recordings as tabs on one page, picked by
     `?tab=` (see `libraryHref`). `defaultTab` is for split-screen panes opened as Chord Charts. */
 export default function LibraryHub({ defaultTab = "tunes" }: { defaultTab?: LibraryTab }) {
   const param = useSearchParams()?.get("tab");
@@ -16,6 +17,7 @@ export default function LibraryHub({ defaultTab = "tunes" }: { defaultTab?: Libr
   if (tab === "setlists") return <SetlistsPage />;
   if (tab === "charts") return <ChartsDashboard />;
   if (tab === "files") return <FilesPage />;
+  if (tab === "recordings") return <RecordingsPage />;
   return <TunesDashboard />;
 }
 
