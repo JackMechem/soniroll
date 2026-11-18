@@ -116,7 +116,7 @@ export function GeneralSettings() {
       </SettingsCard>
       <SettingsCard title="Feel">
         <SwitchRow label="Confetti and sparkles" checked={site.celebrations} onChange={(celebrations) => update({ celebrations })} hint="The burst when you tick something off and the confetti when you reach a goal or finish a routine." />
-        <SwitchRow label="Bug report button" checked={!fabHidden} onChange={(on) => (on ? showFeedbackFab() : hideFeedbackFab())} hint="The button in the bottom corner of every page. Send feedback is still in the sidebar's ⋮ menu. Saved on this device." />
+        <SwitchRow label="Bug report button" checked={!fabHidden} onChange={(on) => (on ? showFeedbackFab() : hideFeedbackFab())} hint="The bug button at the right of each tool's top bar (and the phone's top bar). Send feedback is still in the sidebar's ⋮ menu. Saved on this device." />
       </SettingsCard>
       <SettingsCard
         title="Start over"

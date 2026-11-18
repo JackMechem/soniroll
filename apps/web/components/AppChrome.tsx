@@ -41,7 +41,6 @@ export default function AppChrome({ chrome, children }: { chrome: ReactNode; chi
       </AppShell>
       <SiteBanner />
       <StorageMoveBanner />
-      <FeedbackFab />
       <FeedbackDialog />
       <UsageTracker />
     </>

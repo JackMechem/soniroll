@@ -33,6 +33,15 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.9",
+    date: "2026-11-18",
+    title: "Bug button in the top bar",
+    changes: [
+      { kind: "improved", text: "**Report a bug** is now a button at the right of each tool's top bar, instead of floating in the corner over the page. Send feedback is still in the sidebar's ⋮ menu." },
+      { kind: "fixed", text: "The **Metronome**'s beat bars showed empty on some Macs (in the desktop app) — they're drawn in a simpler way that works everywhere." },
+    ],
+  },
+  {
     version: "0.10.8",
     date: "2026-11-18",
     title: "Rhythm Section stays put",
