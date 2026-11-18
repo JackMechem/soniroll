@@ -28,8 +28,6 @@ import { useSiteSettings } from "@/lib/siteSettings";
  * Account section once you're signed in.
  */
 
-const DESKTOP_URL = "https://github.com/JackMechem/soniroll/releases";
-
 type Interval = "month" | "year";
 type Plan = { productId: string; name: string; storageGb: number; interval: Interval; priceCents: number; currency: string };
 
@@ -477,9 +475,9 @@ function Comparison({ desktop, freeOnline }: { desktop: boolean; freeOnline?: nu
       {!desktop && (
         <p className="text-sm text-muted">
           The desktop app is free for Linux, macOS and Windows.{" "}
-          <a href={DESKTOP_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+          <Link href="/download" className="font-medium text-accent hover:underline">
             Get the desktop app
-          </a>
+          </Link>
         </p>
       )}
     </section>

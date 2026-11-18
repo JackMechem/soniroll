@@ -18,6 +18,7 @@ import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
 import { PlansRow } from "@/components/plans/PlansRow";
+import { DesktopAppRow, DOWNLOAD_PATH } from "@/components/download/DesktopAppRow";
 import { PLAN_HREF } from "@/lib/storagePlan";
 import {
   CATEGORY_COLORS,
@@ -26,6 +27,7 @@ import {
   GearIcon,
   MegaphoneIcon,
   CloudIcon,
+  DownloadIcon,
   HeartIcon,
   HelpIcon,
   ShieldIcon,
@@ -989,6 +991,7 @@ export default function Sidebar() {
           className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
+          <DesktopAppRow collapsed={collapsed} active={currentPath === DOWNLOAD_PATH} />
           <PlansRow collapsed={collapsed} path={currentPath} />
           {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
           <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
@@ -1118,6 +1121,7 @@ const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: str
   { match: (p) => p === "/feedback", label: "Feedback", href: "/feedback", icon: FeedbackIcon },
   { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
   { match: (p) => p === "/plans", label: "Storage plans", href: "/plans", icon: CloudIcon },
+  { match: (p) => p === DOWNLOAD_PATH, label: "Desktop app", href: DOWNLOAD_PATH, icon: DownloadIcon },
   { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
   { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
   { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },

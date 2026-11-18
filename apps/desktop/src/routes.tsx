@@ -64,6 +64,8 @@ import SlowDowner from "@/components/SlowDowner";
 import StickControl from "@/components/StickControl";
 import SupportPage from "@/components/support/SupportPage";
 import PlansPage from "@/components/plans/PlansPage";
+import DownloadPage from "@/components/download/DownloadPage";
+import DownloadPage from "@/components/download/DownloadPage";
 import Syncopation from "@/components/Syncopation";
 import TempoTrainer from "@/components/TempoTrainer";
 import TimeTest from "@/components/TimeTest";
@@ -192,6 +194,8 @@ const ROUTES: Route[] = [
   { path: "/feedback", render: () => <FeedbackPage /> },
   { path: "/support", render: () => <SupportPage /> },
   { path: "/plans", render: () => <PlansPage /> },
+  { path: "/download", render: () => <DownloadPage /> },
+  { path: "/download", render: () => <DownloadPage /> },
   { path: "/privacy", render: () => <PrivacyPage /> },
   { path: "/terms", render: () => <TermsPage /> },
   { path: "/credits", render: () => <CreditsPage /> },

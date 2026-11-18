@@ -11,6 +11,7 @@ import {
   CalendarIcon,
   ChordChartIcon,
   CloseIcon,
+  DownloadIcon,
   DrumIcon,
   EarIcon,
   GraduationCapIcon,
@@ -154,6 +155,7 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
           <a href="#tools" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Tools</a>
           <a href="#features" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Features</a>
           <a href="#free" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Why it&apos;s free</a>
+          <Link href="/download" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Desktop app</Link>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           {signedIn ? (
@@ -199,6 +201,15 @@ function Ctas({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
         Try it without an account <Arrow />
       </SecondaryButton>
     </>
+  );
+}
+
+/** Under the calls to action: the desktop app. */
+function DesktopLink() {
+  return (
+    <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground" style={{ animationDelay: "240ms" }}>
+      <DownloadIcon className="h-4 w-4 text-accent" /> Get the desktop app for macOS, Windows and Linux <Arrow />
+    </Link>
   );
 }
 
@@ -281,6 +292,7 @@ function Hero({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
         <div className="landing-rise mt-9 flex flex-col items-center gap-3 sm:flex-row" style={{ animationDelay: "180ms" }}>
           <Ctas signedIn={signedIn} onSignUp={onSignUp} onOpenApp={onOpenApp} onDashboard={onDashboard} />
         </div>
+        <DesktopLink />
       </div>
     </section>
   );
@@ -718,6 +730,7 @@ function FinalCta({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Ctas signedIn={signedIn} onSignUp={onSignUp} onOpenApp={onOpenApp} onDashboard={onDashboard} />
           </div>
+          <DesktopLink />
         </div>
       </Reveal>
     </section>

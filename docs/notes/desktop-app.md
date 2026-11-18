@@ -666,3 +666,27 @@ Jack asked for release channels, like his Marbble and open-stomp-manager have.
   same for `desktop-unstable`).
 - **Not verified:** the workflow hasn't run (no release since); Vercel's `deploymentEnabled` was
   written from its docs, not seen skipping a build.
+
+## 2026-11-17 — A download page (`/download`), linked prominently
+
+Jack: "make download links for the desktop app, should be prominent".
+
+- `/download` (`components/download/DownloadPage.tsx`, also in the desktop router): a big "Download
+  for <your computer>" button (picked from the browser's user agent; none on phones and tablets),
+  four reasons to use the app, every platform's files (the one for your computer outlined, its main
+  file first) with how to open it the first time (unsigned builds), a "What's new" link to the
+  release, and NixOS lines pinned to the release's tag (the `desktop-stable` branch doesn't exist yet,
+  so it isn't offered). Inside the desktop app it says "You're using the desktop app".
+- **Where the files come from:** `lib/desktopRelease.ts` asks GitHub's API (in the browser, cached
+  for the page's life) for the newest Stable release, or the newest of all while every release is a
+  pre-release (true so far, so GitHub's `releases/latest` links don't work). It matches the
+  workflow's stable asset names. If GitHub can't be reached, the page links to the releases list.
+- **Links:** a "Desktop app · Free" row in the sidebar above Storage plans (computers only: not in
+  the phone menu, not inside the desktop app — `DesktopAppRow`), "Desktop app" in the landing page's
+  nav, "Get the desktop app for macOS, Windows and Linux" under both of the landing page's calls to
+  action, ⌘K ("Download the desktop app"), and the storage plans comparison.
+- **Wording to keep true:** "Files on your computer" describes device storage, which ships in the
+  next desktop release (0.1.6 predates it).
+- Checked: tsc, eslint; signed out at 1440 and 390 (no overflow, no console errors; the button
+  pointed at the 0.1.6 AppImage on Linux); the landing hero; the sidebar row signed in.
+
