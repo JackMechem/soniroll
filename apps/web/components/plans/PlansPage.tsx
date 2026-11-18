@@ -126,6 +126,8 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
   useEffect(() => () => embedRef.current?.close(), []);
 
   const current = storage?.plan ?? null;
+  /** A plan given for free (Admin), if one is running: counts like a plan, bigger one wins. */
+  const gift = storage?.gift ?? null;
   const interval: Interval = picked ?? current?.interval ?? "year";
   const hasYearly = (plans ?? []).some((p) => p.interval === "year");
   const hasMonthly = (plans ?? []).some((p) => p.interval === "month");
@@ -190,6 +192,20 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
         </p>
       )}
 
+      {gift && !current && storage && (
+        <section className="flex flex-col gap-4 rounded-xl bg-surface p-5">
+          <div>
+            <h3 className="text-lg font-bold">Your plan: {gift.storageGb} GB</h3>
+            <p className="text-sm text-muted">A gift — nothing to pay · until {longDate(new Date(gift.endsAt).toISOString())}</p>
+          </div>
+          <UsageBar used={storage.used} quota={storage.quota} />
+          <NewFilesDefault />
+          <p className="text-xs text-muted">
+            When it ends, files already online stay there and new ones are kept on this device — or get a plan below to keep everything online.
+          </p>
+        </section>
+      )}
+
       {current && storage && (
         <section className="flex flex-col gap-4 rounded-xl bg-surface p-5">
           <div>
@@ -199,6 +215,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
               {current.renewsAt && ` · ${current.cancelAtPeriodEnd ? "ends" : "renews"} ${longDate(current.renewsAt)}`}
             </p>
             {current.status === "past_due" && <p className="mt-1 text-sm text-danger">The last payment didn&apos;t go through. Update your card below.</p>}
+            {gift && <p className="mt-1 text-sm text-muted">Also a gift of {gift.storageGb} GB until {longDate(new Date(gift.endsAt).toISOString())} — you get whichever is bigger.</p>}
           </div>
           <UsageBar used={storage.used} quota={storage.quota} />
           <NewFilesDefault />

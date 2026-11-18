@@ -367,8 +367,8 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
       ...(item.url ? [{ label: "Download", onSelect: () => void downloadFile(item.url!, item.name), icon: <DownloadIcon className="h-4 w-4" /> }] : []),
       // Kept here: put it online (with a plan, or using the free online space). Online on the free
       // plan: keep it on this device instead (frees the online space).
-      ...(isMovable(item) && item.device && item.url && storage?.plan ? [{ label: "Put online", onSelect: () => void move(item, "online"), icon: <CloudIcon className="h-4 w-4" /> }] : []),
-      ...(isMovable(item) && !item.device && !item.keepOnline && storage && !storage.plan
+      ...(isMovable(item) && item.device && item.url && storage?.hasPlan ? [{ label: "Put online", onSelect: () => void move(item, "online"), icon: <CloudIcon className="h-4 w-4" /> }] : []),
+      ...(isMovable(item) && !item.device && !item.keepOnline && storage && !storage.hasPlan
         ? [{ label: "Keep on this device only", onSelect: () => void move(item, "device"), icon: <DeviceIcon className="h-4 w-4" /> }]
         : []),
       ...(item.kind !== "file"

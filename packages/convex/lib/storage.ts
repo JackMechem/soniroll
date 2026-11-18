@@ -26,14 +26,27 @@ const MB = 1024 * 1024;
     profile). Everything else a free account saves stays on the device. */
 export const FREE_CLOUD_BYTES = 50 * MB;
 
-/** One account's plan and its cloud storage. A broken subscription record never blocks uploads
-    that would fit the free allowance. */
+/** The account's gifted plan that's running now (Admin → Users → Storage), if any. */
+export async function activeGift(ctx: QueryCtx, userId: Id<"users">) {
+  const gifts = await ctx.db.query("planGifts").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
+  const now = Date.now();
+  const live = gifts.filter((g) => !g.ended && g.endsAt > now).sort((a, b) => b.storageGb - a.storageGb);
+  const g = live[0];
+  return g ? { id: g._id, storageGb: g.storageGb, endsAt: g.endsAt } : null;
+}
+
+/** One account's plan — paid (Polar) and/or gifted — and its cloud storage: the biggest of the
+    free allowance, the paid plan and the gift. `hasPlan`: either kind (new files can go online).
+    A broken subscription record never blocks uploads that would fit the free allowance. */
 export async function planFor(ctx: QueryCtx, userId: Id<"users">) {
+  const gift = await activeGift(ctx, userId);
+  const giftBytes = gift ? gift.storageGb * 1024 * MB : 0;
   try {
-    return await accountPlan(ctx, userId, FREE_CLOUD_BYTES);
+    const { plan, cloudBytes } = await accountPlan(ctx, userId, FREE_CLOUD_BYTES);
+    return { plan, gift, hasPlan: !!plan || !!gift, cloudBytes: Math.max(cloudBytes, giftBytes) };
   } catch (e) {
     console.error("Couldn't read the storage plan", e);
-    return { plan: null, cloudBytes: FREE_CLOUD_BYTES };
+    return { plan: null, gift, hasPlan: !!gift, cloudBytes: Math.max(FREE_CLOUD_BYTES, giftBytes) };
   }
 }
 
@@ -50,7 +63,7 @@ export async function quotaFor(ctx: QueryCtx, userId: Id<"users">): Promise<numb
     upload, so a refused save that already uploaded leaves the file in storage — the upload-URL
     check is what keeps that from happening in practice. */
 export async function assertPlanForOnline(ctx: MutationCtx, userId: Id<"users">, storageId?: Id<"_storage">) {
-  if ((await planFor(ctx, userId)).plan) return;
+  if ((await planFor(ctx, userId)).hasPlan) return;
   if (storageId) await ctx.storage.delete(storageId);
   throw new Error("Keeping files online needs a storage plan. Without one they're kept on this device — every feature still works.");
 }

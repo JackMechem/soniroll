@@ -23,9 +23,9 @@ export function useStoragePlan() {
 
 export type AccountStorage = NonNullable<ReturnType<typeof useStoragePlan>>;
 
-/** True when new things are saved online (the account has a plan). */
+/** True when new things can be saved online: the account has a plan, paid or gifted. */
 export function savesOnline(storage: AccountStorage | null | undefined) {
-  return !!storage?.plan;
+  return !!storage?.hasPlan;
 }
 
 /** Where a saved blob ended up: pass straight into `recordings.create` / `tuneSongs.set`. */

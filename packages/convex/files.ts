@@ -36,7 +36,7 @@ export const storage = query({
     const shares = await ctx.db.query("sharedFiles").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
     const shareOf = new Map(shares.map((row) => [`${row.kind}:${row.itemId}`, row._id as string]));
     const items = (await storedItems(ctx, userId, true)).map((item) => ({ ...item, sharedId: shareOf.get(`${item.kind}:${item.id}`) ?? null }));
-    const { plan, cloudBytes } = await planFor(ctx, userId);
+    const { plan, gift, hasPlan, cloudBytes } = await planFor(ctx, userId);
     return {
       items,
       /** Bytes online (what counts towards `quota`) and on devices. */
@@ -45,6 +45,8 @@ export const storage = query({
       quota: cloudBytes,
       freeQuota: FREE_CLOUD_BYTES,
       plan,
+      gift,
+      hasPlan,
       maxFile: MAX_FILE_BYTES,
     };
   },
@@ -57,19 +59,22 @@ export const storagePlan = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
-    const { plan, cloudBytes } = await planFor(ctx, userId);
+    const { plan, gift, hasPlan, cloudBytes } = await planFor(ctx, userId);
     const items = await storedItems(ctx, userId, false);
     // On the free plan, the files, recordings and songs still online from before files moved to
     // devices (shared ones stay online): the move notice asks people to back these up or move them.
     const shared = new Set(
       (await ctx.db.query("sharedFiles").withIndex("by_user", (q) => q.eq("userId", userId)).collect()).map((r) => `${r.kind}:${r.itemId}`),
     );
-    const toMove = plan
+    const toMove = hasPlan
       ? []
       : items.filter((i) => !i.device && !i.keepOnline && (i.kind === "file" || i.kind === "recording" || i.kind === "song") && !shared.has(`${i.kind}:${i.id}`));
     return {
       userId,
+      /** The paid plan (Polar), the gifted one, and whether there's either. */
       plan,
+      gift,
+      hasPlan,
       quota: cloudBytes,
       used: items.reduce((sum, item) => sum + (item.device ? 0 : item.size), 0),
       freeQuota: FREE_CLOUD_BYTES,
@@ -817,7 +822,7 @@ export const copySharedFiles = action({
 
 export const hasPlanFor = internalQuery({
   args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => !!(await planFor(ctx, userId)).plan,
+  handler: async (ctx, { userId }) => (await planFor(ctx, userId)).hasPlan,
 });
 
 export const normalizeShareId = internalQuery({

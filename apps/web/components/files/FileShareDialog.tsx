@@ -92,7 +92,7 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
           <p className="-mt-2 text-xs text-muted">
             {elsewhere
               ? `It's kept on ${item.device!.label}. Share it from there.`
-              : storage?.plan
+              : storage?.hasPlan
                 ? "It's kept on this device. Making a link puts it online first."
                 : `It's kept on this device. Making a link puts it online first, using ${formatBytes(item.size)} of your ${formatBytes(storage?.quota ?? 0)} of online space for sharing.`}
           </p>

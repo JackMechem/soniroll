@@ -17,7 +17,7 @@ export default function StoragePill() {
     <Link
       href={PLAN_HREF}
       title={
-        storage.plan
+        storage.hasPlan
           ? `Your plan keeps ${formatBytes(quota)} online, on all your devices.`
           : `Online space for shared files, Lessons and your profile: ${formatBytes(quota)}. New files are kept on this device; a storage plan keeps them online.`
       }

@@ -255,6 +255,9 @@ export const performDelete = internalMutation({
       .collect();
     for (const row of sharedRoutines) await ctx.db.delete(row._id);
 
+    // Gifted storage plans.
+    for (const g of await ctx.db.query("planGifts").withIndex("by_user", (q) => q.eq("userId", userId)).collect()) await ctx.db.delete(g._id);
+
     // Recordings and their audio files.
     const recordings = await ctx.db
       .query("recordings")
