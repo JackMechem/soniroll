@@ -123,10 +123,19 @@ routes, `.env`) doesn't apply: the webhook and keys live in Convex.
   panel: 5 files, 16 MB; badges; the plan line) at 1440 and 390, the bottom notice on the dashboard
   at 1440 and 390.
 
+- **The free-plan file flow, end to end**, in its own browser context as a dev test account
+  (`demo@soniroll.test`, @storagedemo, made with `testAccounts:create`): upload → saved on the device
+  (badge "This device", 1 IndexedDB entry) → preview shows the image from a `blob:` URL → Put online
+  (badge Online, the device copy deleted, meter 74 B of 50 MB, the move panel counts it) → Download a
+  backup (a valid .zip, `Files/demo-pic.png`) → Keep on this device only (back to 1 entry) → Share a
+  link (the dialog's note, then the link made and the file online) → Stop sharing → back to the device
+  → a second, fresh browser context sees it as "Chrome on Linux" → Delete (row gone, IndexedDB empty).
+  No page errors. Headless Chrome didn't grant persistent storage (`persisted: false`), as expected.
+
 ## Not verified
 
-- **Anything that writes**: saving to the device, Put online / Keep on this device, Download a
-  backup, Move to this device, sharing a device file, saving a shared file on the free plan,
-  `tidyDeviceFiles`. None were run (Jack's real account; no throwaway account).
+- Recordings and tune songs saved to the device (the Recorder needs a mic; same code path as files),
+  Move to this device in bulk, saving someone's shared file or tune on the free plan, the note file
+  picker putting a device file online, `tidyDeviceFiles` after a delete on another device.
 - **Polar end to end:** no token yet, so no checkout, webhook, plan quota, portal or cancellation.
 - The desktop app (its WebView's IndexedDB and opening checkout in the browser), Safari, real phones.

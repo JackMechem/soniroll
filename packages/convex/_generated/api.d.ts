@@ -49,6 +49,7 @@ import type * as shedNoteTemplates from "../shedNoteTemplates.js";
 import type * as shedNotes from "../shedNotes.js";
 import type * as site from "../site.js";
 import type * as syncedSettings from "../syncedSettings.js";
+import type * as testAccounts from "../testAccounts.js";
 import type * as tuneSongs from "../tuneSongs.js";
 import type * as usage from "../usage.js";
 import type * as users from "../users.js";
@@ -101,6 +102,7 @@ declare const fullApi: ApiFromModules<{
   shedNotes: typeof shedNotes;
   site: typeof site;
   syncedSettings: typeof syncedSettings;
+  testAccounts: typeof testAccounts;
   tuneSongs: typeof tuneSongs;
   usage: typeof usage;
   users: typeof users;
