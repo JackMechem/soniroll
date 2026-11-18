@@ -73,7 +73,7 @@ const hasRest = (f: Figure) => f.notes.some((x) => x.rest);
 const isTriplet = (f: Figure) => f.family === "triplet";
 
 /** What the feet (or the hi-hat) keep going underneath. */
-export type Ostinato = "kick" | "kickUnison" | "pedal24" | "pedal" | "kickPedal" | "hhEighths" | "hhQuarters" | "none";
+export type Ostinato = "kick" | "kickUnison" | "pedal24" | "pedal" | "kickPedal" | "hhEighths" | "hhQuarters" | "swing" | "none";
 
 export const OSTINATOS: { id: Ostinato; label: string; feet?: boolean }[] = [
   { id: "kick", feet: true, label: "Bass drum on every beat" },
@@ -83,6 +83,7 @@ export const OSTINATOS: { id: Ostinato; label: string; feet?: boolean }[] = [
   { id: "kickPedal", feet: true, label: "Bass drum on every beat, hi-hat foot on 2 and 4" },
   { id: "hhEighths", label: "Hi-hat on eighths" },
   { id: "hhQuarters", label: "Hi-hat on every beat" },
+  { id: "swing", label: "Swing: ride, hi-hat foot on 2 and 4" },
   { id: "none", label: "Nothing" },
 ];
 
@@ -95,8 +96,19 @@ export const PHRASE_MODES: { id: PhraseMode; label: string }[] = [
   { id: "one", label: "Each line repeats one bar" },
 ];
 
-/** A hi-hat played with the hand (written on top, with the pattern below it). */
-export const handHiHat = (o: Ostinato) => o === "hhEighths" || o === "hhQuarters";
+/** A cymbal played with the hand — the hi-hat, or the swing ride — written on top, with the
+    pattern below it. */
+export const handHiHat = (o: Ostinato) => o === "hhEighths" || o === "hhQuarters" || o === "swing";
+
+/** Swing: the jazz ride pattern (every beat, and the skip note after 2 and 4) with the hi-hat
+    foot on 2 and 4, and everything played swung — an "and" lands on the last triplet of the beat
+    (written as plain eighths, as swing usually is). */
+export const swingFeel = (o: Ostinato) => o === "swing";
+
+/** Where a written tick is played: swung, an eighth's "and" (6) moves to the last triplet (8). */
+export function playedTick(tick: number, o: Ostinato): number {
+  return swingFeel(o) && tick % TICKS_PER_BEAT === 6 ? tick + 2 : tick;
+}
 
 /** What's underneath with the pattern split between snare and bass drum: the feet's parts can't
     be (the bass drum is busy), so they fall back to the hi-hat on eighths. */
@@ -118,7 +130,7 @@ export type SyncopationBar = { figures: Figure[]; kicks?: boolean[] };
 
 export type PatternVoice = "snare" | "kick";
 
-export type SyncopationHit = { tick: number; voice: "snare" | "kick" | "pedal" | "hhClosed"; accent?: boolean; pattern?: boolean };
+export type SyncopationHit = { tick: number; voice: "snare" | "kick" | "pedal" | "hhClosed" | "ride"; accent?: boolean; pattern?: boolean };
 
 // A small seeded random generator (mulberry32), so a seed always writes the same exercise.
 function rng(seed: number) {
@@ -273,6 +285,8 @@ export function hiHatTicks(bar: SyncopationBar, ostinato: Ostinato): number[] {
   for (let b = 0; b < BEATS_PER_BAR; b++) {
     out.push(b * TICKS_PER_BEAT);
     if (ostinato === "hhEighths") out.push(b * TICKS_PER_BEAT + (triplet.has(b) ? 8 : 6));
+    // The ride's skip note, on the "and" of 2 and 4 (played swung; see `playedTick`).
+    if (ostinato === "swing" && b % 2 === 1) out.push(b * TICKS_PER_BEAT + (triplet.has(b) ? 8 : 6));
   }
   return out;
 }
@@ -282,12 +296,15 @@ export function barHits(bar: SyncopationBar, ostinato: Ostinato): SyncopationHit
   const hits: SyncopationHit[] = [];
   const snare = barNotes(bar).filter((x) => !x.rest);
   for (const x of snare) hits.push({ tick: x.tick, voice: x.voice, pattern: true });
-  for (const t of hiHatTicks(bar, ostinato)) hits.push({ tick: t, voice: "hhClosed", accent: t % TICKS_PER_BEAT === 0 });
+  const cymbal = ostinato === "swing" ? "ride" : "hhClosed";
+  // Swing's ride leans on 2 and 4; the hi-hat on every beat.
+  for (const t of hiHatTicks(bar, ostinato))
+    hits.push({ tick: t, voice: cymbal, accent: ostinato === "swing" ? t % TICKS_PER_BEAT === 0 && Math.floor(t / TICKS_PER_BEAT) % 2 === 1 : t % TICKS_PER_BEAT === 0 });
   for (let b = 0; b < BEATS_PER_BAR; b++) {
     const t = b * TICKS_PER_BEAT;
     if (ostinato === "kick" || ostinato === "kickPedal") hits.push({ tick: t, voice: "kick", accent: b === 0 });
     if (ostinato === "pedal") hits.push({ tick: t, voice: "pedal" });
-    if ((ostinato === "pedal24" || ostinato === "kickPedal") && b % 2 === 1) hits.push({ tick: t, voice: "pedal" });
+    if ((ostinato === "pedal24" || ostinato === "kickPedal" || ostinato === "swing") && b % 2 === 1) hits.push({ tick: t, voice: "pedal" });
   }
   if (ostinato === "kickUnison") for (const x of snare) hits.push({ tick: x.tick, voice: "kick" });
   return hits.sort((a, b) => a.tick - b.tick);

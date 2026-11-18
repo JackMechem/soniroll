@@ -24,6 +24,8 @@ const SNARE = "c/5";
 const KICK = "f/4";
 const PEDAL = "d/4/x2";
 const HIHAT = "g/5/x2";
+/** The ride cymbal: an x on the top line. */
+const RIDE = "f/5/x2";
 const ROW_MIN_BAR = 165;
 
 type Written = { tick: number; ticks: number; rest: boolean; triplet: boolean; beat: number; keys: string[] };
@@ -63,7 +65,7 @@ function hiHatPart(bar: SyncopationBar, ostinato: Ostinato): Written[] {
   for (let b = 0; b < BEATS_PER_BAR; b++) {
     const at = ticks.filter((t) => Math.floor(t / TICKS_PER_BEAT) === b);
     const triplet = at.some((t) => t % 4 === 0 && t % TICKS_PER_BEAT !== 0);
-    at.forEach((t, k) => out.push({ tick: t, ticks: (at[k + 1] ?? (b + 1) * TICKS_PER_BEAT) - t, rest: false, triplet, beat: b, keys: [HIHAT] }));
+    at.forEach((t, k) => out.push({ tick: t, ticks: (at[k + 1] ?? (b + 1) * TICKS_PER_BEAT) - t, rest: false, triplet, beat: b, keys: [ostinato === "swing" ? RIDE : HIHAT] }));
   }
   return out;
 }

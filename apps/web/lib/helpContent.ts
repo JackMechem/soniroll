@@ -790,7 +790,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Rhythms", text: "Which figures can appear — quarters, eighths, sixteenths, triplets — and whether rests are included." },
       { name: "Lines", text: "A new bar every bar, a two-bar pattern played twice, or one bar played four times." },
       { name: "Played on", text: "Snare only, or each note split between snare and bass drum." },
-      { name: "Underneath", text: "What keeps time while you read: bass drum, hi-hat foot, both, a hand hi-hat, or nothing." },
+      { name: "Underneath", text: "What keeps time while you read: bass drum, hi-hat foot, both, a hand hi-hat, a swing beat, or nothing. Swing plays the jazz ride pattern with the hi-hat foot on 2 and 4, and swings everything — the written eighths included — the way you'd read them in a jazz setting." },
       { name: "Playback", text: "Hear the pattern or just the part underneath, a hi-hat click, a count-in, and what happens after 16 bars (new exercise, again, or stop)." },
     ],
     shot: "syncopation",
