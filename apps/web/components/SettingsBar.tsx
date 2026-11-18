@@ -26,7 +26,7 @@ export function SettingsBar({ children, fit = false }: { children: ReactNode; /*
   return (
     <div
       className={`flex w-full flex-wrap items-stretch justify-center gap-2 ${
-        fit ? "" : "sm:w-max sm:max-w-[min(46rem,calc(100vw-2rem))] sm:shrink-0"
+        fit ? "" : "sm:w-max sm:max-w-[min(46rem,calc(100cqw-2rem))] sm:shrink-0"
       }`}
     >
       {children}

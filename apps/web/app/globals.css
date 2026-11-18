@@ -1,6 +1,92 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Split screen (`components/TilingLayout.tsx`): each pane is a size container named `pane` and
+   marked `data-pane`, and acts like a phone or tablet screen of its own width. Outside a pane the
+   breakpoint variants are Tailwind's usual window-width media queries (the `:where()` adds no
+   specificity, so nothing changes there). Inside a pane:
+   - `sm:` / `md:` (and `max-sm:` / `max-md:`) follow the pane's width instead of the window's;
+   - `lg:` and up never apply, and `max-lg:` always does. In this app `lg` is where the phone top
+     bar gives way to the sidebar, so `lg:` classes set desktop-chrome things (top paddings for no
+     top bar, header bars, sticky phone bars) that only make sense for the whole window. A pane
+     has its own phone-style top bar instead (title and close button), so pages keep their
+     phone/tablet layout, which is built for exactly that bar.
+   The overridden variants keep Tailwind's own sort order; `max-*` ones are new names, so they
+   sort last (after `dark:`) — fine while no element sets the same property with both.
+   `pane:` targets anything inside a pane. */
+@custom-variant sm {
+  @media (width >= 40rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width >= 40rem) {
+    @slot;
+  }
+}
+@custom-variant md {
+  @media (width >= 48rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width >= 48rem) {
+    @slot;
+  }
+}
+@custom-variant lg {
+  @media (width >= 64rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+}
+@custom-variant xl {
+  @media (width >= 80rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+}
+@custom-variant 2xl {
+  @media (width >= 96rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+}
+@custom-variant max-sm {
+  @media (width < 40rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width < 40rem) {
+    @slot;
+  }
+}
+@custom-variant max-md {
+  @media (width < 48rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width < 48rem) {
+    @slot;
+  }
+}
+@custom-variant max-lg {
+  @media (width < 64rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  &:where([data-pane] *) {
+    @slot;
+  }
+}
+@custom-variant pane (&:where([data-pane] *));
+
 :root {
   --background: #e8ecf1;
   --surface: #f4f6f9;

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { svgProps } from "@/components/tools";
+import { CloseIcon, GearIcon, HelpIcon, HomeIcon, findToolLink } from "@/components/tools";
+import { PaneContext } from "@/lib/paneContext";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import {
   type PaneSplit,
@@ -19,69 +20,90 @@ import {
   useTilingState,
 } from "@/lib/useTilingLayout";
 
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg {...svgProps(className)}>
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
+
+/** The name and icon shown in a pane's top bar: the tool's own (as in the sidebar), or the page's
+    for the few non-tool pages a pane can show. */
+const PANE_PAGES: Record<string, { label: string; icon: (props: { className?: string }) => React.JSX.Element }> = {
+  "/dashboard": { label: "Dashboard", icon: HomeIcon },
+  "/": { label: "Dashboard", icon: HomeIcon },
+  "/account": { label: "Account", icon: GearIcon },
+  "/help": { label: "Help", icon: HelpIcon },
+};
+
+function paneTitle(href: string) {
+  const link = findToolLink(href);
+  if (link) return { label: link.label, icon: link.icon };
+  return PANE_PAGES[href] ?? null;
 }
 
-/** One pane: the actual tool (mounted via `TOOL_COMPONENTS`), a small split button centered on
-    each of its four edges (hover-revealed — `opacity-0 group-hover:opacity-100`, the same
-    reveal-on-hover convention `Sidebar.tsx`'s own favorite star already uses — so they don't
-    clutter the tool's own UI the rest of the time), and an always-visible close button in the
-    corner once there's more than one pane to collapse back into. Clicking an edge button doesn't
-    open any UI of its own — per a direct follow-up request, it opens the exact same `/` command
-    palette every other search in this app uses (`onRequestSplit`, implemented by `TilingLayout`
-    below), rather than a bespoke mini-popover.
+/** One pane: its own top bar (the page's name and the close button) over the tool, which is
+    mounted via `TOOL_COMPONENTS`.
 
-    There used to be an "active pane" accent ring here too, gated to only show once there's more
-    than one pane — but even gated correctly, it kept being reported as an unwanted border (most
-    recently specifically on Community/Account while genuinely tiled with a sibling, where it *was*
-    behaving as designed), so it's been removed outright rather than re-tuned a third time; the
-    sidebar already reflects which pane is active (`Sidebar.tsx`'s `NavItems`), so this wasn't the
-    only way to tell. */
+    A pane behaves like a phone or tablet screen of its own width (FB-22): it's a size container
+    named `pane` (`@container/pane`) marked `data-pane`, and `app/globals.css` makes the `sm:`/`md:`
+    variants follow the pane's width and `lg:` and up never apply inside one. Every page's
+    phone/tablet layout is built to sit under the phone top bar (`Sidebar.tsx`: 3.5rem, see-through,
+    the page scrolling under it; pages leave 4.5rem at the top and stick their own bars at 3.5rem),
+    so the pane's bar is that bar's twin — same height, same look — and the page needs no changes.
+    The bar holds the close button, so it can't land on top of the tool's own header buttons any
+    more (it used to be absolutely positioned over the page's top-right corner), and it sits in the
+    same place in every pane. The page's name is dimmed in the panes that aren't active.
+
+    Container queries re-run whenever the pane's width changes (the window, the sidebar or the
+    divider), so the layout follows a resize with no JavaScript. */
 function Pane({
   href,
+  active,
   canClose,
   onFocus,
   onClose,
 }: {
   href: string;
+  active: boolean;
   canClose: boolean;
   onFocus: () => void;
   onClose: () => void;
 }) {
   const Component = TOOL_COMPONENTS[href];
+  const title = paneTitle(href);
+  const TitleIcon = title?.icon;
+  // The pane's box, for phone-style sheets to portal into (`lib/paneContext.ts`).
+  const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
 
   return (
     <div
+      ref={setPaneEl}
+      data-pane
       onPointerDownCapture={onFocus}
-      className="group relative flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden"
+      className="@container/pane relative flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden"
     >
-      {canClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close this pane"
-          title="Close this pane"
-          // `right-3 top-3` rather than the tighter `right-2 top-2` every other corner button in
-          // this app uses — a pane tiled at the *right* edge of the whole tiling area has this
-          // button sitting right where `AppShell`'s own `lg:rounded-xl` outer corner curves
-          // inward, which at the tighter inset read as badly/awkwardly positioned (reported
-          // directly, with a screenshot). The extra inset clears that corner; it's a no-op for
-          // every other pane position, which has plenty of room either way.
-          className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-md bg-surface/90 text-muted hover:bg-surface-hover hover:text-danger"
-        >
-          <CloseIcon className="h-4 w-4" />
-        </button>
-      )}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Like `AppShell`'s page scroller (a flex column, so pages' `flex-1` fills it). The bar is
+          sticky inside it with a negative margin, so the page starts under it and scrolls beneath
+          it, as on a phone, while the scrollbar runs the full height beside it. */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+        <div className="sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 pl-4 pr-2 backdrop-blur">
+          <p className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
+            {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
+            <span className="truncate">{title?.label ?? ""}</span>
+          </p>
+          {canClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close this pane"
+              title="Close this pane"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         {Component ? (
-          <Component />
+          <PaneContext.Provider value={paneEl}>
+            <Component />
+          </PaneContext.Provider>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center text-sm text-muted">
+          <div className="flex flex-1 flex-col items-center justify-center gap-1 p-4 pt-20 text-center text-sm text-muted">
             <p>This tool isn&apos;t available anymore.</p>
             <p className="text-xs">Close this pane, or right-click a page in the sidebar to open another.</p>
           </div>
@@ -120,7 +142,10 @@ function SplitContainer({
     const pct = row
       ? ((e.clientX - rect.left) / rect.width) * 100
       : ((e.clientY - rect.top) / rect.height) * 100;
-    const clamped = Math.min(80, Math.max(20, pct));
+    // Neither side below 20%, nor narrower than a small phone (a pane lays out like one) or
+    // shorter than a usable strip, while there's room for that.
+    const minPct = Math.min(50, Math.max(20, ((row ? 320 : 200) / (row ? rect.width : rect.height)) * 100));
+    const clamped = Math.min(100 - minPct, Math.max(minPct, pct));
     onResize([clamped, 100 - clamped]);
   }
 
@@ -166,12 +191,14 @@ function SplitContainer({
 
 function PaneNode({
   node,
+  activeId,
   canClose,
   onFocus,
   onClose,
   onResize,
 }: {
   node: PaneTree;
+  activeId: string;
   /** Whether *any* pane can be closed right now — false when this is the only pane left, since
       closing it would have nothing to collapse into (`removePane` would just no-op anyway, but
       showing a close button that does nothing is its own small confusion worth avoiding). */
@@ -184,6 +211,7 @@ function PaneNode({
     return (
       <Pane
         href={node.href}
+        active={node.id === activeId}
         canClose={canClose}
         onFocus={() => onFocus(node.id)}
         onClose={() => onClose(node.id)}
@@ -194,6 +222,7 @@ function PaneNode({
     <SplitContainer node={node} onResize={(sizes) => onResize(node.id, sizes)}>
       <PaneNode
         node={node.children[0]}
+        activeId={activeId}
         canClose={canClose}
         onFocus={onFocus}
         onClose={onClose}
@@ -201,6 +230,7 @@ function PaneNode({
       />
       <PaneNode
         node={node.children[1]}
+        activeId={activeId}
         canClose={canClose}
         onFocus={onFocus}
         onClose={onClose}
@@ -331,6 +361,7 @@ export default function TilingLayout() {
   return (
     <PaneNode
       node={state.tree}
+      activeId={state.activePaneId}
       canClose={collectLeaves(state.tree).length > 1}
       onFocus={focusPane}
       onClose={closePane}

@@ -152,6 +152,11 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - In split-screen (tiling) mode, keep the address bar in sync with `history.replaceState`
   (`syncAddressBar`), not Next's router — `router.replace` remounts the pane and stopped running
   audio.
+- Split-screen panes are size containers (`data-pane`): inside one, `sm:`/`md:` follow the
+  pane's width, `lg:` and up never apply and `max-lg:` always does (`@custom-variant`s at the top
+  of `globals.css`). Use `100cqw`, not `100vw`, for widths. A phone-only sheet portaled to `<body>`
+  should portal into `usePaneElement()` (`lib/paneContext.ts`). JS width checks (`useIsDesktop`,
+  `matchMedia`) still see the window. See `docs/notes/tiling-split-screen.md`.
 - Tailwind `translate-*` and `hover:translate-*` on one element fight (both set
   `--tw-translate-y`); put centering on a wrapper.
 - The dev server reads `next.config.ts` only at startup (restart to see a new version number).

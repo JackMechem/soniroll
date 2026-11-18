@@ -224,7 +224,7 @@ export default function JamPractice() {
           </>
         ) : tunes.length === 0 && !pickFromStandards ? (
           // Nothing to pick from yet: offer both ways in, right here.
-          <div className="flex w-[min(24rem,calc(100vw-2rem))] flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
+          <div className="flex w-[min(24rem,calc(100cqw-2rem))] flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
             <p>Your tune list is empty. Add the tunes you know, or pick from {STANDARDS.length} jazz standards.</p>
             <div className="flex flex-wrap justify-center gap-2">
               <button
@@ -247,7 +247,7 @@ export default function JamPractice() {
             </div>
           </div>
         ) : (
-          <div className="w-[min(24rem,calc(100vw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
+          <div className="w-[min(24rem,calc(100cqw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
             No tune picked yet.
           </div>
         )}

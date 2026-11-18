@@ -244,7 +244,7 @@ export default function TempoTrainer() {
             ]}
           />
           {useStructure && structure.sections.length > 0 && (
-            <div className="w-[min(30rem,calc(100vw-2rem))] rounded-lg bg-surface p-4 text-left">
+            <div className="w-[min(30rem,calc(100cqw-2rem))] rounded-lg bg-surface p-4 text-left">
               <StructureEditor
                 show="form"
                 structure={structure}

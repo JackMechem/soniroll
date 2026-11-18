@@ -641,7 +641,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
       </div>
       {/* An error takes the key hint's place, so the page doesn't grow (and scroll) when one shows. */}
       {shownError ? (
-        <p role="alert" className="-mt-3 text-center text-sm text-danger sm:w-max sm:max-w-[min(40rem,calc(100vw-2rem))]">{shownError}</p>
+        <p role="alert" className="-mt-3 text-center text-sm text-danger sm:w-max sm:max-w-[min(40rem,calc(100cqw-2rem))]">{shownError}</p>
       ) : (
         <KeyHint>
           Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : playing ? "stop the tone" : "start or stop listening"}

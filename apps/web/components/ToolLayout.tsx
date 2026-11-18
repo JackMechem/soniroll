@@ -89,7 +89,9 @@ export default function ToolLayout({
           </h1>
           {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
           {help && <div className="ml-1">{help}</div>}
-          {titleExtra && <div className="ml-3 pr-4">{titleExtra}</div>}
+          {/* Only the room left over (`basis-0`), cut short with … when the header is tight, so
+              the title and the buttons on the right never get squeezed by it (FB-22). */}
+          {titleExtra && <div className="ml-3 min-w-0 flex-1 basis-0 truncate pr-4">{titleExtra}</div>}
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {presets && <PresetsButton tool={presets} />}
             {statsHref && <ToolStats href={statsHref} />}

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRightIcon, CloseIcon, SlidersIcon } from "@/components/tools";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
+import { usePaneElement } from "@/lib/paneContext";
 
 // The building blocks of Bass Genius's properties panel: collapsible sections (open or closed is
 // remembered on this device), labelled fields and level sliders.
@@ -177,9 +178,11 @@ export function OptionsSheet({ open, onClose, firstOpen, children }: { open: boo
       document.body.style.overflow = overflow;
     };
   }, [open, onClose]);
+  // In a split-screen pane (which lays out like a phone), the sheet covers just that pane.
+  const pane = usePaneElement();
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-overlay p-3 lg:hidden" onClick={onClose}>
+    <div className={`${pane ? "absolute" : "fixed"} inset-0 z-[60] flex flex-col justify-end bg-overlay p-3 lg:hidden`} onClick={onClose}>
       <div
         role="dialog"
         aria-label="Options"
@@ -197,7 +200,7 @@ export function OptionsSheet({ open, onClose, firstOpen, children }: { open: boo
         </div>
       </div>
     </div>,
-    document.body,
+    pane ?? document.body,
   );
 }
 
