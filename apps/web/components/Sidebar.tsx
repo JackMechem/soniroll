@@ -17,8 +17,8 @@ import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
-import { AppAndPlansRow, PlansRow } from "@/components/plans/PlansRow";
-import { DesktopAppRow, DOWNLOAD_PATH } from "@/components/download/DesktopAppRow";
+import { DOWNLOAD_PATH } from "@/lib/desktopRelease";
+import { useInDesktopApp } from "@/lib/deviceFiles";
 import { PLAN_HREF } from "@/lib/storagePlan";
 import {
   CATEGORY_COLORS,
@@ -650,6 +650,8 @@ function SearchExtras({ query, large, toolsFound, onNavigate }: { query: string;
     Falls back to the first tileable tool (`TILEABLE_LINKS[0]`) if you happen to enable it from a
     page that isn't a tool at all (e.g. the home page). */
 export default function Sidebar() {
+  // The ⋮ menus offer the desktop app everywhere but inside it.
+  const inDesktop = useInDesktopApp();
   const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
   const [dragging, setDragging] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -793,6 +795,17 @@ export default function Sidebar() {
                         close();
                       }}
                     />
+                    {!inDesktop && (
+                      <FlyoutItem
+                        icon={DownloadIcon}
+                        label="Desktop app"
+                        onSelect={() => {
+                          setMobileOpen(false);
+                          router.push(DOWNLOAD_PATH);
+                          close();
+                        }}
+                      />
+                    )}
                     <FlyoutItem
                       icon={settingsIcon}
                       label={settingsLabel}
@@ -841,7 +854,6 @@ export default function Sidebar() {
           </div>
           <div className="mt-1 flex flex-col gap-1 border-t border-foreground/10 pt-2">
             <PracticeTimerWidget />
-            <PlansRow large path={currentPath} onNavigate={() => setMobileOpen(false)} />
             {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
             <SettingsRow
               large
@@ -933,6 +945,16 @@ export default function Sidebar() {
                     close();
                   }}
                 />
+                {!inDesktop && (
+                  <FlyoutItem
+                    icon={DownloadIcon}
+                    label="Desktop app"
+                    onSelect={() => {
+                      router.push(DOWNLOAD_PATH);
+                      close();
+                    }}
+                  />
+                )}
                 {fabHidden && (
                   <FlyoutItem
                     icon={BugIcon}
@@ -991,14 +1013,6 @@ export default function Sidebar() {
           className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
-          {collapsed ? (
-            <>
-              <DesktopAppRow active={currentPath === DOWNLOAD_PATH} />
-              <PlansRow collapsed path={currentPath} />
-            </>
-          ) : (
-            <AppAndPlansRow path={currentPath} />
-          )}
           {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
           <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
           {collapsed && (
@@ -1065,6 +1079,16 @@ export default function Sidebar() {
                         close();
                       }}
                     />
+                    {!inDesktop && (
+                      <FlyoutItem
+                        icon={DownloadIcon}
+                        label="Desktop app"
+                        onSelect={() => {
+                          router.push(DOWNLOAD_PATH);
+                          close();
+                        }}
+                      />
+                    )}
                     {fabHidden && (
                       <FlyoutItem
                         icon={BugIcon}

@@ -54,6 +54,14 @@ export function inDesktopApp() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+const noSubscribe = () => () => {};
+
+/** `inDesktopApp()` as a hook: false on the server and in the first render, so nothing mismatches
+    while hydrating. */
+export function useInDesktopApp() {
+  return useSyncExternalStore(noSubscribe, inDesktopApp, () => false);
+}
+
 /** "Firefox on Linux", "soniroll desktop on macOS" — shown on other devices for files kept here. */
 export function deviceLabel(): string {
   if (typeof navigator === "undefined") return "Another device";

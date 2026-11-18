@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
  */
 
 export const RELEASES_URL = "https://github.com/JackMechem/soniroll/releases";
+/** The download page (`app/download`). */
+export const DOWNLOAD_PATH = "/download";
 const API = "https://api.github.com/repos/JackMechem/soniroll/releases?per_page=20";
 
 export type Platform = "mac" | "windows" | "linux";

@@ -681,11 +681,9 @@ Jack: "make download links for the desktop app, should be prominent".
   for the page's life) for the newest Stable release, or the newest of all while every release is a
   pre-release (true so far, so GitHub's `releases/latest` links don't work). It matches the
   workflow's stable asset names. If GitHub can't be reached, the page links to the releases list.
-- **Links:** in the sidebar, "Desktop app" and "Storage" share one row above Support soniroll
-  (`AppAndPlansRow` in `components/plans/PlansRow.tsx`; Jack found two separate rows cluttered);
-  collapsed, two icons (`DesktopAppRow`, `PlansRow`); the phone menu has only Storage plans; inside
-  the desktop app only the plans row shows; "Desktop app" in the landing page's
-  nav, "Get the desktop app for macOS, Windows and Linux" under both of the landing page's calls to
+- **Links:** "Desktop app" in the sidebar's ⋮ menus (not inside the app; Jack wanted the sidebar's
+  foot to be only Settings and one more row, Support soniroll, after rows for the desktop app and
+  storage plans looked cluttered), "Desktop app" in the landing page's nav, "Get the desktop app for macOS, Windows and Linux" under both of the landing page's calls to
   action, ⌘K ("Download the desktop app"), and the storage plans comparison.
 - **Wording to keep true:** "Files on your computer" describes device storage, which ships in the
   next desktop release (0.1.6 predates it).
