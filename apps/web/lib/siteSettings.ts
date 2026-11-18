@@ -35,6 +35,8 @@ export const SITE_DEFAULTS = {
   sidebarCategoriesCollapsed: false,
   /** "Support soniroll" in the sidebar. */
   sidebarSupport: true,
+  /** The sidebar's Desktop app row (on the website, on computers). */
+  sidebarDesktopApp: true,
   /** The streak flame next to your name in the sidebar. */
   sidebarStreak: true,
   /** Tools hidden from the sidebar and the dashboard (still found by search). */

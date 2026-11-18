@@ -18,6 +18,7 @@ import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
 import { DOWNLOAD_PATH } from "@/lib/desktopRelease";
+import { DesktopAppRow } from "@/components/download/DesktopAppRow";
 import { useInDesktopApp } from "@/lib/deviceFiles";
 import { PLAN_HREF } from "@/lib/storagePlan";
 import {
@@ -1013,7 +1014,10 @@ export default function Sidebar() {
           className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
-          {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
+          {/* The website offers the desktop app here; inside the app, Support soniroll. */}
+          {inDesktop
+            ? site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />
+            : site.sidebarDesktopApp && <DesktopAppRow collapsed={collapsed} active={currentPath === DOWNLOAD_PATH} />}
           <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
           {collapsed && (
             <div className="flex flex-col items-center gap-1 pb-1">

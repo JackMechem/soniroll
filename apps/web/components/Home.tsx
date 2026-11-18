@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SUPPORT_PATH, SupportCard, useSupportCardHidden } from "@/components/support/SupportParts";
+import { DesktopAppCard, useDesktopCardApplies, useDesktopCardDismissed } from "@/components/download/DesktopAppCard";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "@convex-dev/auth/react";
@@ -154,6 +155,8 @@ export default function Home() {
   const learningSummaries = summarizeLearning(learningProgress);
   const lessonsData = useLessonsData();
   const supportHidden = useSupportCardHidden();
+  const desktopCardDismissed = useDesktopCardDismissed();
+  const desktopCardApplies = useDesktopCardApplies();
 
   // Edit mode: from the Edit button, or `?edit` in the address.
   const urlEdit = useSyncExternalStore(noop, urlAsksToEdit, () => false);
@@ -197,7 +200,13 @@ export default function Home() {
 
   // Settings: the layout, features that are off, and tools you've hidden (a search still finds them).
   const [site, updateSite] = useSiteSettings();
-  const layout = resolveLayout(site.dashboard, site.hiddenCards);
+  const saved = resolveLayout(site.dashboard, site.hiddenCards);
+  // The desktop app card came after people saved their layouts: show it at the end of a saved one
+  // (not while editing) until it's closed with ×.
+  const layout =
+    !editing && site.dashboard && !desktopCardDismissed && desktopCardApplies && !saved.some((c) => c.id === "desktopApp")
+      ? [...saved, { id: "desktopApp", size: "full" as CardSize }]
+      : saved;
   const available = (id: string) => {
     const feature = (cardDef(id) as { feature?: "shedLog" | "lessons" } | undefined)?.feature;
     return !feature || site[feature];
@@ -466,6 +475,8 @@ export default function Home() {
         ) : null;
       case "support":
         return !supportHidden || editing ? <SupportCard always={editing} /> : null;
+      case "desktopApp":
+        return editing || (desktopCardApplies && !desktopCardDismissed) ? <DesktopAppCard always={editing} /> : null;
       default:
         return null;
     }

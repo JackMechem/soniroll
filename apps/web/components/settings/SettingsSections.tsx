@@ -185,7 +185,8 @@ export function SidebarSettings() {
           onChange={(sidebarCategoriesCollapsed) => update({ sidebarCategoriesCollapsed })}
           hint="Each group of tools starts closed; open the ones you use. A group you've opened or closed yourself stays that way."
         />
-        <SwitchRow label="Support soniroll" checked={site.sidebarSupport} onChange={(sidebarSupport) => update({ sidebarSupport })} hint="The row near the bottom of the sidebar. The Support page is still at soniroll.com/support." />
+        <SwitchRow label="Desktop app" checked={site.sidebarDesktopApp} onChange={(sidebarDesktopApp) => update({ sidebarDesktopApp })} hint="The row near the bottom of the sidebar, on the website. The download page is still in the ⋮ menu and at soniroll.com/download." />
+        <SwitchRow label="Support soniroll" checked={site.sidebarSupport} onChange={(sidebarSupport) => update({ sidebarSupport })} hint="The row near the bottom of the sidebar in the phone menu and the desktop app. The Support page is also in the ⋮ menu and at soniroll.com/support." />
         <SwitchRow label="Streak by your name" checked={site.sidebarStreak} onChange={(sidebarStreak) => update({ sidebarStreak })} hint="The flame with your Shed Log streak, next to your name at the bottom of the sidebar." />
       </SettingsCard>
       <SettingsCard title="Tools you see" description="Tap a tool to hide it from the sidebar and the dashboard. Searching still finds it." hints={false}>
