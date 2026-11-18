@@ -44,6 +44,11 @@ import {
 
 const BAR_HEIGHT = 130;
 const STAVE_Y = 10;
+// The part of that height the SVG shows: the ink runs from a triplet's "3" (about y 14) down to
+// the R/L letters (about y 114); the blank bands above and below cost a whole card's height of
+// room, which kept the page from fitting a 900px-tall screen.
+const VIEW_TOP = 10;
+const VIEW_HEIGHT = 108;
 // Extra room *before* the first note of a bar that doesn't already get it from a clef: a bare
 // stave needs only a little, immediately after the previous bar's own closing barline.
 const LEFT_PAD_PLAIN = 16;
@@ -229,7 +234,7 @@ function StickControlRow({
 			? Math.max(fullWidth, Math.ceil(contentBBox.x + contentBBox.width) + RIGHT_SAFETY_PX)
 			: fullWidth;
 		if (svg) {
-			svg.setAttribute("viewBox", `0 0 ${finalWidth} ${BAR_HEIGHT}`);
+			svg.setAttribute("viewBox", `0 ${VIEW_TOP} ${finalWidth} ${VIEW_HEIGHT}`);
 			svg.removeAttribute("width");
 			svg.removeAttribute("height");
 			svg.style.width = "100%";
@@ -261,7 +266,12 @@ function StickControlRow({
 			className="relative mx-auto w-full"
 			style={totalWidth ? { maxWidth: totalWidth } : undefined}
 		>
-			<div ref={containerRef} style={{ color: NOTATION_COLOR }} />
+			{/* The R/L stickings in the UI font, semibold (VexFlow's default text font is a serif). */}
+			<div
+				ref={containerRef}
+				style={{ color: NOTATION_COLOR }}
+				className="[&_.vf-annotation_text]:font-semibold [&_.vf-annotation_text]:[font-family:var(--app-font,var(--font-sans)),sans-serif]"
+			/>
 			{totalWidth > 0 &&
 				barRects.map((rect, i) => (
 					<div

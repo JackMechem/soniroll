@@ -103,12 +103,10 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
           <p className="max-w-sm text-sm text-muted">
             {/* Touch screens have no keyboard to type notes with. */}
+            {/* "New score" is the header's button (one is enough). */}
             <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</span>
             <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap a length and a note name (C to B) to add notes, or switch to Write, hold a finger on the staff and lift to add one.</span>
           </p>
-          <button type="button" onClick={() => void make()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
-            New score
-          </button>
         </div>
       ) : (
         <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
@@ -201,39 +199,59 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
   const [deleting, setDeleting] = useState(false);
   const { change, flush, saveState } = useAutosave((t: Transcription) => save(id, t));
 
+  // The latest version, for Export (the editor keeps its own copy; this follows its changes).
+  const latest = useRef(initial);
+
   const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
+  const back = (
+    <BackButton
+      onClick={() => {
+        flush();
+        onBack();
+      }}
+      label="Scores"
+    />
+  );
   return (
-    <ScoreShell>
+    <ScoreShell
+      // Saved, Export and Delete go in the tool's own bar (the header bar on desktop; on phones the
+      // row with the ?, along with Back), so on a phone the staff isn't pushed down by a row of them.
+      actions={
+        <>
+          <div className="flex lg:hidden">{back}</div>
+          <span className="text-xs text-muted max-lg:ml-auto" aria-live="polite">
+            {SAVE_LABEL[saveState]}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const t = latest.current;
+              downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`);
+            }}
+            className={btn}
+            title="Export as a file"
+            aria-label="Export as a file"
+          >
+            <DownloadIcon className="h-4 w-4" /> <span className="max-sm:hidden">Export</span>
+          </button>
+          <button type="button" onClick={() => setDeleting(true)} className={`${btn} hover:text-danger`} aria-label="Delete score" title="Delete score">
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        </>
+      }
+    >
       <ScoreEditor
         initial={initial}
-        onChange={change}
+        onChange={(t) => {
+          latest.current = t;
+          change(t);
+        }}
         staffControls
         underAppBar
         autoFocus
         header={(t, setMeta) => (
-          // Back and the score's actions share one row, the title under them: on a phone the
-          // header stays short, so the staff is in view while you write.
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <BackButton
-                  onClick={() => {
-                    flush();
-                    onBack();
-                  }}
-                  label="Scores"
-                />
-              </div>
-              <span className="ml-auto text-xs text-muted" aria-live="polite">
-                {SAVE_LABEL[saveState]}
-              </span>
-              <button type="button" onClick={() => downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`)} className={btn} title="Export as a file" aria-label="Export as a file">
-                <DownloadIcon className="h-4 w-4" /> <span className="max-sm:hidden">Export</span>
-              </button>
-              <button type="button" onClick={() => setDeleting(true)} className={`${btn} hover:text-danger`} aria-label="Delete score" title="Delete score">
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            </div>
+            <div className="flex max-lg:hidden">{back}</div>
             <input
               value={t.title}
               onChange={(e) => setMeta({ title: e.target.value })}

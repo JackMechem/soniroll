@@ -45,7 +45,7 @@ function TopicList({ query, selected, onPick }: { query: string; selected: strin
                     }`}
                   >
                     <TopicIcon topic={t} size="sm" />
-                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                    <span className="min-w-0 flex-1 leading-snug">{t.title}</span>
                     <ChevronRightIcon className={`h-4 w-4 shrink-0 text-muted lg:hidden`} />
                   </button>
                 </li>
@@ -90,7 +90,12 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
         </div>
       </header>
 
-      {topic.shot && <Shot name={topic.shot} alt={`${topic.title} screenshot`} />}
+      {/* A desktop screenshot squeezed to phone width is unreadable, so phones skip it. */}
+      {topic.shot && (
+        <div className="max-sm:hidden">
+          <Shot name={topic.shot} alt={`${topic.title} screenshot`} />
+        </div>
+      )}
 
       <section>
         <h2 className="mb-3 text-base font-semibold">How it works</h2>

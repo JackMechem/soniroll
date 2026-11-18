@@ -15,6 +15,7 @@ import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import Subtasks from "@/components/practicelog/Subtasks";
+import { TOUCH_CHECK, TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import DayTimer, { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { CheckIcon, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MicIcon, findToolLink, PencilIcon, PlayIcon, PlusIcon, RepeatIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
@@ -26,6 +27,7 @@ import {
   newDayTask,
   newSubtask,
   parseTime,
+  progressOf,
   formatLongDate,
   formatShortDate,
   formatMinutesShort,
@@ -65,6 +67,10 @@ export default function DayPanel({
   const watch = useDayTimerMs(data, date);
   const minutes = minutesOn(data, date, watch.liveMs);
   const progress = dayProgress(data, date);
+  // The day's "x of y done" bar sums the routines and the extra tasks; with just one of them it
+  // only repeats that routine's own bar (or the Extra tasks count), so it's left out.
+  const progressParts = items.filter((i) => !i.occurrence.skipped && progressOf(i.routine, i.occurrence).total > 0).length + ((day.tasks?.length ?? 0) > 0 ? 1 : 0);
+  const showProgress = progress.total > 0 && progressParts > 1;
   const isToday = date === todayKey();
   // A day that's gone: nothing to start, so logging time for it comes first.
   const past = date < todayKey();
@@ -78,11 +84,18 @@ export default function DayPanel({
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const onDay = new Set(items.map((i) => i.routine.id));
     const others = data.routines.filter((r) => !onDay.has(r.id));
+    // Nothing else to pick from: go straight to a new routine rather than a one-item menu.
+    if (others.length === 0) {
+      router.push(`/shed-log/routine/edit?date=${date}`);
+      return;
+    }
     setAddMenu({
-      x: Math.min(rect.left, window.innerWidth - 216),
+      x: Math.min(rect.left, window.innerWidth - 296),
       y: rect.bottom + 4,
+      // Wide enough for "Add <routine name> to this day".
+      width: 288,
       items: [
-        { label: "New routine starting this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${date}`) },
+        { label: "New routine", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${date}`) },
         ...others.map((r) => ({
           label: `Add ${r.name || "Untitled routine"} to this day`,
           icon: <RoutineIcon icon={r.icon} color={r.color} size="sm" />,
@@ -94,8 +107,8 @@ export default function DayPanel({
 
   const progressSection = (
     <DaySection icon={<CheckIcon className="h-4 w-4" />} title="Progress">
-      <div className={wide && progress.total > 0 ? "grid gap-3 lg:grid-cols-2 lg:items-stretch" : "contents"}>
-      {progress.total > 0 && (
+      <div className={wide && showProgress ? "grid gap-3 lg:grid-cols-2 lg:items-stretch" : "contents"}>
+      {showProgress && (
         <div className="flex items-center gap-3 rounded-lg bg-surface px-4 py-3">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
             <div
@@ -140,7 +153,7 @@ export default function DayPanel({
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: { kind: "day", date } }))}
-                  className="inline-flex items-center gap-1 font-medium text-foreground/80 hover:text-foreground hover:underline"
+                  className={`inline-flex items-center gap-1 font-medium text-foreground/80 hover:text-foreground hover:underline ${TOUCH_TEXT}`}
                 >
                   <ShareIcon className="h-3 w-3" /> Day report
                 </button>
@@ -166,7 +179,7 @@ export default function DayPanel({
         title="Routines"
         count={items.length || undefined}
         action={
-          <button type="button" onClick={openAddMenu} className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground">
+          <button type="button" onClick={openAddMenu} className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground pointer-coarse:h-8">
             <PlusIcon className="h-3.5 w-3.5" /> Add routine
           </button>
         }
@@ -304,7 +317,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
         open.length > 1 &&
         !running &&
         !past && (
-          <button type="button" onClick={() => startDayTasks(date, tasks)} className="flex h-7 items-center gap-1 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={() => startDayTasks(date, tasks)} className="flex h-7 items-center gap-1 rounded-md bg-accent/10 px-2.5 text-xs font-medium text-accent hover:bg-accent/15 pointer-coarse:h-8">
             <PlayIcon className="h-3.5 w-3.5" /> Start all
           </button>
         )
@@ -328,7 +341,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                     if (!t.done) burstAt(e.currentTarget, "var(--accent)");
                     log.toggleDayTask(date, t.id);
                   }}
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border transition-colors lg:h-5 lg:w-5 ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
+                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border transition-colors lg:h-5 lg:w-5 ${TOUCH_CHECK} ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
                 >
                   {t.done && <CheckIcon className="h-3.5 w-3.5" />}
                 </button>
@@ -346,7 +359,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                   <button
                     type="button"
                     onClick={() => log.saveDayTask(date, { ...t, spentMs: t.minutes * 60000 })}
-                    className="mt-1 rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium hover:bg-surface-hover"
+                    className={`mt-1 rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium hover:bg-surface-hover ${TOUCH_TEXT}`}
                     title="Checked off without the timer — log its time"
                   >
                     + Log {formatMinutesShort(t.minutes)}
@@ -370,7 +383,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       onClick={() => setLogging({ target: { kind: "task", taskId: t.id }, minutes: t.minutes || undefined })}
                       aria-label={`Log time on ${t.title}`}
                       title="Log time on this task"
-                      className="shrink-0 rounded-md bg-foreground/[0.05] p-2 text-muted hover:text-foreground lg:border-transparent lg:p-1.5 lg:opacity-0 lg:hover:bg-surface-hover lg:group-hover:opacity-100"
+                      className={`shrink-0 rounded-md bg-foreground/[0.05] p-2 text-muted hover:text-foreground lg:border-transparent lg:p-1.5 lg:opacity-0 lg:hover:bg-surface-hover lg:group-hover:opacity-100 ${TOUCH_ICON}`}
                     >
                       <StopwatchIcon className="h-3.5 w-3.5" />
                     </button>
@@ -381,7 +394,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       onClick={() => startDayTasks(date, tasks, t.id)}
                       aria-label={`Time ${t.title}`}
                       title="Start the timer"
-                      className="shrink-0 rounded-md bg-foreground/[0.05] p-2 text-muted hover:text-foreground lg:border-transparent lg:p-1.5 lg:opacity-0 lg:hover:bg-surface-hover lg:group-hover:opacity-100"
+                      className={`shrink-0 rounded-md bg-foreground/[0.05] p-2 text-muted hover:text-foreground lg:border-transparent lg:p-1.5 lg:opacity-0 lg:hover:bg-surface-hover lg:group-hover:opacity-100 ${TOUCH_ICON}`}
                     >
                       <PlayIcon className="h-3.5 w-3.5" />
                     </button>
@@ -403,7 +416,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       ],
                     });
                   }}
-                  className="shrink-0 rounded-md p-2 text-muted hover:bg-surface-hover hover:text-foreground lg:p-1.5"
+                  className={`shrink-0 rounded-md p-2 text-muted hover:bg-surface-hover hover:text-foreground lg:p-1.5 ${TOUCH_ICON}`}
                 >
                   <DotsVerticalIcon className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                 </button>
@@ -432,7 +445,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
           type="button"
           onClick={() => setEditing({ task: newDayTask(title.trim()), isNew: true })}
           title="Add with a time, length and notes"
-          className="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+          className="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground pointer-coarse:h-8"
         >
           Details
         </button>

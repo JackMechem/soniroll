@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import SetlistChartsPage from "@/components/library/SetlistChartsPage";
 
+export const metadata = { title: "Setlist charts" };
+
 /** `/setlist-charts?mine=|post=|shared=<id>[&start=]` — a setlist's charts, one per page. With no
     setlist given there's nothing to read, so it goes to the Library's setlists. */
 export default async function SetlistChartsRoute({

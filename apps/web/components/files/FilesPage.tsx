@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader } from "@/components/files/FileParts";
 import { MenuButton } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
@@ -264,7 +264,10 @@ export default function FilesPage() {
               </div>
             )}
 
-            {/* Phones: one row — what to show (where it came from, or what kind) and the order. */}
+            {/* Phones: one row — what to show (where it came from, or what kind) and the order. Hidden
+                until there's something to filter. */}
+            {items.length > 0 && (
+            <>
             <div className="flex items-center gap-2 sm:hidden">
               <Select
                 value={phoneFilter}
@@ -309,6 +312,8 @@ export default function FilesPage() {
                   ))}
               </div>
             </div>
+            </>
+            )}
 
             <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
               {/* Title, or what's ticked and what to do with it. */}
@@ -373,15 +378,18 @@ export default function FilesPage() {
                 items.length === 0 ? (
                   <EmptyState
                     title="Nothing here yet"
-                    body="Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes. You can drop files anywhere on this page."
+                    body={
+                      <>
+                        Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes.
+                        <span className="pointer-coarse:hidden"> You can drop files anywhere on this page.</span>
+                      </>
+                    }
                     action={
-                      <button type="button" onClick={uploader.pick} className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-                        Upload files
-                      </button>
+                      <Pill primary icon={UploadIcon} label="Upload files" onClick={uploader.pick} />
                     }
                   />
                 ) : (
-                  <p className="px-4 py-4 text-sm text-muted">Nothing matches.</p>
+                  <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
                 )
               ) : (
                 <div role="table" aria-label="Your files" className="flex flex-col divide-y divide-foreground/10">

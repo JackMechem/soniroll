@@ -64,7 +64,7 @@ import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learnin
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -573,9 +573,8 @@ export default function GuessTheInterval() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const score = scoreOf(session.results);
             const entry: HistoryEntry = {
               at: Date.now(),
@@ -586,7 +585,7 @@ export default function GuessTheInterval() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({ results: session.results, rounds: session.rounds });
           setRound(null);
@@ -643,9 +642,17 @@ export default function GuessTheInterval() {
 
   const arrow = (r: IntervalRound) => (r.direction === 1 ? "↑" : "↓");
   const revealedLabel = (r: IntervalRound) => `${arrow(r)} ${r.interval.label}`;
-  const mainLabel = round ? (status ? revealedLabel(round) : "?") : "—";
+  const mainLabel = running && round ? (status ? revealedLabel(round) : "?") : "—";
   const mainLabelLong = mainLabel.length > 16;
-  const glow = running && status ? GRADE_COLOR[status] : null;
+  // Once answered, the big label shows the right answer: green when the guess was right, the
+  // normal text colour when it wasn't (the wrong pick is named in a small line underneath).
+  const glow = running && status === "correct" ? GRADE_COLOR.correct : null;
+  const pickedLabel =
+    status === "incorrect"
+      ? guessedId
+        ? `You picked ${answerChoices.find((i) => i.id === guessedId)?.label ?? "another interval"}`
+        : "No answer"
+      : null;
   const showCountdown = running;
   const score = summary ? scoreOf(summary.results) : 0;
   const tally = (grade: Grade) =>
@@ -666,13 +673,11 @@ export default function GuessTheInterval() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakIntervalEntries(settings.intervalStats);
   const revealedNotes =
     revealNotes && status && round
-      ? `${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`
+      ? noteGlyphs(`${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`)
       : null;
 
   return (
@@ -1059,10 +1064,7 @@ export default function GuessTheInterval() {
             <span className="text-xs font-medium text-muted">
               Next interval in
             </span>
-            <span
-              className="text-3xl font-semibold tabular-nums sm:text-4xl"
-              style={{ color: GRADE_COLOR[status] }}
-            >
+            <span className="text-3xl font-semibold tabular-nums text-muted sm:text-4xl">
               <CountdownLabel active={running} timerRef={noteTimerRef} />
             </span>
           </div>
@@ -1071,7 +1073,7 @@ export default function GuessTheInterval() {
         <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
-            className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
+            className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
               mainLabelLong ? "text-xl sm:text-2xl" : "text-4xl sm:text-5xl"
             }`}
             style={
@@ -1085,8 +1087,12 @@ export default function GuessTheInterval() {
             {mainLabel}
           </p>
           {/* Before the first round, say what's about to happen. */}
-          {!round && !running && <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">Press Start, listen to two notes, then pick the interval.</p>}
+          {!running && <p className={IDLE_HINT}>Press Start, listen to two notes, then pick the interval.</p>}
         </div>
+        )}
+
+        {running && pickedLabel && (
+          <p className="text-sm font-medium text-danger">{pickedLabel}</p>
         )}
 
         {running && round && (

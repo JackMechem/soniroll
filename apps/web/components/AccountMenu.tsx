@@ -8,7 +8,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
 import StreakBadge from "@/components/practicelog/StreakBadge";
-import { GoogleIcon, UserIcon } from "@/components/tools";
+import { CloseIcon, GoogleIcon, UserIcon } from "@/components/tools";
 import { useSiteStatus } from "@/lib/useSiteStatus";
 
 
@@ -21,7 +21,8 @@ function buttonClass(collapsed?: boolean, large?: boolean) {
   } ${collapsed ? "justify-center" : ""}`;
 }
 
-/** The sign-in / sign-up form. `onClose` is Cancel (and success, unless `onSuccess` is given —
+/** The sign-in / sign-up form, inside a dialog that has its own × to cancel. `onClose` closes the
+    dialog (the "Forgot your password?" link, and success unless `onSuccess` is given —
     the landing page uses that to go into the app once signed in). */
 export function AuthForm({
   onClose,
@@ -168,8 +169,8 @@ export function AuthForm({
           </p>
         )}
         <p className="text-sm text-muted">
-          Sign in to sync your tune list, chord charts and practice stats across devices. Every
-          tool still works fine without an account.
+          {flow === "signIn" ? "Sign in" : "Make a free account"} to sync your tune list, chord
+          charts and practice stats across devices. Every tool still works fine without an account.
         </p>
       </div>
 
@@ -197,19 +198,14 @@ export function AuthForm({
             onChange={(e) => setPassword(e.target.value)}
             className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
+          {flow === "signUp" && (
+            <span className={`text-xs ${password && password.length < 8 ? "text-danger" : "text-muted"}`}>
+              At least 8 characters
+            </span>
+          )}
         </label>
 
         {error && <p className="text-sm text-danger">{error}</p>}
-
-        {flow === "signIn" && (
-          <Link
-            href={`/reset-password${email ? `?${new URLSearchParams({ email })}` : ""}`}
-            onClick={onClose}
-            className="-mt-1 self-start text-sm font-medium text-muted hover:text-foreground"
-          >
-            Forgot your password?
-          </Link>
-        )}
 
         {flow === "signUp" && (
           <p className="text-xs text-muted">
@@ -219,39 +215,45 @@ export function AuthForm({
             </Link>{" "}
             and{" "}
             <Link href="/privacy" className="underline hover:text-foreground">
-              Privacy Policy
+              Privacy policy
             </Link>
             .
           </p>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* The main button runs the whole width, like Google's below; the dialog's × (or Escape,
+            or a click outside) cancels. */}
+        <button
+          type="submit"
+          disabled={submitting || !email || password.length < 8}
+          className="h-10 w-full rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+        >
+          {flow === "signIn" ? "Sign in" : "Sign up"}
+        </button>
+
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
           <button
             type="button"
             onClick={() => {
               setFlow(flow === "signIn" ? "signUp" : "signIn");
               setError(null);
             }}
-            className="text-sm font-medium text-muted hover:text-foreground"
+            className="py-1 text-left text-sm text-muted"
           >
-            {flow === "signIn" ? "Need an account? Sign up" : "Have an account? Sign in"}
+            {flow === "signIn" ? "Need an account? " : "Have an account? "}
+            <span className="font-medium text-accent hover:underline">
+              {flow === "signIn" ? "Sign up" : "Sign in"}
+            </span>
           </button>
-          <div className="flex gap-2">
-            <button
-              type="button"
+          {flow === "signIn" && (
+            <Link
+              href={`/reset-password${email ? `?${new URLSearchParams({ email })}` : ""}`}
               onClick={onClose}
-              className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
+              className="py-1 text-sm font-medium text-accent hover:underline"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !email || password.length < 8}
-              className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
-            >
-              {flow === "signIn" ? "Sign in" : "Sign up"}
-            </button>
-          </div>
+              Forgot your password?
+            </Link>
+          )}
         </div>
       </form>
 
@@ -265,7 +267,7 @@ export function AuthForm({
         type="button"
         onClick={() => void onGoogle()}
         disabled={googleSubmitting}
-        className="flex h-9 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+        className="flex h-10 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
       >
         <GoogleIcon className="h-4 w-4" />
         Continue with Google
@@ -294,9 +296,12 @@ export function SignInModal({ onClose, initialFlow = "signIn" }: { onClose: () =
       <div
         role="dialog"
         aria-label="Sign in"
-        className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="relative flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
+        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+          <CloseIcon className="h-4 w-4" />
+        </button>
         <AuthForm onClose={onClose} initialFlow={initialFlow} />
       </div>
     </div>

@@ -74,7 +74,7 @@ import { useToolActivity } from "@/lib/toolTime";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
-import { PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import { PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_DASH } from "@/components/learning/quizUi";
 
 /** How long the voicing rings. */
 const CHORD_SECONDS = 2.2;
@@ -203,6 +203,8 @@ export default function FindTheRoot() {
   const [round, setRound] = useState<RootlessRound | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
+  /** In Pick mode, the key that answered the round (with 7♭9 any of its four roots counts). */
+  const [rightPick, setRightPick] = useState<number | null>(null);
   const [heard, setHeard] = useState<{ text: string; wrong: boolean } | null>(null);
   const [chordSounding, setChordSounding] = useState(false);
   const [progress, setProgress] = useState<{ index: number; total: number; score: number; done: number } | null>(null);
@@ -340,6 +342,7 @@ export default function FindTheRoot() {
     setStatus(null);
     setHeard(null);
     setWrongPicks([]);
+    setRightPick(null);
     setChordSounding(false);
     setProgress(null);
   }
@@ -426,6 +429,7 @@ export default function FindTheRoot() {
     setRound(r);
     setStatus(null);
     setWrongPicks([]);
+    setRightPick(null);
     setHeard(null);
     updateProgress(session);
     void playRound(r, false);
@@ -529,6 +533,7 @@ export default function FindTheRoot() {
     const session = sessionRef.current;
     if (!session || !session.round || session.grade) return;
     if (correctRoots(session.round.type, session.round.rootPc).includes(pc)) {
+      setRightPick(pc);
       finishRound(session.wrong && cfgRef.current.partialCredit ? "partial" : "correct");
     } else {
       session.wrong = true;
@@ -889,7 +894,7 @@ export default function FindTheRoot() {
                 id="root-listen"
                 title="Microphone"
                 icon={MicIcon}
-                summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen input") : "Default input"}
+                summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen mic") : "Default mic"}
               >
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-muted">Audio input</span>
@@ -897,7 +902,7 @@ export default function FindTheRoot() {
                     value={inputDeviceId}
                     onChange={(value) => updateSettings({ inputDeviceId: value })}
                     options={[
-                      { value: "", label: "Default input" },
+                      { value: "", label: "Default mic" },
                       ...inputs.map((d) => ({ value: d.id, label: d.label })),
                     ]}
                   />
@@ -968,7 +973,7 @@ export default function FindTheRoot() {
             style={{ borderColor: glow ?? "color-mix(in srgb, var(--foreground) 10%, transparent)" }}
           />
           <p
-            className={`relative z-10 font-bold transition-colors duration-200 ${
+            className={!round ? IDLE_DASH : `relative z-10 font-bold transition-colors duration-200 ${
               status && target && chordLabel(target).length > 6 ? "text-3xl sm:text-4xl" : "text-5xl sm:text-6xl"
             }`}
             style={
@@ -993,11 +998,11 @@ export default function FindTheRoot() {
         {round && (
           <div className="flex flex-col items-center gap-1 text-center">
             <p className="text-lg">
-              Make it <span className="font-semibold">{round.type.ask}</span>
+              Which root makes it <span className="font-semibold">{round.type.ask}</span>?
             </p>
             {voicing && (showVoicingName || status) && (
               <p className="text-sm text-muted">
-                You&apos;re hearing{" "}
+                On its own it&apos;s{" "}
                 <span className="font-semibold text-foreground">{chordLabel(voicing)}</span>
                 {/* A starts on the 3rd and B on the 7th, so it's a clue: only after answering. */}
                 {round.ab && status && ` · ${round.ab} voicing`}
@@ -1023,7 +1028,9 @@ export default function FindTheRoot() {
                   </p>
                 )}
                 <p className="text-sm font-medium" style={{ color: GRADE_COLOR[status] }}>
-                  {status === "incorrect" ? "Not this time" : GRADE_LABEL[status]}
+                  {status === "incorrect"
+                    ? "Not this time"
+                    : `Yes, ${prettyNote(rightPick === null || rightPick === round.rootPc ? target!.root : ROOT_NAMES[rightPick])}${status === "partial" ? " · half credit" : ""}`}
                 </p>
               </>
             )}
@@ -1042,6 +1049,17 @@ export default function FindTheRoot() {
                   ? `Heard ${heard.text}, not it`
                   : `Heard ${heard.text}`
                 : "Sing or play the root…"}
+          </p>
+        )}
+
+        {running && round && answerMode === "pick" && !status && (
+          <p
+            className="min-h-5 text-sm"
+            style={wrongPicks.length ? { color: GRADE_COLOR.incorrect } : undefined}
+          >
+            {wrongPicks.length
+              ? `Not ${prettyNote(ROOT_NAMES[wrongPicks[wrongPicks.length - 1]])}. Try again.`
+              : "Pick the root…"}
           </p>
         )}
 
@@ -1108,7 +1126,7 @@ export default function FindTheRoot() {
 
         {running && progress && (
           <p className="text-sm tabular-nums text-muted">
-            Round {progress.index} of {progress.total} · {formatScore(progress.score)}/{progress.done} ·{" "}
+            Round {progress.index} of {progress.total} · Score {formatScore(progress.score)}/{progress.done} ·{" "}
             <ElapsedTimer active={running} startRef={sessionStartRef} />
           </p>
         )}

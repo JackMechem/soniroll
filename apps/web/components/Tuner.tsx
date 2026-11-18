@@ -62,6 +62,9 @@ const MAX_REF = 466;
 const MIN_OCTAVE = 0;
 const MAX_OCTAVE = 7;
 const TONE_SECONDS = 2.5;
+/** The octave −/+ in the dial: round like the tempo ± buttons, and 40px on touch screens. */
+const OCTAVE_BUTTON =
+  "flex h-8 w-8 items-center justify-center rounded-full bg-foreground/[0.05] text-lg leading-none text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:w-10";
 
 const WAVEFORMS: { value: OscillatorType; label: string }[] = [
   { value: "sine", label: "Sine" },
@@ -282,6 +285,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
   const noteName = written === null ? null : midiToNote(written);
   const noteLetter = noteName ? noteName.replace(/\d+$/, "") : null;
   const noteOctave = noteName ? noteName.match(/\d+$/)?.[0] : null;
+  const shownError = error ?? takeError ?? rec.error;
   const verdict = !reading
     ? ""
     : Math.abs(reading.cents) <= 8
@@ -346,7 +350,12 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             )}
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="tuner-input" title="Input" icon={MicIcon}>
+          <CollapsiblePanel
+            id="tuner-input"
+            title="Microphone"
+            icon={MicIcon}
+            summary={inputs.find((d) => d.id === inputDeviceId)?.label ?? "Default mic"}
+          >
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
               <Select
@@ -354,7 +363,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
                 onChange={(id) => updateSettings({ inputDeviceId: id })}
                 disabled={listening}
                 options={[
-                  { value: "", label: "Default input" },
+                  { value: "", label: "Default mic" },
                   ...inputs.map((d) => ({ value: d.id, label: d.label })),
                 ]}
               />
@@ -429,7 +438,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           type="button"
           onClick={() => updateSettings({ sustain: !sustain })}
           aria-pressed={sustain}
-          className={`pointer-events-auto rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+          className={`pointer-events-auto relative rounded-full px-3 py-1 text-xs font-medium transition-colors pointer-coarse:h-8 pointer-coarse:px-4 pointer-coarse:text-sm pointer-coarse:after:absolute pointer-coarse:after:-inset-y-1.5 pointer-coarse:after:inset-x-0 ${
             sustain
               ? "bg-accent text-accent-foreground hover:bg-accent-hover"
               : "bg-foreground/[0.07] text-muted hover:bg-surface-hover hover:text-foreground"
@@ -485,7 +494,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               onClick={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}
               disabled={octave <= MIN_OCTAVE}
               aria-label="Octave down"
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
+              className={OCTAVE_BUTTON}
             >
               −
             </button>
@@ -495,7 +504,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               onClick={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}
               disabled={octave >= MAX_OCTAVE}
               aria-label="Octave up"
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
+              className={OCTAVE_BUTTON}
             >
               +
             </button>
@@ -520,7 +529,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             />
           )}
         </div>
-        <div className="flex w-full justify-between text-[0.7rem] text-muted">
+        <div className="flex w-full justify-between text-[0.8rem] text-muted">
           <span>♭ flat</span>
           <span className="font-medium" style={{ color: reading ? color : undefined }}>
             {verdict}
@@ -579,9 +588,6 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
         </div>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {(rec.error || takeError) && <p className="text-sm text-danger">{takeError ?? rec.error}</p>}
-
       <div className="flex flex-wrap items-center justify-center gap-3">
         {/* While a take records the tuner listens too, so there's only the one Stop. */}
         {!recording && (
@@ -623,9 +629,14 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           </button>
         )}
       </div>
-      <KeyHint>
-        Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : "start or stop listening"}
-      </KeyHint>
+      {/* An error takes the key hint's place, so the page doesn't grow (and scroll) when one shows. */}
+      {shownError ? (
+        <p className="text-center text-sm text-danger sm:w-max sm:max-w-[min(40rem,calc(100vw-2rem))]">{shownError}</p>
+      ) : (
+        <KeyHint>
+          Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : "start or stop listening"}
+        </KeyHint>
+      )}
     </ToolLayout>
   );
 }

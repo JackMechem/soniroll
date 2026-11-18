@@ -297,7 +297,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
 
   const options = (
     <>
-      <SettingChip icon={MicIcon} label="Input" wide value={`${deviceLabel ?? "Default mic"} · ${Math.round(gain * 100)}%`}>
+      <SettingChip icon={MicIcon} label="Microphone" wide value={`${deviceLabel ?? "Default mic"} · ${Math.round(gain * 100)}%`}>
         <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-xs font-semibold text-muted">Microphone</span>
@@ -305,7 +305,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               value={inputs.some((d) => d.id === settings.inputDeviceId) ? settings.inputDeviceId : ""}
               onChange={(v) => updateSettings({ inputDeviceId: v })}
               disabled={busy}
-              options={[{ value: "", label: "Default" }, ...inputs.map((d) => ({ value: d.id, label: d.label || "Microphone" }))]}
+              options={[{ value: "", label: "Default mic" }, ...inputs.map((d) => ({ value: d.id, label: d.label || "Microphone" }))]}
             />
           </label>
           <div className="flex flex-col gap-1.5">
@@ -359,9 +359,18 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         label="Metronome"
         wide
         value={settings.metronome ? `${bpm} BPM · ${meterValue}` : "Off"}
-        toggle={{ checked: settings.metronome, onChange: (v) => updateSettings({ metronome: v }), disabled: busy }}
       >
+        {/* Like every other chip, this one opens its settings; the on/off switch is the first of them. */}
         <div className="flex flex-col items-center gap-4">
+          <div className="w-full">
+            <SwitchRow
+              label="Click while recording"
+              checked={settings.metronome}
+              onChange={(v) => updateSettings({ metronome: v })}
+              disabled={busy}
+              hint="Plays a metronome click (with a count-in) while you record. It isn't recorded unless your microphone picks it up."
+            />
+          </div>
           <TempoHero
             bpm={bpm}
             setBpm={setBpm}
@@ -534,7 +543,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         <div className="flex w-full flex-col gap-1.5">
           <LevelTrace trace={levelTrace} live={live} />
           <p className={`h-4 text-center text-xs ${tooLoud ? "font-medium text-danger" : "text-muted"}`}>
-            {tooLoud ? "Too loud — turn the input level down (Input)" : tooQuiet ? "Very quiet — turn the input level up, or move closer" : live ? "" : "Check the level before you record"}
+            {tooLoud ? "Too loud — turn the input level down (Microphone)" : tooQuiet ? "Very quiet — turn the input level up, or move closer" : live ? "" : "Check the level before you record"}
           </p>
         </div>
 
@@ -567,6 +576,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
             >
               <MicIcon className="h-4 w-4" />
               <span className="hidden sm:inline">{rec.monitoring ? "Stop checking" : "Check level"}</span>
+              <span className="sm:hidden">Level</span>
             </button>
           </div>
           <button
@@ -584,9 +594,14 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               <span className="h-[74px] w-[74px] rounded-full bg-danger" />
             )}
           </button>
-          <div className="text-left text-xs text-muted">
+          <div aria-hidden />
+        </div>
+        {/* A caption under the button (the count-in note too), so nothing beside it moves it. */}
+        <div className="-mt-2 flex flex-col items-center gap-0.5 text-center">
+          <span className="text-sm font-semibold">{busy ? "Stop" : "Record"}</span>
+          <span className="h-4 text-xs text-muted">
             {settings.metronome && !busy && settings.countInBars > 0 && `${settings.countInBars}-bar count-in`}
-          </div>
+          </span>
         </div>
         {rec.error && <p className="text-sm text-danger">{rec.error}</p>}
       </div>

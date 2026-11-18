@@ -73,7 +73,7 @@ import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -575,7 +575,7 @@ export default function IntervalTrainer() {
       roundSeedRef.current,
       cfg.ignoreOctave,
     );
-    setHeard(`${shownNote} (${cents > 0 ? "+" : ""}${cents}¢)`);
+    setHeard(`${noteGlyphs(shownNote)} (${cents > 0 ? "+" : ""}${cents}¢)`);
 
     const nearest = Math.round(frequencyToMidi(freq, cfg.refA));
     if (nearest === session.last) session.stable++;
@@ -809,9 +809,8 @@ export default function IntervalTrainer() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const score = scoreOf(session.results);
             const entry: HistoryEntry = {
               at: Date.now(),
@@ -822,7 +821,7 @@ export default function IntervalTrainer() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({ results: session.results, rounds: session.rounds });
           setRound(null);
@@ -919,12 +918,12 @@ export default function IntervalTrainer() {
 
   const arrow = (r: IntervalRound) => (r.direction === 1 ? "↑" : "↓");
   const rootLabel = (r: IntervalRound, seq = 0) =>
-    spellNote(midiToNote(r.startMidi), accidentalStyle, seq, ignoreOctave);
+    noteGlyphs(spellNote(midiToNote(r.startMidi), accidentalStyle, seq, ignoreOctave));
   // The starting note is always shown, even mid-chain — a chained round that hid it would leave
   // no way to recover after a wrong note, since there'd be nothing on screen to re-orient from.
   const roundLabel = (r: IntervalRound, seq = 0) =>
     `${rootLabel(r, seq)} ${arrow(r)} ${r.interval.label}`;
-  const mainLabel = round ? roundLabel(round, roundSeed) : "—";
+  const mainLabel = running && round ? roundLabel(round, roundSeed) : "—";
   const mainLabelLong = mainLabel.length > 16;
   const glow = running && status ? GRADE_COLOR[status] : null;
   const showCountdown = running;
@@ -952,9 +951,7 @@ export default function IntervalTrainer() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakIntervalEntries(settings.intervalStats);
 
   return (
@@ -1259,8 +1256,9 @@ export default function IntervalTrainer() {
 
           <CollapsiblePanel
             id="interval-listen"
-            title="Listen"
+            title="Microphone"
             icon={MicIcon}
+            summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen mic") : "Default mic"}
             asMode
             toggle={{
               checked: listenMode,
@@ -1326,7 +1324,7 @@ export default function IntervalTrainer() {
                 onChange={setInputDeviceId}
                 disabled={running}
                 options={[
-                  { value: "", label: "Default input" },
+                  { value: "", label: "Default mic" },
                   ...inputs.map((d) => ({ value: d.id, label: d.label })),
                 ]}
               />
@@ -1487,7 +1485,7 @@ export default function IntervalTrainer() {
           <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
+              className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
                 mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
               }`}
               style={
@@ -1501,8 +1499,8 @@ export default function IntervalTrainer() {
               {mainLabel}
             </p>
             {/* Before the first round, say what's about to happen. */}
-            {!round && !running && (
-              <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">
+            {!running && (
+              <p className={IDLE_HINT}>
                 {listenMode
                   ? "Press Start, then play each interval. The mic checks it."
                   : "Press Start, then play each interval shown."}
@@ -1522,7 +1520,7 @@ export default function IntervalTrainer() {
         {listenMode && running && round && showIntervalNotes && (
           <div className="flex flex-wrap justify-center gap-1.5 px-2">
             {round.notes.map((n, i) => {
-              const label = spellNote(n, accidentalStyle, roundSeed, true);
+              const label = noteGlyphs(spellNote(n, accidentalStyle, roundSeed, true));
               const matched = i < intervalProgress;
               const failed = i === intervalProgress && status === "incorrect";
               // Missed once and waiting for a retry (partial-credit mode only).

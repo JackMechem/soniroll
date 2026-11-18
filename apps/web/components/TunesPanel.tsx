@@ -10,7 +10,7 @@ import TuneEditorModal from "@/components/TuneEditorModal";
 import { ChecklistIcon, ListIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
-import { nameId } from "@/lib/standards";
+import { STANDARDS, nameId } from "@/lib/standards";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
 
 function blankTune(name = ""): Tune {
@@ -106,7 +106,12 @@ export default function TunesPanel({
       <CollapsiblePanel
         id="jam-tunes"
         title="Tunes I Know"
-        summary={`${tunes.length} tune${tunes.length === 1 ? "" : "s"}`}
+        // Says what random picks actually come from: the standards (when that's on) or the list.
+        summary={
+          pickFromStandards
+            ? `${STANDARDS.length} standards`
+            : `${tunes.length} tune${tunes.length === 1 ? "" : "s"}`
+        }
         wide
         icon={ListIcon}
         action={

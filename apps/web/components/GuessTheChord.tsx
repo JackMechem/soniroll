@@ -64,7 +64,7 @@ import { cumulativeItems, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 5;
 const MAX_ROUND_SECONDS = 45;
@@ -83,6 +83,8 @@ const DEFAULT_ROUND_COUNT = 12;
 const MIN_ADVANCE_DELAY_MS = 0;
 const MAX_ADVANCE_DELAY_MS = 8000;
 const DEFAULT_ADVANCE_DELAY_MS = 2000;
+/** After a miss, the right chord stays up at least this long (whatever "Next chord after" says). */
+const MIN_MISS_PAUSE_MS = 2500;
 
 const DEFAULT_SLASH_CHANCE = 35;
 
@@ -244,6 +246,8 @@ export default function GuessTheChord() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [typed, setTyped] = useState("");
+  /** Shown under the answer field when Submit can't read what's typed (it doesn't count). */
+  const [typeHint, setTypeHint] = useState<string | null>(null);
   const [progress, setProgress] = useState<{
     index: number;
     total: number;
@@ -305,9 +309,10 @@ export default function GuessTheChord() {
 
   // Autofocus the answer field for each fresh, ungraded round, cursor at the end — so typing can
   // start immediately without clicking into it first, and (with "Give the root" on, prefilling
-  // the field with the root) lands right after the prefilled text instead of before it.
+  // the field with the root) lands right after the prefilled text instead of before it. Not on a
+  // touch screen: the phone's keyboard would pop up over the symbol keypad.
   useEffect(() => {
-    if (!running || !round || status) return;
+    if (!running || !round || status || isTouchFirst()) return;
     const el = inputElRef.current;
     if (!el) return;
     el.focus();
@@ -317,6 +322,7 @@ export default function GuessTheChord() {
 
   function setTypedValue(value: string) {
     setTyped(value);
+    setTypeHint(null);
     typedRef.current = value;
   }
 
@@ -415,12 +421,12 @@ export default function GuessTheChord() {
   }
 
   /** Lets the round's pass/fail be seen briefly before moving on. */
-  function scheduleAdvance(index: number) {
+  function scheduleAdvance(index: number, delayMs: number) {
     if (skipTimeoutRef.current) return;
     skipTimeoutRef.current = setTimeout(() => {
       skipTimeoutRef.current = null;
       if (sessionRef.current?.index === index) skipRef.current?.();
-    }, cfgRef.current.advanceDelayMs);
+    }, delayMs);
   }
 
   /** Locks in a round's grade and starts the pause-before-next-chord countdown: retargets the
@@ -432,7 +438,12 @@ export default function GuessTheChord() {
     if (!session || !session.round) return;
     session.best = grade;
     setStatus(grade);
-    const pauseMs = cfgRef.current.advanceDelayMs;
+    // A miss holds a little longer, so there's time to read the right chord against what was
+    // typed ("Next" moves on sooner).
+    const pauseMs =
+      grade === "incorrect"
+        ? Math.max(cfgRef.current.advanceDelayMs, MIN_MISS_PAUSE_MS)
+        : cfgRef.current.advanceDelayMs;
     // Only ever reached from gradeAndReveal (a form submit, the "I don't know" button, or the
     // max-time timer), never during render — same ref-mutation timing pattern every trainer here
     // uses.
@@ -441,13 +452,14 @@ export default function GuessTheChord() {
       playClick();
       scheduleCountdownClicks(pauseMs);
     }
-    scheduleAdvance(session.index);
+    scheduleAdvance(session.index, pauseMs);
   }
 
   /** Grades whatever's currently typed (parsed via `parseChordInput`) against the active round
       and reveals it — used both by an explicit submit and by the "time to answer" timer running
       out, so a timeout still shows the correct answer instead of just silently moving on. Empty
-      or unrecognized input simply grades as incorrect, same as a wrong guess. */
+      or unrecognized input grades as incorrect here, same as a wrong guess; an explicit Submit
+      checks it first (`submitAnswer`) and doesn't count something it can't read. */
   function gradeAndReveal() {
     const session = sessionRef.current;
     if (!session || !session.round || session.best !== null) return;
@@ -460,6 +472,15 @@ export default function GuessTheChord() {
 
   function submitAnswer(e?: React.FormEvent) {
     e?.preventDefault();
+    const text = typedRef.current.trim();
+    if (!text) {
+      setTypeHint("Type a chord first, or press I don't know.");
+      return;
+    }
+    if (!parseChordInput(text)) {
+      setTypeHint("Couldn't read that chord. Try Cmaj7, D-7 or G7/B.");
+      return;
+    }
     gradeAndReveal();
   }
 
@@ -475,10 +496,14 @@ export default function GuessTheChord() {
     const next = typed.slice(0, start) + text + typed.slice(end);
     setTypedValue(next);
     const pos = start + text.length;
+    // On a touch screen, only keep the caret where it was if the field already has focus —
+    // focusing it would open the phone's keyboard over the keypad.
+    const refocus = !isTouchFirst() || document.activeElement === el;
     // The DOM <input> doesn't have the new value yet this same tick (setTypedValue just
     // scheduled the re-render) — wait a frame so the caret is placed against the text that's
     // actually there instead of the stale, shorter value.
     requestAnimationFrame(() => {
+      if (!refocus) return;
       el?.focus();
       el?.setSelectionRange(pos, pos);
     });
@@ -613,9 +638,8 @@ export default function GuessTheChord() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const score = scoreOf(session.results);
             const entry: HistoryEntry = {
               at: Date.now(),
@@ -626,7 +650,7 @@ export default function GuessTheChord() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({
             results: session.results,
@@ -712,14 +736,12 @@ export default function GuessTheChord() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakChordEntries(settings.chordStats);
 
   function revealedLabel(r: ChordRound, seq: number) {
     const parts = chordRoundParts(r, accidentalStyle, seq);
-    return `${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ""}`;
+    return noteGlyphs(`${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ""}`);
   }
 
   const revealedText = round && status ? revealedLabel(round, roundSeed) : null;
@@ -728,13 +750,28 @@ export default function GuessTheChord() {
   const typedPreview = typedParts
     ? `${typedParts.root}${typedParts.quality}${typedParts.bass ? `/${typedParts.bass}` : ""}`
     : null;
-  const mainLabel = !round ? "—" : (revealedText ?? typedPreview ?? "?");
+  const mainLabel = !running || !round ? "—" : (revealedText ?? typedPreview ?? "?");
   const mainLabelLong = mainLabel.length > 10;
-  const glow = running && status ? GRADE_COLOR[status] : null;
+  // The big label shows the right chord once answered: green when the answer was right, the
+  // normal text colour when it wasn't (what was typed is shown in a small line underneath).
+  const glow = running && status === "correct" ? GRADE_COLOR.correct : null;
+  const typedAnswer = typed.trim();
+  const typedAnswerParsed = status === "incorrect" && typedAnswer ? parseChordInput(typedAnswer) : null;
+  const typedAnswerParts = typedAnswerParsed ? formatChordParts(typedAnswerParsed) : null;
+  const missLine =
+    status !== "incorrect"
+      ? null
+      : !typedAnswer
+        ? "No answer"
+        : `You typed ${
+            typedAnswerParts
+              ? `${typedAnswerParts.root}${typedAnswerParts.quality}${typedAnswerParts.bass ? `/${typedAnswerParts.bass}` : ""}`
+              : typedAnswer
+          }`;
   const showCountdown = running;
   const revealedNoteNames =
     revealNotes && status && round
-      ? round.notes.join(" · ")
+      ? round.notes.map(noteGlyphs).join(" · ")
       : null;
 
   return (
@@ -1117,10 +1154,7 @@ export default function GuessTheChord() {
             <span className="text-xs font-medium text-muted">
               Next chord in
             </span>
-            <span
-              className="text-3xl font-semibold tabular-nums sm:text-4xl"
-              style={{ color: GRADE_COLOR[status] }}
-            >
+            <span className="text-3xl font-semibold tabular-nums text-muted sm:text-4xl">
               <CountdownLabel active={running} timerRef={noteTimerRef} />
             </span>
           </div>
@@ -1129,7 +1163,7 @@ export default function GuessTheChord() {
         <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
-            className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
+            className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
               mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
             }`}
             style={
@@ -1143,19 +1177,30 @@ export default function GuessTheChord() {
             {mainLabel}
           </p>
           {/* Before the first round, say what's about to happen. */}
-          {!round && !running && <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">Press Start, listen to the chord, then type its symbol.</p>}
+          {!running && <p className={IDLE_HINT}>Press Start, listen to the chord, then type its symbol.</p>}
         </div>
         )}
 
+        {running && missLine && (
+          <p className="text-sm font-medium text-danger">{missLine}</p>
+        )}
+
         {running && round && (
-          <button
-            type="button"
-            onClick={() => playChordSound(round.notes)}
-            className={SECONDARY_BUTTON}
-          >
-            <PlayIcon className="h-3.5 w-3.5" />
-            Replay
-          </button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => playChordSound(round.notes)}
+              className={SECONDARY_BUTTON}
+            >
+              <PlayIcon className="h-3.5 w-3.5" />
+              Replay
+            </button>
+            {status && (
+              <button type="button" onClick={() => skipRef.current?.()} className={PRIMARY_BUTTON}>
+                Next
+              </button>
+            )}
+          </div>
         )}
 
         {revealedNoteNames && (
@@ -1180,8 +1225,14 @@ export default function GuessTheChord() {
               value={typed}
               onChange={(e) => setTypedValue(e.target.value)}
               placeholder="e.g. F#^7 or Ab-7/D"
+              aria-describedby={typeHint ? "chord-type-hint" : undefined}
               className="h-11 w-full max-w-[16rem] rounded-md bg-foreground/[0.05] px-3 text-center text-lg text-foreground outline-none focus:ring-2 focus:ring-accent/40"
             />
+            {typeHint && (
+              <p id="chord-type-hint" role="status" className="text-sm text-muted">
+                {typeHint}
+              </p>
+            )}
             <div className="flex gap-2">
               <button
                 type="submit"

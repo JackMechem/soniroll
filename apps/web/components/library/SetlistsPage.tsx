@@ -47,7 +47,7 @@ export default function SetlistsPage() {
         tabs={<LibraryTabs active="setlists" />}
       >
         <Toolbar>
-          <HeroSearch value={query} onChange={setQuery} placeholder="Search setlists, or a tune in one…" />
+          <HeroSearch value={query} onChange={setQuery} placeholder="Search setlists…" />
           <div className="flex h-10 shrink-0 rounded-md bg-foreground/[0.05] p-0.5 sm:h-9" role="group" aria-label="Sort">
             {(["recent", "name"] as Sort[]).map((key) => (
               <button
@@ -61,7 +61,7 @@ export default function SetlistsPage() {
               </button>
             ))}
           </div>
-          <Pill primary icon={PlusIcon} label="New setlist" onClick={() => setNaming(true)} iconOnlyOnPhone />
+          <Pill primary icon={PlusIcon} label="New" onClick={() => setNaming(true)} />
         </Toolbar>
       </Hero>
       {shown.length === 0 ? (

@@ -66,8 +66,9 @@ export default function DownloadPage() {
             </p>
           </div>
         ) : (
-          <a href={release?.url ?? RELEASES_URL} className="inline-flex h-12 items-center gap-2 rounded-full bg-accent px-6 text-base font-bold text-accent-foreground hover:bg-accent-hover">
-            <DownloadIcon className="h-5 w-5" /> {platform === null && release ? "Choose your computer below" : "See the downloads"}
+          // No computer detected (a phone or tablet): jump to the list below rather than off to GitHub.
+          <a href={release ? "#downloads" : RELEASES_URL} className="inline-flex h-12 items-center gap-2 whitespace-nowrap rounded-full bg-accent px-6 text-base font-bold text-accent-foreground hover:bg-accent-hover">
+            <DownloadIcon className="h-5 w-5" /> See downloads
           </a>
         )}
         {platform === null && !desktop && <p className="text-xs text-muted">On a phone or tablet? The desktop app is for computers; soniroll.com works everywhere.</p>}
@@ -85,7 +86,7 @@ export default function DownloadPage() {
         ))}
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="downloads" className="flex scroll-mt-20 flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-bold">Every download</h2>
           {release && (

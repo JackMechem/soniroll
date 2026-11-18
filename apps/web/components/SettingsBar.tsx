@@ -34,6 +34,14 @@ export function SettingsBar({ children, fit = false }: { children: ReactNode; /*
   );
 }
 
+/** A bigger tap area for a small (32px) button on touch screens and phones: an invisible layer
+    6px above and below it, so it's 44px to a finger without looking any bigger. The button must
+    not clip its overflow. `TOUCH_HIT_ROUND` grows it on every side (a 32px square icon button). */
+export const TOUCH_HIT =
+  "relative max-sm:after:absolute max-sm:after:inset-x-0 max-sm:after:-inset-y-1.5 pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-1.5";
+export const TOUCH_HIT_ROUND =
+  "relative max-sm:after:absolute max-sm:after:-inset-1.5 pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5";
+
 const GAP = 8; // between the chip and its popover
 const MARGIN = 16; // kept clear at the screen's edges
 const SM = 640; // Tailwind's `sm` breakpoint: below it the popover is a bottom sheet

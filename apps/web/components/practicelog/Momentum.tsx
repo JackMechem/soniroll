@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import GoalDialog from "@/components/practicelog/GoalDialog";
+import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import { ChevronLeftIcon, ChevronRightIcon, ShareIcon } from "@/components/tools";
 import {
   type PracticeLogData,
@@ -88,7 +89,8 @@ export default function Momentum({
   const weekChange = lastWeek > 0 ? Math.round(((weekTotal - lastWeek) / lastWeek) * 100) : null;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    // Phones: a compact 2 × 2 (four full-width cards pushed everything else off the screen).
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       <GoalCard minutes={minutes} goal={goal} progress={progress} onEdit={() => setEditingGoal(true)} />
       {editingGoal && <GoalDialog data={data} onSave={onPrefs} onClose={() => setEditingGoal(false)} />}
 
@@ -201,7 +203,7 @@ function Card({
   wide?: boolean;
 }) {
   return (
-    <section className={`flex min-w-0 flex-col gap-3 rounded-lg bg-surface p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
+    <section className={`flex min-w-0 flex-col gap-2 rounded-lg bg-surface p-3 sm:gap-3 sm:p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
       <div className="flex h-5 items-center justify-between gap-2">
         <h3 className="truncate text-xs font-medium text-muted">{label}</h3>
         {action}
@@ -210,7 +212,7 @@ function Card({
         {value}
         {aside}
       </div>
-      <div className="mt-auto flex flex-col gap-3">{children}</div>
+      <div className="mt-auto flex flex-col gap-2 sm:gap-3">{children}</div>
     </section>
   );
 }
@@ -261,7 +263,7 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
       wide
       label={goal > 0 ? "Today's goal" : "Today · rest day"}
       action={
-        <button type="button" onClick={onEdit} className="-my-1 rounded-md px-1.5 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={onEdit} className={`-my-1 rounded-md px-1.5 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground ${TOUCH_TEXT}`}>
           {goal > 0 ? "Change" : "Set a goal"}
         </button>
       }

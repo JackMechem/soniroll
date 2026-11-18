@@ -1,12 +1,12 @@
 import { LegalLink, LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Terms of Service",
+  title: "Terms of service",
 };
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="November 17, 2026">
+    <LegalPage title="Terms of service" updated="November 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         These terms cover your use of soniroll (
         <LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>, and its desktop app), a
@@ -19,7 +19,7 @@ export default function TermsPage() {
           Every tool and feature of soniroll is free, as a personal project, with no guarantee of
           uptime, accuracy, or continued availability. Most tools run entirely in your browser;
           creating an account is optional — see the{" "}
-          <LegalLink href="/privacy">Privacy Policy</LegalLink> for exactly what an account does
+          <LegalLink href="/privacy">Privacy policy</LegalLink> for exactly what an account does
           and doesn&apos;t do. The only thing that costs money is an optional storage plan (below).
         </p>
       </LegalSection>
@@ -90,7 +90,7 @@ export default function TermsPage() {
           is built with a number of open-source libraries, each under their own license; using
           soniroll doesn&apos;t grant you any license to soniroll&apos;s own code or design beyond
           what&apos;s stated in its{" "}
-          <LegalLink href="https://github.com/JackMechem/sheddex">
+          <LegalLink href="https://github.com/JackMechem/soniroll">
             public GitHub repository
           </LegalLink>
           , if anything.
@@ -126,7 +126,7 @@ export default function TermsPage() {
       <LegalSection title="Third-party services">
         <p>
           soniroll relies on third-party services (currently Convex, Resend, Google, Vercel and Polar —
-          see the Privacy Policy for what each is used for) to provide accounts, email and payments. Those
+          see the Privacy policy for what each is used for) to provide accounts, email and payments. Those
           services have their own terms, and soniroll isn&apos;t responsible for their
           availability, changes, or errors.
         </p>

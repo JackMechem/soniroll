@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import CollapsiblePanel from "@/components/CollapsiblePanel";
+import CollapsiblePanel, { HintsButton } from "@/components/CollapsiblePanel";
+import { SettingChip } from "@/components/SettingsBar";
+import { HintsContext } from "@/lib/hints";
+import { PANEL_DEFAULTS, panelKey, useHints } from "@/lib/panels";
+import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Hint from "@/components/Hint";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -105,6 +109,16 @@ export default function PracticeTimer() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   // Set when Save is pressed with no name: we ask for one instead of saving "Untitled session".
   const [nameMissing, setNameMissing] = useState(false);
+  // The editor popover's "?" (option descriptions), remembered like a panel's.
+  const [editorPanel, updateEditorPanel] = usePersistedSettings(
+    panelKey("practice-timer-editor"),
+    PANEL_DEFAULTS,
+  );
+  const [editorHints, toggleEditorHints] = useHints(
+    editorPanel.showHints,
+    editorPanel.hints,
+    updateEditorPanel,
+  );
   // The quick timer's length: a plain countdown, no session needed. Not saved.
   const [quickMinutes, setQuickMinutes] = useState(10);
 
@@ -221,18 +235,31 @@ export default function PracticeTimer() {
         <OptionChipLook on={rewardChips}>
           <PanelsToggle ids={PANEL_IDS} />
 
-          <CollapsiblePanel
-              id="practice-timer-editor"
-              title={draft?.id ? "Edit session" : "New session"}
+          {/* "New session" is an action, not a setting, so it's a plain button rather than a
+              value chip; the session editor is still its popover. */}
+          <SettingChip
               icon={draft?.id ? PencilIcon : PlusIcon}
-              summary={draft && !editorOpen ? "Unsaved" : undefined}
+              label={draft?.id ? "Edit session" : "New session"}
               wide
               open={editorOpen}
               onOpenChange={(open) => {
                 if (open && !draft) setDraft(blankDraft());
                 setEditorOpen(open);
               }}
+              headerExtra={<HintsButton on={editorHints} onToggle={toggleEditorHints} />}
+              trigger={{
+                className:
+                  "flex h-10 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover",
+                content: (
+                  <>
+                    {draft?.id ? <PencilIcon className="h-4 w-4 text-accent" /> : <PlusIcon className="h-4 w-4 text-accent" />}
+                    {draft?.id ? "Edit session" : "New session"}
+                    {draft && !editorOpen && <span className="text-muted">· Unsaved</span>}
+                  </>
+                ),
+              }}
             >
+              <HintsContext.Provider value={editorHints}>
               {draft && (
               <>
               <label className="flex flex-col gap-1 text-left text-sm">
@@ -357,7 +384,8 @@ export default function PracticeTimer() {
               </div>
               </>
               )}
-            </CollapsiblePanel>
+              </HintsContext.Provider>
+            </SettingChip>
 
           <CollapsiblePanel id="practice-timer-sound" title="Sound" icon={SpeakerIcon} summary={soundEnabled ? (alarmMode ? "Alarm" : "Chime") : "Off"}>
             <SwitchRow
@@ -415,9 +443,10 @@ export default function PracticeTimer() {
           />
           {engineState.next ? (
             <p className="text-sm text-muted">Next: {engineState.next.title}</p>
-          ) : (
+          ) : engineState.index > 0 ? (
+            // Only for a session with steps before this one; a single timer has nothing to add.
             <p className="text-sm text-muted">Last step of this session.</p>
-          )}
+          ) : null}
           <div className="flex flex-wrap items-center justify-center gap-3">
             {engineState.alarming ? (
               <button

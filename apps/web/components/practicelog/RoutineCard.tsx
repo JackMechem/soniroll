@@ -13,6 +13,7 @@ import RecordClip from "@/components/practicelog/RecordClip";
 import RoutineTimePicker from "@/components/practicelog/RoutineTime";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import Subtasks from "@/components/practicelog/Subtasks";
+import { TOUCH_CHECK, TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
 import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
@@ -144,7 +145,7 @@ export default function RoutineCard({
             {span ? (
               <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span>
             ) : (
-              <button type="button" onClick={() => setEditingTime(true)} className="font-medium text-foreground/80 hover:text-foreground hover:underline" title="Set a time">
+              <button type="button" onClick={() => setEditingTime(true)} className={`font-medium text-foreground/80 hover:text-foreground hover:underline ${TOUCH_TEXT}`} title="Set a time">
                 Any time · Set a time
               </button>
             )}
@@ -168,7 +169,7 @@ export default function RoutineCard({
         >
           {done}/{total}
         </span>
-        <button type="button" onClick={openMenu} aria-label="Routine options" className="-mr-1 shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={openMenu} aria-label="Routine options" className="-mr-1 shrink-0 rounded-md p-1.5 text-muted pointer-coarse:-my-1.5 pointer-coarse:p-3 hover:bg-surface-hover hover:text-foreground">
           <DotsVerticalIcon className="h-4 w-4" />
         </button>
       </header>
@@ -231,10 +232,11 @@ export default function RoutineCard({
           <button
             type="button"
             onClick={() => startRoutine(routine, date, done > 0 ? firstOpen.id : undefined, false, occurrence)}
-            className="flex h-9 items-center justify-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+            // Secondary (a tint, not solid): the day timer's Start timer is the panel's main button.
+            className="flex h-9 min-w-0 items-center justify-center gap-1.5 self-start rounded-md bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15"
           >
-            <PlayIcon className="h-4 w-4" />
-            {done > 0 ? `Continue from ${firstOpen.title || "the next task"}` : "Start routine"}
+            <PlayIcon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{done > 0 ? `Continue from ${firstOpen.title || "the next task"}` : "Start routine"}</span>
           </button>
         ))
       )}
@@ -256,7 +258,7 @@ export default function RoutineCard({
                     if (!checked) burstAt(e.currentTarget, color);
                     log.toggleTask(date, routine.id, task.id);
                   }}
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors ${checked ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-muted"}`}
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors ${TOUCH_CHECK} ${checked ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-muted"}`}
                   style={checked ? { background: color } : undefined}
                 >
                   {checked && <CheckIcon className="h-3.5 w-3.5" />}
@@ -274,7 +276,7 @@ export default function RoutineCard({
                       <button
                         type="button"
                         onClick={() => log.updateOccurrence(date, routine.id, (o) => ({ ...o, spentMs: { ...(o.spentMs ?? {}), [task.id]: task.minutes * 60000 } }))}
-                        className="rounded-md bg-foreground/[0.05] px-2 py-0.5 font-medium text-foreground hover:bg-surface-hover"
+                        className={`rounded-md bg-foreground/[0.05] px-2 py-0.5 font-medium text-foreground hover:bg-surface-hover ${TOUCH_TEXT}`}
                         title="Checked off without the timer — log its time"
                       >
                         + Log {formatMinutesShort(task.minutes)}
@@ -311,7 +313,7 @@ export default function RoutineCard({
                     onClick={() => logTask(task)}
                     aria-label={`Log time on ${task.title || "this task"}`}
                     title="Log time on this task"
-                    className="shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
+                    className={`shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100 ${TOUCH_ICON}`}
                   >
                     <StopwatchIcon className="h-3.5 w-3.5" />
                   </button>
@@ -322,7 +324,7 @@ export default function RoutineCard({
                     onClick={() => startRoutine(routine, date, task.id, true, occurrence)}
                     aria-label={`Time just ${task.title || "this task"}`}
                     title="Time just this task"
-                    className="shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
+                    className={`shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100 ${TOUCH_ICON}`}
                   >
                     <PlayIcon className="h-3.5 w-3.5" />
                   </button>
@@ -343,7 +345,7 @@ export default function RoutineCard({
                     }}
                     aria-label={`Remove ${task.title || "this task"} from today`}
                     title="Remove from today"
-                    className="shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-danger"
+                    className={`shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-danger ${TOUCH_ICON}`}
                   >
                     <CloseIcon className="h-3.5 w-3.5" />
                   </button>
@@ -354,21 +356,31 @@ export default function RoutineCard({
         </ul>
       )}
       {!skipped && (
-        <div className="flex items-center gap-2 rounded-md border border-dashed border-foreground/15 px-3 py-1.5">
+        // A form, so a phone keyboard's Done/Go adds it too; Add shows once something's typed.
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newTitle.trim()) return;
+            setExtra((list) => [...list, newTask(newTitle.trim())]);
+            setNewTitle("");
+          }}
+          className="flex min-h-9 items-center gap-2 rounded-md border border-dashed border-foreground/15 py-1 pl-3 pr-1 pointer-coarse:min-h-10"
+        >
           <PlusIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
           <input
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newTitle.trim()) {
-                setExtra((list) => [...list, newTask(newTitle.trim())]);
-                setNewTitle("");
-              }
-            }}
-            placeholder={`Add a task to this routine, just for ${date === today ? "today" : formatShortDate(date)}`}
-            className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none"
+            enterKeyHint="done"
+            aria-label="New task for this day"
+            placeholder={`Add a task just for ${date === today ? "today" : formatShortDate(date)}`}
+            className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none pointer-coarse:text-base"
           />
-        </div>
+          {newTitle.trim() && (
+            <button type="submit" className="h-7 shrink-0 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover pointer-coarse:h-8">
+              Add
+            </button>
+          )}
+        </form>
       )}
 
       {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} />}

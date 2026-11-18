@@ -601,7 +601,7 @@ export default function ScoreEditor({
               max={400}
               value={t.tempo ?? ""}
               onChange={(e) => setMeta({ tempo: e.target.value ? Math.max(20, Math.min(400, Math.round(Number(e.target.value)))) : null })}
-              placeholder="120"
+              placeholder="Optional"
               aria-label="Tempo (BPM)"
               className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />

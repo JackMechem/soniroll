@@ -328,7 +328,8 @@ export default function StickControl() {
       {/* Phones (CSS order): the pattern first, then New pattern / Start, then the tempo and beats,
           then the next pattern — so the music and Start are both on the first screen. Bigger
           screens: tempo, beats, the patterns, then the buttons. */}
-      <div className="flex w-full max-w-5xl flex-col items-center gap-4 max-sm:order-3">
+      {/* As narrow as the other tools' tempo controls (a full-width slider read oddly). */}
+      <div className="flex w-full max-w-[24rem] flex-col items-center gap-4 max-sm:order-3">
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
 
         <BeatIndicator
@@ -361,11 +362,14 @@ export default function StickControl() {
         </div>
       )}
 
-      {phaseLabel && (
-        <p className="-my-2 text-sm font-medium text-accent max-sm:order-2">{phaseLabel}</p>
-      )}
-
-      <div className="flex items-center gap-3 max-sm:order-2">
+      {/* The phase sits in the gap just above the buttons rather than taking a row of its own, so
+          starting doesn't push the page down (or the chips off a laptop screen). */}
+      <div className="relative flex items-center gap-3 max-sm:order-2">
+        {phaseLabel && (
+          <p className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-sm font-medium text-accent">
+            {phaseLabel}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => advanceStickControlPattern()}

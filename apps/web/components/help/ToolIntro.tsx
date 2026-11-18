@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
 import { CloseIcon, HelpIcon } from "@/components/tools";
+import { TOUCH_HIT_ROUND } from "@/components/SettingsBar";
 import type { HelpTopic } from "@/lib/helpContent";
 import { useSiteSettings } from "@/lib/siteSettings";
 
@@ -85,7 +86,7 @@ export function IntroButton({ onClick, label }: { onClick: () => void; label: st
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
+      className={`${TOUCH_HIT_ROUND} flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground`}
     >
       <HelpIcon className="h-4 w-4" />
     </button>
@@ -117,7 +118,12 @@ export default function ToolIntro({ topic, onClose }: { topic: HelpTopic; onClos
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-        {topic.shot && <Shot name={topic.shot} alt={`${topic.title} screenshot`} />}
+        {/* A desktop screenshot: on a phone its text is too small to read, so it's left out. */}
+        {topic.shot && (
+          <div className="hidden sm:block">
+            <Shot name={topic.shot} alt={`${topic.title} screenshot`} />
+          </div>
+        )}
         <ol className="divide-y divide-foreground/10 rounded-lg bg-foreground/[0.05]">
           {topic.steps.map((s, i) => (
             <li key={s.title} className="flex gap-3 px-3 py-2.5">

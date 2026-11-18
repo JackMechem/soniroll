@@ -14,7 +14,8 @@ import LikedPosts from "@/components/LikedPosts";
 import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader, menuPosition } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
-import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon } from "@/components/tools";
+import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, UserIcon } from "@/components/tools";
+import { useEdgeFade } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useSetlists } from "@/lib/useSetlists";
 import { SIGN_IN_PATH } from "@/lib/landing";
@@ -81,6 +82,8 @@ export default function Community({ initialTab }: { initialTab?: string }) {
     window.history.replaceState(window.history.state, "", url);
   }
   const [kind, setKind] = useState<KindFilter>("all");
+  // The kind filter scrolls sideways on phones; fade the edge with more chips past it.
+  const { attach: kindFadeRef, style: kindFade } = useEdgeFade<HTMLDivElement>();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [deletingId, setDeletingId] = useState<Id<"communityTunes"> | null>(null);
 
@@ -142,6 +145,10 @@ export default function Community({ initialTab }: { initialTab?: string }) {
     setMenu({
       ...pos,
       items: [
+        // Posting needs a public profile: say so first, with the way to turn it on.
+        ...(profile && !profile.isPublic
+          ? [{ label: "Make your profile public to post", icon: <UserIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/account?tab=profile") }]
+          : []),
         { label: "Post tunes", icon: <NoteIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/community/new") },
         setlists.length
           ? {
@@ -193,7 +200,10 @@ export default function Community({ initialTab }: { initialTab?: string }) {
           <button
             type="button"
             onClick={openNewMenu}
-            className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+            // A private profile can't post yet, so New post isn't the page's main button then.
+            className={`flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium ${
+              profile && !profile.isPublic ? "bg-foreground/[0.05] text-foreground hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
+            }`}
           >
             <PlusIcon className="h-4 w-4" /> New post
           </button>
@@ -267,7 +277,7 @@ export default function Community({ initialTab }: { initialTab?: string }) {
                     ))}
                   </div>
                   {feed !== "liked" && (
-                    <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+                    <div ref={kindFadeRef} style={kindFade} className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
                       {KIND_FILTERS.map((k) => (
                         <button
                           key={k.value}
@@ -391,7 +401,7 @@ function MeCard({
       </div>
       {!isPublic && (
         <Link href="/account?tab=profile" className="flex items-center border-t border-foreground/10 px-4 py-2.5 text-xs text-muted transition-colors hover:text-foreground">
-          Make your profile public to post and be found →
+          Make your profile public to post and be found&nbsp;→
         </Link>
       )}
     </div>

@@ -39,7 +39,7 @@ const KINDS: { platform: Platform; match: RegExp; label: string }[] = [
   { platform: "mac", match: /macos-universal\.dmg$/, label: "Disk image (.dmg)" },
   { platform: "mac", match: /macos-universal\.zip$/, label: "App in a .zip" },
   { platform: "windows", match: /windows-x86_64-setup\.exe$/, label: "Installer (.exe)" },
-  { platform: "linux", match: /linux-x86_64\.AppImage$/, label: "AppImage (any distribution)" },
+  { platform: "linux", match: /linux-x86_64\.AppImage$/, label: "AppImage (any Linux)" },
   { platform: "linux", match: /linux-x86_64\.deb$/, label: "Debian, Ubuntu (.deb)" },
   { platform: "linux", match: /linux-x86_64\.rpm$/, label: "Fedora (.rpm)" },
 ];

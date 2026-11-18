@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import RoutineIcon, { RoutineIconPicker } from "@/components/practicelog/RoutineIcon";
+import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import {
   type Repeat,
@@ -90,13 +91,19 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
   const done = () => router.push(isNew ? `/shed-log${returnDate ? `?date=${returnDate}` : ""}` : `/shed-log/routine?id=${encodeURIComponent(r.id)}`);
 
+  const nameRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
   function save() {
     if (!r.name.trim()) {
       setError("Give the routine a name.");
+      nameRef.current?.focus();
       return;
     }
     if (r.repeat.end && r.repeat.end < r.repeat.start) {
       setError("It ends before it starts.");
+      // Saved from the bottom bar on a phone, the message at the top is out of sight.
+      requestAnimationFrame(() => errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
       return;
     }
     const tasks = r.tasks
@@ -116,7 +123,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         <BackButton onClick={() => router.back()} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
-          <div className="flex gap-2">
+          {/* Phones get these in a bar stuck to the bottom instead (below). */}
+          <div className="flex gap-2 max-sm:hidden">
             <button type="button" onClick={() => router.back()} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
               Cancel
             </button>
@@ -126,7 +134,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           </div>
         </div>
       </div>
-      {error && <p className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p ref={errorRef} className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <Card title="Routine">
         <label className="flex flex-col gap-1.5">
@@ -134,14 +142,16 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           <div className="flex items-center gap-2">
             <RoutineIcon icon={r.icon} color={r.color} size="md" />
             <input
+              ref={nameRef}
               autoFocus={isNew}
+              aria-invalid={error === "Give the routine a name." || undefined}
               value={r.name}
               onChange={(e) => {
                 set({ name: e.target.value });
                 setError(null);
               }}
               placeholder="e.g. Morning warm-up"
-              className={`${INPUT} flex-1`}
+              className={`${INPUT} flex-1 aria-[invalid]:ring-2 aria-[invalid]:ring-danger/60`}
             />
           </div>
         </label>
@@ -170,10 +180,6 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
             ))}
           </div>
         </div>
-      </Card>
-
-      <Card title="Icon">
-        <RoutineIconPicker value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
       </Card>
 
       <Card title="When">
@@ -252,7 +258,23 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
       <Card title="Tasks" detail={r.tasks.length ? formatMinutesShort(totalMinutes(r)) : undefined}>
         <ol className="flex flex-col gap-3">
-          {r.tasks.map((task, i) => (
+          {r.tasks.map((task, i) => {
+            // Move up / down and remove: beside the name from sm; on phones on the minutes row, so
+            // the name gets the whole width.
+            const controls = (
+              <>
+                <IconButton label="Move up" disabled={i === 0} onClick={() => moveTask(i, -1)}>
+                  <ChevronLeftIcon className="h-4 w-4 rotate-90" />
+                </IconButton>
+                <IconButton label="Move down" disabled={i === r.tasks.length - 1} onClick={() => moveTask(i, 1)}>
+                  <ChevronRightIcon className="h-4 w-4 rotate-90" />
+                </IconButton>
+                <IconButton label="Remove task" onClick={() => set({ tasks: r.tasks.filter((_, j) => j !== i) })}>
+                  <TrashIcon className="h-4 w-4" />
+                </IconButton>
+              </>
+            );
+            return (
             <li key={task.id} className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
               <div className="flex items-center gap-2">
                 <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
@@ -263,23 +285,14 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   aria-label={`Task ${i + 1}`}
                   className={`${INPUT} flex-1`}
                 />
-                <div className="flex shrink-0">
-                  <IconButton label="Move up" disabled={i === 0} onClick={() => moveTask(i, -1)}>
-                    <ChevronLeftIcon className="h-4 w-4 rotate-90" />
-                  </IconButton>
-                  <IconButton label="Move down" disabled={i === r.tasks.length - 1} onClick={() => moveTask(i, 1)}>
-                    <ChevronRightIcon className="h-4 w-4 rotate-90" />
-                  </IconButton>
-                  <IconButton label="Remove task" onClick={() => set({ tasks: r.tasks.filter((_, j) => j !== i) })}>
-                    <TrashIcon className="h-4 w-4" />
-                  </IconButton>
-                </div>
+                <div className="flex shrink-0 max-sm:hidden">{controls}</div>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-7 text-sm">
                 <div className="flex items-center gap-2">
                   <Stepper value={task.minutes} min={0} max={600} step={task.minutes < 5 ? 1 : 5} onChange={(minutes) => setTask(i, { minutes })} />
                   <span className="text-muted">min</span>
                 </div>
+                <div className="-mr-1 ml-auto flex shrink-0 sm:hidden">{controls}</div>
                 <TimeField
                   label="At"
                   value={task.time}
@@ -316,7 +329,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 <button
                   type="button"
                   onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })}
-                  className="flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground"
+                  className={`flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground ${TOUCH_TEXT}`}
                 >
                   <PlusIcon className="h-3 w-3" /> Subtask
                 </button>
@@ -325,7 +338,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 <AttachmentList items={task.attachments} onChange={(attachments) => setTask(i, { attachments })} compact />
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
         <button
           type="button"
@@ -339,6 +353,10 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         </p>
       </Card>
 
+      <Card title="Icon">
+        <RoutineIconPicker value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
+      </Card>
+
       <Card title="Attached">
         <AttachmentList items={r.attachments} onChange={(attachments) => set({ attachments })} />
       </Card>
@@ -348,6 +366,15 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           <TrashIcon className="h-4 w-4" /> Delete routine
         </button>
       )}
+      {/* Phones: Cancel and Save stay in reach at the bottom while you scroll the form. */}
+      <div className="sticky bottom-0 z-20 -mx-4 -mb-16 flex gap-2 border-t border-foreground/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:hidden">
+        <button type="button" onClick={() => router.back()} className="h-11 flex-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
+          Cancel
+        </button>
+        <button type="button" onClick={save} className="h-11 flex-1 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+          Save
+        </button>
+      </div>
       {confirmDelete && (
         <ConfirmDialog
           title="Delete this routine?"

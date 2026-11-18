@@ -8,6 +8,7 @@ import Momentum from "@/components/practicelog/Momentum";
 import DayTimer from "@/components/practicelog/DayTimer";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
+import { TOUCH_CHECK } from "@/components/practicelog/touch";
 import { CheckIcon, PlayIcon, PlusIcon } from "@/components/tools";
 import {
   ROUTINE_COLORS,
@@ -118,9 +119,10 @@ export default function TodayPractice() {
               <button
                 type="button"
                 onClick={() => startRoutine(routine, today, p.done > 0 ? next.id : undefined, false, occurrence)}
-                className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+                // A tint, not solid: the day timer's Start timer above is the card's main button.
+                className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15"
               >
-                <PlayIcon className="h-3.5 w-3.5" /> {p.done > 0 ? "Continue" : "Start"}
+                <PlayIcon className="h-3.5 w-3.5" /> {p.done > 0 ? "Continue" : <>Start<span className="max-sm:hidden"> routine</span></>}
               </button>
             )}
           </div>
@@ -137,7 +139,7 @@ export default function TodayPractice() {
               if (!t.done) burstAt(e.currentTarget, "var(--accent)");
               log.toggleDayTask(today, t.id);
             }}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${TOUCH_CHECK} ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
           >
             {t.done && <CheckIcon className="h-4 w-4" />}
           </button>
@@ -145,21 +147,31 @@ export default function TodayPractice() {
           <span className="shrink-0 text-xs text-muted">{formatMinutesShort(t.minutes)}</span>
         </div>
       ))}
-      <div className="flex items-center gap-2 rounded-md border border-dashed border-foreground/15 px-3 py-1">
+      {/* A form, so Enter or a phone keyboard's Done adds it; Add shows once something's typed. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!title.trim()) return;
+          log.saveDayTask(today, newDayTask(title.trim()));
+          setTitle("");
+        }}
+        className="flex min-h-9 items-center gap-2 rounded-md border border-dashed border-foreground/15 py-1 pl-3 pr-1 pointer-coarse:min-h-10"
+      >
         <PlusIcon className="h-4 w-4 shrink-0 text-muted" />
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && title.trim()) {
-              log.saveDayTask(today, newDayTask(title.trim()));
-              setTitle("");
-            }
-          }}
-          placeholder="Add a task for today — press Enter"
-          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none"
+          enterKeyHint="done"
+          aria-label="New task for today"
+          placeholder="Add a task for today"
+          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none pointer-coarse:text-base"
         />
-      </div>
+        {title.trim() && (
+          <button type="submit" className="h-7 shrink-0 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover pointer-coarse:h-8">
+            Add
+          </button>
+        )}
+      </form>
     </div>
   );
 }

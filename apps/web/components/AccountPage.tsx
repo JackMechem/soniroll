@@ -714,6 +714,7 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const hasGoogle = providers?.includes("google") ?? false;
   const username = profile?.username || null;
   const current = NAV.flatMap((g) => g.items).find((i) => i.id === view)!;
+  const currentGroup = NAV.find((g) => g.items.some((i) => i.id === view))!.group;
 
   function handleSignOut() {
     void signOut();
@@ -730,27 +731,26 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
 
   return (
     <PageShell wide>
-      {/* Who you are, like the dashboard's header: name and email on the left, actions on the right. */}
-      <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
+      {/* Who you are, like the dashboard's header: name and email on the left, View profile on the
+          right. Phones show it over the list of sections only, not again on each section. Sign out
+          is at the end of the sections, out of the way. */}
+      <header className={`flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between ${phoneList ? "" : "max-md:hidden"}`}>
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar url={profile?.avatarUrl ?? null} />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{username ? `@${username}` : user?.name || "Account"}</h1>
-            <p className="truncate text-sm text-muted">
+            <p className="truncate text-2xl font-semibold tracking-tight">{username ? `@${username}` : user?.name || "Account"}</p>
+            <p className="text-sm text-muted [overflow-wrap:anywhere]">
               {[user?.email, profile?.isPublic ? "Public profile" : "Private profile", methods ? `Signs in with ${methods}` : null].filter(Boolean).join(" · ")}
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 gap-2">
-          {username && profile?.isPublic && (
+        {username && profile?.isPublic && (
+          <div className="flex shrink-0 gap-2">
             <Link href={`/u/${username}`} className={BUTTON_SECONDARY}>
               View profile
             </Link>
-          )}
-          <button type="button" onClick={handleSignOut} className={BUTTON_SECONDARY}>
-            <LogOutIcon className="h-4 w-4" /> Sign out
-          </button>
-        </div>
+          </div>
+        )}
       </header>
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
@@ -776,6 +776,14 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
                 </div>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex min-h-12 items-center gap-3 rounded-lg bg-surface px-4 text-left text-sm text-foreground transition-colors hover:bg-surface-hover"
+            >
+              <LogOutIcon className="h-4 w-4 shrink-0 text-muted" />
+              Sign out
+            </button>
           </nav>
         )}
         <nav aria-label="Account sections" className="hidden w-52 shrink-0 flex-col gap-5 md:sticky md:top-6 md:flex">
@@ -802,12 +810,23 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
               </div>
             </div>
           ))}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex h-9 items-center gap-2 rounded-md px-3 text-left text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          >
+            <LogOutIcon className="h-4 w-4" /> Sign out
+          </button>
         </nav>
 
         <div className={`min-w-0 flex-1 flex-col gap-6 ${phoneList ? "hidden md:flex" : "flex"}`}>
           <div className="flex flex-col gap-3">
             <BackButton onClick={() => { setPhoneList(true); window.scrollTo({ top: 0 }); }} label="All settings" className="md:hidden" />
-            <h2 className="text-xl font-semibold tracking-tight">{current.label}</h2>
+            {/* The page's heading: the section, under the name of its group ("Settings", "Account"…). */}
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-semibold text-muted">{currentGroup}</p>
+              <h1 className="text-2xl font-semibold tracking-tight">{current.label}</h1>
+            </div>
           </div>
 
           {view === "profile" && <PublicProfileEditor />}

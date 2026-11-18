@@ -10,7 +10,7 @@ import type { ToolPresets } from "@/lib/toolPresets";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
 import ToolStats from "@/components/toolstats/ToolStats";
-import { LOG_BY_BUTTON, PLAIN_OPTIONS } from "@/lib/toolTime";
+import { LOG_BY_BUTTON, PLAIN_OPTIONS, useLiveToolTime } from "@/lib/toolTime";
 import { useSiteSettings } from "@/lib/siteSettings";
 
 const LayoutContext = createContext<"split" | "stacked">("split");
@@ -120,7 +120,7 @@ export default function ToolLayout({
                 topAligned ? "justify-start" : "justify-start lg:justify-center"
               }`}
             >
-              {sidePanel && <TopChips>{sidePanel}</TopChips>}
+              {sidePanel !== undefined && <SideChips href={link?.href} tall={rewardOn}>{sidePanel}</SideChips>}
               {children}
             </section>
             {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
@@ -132,7 +132,7 @@ export default function ToolLayout({
           <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-start gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+7.75rem)] sm:px-6 lg:justify-center lg:pt-24 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
-                  {sidePanel && <TopChips>{sidePanel}</TopChips>}
+                  {sidePanel !== undefined && <SideChips href={link?.href} tall={rewardOn}>{sidePanel}</SideChips>}
                 {children}
                 {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
                 {credit && <PhoneCredit>{credit}</PhoneCredit>}
@@ -180,6 +180,18 @@ function TopChips({ children }: { children: React.ReactNode }) {
       <div className="flex flex-wrap justify-center gap-2">{children}</div>
     </ChipsModeContext.Provider>
   );
+}
+
+/** The side panels' row. A tool that hides them until there's something in them (History and
+    Struggles after the first answer) passes `false` until then: while the tool runs, their row is
+    kept free anyway, so when they appear mid-quiz the quiz doesn't jump down under your finger.
+    Its own component, so only it re-renders with the tool's ticking time. */
+function SideChips({ href, tall, children }: { href?: string; tall: boolean; children: React.ReactNode }) {
+  const { running } = useLiveToolTime(href ?? "");
+  if (children) return <TopChips>{children}</TopChips>;
+  if (!running || !href) return null;
+  // As tall as a row of chips (the reward look's are 56px, the plain ones 48px).
+  return <div aria-hidden className={`w-full shrink-0 ${tall ? "h-14" : "h-12"}`} />;
 }
 
 /** Below `lg`, a small row at the top of the page: presets, the tool's stats and Log button, and

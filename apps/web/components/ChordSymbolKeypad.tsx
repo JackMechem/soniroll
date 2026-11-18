@@ -31,8 +31,11 @@ export const SYMBOL_KEYS: { insert: string; caption: string; title: string }[] =
     a key never visibly steals focus from the field it's inserting into. */
 export default function ChordSymbolKeypad({
   onInsert,
+  omit,
 }: {
   onInsert: (text: string) => void;
+  /** Keys (by their inserted text) to leave out, when the caller already has its own. */
+  omit?: string[];
 }) {
   return (
     <div
@@ -40,7 +43,7 @@ export default function ChordSymbolKeypad({
       aria-label="Chord symbol keypad"
       className="grid grid-cols-5 gap-1"
     >
-      {SYMBOL_KEYS.map((key) => (
+      {SYMBOL_KEYS.filter((key) => !omit?.includes(key.insert)).map((key) => (
         <button
           key={key.insert}
           type="button"
@@ -48,7 +51,7 @@ export default function ChordSymbolKeypad({
           aria-label={key.title}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onInsert(key.insert)}
-          className="flex flex-col items-center gap-0.5 rounded-md bg-foreground/[0.05] px-2 py-1.5 hover:bg-surface-hover"
+          className="flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-2 py-1.5 hover:bg-surface-hover pointer-coarse:min-h-10"
         >
           <span className="text-base font-semibold leading-none">{prettyQuality(key.insert)}</span>
           <span className="text-[0.6rem] leading-none text-muted">{key.caption}</span>

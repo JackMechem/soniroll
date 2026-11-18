@@ -619,7 +619,10 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
           className="flex flex-col items-center gap-1 rounded-lg border border-dashed border-foreground/15 px-4 py-6 text-center text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           <UploadIcon className="h-5 w-5" />
-          Drop files here, or click to upload a PDF, image, recording or any other file.
+          <span>
+            <span className="pointer-coarse:hidden">Drop files here, or click to upload</span>
+            <span className="hidden pointer-coarse:inline">Tap to upload</span> a PDF, image, recording or any other file.
+          </span>
         </button>
       ) : (
         <div className="flex flex-col">

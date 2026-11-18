@@ -622,3 +622,19 @@ html.less-motion .confetti-piece,
 html.no-confetti .confetti-piece {
   display: none;
 }
+
+/* Phones: text boxes are at least 16px, so iOS doesn't zoom the page in when one is focused
+   (that's why pinch-zoom no longer has to be switched off in the viewport). Unlayered, so it
+   beats the text-xs/text-sm utilities; boxes set bigger on purpose (titles, the Metronome's
+   tempo) are left alone.
+   Also landscape phones, which are wider than `sm` but zoom the same way. */
+@media (max-width: 639.98px), (pointer: coarse) and (max-height: 520px) {
+  :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]),
+      textarea,
+      select
+    ):not([class*="text-lg"], [class*="text-xl"], [class*="text-2xl"], [class*="text-3xl"], [class*="text-4xl"], [class*="text-5xl"], [class*="text-6xl"], [class*="text-7xl"], [class*="text-8xl"], [class*="text-9xl"]) {
+    /* 1em is what the box would inherit, so one inside big text stays big. */
+    font-size: max(16px, 1em);
+  }
+}

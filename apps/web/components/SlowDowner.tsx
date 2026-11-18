@@ -575,6 +575,8 @@ export default function SlowDowner() {
       title="Slow Downer"
       presets={toolPresets("slow-downer", settings, updateSettings, ["maximized"])}
       layout="stacked"
+      // With a file open, from the top (centred, it left a blank band above the file picker).
+      topAligned={!!file}
       options={null}
     >
       <video
@@ -686,7 +688,7 @@ export default function SlowDowner() {
         </>
       ) : (
         <>
-          <div className="flex w-full justify-start">
+          <div className="flex w-full justify-center">
             <Select
               value={file.id}
               onChange={(id) => {

@@ -24,6 +24,7 @@ import LiveFeedback from "@/components/timetest/LiveFeedback";
 import MicPanel from "@/components/timetest/MicPanel";
 import ToolLayout from "@/components/ToolLayout";
 import { DrumIcon, ListIcon, MeterIcon, MicIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon, StopwatchIcon, TimeTestIcon } from "@/components/tools";
+import { listAudioInputs, type InputDevice } from "@/lib/audioInput";
 import { DEFAULT_CLICK_SOUND_ID, type BeatLevel, type ClickSettings } from "@/lib/clickEngine";
 import { HintsContext } from "@/lib/hints";
 import { MAX_BEATS } from "@/lib/meters";
@@ -32,6 +33,7 @@ import { analyze, type Analysis, type AnalysisParams, type Calibration, type Tak
 import {
   getTimeTestServerSnapshot,
   getTimeTestSnapshot,
+  micErrorMessage,
   playTake,
   runCalibration,
   setLiveParams,
@@ -113,9 +115,8 @@ function sameParams(a: AnalysisParams, b: AnalysisParams) {
   );
 }
 
-function errorText(e: unknown) {
-  return e instanceof Error ? e.message : String(e);
-}
+// Mic errors ("Permission denied") get the same friendly sentence as the Microphone popover.
+const errorText = micErrorMessage;
 
 export default function TimeTest() {
   const [settings, update] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
@@ -133,6 +134,25 @@ export default function TimeTest() {
 
   const calibrated = micSettings.calibrated;
   const latencyMs = calibrated ? micSettings.latencyMs : Math.round((engine.latencyGuessMs ?? 0) * 10) / 10;
+
+  // The chosen mic's name, for the Microphone chip. Names only show once the browser has been
+  // allowed to use the mic, so they're listed again whenever the mic opens.
+  const [inputs, setInputs] = useState<InputDevice[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => {
+      void listAudioInputs()
+        .then((list) => alive && setInputs(list))
+        .catch(() => {});
+    };
+    refresh();
+    navigator.mediaDevices?.addEventListener?.("devicechange", refresh);
+    return () => {
+      alive = false;
+      navigator.mediaDevices?.removeEventListener?.("devicechange", refresh);
+    };
+  }, [engine.micOpen]);
+  const micName = inputs.find((d) => d.id === micSettings.inputDeviceId)?.label ?? "Default mic";
 
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -330,7 +350,8 @@ export default function TimeTest() {
       }
     >
       <div className="flex w-full max-w-[30rem] flex-col items-center gap-6">
-        <div className="flex w-full flex-col items-center gap-4">
+        {/* The tempo column is the Metronome's width, so the slider matches the other tools. */}
+        <div className="flex w-full max-w-sm flex-col items-center gap-4">
           <TempoHero
             bpm={bpm}
             setBpm={(v) => update({ bpm: clampBpm(v) })}
@@ -482,12 +503,12 @@ export default function TimeTest() {
             </SettingChip>
             <SettingChip
               icon={MicIcon}
-              label="Mic"
-              title="Mic and latency"
+              label="Microphone"
+              title="Microphone and latency"
               wide
               open={micOpen}
               onOpenChange={setMicOpen}
-              value={calibrated ? `${latencyMs.toFixed(1)} ms` : micSettings.inputDeviceId ? "Chosen input" : "Default input"}
+              value={calibrated ? `${micName} · ${latencyMs.toFixed(1)} ms` : micName}
               headerExtra={<HintsButton on={micHints} onToggle={() => setMicHints((on) => !on)} />}
             >
               <HintsContext.Provider value={micHints}>

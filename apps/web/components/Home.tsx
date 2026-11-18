@@ -618,14 +618,14 @@ export default function Home() {
             Jack Mechem
           </a>
         </span>
-        <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
-        <Link href="/" className="hover:text-foreground">About</Link>
-        <Link href={SUPPORT_PATH} className="hover:text-foreground">Support soniroll</Link>
-        <Link href="/feedback" className="hover:text-foreground">Send feedback</Link>
-        <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
-        <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-        <Link href="/terms" className="hover:text-foreground">Terms</Link>
-        <Link href="/credits" className="hover:text-foreground">Credits</Link>
+        <a href="https://github.com/JackMechem/soniroll" target="_blank" rel="noopener noreferrer" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">GitHub</a>
+        <Link href="/" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">About</Link>
+        <Link href={SUPPORT_PATH} className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Support soniroll</Link>
+        <Link href="/feedback" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Send feedback</Link>
+        <Link href="/changelog" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">What&apos;s new</Link>
+        <Link href="/privacy" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Privacy</Link>
+        <Link href="/terms" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Terms</Link>
+        <Link href="/credits" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Credits</Link>
       </footer>
 
       {confirmReset && (

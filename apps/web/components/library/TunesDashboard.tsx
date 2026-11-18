@@ -107,7 +107,6 @@ export default function TunesDashboard() {
             primary
             icon={PlusIcon}
             label="Add"
-            iconOnlyOnPhone
             onClick={(e) =>
               setAddMenu({
                 ...menuPosition(e),
@@ -174,7 +173,7 @@ export default function TunesDashboard() {
               {isAuthenticated && (
                 <Panel title={TUNE_LIST_LABEL.learn} detail={learn.length || undefined} href="/tunes/list?list=learn" onAdd={(e) => openListAdd(e, "learn")} addLabel="Add to Tunes to Learn" flush>
                   {learn.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-muted">Tunes you want to learn, kept apart from the ones you know.</p>
+                    <EmptyState title="No tunes to learn yet" body="Tunes you want to learn, kept apart from the ones you know." />
                   ) : (
                     <Rows>{[...learn].reverse().slice(0, PREVIEW).map(row("learn"))}</Rows>
                   )}
@@ -183,10 +182,11 @@ export default function TunesDashboard() {
 
               <Panel title="Setlists" detail={setlists.length || undefined} href={setlists.length ? "/tunes?tab=setlists" : undefined} onAdd={() => setNamingSetlist(true)} addLabel="New setlist" flush>
                 {setlists.length === 0 ? (
-                  <div className="flex flex-col items-start gap-3 p-4">
-                    <p className="text-sm text-muted">Make a setlist for a gig or a session — share it by link or post it to Community.</p>
-                    <Pill icon={PlusIcon} label="New setlist" onClick={() => setNamingSetlist(true)} />
-                  </div>
+                  <EmptyState
+                    title="No setlists yet"
+                    body="Make a setlist for a gig or a session — share it by link or post it to Community."
+                    action={<Pill icon={PlusIcon} label="New setlist" onClick={() => setNamingSetlist(true)} />}
+                  />
                 ) : (
                   <Rows>
                     {sortedSetlists.slice(0, PREVIEW).map((sl) => (

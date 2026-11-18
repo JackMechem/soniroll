@@ -65,7 +65,7 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_INTERVAL_SECONDS = 0.5;
 const MAX_INTERVAL_SECONDS = 10;
@@ -497,7 +497,7 @@ export default function NoteTrainer() {
       noteSeedRef.current,
       cfg.ignoreOctave,
     );
-    setHeard(`${shownNote} (${cents > 0 ? "+" : ""}${cents}¢)`);
+    setHeard(`${noteGlyphs(shownNote)} (${cents > 0 ? "+" : ""}${cents}¢)`);
 
     const nearest = Math.round(frequencyToMidi(freq, cfg.refA));
     if (nearest === session.last) session.stable++;
@@ -704,9 +704,8 @@ export default function NoteTrainer() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const entry: HistoryEntry = {
               at: Date.now(),
               elapsedMs,
@@ -716,7 +715,7 @@ export default function NoteTrainer() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({ results: session.results, notes: session.notes });
           setNote(null);
@@ -799,8 +798,8 @@ export default function NoteTrainer() {
   // With "Ignore octave" on, the octave number is left out everywhere notes are shown — except
   // during (or just after) a "Shed a string" session, which always shows it.
   const noteLabel = (n: string, seq = 0) =>
-    spellNote(n, accidentalStyle, seq, effectiveIgnoreOctave);
-  const mainLabel = note ? noteLabel(note, noteSeed) : "—";
+    noteGlyphs(spellNote(n, accidentalStyle, seq, effectiveIgnoreOctave));
+  const mainLabel = running && note ? noteLabel(note, noteSeed) : "—";
   // "Both" spellings (e.g. "C#/Db") is wider than a single note name, so it needs to shrink
   // to still fit inside the circle.
   const mainLabelIsDouble = mainLabel.includes("/");
@@ -830,9 +829,7 @@ export default function NoteTrainer() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = rankWeak(settings.noteStats);
   const parsedRange = parseRange(rangeInput);
   const weakCountInRange = parsedRange
@@ -1058,7 +1055,7 @@ export default function NoteTrainer() {
                       disabled={running}
                       className={`${SECONDARY_BUTTON_SM} tabular-nums`}
                     >
-                      {spellNote(openNote, accidentalStyle, i, false)}
+                      {noteGlyphs(spellNote(openNote, accidentalStyle, i, false))}
                     </button>
                   ))}
                 </div>
@@ -1113,8 +1110,9 @@ export default function NoteTrainer() {
 
           <CollapsiblePanel
             id="note-listen"
-            title="Listen"
+            title="Microphone"
             icon={MicIcon}
+            summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen mic") : "Default mic"}
             asMode
             toggle={{
               checked: listenMode,
@@ -1180,7 +1178,7 @@ export default function NoteTrainer() {
                 onChange={setInputDeviceId}
                 disabled={running}
                 options={[
-                  { value: "", label: "Default input" },
+                  { value: "", label: "Default mic" },
                   ...inputs.map((d) => ({ value: d.id, label: d.label })),
                 ]}
               />
@@ -1328,7 +1326,7 @@ export default function NoteTrainer() {
           <div className="relative flex h-40 w-40 items-center justify-center sm:h-48 sm:w-48">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
+              className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
                 mainLabelIsDouble
                   ? "text-3xl sm:text-4xl"
                   : "text-6xl sm:text-7xl"
@@ -1344,8 +1342,8 @@ export default function NoteTrainer() {
               {mainLabel}
             </p>
             {/* Before the first round, say what's about to happen. */}
-            {!note && !running && (
-              <p className="absolute inset-x-0 bottom-0 z-10 text-sm text-muted sm:bottom-3">
+            {!running && (
+              <p className={IDLE_HINT}>
                 {listenMode
                   ? "Press Start, then play each note. The mic checks it."
                   : "Press Start, then play each note shown."}

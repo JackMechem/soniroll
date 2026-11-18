@@ -170,7 +170,7 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
           ) : (
             <>
               <button type="button" onClick={onLogIn} className="rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-background">
-                Log in
+                Sign in
               </button>
               <button type="button" onClick={onSignUp} className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 active:scale-[0.98]">
                 Sign up
@@ -207,7 +207,8 @@ function Ctas({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
 /** Under the calls to action: the desktop app. */
 function DesktopLink() {
   return (
-    <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground" style={{ animationDelay: "240ms" }}>
+    // Not on phones and tablets (like the dashboard's desktop card): there's nothing for them to install.
+    <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground pointer-coarse:hidden" style={{ animationDelay: "240ms" }}>
       <DownloadIcon className="h-4 w-4 text-accent" /> Get the desktop app for macOS, Windows and Linux <Arrow />
     </Link>
   );
@@ -506,9 +507,9 @@ function Features() {
   return (
     <section id="features" className="scroll-mt-24 px-4 pb-28">
       <div className="mx-auto max-w-6xl">
-        <Reveal>
-          <h2 className="max-w-2xl text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Try the real tools, right here</h2>
-          <p className="mt-4 max-w-xl text-muted">Pick one and play with it.</p>
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 className="text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Try the real tools, right here</h2>
+          <p className="mt-4 text-muted">Pick one and play with it.</p>
         </Reveal>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
@@ -610,7 +611,7 @@ function Bento() {
   return (
     <section id="free" className="scroll-mt-24 px-4 pb-28">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-12 max-w-2xl">
+        <Reveal className="mx-auto mb-12 max-w-2xl text-center">
           <h2 className="text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Built for the practice room, not the pitch deck</h2>
         </Reveal>
         <div className="grid gap-4 md:grid-cols-6 md:grid-rows-[auto_auto]">
@@ -737,18 +738,21 @@ function FinalCta({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
   );
 }
 
+const FOOTER_LINK = "hover:text-foreground pointer-coarse:inline-flex pointer-coarse:h-9 pointer-coarse:items-center pointer-coarse:px-2";
+
 function Footer() {
   return (
     <footer className="px-4 pb-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-foreground/10 pt-8 text-sm text-muted sm:flex-row">
         <Logo height={28} />
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
-          <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
-          <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
-          <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-          <Link href="/terms" className="hover:text-foreground">Terms</Link>
-          <Link href="/credits" className="hover:text-foreground">Credits</Link>
+        {/* Touch screens: each link is a 36px-tall target, not just its line of text. */}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pointer-coarse:gap-x-1 pointer-coarse:gap-y-0">
+          <a href="https://github.com/JackMechem/soniroll" target="_blank" rel="noopener noreferrer" className={FOOTER_LINK}>GitHub</a>
+          <Link href="/feedback" className={FOOTER_LINK}>Feedback</Link>
+          <Link href="/changelog" className={FOOTER_LINK}>What&apos;s new</Link>
+          <Link href="/privacy" className={FOOTER_LINK}>Privacy</Link>
+          <Link href="/terms" className={FOOTER_LINK}>Terms</Link>
+          <Link href="/credits" className={FOOTER_LINK}>Credits</Link>
         </div>
         <span>Made by musicians, for musicians.</span>
       </div>
@@ -767,7 +771,7 @@ function AuthModal({ mode, onClose, onSuccess }: { mode: "signIn" | "signUp"; on
       <div
         role="dialog"
         aria-modal
-        aria-label={mode === "signUp" ? "Sign up" : "Log in"}
+        aria-label={mode === "signUp" ? "Sign up" : "Sign in"}
         onClick={(e) => e.stopPropagation()}
         className="landing-rise relative flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-surface p-6 text-left shadow-2xl"
       >

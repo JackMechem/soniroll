@@ -9,6 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useEdgeFade } from "@/components/library/ui";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -222,6 +223,8 @@ export default function NotePane({
     [actions, flush, toggleFullWidth, mine, canEdit, shared, note?.ownerId, onOpen],
   );
   const titles = useMemo(() => notes.map((n) => ({ title: n.title, folder: n.folder })), [notes]);
+  // On a phone the formatting row scrolls sideways; fade the edge that has more buttons past it.
+  const { attach: toolbarFadeRef, style: toolbarFade } = useEdgeFade<HTMLDivElement>();
 
   if (note === undefined) {
     return (
@@ -376,7 +379,7 @@ export default function NotePane({
           style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto" }), ...(fontStack ? { fontFamily: fontStack } : {}) }}
         />
 
-        <div className={`${canEdit ? "flex" : "hidden"} items-center gap-0.5 overflow-x-auto border-b border-foreground/10 pb-1.5 [scrollbar-width:none] ${canEdit ? "sm:flex-wrap" : ""} [&::-webkit-scrollbar]:hidden`} style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
+        <div className={`${canEdit ? "flex" : "hidden"} items-center gap-0.5 overflow-x-auto border-b border-foreground/10 pb-1.5 [scrollbar-width:none] ${canEdit ? "sm:flex-wrap" : ""} [&::-webkit-scrollbar]:hidden`} ref={toolbarFadeRef} style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto", width: "100%" }), ...toolbarFade }}>
           {FORMAT.map((f) => (
             <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`h-7 min-w-7 shrink-0 rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${f.className ?? "font-medium"}`}>
               {f.label}

@@ -4,14 +4,14 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useRef, useState } from "react";
 import { SignInModal } from "@/components/AccountMenu";
 import { FlameIcon, burstAt, toastNow } from "@/components/practicelog/Celebrations";
-import { SettingChip } from "@/components/SettingsBar";
+import { SettingChip, TOUCH_HIT } from "@/components/SettingsBar";
 import { CheckIcon, findToolLink, PlusIcon, StopwatchIcon } from "@/components/tools";
 import { formatMinutesShort, formatShortDate, hourMilestone, weekdayOf } from "@jam-practice/core/practiceLog";
 import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
 import { bestStreak, historyOf, todayKey, toolStreak, totalMs, useToolUsage, usedMs, weekOf } from "@/lib/toolUsage";
 
 const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
-const CHIP = "flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover";
+const CHIP = `${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover`;
 
 /** "38 s" under a minute, then "12 min", "1 h 5 min". */
 function formatUse(ms: number) {
@@ -146,7 +146,7 @@ export default function ToolStats({ href }: { href: string }) {
           ref={logRef}
           type="button"
           onClick={log}
-          className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
+          className={`${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover`}
           title={`Add ${formatUse(unlogged)} in this tool to today's Shed Log`}
           aria-label={`Log ${formatUse(unlogged)} to your Shed Log`}
         >

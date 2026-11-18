@@ -5,8 +5,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { EmptyCard } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import StoragePill from "@/components/files/StoragePill";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
@@ -71,7 +70,16 @@ export default function RecordingsPage() {
           action={<SignInButtons />}
         />
       ) : shown.length === 0 ? (
-        <EmptyCard>{query ? "No recordings match." : "No recordings yet — open the Recorder to make one."}</EmptyCard>
+        query ? (
+          <EmptyState boxed title={`No recordings match “${query}”`} body="Try part of a name or a tune." />
+        ) : (
+          <EmptyState
+            boxed
+            title="No recordings yet"
+            body="Record a take in the Recorder or on a tune's page and it shows up here."
+            action={<Pill primary icon={MicIcon} label="Open the Recorder" href="/recorder" />}
+          />
+        )
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {shown.map((r) => (

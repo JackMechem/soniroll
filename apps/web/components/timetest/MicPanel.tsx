@@ -110,7 +110,7 @@ export default function MicPanel({
           value={deviceValue}
           onChange={setInputDeviceId}
           disabled={busy}
-          options={[{ value: "", label: "Default input" }, ...inputs.map((d) => ({ value: d.id, label: d.label }))]}
+          options={[{ value: "", label: "Default mic" }, ...inputs.map((d) => ({ value: d.id, label: d.label }))]}
         />
         {micError && <p className="text-xs text-danger">{micError}</p>}
         <Hint>Use one audio interface for both the mic and the click if you can. Two separate devices drift apart a little over a long take.</Hint>

@@ -703,6 +703,8 @@ function TimeGrid({
     setMenu({
       x: e.clientX,
       y: e.clientY,
+      // Wide enough for "New routine from this day" and "Add <routine name> at 3:00 PM".
+      width: 288,
       items: [
         { label: `Task at ${formatTime(min)}`, icon: <PlusIcon className="h-4 w-4 text-accent" />, onSelect: () => onAddTask(key, timeString(min)) },
         ...untimed.map((it) => ({
@@ -710,7 +712,7 @@ function TimeGrid({
           icon: <RoutineIcon icon={it.routine.icon} color={it.routine.color} size="sm" />,
           onSelect: () => log.updateOccurrence(key, it.routine.id, (o) => ({ ...o, startTime: timeString(min) })),
         })),
-        { label: "New routine starting this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${key}`) },
+        { label: "New routine from this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${key}`) },
         ...free.map((r) => ({
           label: `Add ${r.name || "Untitled routine"} at ${formatTime(min)}`,
           icon: <RoutineIcon icon={r.icon} color={r.color} size="sm" />,

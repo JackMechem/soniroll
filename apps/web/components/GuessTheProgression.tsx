@@ -60,7 +60,7 @@ import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_DASH, bestPassingMs, passedRound, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -98,7 +98,7 @@ const KEY_OPTIONS = [
   { value: "random", label: "Random" },
   ...Array.from({ length: 12 }, (_, pc) => ({
     value: String(pc),
-    label: pcLabel(pc, "flat", 0),
+    label: noteGlyphs(pcLabel(pc, "flat", 0)),
   })),
 ];
 
@@ -210,7 +210,7 @@ function KeypadKey({
       aria-label={title ?? label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPress}
-      className={`flex flex-col items-center justify-center gap-0.5 rounded-lg bg-background px-1.5 py-1.5 hover:bg-surface-hover ${
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-lg bg-background px-1.5 py-1.5 hover:bg-surface-hover pointer-coarse:min-h-10 ${
         wide ? "col-span-2" : ""
       }`}
     >
@@ -315,9 +315,10 @@ export default function GuessTheProgression() {
     };
   }, []);
 
-  // Focus the answer field for each fresh round, cursor at the end (after a prefilled root).
+  // Focus the answer field for each fresh round, cursor at the end (after a prefilled root). Not
+  // on a touch screen: the phone's keyboard would pop up over the keypad.
   useEffect(() => {
-    if (!running || !round || status) return;
+    if (!running || !round || status || isTouchFirst()) return;
     const el = inputElRef.current;
     if (!el) return;
     el.focus();
@@ -496,7 +497,10 @@ export default function GuessTheProgression() {
     const next = before + insert + typed.slice(end);
     setTypedValue(next);
     const pos = start + insert.length;
+    // On a touch screen, don't focus a field that isn't already: it would open the keyboard.
+    const refocus = !isTouchFirst() || document.activeElement === el;
     requestAnimationFrame(() => {
+      if (!refocus) return;
       el?.focus();
       el?.setSelectionRange(pos, pos);
     });
@@ -508,7 +512,9 @@ export default function GuessTheProgression() {
     const end = el?.selectionEnd ?? typed.length;
     const from = start === end ? Math.max(0, start - 1) : start;
     setTypedValue(typed.slice(0, from) + typed.slice(end));
+    const refocus = !isTouchFirst() || document.activeElement === el;
     requestAnimationFrame(() => {
+      if (!refocus) return;
       el?.focus();
       el?.setSelectionRange(from, from);
     });
@@ -622,9 +628,8 @@ export default function GuessTheProgression() {
             setIsNewBest(false);
           } else {
             const config = currentConfig;
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const entry: HistoryEntry = {
               at: Date.now(),
               elapsedMs,
@@ -634,7 +639,7 @@ export default function GuessTheProgression() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({
             results: session.results,
@@ -690,7 +695,7 @@ export default function GuessTheProgression() {
   const score = summary ? scoreOf(summary.results) : 0;
   const tally = (grade: Grade) => summary?.results.filter((g) => g === grade).length ?? 0;
   const matchingHistory = history.filter((h) => sameConfig(h.config, currentConfig));
-  const bestMs = matchingHistory.length ? Math.min(...matchingHistory.map((h) => h.elapsedMs)) : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakEntriesOf(settings.progressionStats);
 
   /** The correct answer for one chord, in the current answer mode. */
@@ -702,9 +707,9 @@ export default function GuessTheProgression() {
 
   const typedTokens = splitAnswer(typed, answerMode);
   const right = marks ? marks.filter(Boolean).length : 0;
-  const centerLabel = !round ? "—" : status && marks ? `${right}/${marks.length}` : "?";
+  const centerLabel = !running || !round ? "—" : status && marks ? `${right}/${marks.length}` : "?";
   const glow = running && status ? GRADE_COLOR[status] : null;
-  const keyName = round ? pcLabel(round.tonicPc, accidentalStyle, 0) : null;
+  const keyName = round ? noteGlyphs(pcLabel(round.tonicPc, accidentalStyle, 0)) : null;
 
   return (
     <ToolLayout
@@ -1070,7 +1075,7 @@ export default function GuessTheProgression() {
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
             <span className="text-xs font-medium text-muted">Next progression in</span>
-            <span className="text-3xl font-semibold tabular-nums sm:text-4xl" style={{ color: GRADE_COLOR[status] }}>
+            <span className="text-3xl font-semibold tabular-nums text-muted sm:text-4xl">
               <CountdownLabel active={running} timerRef={noteTimerRef} />
             </span>
           </div>
@@ -1084,7 +1089,7 @@ export default function GuessTheProgression() {
         <div className="relative flex h-36 w-36 items-center justify-center p-4 text-center sm:h-44 sm:w-44">
           <CountdownRing active={running} timerRef={noteTimerRef} />
           <span
-            className="relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200 sm:text-4xl"
+            className={!running ? IDLE_DASH : "relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200 sm:text-4xl"}
             style={
               glow
                 ? { color: glow }
@@ -1096,7 +1101,7 @@ export default function GuessTheProgression() {
         </div>
         )}
         {/* Before the first round, say what's about to happen (like the other ear trainers). */}
-        {!learnMode && !round && !running && (
+        {!learnMode && !running && (
           <p className="max-w-sm text-center text-sm text-muted">Press Start, listen to the chords, then write them down.</p>
         )}
 
@@ -1121,8 +1126,8 @@ export default function GuessTheProgression() {
                       {shown}
                     </span>
                     {status && !mark && typedTokens[i] && (
-                      <span className="text-[0.65rem] text-muted line-through">
-                        {prettyToken(typedTokens[i], answerMode)}
+                      <span className="text-xs text-muted">
+                        You: {prettyToken(typedTokens[i], answerMode)}
                       </span>
                     )}
                   </div>
@@ -1133,7 +1138,7 @@ export default function GuessTheProgression() {
               {status
                 ? `Key of ${keyName}${round.progression.minor ? " minor" : ""} · ${round.progression.name}`
                 : answerMode === "chords"
-                  ? `Starts on ${firstChordRoot(round, accidentalStyle)}`
+                  ? `Starts on ${noteGlyphs(firstChordRoot(round, accidentalStyle))}`
                   : `${round.progression.chords.length} chords`}
             </p>
             <button
@@ -1149,7 +1154,7 @@ export default function GuessTheProgression() {
 
         {running && round && !status && (
           <form onSubmit={submitAnswer} className="flex w-full flex-col items-center gap-2">
-            <div className="flex w-full max-w-[20rem] flex-col gap-1.5">
+            <div className="flex w-full max-w-[22rem] flex-col gap-1.5">
               {answerMode === "numerals" ? (
                 <div role="group" aria-label="Numeral keypad" className="grid grid-cols-8 gap-1 rounded-xl bg-surface p-1.5">
                   {UPPER_NUMERALS.map((n) => (
@@ -1168,7 +1173,14 @@ export default function GuessTheProgression() {
                   ))}
                 </div>
               )}
-              {(typeQualities || answerMode === "chords") && <ChordSymbolKeypad onInsert={(t) => insertText(t)} />}
+              {/* With numerals, ♭/♯ go before a numeral (the numeral rows have them), never inside
+                  a chord's quality, so the symbol keypad leaves its own pair out. */}
+              {(typeQualities || answerMode === "chords") && (
+                <ChordSymbolKeypad
+                  onInsert={(t) => insertText(t)}
+                  omit={answerMode === "numerals" ? ["#", "b"] : undefined}
+                />
+              )}
               <div className="grid grid-cols-7 gap-1 rounded-xl bg-surface p-1.5">
                 {typeQualities ? (
                   DIGIT_KEYS.map((d) => <KeypadKey key={d} label={d} onPress={() => insertText(d)} />)
@@ -1314,7 +1326,7 @@ export default function GuessTheProgression() {
                     </span>
                   ))}
                   <span className="text-xs text-muted">
-                    · {pcLabel(r.tonicPc, accidentalStyle, 0)}
+                    · {noteGlyphs(pcLabel(r.tonicPc, accidentalStyle, 0))}
                     {r.progression.minor ? " minor" : ""}
                   </span>
                 </div>

@@ -265,16 +265,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-bold">{current ? "Switch plan" : "Plans"}</h3>
           {hasMonthly && hasYearly && (
-            <Segmented
-              label="Billing"
-              value={interval}
-              onChange={setBilling}
-              options={[
-                { value: "month", label: "Monthly" },
-                { value: "year", label: "Yearly" },
-              ]}
-              onPage
-            />
+            <BillingSwitch value={interval} onChange={setBilling} />
           )}
         </div>
         {plans === undefined ? (
@@ -349,7 +340,8 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
 
       <Comparison desktop={desktop} freeOnline={storage?.freeQuota} />
 
-      {!desktop && <KeepFiles />}
+      {/* Only for people with files to keep: someone shopping signed out doesn't need it. */}
+      {!desktop && isAuthenticated && <KeepFiles />}
 
       {confirm?.kind === "cancel" && current && (
         <ConfirmDialog
@@ -377,6 +369,34 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
           onCancel={() => setConfirm(null)}
         />
       )}
+    </div>
+  );
+}
+
+/** Monthly / Yearly: the picked side filled with the accent, so it reads in every theme. */
+function BillingSwitch({ value, onChange }: { value: "month" | "year"; onChange: (v: "month" | "year") => void }) {
+  return (
+    <div role="radiogroup" aria-label="Billing" className="grid auto-cols-fr grid-flow-col gap-1 rounded-full bg-surface p-1">
+      {(
+        [
+          ["month", "Monthly"],
+          ["year", "Yearly"],
+        ] as const
+      ).map(([v, label]) => {
+        const on = v === value;
+        return (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(v)}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${on ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }

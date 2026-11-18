@@ -74,7 +74,7 @@ export default function CreditsPage() {
           tool actually plays directly from the hosts above (both GitHub Pages), the first time
           each one comes up, and keeps them for the rest of that browser tab so repeats are
           instant. See the{" "}
-          <LegalLink href="/privacy">Privacy Policy</LegalLink> for what that means for your
+          <LegalLink href="/privacy">Privacy policy</LegalLink> for what that means for your
           browser&apos;s outgoing requests.
         </p>
       </LegalSection>

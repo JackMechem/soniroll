@@ -6,7 +6,7 @@ import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
-import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { Field, LevelRow, OptionsButton, OptionsSheet, PanelSection, useStickyPanel } from "@/components/bassgenius/PlayPanel";
 import { toolPresets } from "@/lib/toolPresets";
 import SyncopationScore from "@/components/syncopation/SyncopationScore";
 import { DrumIcon, MetronomeIcon, NoteIcon, PlayIcon, ShuffleIcon, SlidersIcon, SpeakerIcon, StopIcon } from "@/components/tools";
@@ -119,40 +119,9 @@ export default function Syncopation() {
     genRef.current = genOpts;
   }, [settings.after, genOpts]);
 
-  // Desktop: the settings panel fits the window below where it sits.
+  // Desktop: the settings panel stays in view as the page scrolls, with no scrollbar of its own.
   const asideRef = useRef<HTMLElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const fit = () => {
-      const el = asideRef.current;
-      if (!el) return;
-      let max = Math.max(240, window.innerHeight - Math.max(16, el.getBoundingClientRect().top) - 24);
-      el.style.maxHeight = `${max}px`;
-      // The page's padding below the panel isn't counted above: if the panel is what makes the
-      // page scroll (it reaches lower than the exercise), take off the overflow too.
-      const scroller = el.parentElement?.closest<HTMLElement>(".overflow-y-auto");
-      const card = cardRef.current;
-      if (!scroller || !card) return;
-      const over = scroller.scrollHeight - scroller.clientHeight;
-      if (over > 0 && el.getBoundingClientRect().bottom > card.getBoundingClientRect().bottom) {
-        max = Math.max(240, max - over);
-        el.style.maxHeight = `${max}px`;
-      }
-    };
-    fit();
-    window.addEventListener("resize", fit);
-    document.addEventListener("scroll", fit, true);
-    // Also when the exercise redraws (it can change height) or the page around it changes size.
-    const ro = new ResizeObserver(() => fit());
-    if (cardRef.current) ro.observe(cardRef.current);
-    const scroller = asideRef.current?.parentElement?.closest<HTMLElement>(".overflow-y-auto");
-    if (scroller) ro.observe(scroller);
-    return () => {
-      window.removeEventListener("resize", fit);
-      document.removeEventListener("scroll", fit, true);
-      ro.disconnect();
-    };
-  }, []);
+  useStickyPanel(asideRef);
 
   const setBpm = (v: number) => update({ bpm: Math.max(MIN_BPM, Math.min(MAX_BPM, Math.round(v))) });
   const tap = useTapTempo(setBpm);
@@ -288,7 +257,7 @@ export default function Syncopation() {
                   type="button"
                   onClick={() => toggleFamily(f.id)}
                   aria-pressed={on}
-                  className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors ${on ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${on ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.06] text-foreground hover:bg-surface-hover"}`}
                 >
                   <RhythmGlyph family={f.id} />
                   {f.label}
@@ -340,36 +309,29 @@ export default function Syncopation() {
 
   return (
     <ToolLayout title="Syncopation" layout="stacked" topAligned options={null} presets={toolPresets("syncopation", settings, update)}>
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="flex items-center gap-2">
+      {/* Phones: Play/Stop and Options stay pinned under the top bar while the notation scrolls. */}
+      <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:self-auto lg:bg-transparent lg:px-0 lg:pt-0 lg:backdrop-blur-none">
+        <div className="flex max-w-full items-center gap-2">
           <button
             type="button"
             onClick={toggle}
-            className={running || downloading ? BIG_SECONDARY : BIG_PRIMARY}
+            className={`shrink-0 ${running || downloading ? BIG_SECONDARY : BIG_PRIMARY}`}
           >
             {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
             {running || downloading ? "Stop" : "Play"}
           </button>
-          <button
-            type="button"
-            onClick={() => setOptionsOpen(true)}
-            aria-label="Options"
-            className="flex h-11 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden"
-          >
-            <SlidersIcon className="h-4 w-4" /> Options
-          </button>
+          <OptionsButton summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
         </div>
-        <OptionsSummaryChip summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
         <p className="min-h-5 text-center text-sm text-muted" aria-live="polite">
           {status}
         </p>
       </div>
 
       <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-        <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-lg">
+        <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:rounded-lg">
           {panel}
         </aside>
-        <div ref={cardRef} className="min-w-0 rounded-lg bg-surface p-3 sm:p-5">
+        <div className="min-w-0 rounded-lg bg-surface p-3 sm:p-5">
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2 px-1">
             <div className="min-w-0">
               <h2 className="text-base font-semibold">
@@ -397,7 +359,7 @@ export default function Syncopation() {
         </div>
       </div>
 
-      <OptionsSheet open={optionsOpen} onClose={closeOptions}>
+      <OptionsSheet open={optionsOpen} onClose={closeOptions} firstOpen="syn-tempo">
         {panel}
       </OptionsSheet>
     </ToolLayout>

@@ -1,12 +1,12 @@
 import { LegalLink, LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Privacy Policy",
+  title: "Privacy policy",
 };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="November 17, 2026">
+    <LegalPage title="Privacy policy" updated="November 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.

@@ -6,7 +6,6 @@ import AppShell from "@/components/AppShell";
 import { LANDING_PATH } from "@/lib/landing";
 import { installIosAudio } from "@/lib/iosAudio";
 import FeedbackDialog from "@/components/feedback/FeedbackDialog";
-import FeedbackFab from "@/components/feedback/FeedbackFab";
 import UsageTracker from "@/components/UsageTracker";
 import { MaintenanceScreen, SiteBanner, SiteGate, useMaintenance } from "@/components/site/SiteNotices";
 import { StorageMoveBanner } from "@/components/files/StorageMove";
@@ -27,7 +26,6 @@ export default function AppChrome({ chrome, children }: { chrome: ReactNode; chi
       <div className="h-dvh w-full overflow-y-auto overflow-x-hidden">
         <SiteGate>{children}</SiteGate>
         <SiteBanner />
-        <FeedbackFab />
         <FeedbackDialog />
         <UsageTracker />
       </div>

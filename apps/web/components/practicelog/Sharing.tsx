@@ -80,7 +80,8 @@ const KIND_OPTIONS: { value: ProgressCardKind; label: string }[] = [
   { value: "streak", label: "Streak" },
   { value: "hours", label: "Hours" },
   { value: "year", label: "Days" },
-  { value: "day", label: "Day" },
+  // Not "Day": beside "Days" it read as the same thing. It's the Day report (one day's practice).
+  { value: "day", label: "Report" },
 ];
 
 const RANGE_OPTIONS: { value: ProgressCardRange; label: string }[] = [

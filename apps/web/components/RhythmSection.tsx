@@ -15,7 +15,7 @@ import BassPlayersTab from "@/components/bassgenius/BassPlayersTab";
 import TranscriptionScore from "@/components/notation/Score";
 import PhraseDialog from "@/components/bassgenius/PhraseDialog";
 import DrumSettingsDialog from "@/components/bassgenius/DrumSettingsDialog";
-import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { Field, LevelRow, OptionsButton, OptionsSheet, PanelSection, useStickyPanel } from "@/components/bassgenius/PlayPanel";
 import { GrooveScore, KIT_PARTS, PART_DEFAULT, PartFader, partGain, useStyleVoices } from "@/components/rhythmsection/kit";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
@@ -403,24 +403,9 @@ export default function RhythmSection({
   const scoreBoxRef = useRef<HTMLDivElement>(null);
   const drumScoreRef = useRef<HTMLDivElement>(null);
   // Desktop: the settings panel is as tall as the window has room for below where it sits now (it
-  // starts lower down, then sticks near the top as the page scrolls), so its bottom is never off
-  // screen.
+  // starts lower down, then sticks as the page scrolls), with no scrollbar of its own.
   const asideRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const fit = () => {
-      const el = asideRef.current;
-      if (!el) return;
-      const top = Math.max(16, el.getBoundingClientRect().top);
-      el.style.maxHeight = `${Math.max(240, window.innerHeight - top - 24)}px`;
-    };
-    fit();
-    window.addEventListener("resize", fit);
-    document.addEventListener("scroll", fit, true); // the app scrolls an inner element
-    return () => {
-      window.removeEventListener("resize", fit);
-      document.removeEventListener("scroll", fit, true);
-    };
-  }, [tab]);
+  useStickyPanel(asideRef, tab === "play");
   const startingRef = useRef(false);
   const [starting, setStarting] = useState(false);
 
@@ -1177,28 +1162,21 @@ export default function RhythmSection({
               }`
             : "";
 
+  // Phones: Play/Stop and Options stay pinned under the top bar while the notation scrolls.
   const transport = (
-    <div className="-mt-2 flex flex-col items-center gap-1.5">
-      <div className="flex items-center gap-2">
+    <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 -mt-2 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:self-auto lg:bg-transparent lg:px-0 lg:pt-0 lg:backdrop-blur-none">
+      <div className="flex max-w-full items-center gap-2">
         <button
           type="button"
           onClick={toggle}
           disabled={styleLoading}
-          className={running || downloading ? BIG_SECONDARY : BIG_PRIMARY}
+          className={`shrink-0 ${running || downloading ? BIG_SECONDARY : BIG_PRIMARY}`}
         >
           {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           {running || downloading ? "Stop" : "Play"}
         </button>
-        <button
-          type="button"
-          onClick={() => setOptionsOpen(true)}
-          aria-label="Options"
-          className="flex h-11 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden"
-        >
-          <SlidersIcon className="h-4 w-4" /> Options
-        </button>
+        <OptionsButton summary={`${bpm} BPM · ${style.name}`} onOpen={() => setOptionsOpen(true)} />
       </div>
-      <OptionsSummaryChip summary={`${bpm} BPM · ${style.name}`} onOpen={() => setOptionsOpen(true)} />
       <p className="min-h-5 text-center text-sm text-muted tabular-nums" aria-live="polite">
         {status}
       </p>
@@ -1261,7 +1239,7 @@ export default function RhythmSection({
         <BassPlayersTab />
       ) : (
         <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-          <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:overflow-y-auto lg:rounded-lg">
+          <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:rounded-lg">
             {panel}
           </aside>
           <div className="grid min-w-0 gap-6">
@@ -1399,7 +1377,7 @@ export default function RhythmSection({
           onClose={() => setOpened(null)}
         />
       )}
-      <OptionsSheet open={optionsOpen} onClose={closeOptions}>
+      <OptionsSheet open={optionsOpen} onClose={closeOptions} firstOpen="tempo">
         {panel}
       </OptionsSheet>
       {drumSettingsOpen && <DrumSettingsDialog config={drumConfig} onChange={(c) => update({ drumConfig: c })} onClose={() => setDrumSettingsOpen(false)} />}

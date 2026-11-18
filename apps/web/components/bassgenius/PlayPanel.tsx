@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRightIcon, CloseIcon } from "@/components/tools";
+import { ChevronRightIcon, CloseIcon, SlidersIcon } from "@/components/tools";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 
 // The building blocks of Bass Genius's properties panel: collapsible sections (open or closed is
@@ -11,6 +11,10 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 type Collapsed = { closed: string[]; opened: string[] };
 const COLLAPSED_KEY = "jam-practice-bass-genius-panel";
 const COLLAPSED_DEFAULTS: Collapsed = { closed: [], opened: [] };
+
+/** Inside the phones' Options sheet the sections don't use the remembered open/closed state (the
+    desktop panel's): the sheet opens with just its first section open, so it isn't one long page. */
+const SheetSections = createContext<{ open: string[]; toggle: (id: string) => void } | null>(null);
 
 export function PanelSection({
   id,
@@ -30,9 +34,12 @@ export function PanelSection({
   children: React.ReactNode;
 }) {
   const [state, update] = usePersistedSettings(COLLAPSED_KEY, COLLAPSED_DEFAULTS);
-  const open = defaultOpen ? !state.closed.includes(id) : state.opened.includes(id);
+  const sheet = useContext(SheetSections);
+  const open = sheet ? sheet.open.includes(id) : defaultOpen ? !state.closed.includes(id) : state.opened.includes(id);
   const toggle = () =>
-    defaultOpen
+    sheet
+      ? sheet.toggle(id)
+      : defaultOpen
       ? update({ closed: open ? [...state.closed, id] : state.closed.filter((x) => x !== id) })
       : update({ opened: open ? state.opened.filter((x) => x !== id) : [...state.opened, id] });
   return (
@@ -111,23 +118,52 @@ export function LevelRow({
   );
 }
 
-/** Phones: a small chip under Play saying what's set (tempo, style…), since the options panel is
-    hidden in a sheet there. Tapping it opens the sheet, like Options. */
-export function OptionsSummaryChip({ summary, onOpen }: { summary: string; onOpen: () => void }) {
+/** Phones: the one button that opens the Options sheet, saying what's set (tempo, style…) since
+    the options panel is hidden there. */
+export function OptionsButton({ summary, onOpen }: { summary: string; onOpen: () => void }) {
   return (
     <button
       type="button"
       onClick={onOpen}
       aria-label={`Options: ${summary}`}
-      className="flex h-8 max-w-full items-center rounded-full bg-foreground/[0.05] px-3.5 text-xs font-medium tabular-nums text-muted transition-colors hover:bg-surface-hover hover:text-foreground lg:hidden"
+      className="flex h-11 min-w-0 items-center gap-2 rounded-md bg-foreground/[0.05] pl-3 pr-4 text-left transition-colors hover:bg-surface-hover lg:hidden"
     >
-      <span className="truncate">{summary}</span>
+      <SlidersIcon className="h-4 w-4 shrink-0 text-muted" />
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="text-[11px] font-medium text-muted">Options</span>
+        <span className="truncate text-sm font-semibold tabular-nums">{summary}</span>
+      </span>
     </button>
   );
 }
 
-/** Phones: the properties panel as a bottom sheet (Esc, the ×, or a tap above it closes it). */
-export function OptionsSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
+/** Desktop: the options panel beside the music stays in view as the page scrolls, without a
+    scrollbar of its own (a scrolling panel inside a scrolling page). A panel taller than the
+    window scrolls with the page until its bottom is in view, then stays (a negative sticky
+    `top`); a shorter one sticks near the top. The panel needs `lg:sticky`. */
+export function useStickyPanel(ref: React.RefObject<HTMLElement | null>, active = true) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!active || !el) return;
+    const fit = () => {
+      const scroller = el.parentElement?.closest<HTMLElement>(".overflow-y-auto");
+      const view = scroller?.clientHeight ?? window.innerHeight;
+      el.style.top = `${Math.min(16, view - el.offsetHeight - 24)}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    window.addEventListener("resize", fit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [ref, active]);
+}
+
+/** Phones: the properties panel as a bottom sheet (Esc, the ×, or a tap above it closes it). Its
+    sections start closed except `firstOpen` (the most used one), each time it opens. */
+export function OptionsSheet({ open, onClose, firstOpen, children }: { open: boolean; onClose: () => void; firstOpen?: string; children: React.ReactNode }) {
   useEffect(() => {
     if (!open) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -154,9 +190,18 @@ export function OptionsSheet({ open, onClose, children }: { open: boolean; onClo
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <SheetBody firstOpen={firstOpen}>{children}</SheetBody>
+        </div>
       </div>
     </div>,
     document.body,
   );
+}
+
+/** Mounted each time the sheet opens, so its sections start from `firstOpen` again. */
+function SheetBody({ firstOpen, children }: { firstOpen?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState<string[]>(firstOpen ? [firstOpen] : []);
+  const toggle = (id: string) => setOpen((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
+  return <SheetSections.Provider value={{ open, toggle }}>{children}</SheetSections.Provider>;
 }

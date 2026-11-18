@@ -167,11 +167,13 @@ async function openMic(deviceId: string) {
   }
 }
 
-function micErrorMessage(error: unknown): string {
+/** A friendly sentence for anything that went wrong opening the mic (or any other error's own
+    message). The Time Test's popover and its Record/Calibrate errors both use this. */
+export function micErrorMessage(error: unknown): string {
   if (error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError")) {
     return "soniroll isn't allowed to use the mic. Allow it in your browser's site settings, then try again.";
   }
-  if (error instanceof DOMException && error.name === "NotFoundError") return "No microphone found.";
+  if (error instanceof DOMException && error.name === "NotFoundError") return "No microphone found. Plug one in, then try again.";
   return error instanceof Error ? error.message : String(error);
 }
 
