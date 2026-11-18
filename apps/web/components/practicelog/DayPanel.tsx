@@ -102,7 +102,7 @@ export default function DayPanel({
               className="h-full rounded-full transition-[width] duration-500"
               style={{
                 width: `${(progress.done / progress.total) * 100}%`,
-                background: progress.done === progress.total ? "#22c55e" : "var(--accent)",
+                background: progress.done === progress.total ? "var(--success)" : "var(--accent)",
               }}
             />
           </div>

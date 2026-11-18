@@ -53,7 +53,7 @@ export default function ImportChartsPage() {
       setText("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (e) {
-      setStatus({ kind: "error", message: e instanceof Error ? e.message : "Couldn't import that playlist." });
+      setStatus({ kind: "error", message: e instanceof Error ? e.message : "Couldn't import that link." });
     } finally {
       setImporting(false);
     }
@@ -72,13 +72,13 @@ export default function ImportChartsPage() {
         <section className="flex flex-col gap-4 rounded-lg bg-surface p-4 sm:p-5">
           <div className="flex items-center gap-3">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] text-xs font-medium text-muted">1</span>
-            <h2 className="text-sm font-medium">Paste a chart link or a playlist link</h2>
+            <h2 className="text-sm font-medium">Paste a chart link or a playlist link from iReal Pro</h2>
           </div>
           <textarea
             autoFocus
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Paste a chord chart link or playlist link"
+            placeholder="Paste a chord chart link or an iReal Pro playlist link"
             rows={6}
             className="w-full resize-y rounded-md bg-background p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-accent/40"
           />
@@ -108,7 +108,7 @@ export default function ImportChartsPage() {
               label="Update charts you already have"
               checked={replaceExisting}
               onChange={setReplaceExisting}
-              hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same playlist. Turn this off to only add charts you don't have yet."
+              hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same folder. Turn this off to only add charts you don't have yet."
             />
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -133,12 +133,12 @@ export default function ImportChartsPage() {
         <aside className="flex flex-col gap-4">
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-sm">
             <h2 className="text-sm font-medium">What happens</h2>
-            <p className="text-muted">A playlist link comes in as a playlist of the same name. Charts you already have are updated or left alone, never doubled up.</p>
+            <p className="text-muted">An iReal Pro playlist comes in as a folder of the same name. Charts you already have are updated or left alone, never doubled up.</p>
             <p className="text-muted">The chart builder can turn a chart you make into a link to share.</p>
           </section>
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-sm">
             <h2 className="text-sm font-medium text-danger">Start over</h2>
-            <p className="text-muted">Remove every chart and playlist in your library.</p>
+            <p className="text-muted">Remove every chart and folder in your library.</p>
             <button
               type="button"
               onClick={() => setConfirmClear(true)}
@@ -153,7 +153,7 @@ export default function ImportChartsPage() {
       {confirmClear && (
         <ConfirmDialog
           title="Delete all chord charts?"
-          message="This removes every imported or created chart and every playlist. You can re-import a playlist any time."
+          message="This removes every imported or created chart and every folder. You can import them again any time."
           confirmLabel="Delete all"
           onConfirm={() => {
             void clearAll();

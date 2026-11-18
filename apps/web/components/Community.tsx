@@ -3,7 +3,7 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
@@ -47,7 +47,9 @@ const KIND_FILTERS: { value: KindFilter; label: string }[] = [
  * Every post opens its own page (`/post/[id]`); posting is the full-page composer
  * (`/community/new`), which checks for a public profile.
  */
-export default function Community() {
+const isFeed = (v: string | null | undefined): v is Feed => !!v && FEEDS.some((f) => f.value === v);
+
+export default function Community({ initialTab }: { initialTab?: string }) {
   const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
   const authed = isAuthenticated ? {} : "skip";
@@ -62,7 +64,22 @@ export default function Community() {
   const { setlists } = useSetlists();
 
   const [query, setQuery] = useState("");
-  const [feed, setFeed] = useState<Feed>("latest");
+  // The address is the truth (coming Back from a post restores this page from Next's cache, with
+  // the props it was first rendered with); `initialTab` covers the first render. In a split-screen
+  // pane the address belongs to another page, so start on Latest there.
+  const onOwnPage = usePathname() === "/community";
+  const urlTab = useSearchParams()?.get("tab");
+  const [feed, setFeed] = useState<Feed>(onOwnPage && isFeed(urlTab) ? urlTab : isFeed(initialTab) ? initialTab : "latest");
+  /** Switches the feed and keeps it in the address (`?tab=`, none for Latest), so a reload or
+      coming Back from a post keeps it. Replaces the entry rather than adding one per tab. */
+  function selectFeed(next: Feed) {
+    setFeed(next);
+    const url = new URL(window.location.href);
+    if (url.pathname !== "/community") return; // a split-screen pane: leave the address alone
+    if (next === "latest") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", next);
+    window.history.replaceState(window.history.state, "", url);
+  }
   const [kind, setKind] = useState<KindFilter>("all");
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [deletingId, setDeletingId] = useState<Id<"communityTunes"> | null>(null);
@@ -241,7 +258,7 @@ export default function Community() {
                       <button
                         key={f.value}
                         type="button"
-                        onClick={() => setFeed(f.value)}
+                        onClick={() => selectFeed(f.value)}
                         aria-pressed={feed === f.value}
                         className={`-mb-px flex h-10 items-center border-b-2 text-sm transition-colors ${feed === f.value ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
                       >

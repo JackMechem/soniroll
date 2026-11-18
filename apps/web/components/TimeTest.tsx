@@ -320,10 +320,13 @@ export default function TimeTest() {
           </span>
         ) : null
       }
+      // Only once there's a take, so a first visit leads with the tempo and Record.
       sidePanel={
-        <SettingChip icon={ListIcon} label="History" value={history.takes.length ? `${history.takes.length} take${history.takes.length === 1 ? "" : "s"}` : "None yet"}>
-          <History takes={history.takes} onClear={() => updateHistory({ takes: [] })} />
-        </SettingChip>
+        history.takes.length > 0 && (
+          <SettingChip icon={ListIcon} label="History" value={`${history.takes.length} take${history.takes.length === 1 ? "" : "s"}`}>
+            <History takes={history.takes} onClear={() => updateHistory({ takes: [] })} />
+          </SettingChip>
+        )
       }
     >
       <div className="flex w-full max-w-[30rem] flex-col items-center gap-6">
@@ -335,7 +338,7 @@ export default function TimeTest() {
             beatUnit={beatUnit}
             onTap={tap}
             locked={recording || calibrating}
-            aboveNumber={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => update({ tempoNoteValue: v })} />}
+            tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => update({ tempoNoteValue: v })} />}
           />
           <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={beatUnit} />
           <BeatIndicator

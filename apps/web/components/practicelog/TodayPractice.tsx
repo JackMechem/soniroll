@@ -104,14 +104,14 @@ export default function TodayPractice() {
             <Link href={`/shed-log?date=${today}`} className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate text-sm font-medium">{routine.name || "Routine"}</span>
-                {complete && <CheckIcon className="h-4 w-4 shrink-0 text-emerald-500" />}
+                {complete && <CheckIcon className="h-4 w-4 shrink-0 text-success" />}
               </div>
               <div className="text-xs text-muted">
                 {span ? `${formatTime(span.start)} · ` : ""}
                 {p.done}/{p.total} tasks{running ? " · on the timer now" : ""}
               </div>
               <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-foreground/10">
-                <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%`, background: complete ? "#22c55e" : color }} />
+                <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%`, background: complete ? "var(--success)" : color }} />
               </div>
             </Link>
             {!complete && next && !running && (

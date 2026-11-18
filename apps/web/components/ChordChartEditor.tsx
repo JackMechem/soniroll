@@ -15,6 +15,7 @@ import {
 import { layoutRows, type PlacedBar } from "@jam-practice/core/chartLayout";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import NumberField from "@/components/NumberField";
+import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { PlusIcon, TrashIcon } from "@/components/tools";
 import { encodeChartString } from "@/lib/chartString";
 import { parseBarSlots, slotsToText, type Bar, type ChordSlot, type IRealSong } from "@/lib/iRealPro";
@@ -167,8 +168,21 @@ function toRealBar(eb: EditableBar): Bar {
     elsewhere. */
 const NO_PLAYLIST = "\u0000none";
 
+/** The chart the editor's fields describe. */
+function songOf(f: { title: string; composer: string; style: string; key: string; top: number; bottom: number; bars: EditableBar[] }): IRealSong {
+  return {
+    title: f.title.trim(),
+    composer: f.composer.trim(),
+    style: f.style.trim(),
+    key: f.key.trim(),
+    timeSignature: { top: f.top, bottom: f.bottom },
+    bars: f.bars.map(toRealBar),
+  };
+}
+
 export default function ChordChartEditor({
   initial,
+  prefill,
   playlists = [],
   defaultPlaylist,
   onSave,
@@ -176,6 +190,8 @@ export default function ChordChartEditor({
 }: {
   /** Edit this existing chart (saved back in place) instead of building a new one. */
   initial?: IRealSong;
+  /** A new chart's starting title, key and time (written from a tune's page). */
+  prefill?: { title?: string; key?: string; timeSignature?: { top: number; bottom: number } };
   /** Existing playlist names — a new chart can go in one, a new one named here, or none (All
       charts only). */
   playlists?: string[];
@@ -185,15 +201,24 @@ export default function ChordChartEditor({
   onClose: () => void;
 }) {
   const editing = !!initial;
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [composer, setComposer] = useState(initial?.composer ?? "");
-  const [style, setStyle] = useState(initial?.style ?? "");
-  const [key, setKey] = useState(initial?.key ?? "");
-  const [top, setTop] = useState(initial?.timeSignature.top ?? 4);
-  const [bottom, setBottom] = useState(initial?.timeSignature.bottom ?? 4);
-  const [bars, setBars] = useState<EditableBar[]>(() =>
-    initial && initial.bars.length > 0 ? initial.bars.map(fromRealBar) : Array.from({ length: STARTING_BARS }, blankBar),
-  );
+  const [start] = useState(() => ({
+    title: initial?.title ?? prefill?.title ?? "",
+    composer: initial?.composer ?? "",
+    style: initial?.style ?? "",
+    key: initial?.key ?? prefill?.key ?? "",
+    top: initial?.timeSignature.top ?? prefill?.timeSignature?.top ?? 4,
+    bottom: initial?.timeSignature.bottom ?? prefill?.timeSignature?.bottom ?? 4,
+    bars: initial && initial.bars.length > 0 ? initial.bars.map(fromRealBar) : Array.from({ length: STARTING_BARS }, blankBar),
+  }));
+  const [title, setTitle] = useState(start.title);
+  const [composer, setComposer] = useState(start.composer);
+  const [style, setStyle] = useState(start.style);
+  const [key, setKey] = useState(start.key);
+  const [top, setTop] = useState(start.top);
+  const [bottom, setBottom] = useState(start.bottom);
+  const [bars, setBars] = useState<EditableBar[]>(start.bars);
+  // What the chart looked like when the editor opened — anything else is unsaved work.
+  const [baseline] = useState(() => JSON.stringify(songOf(start)));
   // "" = a new playlist, named in `newPlaylist`; NO_PLAYLIST = All charts only.
   const [playlist, setPlaylist] = useState(defaultPlaylist ?? NO_PLAYLIST);
   const [newPlaylist, setNewPlaylist] = useState("");
@@ -209,13 +234,22 @@ export default function ChordChartEditor({
   const [exported, setExported] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const song: IRealSong = songOf({ title, composer, style, key, top, bottom, bars });
+  const dirty = JSON.stringify(song) !== baseline;
+  // Close, Escape, browser Back and links elsewhere ask first when something changed.
+  const guard = useLeaveGuard(dirty, editing ? "Your changes to this chart haven't been saved." : "This chart hasn't been saved yet.");
+  const closeRef = useRef(() => {});
+  useEffect(() => {
+    closeRef.current = () => guard.requestLeave(onClose);
+  });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     const i = focusIndexRef.current;
@@ -223,15 +257,6 @@ export default function ChordChartEditor({
     focusIndexRef.current = null;
     inputRefs.current[i]?.focus();
   }, [activeIndex, bars.length]);
-
-  const song: IRealSong = {
-    title: title.trim(),
-    composer: composer.trim(),
-    style: style.trim(),
-    key: key.trim(),
-    timeSignature: { top, bottom },
-    bars: bars.map(toRealBar),
-  };
 
   function updateBar(index: number, patch: Partial<EditableBar>) {
     setBars((prev) => prev.map((b, i) => (i === index ? { ...b, ...patch } : b)));
@@ -293,14 +318,14 @@ export default function ChordChartEditor({
     }
     const playlistName = editing || playlist === NO_PLAYLIST ? null : playlist || newPlaylist.trim();
     if (!editing && playlist === "" && !playlistName) {
-      setError("Name the new playlist, or pick another option.");
+      setError("Name the new folder, or pick another option.");
       return;
     }
     setError(null);
     setSaving(true);
     try {
       await onSave(song, playlistName);
-      onClose();
+      guard.leave(onClose);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save that chord chart.");
     } finally {
@@ -351,7 +376,7 @@ export default function ChordChartEditor({
         <h2 className="text-2xl font-semibold tracking-tight">{editing ? `Edit "${initial?.title}"` : "Create a chord chart"}</h2>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => guard.requestLeave(onClose)}
           className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
         >
           Close
@@ -361,26 +386,26 @@ export default function ChordChartEditor({
       <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
         {!editing && (
           <div className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-xs font-medium text-muted">Playlist</span>
+            <span className="text-xs font-medium text-muted">Folder</span>
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={playlist}
                 onChange={(e) => setPlaylist(e.target.value)}
                 className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
               >
-                <option value={NO_PLAYLIST}>No playlist (All charts only)</option>
+                <option value={NO_PLAYLIST}>No folder (All charts only)</option>
                 {playlists.map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
                 ))}
-                <option value="">New playlist…</option>
+                <option value="">New folder…</option>
               </select>
               {playlist === "" && (
                 <input
                   value={newPlaylist}
                   onChange={(e) => setNewPlaylist(e.target.value)}
-                  placeholder="New playlist name"
+                  placeholder="New folder name"
                   className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
                 />
               )}
@@ -648,6 +673,7 @@ export default function ChordChartEditor({
           {saving ? "Saving…" : editing ? "Save changes" : "Save to library"}
         </button>
       </div>
+      {guard.dialog}
     </div>
   );
 }

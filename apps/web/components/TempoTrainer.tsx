@@ -333,7 +333,7 @@ export default function TempoTrainer() {
           beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
           beatUnit={activeSection?.beatUnit ?? beatUnit}
           onTap={tap}
-          aboveNumber={<TempoNoteValuePicker value={tempoNoteValue} onChange={setTempoNoteValue} />}
+          tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={setTempoNoteValue} />}
         />
         <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
         {silentNow ? (

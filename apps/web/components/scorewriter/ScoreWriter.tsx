@@ -208,36 +208,38 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
         initial={initial}
         onChange={change}
         staffControls
+        underAppBar
         autoFocus
         header={(t, setMeta) => (
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-              <BackButton
-                onClick={() => {
-                  flush();
-                  onBack();
-                }}
-                label="Scores"
-                className="mb-2"
-              />
-              <input
-                value={t.title}
-                onChange={(e) => setMeta({ title: e.target.value })}
-                aria-label="Title"
-                className="w-full min-w-0 rounded-md bg-transparent px-1 -mx-1 text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-              />
-            </div>
+          // Back and the score's actions share one row, the title under them: on a phone the
+          // header stays short, so the staff is in view while you write.
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted" aria-live="polite">
+              <div className="flex">
+                <BackButton
+                  onClick={() => {
+                    flush();
+                    onBack();
+                  }}
+                  label="Scores"
+                />
+              </div>
+              <span className="ml-auto text-xs text-muted" aria-live="polite">
                 {SAVE_LABEL[saveState]}
               </span>
-              <button type="button" onClick={() => downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`)} className={btn} title="Export as a file">
-                <DownloadIcon className="h-4 w-4" /> Export
+              <button type="button" onClick={() => downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`)} className={btn} title="Export as a file" aria-label="Export as a file">
+                <DownloadIcon className="h-4 w-4" /> <span className="max-sm:hidden">Export</span>
               </button>
               <button type="button" onClick={() => setDeleting(true)} className={`${btn} hover:text-danger`} aria-label="Delete score" title="Delete score">
                 <TrashIcon className="h-4 w-4" />
               </button>
             </div>
+            <input
+              value={t.title}
+              onChange={(e) => setMeta({ title: e.target.value })}
+              aria-label="Title"
+              className="w-full min-w-0 rounded-md bg-transparent px-1 -mx-1 text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
           </div>
         )}
       />

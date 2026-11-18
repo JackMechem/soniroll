@@ -617,11 +617,15 @@ export default function SlowDowner() {
               const dropped = e.dataTransfer.files?.[0];
               if (dropped) loadFile(dropped);
             }}
-            className={`flex w-full flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-14 transition-colors ${
+            className={`flex w-full max-w-2xl flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-14 transition-colors ${
               dragOver ? "border-accent bg-accent/10" : "border-foreground/15"
             }`}
           >
-            <p className="text-base font-medium">Drop an audio or video file here</p>
+            {/* Touch screens can't drop a file. */}
+            <p className="text-base font-medium">
+              <span className={MOUSE_ONLY}>Drop an audio or video file here</span>
+              <span className={TOUCH_ONLY}>Choose an audio or video file</span>
+            </p>
             <p className="max-w-xs text-sm text-muted">
               MP3, WAV, M4A, FLAC, MP4 and more. For video files only the audio is used. Nothing is
               uploaded — files are saved in this browser so they&apos;re here next time.
@@ -855,6 +859,11 @@ export default function SlowDowner() {
             <button type="button" onClick={() => setEdge("end", time)} disabled={!duration} title="End the loop at the playhead" className={loopButton}>
               Loop end
             </button>
+            {loop && (
+              <span className={`text-sm tabular-nums ${loopOn ? "text-foreground" : "text-muted"}`} title={loopOn ? "The loop" : "The loop (off)"}>
+                Loop {formatTime(loop.start)}–{formatTime(loop.end)}
+              </span>
+            )}
             <button type="button" onClick={clearLoop} disabled={!loop} className={loopButton}>
               Clear loop
             </button>

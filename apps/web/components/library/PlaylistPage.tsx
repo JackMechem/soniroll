@@ -45,11 +45,11 @@ export default function PlaylistPage({ id }: { id: string }) {
   return (
     <LibraryPage>
       <Hero
-        title={playlist?.name ?? "Playlist"}
+        title={playlist?.name ?? "Folder"}
         icon={isAll ? ChordChartIcon : FolderIcon}
         backHref="/tunes?tab=charts"
         backLabel="Chord Charts"
-        subtitle={playlist ? `${isAll ? "Every chart in your library" : "Playlist"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
+        subtitle={playlist ? `${isAll ? "Every chart in your library" : "Folder"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
         actions={
           playlist ? (
             <>
@@ -75,7 +75,7 @@ export default function PlaylistPage({ id }: { id: string }) {
           <LoadingSpinner />
         </div>
       ) : !playlist ? (
-        <EmptyState boxed title="Playlist not found" body="This playlist isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
+        <EmptyState boxed title="Folder not found" body="This folder isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
       ) : songs.length === 0 ? (
         <EmptyState
           boxed

@@ -128,14 +128,14 @@ const SLIDES: { title: string; line: string; art: React.ReactNode }[] = [
               <FlameIcon className="log-flame h-4 w-4 text-orange-500" /> 12
             </span>
           </div>
-          <span className="h-1.5 w-full rounded-full bg-emerald-500" />
+          <span className="h-1.5 w-full rounded-full bg-success" />
         </div>
         <div className="grid grid-cols-7 gap-1.5">
           {["g", "g", "r", "g", "g", "g", "t"].map((k, i) => (
             <span
               key={i}
               className={`flex h-8 w-8 items-center justify-center rounded-md text-white ${k === "t" ? "ring-2 ring-accent" : ""}`}
-              style={{ background: k === "g" ? "#22c55e" : k === "r" ? "#ef4444" : "var(--surface)" }}
+              style={{ background: k === "g" ? "var(--success)" : k === "r" ? "var(--danger)" : "var(--surface)" }}
             >
               {k === "g" ? <CheckIcon className="h-4 w-4" /> : k === "r" ? <CloseIcon className="h-4 w-4" /> : null}
             </span>

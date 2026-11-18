@@ -231,7 +231,9 @@ export default function IntervalTrainer() {
     INSTRUMENTS.some((i) => i.id === settings.instrumentId)
       ? settings.instrumentId
       : INSTRUMENTS[0].id;
-  const pool = INTERVALS.filter((i) => settings.intervalIds.includes(i.id));
+  // The intervals picked; none picked means all of them (like every pool of choices).
+  const picked = INTERVALS.filter((i) => settings.intervalIds.includes(i.id));
+  const pool = picked.length > 0 ? picked : INTERVALS;
   const directions: Direction[] = includeDescending ? [1, -1] : [1];
   const setInstrumentId = (instrumentId: string) =>
     updateSettings({ instrumentId });
@@ -675,10 +677,6 @@ export default function IntervalTrainer() {
       );
       return;
     }
-    if (!weak && pool.length === 0) {
-      setError("Select at least one interval to practice.");
-      return;
-    }
     setError(null);
     setSummary(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -960,8 +958,9 @@ export default function IntervalTrainer() {
     <ToolLayout
       title="Interval Trainer"
       presets={toolPresets("interval-trainer", settings, updateSettings)}
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
-        listenMode && (
+        listenMode && (history.length > 0 || weakEntries.length > 0) && (
           <>
             <CollapsiblePanel
               id="history"
@@ -1112,10 +1111,10 @@ export default function IntervalTrainer() {
       options={
         <>
           <PanelsToggle ids={PANEL_IDS} />
-          <CollapsiblePanel id="interval-set" title="Intervals" icon={IntervalIcon} summary={`${pool.length} of ${INTERVALS.length}`}>
+          <CollapsiblePanel id="interval-set" title="Intervals" icon={IntervalIcon} summary={picked.length > 0 ? `${picked.length} of ${INTERVALS.length}` : `All ${INTERVALS.length}`}>
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-muted">
-                {pool.length} of {INTERVALS.length} selected
+                {picked.length} of {INTERVALS.length} selected
               </span>
               <div className="flex gap-3">
                 <button
@@ -1138,7 +1137,8 @@ export default function IntervalTrainer() {
                 </button>
               </div>
             </div>
-            <Hint>Which intervals can be picked for a round. At least one must stay selected.</Hint>
+            <Hint>Which intervals can be picked for a round. With none selected, any of them can come up.</Hint>
+            {picked.length === 0 && <p className="text-xs text-muted">None selected, so every interval can come up.</p>}
 
             <div className="flex flex-wrap gap-1.5">
               {INTERVALS.map((interval) => {

@@ -26,9 +26,10 @@ function currentLabel({ active, presets }: PresetsState) {
 /** The "Presets" setting chip; its popover is the presets list. */
 export function PresetsChip({ tool }: { tool: ToolPresets }) {
   const state = usePresets(tool);
+  const [open, setOpen] = useState(false);
   return (
-    <SettingChip icon={BookmarkIcon} label="Presets" value={<span className="block max-w-[10rem] truncate">{currentLabel(state)}</span>}>
-      <PresetsList state={state} />
+    <SettingChip icon={BookmarkIcon} label="Presets" value={<span className="block max-w-[10rem] truncate">{currentLabel(state)}</span>} open={open} onOpenChange={setOpen}>
+      <PresetsList state={state} onApplied={() => closeSheetOnPhone(setOpen)} />
     </SettingChip>
   );
 }
@@ -37,10 +38,13 @@ export function PresetsChip({ tool }: { tool: ToolPresets }) {
     the way of the option chips: the bookmark, "Presets" and the one in use. */
 export function PresetsButton({ tool }: { tool: ToolPresets }) {
   const state = usePresets(tool);
+  const [open, setOpen] = useState(false);
   return (
     <SettingChip
       icon={BookmarkIcon}
       label="Presets"
+      open={open}
+      onOpenChange={setOpen}
       trigger={{
         className: "flex h-8 max-w-[14rem] shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover",
         content: (
@@ -54,9 +58,15 @@ export function PresetsButton({ tool }: { tool: ToolPresets }) {
         ),
       }}
     >
-      <PresetsList state={state} />
+      <PresetsList state={state} onApplied={() => closeSheetOnPhone(setOpen)} />
     </SettingChip>
   );
+}
+
+/** On a phone the presets are a bottom sheet over the tool: applying one closes it, so you see
+    what changed. (On a wider screen the popover stays, to try one preset after another.) */
+function closeSheetOnPhone(setOpen: (open: boolean) => void) {
+  if (window.innerWidth < 640) setOpen(false);
 }
 
 /** A "Presets" section for a properties panel (`PanelSection`, the Bass Genius look). Closed
@@ -80,7 +90,7 @@ type Dialog =
  * A tool's saved presets: tap one to apply it, ⋮ (or right-click) to update it with the current
  * options, rename or delete it, and a button to save the current options as a new one.
  */
-function PresetsList({ state }: { state: PresetsState }) {
+function PresetsList({ state, onApplied }: { state: PresetsState; /** After a preset is applied. */ onApplied?: () => void }) {
   const { presets, active } = state;
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -121,7 +131,10 @@ function PresetsList({ state }: { state: PresetsState }) {
               >
                 <button
                   type="button"
-                  onClick={() => state.apply(p)}
+                  onClick={() => {
+                    state.apply(p);
+                    onApplied?.();
+                  }}
                   aria-pressed={on}
                   title={on ? "Your options match this preset" : `Use “${p.name}”`}
                   className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-2 pl-2.5 pr-2 text-left text-sm font-medium"

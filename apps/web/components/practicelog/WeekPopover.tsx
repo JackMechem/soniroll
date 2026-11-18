@@ -136,7 +136,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
             )}
           </p>
           {(skipped || complete || status === "missed" || status === "partial") && (
-            <p className={`mt-0.5 text-xs font-semibold ${complete ? "text-green-600 dark:text-green-400" : skipped ? "text-muted" : status === "missed" ? "text-muted" : "text-amber-600 dark:text-amber-400"}`}>
+            <p className={`mt-0.5 text-xs font-semibold ${complete ? "text-success" : skipped ? "text-muted" : status === "missed" ? "text-muted" : "text-warning"}`}>
               {skipped ? "Skipped this day" : complete ? "All done" : status === "missed" ? "Missed" : "Partly done"}
             </p>
           )}

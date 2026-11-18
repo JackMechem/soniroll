@@ -41,7 +41,7 @@ export function useChartActions(options: { onPlaylistDeleted?: () => void; onSon
             ? { label: `Remove from ${p.name}`, onSelect: () => void removeFromPlaylist(song.id, p.id) }
             : { label: `Add to ${p.name}`, onSelect: () => void addToPlaylist(song.id, p.name) },
         ),
-      { label: "Add to a new playlist…", onSelect: () => setAddingToNew(song.id) },
+      { label: "Add to a new folder…", onSelect: () => setAddingToNew(song.id) },
       { label: "Delete chart", danger: true, onSelect: () => setDeletingSong(song) },
     ];
     setMenu({ ...menuPosition(e), items });
@@ -52,8 +52,8 @@ export function useChartActions(options: { onPlaylistDeleted?: () => void; onSon
     setMenu({
       ...menuPosition(e),
       items: [
-        { label: "Delete playlist", danger: true, onSelect: () => setDeletingPlaylist({ ...playlist, deleteCharts: false }) },
-        { label: "Delete playlist and its charts", danger: true, onSelect: () => setDeletingPlaylist({ ...playlist, deleteCharts: true }) },
+        { label: "Delete folder", danger: true, onSelect: () => setDeletingPlaylist({ ...playlist, deleteCharts: false }) },
+        { label: "Delete folder and its charts", danger: true, onSelect: () => setDeletingPlaylist({ ...playlist, deleteCharts: true }) },
       ],
     });
   }
@@ -63,7 +63,7 @@ export function useChartActions(options: { onPlaylistDeleted?: () => void; onSon
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
       {addingToNew && (
         <PromptDialog
-          title="Add to a new playlist"
+          title="Add to a new folder"
           initialValue=""
           onSubmit={(name) => {
             if (name.trim()) void addToPlaylist(addingToNew, name.trim());
@@ -75,7 +75,7 @@ export function useChartActions(options: { onPlaylistDeleted?: () => void; onSon
       {deletingSong && (
         <ConfirmDialog
           title={`Delete "${deletingSong.title}"?`}
-          message="This removes the chart from your library and every playlist it's in. This can't be undone."
+          message="This removes the chart from your library and every folder it's in. This can't be undone."
           confirmLabel="Delete"
           onConfirm={() => {
             void deleteSong(deletingSong.id);
@@ -91,10 +91,10 @@ export function useChartActions(options: { onPlaylistDeleted?: () => void; onSon
           title={`Delete "${deletingPlaylist.name}"?`}
           message={
             deletingPlaylist.deleteCharts
-              ? `This deletes the playlist and its ${deletingPlaylist.count} chart${deletingPlaylist.count === 1 ? "" : "s"} — except any that are also in another playlist, which stay. Tunes linked to deleted charts keep their notes and keys. This can't be undone.`
-              : `Only the playlist goes — its ${deletingPlaylist.count} chart${deletingPlaylist.count === 1 ? "" : "s"} stay in All charts and any other playlists.`
+              ? `This deletes the folder and its ${deletingPlaylist.count} chart${deletingPlaylist.count === 1 ? "" : "s"} — except any that are also in another folder, which stay. Tunes linked to deleted charts keep their notes and keys. This can't be undone.`
+              : `Only the folder goes — its ${deletingPlaylist.count} chart${deletingPlaylist.count === 1 ? "" : "s"} stay in All charts and any other folders.`
           }
-          confirmLabel={deletingPlaylist.deleteCharts ? "Delete both" : "Delete playlist"}
+          confirmLabel={deletingPlaylist.deleteCharts ? "Delete both" : "Delete folder"}
           onConfirm={() => {
             void deletePlaylist(deletingPlaylist.id, { deleteCharts: deletingPlaylist.deleteCharts });
             setDeletingPlaylist(null);

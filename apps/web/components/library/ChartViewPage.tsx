@@ -1,5 +1,6 @@
 "use client";
 
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ChordChart from "@/components/ChordChart";
@@ -14,10 +15,11 @@ import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { BassIcon, ChevronLeftIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
+import { BassIcon, ChevronLeftIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PlusIcon } from "@/components/tools";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
+import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
 
 /** One chord chart on its own page: title and details up top, a key selector (display-only
     transpose), full-screen, and the chart ⋮ menu (edit / playlists / delete). Opening it puts it in
@@ -29,6 +31,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   const [transposeKey, setTransposeKey] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const lists = useTuneLists();
+  const { isAuthenticated } = useConvexAuth();
 
   const { record } = useRecentCharts();
   const recordRef = useRef(record);
@@ -57,6 +60,29 @@ export default function ChartViewPage({ id }: { id: string }) {
     ...lists.tunes.tunes.filter((t) => t.chordChartId === id).map((t) => ({ tune: t, list: "tunes" as TuneListId })),
     ...lists.learn.tunes.filter((t) => t.chordChartId === id).map((t) => ({ tune: t, list: "learn" as TuneListId })),
   ];
+  /** Puts this chart's tune in one of your lists, linked to the chart: the tune of the same name
+      if the list has one, else a new tune with the chart's title, key and time. */
+  function addToList(list: TuneListId) {
+    if (!chart) return;
+    const name = chart.title.trim().toLowerCase();
+    lists[list].setTunes((prev) => {
+      if (prev.some((t) => t.name.trim().toLowerCase() === name && !t.chordChartId)) {
+        return prev.map((t) => (t.name.trim().toLowerCase() === name && !t.chordChartId ? { ...t, chordChartId: id } : t));
+      }
+      const tune: Tune = {
+        id: makeId(),
+        name: chart.title,
+        tempos: [],
+        keys: chart.key ? [{ id: makeId(), value: displayKey(chart.key), enabled: true }] : [],
+        timeSignature: chart.timeSignature ? `${chart.timeSignature.top}/${chart.timeSignature.bottom}` : DEFAULT_TIME_SIGNATURE,
+        notes: "",
+        chordChartId: id,
+      };
+      return [...prev, tune];
+    });
+  }
+  const inList = (list: TuneListId) => linkedTunes.some((l) => l.list === list);
+
   const keyOptions = chart ? [{ value: "", label: `Original (${chart.key ? displayKey(chart.key) : "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))] : [];
 
   if (loading || selectedSongLoading) {
@@ -155,13 +181,13 @@ export default function ChartViewPage({ id }: { id: string }) {
           </section>
 
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
-            <h2 className="text-sm font-medium">Playlists</h2>
+            <h2 className="text-sm font-medium">Folders</h2>
             {meta && meta.playlistIds.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {meta.playlistIds.map((pid) => (
                   <Link key={pid} href={playlistHref(pid)} className="inline-flex items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 py-1.5 text-xs font-medium hover:bg-surface-hover">
                     <FolderIcon className="h-3.5 w-3.5 text-muted" />
-                    {playlists.find((p) => p.id === pid)?.name ?? "Playlist"}
+                    {playlists.find((p) => p.id === pid)?.name ?? "Folder"}
                   </Link>
                 ))}
               </div>
@@ -185,7 +211,22 @@ export default function ChartViewPage({ id }: { id: string }) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted">No tune uses this chart yet — link it from a tune&apos;s page.</p>
+              <p className="text-sm text-muted">None of your tunes uses this chart yet.</p>
+            )}
+            {/* Tunes to Learn only exists in an account. */}
+            {(!inList("tunes") || (isAuthenticated && !inList("learn"))) && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {!inList("tunes") && (
+                  <button type="button" onClick={() => addToList("tunes")} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+                    <PlusIcon className="h-4 w-4" /> Add to {TUNE_LIST_LABEL.tunes}
+                  </button>
+                )}
+                {isAuthenticated && !inList("learn") && (
+                  <button type="button" onClick={() => addToList("learn")} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+                    <PlusIcon className="h-4 w-4" /> Add to {TUNE_LIST_LABEL.learn}
+                  </button>
+                )}
+              </div>
             )}
           </section>
         </aside>

@@ -417,7 +417,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
                 beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
                 beatUnit={activeSection?.beatUnit ?? beatUnit}
                 onTap={tap}
-                aboveNumber={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
+                tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
               />
               <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
               {useStructure && !activeSection ? (

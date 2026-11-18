@@ -754,7 +754,9 @@ export default function GuessTheChord() {
           ]}
         />
       }
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
+        (history.length > 0 || weakEntries.length > 0) && (
         <>
           <CollapsiblePanel
             id="history"
@@ -875,6 +877,7 @@ export default function GuessTheChord() {
             )}
           </CollapsiblePanel>
         </>
+        )
       }
       // Hidden while a session runs, so the round has the screen to itself.
       options={

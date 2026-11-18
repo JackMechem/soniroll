@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { BackButton, MenuButton, tuneSummary } from "@/components/library/shared";
@@ -75,8 +75,9 @@ export function Chip({ children, accent = false, title }: { children: ReactNode;
   );
 }
 
-/** A button — `primary` filled with the accent, else outlined. A link with `href`. (Named Pill
-    from when it was round; it's a plain rectangular button now.) */
+/** A button — `primary` filled with the accent, else a faint fill (the secondary look every
+    page header uses). A link with `href`. (Named Pill from when it was round; it's a plain
+    rectangular button now.) */
 export function Pill({
   icon: Icon,
   label,
@@ -85,6 +86,7 @@ export function Pill({
   primary = false,
   disabled = false,
   iconOnlyOnPhone = false,
+  className = "",
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   label: string;
@@ -93,10 +95,11 @@ export function Pill({
   primary?: boolean;
   disabled?: boolean;
   iconOnlyOnPhone?: boolean;
+  className?: string;
 }) {
-  const cls = `inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50 sm:h-9 ${
+  const cls = `${className} inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50 sm:h-9 ${
     iconOnlyOnPhone && Icon ? "w-10 sm:w-auto sm:px-3" : "px-3"
-  } ${primary ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "text-foreground hover:bg-surface-hover"}`;
+  } ${primary ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"}`;
   const inner = (
     <>
       {Icon && <Icon className="h-4 w-4 shrink-0" />}
@@ -112,6 +115,36 @@ export function Pill({
       {inner}
     </button>
   );
+}
+
+/** For a row that scrolls sideways (tabs, chips): fades whichever edge has more to scroll to,
+    so a phone shows there's more off screen. Pass `attach` as the scrolling element's `ref`, and `style`. */
+export function useEdgeFade<T extends HTMLElement>() {
+  // A callback ref (kept in state), so a row that mounts later — after data loads — is still seen.
+  const [el, setEl] = useState<T | null>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useEffect(() => {
+    if (!el) return;
+    const update = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges((p) => (p.left === left && p.right === right ? p : { left, right }));
+    };
+    // The observer also fires once straight away, which sets the first state.
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    for (const child of el.children) observer.observe(child);
+    el.addEventListener("scroll", update, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", update);
+    };
+  }, [el]);
+  const mask =
+    edges.left || edges.right
+      ? `linear-gradient(to right, ${edges.left ? "transparent, black 2rem" : "black, black"}, ${edges.right ? "black calc(100% - 2rem), transparent" : "black"})`
+      : undefined;
+  return { attach: setEl, style: mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined };
 }
 
 export type LibraryTab = "tunes" | "setlists" | "charts" | "files";
@@ -133,8 +166,9 @@ export function LibraryTabs({ active }: { active: LibraryTab | "recordings" }) {
     { id: "files", label: "Files", href: libraryHref("files") },
     { id: "recordings", label: "Recordings", href: "/recordings" },
   ] as const;
+  const { attach: fadeRef, style: fadeStyle } = useEdgeFade<HTMLElement>();
   return (
-    <nav className="flex max-w-full gap-1 overflow-x-auto border-b border-foreground/10 [scrollbar-width:none] sm:gap-2" aria-label="Library">
+    <nav ref={fadeRef} style={fadeStyle} className="flex max-w-full overflow-x-auto border-b border-foreground/10 [scrollbar-width:none] sm:gap-2" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
@@ -142,7 +176,7 @@ export function LibraryTabs({ active }: { active: LibraryTab | "recordings" }) {
           replace
           scroll={false}
           aria-current={active === t.id ? "page" : undefined}
-          className={`-mb-px flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-2.5 text-sm transition-colors sm:px-3 ${
+          className={`-mb-px flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-2 text-sm transition-colors sm:px-3 ${
             active === t.id ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"
           }`}
         >
@@ -464,7 +498,34 @@ export function RecentList({
   );
 }
 
-/** A playlist as a row: a folder, its name, how many charts, and its ⋮ menu. */
+/** Recently opened charts (or tunes) as one slim row of chips — key badge and title — under a
+    small "Recent" label. Scrolls sideways when it doesn't fit (phones), with a faded edge. */
+export function RecentStrip({ items }: { items: { key: string; title: string; href: string; keyLabel?: string | null; detail?: string }[] }) {
+  const { attach: fadeRef, style: fadeStyle } = useEdgeFade<HTMLDivElement>();
+  if (items.length === 0) return null;
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span className="shrink-0 text-xs font-medium text-muted">Recent</span>
+      <div ref={fadeRef} style={fadeStyle} className="-mr-4 min-w-0 flex-1 overflow-x-auto pr-4 [scrollbar-width:none] sm:mr-0 sm:pr-0 [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max gap-1.5">
+          {items.map((it) => (
+            <Link
+              key={it.key}
+              href={it.href}
+              title={it.detail ? `${it.title} · ${it.detail}` : it.title}
+              className="flex h-10 max-w-[14rem] shrink-0 items-center gap-2 rounded-md bg-surface pl-1.5 pr-3 text-sm font-medium transition-colors hover:bg-surface-hover sm:h-9"
+            >
+              <KeyBadge label={it.keyLabel} size="sm" />
+              <span className="truncate">{it.title}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A folder of charts as a row: a folder icon, its name, how many charts, and its ⋮ menu. */
 export function PlaylistItem({ name, count, href, onMenu, all = false }: { name: string; count: number; href: string; onMenu?: (e: React.MouseEvent) => void; all?: boolean }) {
   return (
     <RowShell

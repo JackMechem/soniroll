@@ -18,7 +18,7 @@ function GoalRing({ frac, met }: { frac: number; met: boolean }) {
   return (
     <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0 -rotate-90" aria-hidden>
       <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2" className="stroke-foreground/10" />
-      {frac > 0 && <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2" strokeLinecap="round" stroke={met ? "#22c55e" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />}
+      {frac > 0 && <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2" strokeLinecap="round" stroke={met ? "var(--success)" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />}
     </svg>
   );
 }

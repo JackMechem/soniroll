@@ -58,7 +58,7 @@ function isMinorKey(value: string) {
  * and Tunes to Learn, or deleted. Linked from every tune in the account's tune lists.
  */
 /** Phones: whether a tune's chart fits the screen (else full size, scrolling sideways). Fits by
-    default, so nothing's cut off on the right; "Full size" is remembered once picked. */
+    default, so nothing's cut off on the right; "Zoom in" is remembered once picked. */
 const CHART_VIEW_KEY = "jam-practice-tune-chart-view";
 const CHART_VIEW_DEFAULTS = { fit: true };
 
@@ -211,8 +211,15 @@ function Hub({
   }, [tune.id]);
 
   const firstKey = tune.keys.find((k) => k.enabled)?.value ?? (chart?.key || null);
+  // "Write the chart" starts the builder from this tune and links the result back to it.
+  const writeChartHref = `/chord-charts/new?${new URLSearchParams({
+    tune: `${list}:${tune.id}`,
+    title: tune.name,
+    ...(firstKey ? { key: firstKey } : {}),
+    ...(tune.timeSignature ? { time: tune.timeSignature } : {}),
+  }).toString()}`;
   const btn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
-  const iconBtn = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9";
+  const iconBtn = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9";
 
   return (
     <LibraryPage>
@@ -279,12 +286,14 @@ function Hub({
                       options={[{ value: "", label: `Original (${chart.key || "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
                       className="min-w-32"
                     />
-                    {/* Phones: the chart is full size and scrolls sideways, or fits the screen. */}
-                    <button type="button" onClick={() => setChartView({ fit: !chartFit })} aria-pressed={chartFit} className={`${btn} sm:hidden`}>
-                      {chartFit ? "Full size" : "Fit to screen"}
+                    {/* Phones: the chart fits the screen, or is zoomed in and scrolls sideways.
+                        (Opening the chart's own page is in the ⋮ there, so the two don't read
+                        alike.) */}
+                    <button type="button" onClick={() => setChartView({ fit: !chartFit })} aria-pressed={!chartFit} className={`${btn} sm:hidden`}>
+                      {chartFit ? "Zoom in" : "Fit to screen"}
                     </button>
-                    <button type="button" onClick={openInChordCharts} className={btn}>
-                      Open
+                    <button type="button" onClick={openInChordCharts} className={`${btn} max-sm:hidden`}>
+                      Open chart page
                     </button>
                     <button
                       type="button"
@@ -292,6 +301,7 @@ function Hub({
                         setMenu({
                           ...menuPosition(e),
                           items: [
+                            { label: "Open chart page", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: openInChordCharts },
                             { label: "Link a different chart", icon: <LinkIcon className="h-4 w-4 text-muted" />, onSelect: () => setPicking(true) },
                             { label: "Unlink the chart", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: () => patch({ chordChartId: undefined }) },
                           ],
@@ -350,7 +360,7 @@ function Hub({
                     </button>
                   )}
                   <Link
-                    href="/chord-charts/new"
+                    href={writeChartHref}
                     className={
                       matches.length || allSongs.length
                         ? btn

@@ -405,7 +405,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         {/* Its scrollbar stays out of sight until the pointer is over the day, so the page doesn't
             show two scrollbars side by side. */}
         <div
-          className={`order-1 min-w-0 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 lg:[&::-webkit-scrollbar-thumb]:bg-transparent lg:hover:[&::-webkit-scrollbar-thumb]:bg-foreground/15 lg:[&::-webkit-scrollbar-thumb:hover]:bg-foreground/30 ${dayHidden ? "lg:hidden" : ""} ${pane === "day" ? "" : "max-lg:hidden"}`}
+          className={`order-1 min-w-0 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 scrollbar-on-hover ${dayHidden ? "lg:hidden" : ""} ${pane === "day" ? "" : "max-lg:hidden"}`}
         >
           <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
         </div>
@@ -505,7 +505,7 @@ function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; today: s
       <button type="button" onClick={onGoal} title="Today's goal — change it" className="flex items-center gap-2 rounded-sm hover:text-foreground">
         {goal > 0 && (
           <span className="h-1 w-16 overflow-hidden rounded-full bg-foreground/10">
-            <span className="block h-full rounded-full transition-[width] duration-700" style={{ width: `${Math.min(100, (minutes / goal) * 100)}%`, background: met ? "#22c55e" : "var(--accent)" }} />
+            <span className="block h-full rounded-full transition-[width] duration-700" style={{ width: `${Math.min(100, (minutes / goal) * 100)}%`, background: met ? "var(--success)" : "var(--accent)" }} />
           </span>
         )}
         <span className="tabular-nums">

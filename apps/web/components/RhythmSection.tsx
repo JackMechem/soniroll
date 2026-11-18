@@ -1359,11 +1359,17 @@ export default function RhythmSection({
                       <div className="w-full rounded-lg bg-surface p-2 text-left sm:p-6">
                         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 px-2 sm:px-0">
                           <h2 className="text-lg font-semibold tracking-tight">{song.title}</h2>
-                          <p className="text-sm text-muted">
-                            {[song.composer ? formatComposer(song.composer) : null, song.style || null, song.key, `${song.timeSignature.top}/${song.timeSignature.bottom}`]
+                          {/* One line, cut short with "…" in a narrow column (wrapping left "· 4/4" alone). */}
+                          {(() => {
+                            const details = [song.composer ? formatComposer(song.composer) : null, song.style || null, song.key, `${song.timeSignature.top}/${song.timeSignature.bottom}`]
                               .filter(Boolean)
-                              .join(" · ")}
-                          </p>
+                              .join(" · ");
+                            return (
+                              <p className="min-w-0 max-w-full truncate text-sm text-muted" title={details}>
+                                {details}
+                              </p>
+                            );
+                          })()}
                         </div>
                         <ChordChart song={song} hideHeader activeBar={activeBar} />
                       </div>

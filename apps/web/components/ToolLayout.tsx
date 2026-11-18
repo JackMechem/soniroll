@@ -114,7 +114,7 @@ export default function ToolLayout({
           <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+7rem)] sm:px-6 lg:pt-20">
             <section
               className={`flex w-full min-w-0 flex-1 flex-col items-center gap-6 text-center ${
-                topAligned ? "justify-start" : "justify-center"
+                topAligned ? "justify-start" : "justify-start lg:justify-center"
               }`}
             >
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
@@ -123,7 +123,9 @@ export default function ToolLayout({
             {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
           </main>
         ) : (
-          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+7rem)] sm:px-6 lg:pt-24 xl:max-w-5xl">
+          // Phones and tablets: from the top, just under the row of presets/stats (centred, a short
+          // tool left a blank band above it and pushed its chips down). Desktop: centred.
+          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-start gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+7.75rem)] sm:px-6 lg:justify-center lg:pt-24 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
                   {sidePanel && <TopChips>{sidePanel}</TopChips>}

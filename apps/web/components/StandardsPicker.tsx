@@ -11,11 +11,16 @@ const MAX_ROWS = 60;
 export default function StandardsPicker({
   onClose,
   onCreateCustom,
+  onAddCustom,
   tunes: tunesOverride,
   setTunes: setTunesOverride,
 }: {
   onClose: () => void;
   onCreateCustom: (name: string) => void;
+  /** Adding your own tune by name in one tap (Jam Practice): the row adds it straight away, with
+      a "More details" button that calls `onCreateCustom` for tempos, keys and notes. Without it,
+      the row opens `onCreateCustom` (the full form) at once. */
+  onAddCustom?: (name: string) => void;
   /** Which list a picked standard is added into. Omitted by Jam Practice's own `TunesPanel.tsx`
       (this component's original, still-unchanged caller), which falls back to `useSyncedTunes()`
       below — Jam Practice's own tune list, exactly as before this prop existed. Passed explicitly
@@ -37,6 +42,7 @@ export default function StandardsPicker({
   const shown = results.slice(0, MAX_ROWS);
   const typed = query.trim();
   const canCreate = typed !== "" && !STANDARDS.some((s) => nameId(s.name) === nameId(typed));
+  const customAdded = !!onAddCustom && canCreate && added.has(nameId(typed));
   const optionCount = shown.length + (canCreate ? 1 : 0);
   const activeIndex = Math.min(active, Math.max(0, optionCount - 1));
 
@@ -54,6 +60,12 @@ export default function StandardsPicker({
     });
   }
 
+  /** The "your own tune" row: add it by name (when that's offered), or open the full form. */
+  function createCustom() {
+    if (onAddCustom && !customAdded) onAddCustom(typed);
+    else onCreateCustom(typed);
+  }
+
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -65,7 +77,7 @@ export default function StandardsPicker({
       e.preventDefault();
       const target = shown[activeIndex];
       if (target) add([target]);
-      else if (canCreate) onCreateCustom(typed);
+      else if (canCreate) createCustom();
     } else if (e.key === "Escape") {
       e.preventDefault();
       onClose();
@@ -158,15 +170,34 @@ export default function StandardsPicker({
               aria-selected={activeIndex === shown.length}
               data-index={shown.length}
               onPointerMove={() => setActive(shown.length)}
-              onClick={() => onCreateCustom(typed)}
+              onClick={createCustom}
               className={`flex cursor-pointer items-center gap-4 rounded-md px-4 py-3 ${
                 activeIndex === shown.length ? "bg-surface-hover" : ""
               }`}
             >
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-accent text-accent-foreground">
-                <PlusIcon className="h-4 w-4" />
+                {customAdded ? <CheckIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
               </span>
-              <span className="min-w-0 flex-1 truncate">Create custom tune “{typed}”</span>
+              {onAddCustom ? (
+                <div className="min-w-0 flex-1">
+                  <div className="truncate">{customAdded ? `“${typed}”` : `Add “${typed}”`}</div>
+                  <div className={`truncate text-xs ${customAdded ? "text-accent" : "text-muted"}`}>{customAdded ? "Added as your own tune" : "Your own tune, name only"}</div>
+                </div>
+              ) : (
+                <span className="min-w-0 flex-1 truncate">Create custom tune “{typed}”</span>
+              )}
+              {onAddCustom && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateCustom(typed);
+                  }}
+                  className="shrink-0 rounded-md bg-foreground/[0.05] px-2.5 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  More details
+                </button>
+              )}
             </li>
           )}
           {results.length > shown.length && (
@@ -177,7 +208,10 @@ export default function StandardsPicker({
         </ul>
 
         <div className="flex items-center gap-3 border-t border-surface-hover px-5 py-3 text-sm sm:px-6">
-          <span className="text-muted">{tunes.length} in your list · Enter or click to add</span>
+          <span className="text-muted">
+            {tunes.length} in your list · <span className="[@media(pointer:coarse)]:hidden">Enter or click to add</span>
+            <span className="hidden [@media(pointer:coarse)]:inline">Tap a tune to add it</span>
+          </span>
         </div>
       </div>
     </div>

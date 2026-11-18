@@ -844,8 +844,9 @@ export default function NoteTrainer() {
       title="Note Trainer"
       presets={toolPresets("note-trainer", settings, updateSettings)}
       credit="Idea by Rob Moreno"
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
-        listenMode && (
+        listenMode && (history.length > 0 || weakEntries.length > 0) && (
           <>
             <CollapsiblePanel
               id="history"

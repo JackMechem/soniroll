@@ -18,6 +18,7 @@ import { CheckIcon, FlagIcon, ShareIcon, StopwatchIcon } from "@/components/tool
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { BackButton } from "@/components/library/shared";
+import { useEdgeFade } from "@/components/library/ui";
 import { useRouter } from "next/navigation";
 import { type PublicPracticeStats, todayKey } from "@/lib/practiceLog";
 
@@ -52,6 +53,8 @@ export default function PublicProfilePage({ username }: { username: string }) {
   const following = useQuery(api.follows.listFollowing, userId ? { userId } : "skip");
   const likedIds = useQuery(api.communityTunes.myLikes);
   const [tab, setTab] = useState<ProfileTab | null>(null);
+  // The tabs scroll sideways on a phone: fade the edge that has more.
+  const { attach: tabFadeRef, style: tabFadeStyle } = useEdgeFade<HTMLDivElement>();
   const [copied, setCopied] = useState(false);
 
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
@@ -151,7 +154,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
 
       {profile.practice && <PracticeCard stats={profile.practice} username={profile.username} />}
 
-      <div className="-mx-4 flex gap-5 overflow-x-auto border-b border-foreground/10 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="tablist">
+      <div ref={tabFadeRef} style={tabFadeStyle} className="-mx-4 flex gap-5 overflow-x-auto border-b border-foreground/10 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="tablist">
         {tabs.map((t) => (
           <button
             key={t.id}

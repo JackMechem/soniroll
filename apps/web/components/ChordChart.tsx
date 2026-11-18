@@ -512,7 +512,15 @@ function BarCell({
           {"" /* repeat2Bars */}
         </span>
       )}
-      {timeSignature && <TimeSignatureGlyph timeSignature={timeSignature} />}
+      {timeSignature && (
+        <TimeSignatureGlyph
+          timeSignature={timeSignature}
+          // A section badge, segno or coda sits in the top-left corner: drop the time signature
+          // below it rather than printing the two on top of each other.
+          belowMark={sectionContent != null || !!bar.section || !!bar.segno || !!bar.coda}
+          afterRepeat={!!bar.startRepeat}
+        />
+      )}
       {content ?? <BarContent bar={bar} />}
       {bar.directive && (
         <span className="absolute -bottom-5 right-0 whitespace-nowrap italic text-muted" style={{ fontSize: SMALL_LABEL_SIZE }}>
@@ -529,14 +537,20 @@ function BarCell({
     symbol rather than adding an extra column. */
 function TimeSignatureGlyph({
   timeSignature,
+  belowMark = false,
+  afterRepeat = false,
 }: {
   timeSignature: { top: number; bottom: number };
+  /** The bar has a mark in its top-left corner — sit lower, clear of it. */
+  belowMark?: boolean;
+  /** The bar opens a repeat — leave room for its dots. */
+  afterRepeat?: boolean;
 }) {
   return (
     <span
       aria-hidden
       className={`flex shrink-0 flex-col items-center justify-center leading-[0.85] text-foreground ${chordFont.className}`}
-      style={{ fontSize: TIME_SIG_SIZE }}
+      style={{ fontSize: TIME_SIG_SIZE, paddingTop: belowMark ? "0.75em" : undefined, marginLeft: afterRepeat ? "0.6rem" : undefined }}
     >
       <span>{timeSignature.top}</span>
       <span>{timeSignature.bottom}</span>
@@ -589,12 +603,11 @@ export function BarContent({ bar }: { bar: Bar }) {
 }
 
 /** Keeps a bar's chords on one line no matter how many there are: never wraps, and instead
-    horizontally compresses the whole row (`transform: scaleX()`, which only affects width — the
-    text's height, and everything else about it, stays exactly as sized) by just enough that it
-    stops overflowing the bar. Renders at natural size (no transform) until it actually doesn't
-    fit. Orthogonal to `PageFit` above (which scales the *whole chart*) — this handles the
-    narrower case of one bar with more chords crammed into it than its own fixed `COL_WIDTH` can
-    comfortably hold at natural size. */
+    shrinks the whole row evenly (`transform: scale()`) by just enough that it fits inside the bar
+    with a little room either side, so a bar holding two or more chords prints them smaller rather
+    than running them into the barlines. Renders at natural size (no transform) until it actually
+    doesn't fit. (It used to squeeze only the width, `scaleX()`, which crushed the letters and still
+    left them touching the lines.) Orthogonal to `PageFit` above (which scales the *whole chart*). */
 function FitChordRow({ children }: { children: React.ReactNode }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -607,7 +620,8 @@ function FitChordRow({ children }: { children: React.ReactNode }) {
     const recompute = () => {
       // scrollWidth/clientWidth reflect layout size, not any transform already applied, so this
       // stays accurate (and doesn't feed back on itself) however much the row is currently scaled.
-      const available = wrap.clientWidth;
+      const style = getComputedStyle(wrap);
+      const available = wrap.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
       const natural = content.scrollWidth;
       setScale(available > 0 && natural > 0 ? Math.min(1, available / natural) : 1);
     };
@@ -619,11 +633,11 @@ function FitChordRow({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={wrapRef} className="flex w-full justify-center overflow-hidden">
+    <div ref={wrapRef} className="flex w-full min-w-0 justify-center overflow-hidden px-1.5">
       <div
         ref={contentRef}
-        className="flex items-center gap-x-2 whitespace-nowrap"
-        style={scale < 1 ? { transform: `scaleX(${scale})`, transformOrigin: "center" } : undefined}
+        className="flex shrink-0 items-center gap-x-2 whitespace-nowrap"
+        style={scale < 1 ? { transform: `scale(${scale})`, transformOrigin: "center" } : undefined}
       >
         {children}
       </div>

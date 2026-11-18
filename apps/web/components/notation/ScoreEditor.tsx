@@ -115,6 +115,7 @@ export default function ScoreEditor({
   sound = "piano",
   staffControls = false,
   autoFocus = false,
+  underAppBar = false,
 }: {
   initial: Transcription;
   onChange: (t: Transcription) => void;
@@ -122,9 +123,12 @@ export default function ScoreEditor({
   header?: (t: Transcription, setMeta: (patch: Partial<Transcription>) => void) => React.ReactNode;
   /** What Play sounds like. */
   sound?: "piano" | "upright-bass";
-  /** Show clef, key, time signature and tempo. */
+  /** Show clef, key, time signature and tempo. (On phones they fold into one summary row.) */
   staffControls?: boolean;
   autoFocus?: boolean;
+  /** On a page under the app's phone top bar (not in a dialog): the palette, which stays stuck
+      at the top while the score scrolls, sits just below that bar instead of under it. */
+  underAppBar?: boolean;
 }) {
   const [t, setT] = useState<Transcription>(initial);
   const [cursor, setCursor] = useState<Cursor>({ measure: 0, note: initial.measures[0]?.notes.length ? initial.measures[0].notes.length - 1 : -1 });
@@ -132,6 +136,8 @@ export default function ScoreEditor({
   const [dotted, setDotted] = useState(false);
   // Phones: the less-used tools hide behind "More" so the palette stays two rows.
   const [moreTools, setMoreTools] = useState(false);
+  // Phones: clef, key, time and tempo fold into one summary row until opened.
+  const [staffOpen, setStaffOpen] = useState(false);
   const [triplet, setTriplet] = useState(false);
   const [past, setPast] = useState<Transcription[]>([]);
   const [future, setFuture] = useState<Transcription[]>([]);
@@ -155,6 +161,8 @@ export default function ScoreEditor({
   const chordBlurredAt = useRef(0);
   const justClosedChord = () => Date.now() - chordBlurredAt.current < 400;
   const editorRef = useRef<HTMLDivElement>(null);
+  const paletteRef = useRef<HTMLDivElement>(null);
+  const scoreBoxRef = useRef<HTMLDivElement>(null);
   const playTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Every change goes to the caller (who saves it).
@@ -175,6 +183,15 @@ export default function ScoreEditor({
   }, [autoFocus]);
   const staff = staffOf(t);
   const alters = keyAlters(t.key);
+
+  // After each entry (or a move of the cursor), bring the cursor's line of music into view if it
+  // has gone off screen or under the stuck palette, so you never write without seeing the notes.
+  // Not on opening.
+  const [openedCursor] = useState(cursor);
+  useEffect(() => {
+    if (cursor === openedCursor) return;
+    revealCaret(scoreBoxRef.current, paletteRef.current);
+  }, [cursor, t.measures, openedCursor]);
 
   /** Applies an edit with undo history. */
   const commit = useCallback((next: Transcription, nextCursor?: Cursor) => {
@@ -538,12 +555,32 @@ export default function ScoreEditor({
     commit(next, { measure: 0, note: -1 });
   };
 
+  const staffSummary = [
+    CLEF_NAMES[t.clef ?? "bass8"].replace(/ \(.*\)$/, ""),
+    `${(KEY_NAMES[t.key ?? 0]?.major ?? "C").replace("b", "♭").replace("#", "♯")} major`,
+    `${t.timeSignature.top}/${t.timeSignature.bottom}`,
+    `${t.tempo ?? 120} BPM`,
+  ].join(" · ");
+
   return (
     <div className="flex w-full flex-col gap-4 text-left">
       {header?.(t, setMeta)}
 
       {staffControls && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => setStaffOpen((o) => !o)}
+          aria-expanded={staffOpen}
+          aria-label={`Clef, key, time and tempo: ${staffSummary}`}
+          className="-mb-1 flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-left text-sm transition-colors hover:bg-surface-hover sm:hidden"
+        >
+          <span className="min-w-0 flex-1 truncate font-medium">{staffSummary}</span>
+          <span className="shrink-0 text-xs text-muted">{staffOpen ? "Done" : "Change"}</span>
+          <ChevronRightIcon className={`h-3.5 w-3.5 shrink-0 text-muted ${staffOpen ? "-rotate-90" : "rotate-90"}`} />
+        </button>
+      )}
+      {staffControls && (
+        <div className={`${staffOpen ? "grid" : "hidden"} grid-cols-2 gap-2 sm:grid sm:grid-cols-4`}>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted">Clef</span>
             <Select<Clef> value={t.clef ?? "bass8"} options={(Object.keys(CLEF_NAMES) as Clef[]).map((c) => ({ value: c, label: CLEF_NAMES[c] }))} onChange={(clef) => commit({ ...t, clef })} />
@@ -574,7 +611,10 @@ export default function ScoreEditor({
 
       <div ref={editorRef} tabIndex={0} onKeyDown={onKeyDown} className="flex flex-col gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
         {/* Palette */}
-        <div className="sticky top-2 z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5">
+        <div
+          ref={paletteRef}
+          className={`sticky z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5 ${underAppBar ? "top-[calc(env(safe-area-inset-top)+4rem)] lg:top-2" : "top-2"}`}
+        >
           {/* On phones the less-used tools (tie, ghost, chord, accidentals, octaves, redo) hide
               behind "More", and Undo and More move up beside Play (CSS order), so the palette (which
               stays stuck at the top) is two rows plus the note names and doesn't cover half the
@@ -682,7 +722,7 @@ export default function ScoreEditor({
         </div>
 
         {/* Score */}
-        <div className="rounded-lg bg-surface p-3 sm:p-5" onMouseDown={() => editorRef.current?.focus({ preventScroll: true })}>
+        <div ref={scoreBoxRef} className="rounded-lg bg-surface p-3 sm:p-5" onMouseDown={() => editorRef.current?.focus({ preventScroll: true })}>
           <Score
             handleRef={scoreRef}
             onChordClick={(measure, beat) => openChord(measure, beat)}
@@ -784,6 +824,26 @@ export default function ScoreEditor({
 
 const KEY_HELP =
   "Select mode (Esc): clicks only select — a note, or a whole bar (click beside its notes; Shift+click another bar for a range); right-click bars to copy, paste or clear their chords (Ctrl+C / Ctrl+V). Write mode (W): clicking the staff adds notes. Keys: A–G add a note (nearest the last one) · 3 4 5 6 7 = 16th, 8th, quarter, half, whole · . dot · T triplet · 0 or R rest · ↑ ↓ semitone, Shift+↑ ↓ octave · # sharp, - flat, N natural · + tie · X ghost note · ← → move · Backspace turns a note into a rest · Space play · Ctrl+Z undo. Chords: select a note, then + Chord (Ctrl+K), type it, Enter — Space/Tab goes on to the next note's, an empty one removes it, click a chord to edit it. In write mode, click the staff to add a note there, or above/below an existing note to change its pitch (the preview shows which); click a note's head (or arrow to it) to select it — typing then overwrites it and moves on, keeping the rhythm — then the note-value, dot and triplet buttons change that note; Esc goes back to entering. New notes go after the cursor.";
+
+/** Scrolls the line of music with the cursor in it (the row holding the caret) into view inside
+    whatever scrolls the editor (the page, or a dialog), clear of the stuck palette above it, but
+    only when it's out of view. */
+function revealCaret(scoreBox: HTMLElement | null, palette: HTMLElement | null) {
+  const row = scoreBox?.querySelector(".notation-caret")?.closest("[data-row]");
+  if (!(row instanceof HTMLElement)) return;
+  let scroller: HTMLElement | null = row.parentElement;
+  while (scroller && !(/(auto|scroll)/.test(getComputedStyle(scroller).overflowY) && scroller.scrollHeight > scroller.clientHeight)) scroller = scroller.parentElement;
+  const box = scroller ? scroller.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+  const top = Math.max(box.top, palette ? palette.getBoundingClientRect().bottom : box.top) + 8;
+  const bottom = Math.min(box.bottom, window.innerHeight) - 16;
+  const r = row.getBoundingClientRect();
+  let delta = 0;
+  if (r.top < top) delta = r.top - top;
+  else if (r.bottom > bottom) delta = Math.min(r.bottom - bottom, r.top - top);
+  if (Math.abs(delta) < 1) return;
+  const behavior: ScrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  (scroller ?? document.scrollingElement)?.scrollBy({ top: delta, behavior });
+}
 
 /** The beat (in quarters from the bar line) the note at `c` starts on. */
 function startBeat(t: Transcription, c: Cursor): number {

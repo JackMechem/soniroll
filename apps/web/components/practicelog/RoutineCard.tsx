@@ -159,7 +159,7 @@ export default function RoutineCard({
             </span>
             {skipped && <span className="font-semibold text-foreground">· Skipped</span>}
             {!skipped && routineStatus(item, date, today) === "missed" && <span className="text-muted">· Missed</span>}
-            {routineStatus(item, date, today) === "partial" && <span className="font-semibold text-amber-600 dark:text-amber-400">· Partly done</span>}
+            {routineStatus(item, date, today) === "partial" && <span className="font-semibold text-warning">· Partly done</span>}
           </div>
         </div>
         <span

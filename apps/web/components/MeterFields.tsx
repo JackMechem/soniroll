@@ -409,7 +409,8 @@ const TEMPO_NOTE_OPTIONS = [
   })),
 ];
 
-/** The "quarter note = 140"-style picker meant for `TempoHero`'s own `aboveNumber` slot — lets the
+/** The note value the tempo counts ("Quarter", "Eighth" …), for `TempoHero`'s `tempoNote` slot,
+    where it reads with the number as one unit: "100 / ♩ Quarter BPM · 4/4". Lets the
     displayed tempo refer to a different note value than the meter's own beat unit. `null` means
     "match the beat unit" (the `TEMPO_NOTE_MATCH` sentinel's own "Beat unit" option); any other
     value is one of `NOTE_VALUES`. */
@@ -421,14 +422,12 @@ export function TempoNoteValuePicker({
   onChange: (value: number | null) => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <Select
-        value={value ?? TEMPO_NOTE_MATCH}
-        onChange={(v) => onChange(v === TEMPO_NOTE_MATCH ? null : v)}
-        options={TEMPO_NOTE_OPTIONS}
-      />
-      <span className="text-lg text-muted">=</span>
-    </div>
+    <Select
+      value={value ?? TEMPO_NOTE_MATCH}
+      onChange={(v) => onChange(v === TEMPO_NOTE_MATCH ? null : v)}
+      options={TEMPO_NOTE_OPTIONS}
+      className="text-sm"
+    />
   );
 }
 
@@ -463,7 +462,7 @@ function JumpButton({ amount, onClick }: { amount: number; onClick: () => void }
       type="button"
       onClick={onClick}
       aria-label={`${amount > 0 ? "Increase" : "Decrease"} tempo by ${Math.abs(amount)}`}
-      className="flex h-10 w-11 items-center justify-center rounded-full bg-foreground/[0.05] text-sm font-medium tabular-nums text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+      className="flex h-10 w-11 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] text-sm font-medium tabular-nums text-muted transition-colors hover:bg-surface-hover hover:text-foreground @max-[22rem]:w-10"
     >
       {text}
     </button>
@@ -478,7 +477,7 @@ export function TempoHero({
   onTap,
   locked = false,
   precise,
-  aboveNumber,
+  tempoNote,
 }: {
   bpm: number;
   setBpm: (bpm: number) => void;
@@ -492,21 +491,16 @@ export function TempoHero({
       here — e.g. mid-run, between modulations. Only used while `locked`; a nonzero tenths digit
       is shown right after the whole number, in smaller, dimmer text. */
   precise?: number;
-  /** Rendered directly above the big number itself (e.g. Metronome's "tempo note value" picker)
-      — optional, so every other caller is unaffected. */
-  aboveNumber?: React.ReactNode;
+  /** The note value the tempo counts (`TempoNoteValuePicker`), shown in the line under the big
+      number, before "BPM", so the two read as one: "100 / ♩ Quarter BPM · 4/4". */
+  tempoNote?: React.ReactNode;
 }) {
   const { whole, tenths } = splitTenths(precise ?? bpm);
   const reward = useReward();
   const [taps, setTaps] = useState(0);
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      {/* A sibling row above the −/number/+ row, not nested inside it — so the steppers below
-          stay centered against *just* the number (their own row's only other content), never
-          shifted by however tall this happens to be. Both rows share the same horizontal center
-          either way (this whole column is itself `items-center`), so it still reads as "on top
-          of the big number". */}
-      {aboveNumber}
+      <div className="flex flex-col items-center">
       <div className="flex items-center gap-4">
         {!locked && (
           <StepButton label="Decrease tempo" onClick={() => setBpm(bpm - 1)}>
@@ -531,16 +525,22 @@ export function TempoHero({
               className="w-full rounded-md bg-transparent text-center text-6xl font-bold tracking-tight tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent/40 sm:text-7xl"
             />
           )}
-          <span className="flex items-center gap-1 text-sm text-muted">
-            {reward && <Sparkle show={!locked && bpm % 10 === 0} at={bpm} color={reward.color} />}
-            BPM · {beatsPerBar}/{beatUnit}
-          </span>
         </div>
         {!locked && (
           <StepButton label="Increase tempo" onClick={() => setBpm(bpm + 1)}>
             +
           </StepButton>
         )}
+      </div>
+      {/* Its own row under the −/number/+ one (not inside the number's column), so a note-value
+          picker can be wider than the number without crowding the steppers. */}
+      <span className={`flex items-center gap-1.5 text-sm text-muted ${tempoNote ? "mt-1" : ""}`}>
+        {reward && <Sparkle show={!locked && bpm % 10 === 0} at={bpm} color={reward.color} />}
+        {tempoNote}
+        <span>
+          BPM · {beatsPerBar}/{beatUnit}
+        </span>
+      </span>
       </div>
 
       {!locked && (
@@ -561,8 +561,10 @@ export function TempoHero({
             }
             className={`slider h-6 w-full cursor-pointer ${reward ? "slider-reward" : ""}`}
           />
-          {/* Bigger jumps either side of Tap tempo: −10, −5 … +5, +10. */}
-          <div className="flex items-center justify-center gap-1.5">
+          {/* Bigger jumps either side of Tap tempo: −10, −5 … +5, +10. In a narrow column (Rhythm
+              Section's side panel) Tap tempo shortens to "Tap" so all five fit on one line. */}
+          <div className="@container">
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
             {[-10, -5].map((n) => (
               <JumpButton key={n} amount={n} onClick={() => setBpm(Math.max(MIN_BPM, bpm + n))} />
             ))}
@@ -573,16 +575,20 @@ export function TempoHero({
                 setTaps((n) => n + 1);
               }}
               title="Tap along a few times to set the tempo"
-              className="relative mx-1 inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+              aria-label="Tap tempo"
+              className="relative mx-1 inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover @max-[22rem]:mx-0 @max-[22rem]:px-3"
             >
-              <MetronomeIcon className="h-4 w-4 text-muted" />
-              Tap tempo
+              <MetronomeIcon className="h-4 w-4 text-muted @max-[22rem]:hidden" />
+              <span>
+                Tap<span className="@max-[22rem]:hidden"> tempo</span>
+              </span>
               {/* A ring flashes out from the button on every tap. */}
               {taps > 0 && <span key={taps} aria-hidden className="tap-ring pointer-events-none absolute inset-0 rounded-full opacity-0 ring-2 ring-accent" />}
             </button>
             {[5, 10].map((n) => (
               <JumpButton key={n} amount={n} onClick={() => setBpm(Math.min(MAX_BPM, bpm + n))} />
             ))}
+          </div>
           </div>
         </div>
       )}

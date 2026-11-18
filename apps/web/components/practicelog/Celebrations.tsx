@@ -213,9 +213,9 @@ const BURST = Array.from({ length: 10 }, (_, i) => {
 });
 
 const TOAST_COLOR: Record<ToastKind, string> = {
-  routine: "#22c55e",
+  routine: "var(--success)",
   goal: "var(--accent)",
-  day: "#22c55e",
+  day: "var(--success)",
   streak: "#f97316",
   hours: "#a78bfa",
 };

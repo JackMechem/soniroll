@@ -171,7 +171,7 @@ export default function GoalDialog({ data, onSave, onClose }: { data: PracticeLo
               const hit = g > 0 && d.minutes >= g;
               return (
                 <div key={d.key} className="relative flex h-full flex-1 items-end" title={`${d.key}: ${formatMinutesShort(Math.round(d.minutes))}`}>
-                  <div className={`w-full rounded-sm ${hit ? "bg-emerald-500" : d.minutes > 0 ? "bg-accent/50" : "bg-foreground/10"}`} style={{ height: `${Math.max(d.minutes > 0 ? 6 : 3, (d.minutes / max) * 100)}%` }} />
+                  <div className={`w-full rounded-sm ${hit ? "bg-success" : d.minutes > 0 ? "bg-accent/50" : "bg-foreground/10"}`} style={{ height: `${Math.max(d.minutes > 0 ? 6 : 3, (d.minutes / max) * 100)}%` }} />
                   {g > 0 && <div className="absolute inset-x-0 border-t-2 border-foreground/40" style={{ bottom: `${(g / max) * 100}%` }} />}
                 </div>
               );

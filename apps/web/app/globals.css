@@ -12,6 +12,9 @@
   --accent-foreground: #ffffff;
   --overlay: rgba(30, 40, 51, 0.55);
   --danger: #c8475a;
+  /* Done / goal met, and partly done (the Shed Log's greens and ambers). */
+  --success: #16a34a;
+  --warning: #ca8a04;
 }
 
 .dark {
@@ -25,6 +28,8 @@
   --accent-foreground: #111821;
   --overlay: rgba(0, 0, 0, 0.65);
   --danger: #e8848f;
+  --success: #22c55e;
+  --warning: #eab308;
 }
 
 /* Settings → Classic look (lib/display.ts): the rounder look from before the 2026-11 refresh.
@@ -141,6 +146,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-overlay: var(--overlay);
   --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   /* Drives components/LoadingSpinner.tsx's dots — each one uses this same animation, staggered
@@ -472,16 +479,18 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
   box-shadow: 0 0 0 3px var(--surface), 0 0 0 7px color-mix(in srgb, var(--reward, var(--accent)) 20%, transparent);
 }
 
-/* Scrollbars (mouse and trackpad): an 8px rounded pill, a faint tint of the theme's text colour on a clear track, no arrow
-   buttons. Chrome and Safari use the `::-webkit-scrollbar` styles (setting the standard
-   `scrollbar-color` there would switch them off and bring Chrome's arrows back); Firefox gets the
-   standard properties. In the base layer so the `[scrollbar-width:none]` utilities that hide them
-   on chip rows still win. */
+/* Scrollbars (mouse and trackpad): thin, a faint tint of the theme's text colour on a clear
+   track, so the ones that sit side by side (sidebar, Shed Log, calendar, tool panels) stay quiet.
+   Browsers with the standard properties (Chrome, Edge, Firefox) use `scrollbar-width` and
+   `scrollbar-color` — in Chrome these switch the `::-webkit-scrollbar` styles off, so the
+   standard ones only go on where `scrollbar-color` is supported. Safari and the desktop app
+   (WebKit) keep the `::-webkit-scrollbar` pill. In the base layer so the `[scrollbar-width:none]`
+   utilities that hide them on chip rows still win. */
 @layer base {
-  /* Only with a mouse or trackpad: touch screens keep their own thin overlay scrollbars, which
-     take no room (styling ::-webkit-scrollbar on Android swaps them for classic ones that push
-     the page over and can draw a solid track). */
-  @media (hover: hover) and (pointer: fine) {
+  /* Not on touch screens: they keep their own thin overlay scrollbars, which take no room
+     (styling ::-webkit-scrollbar on Android swaps them for classic ones that push the page over
+     and can draw a solid track). */
+  @media not (pointer: coarse) {
     ::-webkit-scrollbar {
       width: 14px;
       height: 14px;
@@ -503,12 +512,23 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
     ::-webkit-scrollbar-thumb:hover {
       background-color: color-mix(in oklab, var(--foreground) 32%, transparent);
     }
-    @supports not selector(::-webkit-scrollbar) {
+    @supports (scrollbar-color: red blue) {
       * {
-        scrollbar-width: auto;
-        scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
       }
     }
+  }
+}
+
+/* A scroll area whose scrollbar only shows while the pointer is over it (the Shed Log's day
+   column, so the page doesn't show two scrollbars side by side). */
+@media not (pointer: coarse) {
+  .scrollbar-on-hover:not(:hover) {
+    scrollbar-color: transparent transparent;
+  }
+  .scrollbar-on-hover:not(:hover)::-webkit-scrollbar-thumb {
+    background-color: transparent;
   }
 }
 

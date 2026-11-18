@@ -65,7 +65,7 @@ export default function StreakBadge({ compact = false, onNavigate }: { compact?:
       {goal > 0 && (
         <svg viewBox="0 0 18 18" className="h-4 w-4 -rotate-90" aria-hidden>
           <circle cx="9" cy="9" r={R} fill="none" strokeWidth="2.5" className="stroke-foreground/15" />
-          <circle cx="9" cy="9" r={R} fill="none" strokeWidth="2.5" strokeLinecap="round" stroke={frac >= 1 ? "#22c55e" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
+          <circle cx="9" cy="9" r={R} fill="none" strokeWidth="2.5" strokeLinecap="round" stroke={frac >= 1 ? "var(--success)" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
         </svg>
       )}
     </Link>

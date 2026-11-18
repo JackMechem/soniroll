@@ -710,7 +710,9 @@ export default function GuessTheProgression() {
     <ToolLayout
       title="Guess the Progression"
       presets={toolPresets("guess-the-progression", settings, updateSettings)}
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
+        (history.length > 0 || weakEntries.length > 0) && (
         <>
           <CollapsiblePanel
             id="history"
@@ -812,9 +814,9 @@ export default function GuessTheProgression() {
             )}
           </CollapsiblePanel>
         </>
+        )
       }
       optionsMode={
-        <div className="flex flex-wrap justify-center gap-2">
         <Segmented
           onPage
           label="Mode"
@@ -826,18 +828,6 @@ export default function GuessTheProgression() {
             { value: "learn", label: "Learn" },
           ]}
         />
-        <Segmented
-          onPage
-          label="Answer with"
-          value={answerMode}
-          onChange={(v) => updateSettings({ answerMode: v })}
-          disabled={running}
-          options={[
-            { value: "numerals", label: "Roman numerals" },
-            { value: "chords", label: "Chord names" },
-          ]}
-        />
-        </div>
       }
       // Hidden while a session runs, so the round has the screen to itself.
       options={
@@ -897,8 +887,30 @@ export default function GuessTheProgression() {
             id="progression-answer"
             title="Answer"
             icon={SlidersIcon}
-            summary={typeQualities ? "With qualities" : answerMode === "numerals" ? "Numerals only" : "Roots only"}
+            summary={
+              answerMode === "numerals"
+                ? typeQualities
+                  ? "Numerals + qualities"
+                  : "Numerals only"
+                : typeQualities
+                  ? "Chord symbols"
+                  : "Chord roots only"
+            }
           >
+            <div className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-muted">Answer with</span>
+              <Segmented
+                label="Answer with"
+                value={answerMode}
+                onChange={(v) => updateSettings({ answerMode: v })}
+                disabled={running}
+                options={[
+                  { value: "numerals", label: "Roman numerals" },
+                  { value: "chords", label: "Chord names" },
+                ]}
+              />
+            </div>
+            <Hint>Type the progression as Roman numerals (ii V I), or as chord names in the key that was played (Dm G C).</Hint>
             <SwitchRow
               label="Type chord qualities"
               checked={typeQualities}

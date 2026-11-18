@@ -231,7 +231,7 @@ export default function Metronome() {
           beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
           beatUnit={activeSection?.beatUnit ?? beatUnit}
           onTap={tap}
-          aboveNumber={<TempoNoteValuePicker value={tempoNoteValue} onChange={setTempoNoteValue} />}
+          tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={setTempoNoteValue} />}
         />
         <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
         {useStructure && activeSection && (

@@ -5,6 +5,7 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Hint from "@/components/Hint";
 import PromptDialog from "@/components/PromptDialog";
+import { SettingChip } from "@/components/SettingsBar";
 import { DownloadIcon, ListIcon, PencilIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt } from "@/lib/recordings";
 import { type TunerTake, deleteTake, downloadTake, renameTake } from "@/lib/tunerTakes";
@@ -38,16 +39,8 @@ export default function TakesChip({
   const fileInput = useRef<HTMLInputElement>(null);
   const count = takes?.length ?? 0;
 
-  return (
+  const body = (
     <>
-      <CollapsiblePanel
-        id="tuner-takes"
-        title="Takes"
-        icon={ListIcon}
-        summary={count ? `${count} take${count === 1 ? "" : "s"}` : "None yet"}
-        open={popover}
-        onOpenChange={setPopover}
-      >
         <Hint>
           Takes are kept in this browser, on this device only. They aren&apos;t uploaded or saved to your account, and clearing the browser&apos;s data
           deletes them. Play one to watch the needle follow it, with a graph of how sharp or flat each note was.
@@ -121,7 +114,36 @@ export default function TakesChip({
             })}
           </ul>
         )}
-      </CollapsiblePanel>
+    </>
+  );
+
+  return (
+    <>
+      {count === 0 ? (
+        // No takes yet: a small, quiet link instead of a chip leading the page (it still opens a
+        // file from here).
+        <SettingChip
+          icon={ListIcon}
+          label="Takes"
+          open={popover}
+          onOpenChange={setPopover}
+          trigger={{
+            className: "flex h-8 items-center gap-1.5 rounded-full px-3 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground",
+            content: (
+              <>
+                <ListIcon className="h-4 w-4" />
+                Takes
+              </>
+            ),
+          }}
+        >
+          {body}
+        </SettingChip>
+      ) : (
+        <CollapsiblePanel id="tuner-takes" title="Takes" icon={ListIcon} summary={`${count} take${count === 1 ? "" : "s"}`} open={popover} onOpenChange={setPopover}>
+          {body}
+        </CollapsiblePanel>
+      )}
 
       {renaming && (
         <PromptDialog

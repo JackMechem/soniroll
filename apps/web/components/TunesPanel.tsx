@@ -10,6 +10,7 @@ import TuneEditorModal from "@/components/TuneEditorModal";
 import { ChecklistIcon, ListIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
+import { nameId } from "@/lib/standards";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
 
 function blankTune(name = ""): Tune {
@@ -262,7 +263,15 @@ export default function TunesPanel({
       {pickerOpen && (
         <StandardsPicker
           onClose={() => setPickerOpen(false)}
-          onCreateCustom={(name) => setEditing({ tune: blankTune(name), isNew: true })}
+          // Your own tune: one tap adds it by name; "More details" opens the form (for the one just
+          // added, if it was).
+          onAddCustom={(name) =>
+            setTunes((prev) => (prev.some((t) => nameId(t.name) === nameId(name)) ? prev : [...prev, blankTune(name)]))
+          }
+          onCreateCustom={(name) => {
+            const existing = tunes.find((t) => nameId(t.name) === nameId(name));
+            setEditing(existing ? { tune: existing, isNew: false } : { tune: blankTune(name), isNew: true });
+          }}
         />
       )}
       {confirmingClear && (

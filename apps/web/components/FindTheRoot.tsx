@@ -599,7 +599,9 @@ export default function FindTheRoot() {
           ]}
         />
       }
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
+        (history.length > 0 || weakEntries.length > 0) && (
         <>
           <CollapsiblePanel
             id="history"
@@ -700,6 +702,7 @@ export default function FindTheRoot() {
             )}
           </CollapsiblePanel>
         </>
+        )
       }
       options={
         running ? null : (

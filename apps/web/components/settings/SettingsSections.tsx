@@ -94,6 +94,8 @@ export function GeneralSettings() {
       <SettingsCard title="Times">
         <div className="flex flex-col gap-2">
           <FieldLabel>Clock</FieldLabel>
+          {/* Two short choices: don't stretch them across the whole card. */}
+          <div className="w-full max-w-xs">
           <Segmented
             label="Clock"
             value={site.clock}
@@ -103,6 +105,7 @@ export function GeneralSettings() {
               { value: "24", label: "15:00" },
             ]}
           />
+          </div>
         </div>
       </SettingsCard>
       <SettingsCard title="Features" description="Turn off the parts of soniroll you don't use. Nothing is deleted, and you can turn them back on any time.">

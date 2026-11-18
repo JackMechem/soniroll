@@ -244,7 +244,7 @@ export const MORE_PRESETS: ThemePreset[] = [
     label: "One Dark",
     colors: {
       background: "#282c34",
-      surface: "#2c313a",
+      surface: "#2e333c",
       "surface-hover": "#3a3f4b",
       foreground: "#abb2bf",
       muted: "#5c6370",
@@ -259,7 +259,7 @@ export const MORE_PRESETS: ThemePreset[] = [
     id: "one-light",
     label: "One Light",
     colors: {
-      background: "#fafafa",
+      background: "#f3f3f3",
       surface: "#ffffff",
       "surface-hover": "#eaeaeb",
       foreground: "#383a42",
@@ -308,8 +308,8 @@ export const MORE_PRESETS: ThemePreset[] = [
     label: "Catppuccin Latte",
     colors: {
       background: "#eff1f5",
-      surface: "#e6e9ef",
-      "surface-hover": "#dce0e8",
+      surface: "#e3e6eb",
+      "surface-hover": "#d5d9e1",
       foreground: "#4c4f69",
       muted: "#6c6f85",
       accent: "#1e66f5",
@@ -324,8 +324,8 @@ export const MORE_PRESETS: ThemePreset[] = [
     label: "Ayu Dark",
     colors: {
       background: "#0a0e14",
-      surface: "#131721",
-      "surface-hover": "#1b212c",
+      surface: "#151923",
+      "surface-hover": "#1e242f",
       foreground: "#b3b1ad",
       muted: "#626a73",
       accent: "#ffb454",
@@ -388,8 +388,8 @@ export const MORE_PRESETS: ThemePreset[] = [
     label: "Rosé Pine",
     colors: {
       background: "#191724",
-      surface: "#1f1d2e",
-      "surface-hover": "#26233a",
+      surface: "#222031",
+      "surface-hover": "#2b293f",
       foreground: "#e0def4",
       muted: "#6e6a86",
       accent: "#c4a7e7",
@@ -403,9 +403,9 @@ export const MORE_PRESETS: ThemePreset[] = [
     id: "rose-pine-dawn",
     label: "Rosé Pine Dawn",
     colors: {
-      background: "#faf4ed",
+      background: "#f4eee7",
       surface: "#fffaf3",
-      "surface-hover": "#f2e9e1",
+      "surface-hover": "#ede4dd",
       foreground: "#575279",
       muted: "#9893a5",
       accent: "#907aa9",
@@ -436,8 +436,8 @@ export const MORE_PRESETS: ThemePreset[] = [
     label: "Synthwave '84",
     colors: {
       background: "#262335",
-      surface: "#2a2139",
-      "surface-hover": "#34294f",
+      surface: "#312940",
+      "surface-hover": "#3a2f54",
       foreground: "#f4eee4",
       muted: "#848bbd",
       accent: "#ff7edb",

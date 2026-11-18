@@ -119,7 +119,7 @@ export default function Momentum({
           <span className="flex items-center gap-1">
             {weekChange !== null && (
               <span
-                className={`whitespace-nowrap text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-emerald-500" : "text-muted"}`}
+                className={`whitespace-nowrap text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-success" : "text-muted"}`}
                 title="Compared with the week before"
               >
                 {weekChange >= 0 ? "▲" : "▼"} {Math.abs(weekChange)}%
@@ -228,7 +228,7 @@ function Value({ value, unit }: { value: string | number; unit?: React.ReactNode
 }
 
 function Note({ children, warn = false, good = false }: { children: React.ReactNode; warn?: boolean; good?: boolean }) {
-  return <p className={`text-xs ${warn ? "text-orange-500" : good ? "text-emerald-500" : "text-muted"}`}>{children}</p>;
+  return <p className={`text-xs ${warn ? "text-warning" : good ? "text-success" : "text-muted"}`}>{children}</p>;
 }
 
 /** A thin progress bar; green once it's full (`done`). */
@@ -237,7 +237,7 @@ function Bar({ frac, done = false }: { frac: number; done?: boolean }) {
     <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
       <div
         className="h-full rounded-full transition-[width] duration-700"
-        style={{ width: `${frac * 100}%`, background: done ? "#22c55e" : "var(--accent)" }}
+        style={{ width: `${frac * 100}%`, background: done ? "var(--success)" : "var(--accent)" }}
       />
     </div>
   );
@@ -302,7 +302,7 @@ function WeekBars({ week, today }: { week: { key: string; minutes: number; goal:
               {!same && d.goal > 0 && <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground/40" style={{ bottom: `${(d.goal / max) * 100}%` }} />}
               {d.minutes > 0 && (
                 <div
-                  className={`absolute inset-x-0 bottom-0 rounded-sm transition-[height] duration-700 ${hit ? "bg-emerald-500" : "bg-accent"}`}
+                  className={`absolute inset-x-0 bottom-0 rounded-sm transition-[height] duration-700 ${hit ? "bg-success" : "bg-accent"}`}
                   style={{ height: `${Math.max(10, (d.minutes / max) * 100)}%` }}
                 />
               )}

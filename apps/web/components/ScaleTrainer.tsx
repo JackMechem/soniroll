@@ -937,8 +937,9 @@ export default function ScaleTrainer() {
     <ToolLayout
       title="Scale Trainer"
       presets={toolPresets("scale-trainer", settings, updateSettings)}
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
-        listenMode && (
+        listenMode && (history.length > 0 || weakEntries.length > 0) && (
           <>
             <CollapsiblePanel
               id="history"
