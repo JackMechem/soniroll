@@ -1,13 +1,13 @@
 # Versioning and the changelog
 
-soniroll is **v0.10.7 beta**. It uses semantic versioning (MAJOR.MINOR.PATCH); 1.0 will be the
+soniroll is **v0.10.8 beta**. It uses semantic versioning (MAJOR.MINOR.PATCH); 1.0 will be the
 first non-beta release.
 
 ## Where the version lives
 
 - **One source:** `"version"` in `apps/web/package.json`.
 - `apps/web/next.config.ts` passes it in as `NEXT_PUBLIC_APP_VERSION`; `apps/web/lib/version.ts`
-  exposes `APP_VERSION`, `CHANNEL` ("beta" until 1.0) and `VERSION_LABEL` ("v0.10.7 beta").
+  exposes `APP_VERSION`, `CHANNEL` ("beta" until 1.0) and `VERSION_LABEL` ("v0.10.8 beta").
 - It shows under the sidebar logo (a link to `/changelog`, with a "New" pill until the visitor
   opens the latest version) and in the ⋮ menus as "What's new · vX".
 - The root `README.md` has a "Current version" line that must match.
