@@ -54,6 +54,7 @@ import { EMPTY_STRUCTURE, type Structure, cycleSectionAccent, cycleSectionSubAcc
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
 import { SIGN_IN_PATH } from "@/lib/landing";
+import { useDeviceUrls } from "@/lib/deviceFiles";
 
 // The same key and shape as the app's Recorder, so settings follow you between the two. Everything
 // from `bpm` on is the Metronome tool's own settings shape.
@@ -95,7 +96,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   const [settings, updateSettings] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const byId = useTuneIndex();
   const tune = tuneId ? byId.get(tuneId)?.tune : undefined;
-  const recordings = useQuery(recordingsApi.list, isAuthenticated ? {} : "skip");
+  const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : "skip"));
   const song = useTuneSong(tuneId);
   const songOn = !!song?.url && settings.playSong;
   const [songStart, setSongStart] = useState(0);

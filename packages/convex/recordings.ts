@@ -1,14 +1,16 @@
 import { v } from "convex/values";
 import { assertUploadsOpen } from "./lib/site";
-import { assertFits, assertHasRoom } from "./lib/storage";
+import { MAX_FILE_BYTES, assertFits, assertHasRoom } from "./lib/storage";
+import { cleanDevice } from "./files";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 
 /**
- * The Recorder tool's recordings — private to their owner. Uploading is the usual two steps
- * (`generateUploadUrl`, then POST the file there, then `create` with the returned `storageId`);
- * deleting a recording deletes its file too.
+ * The Recorder tool's recordings — private to their owner. Online (a storage plan): the usual two
+ * steps (`generateUploadUrl`, then POST the file there, then `create` with the returned
+ * `storageId`). On the device (free accounts): the web app keeps the audio and calls `create` with
+ * `device` and `size` instead (see `lib/storage.ts`). Deleting a recording deletes its file too.
  */
 
 const MAX_NAME = 120;
@@ -40,7 +42,9 @@ async function withUrl(ctx: QueryCtx, row: Doc<"recordings">) {
     routineId: row.routineId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    url: await ctx.storage.getUrl(row.storageId),
+    /** Null when it's only on a device (`device`). */
+    url: row.storageId ? await ctx.storage.getUrl(row.storageId) : null,
+    device: row.device ?? null,
   };
 }
 
@@ -57,7 +61,10 @@ export const generateUploadUrl = mutation({
 
 export const create = mutation({
   args: {
-    storageId: v.id("_storage"),
+    /** Online, or `device` + `size` for a take kept on this device. */
+    storageId: v.optional(v.id("_storage")),
+    device: v.optional(v.object({ key: v.string(), label: v.string() })),
+    size: v.optional(v.number()),
     name: v.string(),
     notes: v.optional(v.string()),
     durationSec: v.number(),
@@ -70,11 +77,19 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save recordings.");
-    await assertFits(ctx, userId, args.storageId);
+    let where: { storageId: Id<"_storage"> } | { device: { key: string; label: string }; size: number };
+    if (args.storageId) {
+      await assertFits(ctx, userId, args.storageId);
+      where = { storageId: args.storageId };
+    } else if (args.device) {
+      const size = Math.max(0, Math.round(args.size ?? 0));
+      if (size > MAX_FILE_BYTES) throw new Error(`Recordings can be up to ${MAX_FILE_BYTES / (1024 * 1024)} MB.`);
+      where = { device: cleanDevice(args.device), size };
+    } else throw new Error("The recording didn't arrive — try again.");
     const now = Date.now();
     return await ctx.db.insert("recordings", {
       userId,
-      storageId: args.storageId,
+      ...where,
       name: args.name.trim().slice(0, MAX_NAME) || "Recording",
       notes: (args.notes ?? "").slice(0, MAX_NOTES),
       durationSec: Math.max(0, args.durationSec),
@@ -192,7 +207,7 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     const row = await ctx.db.get(id);
     if (!userId || !row || row.userId !== userId) return;
-    await ctx.storage.delete(row.storageId);
+    if (row.storageId) await ctx.storage.delete(row.storageId);
     await ctx.db.delete(id);
     // Its link (`files.shareItem`), if it had one.
     for (const share of await ctx.db

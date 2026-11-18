@@ -192,12 +192,14 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   the book its patterns were transcribed from.
 - **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — fine for a free site with credit,
   not for anything commercial. Every bundled sample/font is credited on `/credits`.
-- **Storage:** every account has 100 MB in total (`packages/convex/lib/storage.ts`; every upload
-  path must call `assertHasRoom` / `assertFits`). A new kind of stored file must also be added to
-  `storedItems` (so it counts and shows on `/files`) and to `ownedItem` in `files.ts` (rename,
-  delete, share by link). Paid plans for more storage are planned, not
-  built — and the Rhodes license has to be sorted out before soniroll charges for anything
-  (`docs/notes/files-and-tune-sharing.md`).
+- **Storage:** files, recordings and tune songs live online (`storageId`) or on the device that
+  saved them (`device`; the row stays in Convex). Free accounts save on the device and get 50 MB
+  online (sharing, Lessons, notes, profile); a storage plan (Polar, `billing.ts`) saves online. Only
+  online bytes count (`packages/convex/lib/storage.ts`; every upload path must call `assertHasRoom` /
+  `assertFits`). Wrap any new query of files/recordings/songs with `useDeviceUrls` so device files
+  play. A new kind of stored file must also be added to `storedItems` and `ownedItem` in `files.ts`.
+  Every tool and feature stays free; only storage is sold. The Rhodes license has to be sorted out
+  before soniroll charges anything. See `docs/notes/storage-plans.md`.
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
 - **Be honest about verification:** say what was checked and how, and what wasn't (especially
@@ -285,6 +287,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
+| Storage plans (Polar, `/plans`), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
 | Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |

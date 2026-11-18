@@ -23,6 +23,7 @@ import {
   FeedbackIcon,
   GearIcon,
   MegaphoneIcon,
+  CloudIcon,
   HeartIcon,
   HelpIcon,
   ShieldIcon,
@@ -780,6 +781,15 @@ export default function Sidebar() {
                       }}
                     />
                     <FlyoutItem
+                      icon={CloudIcon}
+                      label="Storage plans"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        router.push("/plans");
+                        close();
+                      }}
+                    />
+                    <FlyoutItem
                       icon={settingsIcon}
                       label={settingsLabel}
                       onSelect={() => {
@@ -910,6 +920,14 @@ export default function Sidebar() {
                     close();
                   }}
                 />
+                <FlyoutItem
+                  icon={CloudIcon}
+                  label="Storage plans"
+                  onSelect={() => {
+                    router.push("/plans");
+                    close();
+                  }}
+                />
                 {fabHidden && (
                   <FlyoutItem
                     icon={BugIcon}
@@ -1026,6 +1044,14 @@ export default function Sidebar() {
                         close();
                       }}
                     />
+                    <FlyoutItem
+                      icon={CloudIcon}
+                      label="Storage plans"
+                      onSelect={() => {
+                        router.push("/plans");
+                        close();
+                      }}
+                    />
                     {fabHidden && (
                       <FlyoutItem
                         icon={BugIcon}
@@ -1087,6 +1113,7 @@ const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: str
   { match: (p) => p === "/changelog", label: "What's new", href: "/changelog", icon: MegaphoneIcon },
   { match: (p) => p === "/feedback", label: "Feedback", href: "/feedback", icon: FeedbackIcon },
   { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
+  { match: (p) => p === "/plans", label: "Storage plans", href: "/plans", icon: CloudIcon },
   { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
   { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
   { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },

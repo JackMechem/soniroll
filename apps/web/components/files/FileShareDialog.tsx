@@ -7,6 +7,8 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { FileTypeIcon } from "@/components/files/FileParts";
 import { CheckIcon, CloseIcon, LinkIcon, ShareIcon } from "@/components/tools";
 import { type StoredEntry, errorText, fileKind, filesApi, formatBytes, sharedFileUrl } from "@/lib/files";
+import { useStorageMoves } from "@/lib/storageMove";
+import { useStoragePlan } from "@/lib/storagePlan";
 import { shareLink } from "@/lib/shareLink";
 
 /** What the person you send it to sees, by where the file came from. */
@@ -26,6 +28,11 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
   const shareId = useQuery(filesApi.itemShare, { kind: item.kind, id: item.id });
   const share = useMutation(filesApi.shareItem);
   const unshare = useMutation(filesApi.unshareItem);
+  const storage = useStoragePlan();
+  const { moveOnline } = useStorageMoves(storage?.userId);
+  // Kept on a device: a link can't reach it, so making one puts it online first.
+  const onDevice = !!item.device;
+  const elsewhere = onDevice && !item.url;
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +52,7 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
     setBusy(true);
     setError(null);
     try {
+      if (onDevice) await moveOnline(item);
       const id = await share({ kind: item.kind, id: item.id });
       await send(id);
     } catch (e) {
@@ -80,6 +88,15 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
           </div>
         </div>
         {NOTE[item.kind] && <p className="-mt-2 text-xs text-muted">{NOTE[item.kind]}</p>}
+        {shareId === null && onDevice && (
+          <p className="-mt-2 text-xs text-muted">
+            {elsewhere
+              ? `It's kept on ${item.device!.label}. Share it from there.`
+              : storage?.plan
+                ? "It's kept on this device. Making a link puts it online first."
+                : `It's kept on this device. Making a link puts it online first, using ${formatBytes(item.size)} of your ${formatBytes(storage?.quota ?? 0)} of online space for sharing.`}
+          </p>
+        )}
 
         {shareId === undefined ? (
           <LoadingSpinner />
@@ -112,7 +129,7 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
           <button
             type="button"
             onClick={() => void create()}
-            disabled={busy}
+            disabled={busy || elsewhere}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
           >
             {busy ? <LoadingSpinner size="sm" inline label="Making the link" /> : <LinkIcon className="h-4 w-4" />}

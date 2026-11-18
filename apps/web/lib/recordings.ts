@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import type { Tune } from "@/lib/types";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
+import { type DeviceRef, useDeviceUrl } from "@/lib/deviceFiles";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
 
 /** A saved recording, as `convex/recordings.ts`'s queries return it — shared with the app. */
@@ -23,7 +24,9 @@ export type Recording = {
   routineId?: string | null;
   createdAt: number;
   updatedAt: number;
+  /** Null when it's on another device (`device`), or before `useDeviceUrls` fills it in. */
   url: string | null;
+  device: DeviceRef | null;
 };
 
 /** How a take plays over its tune's song: each side's volume (0..1), and where in the song the
@@ -41,12 +44,14 @@ export type TuneSong = {
   durationSec: number;
   mimeType: string;
   url: string | null;
+  device: DeviceRef | null;
 };
 
+/** The tune's song, with a playable `url` when it's online or on this device. */
 export function useTuneSong(tuneId: string | null | undefined): TuneSong | null | undefined {
   const { isAuthenticated } = useConvexAuth();
   const active = isAuthenticated && !!tuneId;
-  const song = useQuery(tuneSongsApi.getForTune, active ? { tuneId } : "skip");
+  const song = useDeviceUrl(useQuery(tuneSongsApi.getForTune, active ? { tuneId } : "skip"));
   return active ? song : null;
 }
 

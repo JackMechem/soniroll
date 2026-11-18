@@ -44,6 +44,7 @@ import { recordingsApi } from "@/lib/recordings";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { useSiteSettings } from "@/lib/siteSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
+import { useDeviceUrls } from "@/lib/deviceFiles";
 
 export const VIEW_KEY = "jam-practice-practice-log-view";
 export const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448, dayHidden: false };
@@ -142,7 +143,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
     const grid = monthGrid(d.getFullYear(), d.getMonth());
     return { from: grid[0], to: grid[grid.length - 1] };
   }, [selected, view]);
-  const recordings = useQuery(recordingsApi.listForLogRange, isAuthenticated && range ? range : "skip");
+  const recordings = useDeviceUrls(useQuery(recordingsApi.listForLogRange, isAuthenticated && range ? range : "skip"));
   const clipsByDate = useMemo(() => {
     const m = new Map<string, number>();
     for (const r of recordings ?? []) if (r.logDate) m.set(r.logDate, (m.get(r.logDate) ?? 0) + 1);

@@ -12,6 +12,8 @@ import TakePlayer from "@/components/recordings/TakePlayer";
 import { CloseIcon, LinkIcon, MicIcon, NoteIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { errorText } from "@/lib/files";
+import { placeBlob, unplace, useStoragePlan } from "@/lib/storagePlan";
+import { useDeviceUrls } from "@/lib/deviceFiles";
 import {
   type Recording,
   type RecordingMix,
@@ -21,10 +23,10 @@ import {
   formatRecordedAt,
   recordingsApi,
   tuneSongsApi,
-  uploadRecordingBlob,
   useTuneIndex,
   useTuneSong,
 } from "@/lib/recordings";
+import { OnOtherDevice } from "@/components/files/StorageMove";
 
 /** A recording in a list: name (links to its page), date · length (· the tune, a link to it), a ⋮
     menu when `onMenu` is given (rename, share, delete — the Files page's menu), and a player — over
@@ -72,6 +74,7 @@ export function RecordingCard({
         ) : (
           <TakePlayer url={recording.url} durationSec={recording.durationSec} compact />
         ))}
+      {!recording.url && recording.device && <OnOtherDevice label={recording.device.label} what="recording" />}
     </div>
   );
 }
@@ -135,7 +138,7 @@ export function RecordingSelectDialog({
   onClose: () => void;
 }) {
   useEscape(onClose);
-  const recordings = useQuery(recordingsApi.list, {});
+  const recordings = useDeviceUrls(useQuery(recordingsApi.list, {}));
   const byId = useTuneIndex();
   const [query, setQuery] = useState("");
   const rows = useMemo(() => {
@@ -202,6 +205,7 @@ export function SaveTakeDialog({
   const byId = useTuneIndex();
   const generateUploadUrl = useMutation(recordingsApi.generateUploadUrl);
   const create = useMutation(recordingsApi.create);
+  const storage = useStoragePlan();
   const forTune = useQuery(recordingsApi.listForTune, initialTuneId ? { tuneId: initialTuneId } : "skip");
   // Released when the dialog is done (saved/discarded) — not in an effect cleanup, which React's
   // dev double-mount runs early and leaves the preview pointing at a revoked URL.
@@ -227,9 +231,10 @@ export function SaveTakeDialog({
     setSaving(true);
     setError(null);
     try {
-      const storageId = await uploadRecordingBlob(blob, generateUploadUrl);
+      // Online with a storage plan, on this device without one.
+      const placed = await placeBlob(blob, shownName, storage, generateUploadUrl);
       const id = await create({
-        storageId,
+        ...placed,
         name: shownName,
         notes,
         durationSec,
@@ -237,6 +242,9 @@ export function SaveTakeDialog({
         ...(tuneId ? { tuneId } : {}),
         ...(tuneId && (song?.url || initialMix) ? { mix } : {}),
         ...(log ? { logDate: log.date, ...(logRoutineId ? { routineId: logRoutineId } : {}) } : {}),
+      }).catch(async (e: unknown) => {
+        await unplace(placed);
+        throw e;
       });
       URL.revokeObjectURL(url);
       onSaved(id);
@@ -359,7 +367,7 @@ export function SaveTakeDialog({
     linked to this tune, metronome at its tempo) and "Link existing". */
 export function TuneRecordings({ tuneId }: { tuneId: string }) {
   const { isAuthenticated } = useConvexAuth();
-  const recordings = useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : "skip");
+  const recordings = useDeviceUrls(useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : "skip"));
   const song = useTuneSong(tuneId);
   const update = useMutation(recordingsApi.update);
   const [linking, setLinking] = useState(false);
@@ -418,6 +426,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
   const generateUploadUrl = useMutation(recordingsApi.generateUploadUrl);
   const setSong = useMutation(tuneSongsApi.set);
   const removeSong = useMutation(tuneSongsApi.remove);
+  const storage = useStoragePlan();
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -436,13 +445,17 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
     setUploading(true);
     try {
       const durationSec = await audioFileDuration(file);
-      const storageId = await uploadRecordingBlob(file, generateUploadUrl);
+      const name = file.name.replace(/\.[^.]+$/, "");
+      const placed = await placeBlob(file, name, storage, generateUploadUrl);
       await setSong({
         tuneId,
-        storageId,
-        name: file.name.replace(/\.[^.]+$/, ""),
+        ...placed,
+        name,
         mimeType: file.type || "audio/mpeg",
         durationSec,
+      }).catch(async (e: unknown) => {
+        await unplace(placed);
+        throw e;
       });
     } catch (e) {
       setError(errorText(e, "Couldn't upload the song."));

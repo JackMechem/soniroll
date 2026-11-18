@@ -698,6 +698,25 @@ export function GlobeIcon({ className }: { className?: string }) {
   );
 }
 
+/** Online storage (files kept in the cloud). */
+export function CloudIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.2 9.1 4.5 4.5 0 007 18z" />
+    </svg>
+  );
+}
+
+/** This device (files kept on the computer or phone). */
+export function DeviceIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="4" y="5" width="16" height="11" rx="1.5" />
+      <path d="M2 19h20" />
+    </svg>
+  );
+}
+
 export function DrumIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>

@@ -4,10 +4,14 @@ import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { feedbackRefs, issueRefs, validSignature } from "./lib/github";
 import { hub } from "./inbox";
+import { polar } from "./billing";
 
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
+
+// Polar's webhook (`/polar/events`): keeps storage plans' products and subscriptions up to date.
+polar.registerRoutes(http);
 
 const MAIN = "main";
 

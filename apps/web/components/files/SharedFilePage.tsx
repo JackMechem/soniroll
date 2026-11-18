@@ -9,6 +9,7 @@ import { FileTypeIcon, FileViewer, fileDetail } from "@/components/files/FilePar
 import { CheckIcon, DownloadIcon, FileIcon } from "@/components/tools";
 import { canPreview, downloadFile, errorText, fileKind, filesApi } from "@/lib/files";
 import { SIGN_IN_PATH } from "@/lib/landing";
+import { useDeviceCopy } from "@/lib/storageMove";
 
 /**
  * A file someone shared by link (`/file/<id>`) — open to anyone, signed in or not. The file shown in
@@ -75,7 +76,7 @@ export default function SharedFilePage({ id }: { id: string }) {
             <FileIcon className="h-4 w-4" /> This is your file — open Files
           </Link>
         ) : (
-          <SaveCopy shareId={shared.id} />
+          <SaveCopy shareId={shared.id} file={shared} />
         )}
       </div>
 
@@ -89,9 +90,11 @@ export default function SharedFilePage({ id }: { id: string }) {
 }
 
 /** "Save to my files": a copy in your account, or a sign-in link when signed out. */
-function SaveCopy({ shareId }: { shareId: string }) {
+function SaveCopy({ shareId, file }: { shareId: string; file: { url: string | null; name: string; mimeType: string } }) {
   const { isAuthenticated } = useConvexAuth();
   const copy = useAction(filesApi.copySharedFile);
+  // Free accounts keep it on this device; a plan copies it online.
+  const { toDevice, copyToDevice } = useDeviceCopy();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +122,8 @@ function SaveCopy({ shareId }: { shareId: string }) {
           setSaving(true);
           setError(null);
           try {
-            await copy({ shareId });
+            if (toDevice) await copyToDevice(file);
+            else await copy({ shareId });
             setSaved(true);
           } catch (e) {
             setError(errorText(e, "Couldn't save the file."));

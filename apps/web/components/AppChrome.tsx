@@ -9,6 +9,7 @@ import FeedbackDialog from "@/components/feedback/FeedbackDialog";
 import FeedbackFab from "@/components/feedback/FeedbackFab";
 import UsageTracker from "@/components/UsageTracker";
 import { MaintenanceScreen, SiteBanner, SiteGate, useMaintenance } from "@/components/site/SiteNotices";
+import { StorageMoveBanner } from "@/components/files/StorageMove";
 
 /** Shows the app's chrome (sidebar, ⌘K palette, timer badge, tool dock) and `AppShell` around
     every page except the landing page, a standalone marketing site with its own nav. The body
@@ -39,6 +40,7 @@ export default function AppChrome({ chrome, children }: { chrome: ReactNode; chi
         <SiteGate>{children}</SiteGate>
       </AppShell>
       <SiteBanner />
+      <StorageMoveBanner />
       <FeedbackFab />
       <FeedbackDialog />
       <UsageTracker />

@@ -54,8 +54,10 @@ export default function TuneShareDialog({ tuneId, tuneName, hasChart, onClose }:
     }
   }
 
-  const fileCount = files?.length ?? 0;
-  const recCount = recordings?.length ?? 0;
+  // Only what's online is shared: a link can't reach files kept on a device.
+  const fileCount = files?.filter((f) => !f.device).length ?? 0;
+  const recCount = recordings?.filter((r) => !r.device).length ?? 0;
+  const onDevices = (files?.filter((f) => f.device).length ?? 0) + (recordings?.filter((r) => r.device).length ?? 0);
   const included = [
     { icon: ChordChartIcon, text: hasChart ? "Its chord chart" : "No chord chart linked", on: hasChart },
     { icon: FileIcon, text: fileCount ? `${fileCount} file${fileCount === 1 ? "" : "s"}` : "No files attached", on: fileCount > 0 },
@@ -87,6 +89,13 @@ export default function TuneShareDialog({ tuneId, tuneName, hasChart, onClose }:
               {text}
             </li>
           ))}
+          {onDevices > 0 && (
+            <li className="flex items-start gap-2.5 text-muted">
+              <span className="h-4 w-4 shrink-0" />
+              {onDevices} kept on your devices {onDevices === 1 ? "isn't" : "aren't"} included. Put {onDevices === 1 ? "it" : "them"} online from Files to share
+              {onDevices === 1 ? " it" : " them"} too.
+            </li>
+          )}
           <li className="flex items-center gap-2.5 text-muted">
             <span className="h-4 w-4" />
             Your notes are never shared.

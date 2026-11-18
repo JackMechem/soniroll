@@ -2,6 +2,12 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+/** Where a file, recording or tune song keeps its data when it isn't in Convex file storage: on
+    the device that saved it (free accounts — see `lib/storage.ts`). `key` finds it in that
+    device's store (IndexedDB, `apps/web/lib/deviceFiles.ts`); `label` says which device, for the
+    others ("Firefox on Linux"). */
+const onDevice = v.object({ key: v.string(), label: v.string() });
+
 export default defineSchema({
   ...authTables,
 
@@ -540,7 +546,13 @@ export default defineSchema({
 
   recordings: defineTable({
     userId: v.id("users"),
-    storageId: v.id("_storage"),
+    /** In Convex file storage, or (`device`) only on the device that recorded it. */
+    storageId: v.optional(v.id("_storage")),
+    device: v.optional(onDevice),
+    /** It's in a Shed Note or lesson notes, so it stays online (others see it there). */
+    keepOnline: v.optional(v.boolean()),
+    /** Size in bytes, for one kept on a device (the cloud's own size is read from `_storage`). */
+    size: v.optional(v.number()),
     name: v.string(),
     notes: v.string(),
     durationSec: v.number(),
@@ -564,11 +576,15 @@ export default defineSchema({
 
   /** A tune's song — an audio file of the actual recording, uploaded by the owner to play
       behind their takes of that tune (and along with them while recording). One per tune; the
-      file lives in Convex file storage. `tuneId` is a plain string, same as `recordings`. */
+      file lives in Convex file storage or on a device, like `files`. `tuneId` is a plain string, same as `recordings`. */
   tuneSongs: defineTable({
     userId: v.id("users"),
     tuneId: v.string(),
-    storageId: v.id("_storage"),
+    /** In Convex file storage, or (`device`) only on the device that added it. */
+    storageId: v.optional(v.id("_storage")),
+    device: v.optional(onDevice),
+    keepOnline: v.optional(v.boolean()),
+    size: v.optional(v.number()),
     name: v.string(),
     mimeType: v.string(),
     durationSec: v.number(),
@@ -578,10 +594,16 @@ export default defineSchema({
   /** Files the owner uploaded (PDFs, images, audio, video, documents…) — the Files page, and a
       tune's Files section. `tuneId` (a plain string, like `recordings`) attaches one to a tune; a
       file without one is just in the account. Private to the owner, except that a tune shared by
-      link (`sharedTunes`) shows its attached files. The file lives in Convex file storage. */
+      link (`sharedTunes`) shows its attached files. The file lives in Convex file storage (storage
+      plans), or only on the device that added it (free accounts). */
   files: defineTable({
     userId: v.id("users"),
-    storageId: v.id("_storage"),
+    /** In Convex file storage, or (`device`) only on the device that added it. */
+    storageId: v.optional(v.id("_storage")),
+    device: v.optional(onDevice),
+    /** Pasted into (or picked for) a Shed Note or lesson notes: stays online, since everyone who
+        can open the note sees it. */
+    keepOnline: v.optional(v.boolean()),
     name: v.string(),
     mimeType: v.string(),
     size: v.number(),

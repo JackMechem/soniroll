@@ -1,27 +1,54 @@
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { accountPlan } from "../billing";
 
 /**
- * How much an account stores, and the limit on it. Everything counts: uploaded files, recordings,
- * tunes' songs, files given to students in Lessons, hand-ins, and profile images. Every upload path
- * checks it (`assertHasRoom` before handing out an upload URL, `assertFits` once the file's real
- * size is known).
+ * What an account stores, where, and the limit on its cloud storage.
  *
- * The limit is 100 MB per account for now. Paid plans with more storage are planned (see
- * docs/notes/files-and-tune-sharing.md); `quotaFor` is where a per-account limit would come from.
+ * Files, recordings and tune songs live either in Convex file storage (`storageId`: "online", on
+ * every device) or only on the device that saved them (`device`: the file's data is in that
+ * browser's or desktop app's own storage; only its name and details are here, so lists, tunes and
+ * the Shed Log still show it everywhere). Free accounts save new ones on the device; a storage plan
+ * (`billing.ts`) saves them online. Lesson files, hand-ins and profile images are always online
+ * (other people see them), and a file shared by link is put online first.
+ *
+ * Only what's online counts towards the limit: `FREE_CLOUD_BYTES` on the free plan (for sharing,
+ * Lessons and the profile), or the plan's size. Every upload path checks it (`assertHasRoom` before
+ * handing out an upload URL, `assertFits` once the file's real size is known).
  */
 
 /** Largest single file. */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
-/** What every account can store, in total. */
-export const ACCOUNT_QUOTA_BYTES = 100 * 1024 * 1024;
 
 const MB = 1024 * 1024;
 
-/** One account's storage limit. Everyone has the same for now; paid plans would change it here. */
-export async function quotaFor(_ctx: QueryCtx, _userId: Id<"users">): Promise<number> {
-  return ACCOUNT_QUOTA_BYTES;
+/** Cloud storage on the free plan: room for what other people see (shared links, Lessons, the
+    profile). Everything else a free account saves stays on the device. */
+export const FREE_CLOUD_BYTES = 50 * MB;
+
+/** One account's plan and its cloud storage. A broken subscription record never blocks uploads
+    that would fit the free allowance. */
+export async function planFor(ctx: QueryCtx, userId: Id<"users">) {
+  try {
+    return await accountPlan(ctx, userId, FREE_CLOUD_BYTES);
+  } catch (e) {
+    console.error("Couldn't read the storage plan", e);
+    return { plan: null, cloudBytes: FREE_CLOUD_BYTES };
+  }
 }
+
+/** One account's cloud storage limit, in bytes. */
+export async function quotaFor(ctx: QueryCtx, userId: Id<"users">): Promise<number> {
+  return (await planFor(ctx, userId)).cloudBytes;
+}
+
+/** "50 MB", "5 GB". */
+export function sizeLabel(bytes: number) {
+  return bytes >= 1024 * MB ? `${Math.round((bytes / (1024 * MB)) * 10) / 10} GB` : `${Math.round(bytes / MB)} MB`;
+}
+
+/** Where a file, recording or song keeps its data on a device (see the schema's `onDevice`). */
+export type DeviceRef = { key: string; label: string };
 
 async function fileSize(ctx: QueryCtx, storageId: Id<"_storage">) {
   const meta = await ctx.db.system.get(storageId);
@@ -33,6 +60,10 @@ export type StoredKind = "file" | "recording" | "song" | "lesson" | "handin" | "
 
 export type StoredItem = {
   kind: StoredKind;
+  /** Null when it's online; otherwise the device that has it (and `url` is null). */
+  device: DeviceRef | null;
+  /** In a Shed Note or lesson notes: stays online (never moved to a device). */
+  keepOnline?: boolean;
   id: string;
   name: string;
   mimeType: string;
@@ -52,19 +83,21 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
 
   const files = await ctx.db.query("files").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
   for (const f of files) {
-    out.push({ kind: "file", id: f._id, name: f.name, mimeType: f.mimeType, size: f.size, createdAt: f.createdAt, url: await url(f.storageId), tuneId: f.tuneId ?? null, href: null });
+    out.push({ kind: "file", device: f.device ?? null, keepOnline: f.keepOnline, id: f._id, name: f.name, mimeType: f.mimeType, size: f.size, createdAt: f.createdAt, url: f.storageId ? await url(f.storageId) : null, tuneId: f.tuneId ?? null, href: null });
   }
 
   const recordings = await ctx.db.query("recordings").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
   for (const r of recordings) {
     out.push({
       kind: "recording",
+      device: r.device ?? null,
+      keepOnline: r.keepOnline,
       id: r._id,
       name: r.name,
       mimeType: r.mimeType,
-      size: await fileSize(ctx, r.storageId),
+      size: r.storageId ? await fileSize(ctx, r.storageId) : (r.size ?? 0),
       createdAt: r.createdAt,
-      url: await url(r.storageId),
+      url: r.storageId ? await url(r.storageId) : null,
       tuneId: r.tuneId ?? null,
       href: `/recordings/view?id=${r._id}`,
     });
@@ -74,12 +107,14 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
   for (const s of songs) {
     out.push({
       kind: "song",
+      device: s.device ?? null,
+      keepOnline: s.keepOnline,
       id: s._id,
       name: s.name,
       mimeType: s.mimeType,
-      size: await fileSize(ctx, s.storageId),
+      size: s.storageId ? await fileSize(ctx, s.storageId) : (s.size ?? 0),
       createdAt: s.createdAt,
-      url: await url(s.storageId),
+      url: s.storageId ? await url(s.storageId) : null,
       tuneId: s.tuneId,
       href: null,
     });
@@ -93,6 +128,7 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
       if (!item.fileId) continue;
       out.push({
         kind: "lesson",
+        device: null,
         id: item._id,
         name: item.fileName || item.title,
         mimeType: item.fileType ?? "",
@@ -115,6 +151,7 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
       for (const f of sub.files) {
         out.push({
           kind: "handin",
+          device: null,
           id: `${sub._id}:${f.fileId}`,
           name: f.name,
           mimeType: f.type,
@@ -137,6 +174,7 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
     const meta = await ctx.db.system.get(storageId);
     out.push({
       kind: "profile",
+      device: null,
       id: storageId,
       name,
       mimeType: meta?.contentType ?? "image/jpeg",
@@ -151,15 +189,16 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
   return out.sort((a, b) => b.createdAt - a.createdAt);
 }
 
+/** Bytes the account keeps online (what counts towards its limit). */
 export async function bytesUsed(ctx: QueryCtx, userId: Id<"users">) {
-  return (await storedItems(ctx, userId, false)).reduce((sum, item) => sum + item.size, 0);
+  return (await storedItems(ctx, userId, false)).reduce((sum, item) => sum + (item.device ? 0 : item.size), 0);
 }
 
-
-/** Refuses (with a message people can act on) when the account is already full. */
+/** Refuses (with a message people can act on) when the account's cloud storage is already full. */
 export async function assertHasRoom(ctx: QueryCtx, userId: Id<"users">) {
-  if ((await bytesUsed(ctx, userId)) >= (await quotaFor(ctx, userId))) {
-    throw new Error(`Your account's storage is full (${(await quotaFor(ctx, userId)) / MB} MB). Delete some files or recordings on the Files page to make room.`);
+  const quota = await quotaFor(ctx, userId);
+  if ((await bytesUsed(ctx, userId)) >= quota) {
+    throw new Error(`Your online storage is full (${sizeLabel(quota)}). Delete something on the Files page, or move files to this device, to make room.`);
   }
 }
 
@@ -176,7 +215,7 @@ export async function assertFits(ctx: MutationCtx, userId: Id<"users">, storageI
   const quota = await quotaFor(ctx, userId);
   if ((await bytesUsed(ctx, userId)) - replacing + meta.size > quota) {
     await ctx.storage.delete(storageId);
-    throw new Error(`There isn't room for that — your account can store ${quota / MB} MB. Delete some files or recordings on the Files page to make room.`);
+    throw new Error(`There isn't room for that online — your account has ${sizeLabel(quota)} of online storage. Delete something on the Files page, or move files to this device, to make room.`);
   }
   return { size: meta.size, contentType: meta.contentType ?? null };
 }

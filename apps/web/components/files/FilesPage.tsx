@@ -10,10 +10,13 @@ import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUpload
 import { MenuButton } from "@/components/library/shared";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
+import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
+import { StorageMovePanel } from "@/components/files/StorageMove";
+import { useStoragePlan } from "@/lib/storagePlan";
 
 type Source = StoredKind;
 
@@ -88,7 +91,17 @@ export default function FilesPage() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [selecting, setSelecting] = useState(false);
 
-  const items = useMemo<StoredEntry[]>(() => storage?.items ?? [], [storage]);
+  const plan = useStoragePlan();
+  const withUrls = useDeviceUrls(storage?.items);
+  const items = useMemo<StoredEntry[]>(() => withUrls ?? [], [withUrls]);
+
+  // Forget files on this device that the account no longer lists (deleted or moved online, maybe
+  // from another device).
+  const owner = plan?.userId;
+  const liveKeys = useMemo(() => (storage ? new Set(storage.items.flatMap((i) => (i.device ? [i.device.key] : []))) : null), [storage]);
+  useEffect(() => {
+    if (owner && liveKeys) void tidyDeviceFiles(owner, liveKeys);
+  }, [owner, liveKeys]);
 
   const counts = useMemo(() => {
     const bySource = new Map<string, number>();
@@ -212,9 +225,12 @@ export default function FilesPage() {
           />
         ) : (
           <>
-            {(used >= quota || uploader.progress || uploader.error) && (
+            {plan && <StorageMovePanel storage={plan} items={items} />}
+            {plan && <WhereFilesGo storage={plan} />}
+
+            {((plan?.plan && used >= quota) || uploader.progress || uploader.error) && (
               <div className="flex flex-col gap-2">
-                {used >= quota && <p className="text-sm text-danger">Your storage is full. Delete some files or recordings to upload more.</p>}
+                {plan?.plan && used >= quota && <p className="text-sm text-danger">Your online storage is full. Delete something to add more.</p>}
                 <UploadProgress progress={uploader.progress} />
                 {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
               </div>
@@ -373,6 +389,7 @@ export default function FilesPage() {
                                   <span className="hidden lg:inline">Shared</span>
                                 </span>
                               )}
+                              <PlaceBadge item={item} paid={!!plan?.plan} />
                             </span>
                             {/* Phones: everything in one line under the name. */}
                             <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, where === "Your files" ? null : where)}</span>
@@ -405,6 +422,7 @@ export default function FilesPage() {
                   })}
                 </div>
               )}
+              {actions.status && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-muted">{actions.status}</p>}
               {actions.error && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error}</p>}
             </section>
           </>
@@ -459,5 +477,51 @@ function FilterChip({ active, onClick, label, count, small = false }: { active: 
       {label}
       {count != null && <span className={`text-xs tabular-nums ${active ? "text-accent/80" : "text-muted"}`}>{count}</span>}
     </button>
+  );
+}
+
+/** Where an item's data is, beside its name: on this device, on another one (it won't open here),
+    or online — shown for online items only on the free plan, where most things are on devices. */
+function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean }) {
+  const badge = "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-[11px] font-medium";
+  if (item.device) {
+    return item.url ? (
+      <span title="Kept on this device" className={`${badge} bg-foreground/[0.05] text-muted`}>
+        <DeviceIcon className="h-3 w-3" />
+        <span className="hidden lg:inline">This device</span>
+      </span>
+    ) : (
+      <span title={`Kept on ${item.device.label}. Open it there.`} className={`${badge} bg-foreground/[0.05] text-muted`}>
+        <DeviceIcon className="h-3 w-3" />
+        <span className="max-w-[10rem] truncate">{item.device.label}</span>
+      </span>
+    );
+  }
+  // Online on the free plan: only for what's going to move (not lesson files, the profile, things
+  // in notes or shared by link — those stay online).
+  if (paid || !(item.kind === "file" || item.kind === "recording" || item.kind === "song") || item.keepOnline || item.sharedId) return null;
+  return (
+    <span title="Online" className={`${badge} bg-foreground/[0.05] text-muted`}>
+      <CloudIcon className="h-3 w-3" />
+      <span className="hidden lg:inline">Online</span>
+    </span>
+  );
+}
+
+/** One line on where new files go: this device (free), or online with the plan. */
+function WhereFilesGo({ storage }: { storage: NonNullable<ReturnType<typeof useStoragePlan>> }) {
+  const Icon = storage.plan ? CloudIcon : DeviceIcon;
+  return (
+    <p className="flex items-start gap-2 text-sm text-muted">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+      <span>
+        {storage.plan
+          ? `Your ${storage.plan.storageGb} GB plan keeps files online, on all your devices: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} used.`
+          : "New files are kept on this device. Every feature works; to have them on all your devices, get a storage plan."}{" "}
+        <Link href="/plans" className="font-medium text-accent hover:underline">
+          {storage.plan ? "Manage plan" : "Storage plans"}
+        </Link>
+      </span>
+    </p>
   );
 }

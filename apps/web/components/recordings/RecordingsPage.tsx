@@ -14,6 +14,7 @@ import { LibraryIcon, MicIcon } from "@/components/tools";
 import { useFileActions } from "@/components/files/FileParts";
 import { filesApi, type StoredEntry } from "@/lib/files";
 import { recordingsApi, useTuneIndex, type Recording } from "@/lib/recordings";
+import { useDeviceUrls } from "@/lib/deviceFiles";
 
 /** A recording as the Files page's item, for its ⋮ menu: the storage list's entry (size, share
     link) when it's loaded, else one made from the recording. */
@@ -27,14 +28,15 @@ function entryOf(r: Recording, stored: Map<string, StoredEntry>): StoredEntry {
     place; click a name to open it. Shown as the Library's last tab (its header and tabs). */
 export default function RecordingsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const recordings = useQuery(recordingsApi.list, isAuthenticated ? {} : "skip");
+  const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : "skip"));
   const byId = useTuneIndex();
   const [query, setQuery] = useState("");
   // The Files page's ⋮ menu (open, rename, share, download, delete) for each recording.
   const files = useFileActions({ tuneName: (tuneId) => byId.get(tuneId)?.tune.name });
   // The same list the storage meter reads (one subscription), for each recording's size and share link.
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
-  const stored = useMemo(() => new Map((storage?.items ?? []).filter((i) => i.kind === "recording").map((i) => [i.id, i as StoredEntry])), [storage]);
+  const storedItems = useDeviceUrls(storage?.items);
+  const stored = useMemo(() => new Map((storedItems ?? []).filter((i) => i.kind === "recording").map((i) => [i.id, i as StoredEntry])), [storedItems]);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!recordings || !q) return recordings ?? [];
