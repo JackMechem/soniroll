@@ -617,7 +617,13 @@ function Bento() {
               <span className="text-6xl font-semibold tracking-[-0.05em]">$0</span>
               <div>
                 <h3 className="text-xl font-semibold tracking-tight">Free. Actually free.</h3>
-                <p className="mt-1.5 text-sm opacity-80">No ads, no popups, no premium tier hiding the good stuff.</p>
+                <p className="mt-1.5 text-sm opacity-80">
+                  No ads, no popups, every tool free. Want your files and recordings on all your devices?{" "}
+                  <Link href="/plans" className="font-semibold underline underline-offset-2">
+                    Storage plans
+                  </Link>{" "}
+                  are optional.
+                </p>
               </div>
             </div>
           </Reveal>

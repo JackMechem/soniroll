@@ -190,3 +190,21 @@ export function OnOtherDevice({ label, what = "file" }: { label: string; what?: 
     </p>
   );
 }
+
+/** A line under something just saved, on the free plan: it's kept on this device, and a plan keeps
+    it on all of them. Nothing with a plan (or while loading). */
+export function KeptHereHint({ what = "Files" }: { what?: string }) {
+  const storage = useStoragePlan();
+  if (!storage || storage.plan) return null;
+  return (
+    <p className="flex items-start gap-1.5 text-xs text-muted">
+      <DeviceIcon className="mt-px h-3.5 w-3.5 shrink-0" />
+      <span>
+        {what} are kept on this device.{" "}
+        <Link href="/plans" className="font-medium text-accent hover:underline">
+          Get them on all your devices
+        </Link>
+      </span>
+    </p>
+  );
+}

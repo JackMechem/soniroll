@@ -34,6 +34,7 @@ import {
 import { useStoragePlan } from "@/lib/storagePlan";
 import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
+import { KeptHereHint } from "@/components/files/StorageMove";
 
 // ---------------------------------------------------------------- icons
 
@@ -617,6 +618,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
       <UploadProgress progress={uploader.progress} />
       {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
       {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
+      {isAuthenticated && files && files.length > 0 && <KeptHereHint />}
       {uploader.input}
       {actions.dialogs}
       {adding && (

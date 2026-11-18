@@ -85,6 +85,13 @@ plans page compares the website, the desktop app and a plan.
   (with a button to ask). Checkout and the portal open in the same tab on the web and in the system
   browser in the desktop app. Linked from the account menus, ⌘K ("Storage plans"), the storage meter
   beside the Library title (now online use), the Files page and the move notice.
+- **Making plans known** (Jack: "it should probably be making the plans more prominent"): a
+  **Storage plans** row in the sidebar above Support soniroll, always shown (`components/plans/
+  PlansRow.tsx`; with a plan it reads "Your storage plan · 5 GB"); the dashboard's support card
+  ("a coffee or a storage plan…", a Storage plans button); "Get a storage plan" first under Other ways
+  to help on `/support`; the landing page's "$0" tile ("every tool free… Storage plans are
+  optional", linked); and on the free plan a `KeptHereHint` line ("Recordings are kept on this
+  device. Get them on all your devices") in the save-recording dialog and under a tune's files.
 - Help (`files` topic, Shed Notes' pictures), privacy policy (where files are kept, Polar, storage
   plans) and terms (storage plans section; the service is free, plans optional) updated.
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { DONATE_URL } from "@/components/support/SupportParts";
-import { CheckIcon, FeedbackIcon, HeartIcon, ShareIcon, UsersIcon } from "@/components/tools";
+import { CheckIcon, CloudIcon, FeedbackIcon, HeartIcon, ShareIcon, UsersIcon } from "@/components/tools";
 import { shareLink } from "@/lib/shareLink";
 
 const HEART = "var(--danger)";
@@ -75,7 +75,12 @@ export default function SupportPage() {
 
       <section className="flex flex-col gap-3 rounded-3xl bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-bold">Other ways to help</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link href="/plans" className="flex flex-col items-start gap-2 rounded-2xl bg-background p-4 hover:bg-surface-hover">
+            <CloudIcon className="h-5 w-5 text-accent" />
+            <span className="font-semibold">Get a storage plan</span>
+            <span className="text-sm text-muted">Keep your files and recordings on all your devices, and help pay for the servers.</span>
+          </Link>
           <button type="button" onClick={() => void tellAFriend()} className="flex flex-col items-start gap-2 rounded-2xl bg-background p-4 text-left hover:bg-surface-hover">
             <ShareIcon className="h-5 w-5 text-accent" />
             <span className="font-semibold">Tell a friend</span>

@@ -26,7 +26,7 @@ import {
   useTuneIndex,
   useTuneSong,
 } from "@/lib/recordings";
-import { OnOtherDevice } from "@/components/files/StorageMove";
+import { KeptHereHint, OnOtherDevice } from "@/components/files/StorageMove";
 
 /** A recording in a list: name (links to its page), date · length (· the tune, a link to it), a ⋮
     menu when `onMenu` is given (rename, share, delete — the Files page's menu), and a player — over
@@ -314,6 +314,7 @@ export function SaveTakeDialog({
             className="resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
           />
         </label>
+        <KeptHereHint what="Recordings" />
         {error && <p className="text-sm text-danger">{error} Your take is still here — try Save again.</p>}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => setConfirmDiscard(true)} disabled={saving} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-danger hover:bg-surface-hover disabled:opacity-50">
