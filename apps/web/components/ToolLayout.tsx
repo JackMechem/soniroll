@@ -5,6 +5,7 @@ import { NAV_LINKS } from "@/components/tools";
 import { RewardProvider } from "@/components/reward/Reward";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
 import { PresetsButton } from "@/components/PresetsChip";
+import { FeedbackHeaderButton } from "@/components/feedback/FeedbackFab";
 import type { ToolPresets } from "@/lib/toolPresets";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
@@ -89,13 +90,12 @@ export default function ToolLayout({
           {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
           {help && <div className="ml-1">{help}</div>}
           {titleExtra && <div className="ml-3 pr-4">{titleExtra}</div>}
-          {(presets || statsHref || actions) && (
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {presets && <PresetsButton tool={presets} />}
-              {statsHref && <ToolStats href={statsHref} />}
-              {actions}
-            </div>
-          )}
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {presets && <PresetsButton tool={presets} />}
+            {statsHref && <ToolStats href={statsHref} />}
+            {actions}
+            <FeedbackHeaderButton />
+          </div>
         </div>
 
         {/* Phones: the same row, pinned just under the app's top bar. */}

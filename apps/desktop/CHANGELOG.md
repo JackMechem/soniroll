@@ -4,6 +4,12 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.9] - 2026-11-18
+
+- The Metronome's beat bars show again on Macs where they came out empty (FB-20).
+- Report a bug is a button in each tool's top bar instead of floating in the corner.
+- Everything else in the website's 0.10.9.
+
 ## [0.1.8] - 2026-11-18
 
 - Rhythm Section no longer scrolls the page to follow the music while it plays.

@@ -30,14 +30,18 @@ function Bar({
   onClick?: () => void;
 }) {
   const rank = LEVEL_RANK[level] ?? 2;
-  const lit = level === 2 ? "bg-accent" : "bg-foreground/40";
-  const className = `relative flex ${dim} shrink-0 flex-col-reverse gap-[3px] rounded-md bg-surface p-[3px] ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
+  // Plain colours with `opacity` rather than `bg-foreground/40` (a color-mix) for the lit and unlit
+  // segments, and a grid rather than flex-1 children of a button: the macOS desktop app's WebKit
+  // drew the segments as nothing (FB-20).
+  const lit = level === 2 ? "bg-accent" : "bg-foreground opacity-40";
+  const className = `relative grid ${dim} shrink-0 grid-rows-3 gap-[3px] rounded-md bg-surface p-[3px] ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
     level === 0 ? "opacity-50" : ""
   } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;
   const content = (
     <>
-      {[0, 1, 2].map((i) => (
-        <span key={i} className={`flex-1 rounded-[3px] ${i < rank ? lit : "bg-foreground/10"}`} />
+      {/* Top to bottom; they light from the bottom up. */}
+      {[2, 1, 0].map((i) => (
+        <span key={i} className={`block rounded-[3px] ${i < rank ? lit : "bg-foreground opacity-10"}`} />
       ))}
       {number !== undefined && (
         <span

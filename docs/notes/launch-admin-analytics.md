@@ -300,3 +300,11 @@ Verified:
   the same check against GitHub's PR list when it loads. Checked in the harness with the real
   merged PR #8 (closed the feedback once, nothing on the next refresh) and the `#n` / `FB-n`
   parsing in Node.
+
+## 2026-11-18 — Bug button in the tool header
+
+Jack asked for the floating bottom-right "Report a bug" button to move to the top bar. Now
+`FeedbackHeaderButton` (in `FeedbackFab.tsx`) sits at the right end of `ToolLayout`'s desktop
+header, after Log; phones keep `FeedbackBarButton` in the app's top bar. The floating `FeedbackFab`
+is only on the landing page now; other app pages have Send feedback in the sidebar's ⋮ menu. The
+same hide switch (Settings → General, `jam-practice-feedback-fab-hidden`) hides all of them.

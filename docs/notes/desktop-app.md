@@ -725,3 +725,12 @@ there's a new version.
   yet). The Nix pnpm hash updated. **Not checked:** a real signed release, an install, a download,
   a relaunch — needs the secret and a release.
 
+## 2026-11-18 — FB-20: empty beat bars on macOS
+
+Jack's report from the macOS app (0.1.6): the Metronome's beat bars drew as empty boxes but it still
+clicked. Couldn't reproduce here (no macOS WebKit; Chromium and the Linux app look right), so
+`BeatIndicator`'s `Bar` was rebuilt from things every WebKit handles: a `grid grid-rows-3` (was a
+`flex-col-reverse` button with `flex-1` spans) and solid `bg-foreground` + `opacity-40/10` (was
+`bg-foreground/40`, a `color-mix`). Same look in Chromium. **Not verified on a Mac** — ask Jack to
+check 0.1.9. If other see-through fills turn out missing on his Mac too, the cause is an old macOS
+WebKit without `color-mix` (Tailwind v4 needs Safari 16.4+), and that's a bigger fix.

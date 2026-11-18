@@ -53,8 +53,9 @@ function subscribe(cb: () => void) {
 }
 
 /**
- * "Report a bug" pinned to the bottom-right corner of every page on desktop, opening the feedback
- * dialog. The little × hides it on this device (localStorage); "Send feedback" in the sidebar's ⋮
+ * "Report a bug" pinned to the bottom-right corner on desktop, opening the feedback dialog. Only on
+ * the landing page now: inside the app it's in a tool's header bar (`FeedbackHeaderButton`), and
+ * "Send feedback" is in the sidebar's ⋮ menu everywhere. The little × hides it on this device (localStorage); "Send feedback" in the sidebar's ⋮
  * menu still works after that. Phones get `FeedbackBarButton` in the top bar instead, where it
  * can't sit on top of a tool's controls. Rendered hidden on the server so it never flashes for
  * someone who closed it.
@@ -87,6 +88,24 @@ export default function FeedbackFab() {
         <CloseIcon className="h-3 w-3" />
       </button>
     </div>
+  );
+}
+
+/** Desktop: "Report a bug" at the right end of a tool's header bar (`ToolLayout`). Hidden with the
+    others (Settings → General). */
+export function FeedbackHeaderButton() {
+  const show = useShowFeedbackButton();
+  if (!show) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => openFeedback({ kind: "bug" })}
+      aria-label="Report a bug"
+      title="Report a bug"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+    >
+      <BugIcon className="h-4 w-4" />
+    </button>
   );
 }
 
