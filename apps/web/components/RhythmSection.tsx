@@ -655,11 +655,8 @@ export default function RhythmSection({
     if (!at) return;
     const el = box.querySelector(`[data-note="${at.measure}:${at.note}"]`);
     if (!el) return;
+    // Only lit: the page doesn't scroll to follow it (Jack found that annoying).
     el.classList.add("bass-now");
-    // Keep the playing note in view by scrolling — not on phones, where it fought your own scrolling.
-    if (!window.matchMedia("(min-width: 640px)").matches) return;
-    const r = el.getBoundingClientRect();
-    if (r.top < 80 || r.bottom > window.innerHeight - 40) el.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [nowBeat, scored]);
 
   // The drums: stopped, the first bars Play will play; playing, the bars around the music.

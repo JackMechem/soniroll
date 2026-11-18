@@ -141,3 +141,8 @@ updated. To bring it back: restore the files and code from git history before th
 The ear trainers' "Rhodes" tone is a different set (FluidR3 "Electric Piano 1", CC BY 3.0, from
 GitHub Pages) and stays.
 
+## 2026-11-18 — No auto-scroll
+
+Jack found it annoying: while playing, the page no longer scrolls to keep the bass's playing note in
+view (`scrollIntoView` removed); the note is still lit (`bass-now`). The drum notation still turns to
+the next window of bars as it plays (that swaps the bars shown, it doesn't scroll).

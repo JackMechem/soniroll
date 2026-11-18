@@ -4,6 +4,11 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.8] - 2026-11-18
+
+- Rhythm Section no longer scrolls the page to follow the music while it plays.
+- Everything else in the website's 0.10.8.
+
 ## [0.1.7] - 2026-11-17
 
 - **Updates itself:** at launch it checks for a new version and installs it (macOS, Windows), or

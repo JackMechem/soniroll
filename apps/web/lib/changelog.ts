@@ -33,6 +33,12 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.8",
+    date: "2026-11-18",
+    title: "Rhythm Section stays put",
+    changes: [{ kind: "improved", text: "**Rhythm Section** no longer scrolls the page to follow the music while it plays — the note being played is still lit." }],
+  },
+  {
     version: "0.10.7",
     date: "2026-11-18",
     title: "Piano chords in Rhythm Section",

@@ -4135,7 +4135,7 @@ dependencies = [
 
 [[package]]
 name = "soniroll-desktop"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "cpal",
  "mp3lame-encoder",
