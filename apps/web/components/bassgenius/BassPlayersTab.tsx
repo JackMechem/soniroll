@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { type FileFilter, useFilePicker } from "@/components/files/FilePicker";
 import PromptDialog from "@/components/PromptDialog";
 import { BackButton } from "@/components/library/shared";
 import { BassIcon, ChevronRightIcon, DownloadIcon, PlusIcon, TrashIcon, WaveIcon } from "@/components/tools";
@@ -14,6 +15,13 @@ import { cleanTranscription, emptyTranscription, playerFile, readImportFile, typ
 import { decodeXmlBytes, importMusicXml } from "@/lib/musicXml";
 import { looksLikeZip, readMxl } from "@/lib/mxl";
 import { useBassPlayers, useTranscription } from "@/lib/useBassPlayers";
+
+/** What the Bass players tab imports: MusicXML, or a player / transcription exported from here. */
+const BASS_IMPORT: FileFilter = {
+  accept: "application/json,.json,.musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml",
+  matches: (f) => /\.(json|musicxml|xml|mxl)$/i.test(f.name) || /json|musicxml/.test(f.mimeType),
+  noun: "a MusicXML or bass player file",
+};
 
 type View = { kind: "players" } | { kind: "player"; playerId: string } | { kind: "transcription"; playerId: string; transcriptionId: string };
 
@@ -28,7 +36,6 @@ export default function BassPlayersTab() {
   const [prompt, setPrompt] = useState<null | { title: string; initial: string; confirm: string; onSubmit: (v: string) => void }>(null);
   const [confirm, setConfirm] = useState<null | { title: string; message: string; confirm: string; onConfirm: () => void }>(null);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   // The Patterns page: one transcription's, or (null) all of the player's.
   const [patterns, setPatterns] = useState<{ transcriptionId: string | null } | null>(null);
   /** Copies a built-in player (and its transcriptions) into your own players, then opens it. */
@@ -56,12 +63,9 @@ export default function BassPlayersTab() {
 
   const pickImport = (playerId: string | null) => {
     importTarget.current = playerId;
-    fileRef.current?.click();
+    picker.open();
   };
-  const onFile = async (files: FileList | null) => {
-    const file = files?.[0];
-    if (fileRef.current) fileRef.current.value = "";
-    if (!file) return;
+  const onFile = async (file: File) => {
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const text = looksLikeZip(bytes) ? await readMxl(bytes) : decodeXmlBytes(bytes);
@@ -112,6 +116,9 @@ export default function BassPlayersTab() {
     });
   };
 
+  // Import: a MusicXML file from your Files (signed in) or from this device.
+  const picker = useFilePicker({ filter: BASS_IMPORT, title: "Import a transcription", onFile: (file) => void onFile(file) });
+
   const newPlayer = () =>
     setPrompt({
       title: "New bass player",
@@ -139,7 +146,7 @@ export default function BassPlayersTab() {
     downloadJson(playerFile(name, description, full), `${safeFilename(name)}.json`);
   };
 
-  const fileInput = <input ref={fileRef} type="file" accept="application/json,.json,.musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml" className="hidden" onChange={(e) => void onFile(e.target.files)} />;
+  const fileInput = picker.elements;
   const dialogs = (
     <>
       {prompt && (

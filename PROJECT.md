@@ -246,6 +246,9 @@ Web (`apps/web`):
 - Files: `components/files/FileParts.tsx` (`useFileActions` — the ⋮/right-click menu, rename,
   share, delete for any `StoredEntry`; `FileViewer`, `FilePreviewDialog`, `useFileUploader`,
   `TuneFiles`), `FileShareDialog`, `lib/files.ts` (`fileKind`, `formatBytes`, `downloadFile`).
+  A tool that opens a file uses `useFilePicker` (`components/files/FilePicker.tsx`: the "Open a
+  file" dialog listing the user's files, Upload, saving to Files) and `lib/useFileDrop.ts`
+  (drop a file anywhere on the tool's page or pane).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
 - Notation: `components/notation/ScoreEditor.tsx` (the one notation editor — never write another;
   wrap it with a `header`) and `Score.tsx` (read-only view too); scores via `lib/useScores.ts`.

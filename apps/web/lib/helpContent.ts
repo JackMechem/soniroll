@@ -713,7 +713,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     tagline: "Slow it down, keep the pitch.",
     purpose: "Learn solos and tricky passages: slow a song down without changing its pitch and loop a section.",
     steps: [
-      { title: "Load a song", text: "Any audio file from your device." },
+      { title: "Load a song", text: "Open a file picks one of your files, or uploads one from your device. You can also drop a file anywhere on the page." },
       { title: "Set the speed", text: "Slower, without the pitch dropping." },
       { title: "Loop it", text: "Drag across the waveform on a phone, Shift-drag with a mouse, or use Loop start and Loop end at the playhead; add markers with notes." },
     ],
@@ -724,7 +724,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Volume", text: "How loud the file plays." },
       { name: "Loop", text: "Drag across the waveform on a phone, Shift-drag with a mouse, or press Loop start and Loop end at the playhead, to loop a section; its start and end times show beside Clear loop, and it repeats until you press Clear loop. Drag a loop's edge to move it; a quick tap just moves the playhead. Loop end only works after the loop's start. The ⏮ button (or B) jumps back to the loop's start." },
       { name: "Markers", text: "Named points with notes, to jump between sections. Press Add marker at the playhead, or right-click the waveform." },
-      { name: "Saved files", text: "Files you've loaded stay in this browser to open again." },
+      { name: "Open a file", text: "Lists your audio and video files, recordings and tune songs, newest first, with a search. Upload opens a file from your device; dropping a file anywhere on the page does the same. Signed in, a file you open from your device is saved to your Files (online with a storage plan, otherwise on this device), once. Signed out, files are kept in this browser to open again." },
     ],
     shot: "slow-downer",
   },

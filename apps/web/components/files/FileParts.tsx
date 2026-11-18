@@ -222,8 +222,8 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
   const [dragging, setDragging] = useState(false);
 
   const uploadAll = useCallback(
-    async (files: File[]) => {
-      if (!files.length) return;
+    async (files: File[]): Promise<boolean> => {
+      if (!files.length) return true;
       setError(null);
       setProgress({ done: 0, total: files.length });
       const failures: string[] = [];
@@ -239,6 +239,7 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
       }
       setProgress(null);
       if (failures.length) setError(failures.join(" "));
+      return failures.length === 0;
     },
     [create, createOnDevice, generateUploadUrl, online, storage, tuneId],
   );
@@ -274,7 +275,8 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
     },
   };
 
-  return { pick: () => inputRef.current?.click(), input, drop, dragging, progress, error, clearError: () => setError(null) };
+  /** `uploadAll(files)`: saves files chosen some other way; resolves true when every one saved. */
+  return { pick: () => inputRef.current?.click(), input, drop, dragging, progress, error, clearError: () => setError(null), uploadAll };
 }
 
 /** "Uploading 2 of 5…" while files go up. */

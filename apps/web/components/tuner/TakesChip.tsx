@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Hint from "@/components/Hint";
+import { AUDIO_ONLY, useFilePicker } from "@/components/files/FilePicker";
 import PromptDialog from "@/components/PromptDialog";
 import { SettingChip } from "@/components/SettingsBar";
 import { DownloadIcon, ListIcon, PencilIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/tools";
@@ -36,7 +37,20 @@ export default function TakesChip({
   const [renaming, setRenaming] = useState<TunerTake | null>(null);
   const [deleting, setDeleting] = useState<TunerTake | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
+  // "Open a file": one of your files or recordings (signed in), or one from this device.
+  const picker = useFilePicker({
+    filter: AUDIO_ONLY,
+    title: "Open a file in the Tuner",
+    onFile: (file) => {
+      if (file.size > MAX_FILE_BYTES) {
+        setFileError("That file is too big. Pick one under 40 MB.");
+        setPopover(true);
+        return;
+      }
+      setFileError(null);
+      onOpenFile(file);
+    },
+  });
   const count = takes?.length ?? 0;
 
   const body = (
@@ -47,30 +61,15 @@ export default function TakesChip({
         </Hint>
         <button
           type="button"
-          onClick={() => fileInput.current?.click()}
+          onClick={() => {
+            setPopover(false);
+            picker.open();
+          }}
           className="flex h-9 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
         >
           <UploadIcon className="h-4 w-4" />
           Open a file
         </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="audio/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            if (file.size > MAX_FILE_BYTES) {
-              setFileError("That file is too big. Pick one under 40 MB.");
-              return;
-            }
-            setFileError(null);
-            setPopover(false);
-            onOpenFile(file);
-          }}
-        />
         {fileError && <p className="text-xs text-danger">{fileError}</p>}
 
         {takes === null ? null : takes.length === 0 ? (
@@ -145,6 +144,7 @@ export default function TakesChip({
         </CollapsiblePanel>
       )}
 
+      {picker.elements}
       {renaming && (
         <PromptDialog
           title="Rename take"

@@ -1,10 +1,10 @@
 "use client";
 
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useEffect, useRef, useState } from "react";
 import ContextMenu, { MenuItem, MenuState } from "@/components/ContextMenu";
-import ConfirmDialog from "@/components/ConfirmDialog";
 import Hint from "@/components/Hint";
-import Select from "@/components/Select";
+import { AUDIO_OR_VIDEO, OpenFileButton, useFilePicker } from "@/components/files/FilePicker";
 import { OptionSection, OptionsCard } from "@/components/OptionsCard";
 import KeyHint from "@/components/KeyHint";
 import SwitchRow from "@/components/SwitchRow";
@@ -18,15 +18,15 @@ import {
   FlagIcon,
   PauseIcon,
   PlayIcon,
-  PlusIcon,
   RepeatIcon,
   ShrinkHeightIcon,
   SkipForwardIcon,
   SpeakerIcon,
   StopwatchIcon,
+  UploadIcon,
 } from "@/components/tools";
 import { Peaks, analyzeAudio, formatTime } from "@/lib/audioFile";
-import { LibraryEntry, deleteFile, fileId, getFile, listFiles, saveFile } from "@/lib/fileLibrary";
+import { LibraryEntry, deleteFile, getFile, listFiles, saveFile } from "@/lib/fileLibrary";
 import { Marker, fileKeyOf, loadMarkers, saveMarkers } from "@/lib/markers";
 import { makeId } from "@/lib/types";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
@@ -34,7 +34,6 @@ import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
 
-const ADD_FILE_VALUE = "__add-new-file__";
 const SETTINGS_KEY = "jam-practice-slow-downer";
 const DEFAULT_SETTINGS = { speed: 100, preservePitch: true, volume: 1, maximized: false };
 
@@ -43,12 +42,6 @@ const MAX_SPEED = 150;
 const SPEED_PRESETS = [50, 60, 70, 80, 90, 100];
 const SKIP_SECONDS = 5;
 const MIN_SPAN = 2;
-
-function formatSize(bytes: number) {
-  return bytes >= 1024 * 1024
-    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
 
 function sliderStyle(value: number, min: number, max: number) {
   return { "--progress": `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties;
@@ -112,7 +105,7 @@ export default function SlowDowner() {
   const speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, settings.speed));
   const { preservePitch, volume, maximized } = settings;
 
-  const [file, setFile] = useState<{ id: string; name: string; url: string } | null>(null);
+  const [file, setFile] = useState<{ name: string; type: string; url: string } | null>(null);
   const [peaks, setPeaks] = useState<Peaks | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -124,16 +117,13 @@ export default function SlowDowner() {
   const [loop, setLoop] = useState<LoopRegion | null>(null);
   const [loopOn, setLoopOn] = useState(false);
   const [view, setView] = useState<View>({ start: 0, span: 1 });
-  const [dragOver, setDragOver] = useState(false);
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
-  const [pendingDelete, setPendingDelete] = useState<LibraryEntry | null>(null);
   const [loopNote, setLoopNote] = useState<string | null>(null);
   const loopNoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mediaRef = useRef<HTMLVideoElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const loopRef = useRef({ loop, loopOn });
   const fileTokenRef = useRef(0);
   const fileKeyRef = useRef<string | null>(null);
@@ -214,7 +204,7 @@ export default function SlowDowner() {
     fileKeyRef.current = fileKeyOf(next);
     setMarkers(loadMarkers(fileKeyRef.current));
     setMenu(null);
-    setFile({ id: fileId(next), name: next.name, url: URL.createObjectURL(next) });
+    setFile({ name: next.name, type: next.type, url: URL.createObjectURL(next) });
 
     if (remember) {
       void saveFile(next)
@@ -252,21 +242,25 @@ export default function SlowDowner() {
     setError(null);
   }
 
+  /** Deletes a file kept in this browser (signed out), with its markers. */
   async function confirmDelete(entry: LibraryEntry) {
-    setPendingDelete(null);
     await deleteFile(entry.id);
     saveMarkers(entry.id, []);
-    if (file?.id === entry.id) closeFile();
+    if (fileKeyRef.current === entry.id) closeFile();
     setLibrary(await listFiles());
   }
 
+  /** Opens a file kept in this browser. Signed in, it's saved to Files and the browser's copy goes
+      (it was kept here from before files went to Files). */
   async function openSaved(entry: LibraryEntry) {
     const saved = await getFile(entry.id);
-    if (saved) loadFile(saved, false);
-    else {
+    if (!saved) {
       setError("That file is no longer stored in this browser.");
       setLibrary(await listFiles());
+      return;
     }
+    loadFile(saved, false);
+    if (isAuthenticated && (await picker.save(saved))) await removeSaved(entry);
   }
 
   async function removeSaved(entry: LibraryEntry) {
@@ -296,6 +290,30 @@ export default function SlowDowner() {
   }
 
   useSpaceToggle(togglePlay, file !== null);
+
+  // Opening a file: the dialog (your Files, or Upload), or a file dropped anywhere on the page.
+  // Signed in, a file from this device is saved to Files (once); signed out it's kept in this
+  // browser, as before.
+  const { isAuthenticated } = useConvexAuth();
+  const picker = useFilePicker({
+    filter: AUDIO_OR_VIDEO,
+    saveToFiles: true,
+    dropInto: "Slow Downer",
+    onFile: (next, from) => loadFile(next, !from && !isAuthenticated),
+    local: {
+      title: "Only in this browser",
+      files: library,
+      open: (id) => {
+        const entry = library.find((e) => e.id === id);
+        if (entry) void openSaved(entry);
+      },
+      remove: (id) => {
+        const entry = library.find((e) => e.id === id);
+        if (entry) void confirmDelete(entry);
+      },
+      removeMessage: "It's removed from this browser, along with its markers and notes. You can add the file again later.",
+    },
+  });
 
   /** Back to the start of the loop (or of the file, with no loop on); keeps playing if it was. */
   function toLoopStart() {
@@ -605,117 +623,34 @@ export default function SlowDowner() {
         onError={() => file && setError("This file couldn't be played by your browser.")}
       />
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="audio/*,video/*"
-        className="hidden"
-        onChange={(e) => {
-          const chosen = e.target.files?.[0];
-          if (chosen) loadFile(chosen);
-          e.target.value = "";
-        }}
-      />
+      {picker.elements}
 
       {!file ? (
-        <>
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              const dropped = e.dataTransfer.files?.[0];
-              if (dropped) loadFile(dropped);
-            }}
-            className={`flex w-full max-w-2xl flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-14 transition-colors ${
-              dragOver ? "border-accent bg-accent/10" : "border-foreground/15"
-            }`}
+        <div className="flex w-full max-w-2xl flex-col items-center gap-3 rounded-lg bg-foreground/[0.03] px-6 py-14">
+          {/* Touch screens can't drop a file. */}
+          <p className="text-base font-medium">
+            <span className={MOUSE_ONLY}>Drop an audio or video file anywhere</span>
+            <span className={TOUCH_ONLY}>Open an audio or video file</span>
+          </p>
+          <p className="max-w-sm text-sm text-muted">
+            MP3, WAV, M4A, FLAC, MP4 and more. For video files only the audio is used.{" "}
+            {isAuthenticated ? "Files you open are kept in your Files." : "Files are kept in this browser so they're here next time."}
+          </p>
+          <button
+            type="button"
+            onClick={picker.open}
+            className="mt-1 inline-flex h-12 items-center gap-2 rounded-full bg-accent px-8 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
           >
-            {/* Touch screens can't drop a file. */}
-            <p className="text-base font-medium">
-              <span className={MOUSE_ONLY}>Drop an audio or video file here</span>
-              <span className={TOUCH_ONLY}>Choose an audio or video file</span>
-            </p>
-            <p className="max-w-xs text-sm text-muted">
-              MP3, WAV, M4A, FLAC, MP4 and more. For video files only the audio is used. Nothing is
-              uploaded — files are saved in this browser so they&apos;re here next time.
-            </p>
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="mt-1 inline-flex h-12 items-center rounded-full bg-accent px-8 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
-            >
-              Choose a file
-            </button>
-          </div>
-          {library.length > 0 && (
-            <section
-              aria-label="Saved files"
-              className="flex w-full max-w-2xl flex-col gap-2 text-left"
-            >
-              <h2 className="text-sm font-medium">Saved in this browser</h2>
-              <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
-                {library.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface-hover"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => void openSaved(entry)}
-                      className="min-w-0 flex-1 text-left"
-                    >
-                      <span className="block truncate font-medium">{entry.name}</span>
-                      <span className="text-xs text-muted">{formatSize(entry.size)}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void removeSaved(entry)}
-                      aria-label={`Remove ${entry.name}`}
-                      title="Remove from this browser"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-background hover:text-danger"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
+            <UploadIcon className="h-5 w-5" />
+            Open a file
+          </button>
+          {picker.status}
+        </div>
       ) : (
         <>
-          <div className="flex w-full justify-center">
-            <Select
-              value={file.id}
-              onChange={(id) => {
-                if (id === ADD_FILE_VALUE) inputRef.current?.click();
-                else if (id !== file.id) {
-                  const entry = library.find((e) => e.id === id);
-                  if (entry) void openSaved(entry);
-                }
-              }}
-              options={[
-                ...(library.some((e) => e.id === file.id)
-                  ? []
-                  : [{ value: file.id, label: file.name }]),
-                ...library.map((e) => ({
-                  value: e.id,
-                  label: e.name,
-                  onDelete: () => setPendingDelete(e),
-                })),
-                {
-                  value: ADD_FILE_VALUE,
-                  label: "Add new file…",
-                  icon: <PlusIcon className="h-4 w-4" />,
-                },
-              ]}
-              className="w-full max-w-md font-medium"
-            />
+          <div className="flex w-full flex-col items-center gap-1">
+            <OpenFileButton name={file.name} mimeType={file.type} onClick={picker.open} />
+            {picker.status}
           </div>
 
           <p className="text-5xl font-semibold tabular-nums tracking-tight">
@@ -917,15 +852,6 @@ export default function SlowDowner() {
       {optionChips}
 
       {error && <p className="text-sm text-danger">{error}</p>}
-      {pendingDelete && (
-        <ConfirmDialog
-          title="Delete this file?"
-          message={`"${pendingDelete.name}" will be removed from this browser, along with its markers and notes. You can add the file again later.`}
-          confirmLabel="Delete"
-          onConfirm={() => void confirmDelete(pendingDelete)}
-          onCancel={() => setPendingDelete(null)}
-        />
-      )}
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </ToolLayout>
   );
