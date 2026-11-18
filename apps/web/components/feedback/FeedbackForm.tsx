@@ -1,6 +1,6 @@
 "use client";
 
-import { APP_VERSION, CHANNEL } from "@/lib/version";
+import { APP_VERSION, CHANNEL, DESKTOP_VERSION } from "@/lib/version";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
@@ -83,7 +83,8 @@ export default function FeedbackForm({
         ...(email.trim() ? { email } : {}),
         page: window.location.pathname + window.location.search,
         userAgent: navigator.userAgent,
-        version: `${APP_VERSION}${CHANNEL === "stable" ? "" : ` ${CHANNEL}`}`,
+        // From the desktop app, its own version too (it bundles this website version).
+        version: `${APP_VERSION}${CHANNEL === "stable" ? "" : ` ${CHANNEL}`}${DESKTOP_VERSION ? ` · desktop ${DESKTOP_VERSION}` : ""}`,
         ...(screenshotId ? { screenshotId } : {}),
         ...(target ? { target } : {}),
       });

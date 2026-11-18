@@ -10,7 +10,7 @@ import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import ThemeModal from "@/components/ThemeModal";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import Logo, { LogoMark } from "@/components/Logo";
-import { APP_VERSION, CHANNEL, VERSION_LABEL } from "@/lib/version";
+import { APP_VERSION, CHANNEL, DESKTOP_VERSION, SHOWN_VERSION, VERSION_LABEL } from "@/lib/version";
 import { useChangelogUnseen } from "@/lib/useChangelogUnseen";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
 import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
@@ -916,7 +916,7 @@ export default function Sidebar() {
               <>
                 <FlyoutItem
                   icon={MegaphoneIcon}
-                  label={`What's new · v${APP_VERSION}`}
+                  label={`What's new · v${SHOWN_VERSION}`}
                   onSelect={() => {
                     router.push("/changelog");
                     close();
@@ -1053,7 +1053,7 @@ export default function Sidebar() {
                     />
                     <FlyoutItem
                       icon={MegaphoneIcon}
-                      label={`What's new · v${APP_VERSION}`}
+                      label={`What's new · v${SHOWN_VERSION}`}
                       onSelect={() => {
                         router.push("/changelog");
                         close();
@@ -1281,11 +1281,15 @@ function VersionTag({ onNavigate }: { onNavigate?: () => void }) {
     <Link
       href="/changelog"
       onClick={onNavigate}
-      title="What's new"
+      title={DESKTOP_VERSION ? `What's new — soniroll desktop ${DESKTOP_VERSION} (website v${APP_VERSION})` : "What's new"}
       className="mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
     >
-      {VERSION_LABEL.replace(/ beta$/, "")}
-      {CHANNEL === "beta" && <span className="rounded-sm bg-foreground/[0.05] px-1 py-px text-[9px] font-semibold text-muted">Beta</span>}
+      {DESKTOP_VERSION ? `v${DESKTOP_VERSION}` : VERSION_LABEL.replace(/ beta$/, "")}
+      {DESKTOP_VERSION ? (
+        <span className="rounded-sm bg-foreground/[0.05] px-1 py-px text-[9px] font-semibold text-muted">Desktop</span>
+      ) : (
+        CHANNEL === "beta" && <span className="rounded-sm bg-foreground/[0.05] px-1 py-px text-[9px] font-semibold text-muted">Beta</span>
+      )}
       {unseen && (
         <span className="flex items-center gap-1 rounded-sm bg-accent px-1 py-px text-[9px] font-semibold text-accent-foreground">
           <span className="h-1 w-1 rounded-full bg-accent-foreground" /> New

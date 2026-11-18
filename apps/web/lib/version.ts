@@ -9,3 +9,10 @@ export const CHANNEL: "beta" | "stable" = "beta";
 
 /** "v0.9.0 beta". */
 export const VERSION_LABEL = `v${APP_VERSION}${CHANNEL === "beta" ? " beta" : ""}`;
+
+/** The desktop app's own version (apps/desktop/package.json, passed in by its build), or undefined
+    on the website. The app shows this rather than the website's. */
+export const DESKTOP_VERSION: string | undefined = process.env.NEXT_PUBLIC_DESKTOP_VERSION || undefined;
+
+/** The version people see: the desktop app's inside the app, else the website's. */
+export const SHOWN_VERSION = DESKTOP_VERSION ?? APP_VERSION;
