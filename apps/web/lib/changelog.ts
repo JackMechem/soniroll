@@ -33,6 +33,29 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.5",
+    date: "2026-11-17",
+    title: "A cleaner, clearer soniroll",
+    summary: "A calmer look with less clutter, easier to find your way around, and a lot of small fixes — especially on phones. Prefer the old look? Settings → Appearance → Classic look.",
+    changes: [
+      { kind: "improved", text: "**A cleaner look** throughout: less clutter, smaller corners, fewer outlines, and the big stat cards are gone. **Classic look** in Settings → Appearance brings back the old feel." },
+      { kind: "improved", text: "**The sidebar** is one simple list with colour-coded tools, Favorites stand out, there's a **Settings** row, and it scrolls to the page you're on." },
+      { kind: "improved", text: "**Search (/)** finds tools, your tunes and chord charts, pages, settings and help — type \"theme\" or \"help metronome\". The phone menu's search does too." },
+      { kind: "improved", text: "**On phones**: a top bar with the page name (tap it to go to that section), tools start at the top, the bug-report button sits in the top bar, and Account opens on a list of sections." },
+      { kind: "improved", text: "**Tools**: Presets sit in every tool's top bar, all option chips look the same, your time today is one small button, and History/Struggles only show once you have some. Trainers say what to do before you start and show your instrument." },
+      { kind: "new", text: "Metronome and other tempo tools: **−10, −5, +5, +10** buttons, and Space always starts and stops, even while typing a tempo." },
+      { kind: "improved", text: "**Shed Log**: no more wall of red for missed days; the month and week views show minutes and progress for each day; past days let you log time; Stats steps back through past weeks; on phones, Today and Calendar tabs." },
+      { kind: "improved", text: "**Library**: Chord Charts opens on your **folders** (what used to be called playlists), with a Recent row. A Recordings tab. Pick Tunes I Know or Tunes to Learn when adding standards." },
+      { kind: "new", text: "**Write the chart** from a tune starts with its name, key and time and links it when you save; a chart's page can add it to your tunes; **Play along** opens a tune's chart in Rhythm Section." },
+      { kind: "new", text: "**Slow Downer on phones**: drag across the waveform, or use Loop start and Loop end, to loop a section. **Score Writer** works on phones too." },
+      { kind: "new", text: "**Practice Timer**: a quick timer — type the minutes and press Start." },
+      { kind: "improved", text: "Pages load faster when you're signed in: your own things show first instead of waiting for your whole chart library." },
+      { kind: "fixed", text: "Light themes' practice grid ran from dark to light; it now goes pale to deep. Seven themes (like Synthwave) had cards almost the same colour as the page." },
+      { kind: "fixed", text: "The chord chart editor asks before you leave with unsaved changes, and no longer saves an empty bar at the end." },
+      { kind: "fixed", text: "Chord charts: chords in a busy bar no longer run into the barlines, and the time signature no longer sits on the section letter." },
+    ],
+  },
+  {
     version: "0.10.4",
     date: "2026-11-16",
     title: "Rhythm Section, presets and Find the Root",
