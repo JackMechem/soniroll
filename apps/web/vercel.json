@@ -1,3 +1,9 @@
 {
-  "buildCommand": "cd ../../packages/convex && npx convex deploy --preview-run previewSeed:seed --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'cd ../../apps/web && pnpm build'"
+  "buildCommand": "cd ../../packages/convex && npx convex deploy --preview-run previewSeed:seed --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'cd ../../apps/web && pnpm build'",
+  "git": {
+    "deploymentEnabled": {
+      "desktop-stable": false,
+      "desktop-unstable": false
+    }
+  }
 }

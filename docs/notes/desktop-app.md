@@ -637,3 +637,32 @@ package set `WEBKIT_DISABLE_DMABUF_RENDERER=1` for everyone, which forces WebKit
 (`webkit_gpu_workaround`) sets it at start-up only when `/proc/driver/nvidia/version` exists and
 the variable isn't already set, and the flake no longer sets it. Jack's machine: AMD RX 7700/7800 XT,
 Hyprland (Wayland). Not verified by me: whether it's smoother (Jack to check), and NVIDIA machines.
+
+## 2026-11-17 — Release channels (Stable and Unstable)
+
+Jack asked for release channels, like his Marbble and open-stomp-manager have.
+
+- **Two channels, decided by the tag:** a plain version (`desktop-v0.2.0`) is **Stable**; a version
+  with a suffix (`desktop-v0.2.0-beta.1`, `-rc.1`) is **Unstable** and published as a GitHub
+  pre-release. Unstable means "every release": its branch moves on Stable releases too.
+- **This replaces "0.x is a pre-release"** (the 2026-10-27 entry). Plain 0.x versions are now normal
+  releases, so GitHub's "Latest" is the newest Stable one. The release notes say which channel.
+- **Channel branches:** after publishing, `desktop-release.yml` force-pushes the tag's commit to
+  `desktop-unstable` (if it's the newest tag of all) and `desktop-stable` (if it's the newest plain
+  one). Sorting is `git tag --sort=-v:refname` with `versionsort.suffix=-`, so `0.2.0-rc.1` comes
+  before `0.2.0`; checked locally against made-up tags (0.1.10 > 0.1.6, a beta of 0.2.1 only moves
+  Unstable, a fix to an older line moves neither). The publish job checks out with
+  `fetch-depth: 0` to see every tag. Nothing is committed to these branches.
+- **Kept off the channel branches:** Vercel (`git.deploymentEnabled` false for both in
+  `apps/web/vercel.json`; otherwise each move would build a preview site and a Convex preview
+  backend) and Desktop CI (negated patterns in its `branches`). A push made with the workflow's
+  `GITHUB_TOKEN` doesn't start other workflows anyway; the exclusion is for a push by hand.
+- **Unstable releases have no `.rpm`:** RPM versions can't hold `-beta.1` (Marbble does the same).
+  The `.deb`, AppImage, `.dmg` and NSIS installer take suffixed versions (Marbble's alpha releases on
+  the same Tauri 2 build all of them). `check-version.sh` and the changelog's `## [0.2.0-beta.1]`
+  heading already work with a suffix; the flake reads the version from `Cargo.toml`.
+- **The branches don't exist until the next release** moves them, or until they're pushed once by
+  hand at `desktop-v0.1.6` (`git push origin desktop-v0.1.6^{commit}:refs/heads/desktop-stable`,
+  same for `desktop-unstable`).
+- **Not verified:** the workflow hasn't run (no release since); Vercel's `deploymentEnabled` was
+  written from its docs, not seen skipping a build.

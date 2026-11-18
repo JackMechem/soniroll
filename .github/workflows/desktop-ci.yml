@@ -4,7 +4,8 @@ name: Desktop CI
 # builds. The app is made from the website's components, so website and package changes run it too.
 on:
   push:
-    branches: ["**"]
+    # not the release channel branches: they only ever point at a release that was already checked
+    branches: ["**", "!desktop-stable", "!desktop-unstable"]
     paths:
       - "apps/desktop/**"
       - "apps/web/**"

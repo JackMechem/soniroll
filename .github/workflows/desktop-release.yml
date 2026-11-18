@@ -2,8 +2,12 @@ name: Desktop release
 
 # Push a tag `desktop-vX.Y.Z` matching apps/desktop's version to build the desktop app's installers
 # and publish them as a GitHub release, with that version's section of apps/desktop/CHANGELOG.md
-# as its notes. Versions before 1.0, and tags with a suffix (desktop-v0.2.0-beta.1), are
-# published as pre-releases.
+# as its notes.
+#
+# Two release channels: a plain version (desktop-v0.2.0) is a Stable release; a version with a
+# suffix (desktop-v0.2.0-beta.1, -rc.1) is an Unstable one, published as a GitHub pre-release.
+# Once a release is published, the `desktop-stable` and `desktop-unstable` branches move to it
+# (see the last step). See "Release channels" in docs/notes/desktop-app.md.
 #
 #   git tag desktop-v0.1.0 && git push origin desktop-v0.1.0
 on:
@@ -57,18 +61,21 @@ jobs:
 
       # `tauri build` builds the frontend, the app and the installers. The files get stable names:
       # soniroll-desktop-<version>-<platform>.<ext>
+      # RPM versions can't hold a suffix like "-beta.1", so Unstable releases have no .rpm.
       - name: Package (Linux)
         if: runner.os == 'Linux'
         working-directory: apps/desktop
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1 # no FUSE on the runner
         run: |
-          pnpm tauri build --bundles deb,rpm,appimage
+          v=${GITHUB_REF_NAME#desktop-v}
+          if [[ "$v" == *-* ]]; then bundles=deb,appimage; else bundles=deb,rpm,appimage; fi
+          pnpm tauri build --bundles $bundles
           b=src-tauri/target/release/bundle
-          p=soniroll-desktop-${GITHUB_REF_NAME#desktop-v}-${{ matrix.name }}
+          p=soniroll-desktop-$v-${{ matrix.name }}
           mkdir -p ../../out
           cp $b/deb/*.deb ../../out/$p.deb
-          cp $b/rpm/*.rpm ../../out/$p.rpm
+          [[ $bundles != *rpm* ]] || cp $b/rpm/*.rpm ../../out/$p.rpm
           cp $b/appimage/*.AppImage ../../out/$p.AppImage
       - name: Package (macOS)
         if: runner.os == 'macOS'
@@ -105,6 +112,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # every tag, for moving the channel branches
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -115,21 +124,44 @@ jobs:
           ls dist/* >/dev/null 2>&1 || { echo "::error::no platform built"; exit 1; }
           v=${GITHUB_REF_NAME#desktop-v}
           echo "version=$v" >> "$GITHUB_OUTPUT"
+          # a suffix (0.2.0-beta.1) is the Unstable channel, published as a pre-release
+          if [[ "$v" == *-* ]]; then
+            channel="**Channel:** Unstable (a pre-release: newer, less tested)."
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            channel="**Channel:** Stable."
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
           awk -v v="$v" '/^## \[/{p = index($0, "[" v "]") > 0; next} p' apps/desktop/CHANGELOG.md > notes.md
+          printf '\n%s\n' "$channel" >> notes.md
           cat >> notes.md <<'EOF'
 
           ### Installing
 
-          - **Linux:** the `.deb` (Debian, Ubuntu), the `.rpm` (Fedora) or the `.AppImage` (anywhere; make it executable first). Needs PipeWire.
-          - **NixOS:** `nix run github:JackMechem/soniroll/${{ github.ref_name }}`, or see the README for adding it to your configuration.
+          - **Linux:** the `.deb` (Debian, Ubuntu), the `.rpm` (Fedora; Stable releases only) or the `.AppImage` (anywhere; make it executable first). Needs PipeWire.
+          - **NixOS:** `nix run github:JackMechem/soniroll/${{ github.ref_name }}`, or follow a channel in your configuration (`github:JackMechem/soniroll/desktop-stable` or `/desktop-unstable`); see the README.
           - **macOS:** the `.dmg`. It isn't notarized: the first time, right-click the app and choose Open (or run `xattr -cr /Applications/soniroll.app`).
           - **Windows:** the `-setup.exe`. SmartScreen may warn that it's unrecognized: choose More info, then Run anyway.
           EOF
-          # 0.x versions and suffixed tags are pre-releases
-          if [[ "$v" == 0.* || "$v" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
       - uses: softprops/action-gh-release@v2
         with:
           name: soniroll desktop ${{ steps.notes.outputs.version }}
           prerelease: ${{ steps.notes.outputs.prerelease }}
           files: dist/*
           body_path: notes.md
+
+      # The release channels are branches pointing at the newest release on each: `desktop-unstable`
+      # at the newest of all, `desktop-stable` at the newest without a suffix. A fix to an older
+      # line (0.1.7 after 0.2.0) leaves them where they are. Flake inputs follow them; nothing is
+      # ever committed to them. (A push made with the workflow's token doesn't start other
+      # workflows, and apps/web/vercel.json keeps Vercel from deploying these branches.)
+      - name: Move the channel branches
+        run: |
+          # versionsort.suffix sorts 0.2.0-rc.1 before 0.2.0
+          newest() { git -c versionsort.suffix=- tag --list 'desktop-v*' --sort=-v:refname | grep -E "$1" | head -n 1; }
+          if [ "$(newest .)" = "$GITHUB_REF_NAME" ]; then
+            git push --force origin "$GITHUB_SHA:refs/heads/desktop-unstable"
+          fi
+          if [ "$(newest '^desktop-v[0-9]+\.[0-9]+\.[0-9]+$')" = "$GITHUB_REF_NAME" ]; then
+            git push --force origin "$GITHUB_SHA:refs/heads/desktop-stable"
+          fi
