@@ -2,18 +2,21 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { action, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { communityHidden, assertUploadsOpen } from "./lib/site";
 import { resolveLinkedChart } from "./lib/chordCharts";
 import { ownerTune } from "./lib/tunes";
 import { sharedInLesson, sharedInNote } from "./scores";
-import { MAX_FILE_BYTES, assertFits, assertHasRoom, bytesUsed, quotaFor, storedItems, type StoredKind } from "./lib/storage";
+import { FREE_CLOUD_BYTES, MAX_FILE_BYTES, assertFits, assertHasRoom, assertPlanForOnline, bytesUsed, planFor, quotaFor, storedItems, type DeviceRef, type StoredKind } from "./lib/storage";
 import type { PublicRecording, PublicTune } from "@jam-practice/core/profileTunes";
 
 /**
  * Files: anything a person uploads to keep with their account (PDFs, images, audio, video,
- * notation, documents), on its own or attached to one of their tunes. Uploading is the usual two
- * steps: `generateUploadUrl`, POST the file there, then `create` with the returned `storageId`.
+ * notation, documents), on its own or attached to one of their tunes. Online (a storage plan, or
+ * shared): the usual two steps, `generateUploadUrl`, POST the file there, then `create` with the
+ * returned `storageId`. On the device (free accounts): the web app keeps the data and calls
+ * `createOnDevice` with its key. `moveOnline` / `moveToDevice` move any file, recording or song
+ * between the two (see `lib/storage.ts`).
  *
  * Also here: `storage` (everything the account stores — files, recordings, tune songs, lesson
  * files, hand-ins, profile pictures — for the Files page), renaming, deleting and sharing any of
@@ -33,7 +36,46 @@ export const storage = query({
     const shares = await ctx.db.query("sharedFiles").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
     const shareOf = new Map(shares.map((row) => [`${row.kind}:${row.itemId}`, row._id as string]));
     const items = (await storedItems(ctx, userId, true)).map((item) => ({ ...item, sharedId: shareOf.get(`${item.kind}:${item.id}`) ?? null }));
-    return { items, used: items.reduce((sum, item) => sum + item.size, 0), quota: await quotaFor(ctx, userId), maxFile: MAX_FILE_BYTES };
+    const { plan, cloudBytes } = await planFor(ctx, userId);
+    return {
+      items,
+      /** Bytes online (what counts towards `quota`) and on devices. */
+      used: items.reduce((sum, item) => sum + (item.device ? 0 : item.size), 0),
+      onDevices: items.reduce((sum, item) => sum + (item.device ? item.size : 0), 0),
+      quota: cloudBytes,
+      freeQuota: FREE_CLOUD_BYTES,
+      plan,
+      maxFile: MAX_FILE_BYTES,
+    };
+  },
+});
+
+/** The caller's plan and online storage: where their new files go (online with a plan, on the
+    device without one) and how much room is left online. Null when signed out. */
+export const storagePlan = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const { plan, cloudBytes } = await planFor(ctx, userId);
+    const items = await storedItems(ctx, userId, false);
+    // On the free plan, the files, recordings and songs still online from before files moved to
+    // devices (shared ones stay online): the move notice asks people to back these up or move them.
+    const shared = new Set(
+      (await ctx.db.query("sharedFiles").withIndex("by_user", (q) => q.eq("userId", userId)).collect()).map((r) => `${r.kind}:${r.itemId}`),
+    );
+    const toMove = plan
+      ? []
+      : items.filter((i) => !i.device && !i.keepOnline && (i.kind === "file" || i.kind === "recording" || i.kind === "song") && !shared.has(`${i.kind}:${i.id}`));
+    return {
+      userId,
+      plan,
+      quota: cloudBytes,
+      used: items.reduce((sum, item) => sum + (item.device ? 0 : item.size), 0),
+      freeQuota: FREE_CLOUD_BYTES,
+      maxFile: MAX_FILE_BYTES,
+      toMove: { count: toMove.length, bytes: toMove.reduce((sum, i) => sum + i.size, 0) },
+    };
   },
 });
 
@@ -48,7 +90,8 @@ const kindArg = v.union(
   v.literal("profile"),
 );
 
-type OwnedItem = { storageId: Id<"_storage">; name: string; mimeType: string; size: number; createdAt: number };
+/** `storageId` is missing when the item is only on a device (`device`). */
+type OwnedItem = { storageId?: Id<"_storage">; device?: DeviceRef; name: string; mimeType: string; size: number; createdAt: number };
 
 /** One of `userId`'s stored files, by its kind and id (as `storage` lists them), or null if it
     doesn't exist or isn't theirs. Ids come from the client, so every kind re-checks ownership. */
@@ -57,17 +100,17 @@ async function ownedItem(ctx: QueryCtx, userId: Id<"users">, kind: StoredKind, i
   if (kind === "file") {
     const fileId = ctx.db.normalizeId("files", id);
     const row = fileId && (await ctx.db.get(fileId));
-    return row && row.userId === userId ? { storageId: row.storageId, name: row.name, mimeType: row.mimeType, size: row.size, createdAt: row.createdAt } : null;
+    return row && row.userId === userId ? { storageId: row.storageId, device: row.device, name: row.name, mimeType: row.mimeType, size: row.size, createdAt: row.createdAt } : null;
   }
   if (kind === "recording") {
     const recId = ctx.db.normalizeId("recordings", id);
     const row = recId && (await ctx.db.get(recId));
-    return row && row.userId === userId ? { storageId: row.storageId, name: row.name, mimeType: row.mimeType, size: await sizeOf(row.storageId), createdAt: row.createdAt } : null;
+    return row && row.userId === userId ? { storageId: row.storageId, device: row.device, name: row.name, mimeType: row.mimeType, size: row.storageId ? await sizeOf(row.storageId) : (row.size ?? 0), createdAt: row.createdAt } : null;
   }
   if (kind === "song") {
     const songId = ctx.db.normalizeId("tuneSongs", id);
     const row = songId && (await ctx.db.get(songId));
-    return row && row.userId === userId ? { storageId: row.storageId, name: row.name, mimeType: row.mimeType, size: await sizeOf(row.storageId), createdAt: row.createdAt } : null;
+    return row && row.userId === userId ? { storageId: row.storageId, device: row.device, name: row.name, mimeType: row.mimeType, size: row.storageId ? await sizeOf(row.storageId) : (row.size ?? 0), createdAt: row.createdAt } : null;
   }
   if (kind === "lesson") {
     const itemId = ctx.db.normalizeId("lessonItems", id);
@@ -138,7 +181,19 @@ export const embed = query({
     if (!visible) return null;
     const item = await ownedItem(ctx, ownerId, kind, id);
     if (!item) return null;
-    return { kind, id, name: item.name, mimeType: item.mimeType, size: item.size, createdAt: item.createdAt, url: await ctx.storage.getUrl(item.storageId), mine };
+    // Kept on a device: only its owner can open it, and only on that device (the web app finds it
+    // by `device.key`); anyone else sees that it isn't online.
+    return {
+      kind,
+      id,
+      name: item.name,
+      mimeType: item.mimeType,
+      size: item.size,
+      createdAt: item.createdAt,
+      url: item.storageId ? await ctx.storage.getUrl(item.storageId) : null,
+      device: mine ? (item.device ?? null) : null,
+      mine,
+    };
   },
 });
 
@@ -187,7 +242,7 @@ export const removeItem = mutation({
     if (!userId) throw new Error("Not signed in.");
     const owned = await ownedItem(ctx, userId, kind, id);
     if (!owned) return;
-    await ctx.storage.delete(owned.storageId);
+    if (owned.storageId) await ctx.storage.delete(owned.storageId);
     if (kind === "file") await ctx.db.delete(id as Id<"files">);
     else if (kind === "recording") await ctx.db.delete(id as Id<"recordings">);
     else if (kind === "song") await ctx.db.delete(id as Id<"tuneSongs">);
@@ -238,7 +293,10 @@ export const shareItem = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to share a file.");
     if (kind === "profile") throw new Error("Profile pictures show on your profile instead.");
-    if (!(await ownedItem(ctx, userId, kind, id))) throw new Error("File not found.");
+    const owned = await ownedItem(ctx, userId, kind, id);
+    if (!owned) throw new Error("File not found.");
+    // The web app puts it online first (`moveOnline`); a link can't reach a device.
+    if (!owned.storageId) throw new Error("That file is only on your device. Put it online to share it.");
     const existing = await ctx.db
       .query("sharedFiles")
       .withIndex("by_user_item", (q) => q.eq("userId", userId).eq("kind", kind).eq("itemId", id))
@@ -268,7 +326,7 @@ export const getSharedFile = query({
     const row = shareId && (await ctx.db.get(shareId));
     if (!row) return null;
     const item = await ownedItem(ctx, row.userId, row.kind as StoredKind, row.itemId);
-    if (!item) return null;
+    if (!item?.storageId) return null;
     const profile = await ctx.db.query("profiles").withIndex("by_user", (q) => q.eq("userId", row.userId)).unique();
     const viewer = await getAuthUserId(ctx);
     return {
@@ -293,7 +351,7 @@ export const sharedFileSource = internalQuery({
     const row = shareId && (await ctx.db.get(shareId));
     if (!row || (await communityHidden(ctx))) return null;
     const item = await ownedItem(ctx, row.userId, row.kind as StoredKind, row.itemId);
-    if (!item) return null;
+    if (!item?.storageId) return null;
     return { storageId: item.storageId, name: item.name, size: item.size, used: await bytesUsed(ctx, userId), quota: await quotaFor(ctx, userId) };
   },
 });
@@ -304,6 +362,7 @@ export const copySharedFile = action({
   handler: async (ctx, { shareId }): Promise<{ id: string }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save files.");
+    if (!(await ctx.runQuery(internal.files.hasPlanFor, { userId }))) throw new Error("Keeping files online needs a storage plan. Save it to this device instead.");
     const source = await ctx.runQuery(internal.files.sharedFileSource, { id: shareId, userId });
     if (!source) throw new Error("That file isn't shared any more.");
     if (source.used + source.size > source.quota) throw new Error("There isn't room for this file in your account. Delete something first.");
@@ -319,6 +378,7 @@ export const copySharedFile = action({
 function fileView(row: Doc<"files">, url: string | null) {
   return {
     _id: row._id,
+    device: row.device ?? null,
     name: row.name,
     mimeType: row.mimeType,
     size: row.size,
@@ -329,12 +389,15 @@ function fileView(row: Doc<"files">, url: string | null) {
   };
 }
 
+/** An upload URL for a file going online. Without a storage plan only for a `purpose` other people
+    need it online for (`note`, `share`; see `moveOnline`). */
 export const generateUploadUrl = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { purpose: v.optional(v.union(v.literal("note"), v.literal("share"))) },
+  handler: async (ctx, { purpose }) => {
     await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
+    if (!purpose) await assertPlanForOnline(ctx, userId);
     await assertHasRoom(ctx, userId);
     return await ctx.storage.generateUploadUrl();
   },
@@ -343,10 +406,13 @@ export const generateUploadUrl = mutation({
 /** Saves an uploaded file (after POSTing it to a `generateUploadUrl` URL). Too big, or no room
     left: the upload is deleted and it throws. */
 export const create = mutation({
-  args: { storageId: v.id("_storage"), name: v.string(), tuneId: v.optional(v.string()) },
-  handler: async (ctx, { storageId, name, tuneId }) => {
+  /** `keepOnline`: it's for a note (see the schema). */
+  args: { storageId: v.id("_storage"), name: v.string(), tuneId: v.optional(v.string()), keepOnline: v.optional(v.boolean()) },
+  handler: async (ctx, { storageId, name, tuneId, keepOnline }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
+    // A picture for a note goes online on any plan (everyone who can open the note sees it).
+    if (!keepOnline) await assertPlanForOnline(ctx, userId, storageId);
     const meta = await assertFits(ctx, userId, storageId);
     const now = Date.now();
     return await ctx.db.insert("files", {
@@ -356,9 +422,160 @@ export const create = mutation({
       mimeType: meta.contentType ?? "application/octet-stream",
       size: meta.size,
       ...(tuneId ? { tuneId: tuneId.slice(0, 100) } : {}),
+      ...(keepOnline ? { keepOnline: true } : {}),
       createdAt: now,
       updatedAt: now,
     });
+  },
+});
+
+/** Marks a file, recording or song as being in a note, so it stays online. The web app calls it
+    when one is picked for a note (after putting it online if it was on the device). */
+export const keepOnline = mutation({
+  args: { kind: v.union(v.literal("file"), v.literal("recording"), v.literal("song")), id: v.string() },
+  handler: async (ctx, { kind, id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not signed in.");
+    const row = await movableRow(ctx, userId, kind, id);
+    if (row && !row.keepOnline) await ctx.db.patch(row._id, { keepOnline: true });
+  },
+});
+
+/** One-off: marks every file, recording and song already shown in a Shed Note or lesson notes as
+    staying online (from before files moved to devices). Run once per deployment:
+    `npx convex run files:markNoteFiles` (add `--prod` for production). Pages through every note. */
+export const markNoteFiles = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    let marked = 0;
+    for (const table of ["shedNotes", "lessonItems"] as const) {
+      let cursor: string | null = null;
+      for (;;) {
+        const page: { marked: number; cursor: string; done: boolean } = await ctx.runMutation(internal.files.markNoteFilesPage, { table, cursor });
+        marked += page.marked;
+        if (page.done) break;
+        cursor = page.cursor;
+      }
+    }
+    return { marked };
+  },
+});
+
+export const markNoteFilesPage = internalMutation({
+  args: { table: v.union(v.literal("shedNotes"), v.literal("lessonItems")), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { table, cursor }) => {
+    const page = await ctx.db.query(table).paginate({ numItems: 100, cursor });
+    let marked = 0;
+    for (const doc of page.page) {
+      const body = "body" in doc && typeof doc.body === "string" ? doc.body : "";
+      for (const m of body.matchAll(/\(file:([^)\s|]+)/g)) {
+        const ref = m[1];
+        const slash = ref.indexOf("/");
+        const kind = slash < 0 ? "file" : ref.slice(0, slash);
+        const id = slash < 0 ? ref : ref.slice(slash + 1);
+        const tableOf = kind === "file" ? "files" : kind === "recording" ? "recordings" : kind === "song" ? "tuneSongs" : null;
+        const rowId = tableOf ? ctx.db.normalizeId(tableOf, id) : null;
+        const row = rowId ? await ctx.db.get(rowId) : null;
+        if (row && !row.keepOnline) {
+          await ctx.db.patch(row._id, { keepOnline: true });
+          marked += 1;
+        }
+      }
+    }
+    return { marked, cursor: page.continueCursor, done: page.isDone };
+  },
+});
+
+const deviceArg = v.object({ key: v.string(), label: v.string() });
+
+/** A device reference from the client, trimmed to sane sizes. */
+export function cleanDevice(device: DeviceRef): DeviceRef {
+  const key = device.key.trim().slice(0, 100);
+  if (!key) throw new Error("Missing the file's key on this device.");
+  return { key, label: device.label.trim().slice(0, 80) || "Another device" };
+}
+
+/** Saves a file kept on the caller's device: its data stays there (under `device.key`); this
+    row is its name, size and tune, so it shows in lists on every device. */
+export const createOnDevice = mutation({
+  args: { name: v.string(), mimeType: v.string(), size: v.number(), tuneId: v.optional(v.string()), device: deviceArg },
+  handler: async (ctx, { name, mimeType, size, tuneId, device }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Sign in to save files.");
+    if (size > MAX_FILE_BYTES) throw new Error(`Files can be up to ${MAX_FILE_BYTES / (1024 * 1024)} MB.`);
+    const now = Date.now();
+    return await ctx.db.insert("files", {
+      userId,
+      device: cleanDevice(device),
+      name: name.trim().slice(0, MAX_NAME) || "File",
+      mimeType: mimeType.slice(0, 200) || "application/octet-stream",
+      size: Math.max(0, Math.round(size)),
+      ...(tuneId ? { tuneId: tuneId.slice(0, 100) } : {}),
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+const movableKind = v.union(v.literal("file"), v.literal("recording"), v.literal("song"));
+
+/** One of the caller's files, recordings or songs, by kind, with the table it's in. */
+async function movableRow(ctx: QueryCtx, userId: Id<"users">, kind: "file" | "recording" | "song", id: string) {
+  const table = kind === "file" ? "files" : kind === "recording" ? "recordings" : "tuneSongs";
+  const rowId = ctx.db.normalizeId(table, id);
+  const row = rowId ? await ctx.db.get(rowId) : null;
+  return row && row.userId === userId ? row : null;
+}
+
+/** Puts a file, recording or song that was only on a device online: the web app uploads its data
+    (`generateUploadUrl`) and passes the new `storageId`. Checks it fits the account's online
+    storage (deleting the upload if not). With a storage plan, for anything. Without one, only for
+    a `purpose` other people need it online for: `share` (the link is made here, in the same step,
+    and its id returned) or `note` (it's marked to stay online). */
+export const moveOnline = mutation({
+  args: { kind: movableKind, id: v.string(), storageId: v.id("_storage"), purpose: v.optional(v.union(v.literal("share"), v.literal("note"))) },
+  handler: async (ctx, { kind, id, storageId, purpose }): Promise<string | null> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not signed in.");
+    if (!purpose) await assertPlanForOnline(ctx, userId, storageId);
+    const row = await movableRow(ctx, userId, kind, id);
+    if (!row) {
+      await ctx.storage.delete(storageId);
+      throw new Error("File not found.");
+    }
+    if (row.storageId) {
+      // Already online (another device moved it first).
+      await ctx.storage.delete(storageId);
+    } else {
+      const meta = await assertFits(ctx, userId, storageId);
+      await ctx.db.patch(row._id, { storageId, device: undefined, ...(kind === "file" ? { size: meta.size } : { size: undefined }) });
+    }
+    if (purpose === "note" && !row.keepOnline) await ctx.db.patch(row._id, { keepOnline: true });
+    if (purpose !== "share") return null;
+    const existing = await ctx.db
+      .query("sharedFiles")
+      .withIndex("by_user_item", (q) => q.eq("userId", userId).eq("kind", kind).eq("itemId", id))
+      .first();
+    return existing?._id ?? (await ctx.db.insert("sharedFiles", { userId, kind, itemId: id, createdAt: Date.now() }));
+  },
+});
+
+/** Takes a file, recording or song offline: the web app has already saved its data on this device
+    (under `device.key`), and the online copy is deleted. Any link to it stops working, since a link
+    can't reach a device. */
+export const moveToDevice = mutation({
+  args: { kind: movableKind, id: v.string(), device: deviceArg },
+  handler: async (ctx, { kind, id, device }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not signed in.");
+    const row = await movableRow(ctx, userId, kind, id);
+    if (!row) throw new Error("File not found.");
+    if (!row.storageId) return;
+    if (row.keepOnline) throw new Error(`"${row.name}" is in a note, so it stays online for the people who can open the note.`);
+    const meta = await ctx.db.system.get(row.storageId);
+    await ctx.storage.delete(row.storageId);
+    await ctx.db.patch(row._id, { storageId: undefined, device: cleanDevice(device), size: meta?.size ?? row.size ?? 0 });
+    await dropShares(ctx, userId, kind, id);
   },
 });
 
@@ -369,7 +586,7 @@ export const list = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const rows = await ctx.db.query("files").withIndex("by_user", (q) => q.eq("userId", userId)).order("desc").collect();
-    return Promise.all(rows.map(async (row) => fileView(row, await ctx.storage.getUrl(row.storageId))));
+    return Promise.all(rows.map(async (row) => fileView(row, row.storageId ? await ctx.storage.getUrl(row.storageId) : null)));
   },
 });
 
@@ -384,7 +601,7 @@ export const listForTune = query({
       .withIndex("by_user_tune", (q) => q.eq("userId", userId).eq("tuneId", tuneId))
       .order("desc")
       .collect();
-    return Promise.all(rows.map(async (row) => fileView(row, await ctx.storage.getUrl(row.storageId))));
+    return Promise.all(rows.map(async (row) => fileView(row, row.storageId ? await ctx.storage.getUrl(row.storageId) : null)));
   },
 });
 
@@ -410,7 +627,7 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     const row = await ctx.db.get(id);
     if (!userId || !row || row.userId !== userId) return;
-    await ctx.storage.delete(row.storageId);
+    if (row.storageId) await ctx.storage.delete(row.storageId);
     await ctx.db.delete(id);
     await dropShares(ctx, userId, "file", id);
   },
@@ -493,7 +710,9 @@ export const getSharedTune = query({
               .withIndex("by_user_tune", (q) => q.eq("userId", row.userId).eq("tuneId", row.tuneId))
               .order("desc")
               .collect()
-          ).map(async (f) => ({ id: f._id, name: f.name, mimeType: f.mimeType, size: f.size, createdAt: f.createdAt, url: await ctx.storage.getUrl(f.storageId) })),
+          )
+            .filter((f) => f.storageId)
+            .map(async (f) => ({ id: f._id, name: f.name, mimeType: f.mimeType, size: f.size, createdAt: f.createdAt, url: await ctx.storage.getUrl(f.storageId!) })),
         )
       : [];
     const recordings: PublicRecording[] = live
@@ -504,7 +723,9 @@ export const getSharedTune = query({
               .withIndex("by_user_tune", (q) => q.eq("userId", row.userId).eq("tuneId", row.tuneId))
               .order("desc")
               .collect()
-          ).map(async (r) => ({ id: r._id, name: r.name, durationSec: r.durationSec, createdAt: r.createdAt, url: await ctx.storage.getUrl(r.storageId) })),
+          )
+            .filter((r) => r.storageId)
+            .map(async (r) => ({ id: r._id, name: r.name, durationSec: r.durationSec, createdAt: r.createdAt, url: await ctx.storage.getUrl(r.storageId!) })),
         )
       : [];
 
@@ -535,7 +756,7 @@ export const sharedTuneFiles = internalQuery({
       .withIndex("by_user_tune", (q) => q.eq("userId", row.userId).eq("tuneId", row.tuneId))
       .collect();
     return {
-      files: files.map((f) => ({ storageId: f.storageId, name: f.name, size: f.size })),
+      files: files.flatMap((f) => (f.storageId ? [{ storageId: f.storageId, name: f.name, size: f.size }] : [])),
       used: await bytesUsed(ctx, userId),
       quota: await quotaFor(ctx, userId),
     };
@@ -567,6 +788,7 @@ export const copySharedFiles = action({
   handler: async (ctx, { shareId, tuneId }): Promise<{ copied: number; skipped: number }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save files.");
+    if (!(await ctx.runQuery(internal.files.hasPlanFor, { userId }))) throw new Error("Keeping files online needs a storage plan. Save them to this device instead.");
     const id = await ctx.runQuery(internal.files.normalizeShareId, { id: shareId });
     if (!id) throw new Error("That tune isn't shared any more.");
     const shared = await ctx.runQuery(internal.files.sharedTuneFiles, { shareId: id, userId });
@@ -591,6 +813,11 @@ export const copySharedFiles = action({
     }
     return { copied, skipped };
   },
+});
+
+export const hasPlanFor = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => !!(await planFor(ctx, userId)).plan,
 });
 
 export const normalizeShareId = internalQuery({

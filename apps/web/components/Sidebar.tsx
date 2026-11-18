@@ -17,12 +17,18 @@ import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
+import { DOWNLOAD_PATH } from "@/lib/desktopRelease";
+import { DesktopAppRow } from "@/components/download/DesktopAppRow";
+import { useInDesktopApp } from "@/lib/deviceFiles";
+import { PLAN_HREF } from "@/lib/storagePlan";
 import {
   CATEGORY_COLORS,
   BugIcon,
   FeedbackIcon,
   GearIcon,
   MegaphoneIcon,
+  CloudIcon,
+  DownloadIcon,
   HeartIcon,
   HelpIcon,
   ShieldIcon,
@@ -645,6 +651,8 @@ function SearchExtras({ query, large, toolsFound, onNavigate }: { query: string;
     Falls back to the first tileable tool (`TILEABLE_LINKS[0]`) if you happen to enable it from a
     page that isn't a tool at all (e.g. the home page). */
 export default function Sidebar() {
+  // The ⋮ menus offer the desktop app everywhere but inside it.
+  const inDesktop = useInDesktopApp();
   const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
   const [dragging, setDragging] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -780,6 +788,26 @@ export default function Sidebar() {
                       }}
                     />
                     <FlyoutItem
+                      icon={CloudIcon}
+                      label="Storage plans"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        router.push(PLAN_HREF);
+                        close();
+                      }}
+                    />
+                    {!inDesktop && (
+                      <FlyoutItem
+                        icon={DownloadIcon}
+                        label="Desktop app"
+                        onSelect={() => {
+                          setMobileOpen(false);
+                          router.push(DOWNLOAD_PATH);
+                          close();
+                        }}
+                      />
+                    )}
+                    <FlyoutItem
                       icon={settingsIcon}
                       label={settingsLabel}
                       onSelect={() => {
@@ -910,6 +938,24 @@ export default function Sidebar() {
                     close();
                   }}
                 />
+                <FlyoutItem
+                  icon={CloudIcon}
+                  label="Storage plans"
+                  onSelect={() => {
+                    router.push(PLAN_HREF);
+                    close();
+                  }}
+                />
+                {!inDesktop && (
+                  <FlyoutItem
+                    icon={DownloadIcon}
+                    label="Desktop app"
+                    onSelect={() => {
+                      router.push(DOWNLOAD_PATH);
+                      close();
+                    }}
+                  />
+                )}
                 {fabHidden && (
                   <FlyoutItem
                     icon={BugIcon}
@@ -968,7 +1014,10 @@ export default function Sidebar() {
           className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
-          {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
+          {/* The website offers the desktop app here; inside the app, Support soniroll. */}
+          {inDesktop
+            ? site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />
+            : site.sidebarDesktopApp && <DesktopAppRow collapsed={collapsed} active={currentPath === DOWNLOAD_PATH} />}
           <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
           {collapsed && (
             <div className="flex flex-col items-center gap-1 pb-1">
@@ -1026,6 +1075,24 @@ export default function Sidebar() {
                         close();
                       }}
                     />
+                    <FlyoutItem
+                      icon={CloudIcon}
+                      label="Storage plans"
+                      onSelect={() => {
+                        router.push(PLAN_HREF);
+                        close();
+                      }}
+                    />
+                    {!inDesktop && (
+                      <FlyoutItem
+                        icon={DownloadIcon}
+                        label="Desktop app"
+                        onSelect={() => {
+                          router.push(DOWNLOAD_PATH);
+                          close();
+                        }}
+                      />
+                    )}
                     {fabHidden && (
                       <FlyoutItem
                         icon={BugIcon}
@@ -1087,6 +1154,8 @@ const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: str
   { match: (p) => p === "/changelog", label: "What's new", href: "/changelog", icon: MegaphoneIcon },
   { match: (p) => p === "/feedback", label: "Feedback", href: "/feedback", icon: FeedbackIcon },
   { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
+  { match: (p) => p === "/plans", label: "Storage plans", href: "/plans", icon: CloudIcon },
+  { match: (p) => p === DOWNLOAD_PATH, label: "Desktop app", href: DOWNLOAD_PATH, icon: DownloadIcon },
   { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
   { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
   { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },

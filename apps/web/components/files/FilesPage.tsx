@@ -10,10 +10,16 @@ import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUpload
 import { MenuButton } from "@/components/library/shared";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
+import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
+import { StorageMovePanel } from "@/components/files/StorageMove";
+import { useBackup } from "@/lib/storageMove";
+import { PLAN_HREF, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
+import SaveWhere from "@/components/files/SaveWhere";
+import { useSiteSettings } from "@/lib/siteSettings";
 
 type Source = StoredKind;
 
@@ -78,7 +84,8 @@ export default function FilesPage() {
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
   const tunes = useTuneIndex();
   const tuneName = (id: string) => tunes.get(id)?.tune.name;
-  const uploader = useFileUploader();
+  const saveTarget = useSaveTarget();
+  const uploader = useFileUploader(undefined, saveTarget);
   const actions = useFileActions({ tuneName });
 
   const [query, setQuery] = useState("");
@@ -88,7 +95,18 @@ export default function FilesPage() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [selecting, setSelecting] = useState(false);
 
-  const items = useMemo<StoredEntry[]>(() => storage?.items ?? [], [storage]);
+  const plan = useStoragePlan();
+  const backup = useBackup();
+  const withUrls = useDeviceUrls(storage?.items);
+  const items = useMemo<StoredEntry[]>(() => withUrls ?? [], [withUrls]);
+
+  // Forget files on this device that the account no longer lists (deleted or moved online, maybe
+  // from another device).
+  const owner = plan?.userId;
+  const liveKeys = useMemo(() => (storage ? new Set(storage.items.flatMap((i) => (i.device ? [i.device.key] : []))) : null), [storage]);
+  useEffect(() => {
+    if (owner && liveKeys) void tidyDeviceFiles(owner, liveKeys);
+  }, [owner, liveKeys]);
 
   const counts = useMemo(() => {
     const bySource = new Map<string, number>();
@@ -188,6 +206,17 @@ export default function FilesPage() {
               <HeroSearch value={query} onChange={setQuery} placeholder="Search files and tunes" />
               <button
                 type="button"
+                onClick={() => void backup.backUp(items)}
+                disabled={backup.busy || !items.length}
+                title="Download every file you can open here — online or on this device — as one .zip"
+                aria-label="Back up as a .zip"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
+              >
+                <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
+              </button>
+              <SaveWhere target={saveTarget} className="h-10 sm:h-9" />
+              <button
+                type="button"
                 onClick={uploader.pick}
                 disabled={!!uploader.progress}
                 title="Or drop files anywhere on this page"
@@ -212,9 +241,24 @@ export default function FilesPage() {
           />
         ) : (
           <>
-            {(used >= quota || uploader.progress || uploader.error) && (
+            {plan && <StorageMovePanel storage={plan} items={items} />}
+            {plan && <WhereFilesGo storage={plan} />}
+
+            {(backup.status || backup.message) && (
+              <p className={`flex items-center gap-2 text-sm ${backup.message?.error ? "text-danger" : "text-muted"}`}>
+                {backup.status ? (
+                  <>
+                    <LoadingSpinner size="sm" inline label="Backing up" /> {backup.status}
+                  </>
+                ) : (
+                  backup.message?.text
+                )}
+              </p>
+            )}
+
+            {((plan?.plan && used >= quota) || uploader.progress || uploader.error) && (
               <div className="flex flex-col gap-2">
-                {used >= quota && <p className="text-sm text-danger">Your storage is full. Delete some files or recordings to upload more.</p>}
+                {plan?.plan && used >= quota && <p className="text-sm text-danger">Your online storage is full. Delete something to add more.</p>}
                 <UploadProgress progress={uploader.progress} />
                 {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
               </div>
@@ -274,6 +318,26 @@ export default function FilesPage() {
                     <span className="text-sm font-medium">{picked.length} selected</span>
                     <span className="text-xs tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
                     <div className="ml-auto flex items-center gap-1.5">
+                      {plan?.plan && picked.some((i) => i.device && i.url) && (
+                        <button
+                          type="button"
+                          onClick={() => void actions.putOnline(picked.filter((i) => i.device && i.url), clearSelection)}
+                          disabled={!!actions.status}
+                          title="Put what's ticked and kept on this device online, on all your devices"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+                        >
+                          <CloudIcon className="h-4 w-4" /> Put online
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void backup.backUp(picked)}
+                        disabled={backup.busy}
+                        title="Download what's ticked as one .zip"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+                      >
+                        <DownloadIcon className="h-4 w-4" /> Download
+                      </button>
                       <button type="button" onClick={deletePicked} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-danger hover:bg-surface-hover">
                         <TrashIcon className="h-4 w-4" /> Delete
                       </button>
@@ -373,6 +437,7 @@ export default function FilesPage() {
                                   <span className="hidden lg:inline">Shared</span>
                                 </span>
                               )}
+                              <PlaceBadge item={item} paid={!!plan?.plan} />
                             </span>
                             {/* Phones: everything in one line under the name. */}
                             <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, where === "Your files" ? null : where)}</span>
@@ -405,6 +470,7 @@ export default function FilesPage() {
                   })}
                 </div>
               )}
+              {actions.status && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-muted">{actions.status}</p>}
               {actions.error && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error}</p>}
             </section>
           </>
@@ -459,5 +525,52 @@ function FilterChip({ active, onClick, label, count, small = false }: { active: 
       {label}
       {count != null && <span className={`text-xs tabular-nums ${active ? "text-accent/80" : "text-muted"}`}>{count}</span>}
     </button>
+  );
+}
+
+/** Where an item's data is, beside its name: on this device, on another one (it won't open here),
+    or online — shown for online items only on the free plan, where most things are on devices. */
+function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean }) {
+  const badge = "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-[11px] font-medium";
+  if (item.device) {
+    return item.url ? (
+      <span title="Kept on this device" className={`${badge} bg-foreground/[0.05] text-muted`}>
+        <DeviceIcon className="h-3 w-3" />
+        <span className="hidden lg:inline">This device</span>
+      </span>
+    ) : (
+      <span title={`Kept on ${item.device.label}. Open it there.`} className={`${badge} bg-foreground/[0.05] text-muted`}>
+        <DeviceIcon className="h-3 w-3" />
+        <span className="max-w-[10rem] truncate">{item.device.label}</span>
+      </span>
+    );
+  }
+  // Online on the free plan: only for what's going to move (not lesson files, the profile, things
+  // in notes or shared by link — those stay online).
+  if (paid || !(item.kind === "file" || item.kind === "recording" || item.kind === "song") || item.keepOnline || item.sharedId) return null;
+  return (
+    <span title="Online" className={`${badge} bg-foreground/[0.05] text-muted`}>
+      <CloudIcon className="h-3 w-3" />
+      <span className="hidden lg:inline">Online</span>
+    </span>
+  );
+}
+
+/** One line on where new files go: this device (free), or online with the plan. */
+function WhereFilesGo({ storage }: { storage: NonNullable<ReturnType<typeof useStoragePlan>> }) {
+  const [settings] = useSiteSettings();
+  const Icon = storage.plan ? CloudIcon : DeviceIcon;
+  return (
+    <p className="flex items-start gap-2 text-sm text-muted">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+      <span>
+        {storage.plan
+          ? `Your ${storage.plan.storageGb} GB plan: ${formatBytes(storage.used)} of ${formatBytes(storage.quota)} online. New files go ${settings.newFilesOnline ? "online" : "on this device"} unless you pick otherwise beside Upload.`
+          : "New files are kept on this device. Every feature works; to have them on all your devices, get a storage plan."}{" "}
+        <Link href={PLAN_HREF} className="font-medium text-accent hover:underline">
+          {storage.plan ? "Manage plan" : "Storage plans"}
+        </Link>
+      </span>
+    </p>
   );
 }

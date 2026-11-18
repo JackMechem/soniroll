@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="November 16, 2026">
+    <LegalPage title="Privacy Policy" updated="November 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
@@ -34,9 +34,20 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings and the presets you save, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, recordings and any files you upload (PDFs,
-            images, audio, video and so on, on their own or attached to a tune). Each account can store up to 100 MB.
+            <strong>Your stuff:</strong> tool settings and the presets you save, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, and the details of your recordings and files (PDFs,
+            images, audio, video and so on, on their own or attached to a tune): their names, sizes, dates and which tune they&apos;re on.
             When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
+          </li>
+          <li>
+            <strong>Where files are kept:</strong> on the free plan, the files, recordings and tune songs themselves are kept on the device that saved
+            them (in that browser, or in the desktop app) and aren&apos;t uploaded. Clearing that browser&apos;s data for soniroll.com deletes them, and
+            soniroll can&apos;t get them back. With a storage plan they&apos;re stored online instead. Files you share by link, lesson files, hand-ins
+            and profile pictures are always stored online (free accounts have 50 MB for these).
+          </li>
+          <li>
+            <strong>Storage plans:</strong> if you buy one, the payment is made to Polar, who sells the plan on soniroll&apos;s behalf and handles your
+            card details, sales tax and receipts; soniroll never sees your card. soniroll gives Polar your email and account id, and keeps which plan
+            you have, its price, status and renewal date. Deleting your account cancels the plan.
           </li>
           <li>
             <strong>Profile:</strong> your username, and if you add them, a picture, banner and instruments.
@@ -52,7 +63,7 @@ export default function PrivacyPage() {
         <p>
           When you press Record in the Tuner, the take is saved in your browser on this device only, signed in or not. So are audio files you open
           in the Tuner, and the copy made when you open one of your recordings there. They&apos;re never uploaded or added to your account, and don&apos;t
-          count towards its 100 MB. Delete them from the Tuner&apos;s Takes, or by clearing your browser&apos;s data for soniroll.com.
+          count towards its storage. Delete them from the Tuner&apos;s Takes, or by clearing your browser&apos;s data for soniroll.com.
         </p>
       </LegalSection>
 
@@ -117,8 +128,11 @@ export default function PrivacyPage() {
       <LegalSection title="Services soniroll uses">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <LegalLink href="https://www.convex.dev/legal/privacy">Convex</LegalLink> stores account data, synced data and uploaded files, and runs the
-            server code.
+            <LegalLink href="https://www.convex.dev/legal/privacy">Convex</LegalLink> stores account data, synced data and files kept online, and runs
+            the server code.
+          </li>
+          <li>
+            <LegalLink href="https://polar.sh/legal/privacy">Polar</LegalLink> sells storage plans and takes the payments, if you buy one.
           </li>
           <li>
             <LegalLink href="https://resend.com/legal/privacy-policy">Resend</LegalLink> sends soniroll&apos;s emails (sign-in codes, password resets,

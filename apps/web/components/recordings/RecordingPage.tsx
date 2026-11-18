@@ -14,12 +14,14 @@ import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
 import { LinkIcon, TrashIcon, TunerIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
 import { copyRecordingToTuner } from "@/lib/tunerTakes";
+import { useDeviceUrl } from "@/lib/deviceFiles";
+import { OnOtherDevice } from "@/components/files/StorageMove";
 
 /** `/recordings/view?id=…` — one recording: play it, rename it, keep notes on it, link it to a tune
     (or change or unlink it), or delete it. Edits save with the Save button, or when you leave. */
 export default function RecordingPage({ id }: { id: string }) {
   const router = useRouter();
-  const recording = useQuery(recordingsApi.get, id ? { id: id as Id<"recordings"> } : "skip");
+  const recording = useDeviceUrl(useQuery(recordingsApi.get, id ? { id: id as Id<"recordings"> } : "skip"));
   const update = useMutation(recordingsApi.update);
   const remove = useMutation(recordingsApi.remove);
   const byId = useTuneIndex();
@@ -139,6 +141,7 @@ export default function RecordingPage({ id }: { id: string }) {
         ) : (
           <TakePlayer url={rec.url} durationSec={rec.durationSec} />
         ))}
+      {!rec.url && rec.device && <OnOtherDevice label={rec.device.label} what="recording" />}
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-xs font-medium text-muted">Name</span>

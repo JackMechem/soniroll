@@ -3,6 +3,8 @@
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { siteOrigin } from "@/lib/siteOrigin";
+import type { DeviceRef } from "@/lib/deviceFiles";
+import { type AccountStorage, type Placed, placeBlob, savesOnline, unplace } from "@/lib/storagePlan";
 
 /**
  * Files people upload to their account (`packages/convex/files.ts`): on their own, or attached to
@@ -20,7 +22,10 @@ export type UserFile = {
   tuneId: string | null;
   createdAt: number;
   updatedAt: number;
+  /** Null when it's on another device (or this one, before `useDeviceUrls` fills it in). */
   url: string | null;
+  /** Set when it's kept on a device instead of online. */
+  device: DeviceRef | null;
 };
 
 /** Where a stored item came from (`packages/convex/lib/storage.ts`'s `StoredKind`). */
@@ -39,11 +44,15 @@ export type StoredEntry = {
   tuneId: string | null;
   href: string | null;
   sharedId?: string | null;
+  /** Set when it's kept on a device instead of online (files, recordings and songs only). */
+  device?: DeviceRef | null;
+  /** In a note: stays online, never moved to a device. */
+  keepOnline?: boolean;
 };
 
 /** An upload as a `StoredEntry`. */
 export function entryOf(file: UserFile): StoredEntry {
-  return { kind: "file", id: file._id, name: file.name, mimeType: file.mimeType, size: file.size, createdAt: file.createdAt, url: file.url, tuneId: file.tuneId, href: null };
+  return { kind: "file", id: file._id, name: file.name, mimeType: file.mimeType, size: file.size, createdAt: file.createdAt, url: file.url, tuneId: file.tuneId, href: null, device: file.device };
 }
 
 /** The address a shared file's link opens (`app/file/[id]`). */
@@ -71,7 +80,7 @@ export async function downloadFile(url: string, name: string) {
 }
 
 /** Largest single file — same as the backend (`packages/convex/lib/storage.ts`), which checks
-    again, along with the account's 100 MB total. */
+    again, along with the account's online storage. */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
 export type FileKind = "pdf" | "image" | "audio" | "video" | "notation" | "document" | "other";
@@ -142,6 +151,33 @@ export async function uploadFile<T>(
   if (!res.ok) throw new Error(`Uploading "${file.name}" failed (${res.status}).`);
   const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
   return await create({ storageId, name, ...(tuneId ? { tuneId } : {}) });
+}
+
+/** Saves a new file online (`online`, which needs a plan) or on this device — see
+    `lib/storagePlan.ts` — optionally attached to a tune, and returns the new file's id. */
+export async function saveFile(
+  file: File,
+  storage: AccountStorage | null | undefined,
+  calls: {
+    generateUploadUrl: () => Promise<string>;
+    create: (args: { storageId: Id<"_storage">; name: string; tuneId?: string }) => Promise<Id<"files">>;
+    createOnDevice: (args: { name: string; mimeType: string; size: number; tuneId?: string; device: DeviceRef }) => Promise<Id<"files">>;
+  },
+  tuneId?: string,
+  name = file.name,
+  online = savesOnline(storage),
+): Promise<Id<"files">> {
+  if (online && savesOnline(storage)) return uploadFile(file, calls.generateUploadUrl, calls.create, tuneId, name);
+  if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" is over 100 MB.`);
+  if (!file.size) throw new Error(`"${file.name}" is empty.`);
+  const placed: Placed = await placeBlob(file, name, storage, calls.generateUploadUrl, false);
+  if (!("device" in placed)) throw new Error("unreachable");
+  try {
+    return await calls.createOnDevice({ name, mimeType: file.type || "application/octet-stream", size: file.size, device: placed.device, ...(tuneId ? { tuneId } : {}) });
+  } catch (e) {
+    await unplace(placed);
+    throw e;
+  }
 }
 
 /** Turns a Convex error into the sentence inside it. */

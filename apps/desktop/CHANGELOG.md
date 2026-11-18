@@ -4,6 +4,17 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.7] - 2026-11-17
+
+- **Updates itself:** at launch it checks for a new version and installs it (macOS, Windows), or
+  tells you one is out (Linux). Installs from 0.1.6 and before need this one downloaded by hand.
+- **The Recorder, rebuilt:** pick the input, set the input level (applied in the native engine),
+  Check level before recording, a live level trace that warns when it's too loud; Auto gain is off
+  by default.
+- **Files kept on your computer** without a storage plan, and storage plans for having them online
+  on all your devices (Account → Storage plan; checkout opens in your browser).
+- Syncopation's swing beat underneath, and everything else in the website's 0.10.6.
+
 ## [0.1.6] - 2026-11-17
 
 - **A cleaner look** throughout, the same as the website's: less clutter, smaller corners, fewer

@@ -118,6 +118,15 @@ export default function CreditsPage() {
           <LegalLink href="https://scripts.sil.org/OFL">SIL Open Font License 1.1</LegalLink>.
         </p>
       </LegalSection>
+
+      <LegalSection title="Checkout">
+        <p>
+          The storage plans&apos; checkout opens over the page with{" "}
+          <LegalLink href="https://www.npmjs.com/package/@polar-sh/checkout">Polar&apos;s embedded checkout</LegalLink> script, by Polar Software, Inc.,
+          bundled with soniroll under the{" "}
+          <LegalLink href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</LegalLink>.
+        </p>
+      </LegalSection>
     </LegalPage>
   );
 }

@@ -33,6 +33,21 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.6",
+    date: "2026-11-17",
+    title: "Storage plans, a new Recorder, and the desktop app",
+    summary: "Every tool is still free. Files now live on your device, or online on all your devices with an optional storage plan — and the Recorder is rebuilt around getting your level right.",
+    changes: [
+      { kind: "new", text: "**Storage plans** keep your files, recordings and tune songs online, on all your devices. Every tool and feature stays free. See Account → Storage plan." },
+      { kind: "improved", text: "Without a plan, new files, recordings and songs are **kept on the device that saved them**. Their names still show everywhere; only opening them needs that device. Shared files, lesson files, note pictures and your profile picture stay online." },
+      { kind: "new", text: "Files you already have online can be **downloaded as a .zip** or **moved to this device** from the Files page, and **Back up** downloads everything you can open here as one .zip." },
+      { kind: "new", text: "With a plan, pick **Online or This device** each time you add a file or save a take, set the default, and **Put online** anything kept on this device." },
+      { kind: "improved", text: "**The Recorder, rebuilt:** pick your microphone, set the **input level**, **Check level** before you record, and watch a live level trace that warns when it's too loud. Auto gain is now off by default (it's under Input), and the metronome is a chip." },
+      { kind: "new", text: "**Syncopation:** a swing beat underneath — the jazz ride pattern with the hi-hat foot on 2 and 4, swung." },
+      { kind: "new", text: "**Get the desktop app** from the new download page (sidebar, dashboard and the home page), for macOS, Windows and Linux. It now updates itself." },
+    ],
+  },
+  {
     version: "0.10.5",
     date: "2026-11-17",
     title: "A cleaner, clearer soniroll",

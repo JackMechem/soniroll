@@ -637,3 +637,91 @@ package set `WEBKIT_DISABLE_DMABUF_RENDERER=1` for everyone, which forces WebKit
 (`webkit_gpu_workaround`) sets it at start-up only when `/proc/driver/nvidia/version` exists and
 the variable isn't already set, and the flake no longer sets it. Jack's machine: AMD RX 7700/7800 XT,
 Hyprland (Wayland). Not verified by me: whether it's smoother (Jack to check), and NVIDIA machines.
+
+## 2026-11-17 — Release channels (Stable and Unstable)
+
+Jack asked for release channels, like his Marbble and open-stomp-manager have.
+
+- **Two channels, decided by the tag:** a plain version (`desktop-v0.2.0`) is **Stable**; a version
+  with a suffix (`desktop-v0.2.0-beta.1`, `-rc.1`) is **Unstable** and published as a GitHub
+  pre-release. Unstable means "every release": its branch moves on Stable releases too.
+- **This replaces "0.x is a pre-release"** (the 2026-10-27 entry). Plain 0.x versions are now normal
+  releases, so GitHub's "Latest" is the newest Stable one. The release notes say which channel.
+- **Channel branches:** after publishing, `desktop-release.yml` force-pushes the tag's commit to
+  `desktop-unstable` (if it's the newest tag of all) and `desktop-stable` (if it's the newest plain
+  one). Sorting is `git tag --sort=-v:refname` with `versionsort.suffix=-`, so `0.2.0-rc.1` comes
+  before `0.2.0`; checked locally against made-up tags (0.1.10 > 0.1.6, a beta of 0.2.1 only moves
+  Unstable, a fix to an older line moves neither). The publish job checks out with
+  `fetch-depth: 0` to see every tag. Nothing is committed to these branches.
+- **Kept off the channel branches:** Vercel (`git.deploymentEnabled` false for both in
+  `apps/web/vercel.json`; otherwise each move would build a preview site and a Convex preview
+  backend) and Desktop CI (negated patterns in its `branches`). A push made with the workflow's
+  `GITHUB_TOKEN` doesn't start other workflows anyway; the exclusion is for a push by hand.
+- **Unstable releases have no `.rpm`:** RPM versions can't hold `-beta.1` (Marbble does the same).
+  The `.deb`, AppImage, `.dmg` and NSIS installer take suffixed versions (Marbble's alpha releases on
+  the same Tauri 2 build all of them). `check-version.sh` and the changelog's `## [0.2.0-beta.1]`
+  heading already work with a suffix; the flake reads the version from `Cargo.toml`.
+- **The branches don't exist until the next release** moves them, or until they're pushed once by
+  hand at `desktop-v0.1.6` (`git push origin desktop-v0.1.6^{commit}:refs/heads/desktop-stable`,
+  same for `desktop-unstable`).
+- **Not verified:** the workflow hasn't run (no release since); Vercel's `deploymentEnabled` was
+  written from its docs, not seen skipping a build.
+
+## 2026-11-17 — A download page (`/download`), linked prominently
+
+Jack: "make download links for the desktop app, should be prominent".
+
+- `/download` (`components/download/DownloadPage.tsx`, also in the desktop router): a big "Download
+  for <your computer>" button (picked from the browser's user agent; none on phones and tablets),
+  four reasons to use the app, every platform's files (the one for your computer outlined, its main
+  file first) with how to open it the first time (unsigned builds), a "What's new" link to the
+  release, and NixOS lines pinned to the release's tag (the `desktop-stable` branch doesn't exist yet,
+  so it isn't offered). Inside the desktop app it says "You're using the desktop app".
+- **Where the files come from:** `lib/desktopRelease.ts` asks GitHub's API (in the browser, cached
+  for the page's life) for the newest Stable release, or the newest of all while every release is a
+  pre-release (true so far, so GitHub's `releases/latest` links don't work). It matches the
+  workflow's stable asset names. If GitHub can't be reached, the page links to the releases list.
+- **Links:** "Desktop app" in the sidebar's ⋮ menus (not inside the app; Jack wanted the sidebar's
+  foot to be only Settings and one more row, Support soniroll, after rows for the desktop app and
+  storage plans looked cluttered), "Desktop app" in the landing page's nav, "Get the desktop app for macOS, Windows and Linux" under both of the landing page's calls to
+  action, ⌘K ("Download the desktop app"), and the storage plans comparison.
+- **Wording to keep true:** "Files on your computer" describes device storage, which ships in the
+  next desktop release (0.1.6 predates it).
+- Checked: tsc, eslint; signed out at 1440 and 390 (no overflow, no console errors; the button
+  pointed at the 0.1.6 AppImage on Linux); the landing hero; the sidebar row signed in.
+
+## 2026-11-17 — Updates at launch (Tauri updater)
+
+Jack: check for updates when the app launches; install them on macOS and Windows; on Linux just say
+there's a new version.
+
+- **App:** `tauri-plugin-updater` + `tauri-plugin-process` (Rust and JS), allowed in
+  `capabilities/default.json` (`updater:default`, `process:allow-restart`). `src/Updater.tsx`
+  (mounted in `main.tsx`; nothing in dev builds) checks 3 s after launch. macOS / Windows: downloads
+  and installs straight away with a small card ("Updating to X…", a progress bar), then
+  `relaunch()` (Windows: the NSIS installer runs passively, `installMode: "passive"`, and reopens the
+  app). Linux: a card "soniroll X is out" with Get it → soniroll.com/download (the .deb/.rpm/Nix
+  package update through their package managers). A failure shows a card with the download link.
+- **Signing:** every update is signed; the public key is in `tauri.conf.json` (`plugins.updater`).
+  The private key was generated with `tauri signer generate` (no password) at
+  `~/.tauri/soniroll-updater.key` on Jack's computer — never in the repo — and must be the GitHub
+  secret `TAURI_SIGNING_PRIVATE_KEY` (set 2026-11-18 with `gh secret set … < ~/.tauri/soniroll-updater.key`; no `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret — the key has no password, and a missing secret is empty. `gh secret set --body ""` doesn't work: it waits for typed input). **Losing it means
+  installed apps can't verify future updates** (they'd need a manual reinstall); keep a copy safe.
+- **Release workflow:** with the secret set, `tauri build` gets `--config {"bundle":
+  {"createUpdaterArtifacts":true}}` (a temp file), so CI and the Nix build never need the key. It
+  uploads `…AppImage.sig`, `…macos-universal.app.tar.gz` (+ `.sig`) and `…windows-x86_64-setup.exe.sig`
+  with the usual stable names, and the publish job writes **`latest.json`** (version, the changelog
+  section as notes, `pub_date`, and per platform the signature and download URL; the universal Mac
+  build is listed as `darwin-aarch64`, `darwin-x86_64` and `darwin-universal`). Without the secret
+  it warns and builds as before.
+- **Endpoint:** `https://www.soniroll.com/api/desktop-update` (`apps/web/app/api/desktop-update/
+  route.ts`) returns the newest Stable release's `latest.json` (the newest of all while every release
+  is a pre-release; `?channel=unstable` for the newest of all), or 204 = no update. GitHub's answers
+  are cached 5 minutes. It has to be deployed (main) before apps can update.
+- **What doesn't update itself:** installs older than the first release with the updater (0.1.6 and
+  before) — they need one manual download.
+- Checked: `cargo check` with the plugins, `tsc`/`eslint` (desktop, web), the manifest script on
+  fake signatures (right keys and URLs), the endpoint locally (204: no release has `latest.json`
+  yet). The Nix pnpm hash updated. **Not checked:** a real signed release, an install, a download,
+  a relaunch — needs the secret and a release.
+

@@ -23,6 +23,7 @@ import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { displayKey } from "@jam-practice/core/setlistKeys";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
+import { useDeviceCopy } from "@/lib/storageMove";
 
 /**
  * A tune someone shared by link (`/tune/<id>`) — open to anyone, signed in or not. The tune as it
@@ -98,7 +99,7 @@ export default function SharedTunePage({ id }: { id: string }) {
             This is your tune — open it
           </Link>
         ) : (
-          <SaveTune shareId={shared.id} tune={tune} chart={chart} fileCount={files.length} />
+          <SaveTune shareId={shared.id} tune={tune} chart={chart} files={files} />
         )}
       </header>
 
@@ -181,12 +182,15 @@ function Shell({ children }: { children: React.ReactNode }) {
 type SharedTune = NonNullable<FunctionReturnType<typeof filesApi.getSharedTune>>["tune"];
 
 /** "Save to my tunes": the tune (or yours of the same name), its chart, and — signed in — its files. */
-function SaveTune({ shareId, tune, chart, fileCount }: { shareId: string; tune: SharedTune; chart: IRealSong | null; fileCount: number }) {
+function SaveTune({ shareId, tune, chart, files }: { shareId: string; tune: SharedTune; chart: IRealSong | null; files: { url: string | null; name: string; mimeType: string }[] }) {
+  const fileCount = files.length;
   const { isAuthenticated } = useConvexAuth();
   const [myTunes, setMyTunes] = useSyncedTunes();
   const [learn] = useTunesToLearn();
   const { importSongs } = useChordChartsLibrary(null);
   const copyFiles = useAction(filesApi.copySharedFiles);
+  // Free accounts keep the files on this device; a plan copies them online.
+  const { toDevice, copyToDevice } = useDeviceCopy();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ tuneId: string; note: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -212,9 +216,20 @@ function SaveTune({ shareId, tune, chart, fileCount }: { shareId: string; tune: 
       const notes: string[] = [existing ? `Added to your "${existing.name}"` : "Added to Tunes I Know"];
       if (chartId) notes.push("chart in “Shared with me”");
       if (fileCount && isAuthenticated) {
-        const { copied, skipped } = await copyFiles({ shareId, tuneId: target.id });
+        let copied = 0;
+        let skipped = 0;
+        if (toDevice) {
+          for (const f of files) {
+            try {
+              await copyToDevice(f, target.id);
+              copied += 1;
+            } catch {
+              skipped += 1;
+            }
+          }
+        } else ({ copied, skipped } = await copyFiles({ shareId, tuneId: target.id }));
         if (copied) notes.push(`${copied} file${copied === 1 ? "" : "s"} copied`);
-        if (skipped) notes.push(`${skipped} didn't fit in your storage`);
+        if (skipped) notes.push(toDevice ? `${skipped} couldn't be saved` : `${skipped} didn't fit in your storage`);
       }
       setSaved({ tuneId: target.id, note: notes.join(" · ") });
     } catch (e) {

@@ -31,6 +31,7 @@ import {
   BookIcon,
   CalendarIcon,
   ChevronRightIcon,
+  CloudIcon,
   GearIcon,
   HomeIcon,
   SlidersIcon,
@@ -43,6 +44,7 @@ import {
   UserIcon,
   UsersIcon,
 } from "@/components/tools";
+import { StoragePlans } from "@/components/plans/PlansPage";
 
 /** `wide` widens the page to fit the Profile/Security/Danger zone sidebar layout (the signed-in
     view below); the loading and not-signed-in states stay at the original narrower width, since
@@ -71,6 +73,7 @@ type AccountView =
   | "dashboard"
   | "tools"
   | "practice"
+  | "storage"
   | "security"
   | "danger";
 
@@ -634,6 +637,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Account",
     items: [
+      { id: "storage", label: "Storage plan", icon: CloudIcon },
       { id: "security", label: "Sign-in & security", icon: ShieldIcon },
       { id: "danger", label: "Delete account", icon: TrashIcon, danger: true },
     ],
@@ -827,6 +831,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           {view === "tools" && <ToolSettings />}
 
           {view === "practice" && <PracticeSettings />}
+
+          {view === "storage" && <StoragePlans inAccount />}
 
           {view === "security" && (
             <>

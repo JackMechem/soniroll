@@ -113,14 +113,17 @@ export async function liveSetlist(
         .order("desc")
         .collect();
       if (rows.length === 0) return tune;
+      // Only takes that are online: one kept on the owner's device can't be shared.
       const recordings: PublicRecording[] = await Promise.all(
-        rows.map(async (r) => ({
-          id: r._id,
-          name: r.name,
-          durationSec: r.durationSec,
-          createdAt: r.createdAt,
-          url: await ctx.storage.getUrl(r.storageId),
-        })),
+        rows
+          .filter((r) => r.storageId)
+          .map(async (r) => ({
+            id: r._id,
+            name: r.name,
+            durationSec: r.durationSec,
+            createdAt: r.createdAt,
+            url: await ctx.storage.getUrl(r.storageId!),
+          })),
       );
       return { ...tune, recordings };
     }),

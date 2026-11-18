@@ -4,10 +4,14 @@
  * (`lib/metronomeEngine.ts`, the Metronome tool's own engine) clicking along and counting you in.
  * A plain module, so a take keeps recording while you navigate around the site.
  *
- * **Auto gain** is the browser's own `autoGainControl` on the microphone; echo cancellation and
- * noise suppression are always off (they mangle music). The file format is whatever the browser
- * records best: AAC in an MP4 container where supported (plays everywhere, including the app),
- * else Opus in WebM.
+ * **The input** (`RecorderInput`): which microphone, an **input level** (a gain stage, live — set it
+ * while checking the level), optional **Auto gain** (the browser's own `autoGainControl`; off by
+ * default), and Mono. Echo cancellation and noise suppression are always off (they mangle music).
+ * The microphone always goes through Web Audio: source → gain → (mono) → the recorded stream, with
+ * the level meter after the gain. **Checking the level** (`startMonitor`) opens the input and meters
+ * it without recording; recording from there reuses the open input. The file format is whatever
+ * the browser records best: AAC in an MP4 container where supported (plays everywhere, including the
+ * app), else Opus in WebM.
  *
  * **The tune's song** can play along (`song`): it starts with the take (after any count-in), and
  * the finished take carries `songOffsetSec` — where in the song the take started, less the time
@@ -43,9 +47,13 @@ export type RecorderPhase = "idle" | "countin" | "recording" | "finishing";
 export interface RecorderSnapshot {
   phase: RecorderPhase;
   startedAt: number | null;
-  /** Input level, roughly 0..1. */
+  /** Input level (loudness), roughly 0..1, for meters. */
   level: number;
+  /** The loudest sample lately, 0..1: 0.9 and up is distorting ("too loud"). */
+  peak: number;
   error: string | null;
+  /** The input is open just to check the level (nothing is recorded). */
+  monitoring: boolean;
 }
 
 export type FinishedTake = { blob: Blob; durationSec: number; songOffsetSec?: number };
@@ -56,9 +64,15 @@ export type RecorderSong = { url: string; startSec: number; volume: number };
     (for an interface that puts a single mic on the left or right only). */
 export type RecorderMono = "mix" | "left" | "right";
 
+/** Where a take comes from and how it's set up. `gain`: 0 to 4 (1 = as it comes in). `deviceId`:
+    empty for the system default. */
+export type RecorderInput = { deviceId?: string; autoGain: boolean; mono: RecorderMono | null; gain: number };
+
+const clampGain = (gain: number) => (Number.isFinite(gain) ? Math.min(4, Math.max(0, gain)) : 1);
+
 const MIME_CANDIDATES = ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
 
-let snapshot: RecorderSnapshot = { phase: "idle", startedAt: null, level: 0, error: null };
+let snapshot: RecorderSnapshot = { phase: "idle", startedAt: null, level: 0, peak: 0, error: null, monitoring: false };
 const SERVER_SNAPSHOT = snapshot;
 const listeners = new Set<() => void>();
 
@@ -79,41 +93,64 @@ export function getRecorderServerSnapshot(): RecorderSnapshot {
 }
 
 let stream: MediaStream | null = null;
-/** What's actually recorded: the microphone, or its mono version. */
+/** What's actually recorded: the microphone through the gain (and mono) stage. */
 let recordStream: MediaStream | null = null;
-let monoNodes: AudioNode[] = [];
+let graphNodes: AudioNode[] = [];
+let gainNode: GainNode | null = null;
+/** The input the open stream was opened with (a level check's input is reused by a take). */
+let openedWith: RecorderInput | null = null;
 
-/** A one-channel stream from the microphone, through Web Audio. */
-function monoStream(input: MediaStream, mode: RecorderMono): MediaStream {
+/** The microphone through Web Audio: source → gain → (mono) → a stream to record, and the node
+    the level meter listens to. */
+function buildGraph(input: MediaStream, options: RecorderInput): { out: MediaStream; meterFrom: AudioNode } {
   const ctx = getAudioContext();
   void ctx.resume();
   const source = ctx.createMediaStreamSource(input);
+  const gain = ctx.createGain();
+  gain.gain.value = clampGain(options.gain);
+  source.connect(gain);
+  gainNode = gain;
   const dest = ctx.createMediaStreamDestination();
+  graphNodes = [source, gain, dest];
+  if (!options.mono) {
+    dest.channelCount = 2;
+    gain.connect(dest);
+    return { out: dest.stream, meterFrom: gain };
+  }
   dest.channelCount = 1;
   dest.channelCountMode = "explicit";
-  if (mode === "mix") {
+  if (options.mono === "mix") {
     // Down-mixing to one channel averages left and right.
-    const gain = ctx.createGain();
-    gain.channelCount = 1;
-    gain.channelCountMode = "explicit";
-    gain.channelInterpretation = "speakers";
-    source.connect(gain).connect(dest);
-    monoNodes = [source, gain, dest];
-  } else {
-    const split = ctx.createChannelSplitter(2);
-    source.connect(split);
-    // A mono microphone has no right channel; then "right" falls back to the one it has.
-    const channels = input.getAudioTracks()[0]?.getSettings().channelCount ?? 2;
-    split.connect(dest, mode === "right" && channels > 1 ? 1 : 0);
-    monoNodes = [source, split, dest];
+    const down = ctx.createGain();
+    down.channelCount = 1;
+    down.channelCountMode = "explicit";
+    down.channelInterpretation = "speakers";
+    gain.connect(down).connect(dest);
+    graphNodes.push(down);
+    return { out: dest.stream, meterFrom: down };
   }
-  return dest.stream;
+  const split = ctx.createChannelSplitter(2);
+  gain.connect(split);
+  // A mono microphone has no right channel; then "right" falls back to the one it has.
+  const channels = input.getAudioTracks()[0]?.getSettings().channelCount ?? 2;
+  const pick = ctx.createGain();
+  split.connect(pick, options.mono === "right" && channels > 1 ? 1 : 0);
+  pick.connect(dest);
+  graphNodes.push(split, pick);
+  return { out: dest.stream, meterFrom: pick };
+}
+
+/** Changes the input level live (checking the level, or mid-take). */
+export function setRecorderGain(gain: number) {
+  if (!gainNode) return;
+  gainNode.gain.setTargetAtTime(clampGain(gain), getAudioContext().currentTime, 0.02);
+  if (openedWith) openedWith = { ...openedWith, gain: clampGain(gain) };
 }
 let recorder: MediaRecorder | null = null;
 let chunks: Blob[] = [];
 let countInTimer: ReturnType<typeof setTimeout> | null = null;
 let meterFrame: number | null = null;
-let meterSource: MediaStreamAudioSourceNode | null = null;
+let meterAnalyser: AnalyserNode | null = null;
 let metronomeRunning = false;
 let songEl: HTMLAudioElement | null = null;
 let songStartSec = 0;
@@ -148,17 +185,69 @@ function stopClick() {
 function releaseInput() {
   if (meterFrame !== null) cancelAnimationFrame(meterFrame);
   meterFrame = null;
-  meterSource?.disconnect();
-  meterSource = null;
+  meterAnalyser?.disconnect();
+  meterAnalyser = null;
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
   if (micInUse) {
     micInUse = false;
     endMicUse();
   }
-  if (recordStream !== null) for (const node of monoNodes) node.disconnect();
-  monoNodes = [];
+  for (const node of graphNodes) node.disconnect();
+  graphNodes = [];
+  gainNode = null;
   recordStream = null;
+  openedWith = null;
+}
+
+/** Same microphone, auto gain and channels (the gain can change on an open input). */
+const sameInput = (a: RecorderInput, b: RecorderInput) => (a.deviceId ?? "") === (b.deviceId ?? "") && a.autoGain === b.autoGain && a.mono === b.mono;
+
+/** Opens the microphone (or keeps the open one if it matches) and starts the meter. Returns false
+    (with the error set) if it couldn't. */
+async function openInput(options: RecorderInput): Promise<boolean> {
+  if (stream && openedWith && sameInput(openedWith, options)) {
+    setRecorderGain(options.gain);
+    return true;
+  }
+  releaseInput();
+  beginMicUse();
+  micInUse = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        ...(options.deviceId ? { deviceId: { exact: options.deviceId } } : {}),
+        autoGainControl: options.autoGain,
+        echoCancellation: false,
+        noiseSuppression: false,
+        channelCount: { ideal: 2 },
+      },
+    });
+  } catch {
+    micInUse = false;
+    endMicUse();
+    setSnapshot({ error: options.deviceId ? "Couldn't open that microphone. Pick another under Input." : "Microphone access is needed to record." });
+    return false;
+  }
+  const { out, meterFrom } = buildGraph(stream, options);
+  recordStream = out;
+  openedWith = { ...options, gain: clampGain(options.gain) };
+  startMeter(meterFrom);
+  return true;
+}
+
+/** Opens the input just to check the level (nothing is recorded) — set the input level while
+    watching the meter. `stopMonitor` closes it; recording from here keeps it open. */
+export async function startMonitor(options: RecorderInput) {
+  if (snapshot.phase !== "idle") return;
+  setSnapshot({ error: null, level: 0 });
+  if (await openInput(options)) setSnapshot({ monitoring: true });
+}
+
+export function stopMonitor() {
+  if (snapshot.phase !== "idle" || !snapshot.monitoring) return;
+  releaseInput();
+  setSnapshot({ monitoring: false, level: 0 });
 }
 
 /** Live changes to the metronome while a take is running (tempo, accents, sound, …). */
@@ -168,12 +257,12 @@ export function updateRecorderMetronome(m: RecorderMetronome) {
   updateMetronomeStructure(m.structure);
 }
 
-function startMeter(input: MediaStream) {
+function startMeter(from: AudioNode) {
   const ctx = getAudioContext();
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
-  meterSource = ctx.createMediaStreamSource(input);
-  meterSource.connect(analyser);
+  from.connect(analyser);
+  meterAnalyser = analyser;
   const data = new Float32Array(analyser.fftSize);
   let last = 0;
   const tick = (now: number) => {
@@ -181,8 +270,12 @@ function startMeter(input: MediaStream) {
       last = now;
       analyser.getFloatTimeDomainData(data);
       let sum = 0;
-      for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
-      setSnapshot({ level: Math.min(1, Math.sqrt(sum / data.length) * 4) });
+      let peak = 0;
+      for (let i = 0; i < data.length; i++) {
+        sum += data[i] * data[i];
+        peak = Math.max(peak, Math.abs(data[i]));
+      }
+      setSnapshot({ level: Math.min(1, Math.sqrt(sum / data.length) * 4), peak: Math.min(1, peak) });
     }
     meterFrame = requestAnimationFrame(tick);
   };
@@ -223,12 +316,9 @@ function beginRecording() {
   }
 }
 
-export async function startRecording(
-  metronome: RecorderMetronome,
-  options: { autoGain: boolean; mono?: RecorderMono | null; song?: RecorderSong | null },
-) {
+export async function startRecording(metronome: RecorderMetronome, options: RecorderInput & { song?: RecorderSong | null }) {
   if (snapshot.phase !== "idle") return;
-  setSnapshot({ error: null, level: 0, phase: "countin" });
+  setSnapshot({ error: null, phase: "countin", monitoring: false });
   songOffsetSec = undefined;
   if (options.song) {
     // Loaded (and parked at its start point) during the count-in, so it starts right away.
@@ -240,21 +330,11 @@ export async function startRecording(
     el.addEventListener("loadedmetadata", () => (el.currentTime = songStartSec), { once: true });
     songEl = el;
   }
-  beginMicUse();
-  micInUse = true;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { autoGainControl: options.autoGain, echoCancellation: false, noiseSuppression: false },
-    });
-  } catch {
-    micInUse = false;
-    endMicUse();
+  if (!(await openInput(options))) {
     stopSong();
-    setSnapshot({ phase: "idle", error: "Microphone access is needed to record." });
+    setSnapshot({ phase: "idle", level: 0 });
     return;
   }
-  recordStream = options.mono ? monoStream(stream, options.mono) : stream;
-  startMeter(recordStream);
 
   if (metronome.enabled) {
     const { settings, structure } = metronome;

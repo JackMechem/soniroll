@@ -1,26 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useConvexAuth, useQuery } from "convex/react";
-import { filesApi, formatBytes } from "@/lib/files";
+import { formatBytes } from "@/lib/files";
+import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 
-/** Storage used, as a small meter: "20 MB of 100 MB" over a thin bar. It sits beside the Library
-    title (signed in only) and opens Files. */
+/** Online storage used, as a small meter: "20 MB of 5 GB" over a thin bar. It sits beside the
+    Library title (signed in only) and opens the storage plans page. On the free plan it's the
+    online space for sharing and Lessons (new files are kept on the device). */
 export default function StoragePill() {
-  const { isAuthenticated } = useConvexAuth();
-  const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
-  if (!isAuthenticated || !storage) return null;
+  const storage = useStoragePlan();
+  if (!storage) return null;
   const { used, quota } = storage;
   const frac = Math.min(1, used / Math.max(1, quota));
   const full = used >= quota;
   return (
     <Link
-      href="/tunes?tab=files"
-      title={`Every account has ${formatBytes(quota)} for uploads, recordings, songs and lesson files. Plans with more storage are coming.`}
+      href={PLAN_HREF}
+      title={
+        storage.plan
+          ? `Your plan keeps ${formatBytes(quota)} online, on all your devices.`
+          : `Online space for shared files, Lessons and your profile: ${formatBytes(quota)}. New files are kept on this device; a storage plan keeps them online.`
+      }
       className="flex h-10 shrink-0 flex-col justify-center gap-1 rounded-md px-2 transition-colors hover:bg-surface-hover"
     >
       <span className={`whitespace-nowrap text-xs tabular-nums ${full ? "text-danger" : "text-muted"}`}>
-        {full ? "Storage full" : <>{formatBytes(used)}<span className="hidden sm:inline"> of {formatBytes(quota)}</span></>}
+        {full ? "Online storage full" : <>{formatBytes(used)}<span className="hidden sm:inline"> of {formatBytes(quota)} online</span></>}
       </span>
       <span className="block h-1 w-20 overflow-hidden rounded-full bg-foreground/10">
         <span

@@ -13,6 +13,8 @@ import {
   FeedbackIcon,
   FileIcon,
   GearIcon,
+  CloudIcon,
+  DownloadIcon,
   HeartIcon,
   HelpIcon,
   HomeIcon,
@@ -66,6 +68,8 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Pages", href: "/changelog", label: "What's new", detail: "Changelog", words: "changelog updates releases version news", icon: MegaphoneIcon },
   { group: "Pages", href: "/feedback", label: "Send feedback", words: "feedback bug report idea contact problem suggestion", icon: FeedbackIcon },
   { group: "Pages", href: "/support", label: "Support soniroll", words: "donate donation coffee tip money", icon: HeartIcon },
+  { group: "Pages", href: "/download", label: "Download the desktop app", words: "desktop app download install mac macos windows linux nixos appimage computer native", icon: DownloadIcon },
+  { group: "Pages", href: "/plans", label: "Storage plans", words: "storage plan subscription subscribe cloud online sync files space gb upgrade billing", icon: CloudIcon },
   { group: "Settings", href: "/account?tab=profile", label: "Profile", detail: "Account", words: "account settings username picture avatar banner bio instruments public private", icon: UserIcon, account: true },
   { group: "Settings", href: "/account?tab=general", label: "General", detail: "Settings", words: "settings preferences features turn off hide clock confetti celebrations bug report button reset", icon: GearIcon, account: true },
   { group: "Settings", href: "/account?tab=appearance", label: "Appearance", detail: "Settings", words: "settings theme dark mode light colors colours font text size bigger smaller classic look motion display", icon: EyeIcon, account: true },
@@ -73,6 +77,7 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Settings", href: "/account?tab=dashboard", label: "Dashboard", detail: "Settings", words: "settings home cards layout edit", icon: HomeIcon, account: true },
   { group: "Settings", href: "/account?tab=tools", label: "Tools", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
   { group: "Settings", href: "/account?tab=practice", label: "Shed Log", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
+  { group: "Settings", href: "/account?tab=storage", label: "Storage plan", detail: "Account", words: "storage plan subscription subscribe cancel billing payment receipts card upgrade gb cloud", icon: CloudIcon, account: true },
   { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password email google login sign in", icon: ShieldIcon, account: true },
 ];
 

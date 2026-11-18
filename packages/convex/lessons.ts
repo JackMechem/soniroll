@@ -350,7 +350,8 @@ export const routineReportFor = query({
         name: r.name,
         date: r.logDate ?? null,
         durationSec: r.durationSec,
-        url: await ctx.storage.getUrl(r.storageId),
+        // A take kept only on the student's device can't be played here.
+        url: r.storageId ? await ctx.storage.getUrl(r.storageId) : null,
         createdAt: r.createdAt,
       })),
     );

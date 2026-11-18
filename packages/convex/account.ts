@@ -12,6 +12,7 @@ import {
 } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
 import { generateOtp, hashCode, sendEmail } from "./lib/resend";
+import { polar } from "./billing";
 
 const CONFIRMATION_CODE_TTL_MS = 15 * 60 * 1000;
 
@@ -188,6 +189,12 @@ export const deleteAccount = action({
 export const performDelete = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
+    // A storage plan: end it now so it isn't charged again (Polar is called after this commits).
+    const subscription = await polar.getCurrentSubscription(ctx, { userId }).catch(() => null);
+    if (subscription && !subscription.endedAt) {
+      await ctx.scheduler.runAfter(0, internal.billing.revokeSubscription, { subscriptionId: subscription.id });
+    }
+
     const accounts = await ctx.db
       .query("authAccounts")
       .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
@@ -254,7 +261,7 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of recordings) {
-      await ctx.storage.delete(row.storageId);
+      if (row.storageId) await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);
     }
 
@@ -264,7 +271,7 @@ export const performDelete = internalMutation({
       .withIndex("by_user_tune", (q) => q.eq("userId", userId))
       .collect();
     for (const row of songs) {
-      await ctx.storage.delete(row.storageId);
+      if (row.storageId) await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);
     }
 
@@ -274,7 +281,7 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of files) {
-      await ctx.storage.delete(row.storageId);
+      if (row.storageId) await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);
     }
     const sharedTunes = await ctx.db

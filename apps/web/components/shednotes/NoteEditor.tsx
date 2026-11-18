@@ -83,6 +83,7 @@ export default function NoteEditor({
   const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes" | "words" | "files", Compartment> | null>(null);
 
   // Files: pasted or dropped ones go up to your Files (signed in, in a note you can write in).
+  // Always online, even on the free plan: everyone who can open the note sees them.
   const { isAuthenticated } = useConvexAuth();
   const canUpload = isAuthenticated && !readOnly && language === "markdown";
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
@@ -252,7 +253,7 @@ export default function NoteEditor({
       ? {
           upload: async (file: File, name: string) => {
             try {
-              return await uploadFile(file, () => generateUploadUrl(), (args) => createFile(args), undefined, name);
+              return await uploadFile(file, () => generateUploadUrl({ purpose: "note" }), (args) => createFile({ ...args, keepOnline: true }), undefined, name);
             } catch (e) {
               throw new Error(errorText(e, `Couldn't upload ${name}.`));
             }

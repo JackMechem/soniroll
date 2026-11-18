@@ -15,6 +15,7 @@ import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as auth from "../auth.js";
 import type * as bassPlayers from "../bassPlayers.js";
+import type * as billing from "../billing.js";
 import type * as changelog from "../changelog.js";
 import type * as chordCharts from "../chordCharts.js";
 import type * as communityTunes from "../communityTunes.js";
@@ -29,6 +30,7 @@ import type * as lessonSchedule from "../lessonSchedule.js";
 import type * as lessons from "../lessons.js";
 import type * as lib_chordCharts from "../lib/chordCharts.js";
 import type * as lib_github from "../lib/github.js";
+import type * as lib_polarWebhook from "../lib/polarWebhook.js";
 import type * as lib_resend from "../lib/resend.js";
 import type * as lib_roles from "../lib/roles.js";
 import type * as lib_routines from "../lib/routines.js";
@@ -48,6 +50,7 @@ import type * as shedNoteTemplates from "../shedNoteTemplates.js";
 import type * as shedNotes from "../shedNotes.js";
 import type * as site from "../site.js";
 import type * as syncedSettings from "../syncedSettings.js";
+import type * as testAccounts from "../testAccounts.js";
 import type * as tuneSongs from "../tuneSongs.js";
 import type * as usage from "../usage.js";
 import type * as users from "../users.js";
@@ -66,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   adminAnalytics: typeof adminAnalytics;
   auth: typeof auth;
   bassPlayers: typeof bassPlayers;
+  billing: typeof billing;
   changelog: typeof changelog;
   chordCharts: typeof chordCharts;
   communityTunes: typeof communityTunes;
@@ -80,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   lessons: typeof lessons;
   "lib/chordCharts": typeof lib_chordCharts;
   "lib/github": typeof lib_github;
+  "lib/polarWebhook": typeof lib_polarWebhook;
   "lib/resend": typeof lib_resend;
   "lib/roles": typeof lib_roles;
   "lib/routines": typeof lib_routines;
@@ -99,6 +104,7 @@ declare const fullApi: ApiFromModules<{
   shedNotes: typeof shedNotes;
   site: typeof site;
   syncedSettings: typeof syncedSettings;
+  testAccounts: typeof testAccounts;
   tuneSongs: typeof tuneSongs;
   usage: typeof usage;
   users: typeof users;
@@ -130,4 +136,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  polar: import("@convex-dev/polar/_generated/component.js").ComponentApi<"polar">;
+};

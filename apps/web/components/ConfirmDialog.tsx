@@ -6,12 +6,15 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  cancelLabel = "Cancel",
   onConfirm,
   onCancel,
 }: {
   title: string;
   message: string;
   confirmLabel: string;
+  /** The button that backs out (when "Cancel" would read oddly, e.g. next to "Cancel plan"). */
+  cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -48,7 +51,7 @@ export default function ConfirmDialog({
             onClick={onCancel}
             className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             type="button"

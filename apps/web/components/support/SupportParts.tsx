@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { CloseIcon, HeartIcon } from "@/components/tools";
+import { CloseIcon, CloudIcon, HeartIcon } from "@/components/tools";
 import { navIconButtonClass, navRowClass } from "@/components/navRow";
+import { PLAN_HREF } from "@/lib/storagePlan";
 
 /**
  * Asking for support (donations), in a few places: the `/support` page, a "Support soniroll" row
@@ -95,14 +96,18 @@ export function SupportCard({ always = false }: { always?: boolean }) {
       <div className="min-w-0 flex-1">
         <h2 className="font-semibold">Keep soniroll free</h2>
         <p className="text-sm text-muted">
-          No ads, no paywalled tools, made by one musician. If soniroll helps your practice, a coffee helps pay for the servers.
+          No ads, no paywalled tools, made by one musician. If soniroll helps your practice, a coffee or a storage plan (your files on all your
+          devices) helps pay for the servers.
         </p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         <a href={DONATE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
           <HeartIcon className="h-4 w-4" filled /> Buy me a coffee
         </a>
-        <Link href={SUPPORT_PATH} className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+        <Link href={PLAN_HREF} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+          <CloudIcon className="h-4 w-4 text-accent" /> Storage plans
+        </Link>
+        <Link href={SUPPORT_PATH} className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
           Why it helps
         </Link>
       </div>

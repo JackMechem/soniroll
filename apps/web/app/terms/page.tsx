@@ -6,21 +6,21 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="September 29, 2026">
+    <LegalPage title="Terms of Service" updated="November 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         These terms cover your use of soniroll (
-        <LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>), a free collection of
-        browser-based music practice tools built and operated by Jack Mechem. By using the site,
+        <LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>, and its desktop app), a
+        collection of music practice tools built and operated by Jack Mechem. By using the site,
         you agree to these terms. If you don&apos;t agree, please don&apos;t use it.
       </p>
 
       <LegalSection title="The service">
         <p>
-          soniroll is provided free of charge, as a personal project, with no guarantee of
+          Every tool and feature of soniroll is free, as a personal project, with no guarantee of
           uptime, accuracy, or continued availability. Most tools run entirely in your browser;
-          creating an account is optional and currently only affects signing in — see the{" "}
+          creating an account is optional — see the{" "}
           <LegalLink href="/privacy">Privacy Policy</LegalLink> for exactly what an account does
-          and doesn&apos;t do.
+          and doesn&apos;t do. The only thing that costs money is an optional storage plan (below).
         </p>
       </LegalSection>
 
@@ -97,10 +97,36 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Storage plans">
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            On the free plan, your files, recordings and tune songs are kept on the device that
+            saved them. They&apos;re your responsibility: if a browser deletes them (for example
+            when you clear its data), soniroll can&apos;t get them back, so keep backups of
+            anything that matters.
+          </li>
+          <li>
+            A storage plan keeps them online, up to the plan&apos;s size. Plans are sold by Polar
+            (polar.sh), who takes the payment as the seller, so Polar&apos;s terms also apply to the
+            purchase. A plan renews automatically each month or year until you cancel.
+          </li>
+          <li>
+            Cancel any time from Manage plan on the storage plans page; the plan runs to the end of
+            the period you paid for. After that, files already online stay there and can still be
+            opened, downloaded or moved to a device, but nothing more can be added online beyond
+            the free space.
+          </li>
+          <li>
+            Prices can change; a change applies from your next renewal, and you&apos;ll be told
+            before it does.
+          </li>
+        </ul>
+      </LegalSection>
+
       <LegalSection title="Third-party services">
         <p>
-          soniroll relies on third-party services (currently Convex, Resend, Google, and Vercel —
-          see the Privacy Policy for what each is used for) to provide accounts and email. Those
+          soniroll relies on third-party services (currently Convex, Resend, Google, Vercel and Polar —
+          see the Privacy Policy for what each is used for) to provide accounts, email and payments. Those
           services have their own terms, and soniroll isn&apos;t responsible for their
           availability, changes, or errors.
         </p>

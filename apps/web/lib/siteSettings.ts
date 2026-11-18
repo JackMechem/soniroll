@@ -35,6 +35,8 @@ export const SITE_DEFAULTS = {
   sidebarCategoriesCollapsed: false,
   /** "Support soniroll" in the sidebar. */
   sidebarSupport: true,
+  /** The sidebar's Desktop app row (on the website, on computers). */
+  sidebarDesktopApp: true,
   /** The streak flame next to your name in the sidebar. */
   sidebarStreak: true,
   /** Tools hidden from the sidebar and the dashboard (still found by search). */
@@ -55,6 +57,11 @@ export const SITE_DEFAULTS = {
 
   /** Which view the Shed Log opens on. */
   shedLogOpenOn: "last" as ShedLogOpenOn,
+
+  /** With a storage plan: where new files, recordings and songs go unless you pick otherwise when
+      adding one — online (on all your devices) or only this device. Free accounts always use the
+      device. */
+  newFilesOnline: true,
 };
 export type SiteSettings = typeof SITE_DEFAULTS;
 

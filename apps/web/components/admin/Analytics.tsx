@@ -736,7 +736,11 @@ function BreakdownCard({
 }) {
   const [kind, setKind] = useState<"bars" | "donut">(defaultKind);
   const [all, setAll] = useState(false);
-  const sorted = [...entries].sort((a, b) => b.value - a.value);
+  // Entries with the same label are one row: a retired tool's old href counts towards the tool that
+  // replaced it (Bass Genius and the Drum Generator both show as Rhythm Section).
+  const merged = new Map<string, number>();
+  for (const e of entries) merged.set(e.label, (merged.get(e.label) ?? 0) + e.value);
+  const sorted = [...merged].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
   const top = all ? sorted : sorted.slice(0, 8);
   const total = sorted.reduce((a, e) => a + e.value, 0);
   const max = Math.max(1, ...sorted.map((e) => e.value));

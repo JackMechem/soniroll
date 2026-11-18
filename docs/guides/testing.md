@@ -48,7 +48,9 @@ await page.close();
 - Close the pages your scripts open, and stop the chromium process when done
   (`lsof -ti:9222 -sTCP:LISTEN | xargs -r kill`).
 - **Signed in:** sign in through `/?auth=login` inside the same script (sessions don't survive
-  between CDP connections). Use the **dev** deployment. Never write a password into a file; pass it
+  between CDP connections). Use the **dev** deployment. For a throwaway account (no inbox needed):
+  `npx convex run testAccounts:create '{"email":"x@soniroll.test","password":"…","username":"x"}'`
+  from `packages/convex` (`.test` addresses only, email already verified). Delete it afterwards. Never write a password into a file; pass it
   in an environment variable. Remove test data afterwards and say so.
 - Audio can't be heard here — and keep it that way: always pass `--mute-audio`, or the headless
   browser plays through Jack's speakers. Say "not heard" rather than implying it sounds right.

@@ -2,7 +2,7 @@ import { getAudioContext } from "./metronome";
 import { playDrum } from "./drumSounds";
 import { setSteadyInterval } from "./steadyTimer";
 import type { DrumVoice } from "./drums";
-import { BAR_TICKS, BEATS_PER_BAR, barHits, TICKS_PER_BEAT, type Ostinato, type SyncopationBar } from "./syncopation";
+import { BAR_TICKS, BEATS_PER_BAR, barHits, playedTick, TICKS_PER_BEAT, type Ostinato, type SyncopationBar } from "./syncopation";
 
 // Plays Syncopation: the pattern (snare, or snare and bass drum) and the part underneath on the real kit, scheduled a bar at a
 // time on the audio clock. What a bar plays (snare on/off, ostinato, click) is read when the bar
@@ -40,7 +40,7 @@ export type SyncopationStart = {
 
 const TICK_MS = 25;
 const LOOKAHEAD = 0.2;
-export const VOICES: DrumVoice[] = ["snare", "kick", "pedal", "hhClosed"];
+export const VOICES: DrumVoice[] = ["snare", "kick", "pedal", "hhClosed", "ride"];
 
 export function startSyncopation(opts: SyncopationStart): SyncopationRun {
   const ctx = getAudioContext();
@@ -81,12 +81,14 @@ export function startSyncopation(opts: SyncopationStart): SyncopationRun {
     const bar = ex.bars[overall - ex.startBar];
     const base = overall * BEATS_PER_BAR;
     for (const h of barHits(bar, playback.ostinato)) {
-      const beat = base + h.tick / TICKS_PER_BEAT;
+      // Swing plays an eighth's "and" on the last triplet (`playedTick`).
+      const beat = base + playedTick(h.tick, playback.ostinato) / TICKS_PER_BEAT;
       const onBeat = h.tick % TICKS_PER_BEAT === 0;
       if (h.pattern) {
         if (playback.snare) play(h.voice, beat, h.voice === "kick" ? 0.6 : onBeat ? 0.62 : 0.52);
       } else if (h.voice === "kick") play("kick", beat, h.accent ? 0.6 : 0.5);
       else if (h.voice === "hhClosed") play("hhClosed", beat, h.accent ? 0.5 : 0.36);
+      else if (h.voice === "ride") play("ride", beat, h.accent ? 0.55 : onBeat ? 0.46 : 0.34);
       else play("pedal", beat, 0.6);
     }
     if (playback.click) for (let b = 0; b < BEATS_PER_BAR; b++) play("hhClosed", base + b, b === 0 ? 0.5 : 0.35);

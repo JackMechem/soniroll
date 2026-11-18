@@ -103,3 +103,18 @@ on their own). Its styles, groove options and kit faders are Rhythm Section's St
 sections; settings still live under `jam-practice-drum-generator`. `lib/drumGeneratorEngine.ts` was
 replaced by `lib/rhythmSectionEngine.ts`; `DrumScore` now fits a busy bar (a fill no longer runs past
 its bar line). See `rhythm-section.md`.
+
+## 2026-11-17 — Syncopation: a swing beat underneath
+
+Jack asked for a swing beat in "Underneath". `packages/core/syncopation.ts`: ostinato `swing`
+("Swing: ride, hi-hat foot on 2 and 4") — the ride on every beat plus the skip note on the "and" of
+2 and 4 (accents on 2 and 4), the hi-hat foot on 2 and 4. It counts as a hand cymbal (`handHiHat`:
+written on top, the pattern below), and works with Snare + bass (it doesn't use the bass drum).
+**Swing feel:** `playedTick` moves an eighth's "and" (tick 6) to the last triplet (8) when playing —
+the ride's skip notes and the exercise's own eighths alike — while the score keeps plain eighths,
+as swing is usually written (a beat that already has triplets keeps the ride on the triplet). The
+engine plays the ride (`VOICES` now includes it, so it's preloaded); the score draws it as an x on
+the top line (`RIDE = "f/5/x2"`). The hi-hat foot isn't written (only the ride is on top), like the
+other hand-cymbal options. Checked: the hits in Node (ride 0, 12, 18→20, 24, 36, 42→44; pedal 12 and
+36), tsc (web, mobile), eslint, the score rendered with swing (no errors). **Not heard.**
+

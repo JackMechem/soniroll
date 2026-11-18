@@ -1,16 +1,19 @@
 "use client";
 
 import type { EditorView } from "@codemirror/view";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { FilePreviewDialog, FileRow, FileTypeIcon, fileDetail, type PreviewFile } from "@/components/files/FileParts";
 import { DownloadIcon, MaximizeIcon, SearchIcon, UploadIcon } from "@/components/tools";
-import { downloadFile, fileKind, type StoredEntry } from "@/lib/files";
+import { downloadFile, errorText, fileKind, type StoredEntry } from "@/lib/files";
 import { useEmbeds } from "./embedStore";
 import type { ScoreContext } from "./ScoreEmbeds";
+import { useDeviceUrl, useDeviceUrls } from "@/lib/deviceFiles";
+import { isMovable, useStorageMoves } from "@/lib/storageMove";
+import { useStoragePlan } from "@/lib/storagePlan";
 
 /** Renders the files in one editor's `![name](file:…)` lines into their widgets (see `embedStore`). */
 export default function FileEmbeds({ owner, context }: { owner: string; context?: ScoreContext }) {
@@ -32,7 +35,7 @@ const pill = "print:hidden inline-flex h-8 shrink-0 items-center gap-1.5 rounded
  */
 export function FileEmbedView({ fileRef, name, width, context, view }: { fileRef: string; name: string; width?: number; context?: ScoreContext; view?: EditorView }) {
   const web = fileRef.startsWith("https://");
-  const row = useQuery(api.files.embed, web ? "skip" : { ref: fileRef, ...(context ?? {}) });
+  const row = useDeviceUrl(useQuery(api.files.embed, web ? "skip" : { ref: fileRef, ...(context ?? {}) }));
   const file: PreviewFile | null | undefined = useMemo(
     () => (web ? { name: name || "Picture", mimeType: "image/*", size: 0, createdAt: 0, url: fileRef } : row ? { name: row.name, mimeType: row.mimeType, size: row.size, createdAt: row.createdAt, url: row.url } : row),
     [web, name, fileRef, row],
@@ -137,12 +140,38 @@ export function FilePickDialog({ onPick, onUpload, onClose }: { onPick: (ref: st
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   const storage = useQuery(api.files.storage, {});
+  const storedItems = useDeviceUrls(storage?.items);
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const plan = useStoragePlan();
+  const { moveOnline } = useStorageMoves(plan?.userId);
+  const keepOnline = useMutation(api.files.keepOnline);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  /** Everyone who can open the note sees what's in it, so a file kept on this device goes online
+      first, and stays online (it's marked as being in a note). */
+  async function pick(f: StoredEntry) {
+    setError(null);
+    try {
+      if (isMovable(f)) {
+        if (f.device) {
+          setBusy(`Putting "${f.name}" online…`);
+          await moveOnline(f, "note");
+        }
+        await keepOnline({ kind: f.kind, id: f.id });
+      }
+      onPick(refOf(f), f.name);
+    } catch (e) {
+      setError(errorText(e, `Couldn't add "${f.name}".`));
+    } finally {
+      setBusy(null);
+    }
+  }
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (storage?.items ?? []).filter((f) => f.kind !== "profile" && (!q || f.name.toLowerCase().includes(q)));
-  }, [storage, query]);
+    return (storedItems ?? []).filter((f) => f.kind !== "profile" && (!q || f.name.toLowerCase().includes(q)));
+  }, [storedItems, query]);
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
@@ -164,6 +193,8 @@ export function FilePickDialog({ onPick, onUpload, onClose }: { onPick: (ref: st
             }}
           />
         </div>
+        {busy && <p className="text-sm text-muted">{busy}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 transition-colors focus-within:ring-2 focus-within:ring-accent/40">
           <SearchIcon className="h-4 w-4 text-muted" />
           <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your files" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
@@ -176,7 +207,7 @@ export function FilePickDialog({ onPick, onUpload, onClose }: { onPick: (ref: st
           ) : rows.length === 0 ? (
             <p className="p-3 text-sm text-muted">{query ? "No files match." : "Nothing in your files yet. Upload one, or paste a picture straight into the note."}</p>
           ) : (
-            rows.map((f) => <FileRow key={`${f.kind}:${f.id}`} name={f.name} mimeType={f.mimeType} detail={fileDetail(f)} onOpen={() => onPick(refOf(f), f.name)} />)
+            rows.map((f) => <FileRow key={`${f.kind}:${f.id}`} name={f.name} mimeType={f.mimeType} detail={fileDetail(f)} onOpen={() => void pick(f)} />)
           )}
         </div>
       </div>

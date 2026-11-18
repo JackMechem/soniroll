@@ -34,6 +34,7 @@ export const DASHBOARD_CARDS = [
   { id: "allTools", label: "All tools", hint: "Every tool, by group.", sizes: ["large", "full"] },
   { id: "lessons", label: "Lessons", hint: "Your next lessons, your students or teachers, and what needs doing.", sizes: ["large", "full"], feature: "lessons" },
   { id: "support", label: "Support soniroll", hint: "The card asking for a donation.", sizes: ["medium", "large", "full"] },
+  { id: "desktopApp", label: "Desktop app", hint: "The desktop app for your computer, with a download button (not shown on phones or inside the app).", sizes: ["medium", "large", "full"] },
 ] as const satisfies readonly { id: string; label: string; hint: string; sizes: readonly CardSize[]; feature?: "shedLog" | "lessons" }[];
 
 export type DashboardCardId = (typeof DASHBOARD_CARDS)[number]["id"];
@@ -54,6 +55,7 @@ export const DEFAULT_LAYOUT: DashboardItem[] = [
   { id: "tuneOfDay", size: "small" },
   { id: "favorites", size: "full" },
   { id: "lessons", size: "full" },
+  { id: "desktopApp", size: "full" },
   { id: "support", size: "full" },
 ];
 

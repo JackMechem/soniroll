@@ -1,6 +1,6 @@
 # soniroll
 
-**Current version: v0.10.5 (beta)** · [What's new](https://www.soniroll.com/changelog)
+**Current version: v0.10.6 (beta)** · [What's new](https://www.soniroll.com/changelog)
 
 Free practice tools for musicians, in the browser: a metronome (odd and changing meters,
 polyrhythm modulation), a tuner, ear training with levelled learning paths, note, scale and
@@ -45,25 +45,41 @@ pnpm desktop:build      # a release build and installers, in apps/desktop/src-ta
 
 **Installing a release.** Downloads for Linux (`.deb`, `.rpm`, `.AppImage`), macOS (`.dmg`) and
 Windows (`-setup.exe`) are on the [releases page](https://github.com/JackMechem/soniroll/releases).
-On NixOS, run it straight from the flake, or add it to your configuration:
+Releases come in two channels:
+
+- **Stable:** releases with a plain version (`desktop-v0.2.0`). GitHub marks the newest as Latest.
+- **Unstable:** every release, including pre-releases (`desktop-v0.2.0-beta.1`, `-rc.1`): new things
+  sooner, less tested. Pre-releases have no `.rpm` (RPM can't hold a version like `-beta.1`).
+
+The `desktop-stable` and `desktop-unstable` branches always point at the newest release on each
+channel. On NixOS, follow a channel (or pin a release tag) and add it to your configuration:
 
 ```nix
-# flake.nix inputs (pin a release tag)
-soniroll.url = "github:JackMechem/soniroll/desktop-v0.1.0";
+# flake.nix inputs: `nix flake update soniroll` moves to the channel's newest release
+soniroll.url = "github:JackMechem/soniroll/desktop-stable";   # or /desktop-unstable, or /desktop-v0.1.6
 
 # configuration.nix
 environment.systemPackages = [ inputs.soniroll.packages.${pkgs.stdenv.hostPlatform.system}.soniroll-desktop ];
 ```
 
 ```bash
-nix run github:JackMechem/soniroll/desktop-v0.1.0
+nix run github:JackMechem/soniroll/desktop-stable
 ```
 
 **Releasing.** The desktop app has its own version, separate from the website's: bump it in
 `apps/desktop/package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` (then
 `cargo build` for the lock file), add a section to `apps/desktop/CHANGELOG.md`, and check with
-`apps/desktop/scripts/check-version.sh`. Pushing a tag `desktop-vX.Y.Z` builds the installers and
-publishes the GitHub release (`.github/workflows/desktop-release.yml`). Every push that touches the
+`apps/desktop/scripts/check-version.sh`. Pushing a tag `desktop-vX.Y.Z` builds the installers,
+publishes the GitHub release (`.github/workflows/desktop-release.yml`) and moves the channel
+branches. For an Unstable release, give the version a suffix (`0.2.0-beta.1`, in all three files
+and the changelog heading) and tag `desktop-v0.2.0-beta.1`. Never commit to `desktop-stable` or
+`desktop-unstable`; only the release workflow moves them.
+
+**Updates.** The app checks for updates at launch (installs them on macOS and Windows, says so on
+Linux). Releases need the signing key as the GitHub secret `TAURI_SIGNING_PRIVATE_KEY` (its private
+half lives at `~/.tauri/soniroll-updater.key` on the maintainer's machine; the public half is in
+`tauri.conf.json`); without it a release builds but installed apps won't update to it. The app asks
+`https://www.soniroll.com/api/desktop-update`, which serves the newest release's `latest.json`. Every push that touches the
 app, the website or the packages runs the desktop checks (`desktop-ci.yml`). If `pnpm-lock.yaml`
 changes, the flake's `pnpm` hash for the desktop package changes too: set it to `""`, run
 `nix build .#soniroll-desktop`, and copy in the hash it prints.

@@ -1,0 +1,23 @@
+/**
+ * Polar's embedded checkout (@polar-sh/checkout 0.6.0, dist/embed.js), copied as is.
+ * Copyright Polar Software, Inc. Licensed under the Apache License 2.0
+ * (https://www.apache.org/licenses/LICENSE-2.0). Vendored because pnpm linked the npm package
+ * wrongly (it has Stripe peer dependencies this file doesn't use). Used by
+ * components/plans/PlansPage.tsx to show the checkout over the page.
+ */
+const e=`POLAR_CHECKOUT`,t=t=>t.type===e;var n=class n{iframe;loader;loaded;closable;eventTarget;windowMessageListener;constructor(e,t){this.iframe=e,this.loader=t,this.loaded=!1,this.closable=!0,this.eventTarget=new EventTarget,this.windowMessageListener=this.handleWindowMessage.bind(this),window.addEventListener(`message`,this.windowMessageListener)}static postMessage(t,n){window.parent.postMessage({...t,type:e},n)}static async create(e,t){typeof t==`string`&&(console.warn(`Passing theme as string is deprecated. Use { theme: "${t}" } instead.`),t={theme:t});let r=new URL(e);r.searchParams.set(`embed`,`true`),r.searchParams.set(`embed_origin`,window.location.origin),t?.theme&&r.searchParams.set(`theme`,t.theme);let i=r.toString(),a=r.searchParams.get(`theme`)===`dark`?`dark`:`light`,o=document.createElement(`style`);o.innerText=`
+      .polar-loader-spinner {
+        width: 20px;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: ${a===`dark`?`#000`:`#fff`};
+        box-shadow: 0 0 0 0 ${a===`dark`?`#fff`:`#000`};
+        animation: polar-loader-spinner-animation 1s infinite;
+      }
+      @keyframes polar-loader-spinner-animation {
+        100% {box-shadow: 0 0 0 30px #0000}
+      }
+      body.polar-no-scroll {
+        overflow: hidden;
+      }
+    `,document.head.appendChild(o);let s=document.createElement(`div`);s.style.position=`absolute`,s.style.top=`50%`,s.style.left=`50%`,s.style.transform=`translate(-50%, -50%)`,s.style.zIndex=`2147483647`,s.style.colorScheme=`auto`;let c=document.createElement(`div`);c.className=`polar-loader-spinner`,s.appendChild(c),document.body.classList.add(`polar-no-scroll`),document.body.appendChild(s);let l=document.createElement(`iframe`);l.src=i,l.style.position=`fixed`,l.style.top=`0`,l.style.left=`0`,l.style.width=`100%`,l.style.height=`100%`,l.style.border=`none`,l.style.zIndex=`2147483647`,l.style.backgroundColor=`rgba(0, 0, 0, 0.5)`,l.style.colorScheme=a,l.setAttribute(`data-lenis-prevent`,``);let u=`https://polar.sh,https://sandbox.polar.sh`.split(`,`).join(` `);l.allow=`payment 'self' ${u}; publickey-credentials-get 'self' ${u};`,document.body.appendChild(l);let d=new n(l,s);return t?.onLoaded&&d.addEventListener(`loaded`,t.onLoaded,{once:!0}),new Promise(e=>{d.addEventListener(`loaded`,()=>e(d),{once:!0})})}static init(){document.querySelectorAll(`[data-polar-checkout]`).forEach(e=>{e.removeEventListener(`click`,n.checkoutElementClickHandler),e.addEventListener(`click`,n.checkoutElementClickHandler)})}close(){window.removeEventListener(`message`,this.windowMessageListener),document.body.contains(this.iframe)&&document.body.removeChild(this.iframe),document.body.classList.remove(`polar-no-scroll`)}addEventListener(e,t,n){this.eventTarget.addEventListener(e,t,n)}removeEventListener(e,t){this.eventTarget.removeEventListener(e,t)}static async checkoutElementClickHandler(e){e.preventDefault();let t=e.target;for(;!t.hasAttribute(`data-polar-checkout`);){if(!t.parentElement)return;t=t.parentElement}let r=t.getAttribute(`href`)||t.getAttribute(`data-polar-checkout`),i=t.getAttribute(`data-polar-checkout-theme`);n.create(r,i?{theme:i}:void 0)}handleLoaded(){this.loaded||=(document.body.removeChild(this.loader),!0)}handleClose(){this.closable&&this.close()}handleConfirmed(){this.closable=!1}handleSuccess(e){this.closable=!0,e.redirect&&(window.location.href=e.successURL)}handleWindowMessage({data:e,origin:n}){if(!`https://polar.sh,https://sandbox.polar.sh`.split(`,`).includes(n)||!t(e))return;let r=new CustomEvent(e.event,{detail:e,cancelable:!0});if(this.eventTarget.dispatchEvent(r),!r.defaultPrevented)switch(e.event){case`loaded`:this.handleLoaded();break;case`close`:this.handleClose();break;case`confirmed`:this.handleConfirmed();break;case`success`:this.handleSuccess(e)}}};if(typeof window<`u`&&(window.Polar={...window.Polar??{},EmbedCheckout:n}),typeof document<`u`){let e=document.currentScript;e&&e.hasAttribute(`data-auto-init`)&&document.addEventListener(`DOMContentLoaded`,async()=>{n.init()})}export{n as PolarEmbedCheckout};

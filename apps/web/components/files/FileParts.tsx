@@ -14,7 +14,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon } from "@/components/tools";
 import {
   type FileKind,
   type StoredEntry,
@@ -29,8 +29,13 @@ import {
   filesApi,
   formatBytes,
   formatFileDate,
-  uploadFile,
+  saveFile,
 } from "@/lib/files";
+import { PLAN_HREF, type SaveTarget, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
+import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
+import { isMovable, useStorageMoves } from "@/lib/storageMove";
+import { KeptHereHint } from "@/components/files/StorageMove";
+import SaveWhere from "@/components/files/SaveWhere";
 
 // ---------------------------------------------------------------- icons
 
@@ -99,13 +104,27 @@ export function fileDetail(file: { name: string; mimeType: string; size: number;
 
 // ---------------------------------------------------------------- preview
 
-export type PreviewFile = { name: string; mimeType: string; size: number; createdAt: number; url: string | null };
+export type PreviewFile = { name: string; mimeType: string; size: number; createdAt: number; url: string | null; device?: { label: string } | null };
 
 /** The file itself: a PDF, image, audio or video shown in place, or a note to download anything the
     browser can't show. */
 export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; autoPlay?: boolean }) {
   const kind = fileKind(file.mimeType, file.name);
   const url = file.url;
+  if (!url && file.device) {
+    return (
+      <div className="flex max-w-sm flex-col items-center gap-3 p-10 text-center">
+        <DeviceIcon className="h-8 w-8 text-muted" />
+        <p className="text-sm text-muted">
+          This file is kept on {file.device.label}, so open it there. A{" "}
+          <Link href={PLAN_HREF} className="text-accent hover:underline">
+            storage plan
+          </Link>{" "}
+          keeps files on all your devices.
+        </p>
+      </div>
+    );
+  }
   if (!url) return <p className="p-8 text-sm text-muted">This file isn&apos;t available.</p>;
   if (kind === "pdf") return <iframe src={url} title={file.name} className="h-full min-h-[60vh] w-full border-0" />;
   if (kind === "image") {
@@ -188,12 +207,15 @@ const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground
 // ---------------------------------------------------------------- uploading
 
 /**
- * Uploading one or more files to the account, optionally attached to a tune: `pick()` opens the
- * file chooser, `drop` props make an element a drop target, and `input` must be rendered.
+ * Adding one or more files to the account, optionally attached to a tune: `pick()` opens the
+ * file chooser, `drop` props make an element a drop target, and `input` must be rendered. They're
+ * saved online with a storage plan, or on this device without one (`lib/storagePlan.ts`).
  */
-export function useFileUploader(tuneId?: string) {
+export function useFileUploader(tuneId: string | undefined, target: SaveTarget) {
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
   const create = useMutation(filesApi.create);
+  const createOnDevice = useMutation(filesApi.createOnDevice);
+  const { storage, online } = target;
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +229,7 @@ export function useFileUploader(tuneId?: string) {
       const failures: string[] = [];
       for (let i = 0; i < files.length; i++) {
         try {
-          await uploadFile(files[i], () => generateUploadUrl(), (args) => create(args), tuneId);
+          await saveFile(files[i], storage, { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create(args), createOnDevice: (args) => createOnDevice(args) }, tuneId, undefined, online);
         } catch (e) {
           failures.push(errorText(e, `Couldn't upload "${files[i].name}".`));
           // Out of room: the rest won't fit either.
@@ -218,7 +240,7 @@ export function useFileUploader(tuneId?: string) {
       setProgress(null);
       if (failures.length) setError(failures.join(" "));
     },
-    [create, generateUploadUrl, tuneId],
+    [create, createOnDevice, generateUploadUrl, online, storage, tuneId],
   );
 
   const input = (
@@ -304,6 +326,24 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
   const update = useMutation(filesApi.update);
   const rename = useMutation(filesApi.renameItem);
   const remove = useMutation(filesApi.removeItem);
+  const storage = useStoragePlan();
+  const moves = useStorageMoves(storage?.userId);
+  const [moving, setMoving] = useState<string | null>(null);
+
+  /** Puts a file kept on this device online, or the other way round, saying how it went. */
+  async function move(item: StoredEntry, to: "online" | "device") {
+    setError(null);
+    setMoving(to === "online" ? `Putting "${item.name}" online…` : `Saving "${item.name}" on this device…`);
+    try {
+      if (to === "online") await moves.moveOnline(item);
+      else await moves.moveToDevice(item);
+      if (open && open.kind === item.kind && open.id === item.id) setOpen(null);
+    } catch (e) {
+      setError(errorText(e, to === "online" ? "Couldn't put it online." : "Couldn't save it on this device."));
+    } finally {
+      setMoving(null);
+    }
+  }
   const router = useRouter();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [open, setOpen] = useState<StoredEntry | null>(null);
@@ -325,6 +365,12 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
       ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
       ...(item.kind !== "profile" ? [{ label: item.sharedId ? "Shared — manage link" : "Share a link", onSelect: () => setSharing(item), icon: <ShareIcon className="h-4 w-4" /> }] : []),
       ...(item.url ? [{ label: "Download", onSelect: () => void downloadFile(item.url!, item.name), icon: <DownloadIcon className="h-4 w-4" /> }] : []),
+      // Kept here: put it online (with a plan, or using the free online space). Online on the free
+      // plan: keep it on this device instead (frees the online space).
+      ...(isMovable(item) && item.device && item.url && storage?.plan ? [{ label: "Put online", onSelect: () => void move(item, "online"), icon: <CloudIcon className="h-4 w-4" /> }] : []),
+      ...(isMovable(item) && !item.device && !item.keepOnline && storage && !storage.plan
+        ? [{ label: "Keep on this device only", onSelect: () => void move(item, "device"), icon: <DeviceIcon className="h-4 w-4" /> }]
+        : []),
       ...(item.kind !== "file"
         ? []
         : hereTuneId && item.tuneId === hereTuneId
@@ -355,6 +401,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     for (const item of list) {
       try {
         await remove({ kind: item.kind, id: item.id });
+        if (item.device) await deleteOnDevice(item.device.key);
       } catch {
         failed.push(item.name);
       }
@@ -452,7 +499,26 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     </>
   );
 
-  return { openMenu, contextMenu, openFile: setOpen, deleteMany, error, clearError: () => setError(null), dialogs };
+  /** Puts several files kept on this device online (with a plan), one by one. */
+  async function putOnline(list: StoredEntry[], onDone?: () => void) {
+    setError(null);
+    const failed: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      setMoving(`Putting ${i + 1} of ${list.length} online…`);
+      try {
+        await moves.moveOnline(list[i]);
+      } catch (e) {
+        failed.push(errorText(e, `"${list[i].name}" couldn't be put online.`));
+        if (/room|plan/i.test(failed[failed.length - 1])) break;
+      }
+    }
+    setMoving(null);
+    if (failed.length) setError(failed.join(" "));
+    onDone?.();
+  }
+
+  /** `status`: what's happening while a file is being put online or saved here. */
+  return { openMenu, contextMenu, openFile: setOpen, deleteMany, putOnline, error, status: moving, clearError: () => setError(null), dialogs };
 }
 
 // ---------------------------------------------------------------- picking files already uploaded
@@ -475,7 +541,7 @@ export function FileSelectDialog({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const files = useQuery(filesApi.list, {});
+  const files = useDeviceUrls(useQuery(filesApi.list, {}));
   const [query, setQuery] = useState("");
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -515,9 +581,10 @@ export function FileSelectDialog({
     from my files". */
 export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tuneId: string) => string | undefined }) {
   const { isAuthenticated } = useConvexAuth();
-  const files = useQuery(filesApi.listForTune, isAuthenticated ? { tuneId } : "skip");
+  const files = useDeviceUrls(useQuery(filesApi.listForTune, isAuthenticated ? { tuneId } : "skip"));
   const update = useMutation(filesApi.update);
-  const uploader = useFileUploader(tuneId);
+  const saveTarget = useSaveTarget();
+  const uploader = useFileUploader(tuneId, saveTarget);
   const actions = useFileActions({ tuneName, hereTuneId: tuneId });
   const [adding, setAdding] = useState(false);
 
@@ -531,6 +598,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
         {files && files.length > 0 && <span className="text-xs tabular-nums text-muted">{files.length}</span>}
         {isAuthenticated && (
           <div className="ml-auto flex flex-wrap gap-2">
+            <SaveWhere target={saveTarget} />
             <button type="button" onClick={uploader.pick} disabled={!!uploader.progress} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50">
               <UploadIcon className="h-4 w-4" /> Upload
             </button>
@@ -571,6 +639,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
       <UploadProgress progress={uploader.progress} />
       {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
       {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
+      {isAuthenticated && files && files.length > 0 && <KeptHereHint />}
       {uploader.input}
       {actions.dialogs}
       {adding && (

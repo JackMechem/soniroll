@@ -176,6 +176,9 @@ pub struct Processor {
     in_channels: usize,
     mono: Option<MonoSource>,
     auto_gain: Option<AutoGain>,
+    /// The input level the person set (a plain multiplier, 1.0 = as it comes in), as `f32` bits:
+    /// shared with `recorder_set_gain`, so moving the slider while the input is open applies live.
+    gain: Arc<AtomicU32>,
 }
 
 impl Processor {
@@ -184,7 +187,14 @@ impl Processor {
             in_channels: in_channels.clamp(1, 2),
             mono,
             auto_gain: auto_gain.then(|| AutoGain::new(sample_rate)),
+            gain: Arc::new(AtomicU32::new(1.0f32.to_bits())),
         }
+    }
+
+    /// Reads the manual input level from `gain` (see the field).
+    pub fn with_gain(mut self, gain: Arc<AtomicU32>) -> Self {
+        self.gain = gain;
+        self
     }
 
     /// One channel for a mono input or in mono mode, else two.
@@ -207,6 +217,9 @@ impl Processor {
             // Like Web Audio's down-mix: the average.
             (_, _) => ((l + r) * 0.5, 0.0),
         };
+        // The level the person set, then (if on) auto gain on top of it.
+        let manual = f32::from_bits(self.gain.load(Ordering::Relaxed));
+        let (a, b) = (a * manual, b * manual);
         let gain = match self.auto_gain.as_mut() {
             Some(agc) => agc.next(a.abs().max(b.abs())),
             None => 1.0,
@@ -340,6 +353,8 @@ pub fn frame_at(marker: Marker, nanos: u64, sample_rate: f64) -> u64 {
 
 struct Shared {
     cancel: AtomicBool,
+    /// The manual input level (`Processor::gain`).
+    gain: Arc<AtomicU32>,
     /// Capture time the take starts / ends at (`audio::now_nanos()` terms; 0 = not yet).
     begin_nanos: AtomicU64,
     end_nanos: AtomicU64,
@@ -386,7 +401,8 @@ pub fn recorder_open(
     device_id: String,
     mono: Option<MonoSource>,
     auto_gain: bool,
-    on_level: Channel<f32>,
+    gain: Option<f32>,
+    on_level: Channel<(f32, f32)>,
 ) -> Result<OpenInfo, String> {
     cancel_session(&state);
     *state.take.lock().unwrap() = None;
@@ -409,10 +425,12 @@ pub fn recorder_open(
     let format = supported.sample_format();
     let sample_rate = config.sample_rate;
     let in_channels = config.channels as usize;
-    let processor = Processor::new(in_channels, mono, auto_gain, sample_rate as f32);
+    let gain = Arc::new(AtomicU32::new(clamp_gain(gain.unwrap_or(1.0)).to_bits()));
+    let processor = Processor::new(in_channels, mono, auto_gain, sample_rate as f32).with_gain(gain.clone());
     let out_channels = processor.out_channels();
     let shared = Arc::new(Shared {
         cancel: AtomicBool::new(false),
+        gain,
         begin_nanos: AtomicU64::new(0),
         end_nanos: AtomicU64::new(0),
         input_latency_micros: AtomicU32::new(0),
@@ -521,7 +539,7 @@ fn run_worker(
     mut processor: Processor,
     in_channels: usize,
     sample_rate: u32,
-    on_level: &Channel<f32>,
+    on_level: &Channel<(f32, f32)>,
 ) -> Option<Result<Take, String>> {
     let out_channels = processor.out_channels();
     let mut assembler = TakeAssembler::new(out_channels, (PREROLL_SECS * sample_rate as f64) as usize);
@@ -581,7 +599,10 @@ fn run_worker(
         if last_level.elapsed() >= LEVEL_INTERVAL {
             last_level = Instant::now();
             let rms = (meter.iter().map(|s| s * s).sum::<f32>() / meter.len().max(1) as f32).sqrt();
-            if on_level.send((rms * 4.0).min(1.0)).is_err() {
+            // The level (scaled up for the meter) and the peak (for "too loud": the soft clipper
+            // starts at 0.8, so 0.9 is distorting).
+            let peak = meter.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+            if on_level.send(((rms * 4.0).min(1.0), peak.min(1.0))).is_err() {
                 return None;
             }
         }
@@ -603,6 +624,23 @@ fn run_worker(
 /// the output stopped), it starts on the sample captured now. Returns how many seconds before now
 /// the decoded file's first sample was captured (including the MP3 codec delay), for lining the
 /// take up with a song.
+/// The input level (0 to 4×, 1 = unchanged), sensible whatever the page sends.
+fn clamp_gain(gain: f32) -> f32 {
+    if gain.is_finite() {
+        gain.clamp(0.0, 4.0)
+    } else {
+        1.0
+    }
+}
+
+/// Changes the input level of the open input (checking the level, or mid-take).
+#[tauri::command]
+pub fn recorder_set_gain(state: tauri::State<'_, RecorderState>, gain: f32) {
+    if let Some(session) = state.session.lock().unwrap().as_ref() {
+        session.shared.gain.store(clamp_gain(gain).to_bits(), Ordering::Relaxed);
+    }
+}
+
 #[tauri::command]
 pub fn recorder_begin(state: tauri::State<'_, RecorderState>, at: Option<f64>) -> Result<f64, String> {
     let session = state.session.lock().unwrap();
@@ -843,6 +881,21 @@ mod tests {
         take.set_end(40);
         assert!(take.finished());
         assert!(sink.0.is_empty());
+    }
+
+    #[test]
+    fn manual_gain_scales_and_changes_live() {
+        let gain = Arc::new(AtomicU32::new(2.0f32.to_bits()));
+        let mut p = Processor::new(1, None, false, 48_000.0).with_gain(gain.clone());
+        let mut out = Vec::new();
+        p.process(&[0.1], &mut out);
+        assert!((out[0] - 0.2).abs() < 1e-6, "doubled: {}", out[0]);
+        gain.store(0.5f32.to_bits(), Ordering::Relaxed);
+        out.clear();
+        p.process(&[0.1], &mut out);
+        assert!((out[0] - 0.05).abs() < 1e-6, "halved after the change: {}", out[0]);
+        assert_eq!(clamp_gain(f32::NAN), 1.0);
+        assert_eq!(clamp_gain(10.0), 4.0);
     }
 
     #[test]
