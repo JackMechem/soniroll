@@ -41,9 +41,18 @@ plans page compares the website, the desktop app and a plan.
   `storage_gb`** is set, with fixed monthly/yearly prices — no product ids in code); `accountPlan`
   (active / trialing / past_due count as paid); `checkout({productId})` (checks it's a plan and that
   the account has none, success URL `SITE_URL/plans?welcome=1`); `portal` (Polar's customer portal:
-  change plan, card, receipts, cancel); `syncProducts` (owner only, for products made before the
-  webhook); `revokeSubscription` (internal).
-- `http.ts`: `polar.registerRoutes(http)` → webhook at `<deployment>.convex.site/polar/events`.
+  change plan, card, receipts, cancel); `syncProducts` (internal: `npx convex run
+  billing:syncProducts`, for products made before the webhook worked); `revokeSubscription`
+  (internal). Polar only accepts emails whose domain takes mail, so dev test accounts (`.test`) check
+  out as `<name>+test@soniroll.com`. Checkout/portal failures are logged and shown as a plain message.
+- `http.ts`: the webhook at `<deployment>.convex.site/polar/events`. **Polar's secrets are now
+  `whsec_<base64>` and sign with the decoded bytes, but the component's pinned 0.x SDK only tries the
+  secret's raw text**, so every real delivery got 403. `lib/polarWebhook.ts` checks the signature
+  with both keys (as Polar's v1 SDK does), then re-signs the request with the raw text and calls the
+  component's own handler (captured from `registerRoutes` via the route's `_handler`, so the
+  component still stores products and subscriptions). If the component or Convex changes that
+  shape, the route answers 503 rather than accepting unchecked requests.
+- `/plans` strips the `customer_session_token` Polar adds to the return address.
 - `account.performDelete`: schedules `billing.revokeSubscription` for an active plan (Polar's own
   customer row in the component's tables is left; it holds only Polar's id and our user id).
 - `files.ts`: `storage` returns `used` (online), `onDevices`, `quota`, `freeQuota`, `plan`;
@@ -92,6 +101,17 @@ plans page compares the website, the desktop app and a plan.
 - **Run once per deployment:** `npx convex run files:markNoteFiles` (`--prod` for production) marks
   files/recordings/songs already in Shed Notes or lesson notes as `keepOnline`. Run on dev (marked 1).
 
+## Polar sandbox on dev (set up 2026-11-17)
+
+- Organization `soniroll` in the **sandbox**. Dev Convex env: `POLAR_ORGANIZATION_TOKEN` (the sandbox
+  token Jack gave), `POLAR_SERVER=sandbox`, `POLAR_WEBHOOK_SECRET` (piped from the API, never
+  printed). `SITE_URL` is `http://localhost:3000` on dev.
+- Webhook endpoint `235671df-d161-4824-b648-3dc423b5efb7` → `https://befitting-cobra-264.convex.site/
+  polar/events` (product, subscription, order.paid, customer.state_changed events).
+- Products (metadata `storage_gb`; placeholder prices to adjust): 5 GB $2/mo `8d920763…`, $20/yr
+  `18bf55cb…`; 25 GB $5/mo `df676c96…`, $50/yr `b63d48ba…`; 100 GB $12/mo `e09e887c…`, $120/yr
+  `18e802be…`.
+
 ## Setting up Polar (Jack)
 
 Test in Polar's **sandbox** first (a separate account at sandbox.polar.sh), on the dev deployment:
@@ -132,10 +152,19 @@ routes, `.env`) doesn't apply: the webhook and keys live in Convex.
   → a second, fresh browser context sees it as "Chrome on Linux" → Delete (row gone, IndexedDB empty).
   No page errors. Headless Chrome didn't grant persistent storage (`persisted: false`), as expected.
 
+- **Polar sandbox, end to end**, as the demo account in its own browser context: `/plans` lists the six
+  plans → Get 5 GB → Polar's sandbox checkout (test card 4242…) → back to `/plans?welcome=1` → the
+  webhook stored the subscription → "Your plan: 5 GB · $20 a year · renews November 17, 2027". With
+  the plan, an upload went online (no device copy; meter "74 B of 5.0 GB online"). Manage plan opened
+  Polar's portal (subscription Active). Through the API: cancel at period end → still 5 GB,
+  `cancelAtPeriodEnd` true; revoke → back to free (50 MB). Every webhook delivery 202.
+
 ## Not verified
 
 - Recordings and tune songs saved to the device (the Recorder needs a mic; same code path as files),
   Move to this device in bulk, saving someone's shared file or tune on the free plan, the note file
   picker putting a device file online, `tidyDeviceFiles` after a delete on another device.
-- **Polar end to end:** no token yet, so no checkout, webhook, plan quota, portal or cancellation.
+- Polar **production** (only the sandbox), renewals and failed payments (`past_due`), changing plan
+  in the portal, account deletion revoking a real subscription, and the desktop app opening checkout
+  in the system browser.
 - The desktop app (its WebView's IndexedDB and opening checkout in the browser), Safari, real phones.

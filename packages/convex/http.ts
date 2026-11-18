@@ -1,17 +1,38 @@
 import { httpRouter } from "convex/server";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
-import { httpAction } from "./_generated/server";
+import { httpAction, type ActionCtx } from "./_generated/server";
 import { feedbackRefs, issueRefs, validSignature } from "./lib/github";
 import { hub } from "./inbox";
 import { polar } from "./billing";
+import { resignForComponent, validPolarSignature } from "./lib/polarWebhook";
 
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
 
 // Polar's webhook (`/polar/events`): keeps storage plans' products and subscriptions up to date.
-polar.registerRoutes(http);
+// The component's own route can't check Polar's current `whsec_` signatures, so this route checks
+// them (`lib/polarWebhook.ts`) and passes the request, re-signed, to the component's handler.
+type RawHttpHandler = (ctx: ActionCtx, request: Request) => Promise<Response>;
+let polarHandler: RawHttpHandler | null = null;
+polar.registerRoutes({
+  route: ({ handler }: { handler: { _handler?: RawHttpHandler } }) => {
+    polarHandler = handler._handler ?? null;
+  },
+} as unknown as Parameters<typeof polar.registerRoutes>[0]);
+
+http.route({
+  path: "/polar/events",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const secret = process.env.POLAR_WEBHOOK_SECRET ?? "";
+    if (!secret || !polarHandler) return new Response("Not set up", { status: 503 });
+    const body = await req.text();
+    if (!(await validPolarSignature(body, req.headers, secret))) return new Response("Forbidden", { status: 403 });
+    return polarHandler(ctx, await resignForComponent(body, req.headers, secret, req.url));
+  }),
+});
 
 const MAIN = "main";
 

@@ -45,7 +45,16 @@ function Plans() {
   const plans = useQuery(api.billing.plans, {});
   const checkout = useAction(api.billing.checkout);
   const portal = useAction(api.billing.portal);
-  const welcome = useSearchParams().get("welcome") === "1";
+  const params = useSearchParams();
+  const welcome = params.get("welcome") === "1";
+  // Polar adds a customer session token to the address it sends people back to; keep it out of
+  // the address bar (and history, and anything copied from it).
+  useEffect(() => {
+    if (!params.get("customer_session_token")) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("customer_session_token");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search);
+  }, [params]);
   const desktop = useSyncExternalStore(noSubscribe, inDesktopApp, () => false);
   const [interval, setBilling] = useState<Interval>("year");
   const [busy, setBusy] = useState<string | null>(null);

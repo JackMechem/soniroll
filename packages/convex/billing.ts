@@ -5,7 +5,6 @@ import { subscriptionsRevoke } from "@polar-sh/sdk/funcs/subscriptionsRevoke.js"
 import { components, internal } from "./_generated/api";
 import type { DataModel, Id } from "./_generated/dataModel";
 import { action, internalAction, internalQuery, query, type QueryCtx } from "./_generated/server";
-import { isOwnerUser } from "./lib/roles";
 
 /**
  * Storage plans, sold through Polar (polar.sh, the merchant of record: it handles payments, sales
@@ -18,7 +17,7 @@ import { isOwnerUser } from "./lib/roles";
  *   "production"). The webhook is `<deployment>.convex.site/polar/events`.
  * - In Polar, one product per plan and billing period, each with the metadata `storage_gb` (how
  *   many GB it gives). Products without it are ignored, so nothing else in Polar becomes a plan.
- *   Products made before the webhook existed come in with `syncProducts` (owner only).
+ *   Products made before the webhook existed come in with `syncProducts` (run from the CLI).
  */
 
 type UserInfo = { userId: string; email: string };
@@ -37,7 +36,10 @@ export const signedInUser = internalQuery({
     const userId = await getAuthUserId(ctx);
     const user = userId ? await ctx.db.get(userId) : null;
     if (!user?.email) return null;
-    return { userId: user._id as string, email: user.email };
+    // Polar only takes addresses that can receive mail, so dev test accounts (`testAccounts.ts`,
+    // always `.test`) check out as <name>+test@soniroll.com.
+    const email = user.email.endsWith(".test") ? `${user.email.split("@")[0]}+test@soniroll.com` : user.email;
+    return { userId: user._id as string, email };
   },
 });
 
@@ -132,14 +134,19 @@ export const checkout = action({
     if (!known) throw new Error("That plan isn't on sale any more. Reload the page and pick another.");
     const current: boolean = await ctx.runQuery(internal.billing.hasPlan, { userId: user.userId as Id<"users"> });
     if (current) throw new Error("You already have a plan. Change it from Manage plan.");
-    const session = await polar.createCheckoutSession(ctx, {
-      productIds: [productId],
-      userId: user.userId,
-      email: user.email,
-      origin: siteUrl(""),
-      successUrl: siteUrl("/plans?welcome=1"),
-    });
-    return { url: session.url };
+    try {
+      const session = await polar.createCheckoutSession(ctx, {
+        productIds: [productId],
+        userId: user.userId,
+        email: user.email,
+        origin: siteUrl(""),
+        successUrl: siteUrl("/plans?welcome=1"),
+      });
+      return { url: session.url };
+    } catch (e) {
+      console.error("Polar checkout failed", e);
+      throw new Error("The checkout couldn't be opened. Try again in a minute, or send feedback if it keeps happening.");
+    }
   },
 });
 
@@ -159,25 +166,21 @@ export const portal = action({
   handler: async (ctx): Promise<{ url: string }> => {
     const user: UserInfo | null = await ctx.runQuery(internal.billing.signedInUser, {});
     if (!user) throw new Error("Sign in first.");
-    return await polar.createCustomerPortalSession(ctx, { userId: user.userId, returnUrl: siteUrl("/plans") });
+    try {
+      return await polar.createCustomerPortalSession(ctx, { userId: user.userId, returnUrl: siteUrl("/plans") });
+    } catch (e) {
+      console.error("Polar customer portal failed", e);
+      throw new Error("Your plan's page couldn't be opened. Try again in a minute, or send feedback if it keeps happening.");
+    }
   },
 });
 
-/** Pulls in products made in Polar before the webhook was set up. Owner only. */
-export const syncProducts = action({
+/** Pulls in products made in Polar before the webhook was set up (or while it was failing):
+    `npx convex run billing:syncProducts` (add `--prod` for production). */
+export const syncProducts = internalAction({
   args: {},
   handler: async (ctx) => {
-    const ok: boolean = await ctx.runQuery(internal.billing.callerIsOwner, {});
-    if (!ok) throw new Error("Only the site owner can do that.");
     await polar.syncProducts(ctx);
-  },
-});
-
-export const callerIsOwner = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    return isOwnerUser(userId ? await ctx.db.get(userId) : null);
   },
 });
 
@@ -190,3 +193,4 @@ export const revokeSubscription = internalAction({
     if (!result.ok) console.error("Couldn't cancel the Polar subscription", subscriptionId, result.error);
   },
 });
+

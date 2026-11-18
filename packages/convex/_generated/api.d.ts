@@ -30,6 +30,7 @@ import type * as lessonSchedule from "../lessonSchedule.js";
 import type * as lessons from "../lessons.js";
 import type * as lib_chordCharts from "../lib/chordCharts.js";
 import type * as lib_github from "../lib/github.js";
+import type * as lib_polarWebhook from "../lib/polarWebhook.js";
 import type * as lib_resend from "../lib/resend.js";
 import type * as lib_roles from "../lib/roles.js";
 import type * as lib_routines from "../lib/routines.js";
@@ -83,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   lessons: typeof lessons;
   "lib/chordCharts": typeof lib_chordCharts;
   "lib/github": typeof lib_github;
+  "lib/polarWebhook": typeof lib_polarWebhook;
   "lib/resend": typeof lib_resend;
   "lib/roles": typeof lib_roles;
   "lib/routines": typeof lib_routines;
