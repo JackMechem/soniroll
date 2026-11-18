@@ -33,6 +33,12 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.10",
+    date: "2026-11-18",
+    title: "Metronome beat bars on Macs",
+    changes: [{ kind: "fixed", text: "The **Metronome**'s beat bars were still empty in the Mac desktop app — they show now." }],
+  },
+  {
     version: "0.10.9",
     date: "2026-11-18",
     title: "Bug button in the top bar",

@@ -19,6 +19,7 @@ function Bar({
   label,
   number,
   dim,
+  seg,
   onClick,
 }: {
   level: BeatLevel;
@@ -27,21 +28,23 @@ function Bar({
   /** Shown top-left inside the bar; omitted for a subdivision tick. */
   number?: number;
   dim: string;
+  /** Each segment's own fixed height (see below). */
+  seg: string;
   onClick?: () => void;
 }) {
   const rank = LEVEL_RANK[level] ?? 2;
-  // Plain colours with `opacity` rather than `bg-foreground/40` (a color-mix) for the lit and unlit
-  // segments, and a grid rather than flex-1 children of a button: the macOS desktop app's WebKit
-  // drew the segments as nothing (FB-20).
+  // The segments are plain blocks with a fixed height, stacked with margins. Sized as shares of the
+  // bar (flex-1, then grid rows) they came out zero-height in the macOS desktop app — WebKit doesn't
+  // give a <button>'s inside a definite height (FB-20, FB-21). Solid colours with `opacity`, too.
   const lit = level === 2 ? "bg-accent" : "bg-foreground opacity-40";
-  const className = `relative grid ${dim} shrink-0 grid-rows-3 gap-[3px] rounded-md bg-surface p-[3px] ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
+  const className = `relative block ${dim} shrink-0 rounded-md bg-surface p-[3px] text-left ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
     level === 0 ? "opacity-50" : ""
   } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;
   const content = (
     <>
       {/* Top to bottom; they light from the bottom up. */}
       {[2, 1, 0].map((i) => (
-        <span key={i} className={`block rounded-[3px] ${i < rank ? lit : "bg-foreground opacity-10"}`} />
+        <span key={i} className={`block w-full ${seg} rounded-[3px] ${i < 2 ? "mb-[3px]" : ""} ${i < rank ? lit : "bg-foreground opacity-10"}`} />
       ))}
       {number !== undefined && (
         <span
@@ -112,6 +115,8 @@ export default function BeatIndicator({
 }) {
   const small = size === "sm";
   const dim = small ? "h-10 w-7" : "h-16 w-10";
+  // Three segments and two 3px gaps inside 3px padding: (40 − 12) / 3 and (64 − 12) / 3, rounded down.
+  const seg = small ? "h-[9px]" : "h-[17px]";
   const dotCount = Math.max(0, Math.round(subdivision) - 1);
 
   return (
@@ -130,6 +135,7 @@ export default function BeatIndicator({
             label={`Beat ${i + 1}: ${LEVEL_LABEL[level]}`}
             number={i + 1}
             dim={dim}
+            seg={seg}
             onClick={onCycle && (() => onCycle(i))}
           />
           {Array.from({ length: dotCount }, (_, d) => {
@@ -142,6 +148,7 @@ export default function BeatIndicator({
                 active={currentBeat === i && currentSub === d + 1}
                 label={`Subdivision after beat ${i + 1}${dotCount > 1 ? ` (${d + 1}/${dotCount})` : ""}: ${LEVEL_LABEL[dotLevel]}`}
                 dim={dim}
+            seg={seg}
                 onClick={onCycleSub && (() => onCycleSub(i, d))}
               />
             );

@@ -743,3 +743,14 @@ and the CDN kept the answer 5 min plus 10 stale, so a new release took up to ~20
 the app only checks once at launch. Now Stable reads `releases/latest/download/latest.json` from
 github.com uncached (no API rate limit), Unstable still uses the API (60 s cache), and the CDN keeps
 answers for 60 s.
+
+## 2026-11-18 — FB-20 again (FB-21): the real cause
+
+0.1.9's grid + opacity didn't help. Jack's close-up (FB-21) showed the boxes, rings and numbers but no
+segments, so the colours were fine and the segments were zero height: sized as shares of the bar
+(flex-1, then 1fr grid rows), and macOS WebKit doesn't give a `<button>`'s inside a definite height.
+`Bar` is now `display: block` with three fixed-height blocks (17px, or 9px for the small size) stacked
+with margins — nothing depends on the button. Looks the same in Chromium; not verified on a Mac
+until Jack checks 0.1.10. Lesson: inside a `<button>`, don't size children by percentage/flex/grid
+fractions of its height.
+
