@@ -47,8 +47,9 @@ export const LOG_BY_BUTTON = new Set<string>([
   "/time-test",
 ]);
 
-/** Tools that keep their own options look (stats and Log button, but not the reward look). */
-export const PLAIN_OPTIONS = new Set<string>(["/rhythm-section", "/syncopation", "/random-sticking-warmup"]);
+/** Tools that keep their own options look (stats and Log button, but not the reward look): the
+    two with a properties panel instead of option chips. Every chip row gets the same look. */
+export const PLAIN_OPTIONS = new Set<string>(["/rhythm-section", "/syncopation"]);
 
 type Active = { since: number; visibleOnly: boolean };
 

@@ -54,10 +54,18 @@ export type LibraryPlaylist = { id: string; name: string; songs: LibrarySongMeta
  */
 export function useChordChartsLibrary(selectedSongId: string | null) {
   const { isAuthenticated } = useConvexAuth();
+  // Signed in, the library query reads every chart (~400 KB for a big library). Convex answers a
+  // page's first batch of queries together, so subscribing to it with the rest made the whole page
+  // — your name, favorites, today's practice, even mutations — wait for it: seconds on a cold
+  // backend. So it subscribes only once the account's first answer is in (`users.current`, which
+  // the sidebar already loads on every page, so this adds no query); until then it reads as still
+  // loading.
+  const me = useQuery(api.users.current, isAuthenticated ? {} : "skip");
+  const defer = isAuthenticated && me === undefined;
 
   const [localLibrary, updateLocalLibrary] = usePersistedSettings(LIBRARY_KEY, LIBRARY_DEFAULTS);
 
-  const convexLibrary = useQuery(api.chordCharts.library, isAuthenticated ? {} : "skip");
+  const convexLibrary = useQuery(api.chordCharts.library, isAuthenticated && !defer ? {} : "skip");
   // `selectedSongId` is device-local (persisted in localStorage regardless of sign-in state — see
   // ChordCharts.tsx's own VIEW_KEY), so it can be a signed-out-library id left over from before
   // the user signed in. Those are `crypto.randomUUID()` strings (lib/chordChartsLibrary.ts's
@@ -86,12 +94,12 @@ export function useChordChartsLibrary(selectedSongId: string | null) {
   // no-op once already migrated, so calling it again on a later sign-in costs one cheap read.
   const migratedRef = useRef(false);
   useEffect(() => {
-    if (isAuthenticated && !migratedRef.current) {
+    if (isAuthenticated && !defer && !migratedRef.current) {
       migratedRef.current = true;
       void migrateMutation({});
     }
     if (!isAuthenticated) migratedRef.current = false;
-  }, [isAuthenticated, migrateMutation]);
+  }, [isAuthenticated, defer, migrateMutation]);
 
   // Every chart once ("All charts"), with the playlists it's in; and each playlist with its charts
   // (a chart in several playlists shows in each).
