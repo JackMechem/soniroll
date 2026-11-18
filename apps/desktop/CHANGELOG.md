@@ -4,6 +4,10 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.10] - 2026-11-18
+
+- The Metronome's beat bars show on Macs (0.1.9's fix didn't do it; FB-20, FB-21).
+
 ## [0.1.9] - 2026-11-18
 
 - The Metronome's beat bars show again on Macs where they came out empty (FB-20).
