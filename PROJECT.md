@@ -144,6 +144,9 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   conditionally mounting it.
 - Next caches optimized images by URL: when retaking screenshots (landing page `public/landing/`,
   Help `public/help/`), use a new versioned folder and bump the folder constant (`SHOTS`).
+- Convex answers a page's first batch of queries together, so one big query (the ~400 KB chord
+  chart library) held the whole page half-loaded. Subscribe to big, secondary queries only after
+  `users.current` has answered (as `useChordChartsLibrary` does). See `docs/notes/ux-refresh.md`.
 - `react-hooks` lint (React Compiler) rejects reading refs during render and calling `setState`
   synchronously inside an effect; restructure rather than disabling the rule.
 - In split-screen (tiling) mode, keep the address bar in sync with `history.replaceState`
