@@ -213,9 +213,9 @@ const BURST = Array.from({ length: 10 }, (_, i) => {
 });
 
 const TOAST_COLOR: Record<ToastKind, string> = {
-  routine: "#22c55e",
+  routine: "var(--success)",
   goal: "var(--accent)",
-  day: "#22c55e",
+  day: "var(--success)",
   streak: "#f97316",
   hours: "#a78bfa",
 };
@@ -279,7 +279,7 @@ export default function Celebrations() {
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: t.share === "day" ? { kind: "day", date: todayKey() } : t.share }))}
-                className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground hover:bg-accent-hover"
+                className="h-8 shrink-0 rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover"
               >
                 Share
               </button>

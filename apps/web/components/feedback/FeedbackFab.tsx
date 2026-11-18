@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { BugIcon, CloseIcon } from "@/components/tools";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
@@ -52,24 +53,26 @@ function subscribe(cb: () => void) {
 }
 
 /**
- * "Report a bug" pinned to the bottom-right corner of every page, opening the feedback dialog.
- * The little × hides it on this device (localStorage); "Send feedback" in the sidebar's ⋮ menu
- * still works after that. Rendered hidden on the server so it never flashes for someone who closed it.
+ * "Report a bug" pinned to the bottom-right corner of every page on desktop, opening the feedback
+ * dialog. The little × hides it on this device (localStorage); "Send feedback" in the sidebar's ⋮
+ * menu still works after that. Phones get `FeedbackBarButton` in the top bar instead, where it
+ * can't sit on top of a tool's controls. Rendered hidden on the server so it never flashes for
+ * someone who closed it.
  */
 export default function FeedbackFab() {
-  const hidden = useSyncExternalStore(subscribe, read, () => true);
-  const site = useSiteStatus();
-  if (hidden || site?.feedbackPaused) return null;
+  const show = useShowFeedbackButton();
+  if (!show) return null;
+  // z-[35]: above the page, but under menus, sheets and dialogs, so it never sits on their rows.
   return (
-    <div className="group fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[45] flex items-center print:hidden">
+    <div className="group fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[35] flex items-center print:hidden max-lg:hidden">
       <button
         type="button"
         onClick={() => openFeedback({ kind: "bug" })}
         aria-label="Report a bug"
-        className="flex h-10 items-center rounded-full bg-background/80 px-3 text-sm font-semibold text-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur transition-colors hover:bg-background/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex h-10 min-w-10 items-center justify-center rounded-full bg-background/80 px-3 ring-1 ring-foreground/10 text-sm font-medium text-foreground shadow-lg backdrop-blur transition-colors hover:bg-background/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <BugIcon className="h-4 w-4 shrink-0" />
-        {/* The label only opens out on hover / keyboard focus; phones just get the icon. */}
+        {/* The label only opens out on hover / keyboard focus. */}
         <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:ml-2 group-hover:max-w-32 group-hover:opacity-100 group-focus-within:ml-2 group-focus-within:max-w-32 group-focus-within:opacity-100">
           Report a bug
         </span>
@@ -85,4 +88,30 @@ export default function FeedbackFab() {
       </button>
     </div>
   );
+}
+
+/** Phones: the same "Report a bug" as a small round button at the right of the top bar. Hidden
+    with the floating one (its ×, or Settings → General). */
+export function FeedbackBarButton() {
+  const show = useShowFeedbackButton();
+  if (!show) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => openFeedback({ kind: "bug" })}
+      aria-label="Report a bug"
+      title="Report a bug"
+      className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+    >
+      <BugIcon className="h-[18px] w-[18px]" />
+    </button>
+  );
+}
+
+function useShowFeedbackButton(): boolean {
+  const hidden = useSyncExternalStore(subscribe, read, () => true);
+  const site = useSiteStatus();
+  const pathname = usePathname();
+  // Not on the feedback page itself: it would only sit over its Send button.
+  return !hidden && !site?.feedbackPaused && pathname !== "/feedback";
 }

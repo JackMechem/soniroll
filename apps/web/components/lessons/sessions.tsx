@@ -9,7 +9,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SwitchRow from "@/components/SwitchRow";
 import { ChevronRightIcon, ChordChartIcon, NoteIcon, PlusIcon } from "@/components/tools";
-import { CapIcon, ClipboardIcon, Dialog, errorText, field, FileIcon } from "@/components/lessons/parts";
+import { CapIcon, ClipboardIcon, Dialog, btnPrimary, btnSecondary, errorText, field, FileIcon } from "@/components/lessons/parts";
 import { lessonHref } from "@/components/lessons/NotesPage";
 import { materialsHref } from "@/components/lessons/MaterialsPage";
 
@@ -36,7 +36,7 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
   const [now] = useState(() => Date.now());
   if (data === undefined)
     return (
-      <div className="flex justify-center rounded-2xl bg-surface p-10">
+      <div className="flex justify-center rounded-lg bg-surface p-10">
         <LoadingSpinner size="sm" />
       </div>
     );
@@ -55,9 +55,9 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-end justify-between gap-2 px-1">
-        <div>
-          <h2 className="text-lg font-bold">Lessons</h2>
+      <div className="flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-sm font-medium">Lessons</h2>
           <p className="text-xs text-muted">
             {data.sessions.length
               ? `${data.sessions.length} lesson${data.sessions.length === 1 ? "" : "s"}${upcoming.length ? ` · next ${relWhen(upcoming[0].start, now).toLowerCase()}` : ""}`
@@ -66,7 +66,7 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {!empty && (
-            <Link href={materialsHref(lessonId)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover">
+            <Link href={materialsHref(lessonId)} className={btnSecondary}>
               All materials
             </Link>
           )}
@@ -74,7 +74,7 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="flex items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover"
+              className={btnPrimary}
             >
               <PlusIcon className="h-4 w-4" /> New lesson
             </button>
@@ -82,11 +82,8 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
         </div>
       </div>
       {empty ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl bg-surface px-6 py-10 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-            <CapIcon className="h-6 w-6" />
-          </span>
-          <p className="font-bold">No lessons yet</p>
+        <div className="flex flex-col items-center gap-1 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
+          <p className="text-sm font-medium">No lessons yet</p>
           <p className="max-w-sm text-sm text-muted">
             {teacher
               ? `Make a lesson for ${otherName}, then put its notes, assignments, files and charts in it. Booked lessons get one automatically.`
@@ -94,7 +91,7 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl bg-surface ring-1 ring-foreground/5">
+        <div className="overflow-hidden rounded-lg bg-surface">
           {upcoming.length > 0 && (
             <>
               <ListHeading>Coming up</ListHeading>
@@ -114,12 +111,12 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
           {data.earlier && (
             <>
               <ListHeading>Before lessons</ListHeading>
-              <Link href={lessonHref(lessonId, "earlier")} className="group flex items-center gap-4 border-t border-foreground/5 px-4 py-3 hover:bg-surface-hover">
-                <span className="w-12 shrink-0 text-center text-muted">
-                  <CapIcon className="mx-auto h-5 w-5" />
+              <Link href={lessonHref(lessonId, "earlier")} className="group flex items-center gap-4 border-t border-foreground/10 px-4 py-3 transition-colors hover:bg-surface-hover">
+                <span className="w-11 shrink-0 text-center text-muted">
+                  <CapIcon className="mx-auto h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1 text-sm">
-                  <span className="block font-bold">Added before lessons</span>
+                  <span className="block font-medium">Added before lessons</span>
                   <Contents c={data.earlier} />
                 </span>
                 <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
@@ -145,7 +142,7 @@ type Row = {
 };
 
 function ListHeading({ children }: { children: React.ReactNode }) {
-  return <p className="border-t border-foreground/5 bg-background/40 px-4 py-1.5 text-[11px] font-bold text-muted first:border-t-0">{children}</p>;
+  return <p className="border-t border-foreground/10 px-4 pb-1 pt-3 text-xs font-medium text-muted first:border-t-0">{children}</p>;
 }
 
 /** "Today", "Tomorrow", "In 5 days", "3 days ago", else the date. */
@@ -192,18 +189,12 @@ function SessionRow({ s, lessonId, teacher, now, upcoming = false }: { s: Row; l
   return (
     <Link
       href={lessonHref(lessonId, s.id)}
-      className="group flex items-center gap-4 border-t border-foreground/5 px-4 py-3 transition-colors first:border-t-0 hover:bg-surface-hover"
+      className="group flex items-center gap-4 border-t border-foreground/10 px-4 py-3 transition-colors hover:bg-surface-hover [p+&]:border-t-0"
     >
-      <span
-        className={`flex w-12 shrink-0 flex-col items-center rounded-xl py-1.5 leading-none ${upcoming ? "bg-accent text-accent-foreground" : s.cancelled ? "bg-background text-muted" : "bg-accent/12 text-accent"}`}
-      >
-        <span className="text-[10px] font-bold">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
-        <span className="text-xl font-extrabold tabular-nums">{d.getDate()}</span>
-        <span className="text-[10px] font-semibold">{d.toLocaleDateString(undefined, { month: "short" })}</span>
-      </span>
+      <DateTile d={d} tone={s.cancelled ? "muted" : upcoming ? "accent" : "plain"} />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={`truncate font-bold ${s.cancelled ? "text-muted line-through" : ""}`}>{s.title}</span>
+          <span className={`truncate text-sm font-medium ${s.cancelled ? "text-muted line-through" : ""}`}>{s.title}</span>
           {s.cancelled && <Badge tone="muted">Cancelled</Badge>}
           {s.booked && !s.cancelled && <Badge tone="accent">Booked</Badge>}
           {teacher && s.hiddenUntil && <Badge tone="muted">Hidden until it starts</Badge>}
@@ -211,19 +202,31 @@ function SessionRow({ s, lessonId, teacher, now, upcoming = false }: { s: Row; l
           {!teacher && s.counts.open > 0 && <Badge tone="warn">{s.counts.open} to do</Badge>}
         </span>
         <span className="block text-xs text-muted">
-          <span className="font-semibold text-foreground/80">{relWhen(s.start, now)}</span>
+          <span className="text-foreground/80">{relWhen(s.start, now)}</span>
           {timed ? ` · ${timeFmt.format(s.start)}${s.end ? ` – ${timeFmt.format(s.end)}` : ""}` : ""}
         </span>
         <Contents c={s.counts} />
       </span>
-      <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+      <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
     </Link>
   );
 }
 
 function Badge({ tone, children }: { tone: "accent" | "muted" | "warn"; children: React.ReactNode }) {
-  const cls = tone === "accent" ? "bg-accent/15 text-accent" : tone === "warn" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-background text-muted";
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{children}</span>;
+  const cls = tone === "accent" ? "border border-accent/30 text-accent" : tone === "warn" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-foreground/[0.05] text-muted";
+  return <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>{children}</span>;
+}
+
+/** A lesson's day as a small calendar tile: weekday, date, month. Upcoming lessons get the accent
+    on the date. */
+function DateTile({ d, tone }: { d: Date; tone: "accent" | "plain" | "muted" }) {
+  return (
+    <span className={`flex w-11 shrink-0 flex-col items-center gap-0.5 rounded-md bg-background py-1 leading-none ${tone === "muted" ? "text-muted" : ""}`}>
+      <span className="text-[10px] text-muted">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
+      <span className={`text-base font-semibold tabular-nums ${tone === "accent" ? "text-accent" : ""}`}>{d.getDate()}</span>
+      <span className="text-[10px] text-muted">{d.toLocaleDateString(undefined, { month: "short" })}</span>
+    </span>
+  );
 }
 
 function localDateKey(ms: number) {
@@ -285,22 +288,22 @@ export function NewLessonDialog({
 
   return (
     <Dialog title={sessionId ? "Edit lesson" : `New lesson with ${otherName}`} onClose={onClose}>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Title
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={autoTitle} className={field} autoFocus />
       </label>
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm font-semibold">
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           Day
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold">
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           Time <span className="font-normal text-muted">(optional)</span>
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} />
         </label>
       </div>
       {time && (
-        <label className="flex flex-col gap-1 text-sm font-semibold">
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           Length
           <select value={length} onChange={(e) => setLength(Number(e.target.value))} className={field}>
             {[15, 20, 30, 45, 60, 75, 90, 120].map((m) => (
@@ -314,14 +317,14 @@ export function NewLessonDialog({
       {future && <SwitchRow label={`Hide it from ${otherName} until it starts`} checked={hidden} onChange={setHidden} />}
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+        <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
         <button
           type="button"
           disabled={busy || !Number.isFinite(start)}
           onClick={() => void save()}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnPrimary}
         >
           {busy ? "Saving…" : sessionId ? "Save" : "Make the lesson"}
         </button>
@@ -338,27 +341,23 @@ export function UpcomingLessons() {
   if (!data || data.length === 0) return null;
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="px-1 text-lg font-bold">Coming up</h2>
-      <div className="overflow-hidden rounded-2xl bg-surface ring-1 ring-foreground/5">
+      <h2 className="text-sm font-medium">Coming up</h2>
+      <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
         {data.slice(0, 8).map((l) => {
           const d = new Date(l.start);
           const timed = d.getHours() !== 0 || d.getMinutes() !== 0 || !!l.end;
           const body = (
             <>
-              <span className="flex w-12 shrink-0 flex-col items-center rounded-xl bg-accent py-1.5 leading-none text-accent-foreground">
-                <span className="text-[10px] font-bold">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
-                <span className="text-xl font-extrabold tabular-nums">{d.getDate()}</span>
-                <span className="text-[10px] font-semibold">{d.toLocaleDateString(undefined, { month: "short" })}</span>
-              </span>
+              <DateTile d={d} tone="accent" />
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="truncate font-bold">{l.title}</span>
+                  <span className="truncate text-sm font-medium">{l.title}</span>
                   {l.booked && <Badge tone="accent">Booked</Badge>}
                   {l.role === "teacher" && l.hidden && <Badge tone="muted">Hidden until it starts</Badge>}
                   {l.locked && <Badge tone="muted">Opens when it starts</Badge>}
                 </span>
                 <span className="block truncate text-xs text-muted">
-                  <span className="font-semibold text-foreground/80">{relWhen(l.start, now)}</span>
+                  <span className="text-foreground/80">{relWhen(l.start, now)}</span>
                   {timed ? ` · ${timeFmt.format(l.start)}${l.end ? ` – ${timeFmt.format(l.end)}` : ""}` : ""}
                   {` · ${l.role === "teacher" ? "with" : "from"} ${l.with}`}
                 </span>
@@ -366,17 +365,17 @@ export function UpcomingLessons() {
             </>
           );
           return l.locked ? (
-            <div key={l.id} className="flex items-center gap-4 border-t border-foreground/5 px-4 py-3 first:border-t-0">
+            <div key={l.id} className="flex items-center gap-4 px-4 py-3">
               {body}
             </div>
           ) : (
             <Link
               key={l.id}
               href={lessonHref(l.lessonId, l.id)}
-              className="group flex items-center gap-4 border-t border-foreground/5 px-4 py-3 first:border-t-0 hover:bg-surface-hover"
+              className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-hover"
             >
               {body}
-              <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+              <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
             </Link>
           );
         })}

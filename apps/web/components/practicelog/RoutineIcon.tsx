@@ -179,7 +179,7 @@ export function RoutineIconPicker({ value, color, onChange }: { value: string | 
             aria-label={label}
             title={label}
             onClick={() => onChange(id)}
-            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-transform ${on ? "scale-110 text-white shadow-md" : "bg-background text-muted hover:scale-105 hover:text-foreground"}`}
+            className={`flex h-10 w-10 items-center justify-center rounded-md border transition-colors ${on ? "border-transparent text-white" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
             style={on ? { background: c } : undefined}
           >
             <Icon className="h-5 w-5" />

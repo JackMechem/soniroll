@@ -83,14 +83,14 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
 
   return (
     <PageShell fullWidth={false}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-foreground/10 pb-6">
         <div>
           <BackButton onClick={() => router.back()} className="mb-2" />
-          <h1 className="text-3xl font-extrabold tracking-tight">{fromSetlist ? "Post a setlist" : "New post"}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{fromSetlist ? "Post a setlist" : "New post"}</h1>
         </div>
-        {paused && <p className="w-full rounded-2xl bg-amber-500/15 px-4 py-3 text-sm font-semibold text-amber-700 dark:text-amber-300">New posts are paused for a bit. Try again later.</p>}
+        {paused && <p className="w-full rounded-lg bg-surface px-4 py-3 text-sm">New posts are paused for a bit. Try again later.</p>}
         {!loading && !blocked && (
-          <button type="button" onClick={() => void post()} disabled={posting} className="rounded-full bg-accent px-6 py-2.5 font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
+          <button type="button" onClick={() => void post()} disabled={posting} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
             {posting ? "Posting…" : "Post"}
           </button>
         )}
@@ -101,9 +101,9 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
           <LoadingSpinner />
         </div>
       ) : blocked ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface p-8 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
           <p className="text-sm text-muted">{isAuthenticated ? "Make your profile public before posting to Community." : "Sign in to post to Community."}</p>
-          <Link href={isAuthenticated ? "/account" : SIGN_IN_PATH} className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
+          <Link href={isAuthenticated ? "/account" : SIGN_IN_PATH} className="flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             {isAuthenticated ? "Edit public profile" : "Sign in"}
           </Link>
         </div>
@@ -115,16 +115,16 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title — e.g. Friday gig setlist"
               autoFocus={!setlistId}
-              className="rounded-xl bg-surface px-4 py-3 text-base outline-none focus:ring-2 focus:ring-accent"
+              className="h-10 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description (optional)"
               rows={3}
-              className="resize-y rounded-xl bg-surface px-4 py-3 text-base outline-none focus:ring-2 focus:ring-accent"
+              className="resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
-            <div className="rounded-xl bg-surface px-4 py-2">
+            <div className="rounded-lg bg-surface px-4 py-2">
               <SwitchRow label="Unlisted" checked={unlisted} onChange={setUnlisted} />
               <p className="pb-1 text-xs text-muted">Won&apos;t show up in Community&apos;s feed or search, or on your public profile — only people with the link can see it.</p>
             </div>
@@ -132,11 +132,11 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
 
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-bold">
-                {fromSetlist ? "Setlist" : "Tunes"} ({chosen.length})
+              <h2 className="text-sm font-medium">
+                {fromSetlist ? "Setlist" : "Tunes"} <span className="font-normal text-muted">· {chosen.length}</span>
               </h2>
               {!fromSetlist && (
-                <button type="button" onClick={() => setPicking(true)} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-bold hover:bg-surface-hover">
+                <button type="button" onClick={() => setPicking(true)} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
                   <PlusIcon className="h-4 w-4" />
                   Add tunes
                 </button>
@@ -144,18 +144,18 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
             </div>
             {fromSetlist && <p className="text-sm text-muted">Posted as a setlist — it stays in sync: when you change the setlist, the post changes too.</p>}
             {chosen.length === 0 ? (
-              <p className="rounded-2xl bg-surface p-4 text-sm text-muted">No tunes yet — add some from your lists. Each one&apos;s chord chart comes along.</p>
+              <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">No tunes yet — add some from your lists. Each one&apos;s chord chart comes along.</p>
             ) : (
-              <ol className="overflow-hidden rounded-2xl bg-surface">
+              <ol className="divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
                 {chosen.map((t, i) => (
-                  <li key={t.id} className={`flex items-center gap-3 px-3 py-2.5 ${i ? "border-t border-background" : ""}`}>
+                  <li key={t.id} className="flex items-center gap-3 px-3 py-2.5">
                     <span className="w-6 text-right text-sm tabular-nums text-muted">{i + 1}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">{t.name}</span>
+                      <span className="block truncate text-sm font-medium">{t.name}</span>
                       <span className="block truncate text-xs text-muted">{[tuneSummary(t), t.chordChartId ? "chart included" : null].filter(Boolean).join(" · ")}</span>
                     </span>
                     {!fromSetlist && (
-                      <button type="button" onClick={() => setTuneIds((prev) => prev.filter((x) => x !== t.id))} aria-label={`Remove ${t.name}`} className="rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
+                      <button type="button" onClick={() => setTuneIds((prev) => prev.filter((x) => x !== t.id))} aria-label={`Remove ${t.name}`} className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
                         <CloseIcon className="h-4 w-4" />
                       </button>
                     )}

@@ -80,7 +80,7 @@ export default function WeekPopover({
         aria-label="Day details"
         onPointerDown={(e) => e.stopPropagation()}
         style={{ position: "fixed", top: anchor.top, left, width: WIDTH }}
-        className="log-pop flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-2xl border border-surface-hover bg-surface shadow-2xl max-sm:!bottom-0 max-sm:!left-0 max-sm:!top-auto max-sm:!w-full max-sm:max-h-[80dvh] max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[env(safe-area-inset-bottom)]"
+        className="log-pop flex max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface shadow-2xl max-sm:!bottom-0 max-sm:!left-0 max-sm:!top-auto max-sm:!w-full max-sm:max-h-[80dvh] max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[env(safe-area-inset-bottom)]"
       >
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-surface-hover sm:hidden" />
         {target.kind === "routine" ? (
@@ -123,7 +123,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
       <header className="flex items-start gap-3 p-4 pb-3">
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0 flex-1">
-          <h3 className={`truncate text-base font-bold ${skipped ? "line-through opacity-60" : ""}`}>{routine.name || "Untitled routine"}</h3>
+          <h3 className={`truncate text-base font-semibold ${skipped ? "line-through opacity-60" : ""}`}>{routine.name || "Untitled routine"}</h3>
           <p className="text-xs text-muted">
             {dayLabel(date)} · {span ? `${formatTime(span.start)} – ${formatTime(span.end)}` : "Any time"} · {formatMinutesShort(minutes)}
             {span && !hasFixedTimes(routine, occurrence) && !picking && (
@@ -136,7 +136,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
             )}
           </p>
           {(skipped || complete || status === "missed" || status === "partial") && (
-            <p className={`mt-0.5 text-xs font-semibold ${complete ? "text-green-600 dark:text-green-400" : skipped ? "text-muted" : status === "missed" ? "text-red-500" : "text-amber-600 dark:text-amber-400"}`}>
+            <p className={`mt-0.5 text-xs font-semibold ${complete ? "text-success" : skipped ? "text-muted" : status === "missed" ? "text-muted" : "text-warning"}`}>
               {skipped ? "Skipped this day" : complete ? "All done" : status === "missed" ? "Missed" : "Partly done"}
             </p>
           )}
@@ -145,7 +145,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
       </header>
       {total > 0 && (
         <div className="mx-4 mb-2 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/10">
             <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${(done / total) * 100}%`, background: color }} />
           </div>
           <span className="text-xs font-semibold tabular-nums text-muted">
@@ -163,7 +163,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
           <button
             type="button"
             onClick={() => setPicking(true)}
-            className="mx-3 mb-2 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-accent/50 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+            className="mx-3 mb-2 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/20 px-3 py-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
           >
             <PlusIcon className="h-4 w-4" /> Set a time
           </button>
@@ -184,7 +184,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
                   if (!checked) burstAt(e.currentTarget.querySelector("[data-box]") ?? e.currentTarget, color);
                   log.toggleTask(date, routine.id, task.id);
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-background disabled:opacity-50 sm:py-2 ${isNow ? "bg-accent/10" : ""}`}
+                className={`flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-surface-hover disabled:opacity-50 sm:py-2 ${isNow ? "bg-accent/10" : ""}`}
               >
                 <span
                   data-box
@@ -212,7 +212,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
           <button
             type="button"
             onClick={() => log.updateOccurrence(date, routine.id, (o) => ({ ...o, skipped: false }))}
-            className="rounded-full bg-background px-3.5 py-2 text-sm font-semibold hover:bg-surface-hover"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
           >
             Don&apos;t skip this day
           </button>
@@ -226,7 +226,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
                 startRoutine(routine, date, done > 0 ? firstOpen.id : undefined, false, occurrence);
                 onClose();
               }}
-              className="flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
             >
               <PlayIcon className="h-4 w-4" /> {done > 0 ? "Continue" : "Start routine"}
             </button>
@@ -255,7 +255,7 @@ function TasksBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTa
           <CheckIcon className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-bold">{tasks.length === 1 ? tasks[0].title || "Task" : "Extra tasks"}</h3>
+          <h3 className="truncate text-base font-semibold">{tasks.length === 1 ? tasks[0].title || "Task" : "Extra tasks"}</h3>
           <p className="text-xs text-muted">
             {dayLabel(date)} · {done} of {tasks.length} done
           </p>
@@ -276,7 +276,7 @@ function TasksBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTa
                   if (!t.done) burstAt(e.currentTarget.querySelector("[data-box]") ?? e.currentTarget, "var(--accent)");
                   log.toggleDayTask(date, t.id);
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-background sm:py-2 ${isNow ? "bg-accent/10" : ""}`}
+                className={`flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-surface-hover sm:py-2 ${isNow ? "bg-accent/10" : ""}`}
               >
                 <span
                   data-box
@@ -305,7 +305,7 @@ function TasksBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTa
               startDayTasks(date, all, open.length === 1 ? open[0].id : undefined);
               onClose();
             }}
-            className="flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+            className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
           >
             <PlayIcon className="h-4 w-4" /> {open.length === 1 ? "Start" : "Start all"}
           </button>
@@ -325,7 +325,7 @@ function OpenDayButton({ date, onOpenDay, onClose }: { date: string; onOpenDay?:
         onOpenDay(date);
         onClose();
       }}
-      className="ml-auto flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold text-muted hover:bg-background hover:text-foreground"
+      className="ml-auto flex h-9 items-center gap-1 rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
     >
       Open day <ChevronRightIcon className="h-4 w-4" />
     </button>
@@ -334,7 +334,7 @@ function OpenDayButton({ date, onOpenDay, onClose }: { date: string; onOpenDay?:
 
 function CloseButton({ onClose }: { onClose: () => void }) {
   return (
-    <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
+    <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 -mt-1 shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
       <CloseIcon className="h-4 w-4" />
     </button>
   );

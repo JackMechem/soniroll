@@ -100,7 +100,7 @@ export default function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }
 
   return (
     <div className="flex items-center gap-4">
-      <UserAvatar url={avatarUrl} size="xl" />
+      <UserAvatar url={avatarUrl} size="lg" />
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <input
@@ -114,7 +114,7 @@ export default function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="rounded-lg bg-background px-3 py-2 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
           >
             {avatarUrl ? "Change picture" : "Upload picture"}
           </button>
@@ -125,7 +125,7 @@ export default function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }
               disabled={uploading}
               aria-label="Remove picture"
               title="Remove picture"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-danger disabled:opacity-50"
+              className="flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger disabled:opacity-50"
             >
               <TrashIcon className="h-4 w-4" />
             </button>

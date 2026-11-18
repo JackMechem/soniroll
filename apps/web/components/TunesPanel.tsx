@@ -10,6 +10,7 @@ import TuneEditorModal from "@/components/TuneEditorModal";
 import { ChecklistIcon, ListIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
+import { nameId } from "@/lib/standards";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
 
 function blankTune(name = ""): Tune {
@@ -30,6 +31,8 @@ export default function TunesPanel({
   onClearAll,
   pickFromStandards,
   onPickFromStandardsChange,
+  addOpen,
+  onAddOpenChange,
 }: {
   onDeleteTune: (id: string) => void;
   onClearAll: () => void;
@@ -41,9 +44,14 @@ export default function TunesPanel({
       anything where it's reused. */
   pickFromStandards?: boolean;
   onPickFromStandardsChange?: (value: boolean) => void;
+  /** Optionally control the add-a-tune search from outside (Jam Practice's empty state opens it). */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
 }) {
   const [tunes, setTunes] = useSyncedTunes();
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [ownPickerOpen, setOwnPickerOpen] = useState(false);
+  const pickerOpen = addOpen ?? ownPickerOpen;
+  const setPickerOpen = onAddOpenChange ?? setOwnPickerOpen;
   const [managerOpen, setManagerOpen] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -87,10 +95,10 @@ export default function TunesPanel({
   }
 
   const chip = (enabled: boolean) =>
-    `rounded-full px-2.5 py-1 text-xs font-medium tabular-nums transition-colors ${
+    `rounded-md px-2.5 py-1 text-xs font-medium tabular-nums transition-colors ${
       enabled
-        ? "bg-accent/15 text-accent hover:bg-accent/25"
-        : "bg-surface text-muted line-through hover:text-foreground"
+        ? "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
+        : "border border-dashed border-foreground/15 text-muted line-through hover:text-foreground"
     }`;
 
   return (
@@ -109,7 +117,7 @@ export default function TunesPanel({
               disabled={tunes.length === 0}
               aria-label="Manage tunes"
               title="Manage tunes"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-muted hover:text-foreground disabled:opacity-40"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-40"
             >
               <ChecklistIcon className="h-4 w-4" />
             </button>
@@ -118,7 +126,7 @@ export default function TunesPanel({
               onClick={() => setPickerOpen(true)}
               aria-label="Add tune"
               title="Add tune"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground hover:bg-accent-hover"
             >
               <PlusIcon className="h-4 w-4" />
             </button>
@@ -143,11 +151,11 @@ export default function TunesPanel({
             {tunes.map((tune) => (
               <li
                 key={tune.id}
-                className="flex flex-col gap-2.5 rounded-xl bg-background p-3 ring-1 ring-transparent transition-shadow hover:ring-surface-hover"
+                className="flex flex-col gap-2.5 rounded-md bg-foreground/[0.05] p-3 transition-colors hover:border-foreground/20"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold leading-tight">{tune.name}</p>
+                    <p className="truncate text-sm font-medium leading-tight">{tune.name}</p>
                     <p className="mt-0.5 text-xs tabular-nums text-muted">{tune.timeSignature}</p>
                   </div>
                   <div className="-mr-1 -mt-1 flex shrink-0">
@@ -156,7 +164,7 @@ export default function TunesPanel({
                       onClick={() => setEditing({ tune, isNew: false })}
                       aria-label={`Edit ${tune.name}`}
                       title="Edit"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -165,7 +173,7 @@ export default function TunesPanel({
                       onClick={() => onDeleteTune(tune.id)}
                       aria-label={`Delete ${tune.name}`}
                       title="Delete"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-danger"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -216,14 +224,14 @@ export default function TunesPanel({
             type="button"
             onClick={() => downloadTunesCsv(tunes)}
             disabled={tunes.length === 0}
-            className="rounded-lg bg-background px-3 py-1.5 hover:bg-surface-hover disabled:opacity-50"
+            className="rounded-md bg-foreground/[0.05] px-3 py-1.5 hover:bg-surface-hover disabled:opacity-50"
           >
             Export CSV
           </button>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg bg-background px-3 py-1.5 hover:bg-surface-hover"
+            className="rounded-md bg-foreground/[0.05] px-3 py-1.5 hover:bg-surface-hover"
           >
             Import CSV
           </button>
@@ -231,7 +239,7 @@ export default function TunesPanel({
             type="button"
             onClick={() => setConfirmingClear(true)}
             disabled={tunes.length === 0}
-            className="ml-auto rounded-lg bg-background px-3 py-1.5 text-danger hover:bg-surface-hover disabled:opacity-50"
+            className="ml-auto rounded-md bg-foreground/[0.05] px-3 py-1.5 text-danger hover:bg-surface-hover disabled:opacity-50"
           >
             Clear all
           </button>
@@ -255,7 +263,15 @@ export default function TunesPanel({
       {pickerOpen && (
         <StandardsPicker
           onClose={() => setPickerOpen(false)}
-          onCreateCustom={(name) => setEditing({ tune: blankTune(name), isNew: true })}
+          // Your own tune: one tap adds it by name; "More details" opens the form (for the one just
+          // added, if it was).
+          onAddCustom={(name) =>
+            setTunes((prev) => (prev.some((t) => nameId(t.name) === nameId(name)) ? prev : [...prev, blankTune(name)]))
+          }
+          onCreateCustom={(name) => {
+            const existing = tunes.find((t) => nameId(t.name) === nameId(name));
+            setEditing(existing ? { tune: existing, isNew: false } : { tune: blankTune(name), isNew: true });
+          }}
         />
       )}
       {confirmingClear && (

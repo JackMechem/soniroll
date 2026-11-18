@@ -109,7 +109,7 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
 
   return (
     <div className="fixed inset-0 z-[65] flex items-end justify-center bg-overlay sm:items-center sm:p-4" onMouseDown={close}>
-      <div role="dialog" aria-label={note?.title ?? "Note"} className="flex h-[88dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-surface text-foreground shadow-2xl shadow-black/20 sm:h-[80vh] sm:rounded-2xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={note?.title ?? "Note"} className="flex h-[88dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface text-foreground shadow-2xl shadow-black/20 sm:h-[80vh] sm:rounded-xl" onMouseDown={(e) => e.stopPropagation()}>
         {note === undefined ? (
           <div className="flex flex-1 items-center justify-center">
             <LoadingSpinner />
@@ -117,7 +117,7 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
         ) : note === null ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted">This note isn&apos;t there any more.</p>
-            <button type="button" onClick={onClose} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+            <button type="button" onClick={onClose} className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
               Close
             </button>
           </div>
@@ -136,31 +136,31 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
                   }
                 }}
                 aria-label="Note title"
-                className="min-w-0 flex-1 bg-transparent text-xl font-extrabold tracking-tight outline-none"
+                className="min-w-0 flex-1 bg-transparent text-lg font-semibold tracking-tight outline-none"
               />
               <VimSwitch on={cfg.config.vimMode} onChange={(on) => actions.setConfig?.("vimMode", on)} />
-              <button type="button" onClick={close} aria-label="Close" className="shrink-0 rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
+              <button type="button" onClick={close} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
                 <CloseIcon className="h-4 w-4" />
               </button>
             </header>
-            <div className="flex items-center gap-1 px-5 pb-2">
+            <div className="flex items-center gap-0.5 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
               {[
-                ["B", "editor:toggle-bold", "font-extrabold"],
+                ["B", "editor:toggle-bold", "font-bold"],
                 ["I", "editor:toggle-italic", "italic font-serif"],
-                ["H2", "editor:set-heading-2", "font-semibold"],
-                ["☐ Task", "editor:toggle-checklist", "font-semibold"],
-                ["[[ ]]", "editor:insert-wikilink", "font-semibold"],
+                ["H2", "editor:set-heading-2", "font-medium"],
+                ["☐ Task", "editor:toggle-checklist", "font-medium"],
+                ["[[ ]]", "editor:insert-wikilink", "font-medium"],
               ].map(([label, command, cls]) => (
-                <button key={command} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runCommand(command, { view: viewRef.current, actions })} className={`rounded-lg bg-background px-2.5 py-1 text-xs hover:bg-surface-hover ${cls}`}>
+                <button key={command} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runCommand(command, { view: viewRef.current, actions })} className={`h-7 shrink-0 rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${cls}`}>
                   {label}
                 </button>
               ))}
-              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runCommand("editor:insert-notation", { view: viewRef.current, actions })} className="flex items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runCommand("editor:insert-notation", { view: viewRef.current, actions })} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
                 <NoteIcon className="h-3.5 w-3.5" /> Notation
               </button>
             </div>
             <div className="min-h-0 flex-1 px-5 pb-4">
-              <div className="relative h-full overflow-hidden rounded-xl bg-background">
+              <div className="relative h-full overflow-hidden rounded-lg bg-background">
               <NoteEditor
                 key={noteId}
                 initialText={note.body}
@@ -181,14 +181,14 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
               <span className="text-xs text-muted">{saveState === "saved" ? "Saved" : saveState === "error" ? "Not saved" : "Saving…"}</span>
               <span className="flex-1" />
               {onDetach && (
-                <button type="button" onClick={onDetach} className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-background hover:text-foreground">
+                <button type="button" onClick={onDetach} className="h-9 rounded-md px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
                   {detachLabel ?? "Take it off"}
                 </button>
               )}
-              <Link href={`/shed-notes?id=${encodeURIComponent(noteId)}`} onClick={() => flush()} className="rounded-lg bg-background px-3 py-2 text-sm font-semibold hover:bg-surface-hover">
+              <Link href={`/shed-notes?id=${encodeURIComponent(noteId)}`} onClick={() => flush()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                 Open in Shed Notes
               </Link>
-              <button type="button" onClick={close} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+              <button type="button" onClick={close} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
                 Done
               </button>
             </footer>
@@ -208,7 +208,7 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
         </div>
       )}
       {notice && (
-        <div role="status" className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
+        <div role="status" className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg">
           {notice}
         </div>
       )}

@@ -404,7 +404,7 @@ export default function Waveform({
       <canvas
         ref={canvasRef}
         style={{ width, height: HEIGHT }}
-        className={`block rounded-xl bg-background ${scrub !== null ? "cursor-grabbing" : "cursor-crosshair"}`}
+        className={`block rounded-md bg-background ${scrub !== null ? "cursor-grabbing" : "cursor-crosshair"}`}
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
           const rect = e.currentTarget.getBoundingClientRect();
@@ -457,12 +457,12 @@ export default function Waveform({
       />
       {hoverHit && hover && (
         <div
-          className="pointer-events-none absolute top-2 z-10 w-max max-w-64 rounded-xl bg-surface px-3 py-2 text-xs shadow-lg ring-1 ring-foreground/10"
+          className="pointer-events-none absolute top-2 z-10 w-max max-w-64 rounded-md ring-1 ring-foreground/[0.06] bg-surface px-3 py-2 text-xs shadow-lg"
           style={{ left: Math.min(width - 200, Math.max(0, hover.x + 10)) }}
         >
           {hoverHit.kind === "on" ? (
             <>
-              <div className="flex items-center gap-1.5 font-semibold">
+              <div className="flex items-center gap-1.5 font-medium">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COLOR[statusOf(hoverHit.errorMs, tol)] }} />
                 {STATUS_LABEL[statusOf(hoverHit.errorMs, tol)]}
               </div>
@@ -473,7 +473,7 @@ export default function Waveform({
             </>
           ) : (
             <>
-              <div className="font-semibold">Extra stroke</div>
+              <div className="font-medium">Extra stroke</div>
               <div className="text-muted">
                 A second stroke on {whereLabel(hoverHit.bar, hoverHit.beat, hoverHit.pos, hoverHit.n)} (a flam or a bounce). Not graded.
               </div>
@@ -484,7 +484,7 @@ export default function Waveform({
       <canvas
         ref={overviewRef}
         style={{ width, height: OVERVIEW_H }}
-        className="mt-2 block cursor-pointer rounded-lg bg-background"
+        className="mt-2 block cursor-pointer rounded-md bg-background"
         onPointerDown={(e) => {
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
           onOverview(e.clientX);

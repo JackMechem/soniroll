@@ -8,6 +8,7 @@ import BannerPicker from "@/components/BannerPicker";
 import Hint from "@/components/Hint";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SwitchRow from "@/components/SwitchRow";
+import { BUTTON_PRIMARY, INPUT, SettingsCard } from "@/components/settings/SettingsSections";
 import { PlusIcon, TrashIcon } from "@/components/tools";
 import { COMMON_INSTRUMENTS } from "@/lib/profileInstruments";
 import { normalizeUsername, usernameError } from "@/lib/username";
@@ -105,34 +106,45 @@ export default function PublicProfileEditor() {
 
   if (profile === undefined) {
     return (
-      <section className="flex flex-col items-center gap-3 rounded-2xl bg-surface p-5">
+      <section className="flex flex-col items-center gap-3 rounded-lg bg-surface p-5">
         <LoadingSpinner />
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-5 rounded-2xl bg-surface p-5 text-left">
-      <div>
-        <h2 className="text-lg font-semibold">Public profile</h2>
-        <p className="text-sm text-muted">
-          An optional public page other people can find and follow — nothing here is visible to
-          anyone until you turn &quot;Make profile public&quot; on below.
-        </p>
-      </div>
-
+    <>
+    <SettingsCard hints={false} title="Picture and banner" description="Shown on your public profile and next to your posts.">
       <AvatarUpload avatarUrl={profile?.avatarUrl ?? null} />
-
       <BannerPicker banner={profile?.banner} />
+    </SettingsCard>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-muted">Username</span>
+    <SettingsCard
+      hints={false}
+      title="Public profile"
+      description="An optional public page other people can find and follow — nothing here is visible to anyone until you turn “Make profile public” on below."
+      footer={
+        <>
+          {error ? <p className="min-w-0 flex-1 text-danger">{error}</p> : saved ? <p className="min-w-0 flex-1 text-accent">Profile saved.</p> : <span className="flex-1" />}
+          <button
+            type="button"
+            onClick={() => void onSave()}
+            disabled={saving || !!formatError || usernameTaken}
+            className={BUTTON_PRIMARY}
+          >
+            {saving ? "Saving…" : "Save profile"}
+          </button>
+        </>
+      }
+    >
+      <label className="flex max-w-sm flex-col gap-1 text-sm">
+        <span className="text-xs font-medium text-muted">Username</span>
         <input
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="e.g. johndoe"
-          className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+          className={INPUT}
         />
         {formatError ? (
           <p className="text-xs text-danger">{formatError}</p>
@@ -150,12 +162,12 @@ export default function PublicProfileEditor() {
       </label>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-muted">Instruments played</span>
+        <span className="text-xs font-medium text-muted">Instruments played</span>
         <div className="flex flex-wrap gap-2">
           {instruments.map((name) => (
             <span
               key={name}
-              className="flex items-center gap-1.5 rounded-full bg-background px-3 py-1 text-xs font-medium"
+              className="flex h-7 items-center gap-1.5 rounded-md bg-background pl-2.5 pr-1.5 text-xs font-medium"
             >
               {name}
               <button
@@ -169,7 +181,7 @@ export default function PublicProfileEditor() {
             </span>
           ))}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex max-w-sm items-center gap-1.5">
           <input
             type="text"
             value={instrumentInput}
@@ -181,13 +193,13 @@ export default function PublicProfileEditor() {
               }
             }}
             placeholder="Type an instrument and press Enter"
-            className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+            className={`min-w-0 flex-1 ${INPUT}`}
           />
           <button
             type="button"
             onClick={() => addInstrument(instrumentInput)}
             aria-label="Add instrument"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-muted hover:text-foreground"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
           >
             <PlusIcon className="h-4 w-4" />
           </button>
@@ -200,7 +212,7 @@ export default function PublicProfileEditor() {
               key={name}
               type="button"
               onClick={() => addInstrument(name)}
-              className="rounded-full bg-background px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              className="h-7 rounded-md border border-dashed border-foreground/15 px-2 text-xs text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
             >
               + {name}
             </button>
@@ -208,7 +220,7 @@ export default function PublicProfileEditor() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1 rounded-xl bg-background p-3 text-sm">
+      <div className="flex flex-col gap-1 rounded-md bg-foreground/[0.05] p-3 text-sm">
         <p>
           <span className="font-medium">{tunes.length}</span> tune{tunes.length === 1 ? "" : "s"}{" "}
           and <span className="font-medium">{tunesToLearn.length}</span> tune
@@ -234,16 +246,7 @@ export default function PublicProfileEditor() {
         hint="Your streak, best streak, hours, days practiced, the last 26 weeks and milestones. Never your routines, tasks or notes."
       />
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {saved && !error && <p className="text-sm text-accent">Profile saved.</p>}
-      <button
-        type="button"
-        onClick={() => void onSave()}
-        disabled={saving || !!formatError || usernameTaken}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
-      >
-        {saving ? "Saving…" : "Save profile"}
-      </button>
-    </section>
+    </SettingsCard>
+    </>
   );
 }

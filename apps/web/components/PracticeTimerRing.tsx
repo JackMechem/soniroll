@@ -100,7 +100,7 @@ export default function PracticeTimerRing({
       </svg>
       <span
         ref={labelRef}
-        className={`${size === "sm" ? "text-lg" : "text-4xl"} font-bold tabular-nums ${alarming ? "text-danger animate-pulse" : ""}`}
+        className={`${size === "sm" ? "text-lg font-semibold" : "text-4xl font-semibold tracking-tight"} tabular-nums ${alarming ? "text-danger animate-pulse" : ""}`}
       />
     </div>
   );

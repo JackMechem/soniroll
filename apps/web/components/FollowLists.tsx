@@ -18,16 +18,16 @@ function PersonList({ people, emptyText }: { people: PersonRow[] | undefined; em
     );
   }
   if (people.length === 0) {
-    return <p className="text-sm text-muted">{emptyText}</p>;
+    return <p className="p-4 text-sm text-muted">{emptyText}</p>;
   }
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col divide-y divide-foreground/10">
       {people.map((person) =>
         person.username ? (
           <Link
             key={person.userId}
             href={`/u/${person.username}`}
-            className="flex items-center gap-3 border-b border-background/70 py-2.5 last:border-b-0 hover:text-accent"
+            className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-hover"
           >
             <UserAvatar url={person.avatarUrl} size="sm" />
             <span className="truncate text-sm font-medium">{person.username}</span>
@@ -35,7 +35,7 @@ function PersonList({ people, emptyText }: { people: PersonRow[] | undefined; em
         ) : (
           <div
             key={person.userId}
-            className="flex items-center gap-3 border-b border-background/70 py-2.5 text-muted last:border-b-0"
+            className="flex items-center gap-3 px-4 py-2.5 text-muted"
           >
             <UserAvatar url={person.avatarUrl} size="sm" />
             <span className="truncate text-sm">No profile yet</span>
@@ -60,7 +60,7 @@ export default function FollowLists() {
 
   if (user === undefined) {
     return (
-      <section className="flex justify-center rounded-2xl bg-surface p-5">
+      <section className="flex justify-center rounded-lg bg-surface p-5">
         <LoadingSpinner />
       </section>
     );
@@ -68,15 +68,15 @@ export default function FollowLists() {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="flex flex-col gap-3 rounded-2xl bg-surface p-5 text-left">
-        <h2 className="text-lg font-semibold">
-          Following{following !== undefined ? ` (${following.length})` : ""}
+      <section className="overflow-hidden rounded-lg bg-surface text-left">
+        <h2 className="flex h-11 items-center gap-1.5 px-4 text-sm font-medium">
+          Following{following !== undefined && <span className="font-normal text-muted">· {following.length}</span>}
         </h2>
         <PersonList people={following} emptyText="You're not following anyone yet." />
       </section>
-      <section className="flex flex-col gap-3 rounded-2xl bg-surface p-5 text-left">
-        <h2 className="text-lg font-semibold">
-          Followers{followers !== undefined ? ` (${followers.length})` : ""}
+      <section className="overflow-hidden rounded-lg bg-surface text-left">
+        <h2 className="flex h-11 items-center gap-1.5 px-4 text-sm font-medium">
+          Followers{followers !== undefined && <span className="font-normal text-muted">· {followers.length}</span>}
         </h2>
         <PersonList people={followers} emptyText="No one follows you yet." />
       </section>

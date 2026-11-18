@@ -4,7 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import Select from "@/components/Select";
@@ -70,9 +70,8 @@ export default function AdminPage() {
   if (!isAdmin)
     return (
       <LibraryPage>
-        <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-3xl bg-surface p-10 text-center">
-          <ShieldIcon className="h-8 w-8 text-muted" />
-          <p className="text-lg font-bold">Nothing here</p>
+        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-1 rounded-lg border border-dashed border-foreground/15 p-8 text-center">
+          <p className="text-sm font-medium">Nothing here</p>
           <p className="text-sm text-muted">This page isn&apos;t available.</p>
         </div>
       </LibraryPage>
@@ -82,23 +81,21 @@ export default function AdminPage() {
 
   return (
     <LibraryPage>
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-              <ShieldIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> <span className="truncate">Admin</span>
-            </h1>
+      <header className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-semibold tracking-tight">Admin</h1>
             <p className="text-sm text-muted">
               soniroll {VERSION_LABEL} · {role === "owner" ? "Owner" : "Admin"}
             </p>
           </div>
           {stats && stats.newFeedback > 0 && (
-            <button type="button" onClick={() => go("inbox")} className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
+            <button type="button" onClick={() => go("inbox")} className="h-9 shrink-0 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:self-auto">
               {stats.newFeedback} new in the inbox
             </button>
           )}
         </div>
-        <nav className="flex gap-1 overflow-x-auto rounded-2xl bg-surface p-1">
+        <nav className="-mx-4 flex gap-5 overflow-x-auto border-b border-foreground/10 px-4 sm:mx-0 sm:px-0">
           {TABS.map((t) => {
             const badge = t.id === "inbox" ? stats?.newFeedback : t.id === "posts" ? stats?.reports : t.id === "mayday" ? maydayOn : 0;
             return (
@@ -106,12 +103,13 @@ export default function AdminPage() {
                 key={t.id}
                 type="button"
                 onClick={() => go(t.id)}
-                className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                  tab === t.id ? "bg-background text-foreground shadow" : "text-muted hover:bg-surface-hover hover:text-foreground"
+                aria-current={tab === t.id ? "page" : undefined}
+                className={`-mb-px flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-sm transition-colors ${
+                  tab === t.id ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"
                 }`}
               >
                 {t.label}
-                {!!badge && <span className={`rounded-full px-1.5 text-[11px] font-bold ${tab === t.id ? "bg-accent text-accent-foreground" : "bg-background"}`}>{badge}</span>}
+                {!!badge && <span className="min-w-5 rounded-full bg-foreground/10 px-1.5 text-center text-[11px] font-medium tabular-nums text-foreground">{badge}</span>}
               </button>
             );
           })}
@@ -131,35 +129,36 @@ export default function AdminPage() {
 
 // ---------------------------------------------------------------- overview
 
-function Stat({
-  label,
-  value,
-  sub,
-  tone = "accent",
-  onClick,
-}: {
-  label: string;
-  value: number | string;
-  sub?: string;
-  tone?: "accent" | "green" | "amber" | "red";
-  onClick?: () => void;
-}) {
-  const toneCls = {
-    accent: "from-indigo-500/15 text-indigo-600 dark:text-indigo-300",
-    green: "from-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-    amber: "from-amber-500/15 text-amber-600 dark:text-amber-300",
-    red: "from-rose-500/15 text-rose-600 dark:text-rose-300",
-  }[tone];
+/** One number in the overview's bordered grid: a small label, the number, and a line under it. */
+function Stat({ label, value, sub, onClick }: { label: string; value: number | string; sub?: string; onClick?: () => void }) {
   const Comp = onClick ? "button" : "div";
   return (
     <Comp
       {...(onClick ? { type: "button" as const, onClick } : {})}
-      className={`flex flex-col items-start gap-1 rounded-3xl bg-gradient-to-br ${toneCls} to-transparent bg-surface p-4 text-left ring-1 ring-foreground/5 ${onClick ? "transition-transform hover:-translate-y-0.5" : ""}`}
+      className={`flex flex-col items-start gap-1 bg-surface p-4 text-left ${onClick ? "transition-colors hover:bg-surface-hover" : ""}`}
     >
-      <span className="text-xs font-semibold text-muted">{label}</span>
-      <span className="text-3xl font-extrabold tabular-nums text-foreground">{value}</span>
-      {sub && <span className="text-xs font-semibold">{sub}</span>}
+      <span className="text-xs text-muted">{label}</span>
+      <span className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{value}</span>
+      {sub && <span className="text-xs text-muted">{sub}</span>}
     </Comp>
+  );
+}
+
+/** A bordered panel with a title row (and an optional link on the right). */
+function Panel({ title, detail, action, children, bodyClass = "p-4" }: { title: string; detail?: string; action?: { label: string; onClick: () => void }; children: ReactNode; bodyClass?: string }) {
+  return (
+    <section className="flex min-w-0 flex-col overflow-hidden rounded-lg bg-surface">
+      <div className="flex h-11 shrink-0 items-center gap-2 px-4">
+        <h2 className="shrink-0 text-sm font-medium">{title}</h2>
+        {detail && <span className="truncate text-xs text-muted">{detail}</span>}
+        {action && (
+          <button type="button" onClick={action.onClick} className="ml-auto shrink-0 text-xs text-muted transition-colors hover:text-foreground">
+            {action.label}
+          </button>
+        )}
+      </div>
+      <div className={bodyClass}>{children}</div>
+    </section>
   );
 }
 
@@ -178,39 +177,33 @@ function Overview({ onGo }: { onGo: (t: Tab) => void }) {
   const total30 = s.signups.reduce((a, b) => a + b, 0);
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-foreground/[0.05] bg-foreground/10 lg:grid-cols-4">
         <Stat label="Accounts" value={s.users} sub={`+${s.newThisWeek} this week`} onClick={() => onGo("users")} />
-        <Stat label="Community posts" value={s.posts} sub={`+${s.postsThisWeek} this week`} tone="green" onClick={() => onGo("posts")} />
-        <Stat label="Inbox" value={s.openFeedback} sub={s.newFeedback ? `${s.newFeedback} new` : "all read"} tone="amber" onClick={() => onGo("inbox")} />
-        <Stat label="Open reports" value={s.reports} sub={s.reports ? "needs a look" : "none"} tone="red" onClick={() => onGo("inbox")} />
+        <Stat label="Community posts" value={s.posts} sub={`+${s.postsThisWeek} this week`} onClick={() => onGo("posts")} />
+        <Stat label="Inbox" value={s.openFeedback} sub={s.newFeedback ? `${s.newFeedback} new` : "all read"} onClick={() => onGo("inbox")} />
+        <Stat label="Open reports" value={s.reports} sub={s.reports ? "needs a look" : "none"} onClick={() => onGo("inbox")} />
       </div>
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <section className="flex flex-col gap-3 rounded-3xl bg-surface p-5">
-          <div className="flex items-end justify-between gap-2">
-            <div>
-              <h2 className="font-bold">Sign-ups</h2>
-              <p className="text-xs text-muted">Last 30 days · {total30} new</p>
-            </div>
-            <div className="flex gap-4 text-right text-xs text-muted">
-              <span>
-                <b className="block text-base text-foreground">{s.publicProfiles}</b>public profiles
-              </span>
-              <span>
-                <b className="block text-base text-foreground">{s.teachers}</b>teachers
-              </span>
-              <span>
-                <b className="block text-base text-foreground">{s.students}</b>students
-              </span>
-            </div>
+        <Panel title="Sign-ups" detail={`Last 30 days · ${total30} new`} bodyClass="flex flex-col gap-3 p-4">
+          <div className="flex gap-6 text-xs text-muted">
+            <span>
+              <span className="block text-base font-semibold tabular-nums text-foreground">{s.publicProfiles}</span>public profiles
+            </span>
+            <span>
+              <span className="block text-base font-semibold tabular-nums text-foreground">{s.teachers}</span>teachers
+            </span>
+            <span>
+              <span className="block text-base font-semibold tabular-nums text-foreground">{s.students}</span>students
+            </span>
           </div>
-          <div className="flex h-40 items-end gap-1">
+          <div className="flex h-40 items-end gap-1 border-b border-foreground/10">
             {s.signups.map((n, i) => (
               <div key={i} className="group relative flex h-full flex-1 items-end">
                 <div
-                  className="w-full rounded-t-md bg-gradient-to-t from-indigo-600 to-fuchsia-500 transition-opacity group-hover:opacity-80"
+                  className="w-full rounded-t-sm bg-accent transition-opacity group-hover:opacity-80"
                   style={{ height: `${Math.max(n ? 6 : 2, (n / max) * 100)}%`, opacity: n ? 1 : 0.15 }}
                 />
-                <span className="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-1.5 py-0.5 text-[10px] font-bold text-background group-hover:block">
+                <span className="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background group-hover:block">
                   {n} · {new Date(now - (29 - i) * 86_400_000).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 </span>
               </div>
@@ -220,21 +213,17 @@ function Overview({ onGo }: { onGo: (t: Tab) => void }) {
             <span>30 days ago</span>
             <span>today</span>
           </div>
-        </section>
-        <section className="flex flex-col gap-2 rounded-3xl bg-surface p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold">Latest in the inbox</h2>
-            <button type="button" onClick={() => onGo("inbox")} className="text-xs font-semibold text-accent hover:underline">
-              Open inbox
-            </button>
-          </div>
+        </Panel>
+        <Panel title="Latest in the inbox" action={{ label: "Open inbox", onClick: () => onGo("inbox") }} bodyClass="flex flex-col gap-0.5 p-2">
           {!feedback ? (
-            <LoadingSpinner size="sm" />
+            <div className="p-2">
+              <LoadingSpinner size="sm" />
+            </div>
           ) : feedback.length === 0 ? (
-            <p className="py-4 text-sm text-muted">Nothing yet. Feedback from the site lands here.</p>
+            <p className="p-2 text-sm text-muted">Nothing yet. Feedback from the site lands here.</p>
           ) : (
             feedback.slice(0, 5).map((f) => (
-              <button key={f.id} type="button" onClick={() => onGo("inbox")} className="flex items-start gap-3 rounded-2xl p-2 text-left hover:bg-background">
+              <button key={f.id} type="button" onClick={() => onGo("inbox")} className="flex items-start gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-surface-hover">
                 <KindBadge kind={f.kind} small />
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 text-sm">{f.message}</span>
@@ -242,31 +231,23 @@ function Overview({ onGo }: { onGo: (t: Tab) => void }) {
                     {f.from?.username ? `@${f.from.username}` : (f.email ?? "Anonymous")} · {ago(f.createdAt)}
                   </span>
                 </span>
-                {f.status === "new" && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />}
+                {f.status === "new" && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="New" />}
               </button>
             ))
           )}
-        </section>
+        </Panel>
       </div>
-      <section className="flex flex-col gap-2 rounded-3xl bg-surface p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold">Newest accounts</h2>
-          <button type="button" onClick={() => onGo("users")} className="text-xs font-semibold text-accent hover:underline">
-            All accounts
-          </button>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <Panel title="Newest accounts" action={{ label: "All accounts", onClick: () => onGo("users") }} bodyClass="grid gap-0.5 p-2 sm:grid-cols-2 xl:grid-cols-4">
           {(users ?? []).slice(0, 8).map((u) => (
-            <div key={u.id} className="flex items-center gap-3 rounded-2xl bg-background p-2.5">
+            <div key={u.id} className="flex items-center gap-3 rounded-md p-2">
               <Avatar url={u.avatarUrl} name={u.username ?? u.email ?? "?"} />
               <span className="min-w-0">
-                <span className="block truncate text-sm font-bold">{u.username ? `@${u.username}` : (u.name ?? "No username yet")}</span>
-                <span className="block truncate text-[11px] text-muted">{ago(u.joined)}</span>
+                <span className="block truncate text-sm font-medium">{u.username ? `@${u.username}` : (u.name ?? "No username yet")}</span>
+                <span className="block truncate text-xs text-muted">{ago(u.joined)}</span>
               </span>
             </div>
           ))}
-        </div>
-      </section>
+      </Panel>
     </div>
   );
 }
@@ -276,7 +257,7 @@ function Avatar({ url, name, size = 9 }: { url: string | null; name: string; siz
   // eslint-disable-next-line @next/next/no-img-element -- remote avatar
   if (url) return <img src={url} alt="" className={`${dim} shrink-0 rounded-full object-cover`} />;
   return (
-    <span className={`${dim} flex shrink-0 items-center justify-center rounded-full bg-indigo-500/15 font-extrabold text-indigo-600 dark:text-indigo-300`}>
+    <span className={`${dim} flex shrink-0 items-center justify-center rounded-full bg-foreground/10 font-medium text-foreground`}>
       {name.replace(/^@/, "").charAt(0).toUpperCase()}
     </span>
   );
@@ -285,21 +266,19 @@ function Avatar({ url, name, size = 9 }: { url: string | null; name: string; siz
 // ---------------------------------------------------------------- inbox
 
 const KIND_META = {
-  bug: { label: "Bug", Icon: BugIcon, cls: "bg-rose-500/15 text-rose-600 dark:text-rose-300" },
-  feature: { label: "Idea", Icon: SparkIcon, cls: "bg-amber-500/15 text-amber-600 dark:text-amber-300" },
-  other: { label: "Other", Icon: FeedbackIcon, cls: "bg-sky-500/15 text-sky-600 dark:text-sky-300" },
-  report: { label: "Report", Icon: FlagIcon, cls: "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-300" },
+  bug: { label: "Bug", Icon: BugIcon, cls: "text-muted" },
+  feature: { label: "Idea", Icon: SparkIcon, cls: "text-muted" },
+  other: { label: "Other", Icon: FeedbackIcon, cls: "text-muted" },
+  report: { label: "Report", Icon: FlagIcon, cls: "text-danger" },
 } as const;
 
 function KindBadge({ kind, small = false }: { kind: keyof typeof KIND_META; small?: boolean }) {
   const m = KIND_META[kind];
   return small ? (
-    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${m.cls}`}>
-      <m.Icon className="h-4 w-4" />
-    </span>
+    <m.Icon className={`mt-0.5 h-4 w-4 shrink-0 ${m.cls}`} aria-label={m.label} />
   ) : (
-    <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${m.cls}`}>
-      <m.Icon className="h-3.5 w-3.5" /> {m.label}
+    <span className="flex items-center gap-1 rounded-md bg-foreground/[0.05] px-1.5 py-0.5 text-xs font-medium">
+      <m.Icon className={`h-3.5 w-3.5 ${m.cls}`} /> {m.label}
     </span>
   );
 }
@@ -342,25 +321,26 @@ function Inbox() {
 
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="flex flex-col gap-4 rounded-3xl bg-surface p-3 lg:sticky lg:top-6">
+      <aside className="flex flex-col gap-3 rounded-lg bg-surface p-2 lg:sticky lg:top-6">
         <div className="flex flex-col gap-0.5">
           {(["open", ...STATUSES.map((s) => s.id), "all"] as const).map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
-              className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold ${view === v ? "bg-indigo-600 text-white" : "hover:bg-background"}`}
+              className={`flex h-8 items-center justify-between rounded-md px-2.5 text-sm transition-colors ${view === v ? "bg-surface-hover font-medium text-foreground" : "text-foreground/75 hover:bg-surface-hover/60 hover:text-foreground"}`}
             >
               {v === "open" ? "Open" : v === "all" ? "Everything" : STATUSES.find((s) => s.id === v)!.label}
-              <span className={`text-xs tabular-nums ${view === v ? "text-white/80" : "text-muted"}`}>{count(v)}</span>
+              <span className="text-xs tabular-nums text-muted">{count(v)}</span>
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5 border-t border-foreground/5 pt-3">
+        <div className="flex flex-wrap gap-1.5 border-t border-foreground/10 px-1 pb-1 pt-3">
           <button
             type="button"
             onClick={() => setKind("all")}
-            className={`rounded-full px-3 py-1 text-xs font-bold ${kind === "all" ? "bg-foreground text-background" : "bg-background"}`}
+            aria-pressed={kind === "all"}
+            className={`h-7 rounded-md border px-2 text-xs font-medium transition-colors ${kind === "all" ? "border-foreground/30 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:text-foreground"}`}
           >
             All kinds
           </button>
@@ -369,7 +349,8 @@ function Inbox() {
               key={k}
               type="button"
               onClick={() => setKind(k)}
-              className={`rounded-full px-3 py-1 text-xs font-bold ${kind === k ? "bg-foreground text-background" : "bg-background"}`}
+              aria-pressed={kind === k}
+              className={`h-7 rounded-md border px-2 text-xs font-medium transition-colors ${kind === k ? "border-foreground/30 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:text-foreground"}`}
             >
               {KIND_META[k].label}
             </button>
@@ -383,26 +364,26 @@ function Inbox() {
             ? "The shared inbox: bugs, ideas and notes from every deployment (reports about posts stay on the one they're about). Refreshes every 15 seconds."
             : "This deployment's inbox. Refreshes every 15 seconds."}
         </p>
-        {inboxError && <p className="rounded-2xl bg-danger/10 px-4 py-2 text-sm text-danger">Couldn&apos;t reach the inbox: {inboxError}</p>}
+        {inboxError && <p className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">Couldn&apos;t reach the inbox: {inboxError}</p>}
         {list.length === 0 ? (
-          <p className="rounded-3xl bg-surface p-10 text-center text-sm text-muted">
+          <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">
             {rows.length ? "Nothing here." : "No feedback yet — it'll show up here as people send it."}
           </p>
         ) : (
           list.map((f) => (
-            <article key={f.id} className={`flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-4 ring-1 ${f.status === "new" ? "ring-indigo-500/40" : "ring-foreground/5"}`}>
+            <article key={f.id} className={`flex min-w-0 flex-col gap-3 rounded-lg border bg-surface p-4 ${f.status === "new" ? "border-foreground/30" : "border-foreground/10"}`}>
               <div className="flex flex-wrap items-center gap-2">
                 {f.number !== null && <FeedbackId number={f.number} />}
                 <KindBadge kind={f.kind} />
-                {f.status === "new" && <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] font-bold text-white">New</span>}
+                {f.status === "new" && <span className="rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-medium text-accent-foreground">New</span>}
                 <span className="min-w-0 text-xs text-muted [overflow-wrap:anywhere]">
                   {f.from ? (
                     f.from.username ? (
-                      <Link href={`/u/${f.from.username}`} className="font-semibold text-foreground hover:underline">
+                      <Link href={`/u/${f.from.username}`} className="font-medium text-foreground hover:underline">
                         @{f.from.username}
                       </Link>
                     ) : (
-                      <span className="font-semibold text-foreground">{f.from.name ?? "Account without a username"}</span>
+                      <span className="font-medium text-foreground">{f.from.name ?? "Account without a username"}</span>
                     )
                   ) : (
                     "Signed out"
@@ -413,7 +394,7 @@ function Inbox() {
                   {f.email && (
                     <a
                       href={`mailto:${f.email}?subject=${encodeURIComponent(`Re: your ${KIND_META[f.kind].label.toLowerCase()} on soniroll`)}&body=${encodeURIComponent(`\n\n> ${f.message.split("\n").join("\n> ")}`)}`}
-                      className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover"
+                      className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
                     >
                       Reply
                     </a>
@@ -423,20 +404,20 @@ function Inbox() {
                     aria-label="Delete"
                     title="Delete"
                     onClick={() => setConfirm({ title: "Delete this?", body: "It's gone for good (including any screenshot).", action: () => void change(f, { op: "delete", id: f.id }) })}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger"
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
                 </span>
               </div>
               {f.target && (
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-fuchsia-500/10 px-3 py-2 text-sm">
-                  <FlagIcon className="h-4 w-4 text-fuchsia-600 dark:text-fuchsia-300" />
-                  Reported {f.target.type}: <b>{f.target.label}</b>
+                <div className="flex flex-wrap items-center gap-2 rounded-md bg-background px-3 py-2 text-sm">
+                  <FlagIcon className="h-4 w-4 text-danger" />
+                  Reported {f.target.type}: <span className="font-medium">{f.target.label}</span>
                   <span className="ml-auto flex gap-1.5">
                     <Link
                       href={f.target.type === "post" ? `/post/${f.target.id}` : `/u/${f.target.label.replace(/^@/, "")}`}
-                      className="rounded-full bg-surface px-3 py-1 text-xs font-semibold hover:bg-surface-hover"
+                      className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
                     >
                       Open
                     </Link>
@@ -450,7 +431,7 @@ function Inbox() {
                             action: () => void removePost({ id: f.target!.id as Id<"communityTunes"> }),
                           })
                         }
-                        className="rounded-full bg-danger px-3 py-1 text-xs font-bold text-white hover:opacity-90"
+                        className="flex h-8 items-center rounded-md bg-danger px-2.5 text-xs font-medium text-background hover:opacity-90"
                       >
                         Remove post
                       </button>
@@ -460,16 +441,16 @@ function Inbox() {
               )}
               <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{f.message}</p>
               {f.screenshotUrl && (
-                <button type="button" onClick={() => setShot(f.screenshotUrl)} className="self-start overflow-hidden rounded-2xl ring-1 ring-foreground/10">
+                <button type="button" onClick={() => setShot(f.screenshotUrl)} className="self-start overflow-hidden rounded-md bg-foreground/[0.05]">
                   {/* eslint-disable-next-line @next/next/no-img-element -- uploaded screenshot */}
                   <img src={f.screenshotUrl} alt="Screenshot" className="max-h-56 max-w-full object-contain" />
                 </button>
               )}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                 {f.page && (
                   <span className="min-w-0 [overflow-wrap:anywhere]">
                     on{" "}
-                    <Link href={f.page} className="font-semibold text-foreground hover:underline">
+                    <Link href={f.page} className="font-medium text-foreground hover:underline">
                       {f.page}
                     </Link>
                   </span>
@@ -480,26 +461,28 @@ function Inbox() {
                   </span>
                 )}
                 {f.version && <span title="The site's version when this was sent">v{f.version}</span>}
-                {f.source && <span className="rounded-full bg-background px-1.5" title="Sent from this deployment">from {f.source}</span>}
+                {f.source && <span className="rounded-sm bg-foreground/[0.05] px-1.5" title="Sent from this deployment">from {f.source}</span>}
               </div>
               {shared && f.where === "here" && f.kind !== "report" && (
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-amber-500/10 px-3 py-2 text-xs">
+                <div className="flex flex-wrap items-center gap-2 rounded-md bg-background px-3 py-2 text-xs">
                   <span className="flex-1">Only on this deployment (sent before it shared its inbox).</span>
-                  <button type="button" onClick={() => void moveToShared(f).catch((e: unknown) => setConfirm({ title: "Couldn't move it", body: errorText(e), action: () => {} }))} className="rounded-full bg-surface px-3 py-1 font-semibold hover:bg-surface-hover">
+                  <button type="button" onClick={() => void moveToShared(f).catch((e: unknown) => setConfirm({ title: "Couldn't move it", body: errorText(e), action: () => {} }))} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 font-medium transition-colors hover:bg-surface-hover">
                     Move to the shared inbox
                   </button>
                 </div>
               )}
               {(f.kind === "bug" || f.kind === "feature") && (!shared || f.where === "shared") && <IssueBox row={f} createIssue={createIssue} change={change} errorText={errorText} />}
               <WorkLinks row={f} change={change} errorText={errorText} />
-              <div className="flex flex-wrap items-center gap-2 border-t border-foreground/5 pt-3">
-                <div className="flex flex-wrap gap-1 rounded-full bg-background p-1">
+              <div className="flex flex-wrap items-center gap-2 border-t border-foreground/10 pt-3">
+                <div role="radiogroup" aria-label="Status" className="flex flex-wrap gap-0.5 rounded-md bg-background p-0.5">
                   {STATUSES.map((s) => (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => void change(f, { op: "status", id: f.id, status: s.id })}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${f.status === s.id ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}
+                      role="radio"
+                      aria-checked={f.status === s.id}
+                      className={`rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors ${f.status === s.id ? "bg-surface-hover text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
                     >
                       {s.label}
                     </button>
@@ -514,7 +497,7 @@ function Inbox() {
       {shot && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4" onClick={() => setShot(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- uploaded screenshot */}
-          <img src={shot} alt="Screenshot" className="max-h-full max-w-full rounded-xl object-contain" />
+          <img src={shot} alt="Screenshot" className="max-h-full max-w-full rounded-lg object-contain" />
         </div>
       )}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
@@ -553,7 +536,7 @@ function FeedbackId({ number }: { number: number }) {
         setTimeout(() => setCopied(false), 1200);
       }}
       title="Copy the ID — put it in a commit message or PR to link them (“Fixes FB-12” marks it done on main)"
-      className="rounded-full bg-background px-2 py-0.5 font-mono text-[11px] font-bold text-foreground hover:bg-surface-hover"
+      className="rounded-md bg-foreground/[0.05] px-1.5 py-0.5 font-mono text-[11px] font-medium text-foreground transition-colors hover:bg-surface-hover"
     >
       {copied ? "Copied" : id}
     </button>
@@ -576,14 +559,14 @@ function IssueBox({ row, createIssue, change, errorText }: { row: InboxRow; crea
     const open = row.issue.state === "open";
     return (
       <div className="flex min-w-0 items-center gap-2 text-xs">
-        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${open ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-violet-500/15 text-violet-600 dark:text-violet-300"}`}>
+        <span className={`shrink-0 rounded-sm bg-foreground/[0.05] px-1.5 py-0.5 text-[10px] font-medium ${open ? "text-foreground" : "text-muted"}`}>
           {open ? "Issue open" : "Issue closed"}
         </span>
-        <a href={row.issue.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono font-semibold text-foreground hover:underline">
+        <a href={row.issue.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono font-medium text-foreground hover:underline">
           #{row.issue.number}
         </a>
         <span className="min-w-0 flex-1 truncate text-muted">{row.issue.title}</span>
-        <button type="button" onClick={() => void change(row, { op: "setIssue", id: row.id, issue: null }).catch((e: unknown) => setError(errorText(e)))} className="shrink-0 rounded-full px-2 py-0.5 text-muted hover:bg-background hover:text-foreground" title="Unlink the issue (it stays on GitHub)">
+        <button type="button" onClick={() => void change(row, { op: "setIssue", id: row.id, issue: null }).catch((e: unknown) => setError(errorText(e)))} className="shrink-0 rounded-md px-2 py-1 text-muted transition-colors hover:bg-surface-hover hover:text-foreground" title="Unlink the issue (it stays on GitHub)">
           Unlink
         </button>
       </div>
@@ -606,17 +589,17 @@ function IssueBox({ row, createIssue, change, errorText }: { row: InboxRow; crea
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setMode(mode === "create" ? null : "create")} aria-expanded={mode === "create"} className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+        <button type="button" onClick={() => setMode(mode === "create" ? null : "create")} aria-expanded={mode === "create"} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover">
           Create GitHub issue
         </button>
-        <button type="button" onClick={() => setMode("link")} className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+        <button type="button" onClick={() => setMode("link")} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover">
           Link existing issue
         </button>
       </div>
       {mode === "create" && (
-        <div className="flex flex-col gap-2 rounded-2xl bg-background p-3 text-xs">
+        <div className="flex flex-col gap-2 rounded-md bg-background p-3 text-xs">
           <p className="text-muted">
-            Makes a public issue on GitHub labelled <b className="text-foreground">{row.kind === "bug" ? "bug" : "enhancement"}</b>: the message, the page, the site version, the device and FB-{row.number ?? "?"}. Never their email or name.
+            Makes a public issue on GitHub labelled <span className="font-medium text-foreground">{row.kind === "bug" ? "bug" : "enhancement"}</span>: the message, the page, the site version, the device and FB-{row.number ?? "?"}. Never their email or name.
           </p>
           {row.screenshotUrl && (
             <label className="flex items-center gap-2">
@@ -625,10 +608,10 @@ function IssueBox({ row, createIssue, change, errorText }: { row: InboxRow; crea
             </label>
           )}
           <div className="flex gap-2">
-            <button type="button" disabled={busy} onClick={() => void make()} className="rounded-full bg-accent px-3 py-1.5 font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
+            <button type="button" disabled={busy} onClick={() => void make()} className="flex h-8 items-center rounded-md bg-accent px-3 font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
               {busy ? "Making it…" : "Create issue"}
             </button>
-            <button type="button" onClick={() => setMode(null)} className="rounded-full px-3 py-1.5 font-semibold text-muted hover:text-foreground">
+            <button type="button" onClick={() => setMode(null)} className="flex h-8 items-center rounded-md px-3 font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
               Cancel
             </button>
           </div>
@@ -681,7 +664,7 @@ function IssuePicker({ onPick, onClose }: { onPick: (issue: GitHubIssue) => void
   }
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onMouseDown={onClose}>
-      <div role="dialog" aria-label="Link a GitHub issue" className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Link a GitHub issue" className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface shadow-2xl shadow-black/20" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-foreground/10 p-3">
           <input
             autoFocus
@@ -690,7 +673,7 @@ function IssuePicker({ onPick, onClose }: { onPick: (issue: GitHubIssue) => void
             onKeyDown={(e) => e.key === "Enter" && /^\s*(#?\d+|https?:\/\/\S+\/issues\/\d+)\s*$/.test(q) && void byRef()}
             placeholder="Search issues, or type #45 / paste its link"
             aria-label="Search issues"
-            className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+            className="h-9 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
         </div>
         <ul className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -707,8 +690,8 @@ function IssuePicker({ onPick, onClose }: { onPick: (issue: GitHubIssue) => void
           ) : (
             shown.map((i) => (
               <li key={i.number}>
-                <button type="button" onClick={() => onPick(i)} className="flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left hover:bg-surface-hover">
-                  <span className="mt-0.5 shrink-0 font-mono text-xs font-bold">#{i.number}</span>
+                <button type="button" onClick={() => onPick(i)} className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-surface-hover">
+                  <span className="mt-0.5 shrink-0 font-mono text-xs font-medium">#{i.number}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm">{i.title}</span>
                     <span className="block truncate text-xs text-muted">
@@ -748,14 +731,14 @@ function WorkLinks({ row, change, errorText }: { row: InboxRow; change: Inbox["c
         <ul className="flex flex-col gap-1">
           {links.map((l) => (
             <li key={l.url} className="group flex min-w-0 items-center gap-2 text-xs">
-              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${l.kind === "pr" ? (l.merged ? "bg-violet-500/15 text-violet-600 dark:text-violet-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300") : "bg-background text-muted"}`}>
+              <span className={`shrink-0 rounded-sm bg-foreground/[0.05] px-1.5 py-0.5 text-[10px] font-medium ${l.kind === "pr" && !l.merged ? "text-foreground" : "text-muted"}`}>
                 {l.kind === "pr" ? (l.merged ? "PR merged" : "PR") : "Commit"}
               </span>
-              <a href={l.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono font-semibold text-foreground hover:underline">
+              <a href={l.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono font-medium text-foreground hover:underline">
                 {l.ref}
               </a>
               <span className="min-w-0 flex-1 truncate text-muted">{l.title}</span>
-              <button type="button" onClick={() => void change(row, { op: "removeLink", id: row.id, url: l.url })} aria-label={`Unlink ${l.ref}`} className="shrink-0 rounded-full px-1.5 text-muted opacity-60 hover:bg-background hover:text-danger hover:opacity-100">
+              <button type="button" onClick={() => void change(row, { op: "removeLink", id: row.id, url: l.url })} aria-label={`Unlink ${l.ref}`} className="shrink-0 rounded-md px-1.5 text-muted opacity-60 transition-colors hover:bg-surface-hover hover:text-danger hover:opacity-100">
                 ×
               </button>
             </li>
@@ -769,14 +752,14 @@ function WorkLinks({ row, change, errorText }: { row: InboxRow; change: Inbox["c
           onKeyDown={(e) => e.key === "Enter" && void submit()}
           placeholder="Link a commit or PR: hash, #12 or a GitHub link"
           aria-label="Link a commit or pull request"
-          className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+          className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-3 text-xs outline-none focus:ring-2 focus:ring-accent/40"
         />
         {value.trim() ? (
-          <button type="button" onClick={() => void submit()} className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={() => void submit()} className="flex h-8 shrink-0 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover">
             Link
           </button>
         ) : (
-          <button type="button" onClick={() => setPicking(true)} className="shrink-0 rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={() => setPicking(true)} className="flex h-8 shrink-0 items-center rounded-md bg-foreground/[0.05] px-3 text-xs font-medium transition-colors hover:bg-surface-hover">
             Pick…
           </button>
         )}
@@ -827,11 +810,11 @@ function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: 
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onMouseDown={onClose}>
-      <div role="dialog" aria-label="Link work from GitHub" className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Link work from GitHub" className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface shadow-2xl shadow-black/20" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap items-center gap-2 border-b border-foreground/10 p-3">
-          <div className="flex rounded-full bg-background p-0.5 text-xs font-semibold">
+          <div className="flex gap-0.5 rounded-md bg-background p-0.5 text-xs font-medium">
             {(["commits", "pulls"] as const).map((k) => (
-              <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-full px-3 py-1 ${kind === k ? "bg-surface text-foreground" : "text-muted hover:text-foreground"}`}>
+              <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-sm px-2.5 py-1.5 transition-colors ${kind === k ? "bg-surface-hover text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}>
                 {k === "commits" ? "Commits" : "Pull requests"}
               </button>
             ))}
@@ -839,7 +822,7 @@ function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: 
           {kind === "commits" && data && (
             <Select value={branch} options={data.branches.map((b) => ({ value: b, label: b }))} onChange={setBranch} className="min-w-32" />
           )}
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search commits" className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent" />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search commits" className="h-9 min-w-0 flex-1 basis-32 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40" />
         </div>
         <ul className="min-h-0 flex-1 overflow-y-auto p-2">
           {error ? (
@@ -862,16 +845,16 @@ function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: 
                       onPick(it);
                       setPicked((p) => new Set(p).add(it.url));
                     }}
-                    className="flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left hover:bg-surface-hover disabled:opacity-60 disabled:hover:bg-transparent"
+                    className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-surface-hover disabled:opacity-60 disabled:hover:bg-transparent"
                   >
-                    <span className="mt-0.5 shrink-0 font-mono text-xs font-bold">{it.ref}</span>
+                    <span className="mt-0.5 shrink-0 font-mono text-xs font-medium">{it.ref}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm">{it.title}</span>
                       <span className="block truncate text-xs text-muted">
                         {it.detail} · {date(it.at)}
                       </span>
                     </span>
-                    <span className="shrink-0 text-xs font-semibold text-accent">{done ? "Linked" : "Link"}</span>
+                    <span className={`shrink-0 text-xs font-medium ${done ? "text-muted" : "text-accent"}`}>{done ? "Linked" : "Link"}</span>
                   </button>
                 </li>
               );
@@ -879,7 +862,7 @@ function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: 
           )}
         </ul>
         <div className="flex justify-end border-t border-foreground/10 p-3">
-          <button type="button" onClick={onClose} className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={onClose} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             Done
           </button>
         </div>
@@ -896,14 +879,14 @@ function NoteField({ note, onSave }: { note: string; onSave: (note: string) => v
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => value !== note && onSave(value)}
       placeholder="Private note…"
-      className="min-w-0 flex-1 basis-48 rounded-full bg-background px-3.5 py-1.5 text-xs outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+      className="h-8 min-w-0 flex-1 basis-48 rounded-md bg-foreground/[0.05] px-3 text-xs outline-none focus:ring-2 focus:ring-accent/40"
     />
   );
 }
 
 function SearchField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex items-center gap-2.5 rounded-2xl bg-surface px-4 py-3 ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
+    <label className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
       <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
       <input
         type="search"
@@ -940,30 +923,30 @@ function Confirm({
       <div
         role="dialog"
         aria-label={title}
-        className="flex w-full flex-col gap-4 rounded-t-3xl bg-surface p-5 shadow-2xl sm:max-w-md sm:rounded-3xl"
+        className="flex w-full flex-col gap-4 rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 shadow-2xl shadow-black/20 sm:max-w-md sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-extrabold">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-muted">
+          <h2 className="text-base font-semibold">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
         <p className="text-sm text-muted">{body}</p>
         {confirmWord && (
-          <label className="flex flex-col gap-1 text-sm font-semibold">
-            Type <code className="rounded bg-background px-1.5">{confirmWord}</code> to confirm
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Type <code className="rounded-sm bg-background px-1.5">{confirmWord}</code> to confirm
             <input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoFocus
-              className="rounded-xl bg-background px-3.5 py-2.5 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-normal outline-none focus:ring-2 focus:ring-accent/40"
             />
           </label>
         )}
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+          <button type="button" onClick={onClose} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover">
             Cancel
           </button>
           <button
@@ -980,7 +963,7 @@ function Confirm({
                 setBusy(false);
               }
             }}
-            className={`rounded-full px-5 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-40 ${danger ? "bg-danger" : "bg-indigo-600"}`}
+            className={`h-9 rounded-md px-4 text-sm font-medium disabled:opacity-40 ${danger ? "bg-danger text-background hover:opacity-90" : "bg-accent text-accent-foreground hover:bg-accent-hover"}`}
           >
             {busy ? "Working…" : "Yes, do it"}
           </button>
@@ -1022,27 +1005,28 @@ function Posts() {
         <button
           type="button"
           onClick={() => setReportedOnly((v) => !v)}
-          className={`rounded-full px-4 py-2.5 text-sm font-semibold ${reportedOnly ? "bg-fuchsia-600 text-white" : "bg-surface ring-1 ring-foreground/10"}`}
+          aria-pressed={reportedOnly}
+          className={`h-9 shrink-0 rounded-md border px-3 text-sm font-medium transition-colors ${reportedOnly ? "border-foreground/40 bg-surface-hover text-foreground" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
         >
           Reported only {reported ? `(${reported})` : ""}
         </button>
       </div>
-      <div className="overflow-hidden rounded-3xl bg-surface ring-1 ring-foreground/5">
+      <div className="overflow-hidden rounded-lg bg-surface">
         {list.length === 0 ? (
-          <p className="p-10 text-center text-sm text-muted">No posts.</p>
+          <p className="p-6 text-center text-sm text-muted">No posts.</p>
         ) : (
           list.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 border-t border-foreground/5 px-4 py-3 first:border-t-0">
+            <div key={p.id} className="flex items-center gap-3 border-t border-foreground/10 px-4 py-3 first:border-t-0">
               <Avatar url={p.author.avatarUrl} name={p.author.username ?? "?"} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link href={`/post/${p.id}`} className="truncate font-bold hover:underline">
+                  <Link href={`/post/${p.id}`} className="truncate text-sm font-medium hover:underline">
                     {p.title}
                   </Link>
-                  <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted">{POST_KIND[p.kind] ?? p.kind}</span>
-                  {p.unlisted && <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted">Unlisted</span>}
+                  <span className="rounded-sm bg-foreground/[0.05] px-1.5 text-[11px] text-muted">{POST_KIND[p.kind] ?? p.kind}</span>
+                  {p.unlisted && <span className="rounded-sm bg-foreground/[0.05] px-1.5 text-[11px] text-muted">Unlisted</span>}
                   {p.reports > 0 && (
-                    <span className="rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[11px] font-bold text-fuchsia-600 dark:text-fuchsia-300">
+                    <span className="rounded-sm border border-danger/40 px-1.5 text-[11px] font-medium text-danger">
                       {p.reports} report{p.reports === 1 ? "" : "s"}
                     </span>
                   )}
@@ -1061,7 +1045,7 @@ function Posts() {
                     action: () => void removePost({ id: p.id }),
                   })
                 }
-                className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10"
+                className="flex h-8 shrink-0 items-center gap-1 rounded-md px-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
               >
                 <TrashIcon className="h-3.5 w-3.5" /> Remove
               </button>
@@ -1107,7 +1091,8 @@ function Users() {
         <button
           type="button"
           onClick={() => setOnlyAdmins((v) => !v)}
-          className={`rounded-full px-4 py-2.5 text-sm font-semibold ${onlyAdmins ? "bg-indigo-600 text-white" : "bg-surface ring-1 ring-foreground/10"}`}
+          aria-pressed={onlyAdmins}
+          className={`h-9 shrink-0 rounded-md border px-3 text-sm font-medium transition-colors ${onlyAdmins ? "border-foreground/40 bg-surface-hover text-foreground" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
         >
           Admins ({adminCount})
         </button>
@@ -1121,31 +1106,29 @@ function Users() {
           yours.
         </p>
       )}
-      <div className="overflow-hidden rounded-3xl bg-surface ring-1 ring-foreground/5">
+      <div className="overflow-hidden rounded-lg bg-surface">
         {list.map((u) => (
-          <div key={u.id} className="flex flex-wrap items-center gap-3 border-t border-foreground/5 px-4 py-3 first:border-t-0">
+          <div key={u.id} className="flex flex-wrap items-center gap-3 border-t border-foreground/10 px-4 py-3 first:border-t-0">
             <Avatar url={u.avatarUrl} name={u.username ?? u.email ?? "?"} size={11} />
             <div className="min-w-0 flex-1 basis-56">
               <div className="flex flex-wrap items-center gap-1.5">
                 {u.username ? (
-                  <Link href={`/u/${u.username}`} className="font-bold hover:underline">
+                  <Link href={`/u/${u.username}`} className="text-sm font-medium hover:underline">
                     @{u.username}
                   </Link>
                 ) : (
-                  <span className="font-bold text-muted">No username</span>
+                  <span className="text-sm font-medium text-muted">No username</span>
                 )}
                 {u.role === "owner" && (
-                  <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">Owner</span>
+                  <span className="rounded-sm bg-foreground px-1.5 text-[11px] font-medium text-background">Owner</span>
                 )}
-                {u.role === "admin" && <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">Admin</span>}
-                {u.isMe && <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold text-muted">You</span>}
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${u.isPublic ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-background text-muted"}`}
-                >
+                {u.role === "admin" && <span className="rounded-sm bg-accent px-1.5 text-[11px] font-medium text-accent-foreground">Admin</span>}
+                {u.isMe && <span className="rounded-sm bg-foreground/[0.05] px-1.5 text-[11px] text-muted">You</span>}
+                <span className={`rounded-sm bg-foreground/[0.05] px-1.5 text-[11px] ${u.isPublic ? "text-foreground" : "text-muted"}`}>
                   {u.isPublic ? "Public" : "Private"}
                 </span>
                 {u.providers.map((p) => (
-                  <span key={p} className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold text-muted">
+                  <span key={p} className="rounded-sm bg-foreground/[0.05] px-1.5 text-[11px] text-muted">
                     {p === "google" ? "Google" : p === "password" ? "Email" : p}
                   </span>
                 ))}
@@ -1169,7 +1152,7 @@ function Users() {
                           },
                         })
                       }
-                      className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover"
+                      className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
                     >
                       Remove admin
                     </button>
@@ -1187,7 +1170,7 @@ function Users() {
                           },
                         })
                       }
-                      className="flex items-center gap-1 rounded-full bg-indigo-600/10 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-600/20 dark:text-indigo-300"
+                      className="flex h-8 items-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
                     >
                       <ShieldIcon className="h-3.5 w-3.5" /> Make admin
                     </button>
@@ -1196,7 +1179,7 @@ function Users() {
                   <button
                     type="button"
                     onClick={() => void setPublic({ userId: u.id, isPublic: false })}
-                    className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover"
+                    className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover"
                     title="Take their profile off public view"
                   >
                     Make private
@@ -1214,7 +1197,7 @@ function Users() {
                       },
                     })
                   }
-                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger/10"
+                  className="flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
                 >
                   <TrashIcon className="h-3.5 w-3.5" /> Delete
                 </button>

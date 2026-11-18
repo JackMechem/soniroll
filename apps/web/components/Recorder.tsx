@@ -53,6 +53,7 @@ import { DEFAULT_MIX, formatDuration, recordingsApi, useTuneIndex, useTuneSong }
 import { EMPTY_STRUCTURE, type Structure, cycleSectionAccent, cycleSectionSubAccent, sectionAt } from "@/lib/structure";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
+import { SIGN_IN_PATH } from "@/lib/landing";
 
 // The same key and shape as the app's Recorder, so settings follow you between the two. Everything
 // from `bpm` on is the Metronome tool's own settings shape.
@@ -199,7 +200,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         ]}
       />
       {useStructure && (
-        <div className="w-full rounded-3xl bg-surface p-4 text-left">
+        <div className="w-full rounded-lg bg-surface p-4 text-left">
           <StructureEditor
             show="form"
             structure={structure}
@@ -278,10 +279,13 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   if (!isAuthenticated) {
     return (
       <ToolLayout title="Recorder" options={null}>
-        <div className="flex max-w-sm flex-col items-center gap-3 text-center">
-          <p className="text-muted">
-            Recordings are saved to your account, so you can play them back on any device — here or in the app. Sign in (bottom of the sidebar) to start recording.
+        <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
+          <p className="text-sm text-muted">
+            Recordings are saved to your account, so you can play them back on any device — here or in the app. Sign in to start recording.
           </p>
+          <Link href={SIGN_IN_PATH} className="flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+            Sign in
+          </Link>
         </div>
       </ToolLayout>
     );
@@ -294,9 +298,9 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
       <div className="grid w-full max-w-5xl items-start gap-8 lg:grid-cols-2 lg:grid-rows-[auto_1fr]">
         <div className="flex w-full flex-col items-center gap-6 lg:col-start-2 lg:row-start-1">
         <div className="flex flex-col items-center gap-2">
-          <p className={`text-sm font-semibold ${rec.phase === "recording" ? "text-danger" : "text-muted"}`}>{status}</p>
-          <p className="text-6xl font-extrabold tabular-nums">{formatDuration(elapsed)}</p>
-          <div className="h-2 w-48 overflow-hidden rounded-full bg-surface-hover">
+          <p className={`text-sm font-medium ${rec.phase === "recording" ? "text-danger" : "text-muted"}`}>{status}</p>
+          <p className="text-6xl font-semibold tracking-tight tabular-nums">{formatDuration(elapsed)}</p>
+          <div className="h-1.5 w-48 overflow-hidden rounded-full bg-foreground/10">
             <div
               className={`h-full rounded-full ${rec.level > 0.85 ? "bg-danger" : "bg-accent"}`}
               style={{ width: `${Math.round((rec.phase === "recording" ? rec.level : 0) * 100)}%` }}
@@ -308,10 +312,10 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           type="button"
           onClick={() => void onRecord()}
           aria-label={busy ? "Stop recording" : "Start recording"}
-          className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-surface-hover transition-transform hover:scale-105"
+          className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-foreground/15 transition-colors hover:border-foreground/30"
         >
           {busy ? (
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger text-white">
+            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-danger text-white">
               <StopIcon className="h-6 w-6" />
             </span>
           ) : (
@@ -353,7 +357,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           )}
         </div>
         {song?.url && (
-          <div className="flex w-full max-w-sm flex-col gap-3 rounded-2xl bg-surface p-4">
+          <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-surface p-4">
             <SwitchRow
               label="Play the song"
               checked={settings.playSong}
@@ -366,11 +370,11 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
                 <div className="flex items-center justify-between gap-2 text-sm">
                   <span className="font-medium">Start the song at</span>
                   <div className="flex items-center gap-1">
-                    <button type="button" disabled={busy} onClick={() => setSongStart((t) => Math.max(0, t - 5))} className="rounded-lg bg-background px-2 py-1 font-medium hover:bg-surface-hover disabled:opacity-50">
+                    <button type="button" disabled={busy} onClick={() => setSongStart((t) => Math.max(0, t - 5))} className="h-8 rounded-md bg-foreground/[0.05] px-2 font-medium transition-colors hover:bg-surface-hover disabled:opacity-50">
                       −5 s
                     </button>
                     <span className="w-12 text-center tabular-nums">{formatDuration(songStart)}</span>
-                    <button type="button" disabled={busy} onClick={() => setSongStart((t) => Math.min(songMax, t + 5))} className="rounded-lg bg-background px-2 py-1 font-medium hover:bg-surface-hover disabled:opacity-50">
+                    <button type="button" disabled={busy} onClick={() => setSongStart((t) => Math.min(songMax, t + 5))} className="h-8 rounded-md bg-foreground/[0.05] px-2 font-medium transition-colors hover:bg-surface-hover disabled:opacity-50">
                       +5 s
                     </button>
                   </div>
@@ -398,7 +402,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           </div>
         )}
         </div>
-        <section className="flex w-full flex-col items-center gap-4 rounded-3xl border border-surface-hover p-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <section className="flex w-full flex-col items-center gap-4 rounded-lg bg-foreground/[0.05] p-4 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           <div className="flex w-full items-center gap-2">
             <MetronomeIcon className="h-5 w-5 text-muted" />
             <div className="flex-1">
@@ -413,11 +417,11 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
                 beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
                 beatUnit={activeSection?.beatUnit ?? beatUnit}
                 onTap={tap}
-                aboveNumber={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
+                tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
               />
               <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
               {useStructure && !activeSection ? (
-                <p className="rounded-xl bg-surface px-4 py-3 text-center text-sm text-muted">Open Sections to add sections and arrange a form.</p>
+                <p className="rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">Open Sections to add sections and arrange a form.</p>
               ) : (
                 <BeatIndicator
                   accents={displayAccents}
@@ -447,15 +451,15 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         </section>
         <section className="flex w-full flex-col gap-2 lg:col-start-2 lg:row-start-2">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-bold">Recent recordings</h2>
-            <Link href="/recordings" className="text-sm font-medium text-accent hover:underline">
+            <h2 className="text-sm font-medium">Recent recordings</h2>
+            <Link href="/recordings" className="text-xs text-muted transition-colors hover:text-foreground">
               All recordings{recordings ? ` (${recordings.length})` : ""}
             </Link>
           </div>
           {recordings === undefined ? (
             <LoadingSpinner />
           ) : recordings.length === 0 ? (
-            <p className="text-sm text-muted">No recordings yet.</p>
+            <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">No recordings yet.</p>
           ) : (
             recordings.slice(0, 3).map((r) => <RecordingCard key={r._id} recording={r} tuneName={r.tuneId ? byId.get(r.tuneId)?.tune.name : null} />)
           )}

@@ -12,6 +12,9 @@
   --accent-foreground: #ffffff;
   --overlay: rgba(30, 40, 51, 0.55);
   --danger: #c8475a;
+  /* Done / goal met, and partly done (the Shed Log's greens and ambers). */
+  --success: #16a34a;
+  --warning: #ca8a04;
 }
 
 .dark {
@@ -25,7 +28,37 @@
   --accent-foreground: #111821;
   --overlay: rgba(0, 0, 0, 0.65);
   --danger: #e8848f;
+  --success: #22c55e;
+  --warning: #eab308;
 }
+
+/* Settings → Classic look (lib/display.ts): the rounder look from before the 2026-11 refresh.
+   Bigger corners everywhere (same utility names, bigger values), the sidebar's icons on tiles
+   tinted with their own colour, and bolder page titles. */
+:root.classic-look {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+}
+.classic-look [data-nav-icon] {
+  box-sizing: content-box;
+  padding: 6px;
+  margin: -6px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.classic-look h1 { font-weight: 800; }
+
+/* Native scrollbars and form controls follow the theme's light/dark mode. */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+
+/* "Days practiced" heatmap greens: light themes go pale → deep, dark themes dim → bright. */
+:root { --heat-1: #9be9a8; --heat-2: #40c463; --heat-3: #30a14e; --heat-4: #216e39; }
+.dark { --heat-1: #0e4429; --heat-2: #006d32; --heat-3: #26a641; --heat-4: #39d353; }
 
 /* Tool-category colors (the sidebar's icon tiles). Fallback: fixed hues. Where the browser can,
    they're the theme's own accent turned around the color wheel at the same lightness and
@@ -89,6 +122,19 @@
   }
 }
 
+/* Not `inline`, so the utilities read these variables and Classic look (below) can change them. */
+@theme {
+  /* Corners a little tighter than Tailwind's defaults (which run 4px → 24px): small controls
+     6px, cards 10px, dialogs 12–16px; the big main buttons stay fully round (rounded-full). */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
@@ -100,6 +146,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-overlay: var(--overlay);
   --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   /* Drives components/LoadingSpinner.tsx's dots — each one uses this same animation, staggered
@@ -137,6 +185,15 @@ body {
   font-family: var(--app-font, var(--font-sans)), Arial, Helvetica, sans-serif;
 }
 
+/* The page's scroll area (AppShell's, a direct child of <body>) keeps room for its scrollbar, so
+   switching between a page that scrolls and one that doesn't (Library's tabs) doesn't shift the
+   page sideways. Not on phones: their scrollbars float over the page and take no room. */
+@media (min-width: 768px) {
+  body > div.overflow-y-auto {
+    scrollbar-gutter: stable;
+  }
+}
+
 input[type="range"].slider {
   appearance: none;
   -webkit-appearance: none;
@@ -150,14 +207,14 @@ input[type="range"].slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     var(--accent) var(--progress, 0%),
-    var(--background) var(--progress, 0%)
+    color-mix(in oklab, var(--foreground) 12%, transparent) var(--progress, 0%)
   );
 }
 
 input[type="range"].slider::-moz-range-track {
   height: 6px;
   border-radius: 9999px;
-  background: var(--background);
+  background: color-mix(in oklab, var(--foreground) 12%, transparent);
 }
 
 input[type="range"].slider::-moz-range-progress {
@@ -168,23 +225,23 @@ input[type="range"].slider::-moz-range-progress {
 
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  height: 20px;
-  width: 20px;
-  margin-top: -7px;
+  height: 16px;
+  width: 16px;
+  margin-top: -5px;
   border-radius: 9999px;
   border: 0;
   background: var(--foreground);
-  box-shadow: 0 0 0 3px var(--surface), 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
 
 input[type="range"].slider::-moz-range-thumb {
-  height: 20px;
-  width: 20px;
+  height: 16px;
+  width: 16px;
   border-radius: 9999px;
   border: 0;
   background: var(--foreground);
-  box-shadow: 0 0 0 3px var(--surface), 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
 
@@ -396,51 +453,53 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
 }
 
 input[type="range"].slider.slider-reward::-webkit-slider-runnable-track, .reward-scope input[type="range"].slider::-webkit-slider-runnable-track {
-  height: 10px;
+  height: 6px;
   background: linear-gradient(
     to right,
     color-mix(in srgb, var(--reward, var(--accent)) 55%, var(--accent)) 0%,
     var(--reward, var(--accent)) var(--progress, 0%),
-    var(--background) var(--progress, 0%)
+    color-mix(in oklab, var(--foreground) 12%, transparent) var(--progress, 0%)
   );
 }
-input[type="range"].slider.slider-reward::-moz-range-track, .reward-scope input[type="range"].slider::-moz-range-track { height: 10px; }
+input[type="range"].slider.slider-reward::-moz-range-track, .reward-scope input[type="range"].slider::-moz-range-track { height: 6px; }
 input[type="range"].slider.slider-reward::-moz-range-progress, .reward-scope input[type="range"].slider::-moz-range-progress {
-  height: 10px;
+  height: 6px;
   background: linear-gradient(to right, color-mix(in srgb, var(--reward, var(--accent)) 55%, var(--accent)), var(--reward, var(--accent)));
 }
 input[type="range"].slider.slider-reward::-webkit-slider-thumb, .reward-scope input[type="range"].slider::-webkit-slider-thumb {
-  height: 24px;
-  width: 24px;
-  margin-top: -7px;
+  height: 16px;
+  width: 16px;
+  margin-top: -5px;
   background: var(--reward, var(--accent));
-  box-shadow: 0 0 0 4px var(--surface), 0 2px 10px color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 input[type="range"].slider.slider-reward::-moz-range-thumb, .reward-scope input[type="range"].slider::-moz-range-thumb {
-  height: 24px;
-  width: 24px;
+  height: 16px;
+  width: 16px;
   background: var(--reward, var(--accent));
-  box-shadow: 0 0 0 4px var(--surface), 0 2px 10px color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent);
+  box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 input[type="range"].slider.slider-reward:not(:disabled):active::-webkit-slider-thumb, .reward-scope input[type="range"].slider:not(:disabled):active::-webkit-slider-thumb {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 7px color-mix(in srgb, var(--reward, var(--accent)) 20%, transparent);
 }
 input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb, .reward-scope input[type="range"].slider:not(:disabled):active::-moz-range-thumb {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 7px color-mix(in srgb, var(--reward, var(--accent)) 20%, transparent);
 }
 
-/* Scrollbars (mouse and trackpad): an 8px rounded pill, a faint tint of the theme's text colour on a clear track, no arrow
-   buttons. Chrome and Safari use the `::-webkit-scrollbar` styles (setting the standard
-   `scrollbar-color` there would switch them off and bring Chrome's arrows back); Firefox gets the
-   standard properties. In the base layer so the `[scrollbar-width:none]` utilities that hide them
-   on chip rows still win. */
+/* Scrollbars (mouse and trackpad): thin, a faint tint of the theme's text colour on a clear
+   track, so the ones that sit side by side (sidebar, Shed Log, calendar, tool panels) stay quiet.
+   Browsers with the standard properties (Chrome, Edge, Firefox) use `scrollbar-width` and
+   `scrollbar-color` — in Chrome these switch the `::-webkit-scrollbar` styles off, so the
+   standard ones only go on where `scrollbar-color` is supported. Safari and the desktop app
+   (WebKit) keep the `::-webkit-scrollbar` pill. In the base layer so the `[scrollbar-width:none]`
+   utilities that hide them on chip rows still win. */
 @layer base {
-  /* Only with a mouse or trackpad: touch screens keep their own thin overlay scrollbars, which
-     take no room (styling ::-webkit-scrollbar on Android swaps them for classic ones that push
-     the page over and can draw a solid track). */
-  @media (hover: hover) and (pointer: fine) {
+  /* Not on touch screens: they keep their own thin overlay scrollbars, which take no room
+     (styling ::-webkit-scrollbar on Android swaps them for classic ones that push the page over
+     and can draw a solid track). */
+  @media not (pointer: coarse) {
     ::-webkit-scrollbar {
       width: 14px;
       height: 14px;
@@ -462,12 +521,23 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
     ::-webkit-scrollbar-thumb:hover {
       background-color: color-mix(in oklab, var(--foreground) 32%, transparent);
     }
-    @supports not selector(::-webkit-scrollbar) {
+    @supports (scrollbar-color: red blue) {
       * {
-        scrollbar-width: auto;
-        scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
       }
     }
+  }
+}
+
+/* A scroll area whose scrollbar only shows while the pointer is over it (the Shed Log's day
+   column, so the page doesn't show two scrollbars side by side). */
+@media not (pointer: coarse) {
+  .scrollbar-on-hover:not(:hover) {
+    scrollbar-color: transparent transparent;
+  }
+  .scrollbar-on-hover:not(:hover)::-webkit-scrollbar-thumb {
+    background-color: transparent;
   }
 }
 
@@ -503,15 +573,15 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
 .note-doc input[type="checkbox"] { margin-right: 0.45em; accent-color: var(--accent); }
 .note-doc blockquote { border-left: 3px solid var(--accent); padding-left: 1em; color: var(--muted); }
 .note-doc code { font-family: var(--font-mono, ui-monospace), monospace; font-size: 0.9em; background: var(--surface); border-radius: 6px; padding: 0.1em 0.35em; }
-.note-doc pre { background: var(--surface); border-radius: 12px; padding: 0.8em 1em; overflow-x: auto; }
+.note-doc pre { background: var(--surface); border-radius: 6px; padding: 0.8em 1em; overflow-x: auto; }
 .note-doc pre code { background: none; padding: 0; }
 .note-doc hr { border: 0; border-top: 1px solid color-mix(in oklab, var(--foreground) 15%, transparent); margin: 1.5em 0; }
 .note-doc mark { background: color-mix(in oklab, var(--accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 0.15em; }
-.note-doc img { max-width: 100%; border-radius: 10px; }
+.note-doc img { max-width: 100%; border-radius: 6px; }
 .note-doc table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
 .note-doc th, .note-doc td { border: 1px solid color-mix(in oklab, var(--foreground) 15%, transparent); padding: 0.4em 0.7em; text-align: left; vertical-align: top; }
 .note-doc th { font-weight: 700; background: var(--surface); }
-.note-doc-wikilink { text-decoration: none !important; display: inline-block; border-radius: 999px; background: color-mix(in oklab, var(--accent) 15%, transparent); color: var(--accent); font-weight: 600; padding: 0 0.55em; font-size: 0.95em; }
+.note-doc-wikilink { text-decoration: none !important; display: inline-block; border-radius: 4px; background: color-mix(in oklab, var(--accent) 15%, transparent); color: var(--accent); font-weight: 500; padding: 0 0.4em; font-size: 0.95em; }
 .note-doc a.note-doc-wikilink-open:hover { background: color-mix(in oklab, var(--accent) 25%, transparent); }
 .note-doc-wikilink-closed { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 15%, transparent); }
 .note-doc-score, .note-doc-abc, .note-doc .note-file { break-inside: avoid; margin: 1em 0; }

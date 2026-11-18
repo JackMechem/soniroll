@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { ChevronRightIcon, PencilIcon, TrashIcon } from "@/components/tools";
-import { RecentStrip, RoutineReportView, type LessonItem } from "@/components/lessons/parts";
+import { RecentStrip, RoutineReportView, btnSmallPrimary, type LessonItem } from "@/components/lessons/parts";
 import { describeRepeat, formatMinutesShort, lessonRoutineId, totalMinutes } from "@/lib/practiceLog";
 
 type Summary = { recent: { date: string; status: string | null }[]; totals: { done: number } | null } | undefined;
@@ -31,12 +31,12 @@ export function RoutineRow({
   const r = item.routine;
   if (!r) return null;
   return (
-    <div className="overflow-hidden rounded-2xl bg-surface ring-1 ring-foreground/5">
-      <div className="flex items-center gap-3 p-3">
+    <div className="overflow-hidden rounded-lg bg-surface">
+      <div className="flex items-center gap-3 px-3 py-2.5">
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <RoutineIcon icon={r.icon} color={r.color} size="md" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold">{r.name}</span>
+            <span className="block truncate text-sm font-medium">{r.name}</span>
             <span className="block truncate text-xs text-muted">
               {describeRepeat(r.repeat)} · {r.tasks.length} task{r.tasks.length === 1 ? "" : "s"} · {formatMinutesShort(totalMinutes(r))}
             </span>
@@ -57,7 +57,7 @@ export function RoutineRow({
                 onClick={onEdit}
                 aria-label={`Replace ${r.name}`}
                 title="Replace with another routine"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 <PencilIcon className="h-4 w-4" />
               </button>
@@ -68,7 +68,7 @@ export function RoutineRow({
                 onClick={onRemove}
                 aria-label={`Remove ${r.name}`}
                 title="Remove"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-danger"
               >
                 <TrashIcon className="h-4 w-4" />
               </button>
@@ -77,7 +77,7 @@ export function RoutineRow({
         )}
       </div>
       {open && (
-        <div className="flex flex-col gap-3 border-t border-foreground/5 bg-background/40 p-3">
+        <div className="flex flex-col gap-3 border-t border-foreground/10 p-3">
           <ol className="flex flex-col gap-1">
             {r.tasks.map((t, i) => (
               <li key={t.id} className="flex items-center gap-2 text-sm">
@@ -92,7 +92,7 @@ export function RoutineRow({
           ) : (
             <Link
               href={`/shed-log/routine?id=${encodeURIComponent(lessonRoutineId(item.id))}`}
-              className="self-start rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover"
+              className={`self-start ${btnSmallPrimary}`}
             >
               Open in your Shed Log
             </Link>

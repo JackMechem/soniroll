@@ -18,7 +18,7 @@ export default function ScoreDialog({ scoreId, onDone, onClose }: { scoreId: str
   const loaded = useScore(scoreId);
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-overlay sm:items-center sm:p-4">
-      <div role="dialog" aria-label="Music notation" className="flex h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-background text-foreground shadow-2xl shadow-black/25 sm:h-[90vh] sm:rounded-2xl">
+      <div role="dialog" aria-label="Music notation" className="flex h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-xl bg-background text-foreground shadow-[0_16px_40px_-12px_rgba(0,0,0,0.35)] sm:h-[90vh] sm:rounded-xl">
         {scoreId && loaded === undefined ? (
           <div className="flex flex-1 items-center justify-center">
             <LoadingSpinner />
@@ -26,7 +26,7 @@ export default function ScoreDialog({ scoreId, onDone, onClose }: { scoreId: str
         ) : scoreId && loaded === null ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted">This score was deleted.</p>
-            <button type="button" onClick={onClose} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+            <button type="button" onClick={onClose} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
               Close
             </button>
           </div>
@@ -91,20 +91,20 @@ function Editing({ scoreId, start, onDone, onClose }: { scoreId: string | null; 
               value={t.title}
               onChange={(e) => setMeta({ title: e.target.value })}
               aria-label="Title"
-              className="min-w-0 flex-1 rounded-lg bg-transparent text-xl font-extrabold tracking-tight outline-none ring-accent focus:ring-2 sm:text-2xl"
+              className="min-w-0 flex-1 rounded-md bg-transparent px-1 -mx-1 text-xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             />
             <span className="text-xs text-muted" aria-live="polite">
               {id || saveState !== "saved" ? SAVE_LABEL[saveState] : "Not saved yet"}
             </span>
             {id && (
-              <Link href={`/score-writer?id=${encodeURIComponent(id)}`} onClick={() => flush()} className="rounded-lg bg-surface px-3 py-2 text-sm font-semibold hover:bg-surface-hover">
+              <Link href={`/score-writer?id=${encodeURIComponent(id)}`} onClick={() => flush()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                 Open in Score Writer
               </Link>
             )}
-            <button type="button" onClick={() => void finish()} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover" title="Done (Ctrl/⌘-Enter)">
+            <button type="button" onClick={() => void finish()} className="flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover" title="Done (Ctrl/⌘-Enter)">
               {scoreId ? "Done" : "Add to note"}
             </button>
-            <button type="button" onClick={() => void finish()} aria-label="Close" className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
+            <button type="button" onClick={() => void finish()} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-foreground">
               <CloseIcon className="h-4 w-4" />
             </button>
           </div>

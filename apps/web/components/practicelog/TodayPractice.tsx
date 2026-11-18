@@ -8,7 +8,7 @@ import Momentum from "@/components/practicelog/Momentum";
 import DayTimer from "@/components/practicelog/DayTimer";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { CalendarIcon, CheckIcon, PlayIcon, PlusIcon } from "@/components/tools";
+import { CheckIcon, PlayIcon, PlusIcon } from "@/components/tools";
 import {
   ROUTINE_COLORS,
   addDays,
@@ -28,7 +28,7 @@ import {
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
 const noop = () => () => {};
-const LEVEL_BG = ["var(--surface-hover)", "#0e4429", "#006d32", "#26a641", "#39d353"];
+const LEVEL_BG = ["var(--surface-hover)", "var(--heat-1)", "var(--heat-2)", "var(--heat-3)", "var(--heat-4)"];
 
 /** The dashboard's "Goal and streak" card: the Shed Log's goal ring, streak, week and hours. Shows
     nothing signed out (the "Today's practice" card asks you to start a Shed Log). */
@@ -37,7 +37,7 @@ export function TodayMomentum() {
   const { isAuthenticated } = useConvexAuth();
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   if (!isAuthenticated) return null;
-  if (!log.ready || !mounted) return <div className="h-40 animate-pulse rounded-3xl bg-surface" />;
+  if (!log.ready || !mounted) return <div className="h-40 animate-pulse rounded-lg bg-surface" />;
   return (
     <Momentum
       data={log.data}
@@ -63,18 +63,15 @@ export default function TodayPractice() {
   if (!isLoading && !isAuthenticated) {
     return (
       <div className="flex flex-1 flex-col items-start gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-          <CalendarIcon className="h-6 w-6" />
-        </span>
         <div className="min-w-0">
-          <h3 className="text-lg font-extrabold">Start your Shed Log</h3>
-          <p className="text-sm text-muted">Routines, a day timer, a daily goal and a streak — and every minute in soniroll&apos;s tools counts. Free with an account.</p>
+          <h3 className="font-semibold">Start your Shed Log</h3>
+          <p className="mt-1 text-sm text-muted">Routines, a day timer, a daily goal and a streak — and every minute in soniroll&apos;s tools counts. Free with an account.</p>
         </div>
         <SignInButtons />
       </div>
     );
   }
-  if (!ready || !mounted) return <div className="h-40 animate-pulse rounded-2xl bg-background" />;
+  if (!ready || !mounted) return <div className="h-40 animate-pulse rounded-md bg-background" />;
 
   const today = todayKey();
   const items = routinesOn(data, today).filter((i) => !i.occurrence.skipped);
@@ -84,11 +81,11 @@ export default function TodayPractice() {
   return (
     <div className="flex flex-col gap-2">
       <DayTimer data={data} date={today} compact />
-      <h3 className="mt-1 text-sm font-semibold text-muted">On today</h3>
+      <h3 className="mt-1 text-xs font-medium text-muted">On today</h3>
       {nothing && (
-        <div className="flex flex-col items-start gap-3 rounded-2xl bg-background p-4">
+        <div className="flex flex-col items-start gap-3 rounded-md border border-dashed border-foreground/15 p-4">
           <p className="text-sm">Nothing planned yet. A routine repeats on the days you pick — or just add a task for today.</p>
-          <Link href={`/shed-log/routine/edit?date=${today}`} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <Link href={`/shed-log/routine/edit?date=${today}`} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             <PlusIcon className="h-4 w-4" /> Make a routine
           </Link>
         </div>
@@ -102,26 +99,26 @@ export default function TodayPractice() {
         const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
         const running = runningTask(routine.id, today);
         return (
-          <div key={routine.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
+          <div key={routine.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] p-3">
             <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
             <Link href={`/shed-log?date=${today}`} className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate font-bold">{routine.name || "Routine"}</span>
-                {complete && <CheckIcon className="h-4 w-4 shrink-0 text-emerald-500" />}
+                <span className="truncate text-sm font-medium">{routine.name || "Routine"}</span>
+                {complete && <CheckIcon className="h-4 w-4 shrink-0 text-success" />}
               </div>
               <div className="text-xs text-muted">
                 {span ? `${formatTime(span.start)} · ` : ""}
                 {p.done}/{p.total} tasks{running ? " · on the timer now" : ""}
               </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-hover">
-                <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%`, background: complete ? "#22c55e" : color }} />
+              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-foreground/10">
+                <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%`, background: complete ? "var(--success)" : color }} />
               </div>
             </Link>
             {!complete && next && !running && (
               <button
                 type="button"
                 onClick={() => startRoutine(routine, today, p.done > 0 ? next.id : undefined, false, occurrence)}
-                className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
               >
                 <PlayIcon className="h-3.5 w-3.5" /> {p.done > 0 ? "Continue" : "Start"}
               </button>
@@ -130,7 +127,7 @@ export default function TodayPractice() {
         );
       })}
       {tasks.map((t) => (
-        <div key={t.id} className="flex items-center gap-3 rounded-2xl bg-background px-3 py-2.5">
+        <div key={t.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] px-3 py-2">
           <button
             type="button"
             role="checkbox"
@@ -140,15 +137,15 @@ export default function TodayPractice() {
               if (!t.done) burstAt(e.currentTarget, "var(--accent)");
               log.toggleDayTask(today, t.id);
             }}
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-surface-hover hover:border-muted"}`}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
           >
             {t.done && <CheckIcon className="h-4 w-4" />}
           </button>
-          <span className={`min-w-0 flex-1 truncate font-medium ${t.done ? "text-muted line-through" : ""}`}>{t.title}</span>
+          <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-muted line-through" : ""}`}>{t.title}</span>
           <span className="shrink-0 text-xs text-muted">{formatMinutesShort(t.minutes)}</span>
         </div>
       ))}
-      <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-1.5">
+      <div className="flex items-center gap-2 rounded-md border border-dashed border-foreground/15 px-3 py-1">
         <PlusIcon className="h-4 w-4 shrink-0 text-muted" />
         <input
           value={title}
@@ -188,10 +185,10 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
     if (i === 0 || m !== fromDateKey(weeks[i - 1][0].key).getMonth()) months.push({ col: i, label: fromDateKey(wk[0].key).toLocaleString(undefined, { month: "short" }) });
   });
   return (
-    <div className={`flex flex-col gap-3 ${bare ? "" : "rounded-3xl bg-surface p-4"} ${className}`}>
+    <div className={`flex flex-col gap-3 ${bare ? "" : "rounded-lg bg-surface p-4"} ${className}`}>
       <div className="flex items-baseline justify-between gap-2">
-        {!bare && <h3 className="text-sm font-semibold text-muted">Your practice</h3>}
-        <span className="text-xs font-semibold text-muted">{practiced} day{practiced === 1 ? "" : "s"} in {weekCount} weeks</span>
+        {!bare && <h3 className="text-sm font-medium">Your practice</h3>}
+        <span className="text-xs text-muted">{practiced} day{practiced === 1 ? "" : "s"} in {weekCount} weeks</span>
       </div>
       <div className="relative grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${weekCount}, minmax(0, 1fr))` }}>
         {months.map((mo) => (

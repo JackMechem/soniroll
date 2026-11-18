@@ -5,7 +5,7 @@ import BeatIndicator from "@/components/BeatIndicator";
 import { HintsButton } from "@/components/CollapsiblePanel";
 import Hint from "@/components/Hint";
 import KeyHint from "@/components/KeyHint";
-import { TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
+import { BIG_PRIMARY, BIG_SECONDARY, TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
 import {
   OptionGroup,
   SUB_LABELS,
@@ -46,7 +46,6 @@ import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
 import { toolPresets } from "@/lib/toolPresets";
-import { PresetsChip } from "@/components/PresetsChip";
 
 const COMMON_METERS: [number, number][] = [
   [4, 4],
@@ -137,6 +136,8 @@ export default function TimeTest() {
 
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The Mic chip's popover (where Calibrate is), also opened from the "Calibrate first" note.
+  const [micOpen, setMicOpen] = useState(false);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [recStart, setRecStart] = useState(0);
   const [now, setNow] = useState(0);
@@ -310,18 +311,22 @@ export default function TimeTest() {
       layout="stacked"
       topAligned
       options={null}
+      presets={toolPresets("time-test", settings, update)}
       titleExtra={
         recording && countInLeft === null ? (
-          <span className="hidden items-center gap-2 rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums sm:flex">
-            <span className="h-2.5 w-2.5 rounded-full bg-danger motion-safe:animate-pulse" aria-hidden />
+          <span className="hidden h-8 items-center gap-2 rounded-md bg-foreground/[0.05] px-2.5 text-sm font-medium tabular-nums sm:flex">
+            <span className="h-2 w-2 rounded-full bg-danger motion-safe:animate-pulse" aria-hidden />
             Recording {Math.floor(elapsed / 60)}:{String(Math.floor(elapsed % 60)).padStart(2, "0")}
           </span>
         ) : null
       }
+      // Only once there's a take, so a first visit leads with the tempo and Record.
       sidePanel={
-        <SettingChip icon={ListIcon} label="History" value={history.takes.length ? `${history.takes.length} take${history.takes.length === 1 ? "" : "s"}` : "None yet"}>
-          <History takes={history.takes} onClear={() => updateHistory({ takes: [] })} />
-        </SettingChip>
+        history.takes.length > 0 && (
+          <SettingChip icon={ListIcon} label="History" value={`${history.takes.length} take${history.takes.length === 1 ? "" : "s"}`}>
+            <History takes={history.takes} onClear={() => updateHistory({ takes: [] })} />
+          </SettingChip>
+        )
       }
     >
       <div className="flex w-full max-w-[30rem] flex-col items-center gap-6">
@@ -333,7 +338,7 @@ export default function TimeTest() {
             beatUnit={beatUnit}
             onTap={tap}
             locked={recording || calibrating}
-            aboveNumber={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => update({ tempoNoteValue: v })} />}
+            tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => update({ tempoNoteValue: v })} />}
           />
           <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={beatUnit} />
           <BeatIndicator
@@ -357,20 +362,20 @@ export default function TimeTest() {
                 <button
                   type="button"
                   onClick={stopAndAnalyze}
-                  className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                  className={BIG_PRIMARY}
                 >
                   <StopIcon className="h-4 w-4" />
                   Stop and analyze
                 </button>
               ) : calibrating ? (
-                <button type="button" disabled className="rounded-full bg-surface px-8 py-3 text-base font-semibold opacity-70">
+                <button type="button" disabled className={BIG_SECONDARY}>
                   Calibrating… stay quiet
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={record}
-                  className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                  className={BIG_PRIMARY}
                 >
                   <RecordIcon className="h-4 w-4" />
                   Record
@@ -382,14 +387,23 @@ export default function TimeTest() {
             </KeyHint>
           </div>
           {!calibrated && phase === "idle" && (
-            <p className="max-w-sm text-center text-xs text-muted">Calibrate first (Mic → Calibrate) so your setup&apos;s delay doesn&apos;t skew the results.</p>
+            <div className="flex max-w-sm flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center text-xs text-muted">
+              <span>Calibrate first so your setup&apos;s delay doesn&apos;t skew the results.</span>
+              <button
+                type="button"
+                onClick={() => setMicOpen(true)}
+                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+              >
+                <MicIcon className="h-3.5 w-3.5 text-muted" />
+                Calibrate…
+              </button>
+            </div>
           )}
           {error && <p className="max-w-sm text-center text-sm text-danger">{error}</p>}
         </div>
 
         <div className="flex w-full flex-col items-center gap-2">
           <SettingsBar>
-            <PresetsChip tool={toolPresets("time-test", settings, update)} />
             <SettingChip icon={MeterIcon} label="Time" title="Time signature" value={`${beatsPerBar}/${beatUnit}`}>
               <TimeSignatureControl
                 beatsPerBar={beatsPerBar}
@@ -408,7 +422,7 @@ export default function TimeTest() {
                       onPick={() => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
                       className="h-14"
                     >
-                      <span className="flex flex-col items-center text-base font-extrabold leading-[0.95] tabular-nums">
+                      <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
                         <span>{b}</span>
                         <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
                         <span>{u}</span>
@@ -458,8 +472,8 @@ export default function TimeTest() {
                 {TOLERANCES.map((t) => (
                   <RewardCard key={t} id={`tolerance:${t}`} on={settings.toleranceMs === t} label={`±${t} ms`} onPick={() => update({ toleranceMs: t })} className="h-14">
                     <span className="flex flex-col items-center leading-tight">
-                      <span className="text-base font-extrabold tabular-nums">±{t}</span>
-                      <span className="text-[11px] font-semibold opacity-70">ms</span>
+                      <span className="text-base font-semibold tabular-nums">±{t}</span>
+                      <span className="text-[11px] opacity-70">ms</span>
                     </span>
                   </RewardCard>
                 ))}
@@ -471,7 +485,9 @@ export default function TimeTest() {
               label="Mic"
               title="Mic and latency"
               wide
-              value={calibrated ? `${latencyMs.toFixed(1)} ms` : "Calibrate"}
+              open={micOpen}
+              onOpenChange={setMicOpen}
+              value={calibrated ? `${latencyMs.toFixed(1)} ms` : micSettings.inputDeviceId ? "Chosen input" : "Default input"}
               headerExtra={<HintsButton on={micHints} onToggle={() => setMicHints((on) => !on)} />}
             >
               <HintsContext.Provider value={micHints}>

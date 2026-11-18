@@ -189,19 +189,19 @@ export default function NoteList({
     });
   }
 
-  const rowBtn = "shrink-0 rounded-md p-1 text-muted hover:bg-background hover:text-foreground lg:opacity-60 lg:group-hover:opacity-100";
+  const rowBtn = "shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-background hover:text-foreground lg:opacity-60 lg:group-hover:opacity-100";
 
   const noteRow = (n: NoteMeta, detail?: string, draggable = true) => (
     <li key={n.id}>
       <div
-        className={`group flex items-center rounded-lg pl-1.5 ${n.id === currentId ? "bg-accent/15 text-foreground" : "hover:bg-surface-hover"} ${dragging?.kind === "note" && dragging.id === n.id ? "opacity-40" : ""}`}
+        className={`group flex items-center rounded-md pl-1.5 transition-colors ${n.id === currentId ? "bg-surface-hover text-foreground" : "hover:bg-surface-hover/60"} ${dragging?.kind === "note" && dragging.id === n.id ? "opacity-40" : ""}`}
         onContextMenu={(e) => noteMenu(e, n)}
         {...(draggable ? dragProps({ kind: "note", id: n.id, folder: n.folder }) : {})}
       >
         <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left">
-          <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-accent" : "text-muted"}`} />
+          <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-foreground" : "text-muted"}`} />
           <span className="min-w-0 flex-1">
-            <span className={`block truncate text-sm ${n.id === currentId ? "font-semibold" : ""}`}>{n.title}</span>
+            <span className={`block truncate text-sm ${n.id === currentId ? "font-medium" : "text-foreground/80"}`}>{n.title}</span>
             {detail && <span className="block truncate text-xs text-muted">{detail}</span>}
           </span>
         </button>
@@ -220,7 +220,7 @@ export default function NoteList({
       return (
         <li key={`folder:${c.path}`}>
           <div
-            className={`group flex items-center rounded-lg transition-colors ${target ? "bg-accent/20 ring-2 ring-accent/60" : "hover:bg-surface-hover"} ${dragging?.kind === "folder" && dragging.path === c.path ? "opacity-40" : ""}`}
+            className={`group flex items-center rounded-md transition-colors ${target ? "bg-accent/10 ring-1 ring-inset ring-accent/60" : "hover:bg-surface-hover/60"} ${dragging?.kind === "folder" && dragging.path === c.path ? "opacity-40" : ""}`}
             onContextMenu={(e) => folderMenu(e, c.path)}
             {...dragProps({ kind: "folder", path: c.path })}
             {...dropProps(c.path)}
@@ -239,9 +239,9 @@ export default function NoteList({
               className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-0.5 text-left"
             >
               <ChevronRightIcon className={`h-3 w-3 shrink-0 text-muted transition-transform ${isClosed ? "" : "rotate-90"}`} />
-              <Icon className="h-4 w-4 shrink-0 text-accent" />
-              <span className="min-w-0 truncate text-sm font-semibold">{c.name}</span>
-              <span className="shrink-0 rounded-full bg-background px-1.5 text-[10px] font-semibold tabular-nums text-muted">{count(c)}</span>
+              <Icon className="h-4 w-4 shrink-0 text-muted" />
+              <span className="min-w-0 truncate text-sm font-medium">{c.name}</span>
+              <span className="shrink-0 text-xs tabular-nums text-muted">{count(c)}</span>
             </button>
             <button type="button" onClick={() => actions.newNote(c.path)} aria-label={`New note in ${c.name}`} title="New note here" className={rowBtn}>
               <NotePlusIcon className="h-3.5 w-3.5" />
@@ -265,7 +265,7 @@ export default function NoteList({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex items-center gap-2">
-        <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-surface px-3 py-1.5 focus-within:ring-2 focus-within:ring-accent">
+        <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 transition-colors focus-within:ring-2 focus-within:ring-accent/40">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes or #tags" aria-label="Search notes" className="min-w-0 flex-1 bg-transparent text-base outline-none lg:text-sm" />
         </label>
@@ -284,24 +284,25 @@ export default function NoteList({
               ],
             });
           }}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          className="flex h-9 shrink-0 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
           <PlusIcon className="h-4 w-4" /> New
         </button>
       </div>
       {!query && (
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 border-b border-foreground/10 text-sm">
+          {/* The same underline tabs as the Library's. */}
           {(["folders", "recent"] as const).map((s) => (
-            <button key={s} type="button" onClick={() => setSort(s)} className={`rounded-full px-2.5 py-1 font-semibold ${sort === s ? "bg-surface text-foreground" : "text-muted hover:text-foreground"}`}>
+            <button key={s} type="button" onClick={() => setSort(s)} aria-pressed={sort === s} className={`-mb-px flex h-10 items-center border-b-2 px-2 transition-colors ${sort === s ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
               {s === "folders" ? "Folders" : "Recent"}
             </button>
           ))}
         </div>
       )}
-      <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-2" {...(!query && sort === "folders" ? dropProps("") : {})}>
+      <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto border-b border-foreground/10 px-1 pb-2" {...(!query && sort === "folders" ? dropProps("") : {})}>
         {query ? (
           <>
             {titleHits.map((n) => noteRow(n, n.folder || undefined, false))}
-            {bodyHits.length > 0 && <li className="px-2 pb-1 pt-3 text-xs font-semibold text-muted">In the text</li>}
+            {bodyHits.length > 0 && <li className="px-2 pb-1 pt-3 text-xs font-medium text-muted">In the text</li>}
             {bodyHits.map((h) => {
               const meta = notes.find((n) => n.id === h.id);
               return meta ? noteRow(meta, h.snippet, false) : null;
@@ -316,7 +317,7 @@ export default function NoteList({
             {tree.notes.map((n) => noteRow(n))}
             {/* Where a drag goes to put something at the top level. */}
             {dragging && (
-              <li className={`mt-2 rounded-lg border border-dashed px-3 py-3 text-center text-xs font-semibold transition-colors ${over === "" ? "border-accent bg-accent/15 text-accent" : "border-foreground/15 text-muted"}`}>
+              <li className={`mt-2 rounded-md border border-dashed px-3 py-3 text-center text-xs font-medium transition-colors ${over === "" ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 text-muted"}`}>
                 {canDrop("") ? "Drop here for the top level" : "Drop on a folder"}
               </li>
             )}
@@ -324,20 +325,20 @@ export default function NoteList({
         )}
         {!query && shared.length > 0 && (
           <li className="mt-3 border-t border-foreground/10 pt-2">
-            <button type="button" aria-expanded={sharedOpen} onClick={() => setSharedOpen((o) => !o)} className="flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-0.5 text-left text-xs font-semibold text-muted hover:text-foreground">
+            <button type="button" aria-expanded={sharedOpen} onClick={() => setSharedOpen((o) => !o)} className="flex w-full items-center gap-1.5 rounded-md py-1.5 pl-0.5 text-left text-xs font-medium text-muted transition-colors hover:text-foreground">
               <ChevronRightIcon className={`h-3 w-3 shrink-0 transition-transform ${sharedOpen ? "rotate-90" : ""}`} />
               <UsersIcon className="h-3.5 w-3.5 shrink-0" /> Shared with me
-              <span className="rounded-full bg-background px-1.5 text-[10px] tabular-nums">{shared.length}</span>
+              <span className="tabular-nums">{shared.length}</span>
             </button>
             {sharedOpen && (
               <ul>
                 {shared.map((n) => (
                   <li key={`shared:${n.id}`}>
-                    <div className={`group flex items-center rounded-lg pl-1.5 ${n.id === currentId ? "bg-accent/15" : "hover:bg-surface-hover"}`}>
+                    <div className={`group flex items-center rounded-md pl-1.5 transition-colors ${n.id === currentId ? "bg-surface-hover" : "hover:bg-surface-hover/60"}`}>
                       <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left">
-                        <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-accent" : "text-muted"}`} />
+                        <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-foreground" : "text-muted"}`} />
                         <span className="min-w-0 flex-1">
-                          <span className={`block truncate text-sm ${n.id === currentId ? "font-semibold" : ""}`}>{n.title}</span>
+                          <span className={`block truncate text-sm ${n.id === currentId ? "font-medium" : "text-foreground/80"}`}>{n.title}</span>
                           <span className="block truncate text-xs text-muted">
                             {n.owner ? `@${n.owner}` : n.ownerName} · {n.role === "write" ? "can edit" : "can view"}
                             {n.via && ` · linked from ${n.via}`}
@@ -372,11 +373,11 @@ export default function NoteList({
       <button
         type="button"
         onClick={actions.openTemplates}
-        className={`flex shrink-0 items-center gap-2 rounded-lg border-t border-foreground/10 px-2 py-2 text-left text-sm font-semibold ${templatesOpen ? "bg-accent/15 text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
+        className={`flex h-9 shrink-0 items-center gap-2 rounded-md px-2 text-left text-sm transition-colors ${templatesOpen ? "bg-surface-hover font-medium text-foreground" : "text-foreground/75 hover:bg-surface-hover/60 hover:text-foreground"}`}
       >
-        <DocumentIcon className={`h-4 w-4 shrink-0 ${templatesOpen ? "text-accent" : ""}`} />
+        <DocumentIcon className={`h-4 w-4 shrink-0 ${templatesOpen ? "text-foreground" : "text-muted"}`} />
         <span className="flex-1">Templates</span>
-        <span className="rounded-full bg-background px-1.5 text-[10px] tabular-nums">{templateCount}</span>
+        <span className="text-xs tabular-nums text-muted">{templateCount}</span>
       </button>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>

@@ -2,7 +2,7 @@
 
 import { COMMANDS } from "./commands";
 
-const Code = ({ children }: { children: React.ReactNode }) => <code className="rounded bg-surface px-1 py-0.5 font-mono ring-1 ring-foreground/10 text-[0.85em] text-foreground">{children}</code>;
+const Code = ({ children }: { children: React.ReactNode }) => <code className="rounded-sm bg-surface px-1 py-0.5 font-mono text-[0.85em] text-foreground">{children}</code>;
 
 const EXAMPLES: [string, string][] = [
   ["imap jk <Esc>", "Typing jk quickly in insert mode leaves it, like Esc."],
@@ -27,7 +27,7 @@ export default function VimGuide({ leader }: { leader: string }) {
   return (
     <div className="flex flex-col gap-4 text-sm leading-relaxed">
       <section className="flex flex-col gap-1.5">
-        <h4 className="font-semibold">A mapping, piece by piece</h4>
+        <h4 className="font-medium">A mapping, piece by piece</h4>
         <p className="text-muted">
           Each line is <Code>mode keys action</Code>: when you press <em>keys</em> in that mode, Shed Notes presses <em>action</em> for you. In{" "}
           <Code>nnoremap &lt;leader&gt;s :w&lt;CR&gt;</Code>, the mode is normal, the keys are your leader then s, and the action types <Code>:w</Code> and Enter.
@@ -50,7 +50,7 @@ export default function VimGuide({ leader }: { leader: string }) {
       </section>
 
       <section className="flex flex-col gap-1.5">
-        <h4 className="font-semibold">The leader key</h4>
+        <h4 className="font-medium">The leader key</h4>
         <p className="text-muted">
           Write <Code>&lt;leader&gt;</Code> in the keys and it stands for your leader key — now <strong className="text-foreground">{leaderName}</strong>. Change it under Leader key (in the JSON: <Code>&quot;vim&quot;: {"{"} &quot;leader&quot;: &quot;,&quot; {"}"}</Code>); write Space as <Code>&lt;Space&gt;</Code>.
         </p>
@@ -60,7 +60,7 @@ export default function VimGuide({ leader }: { leader: string }) {
       </section>
 
       <section className="flex flex-col gap-1.5">
-        <h4 className="font-semibold">Running Shed Notes commands</h4>
+        <h4 className="font-medium">Running Shed Notes commands</h4>
         <p className="text-muted">
           An action can be a <Code>:</Code> command. End it with <Code>&lt;CR&gt;</Code> so it runs (without it, it waits in the command line).
         </p>
@@ -78,7 +78,7 @@ export default function VimGuide({ leader }: { leader: string }) {
       </section>
 
       <section className="flex flex-col gap-1.5">
-        <h4 className="font-semibold">Examples</h4>
+        <h4 className="font-medium">Examples</h4>
         <ul className="flex flex-col gap-1.5">
           {EXAMPLES.map(([line, what]) => (
             <li key={line} className="flex flex-col">
@@ -90,7 +90,7 @@ export default function VimGuide({ leader }: { leader: string }) {
       </section>
 
       <section className="flex flex-col gap-1.5">
-        <h4 className="font-semibold">If it doesn&apos;t work</h4>
+        <h4 className="font-medium">If it doesn&apos;t work</h4>
         <ul className="ml-4 list-disc text-muted">
           <li>Vim keys must be on, and mappings work in notes, not in the settings file&apos;s JSON editor.</li>
           <li>Check you&apos;re in the right mode: an nmap does nothing while you&apos;re typing in insert mode.</li>

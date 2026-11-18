@@ -70,7 +70,7 @@ export default function WaveScrollbar({
       onPointerUp={end}
       onPointerCancel={end}
       className={`relative w-full cursor-pointer touch-none ${
-        thin ? "h-3" : "-mt-3 h-3 rounded-full bg-surface"
+        thin ? "h-3" : "-mt-3 h-3 rounded-full bg-foreground/10"
       }`}
     >
       <div

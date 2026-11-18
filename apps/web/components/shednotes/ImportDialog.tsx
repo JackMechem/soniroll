@@ -122,15 +122,15 @@ export default function ImportDialog({ onClose, onDone }: { onClose: () => void;
       <div
         role="dialog"
         aria-label="Import notes"
-        className="flex w-full max-w-md flex-col gap-4 rounded-t-3xl bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-xl sm:rounded-3xl sm:pb-5"
+        className="flex w-full max-w-md flex-col gap-4 rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-xl sm:rounded-xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold">Import notes</h2>
+            <h2 className="text-base font-semibold">Import notes</h2>
             <p className="text-sm text-muted">A .zip from Export all, or any folder of Markdown files.</p>
           </div>
-          <button type="button" onClick={onClose} disabled={busy} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-40">
+          <button type="button" onClick={onClose} disabled={busy} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-40">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
@@ -138,21 +138,21 @@ export default function ImportDialog({ onClose, onDone }: { onClose: () => void;
         <input ref={filesInput} type="file" multiple accept=".zip,.md,.markdown,.txt" className="hidden" onChange={(e) => void pick(e.target.files)} />
         <input ref={folderInput} type="file" multiple className="hidden" onChange={(e) => void pick(e.target.files)} />
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" disabled={busy || reading} onClick={() => filesInput.current?.click()} className="flex flex-col items-center gap-1 rounded-2xl bg-background px-3 py-4 text-sm font-semibold hover:bg-surface-hover disabled:opacity-50">
-            <UploadIcon className="h-5 w-5 text-accent" /> A .zip or files
+          <button type="button" disabled={busy || reading} onClick={() => filesInput.current?.click()} className="flex flex-col items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 py-4 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50">
+            <UploadIcon className="h-4 w-4 text-muted" /> A .zip or files
           </button>
-          <button type="button" disabled={busy || reading} onClick={() => folderInput.current?.click()} className="flex flex-col items-center gap-1 rounded-2xl bg-background px-3 py-4 text-sm font-semibold hover:bg-surface-hover disabled:opacity-50">
-            <FolderIcon className="h-5 w-5 text-accent" /> A folder
+          <button type="button" disabled={busy || reading} onClick={() => folderInput.current?.click()} className="flex flex-col items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 py-4 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50">
+            <FolderIcon className="h-4 w-4 text-muted" /> A folder
           </button>
         </div>
 
         {reading && <LoadingSpinner />}
         {found && found.notes.length > 0 && (
           <>
-            <div className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2.5 text-sm">
+            <div className="flex items-center gap-2 rounded-md bg-background px-3 py-2.5 text-sm">
               <CheckIcon className="h-4 w-4 shrink-0 text-accent" />
               <span className="min-w-0 flex-1">
-                <span className="font-semibold">
+                <span className="font-medium">
                   {found.notes.length} {found.notes.length === 1 ? "note" : "notes"}
                   {found.folders.length > 0 && `, ${found.folders.length} ${found.folders.length === 1 ? "folder" : "folders"}`}
                 </span>
@@ -160,10 +160,10 @@ export default function ImportDialog({ onClose, onDone }: { onClose: () => void;
               </span>
             </div>
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold text-muted">When you already have a note with the same title</p>
+              <p className="text-xs font-medium text-muted">When you already have a note with the same title</p>
               <Select value={clash} options={CLASH} onChange={setClash} disabled={busy} />
             </div>
-            <button type="button" onClick={() => void run()} disabled={busy} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60">
+            <button type="button" onClick={() => void run()} disabled={busy} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-60">
               {busy ? (
                 <>
                   <LoadingSpinner size="sm" inline label="Importing" /> Importing {progress} of {found.notes.length}…

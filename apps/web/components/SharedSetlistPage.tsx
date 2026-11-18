@@ -29,8 +29,8 @@ export default function SharedSetlistPage({ id }: { id: string }) {
       ) : (
         <>
           <div className="flex flex-col gap-1">
-            <p className="flex items-center gap-2 text-sm font-semibold text-muted">
-              <SetlistIcon className="h-5 w-5 text-accent" />
+            <p className="flex items-center gap-2 text-sm text-muted">
+              <SetlistIcon className="h-4 w-4" />
               Setlist · {shared.tunes.length} tune{shared.tunes.length === 1 ? "" : "s"}
               {shared.ownerUsername && (
                 <>
@@ -41,7 +41,7 @@ export default function SharedSetlistPage({ id }: { id: string }) {
                 </>
               )}
             </p>
-            <h1 className="text-3xl font-extrabold tracking-tight">{shared.title}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{shared.title}</h1>
             {shared.description && <p className="whitespace-pre-line">{shared.description}</p>}
           </div>
           <PublicSetlist title={shared.title} tunes={shared.tunes} isMine={shared.isMine} ownSetlistId={shared.setlistId} chartsParam={`shared=${encodeURIComponent(shared.id)}`} />

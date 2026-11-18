@@ -37,7 +37,7 @@ export default function TeacherPage({ id }: { id: string }) {
   if (!lesson) {
     return (
       <LibraryPage>
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Not found" body="You're not this teacher's student (anymore)." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
       </LibraryPage>
@@ -72,7 +72,7 @@ export default function TeacherPage({ id }: { id: string }) {
           {routineItems.length > 0 && (
             <section className="flex flex-col gap-3">
               <div className="px-1">
-                <h2 className="text-lg font-bold">Practice routines</h2>
+                <h2 className="text-sm font-medium">Practice routines</h2>
                 <p className="text-xs text-muted">From {lesson.teacher.name} — already in your Shed Log.</p>
               </div>
               <div className="flex flex-col gap-2">

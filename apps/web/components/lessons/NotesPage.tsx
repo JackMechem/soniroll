@@ -9,7 +9,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { EmptyState, Pill } from "@/components/library/ui";
-import { CapIcon, PersonBadge } from "@/components/lessons/parts";
+import { CapIcon, PersonBadge, btnPrimary } from "@/components/lessons/parts";
 import LessonNoteEditor from "@/components/lessons/LessonNoteEditor";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import { noteSnippet } from "@jam-practice/core/shedNotes";
@@ -75,7 +75,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
   if (!data) {
     return (
       <main className="mx-auto max-w-xl px-4 py-24">
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Notes not found" body="These aren't your lesson notes." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
       </main>
@@ -101,18 +101,18 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
   return (
     <main className="flex w-full flex-col pt-[calc(env(safe-area-inset-top)+3.5rem)] lg:h-dvh lg:flex-row lg:pt-0">
       {/* The list */}
-      <aside className={`${selected ? "hidden lg:flex" : "flex"} w-full shrink-0 flex-col gap-3 border-foreground/[0.06] p-4 lg:h-full lg:w-80 lg:border-r lg:p-5`}>
+      <aside className={`${selected ? "hidden lg:flex" : "flex"} w-full shrink-0 flex-col gap-3 border-foreground/10 p-4 lg:h-full lg:w-80 lg:border-r lg:p-5`}>
         <Link
           href={backHref}
-          className="-ml-1 inline-flex items-center gap-0.5 self-start rounded-full py-1 pl-1 pr-3 text-sm font-semibold text-muted hover:bg-surface hover:text-foreground"
+          className="-ml-1 inline-flex h-8 items-center gap-0.5 self-start rounded-md pl-1 pr-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <ChevronLeftIcon className="h-4 w-4" />
           {heading}
         </Link>
         <div className="flex items-center gap-3">
-          <PersonBadge url={data.other?.avatarUrl} name={heading} />
+          <PersonBadge url={data.other?.avatarUrl} name={heading} size="sm" />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-extrabold tracking-tight">{data.session ? data.session.title : "Lesson notes"}</h1>
+            <h1 className="truncate text-base font-semibold tracking-tight">{data.session ? data.session.title : "Lesson notes"}</h1>
             <p className="truncate text-xs text-muted">
               {data.session
                 ? `${new Date(data.session.start).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · `
@@ -128,13 +128,13 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
             type="button"
             onClick={() => void newNote()}
             disabled={creating}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-accent py-2.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+            className={`${btnPrimary} w-full`}
           >
             <PlusIcon className="h-4 w-4" />
             New note
           </button>
         )}
-        <label className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2 ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
+        <label className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             type="search"
@@ -152,7 +152,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
           ) : (
             groups.map((g) => (
               <div key={g.month} className="flex flex-col gap-1">
-                <p className="px-2 text-[11px] font-bold text-muted">{g.month}</p>
+                <p className="px-2 text-xs font-medium text-muted">{g.month}</p>
                 {g.notes.map((n) => {
                   const active = n.id === selected?.id;
                   const snippet = noteSnippet(n.body, 90);
@@ -162,9 +162,9 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
                       href={href(n.id)}
                       replace
                       aria-current={active ? "page" : undefined}
-                      className={`flex flex-col rounded-xl px-3 py-2 transition-colors ${active ? "bg-accent/15" : "hover:bg-surface"}`}
+                      className={`flex flex-col rounded-md px-2 py-2 transition-colors ${active ? "bg-surface-hover" : "hover:bg-surface-hover/60"}`}
                     >
-                      <span className={`truncate text-sm font-semibold ${active ? "text-foreground" : ""}`}>{n.title || "Untitled"}</span>
+                      <span className={`truncate text-sm font-medium ${active ? "text-foreground" : ""}`}>{n.title || "Untitled"}</span>
                       <span className="truncate text-xs text-muted">
                         {new Date(n.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                         {snippet ? ` · ${snippet}` : ""}
@@ -177,9 +177,9 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
           )}
         </nav>
         {/* Private Shed Notes attached to these lessons: only the person who attached them sees them. */}
-        <section className="flex flex-col gap-2 border-t border-foreground/[0.06] pt-3">
-          <h2 className="text-xs font-semibold text-muted">Your own notes</h2>
-          <AttachedNotes target={{ kind: "lesson", lessonId }} label={`Lessons with ${heading}`} newTitle={`Lessons with ${heading}`} cardClassName="bg-surface" buttonClassName="rounded-full bg-surface px-2.5 py-1 text-xs font-medium hover:bg-surface-hover" />
+        <section className="flex flex-col gap-2 border-t border-foreground/10 pt-3">
+          <h2 className="text-xs font-medium text-muted">Your own notes</h2>
+          <AttachedNotes target={{ kind: "lesson", lessonId }} label={`Lessons with ${heading}`} newTitle={`Lessons with ${heading}`} cardClassName="bg-surface" buttonClassName="rounded-md bg-foreground/[0.05] px-2.5 py-1 text-xs font-medium hover:bg-surface-hover" />
         </section>
       </aside>
 
@@ -195,7 +195,8 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
             onDeleted={() => router.replace(href(notes.find((n) => n.id !== selected.id)?.id))}
           />
         ) : (
-          <div className="m-auto max-w-sm p-8">
+          <div className="m-auto w-full max-w-md p-8">
+            <div className="rounded-lg border border-dashed border-foreground/15">
             <EmptyState
               icon={NoteIcon}
               title={notes.length ? "Pick a note" : teacher ? "No notes yet" : "No notes yet"}
@@ -206,6 +207,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
               }
               action={teacher ? <Pill primary icon={PlusIcon} label="New note" onClick={() => void newNote()} /> : undefined}
             />
+            </div>
           </div>
         )}
       </section>
@@ -255,7 +257,7 @@ function NoteView({ note, teacher, listHref, onDeleted, lessonId }: { note: Note
         <Link
           href={listHref}
           replace
-          className="-ml-1 inline-flex items-center gap-0.5 rounded-full py-1 pl-1 pr-3 text-sm font-semibold text-muted hover:bg-surface hover:text-foreground"
+          className="-ml-1 inline-flex h-8 items-center gap-0.5 rounded-md pl-1 pr-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <ChevronLeftIcon className="h-4 w-4" /> All notes
         </Link>
@@ -272,10 +274,10 @@ function NoteView({ note, teacher, listHref, onDeleted, lessonId }: { note: Note
               onBlur={() => saveRef.current()}
               placeholder="Title"
               aria-label="Note title"
-              className="w-full bg-transparent text-3xl font-extrabold tracking-tight outline-none placeholder:text-muted sm:text-4xl"
+              className="w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-muted sm:text-3xl"
             />
           ) : (
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{note.title || "Untitled"}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{note.title || "Untitled"}</h2>
           )}
           <p className="mt-1 text-xs text-muted">
             {created}
@@ -285,7 +287,7 @@ function NoteView({ note, teacher, listHref, onDeleted, lessonId }: { note: Note
         {teacher && (
           <div className="flex shrink-0 items-center gap-2 pt-2">
             <span
-              className={`text-xs font-semibold ${status === "unsaved" ? "text-muted" : status === "saving" ? "text-muted" : "text-emerald-600 dark:text-emerald-400"}`}
+              className={`text-xs ${status === "unsaved" ? "text-muted" : status === "saving" ? "text-muted" : "text-emerald-600 dark:text-emerald-400"}`}
               aria-live="polite"
             >
               {status === "saving" ? "Saving…" : status === "unsaved" ? "Editing…" : "Saved"}
@@ -295,7 +297,7 @@ function NoteView({ note, teacher, listHref, onDeleted, lessonId }: { note: Note
               onClick={() => setConfirmDelete(true)}
               aria-label="Delete note"
               title="Delete note"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-danger"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
             >
               <TrashIcon className="h-4 w-4" />
             </button>

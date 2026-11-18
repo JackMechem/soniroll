@@ -28,23 +28,18 @@ export default function MyPostsTab() {
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">
-          Posts{posts && posts.length > 0 ? ` (${posts.length})` : ""}
-        </h2>
-        <p className="text-sm text-muted">
-          Everything you&apos;ve posted to Community. Post something new from the Community page
-          itself.
-        </p>
-      </div>
+    <section className="flex flex-col gap-4 text-left">
+      <p className="text-sm text-muted">
+        Everything you&apos;ve posted to Community{posts && posts.length > 0 ? ` (${posts.length})` : ""}. Post something new from the Community page
+        itself.
+      </p>
 
       {posts === undefined ? (
         <div className="flex justify-center py-6">
           <LoadingSpinner />
         </div>
       ) : posts.length === 0 ? (
-        <p className="text-sm text-muted">You haven&apos;t posted anything yet.</p>
+        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">You haven&apos;t posted anything yet.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {posts.map((post) => (

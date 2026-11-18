@@ -5,7 +5,8 @@ import { useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { BackButton, PageHeader, PageShell } from "@/components/library/shared";
+import { BackButton } from "@/components/library/shared";
+import ToolLayout from "@/components/ToolLayout";
 import { SAVE_LABEL, downloadJson, safeFilename, useAutosave } from "@/components/bassgenius/TranscriptionEditor";
 import ScoreEditor from "@/components/notation/ScoreEditor";
 import { DotsVerticalIcon, DownloadIcon, PlusIcon, ScoreIcon, TrashIcon, UploadIcon } from "@/components/tools";
@@ -68,22 +69,18 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
   }
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Score Writer"
-        subtitle="Write music in notation: notes, rests, chords, any key and time. Play it back as you go."
-        helpTopic="score-writer"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => fileInput.current?.click()} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-              <UploadIcon className="h-4 w-4" /> Import
-            </button>
-            <button type="button" onClick={() => void make()} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
-              <PlusIcon className="h-4 w-4" /> New score
-            </button>
-          </div>
-        }
-      />
+    <ScoreShell
+      actions={
+        <>
+          <button type="button" onClick={() => fileInput.current?.click()} className="flex h-8 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
+            <UploadIcon className="h-4 w-4" /> Import
+          </button>
+          <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+            <PlusIcon className="h-4 w-4" /> New score
+          </button>
+        </>
+      }
+    >
       <input
         ref={fileInput}
         type="file"
@@ -95,7 +92,7 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           if (f) void importFile(f);
         }}
       />
-      {error && <p className="rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
       {!isLoading && !isAuthenticated && <p className="text-sm text-muted">Signed out, your scores are kept in this browser. Sign in to keep them in your account and put them in Shed Notes.</p>}
 
       {scores === undefined ? (
@@ -103,34 +100,32 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           <LoadingSpinner />
         </div>
       ) : scores.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-foreground/10 px-6 py-14 text-center">
-          <ScoreIcon className="h-10 w-10 text-accent" />
-          <p className="text-lg font-bold">No scores yet</p>
-          <p className="max-w-sm text-sm text-muted">Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</p>
-          <button type="button" onClick={() => void make()} className="mt-1 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+        <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
+          <p className="max-w-sm text-sm text-muted">
+            {/* Touch screens have no keyboard to type notes with. */}
+            <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</span>
+            <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap a length and a note name (C to B) to add notes, or switch to Write, hold a finger on the staff and lift to add one.</span>
+          </p>
+          <button type="button" onClick={() => void make()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             New score
           </button>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
           {scores.map((s) => (
             <li key={s.id}>
               <div
-                className="group flex h-full items-center gap-3 rounded-2xl bg-surface p-4 transition-colors hover:bg-surface-hover"
+                className="group flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-surface-hover"
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setMenu({ x: e.clientX, y: e.clientY, items: [{ label: "Open", onSelect: () => onOpen(s.id) }, { label: "Delete", danger: true, onSelect: () => setDeleting(s) }] });
                 }}
               >
                 <button type="button" onClick={() => onOpen(s.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
-                    <ScoreIcon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-bold">{s.title}</span>
-                    <span className="block text-xs text-muted">
-                      {s.measureCount} {s.measureCount === 1 ? "bar" : "bars"} · {ago(s.updatedAt)}
-                    </span>
+                  <ScoreIcon className="h-4 w-4 shrink-0 text-muted" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.title}</span>
+                  <span className="shrink-0 text-xs text-muted">
+                    {s.measureCount} {s.measureCount === 1 ? "bar" : "bars"} · {ago(s.updatedAt)}
                   </span>
                 </button>
                 <button
@@ -140,7 +135,7 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
                     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
                     setMenu({ x: r.right - 200, y: r.bottom + 4, items: [{ label: "Open", onSelect: () => onOpen(s.id) }, { label: "Delete", danger: true, onSelect: () => setDeleting(s) }] });
                   }}
-                  className="shrink-0 rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-background hover:text-foreground"
                 >
                   <DotsVerticalIcon className="h-4 w-4" />
                 </button>
@@ -162,7 +157,17 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           onCancel={() => setDeleting(null)}
         />
       )}
-    </PageShell>
+    </ScoreShell>
+  );
+}
+
+/** Score Writer's pages in the same frame as the other tools: the compact header bar with the
+    tool's icon, name and ? (desktop), or the row under the app's top bar (phones). */
+function ScoreShell({ actions, children }: { actions?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <ToolLayout title="Score Writer" layout="stacked" topAligned options={null} actions={actions}>
+      <div className="flex w-full flex-col gap-6 text-left lg:px-2">{children}</div>
+    </ToolLayout>
   );
 }
 
@@ -170,19 +175,19 @@ function ScorePage({ id, onBack }: { id: string; onBack: () => void }) {
   const score = useScore(id);
   if (score === undefined) {
     return (
-      <PageShell>
+      <ScoreShell>
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
-      </PageShell>
+      </ScoreShell>
     );
   }
   if (score === null) {
     return (
-      <PageShell>
+      <ScoreShell>
         <BackButton onClick={onBack} label="Scores" />
         <p className="text-sm text-muted">This score isn&apos;t there any more.</p>
-      </PageShell>
+      </ScoreShell>
     );
   }
   return <OpenScore id={id} loaded={score} onBack={onBack} />;
@@ -196,43 +201,45 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
   const [deleting, setDeleting] = useState(false);
   const { change, flush, saveState } = useAutosave((t: Transcription) => save(id, t));
 
-  const btn = "flex h-10 min-w-10 items-center justify-center gap-1 rounded-lg bg-surface px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover";
+  const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
   return (
-    <PageShell>
+    <ScoreShell>
       <ScoreEditor
         initial={initial}
         onChange={change}
         staffControls
+        underAppBar
         autoFocus
         header={(t, setMeta) => (
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-              <BackButton
-                onClick={() => {
-                  flush();
-                  onBack();
-                }}
-                label="Scores"
-                className="mb-2"
-              />
-              <input
-                value={t.title}
-                onChange={(e) => setMeta({ title: e.target.value })}
-                aria-label="Title"
-                className="w-full min-w-0 rounded-lg bg-transparent text-2xl font-extrabold tracking-tight outline-none ring-accent focus:ring-2 sm:text-3xl"
-              />
-            </div>
+          // Back and the score's actions share one row, the title under them: on a phone the
+          // header stays short, so the staff is in view while you write.
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted" aria-live="polite">
+              <div className="flex">
+                <BackButton
+                  onClick={() => {
+                    flush();
+                    onBack();
+                  }}
+                  label="Scores"
+                />
+              </div>
+              <span className="ml-auto text-xs text-muted" aria-live="polite">
                 {SAVE_LABEL[saveState]}
               </span>
-              <button type="button" onClick={() => downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`)} className={btn} title="Export as a file">
-                <DownloadIcon className="h-4 w-4" /> Export
+              <button type="button" onClick={() => downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`)} className={btn} title="Export as a file" aria-label="Export as a file">
+                <DownloadIcon className="h-4 w-4" /> <span className="max-sm:hidden">Export</span>
               </button>
               <button type="button" onClick={() => setDeleting(true)} className={`${btn} hover:text-danger`} aria-label="Delete score" title="Delete score">
                 <TrashIcon className="h-4 w-4" />
               </button>
             </div>
+            <input
+              value={t.title}
+              onChange={(e) => setMeta({ title: e.target.value })}
+              aria-label="Title"
+              className="w-full min-w-0 rounded-md bg-transparent px-1 -mx-1 text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
           </div>
         )}
       />
@@ -248,6 +255,6 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
           onCancel={() => setDeleting(false)}
         />
       )}
-    </PageShell>
+    </ScoreShell>
   );
 }

@@ -25,23 +25,23 @@ export default function SharedRoutinePage({ id }: { id: string }) {
       ) : (
         <>
           <div className="flex flex-col gap-1">
-            <p className="flex items-center gap-2 text-sm font-semibold text-muted">
-              <CalendarIcon className="h-5 w-5 text-accent" />
+            <p className="flex items-center gap-1.5 text-sm text-muted">
+              <CalendarIcon className="h-4 w-4" />
               Practice routine
               {shared.ownerUsername && (
                 <>
                   {" · shared by "}
-                  <Link href={`/u/${shared.ownerUsername}`} className="text-accent hover:underline">
+                  <Link href={`/u/${shared.ownerUsername}`} className="font-medium text-foreground hover:underline">
                     @{shared.ownerUsername}
                   </Link>
                 </>
               )}
             </p>
-            <h1 className="text-3xl font-extrabold tracking-tight">{shared.routine.name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{shared.routine.name}</h1>
           </div>
           <RoutinePreview routine={shared.routine} />
           {shared.isMine && shared.routineId ? (
-            <Link href={`/shed-log/routine?id=${encodeURIComponent(shared.routineId)}`} className="self-start rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+            <Link href={`/shed-log/routine?id=${encodeURIComponent(shared.routineId)}`} className="flex h-9 items-center self-start rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               Open in your Shed Log
             </Link>
           ) : (

@@ -31,14 +31,14 @@ export function OptionsCard({ id, children }: { id: string; children: React.Reac
   }
 
   return (
-    <div className="w-full rounded-2xl bg-surface text-left">
+    <div className="w-full rounded-lg bg-surface text-left">
       <div className="flex items-center">
         <button
           type="button"
           onClick={() => update({ open: !open })}
           aria-expanded={open}
           aria-controls={bodyId}
-          className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent sm:px-6"
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-medium text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent sm:px-6"
         >
           <span className="flex items-center gap-2">
             <SlidersIcon className="h-4 w-4 shrink-0" />
@@ -63,7 +63,7 @@ export function OptionsCard({ id, children }: { id: string; children: React.Reac
           aria-label={showHints ? "Hide option descriptions" : "Show option descriptions"}
           title={showHints ? "Hide option descriptions" : "Show option descriptions"}
           onClick={toggleHints}
-          className={`mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent sm:mr-3 ${
+          className={`mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent sm:mr-3 ${
             showHints
               ? "bg-accent text-accent-foreground"
               : "text-muted hover:bg-background hover:text-foreground"

@@ -30,9 +30,9 @@ export default function FollowButton({ targetUserId, size = "md" }: { targetUser
       type="button"
       onClick={() => void toggle()}
       disabled={isFollowing === undefined || pending}
-      className={`shrink-0 rounded-full ${size === "sm" ? "px-3 py-1 text-xs" : "px-5 py-2 text-sm"} font-semibold transition-colors disabled:opacity-50 ${
+      className={`shrink-0 rounded-md ${size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm"} font-medium transition-colors disabled:opacity-50 ${
         isFollowing
-          ? "bg-surface hover:bg-surface-hover"
+          ? "hover:bg-surface-hover"
           : "bg-accent text-accent-foreground hover:bg-accent-hover"
       }`}
     >

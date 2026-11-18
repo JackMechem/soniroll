@@ -41,10 +41,10 @@ export function PanelSection({
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-2.5 px-4 py-3 text-left hover:bg-surface-hover/60"
+        className="flex h-11 w-full items-center gap-2.5 px-4 text-left transition-colors hover:bg-surface-hover"
       >
-        <Icon className="h-4 w-4 shrink-0 text-accent" />
-        <span className="font-semibold">{title}</span>
+        <Icon className="h-4 w-4 shrink-0 text-muted" />
+        <span className="text-sm font-medium">{title}</span>
         {!open && summary && <span className="min-w-0 flex-1 truncate text-right text-xs text-muted">{summary}</span>}
         <ChevronRightIcon className={`ml-auto h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`} />
       </button>
@@ -57,7 +57,7 @@ export function PanelSection({
 export function Field({ label, note, children }: { label: string; note?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5 text-sm">
-      {label && <span className="text-xs font-semibold text-muted">{label}</span>}
+      {label && <span className="text-xs font-medium text-muted">{label}</span>}
       {children}
       {note && <span className="text-xs leading-relaxed text-muted">{note}</span>}
     </div>
@@ -85,7 +85,7 @@ export function LevelRow({
         <span className="font-medium">{label}</span>
         {value === null ? (
           onTurnOn ? (
-            <button type="button" onClick={onTurnOn} className="text-xs font-semibold text-accent hover:underline">
+            <button type="button" onClick={onTurnOn} className="text-xs font-medium text-accent hover:underline">
               {offLabel ?? "Turn on"}
             </button>
           ) : (
@@ -111,6 +111,21 @@ export function LevelRow({
   );
 }
 
+/** Phones: a small chip under Play saying what's set (tempo, style…), since the options panel is
+    hidden in a sheet there. Tapping it opens the sheet, like Options. */
+export function OptionsSummaryChip({ summary, onOpen }: { summary: string; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Options: ${summary}`}
+      className="flex h-8 max-w-full items-center rounded-full bg-foreground/[0.05] px-3.5 text-xs font-medium tabular-nums text-muted transition-colors hover:bg-surface-hover hover:text-foreground lg:hidden"
+    >
+      <span className="truncate">{summary}</span>
+    </button>
+  );
+}
+
 /** Phones: the properties panel as a bottom sheet (Esc, the ×, or a tap above it closes it). */
 export function OptionsSheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
@@ -130,12 +145,12 @@ export function OptionsSheet({ open, onClose, children }: { open: boolean; onClo
       <div
         role="dialog"
         aria-label="Options"
-        className="flex max-h-[88dvh] flex-col rounded-t-2xl bg-surface pb-[env(safe-area-inset-bottom)] text-left shadow-xl"
+        className="flex max-h-[88dvh] flex-col rounded-t-xl border-t border-foreground/15 bg-surface pb-[env(safe-area-inset-bottom)] text-left shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-foreground/10 px-4 py-3">
-          <h2 className="text-lg font-bold">Options</h2>
-          <button type="button" onClick={onClose} aria-label="Close options" className="flex h-9 w-9 items-center justify-center rounded-full bg-background hover:bg-surface-hover">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-foreground/10 pl-4 pr-2">
+          <h2 className="text-sm font-semibold">Options</h2>
+          <button type="button" onClick={onClose} aria-label="Close options" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>

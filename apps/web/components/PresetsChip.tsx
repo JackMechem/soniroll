@@ -11,9 +11,9 @@ import { BookmarkIcon, CheckIcon, DotsVerticalIcon, PencilIcon, PlusIcon, Repeat
 import { usePresets, type Preset, type ToolPresets } from "@/lib/toolPresets";
 
 // A tool's presets UI (the data side is `lib/toolPresets.ts`). A tool gets it one of three ways:
-// `ToolLayout`'s `presets` prop (a chip first in its chips), `PresetsChip` inside a tool's own
-// `SettingsBar` (Metronome, Time Test, the Recorder's metronome), or `PresetsSection` in a
-// properties panel (Bass Genius, Drum Generator, Syncopation).
+// `ToolLayout`'s `presets` prop (`PresetsButton` in the tool's top bar), `PresetsChip` inside a
+// tool's own `SettingsBar` (the Recorder's metronome), or `PresetsSection` in a properties panel
+// (Rhythm Section, Syncopation).
 
 type PresetsState = ReturnType<typeof usePresets>;
 
@@ -26,11 +26,48 @@ function currentLabel({ active, presets }: PresetsState) {
 /** The "Presets" setting chip; its popover is the presets list. */
 export function PresetsChip({ tool }: { tool: ToolPresets }) {
   const state = usePresets(tool);
+  const [open, setOpen] = useState(false);
   return (
-    <SettingChip icon={BookmarkIcon} label="Presets" value={<span className="block max-w-[10rem] truncate">{currentLabel(state)}</span>}>
-      <PresetsList state={state} />
+    <SettingChip icon={BookmarkIcon} label="Presets" value={<span className="block max-w-[10rem] truncate">{currentLabel(state)}</span>} open={open} onOpenChange={setOpen}>
+      <PresetsList state={state} onApplied={() => closeSheetOnPhone(setOpen)} />
     </SettingChip>
   );
+}
+
+/** The tool's presets as a small button in its top bar (`ToolLayout`), always in view and out of
+    the way of the option chips: the bookmark, "Presets" and the one in use. */
+export function PresetsButton({ tool }: { tool: ToolPresets }) {
+  const state = usePresets(tool);
+  const [open, setOpen] = useState(false);
+  return (
+    <SettingChip
+      icon={BookmarkIcon}
+      label="Presets"
+      open={open}
+      onOpenChange={setOpen}
+      trigger={{
+        // min-w-0 (no shrink-0): on a phone's crowded top row the name truncates rather than
+        // pushing the row off screen (`ToolLayout`'s PhoneBar lets it shrink).
+        className: "flex h-8 min-w-0 max-w-[14rem] items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover",
+        content: (
+          <>
+            <BookmarkIcon className="h-4 w-4 shrink-0 text-accent" />
+            {/* Phones: just the preset in use, or "Presets" while none is (no "Custom"/"None"). */}
+            <span className={state.active ? "hidden text-muted sm:inline" : "truncate text-muted"}>Presets</span>
+            <span className={`truncate font-medium ${state.active ? "" : "hidden sm:inline"}`}>{currentLabel(state)}</span>
+          </>
+        ),
+      }}
+    >
+      <PresetsList state={state} onApplied={() => closeSheetOnPhone(setOpen)} />
+    </SettingChip>
+  );
+}
+
+/** On a phone the presets are a bottom sheet over the tool: applying one closes it, so you see
+    what changed. (On a wider screen the popover stays, to try one preset after another.) */
+function closeSheetOnPhone(setOpen: (open: boolean) => void) {
+  if (window.innerWidth < 640) setOpen(false);
 }
 
 /** A "Presets" section for a properties panel (`PanelSection`, the Bass Genius look). Closed
@@ -54,7 +91,7 @@ type Dialog =
  * A tool's saved presets: tap one to apply it, ⋮ (or right-click) to update it with the current
  * options, rename or delete it, and a button to save the current options as a new one.
  */
-function PresetsList({ state }: { state: PresetsState }) {
+function PresetsList({ state, onApplied }: { state: PresetsState; /** After a preset is applied. */ onApplied?: () => void }) {
   const { presets, active } = state;
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -85,7 +122,7 @@ function PresetsList({ state }: { state: PresetsState }) {
             return (
               <li
                 key={p.id}
-                className={`flex items-center rounded-xl transition-colors ${on ? "bg-accent/15" : "hover:bg-background"}`}
+                className={`flex items-center rounded-md transition-colors ${on ? "bg-surface-hover" : "hover:bg-surface-hover/60"}`}
                 onContextMenu={(e) => {
                   // (React bubbles events from the portaled menu up to here; ignore those.)
                   if (!e.currentTarget.contains(e.target as Node)) return;
@@ -95,10 +132,13 @@ function PresetsList({ state }: { state: PresetsState }) {
               >
                 <button
                   type="button"
-                  onClick={() => state.apply(p)}
+                  onClick={() => {
+                    state.apply(p);
+                    onApplied?.();
+                  }}
                   aria-pressed={on}
                   title={on ? "Your options match this preset" : `Use “${p.name}”`}
-                  className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-2.5 pl-3 pr-2 text-left text-sm font-medium"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-2 pl-2.5 pr-2 text-left text-sm font-medium"
                 >
                   <span className="min-w-0 flex-1 truncate">{p.name}</span>
                   {on && <CheckIcon className="h-4 w-4 shrink-0 text-accent" />}
@@ -111,7 +151,7 @@ function PresetsList({ state }: { state: PresetsState }) {
                     const r = e.currentTarget.getBoundingClientRect();
                     openMenu(p, r.right - 240, r.bottom + 4);
                   }}
-                  className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+                  className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
                 >
                   <DotsVerticalIcon className="h-4 w-4" />
                 </button>
@@ -123,7 +163,7 @@ function PresetsList({ state }: { state: PresetsState }) {
       <button
         type="button"
         onClick={() => setDialog({ kind: "save" })}
-        className="flex items-center gap-1.5 self-start rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+        className="flex h-9 items-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
       >
         <PlusIcon className="h-4 w-4" />
         Save current options

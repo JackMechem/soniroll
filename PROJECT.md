@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.4 beta** (see versioning).
+**v0.10.5 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -144,6 +144,9 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   conditionally mounting it.
 - Next caches optimized images by URL: when retaking screenshots (landing page `public/landing/`,
   Help `public/help/`), use a new versioned folder and bump the folder constant (`SHOTS`).
+- Convex answers a page's first batch of queries together, so one big query (the ~400 KB chord
+  chart library) held the whole page half-loaded. Subscribe to big, secondary queries only after
+  `users.current` has answered (as `useChordChartsLibrary` does). See `docs/notes/ux-refresh.md`.
 - `react-hooks` lint (React Compiler) rejects reading refs during render and calling `setState`
   synchronously inside an effect; restructure rather than disabling the rule.
 - In split-screen (tiling) mode, keep the address bar in sync with `history.replaceState`
@@ -300,6 +303,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |
 | Feedback, reports, admin panel, Mayday switches, analytics, launch checklist | `launch-admin-analytics.md` |
+| UX refresh (2026-11-17): radius scale, borders vs fills, flat sidebar with coloured icons, phone top bar, tool header, decluttered dashboard/library/Shed Log | `ux-refresh.md` |
 | Desktop app (`apps/desktop`): Tauri, reusing web components via aliases, native audio (the Web Audio bridge to `web-audio-api`), Google sign-in through the system browser; CI, `desktop-v*` release tags and the Nix package (update its pnpm hash when the lock file changes) | `desktop-app.md` |
 
 ## Current state at a glance (2026-10-18)

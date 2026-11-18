@@ -9,6 +9,7 @@ import { OptionSection, OptionsCard } from "@/components/OptionsCard";
 import KeyHint from "@/components/KeyHint";
 import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
+import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
 import { toolPresets } from "@/lib/toolPresets";
 import WaveScrollbar from "@/components/WaveScrollbar";
 import Waveform, { LoopRegion, View } from "@/components/Waveform";
@@ -53,8 +54,18 @@ function sliderStyle(value: number, min: number, max: number) {
   return { "--progress": `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties;
 }
 
+/** Hidden on touch screens, which have no keyboard, Shift or right-click. */
+const MOUSE_ONLY = "[@media(pointer:coarse)]:hidden";
+const TOUCH_ONLY = "hidden [@media(pointer:coarse)]:inline";
+
+/** The shortest loop the Loop start / Loop end buttons make, in seconds. */
+const MIN_LOOP_SECONDS = 0.05;
+
+const loopButton =
+  "inline-flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
+
 const zoomButton =
-  "rounded-lg bg-surface px-2.5 py-1 text-sm font-semibold hover:bg-surface-hover disabled:opacity-40";
+  "flex h-8 min-w-8 items-center justify-center rounded-md bg-foreground/[0.05] px-2 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
 
 const CONTROL_HINTS: [string, string][] = [
   ["Drag", "pan"],
@@ -84,10 +95,10 @@ function TransportButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex items-center justify-center rounded-full transition-colors ${
+      className={`flex items-center justify-center transition-colors ${
         primary
-          ? "h-14 w-14 bg-accent text-accent-foreground hover:bg-accent-hover"
-          : "h-11 min-w-11 bg-surface px-3 text-sm font-semibold hover:bg-surface-hover"
+          ? "h-14 w-14 rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
+          : "h-11 min-w-11 rounded-md px-3 text-sm font-medium tabular-nums hover:bg-surface-hover"
       }`}
     >
       {children}
@@ -117,6 +128,8 @@ export default function SlowDowner() {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
   const [pendingDelete, setPendingDelete] = useState<LibraryEntry | null>(null);
+  const [loopNote, setLoopNote] = useState<string | null>(null);
+  const loopNoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mediaRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -310,18 +323,35 @@ export default function SlowDowner() {
     setLoopOn(true);
   }
 
+  /** Sets one end of the loop. With no loop yet, a new 5-second loop starts (or ends) there. A
+      start past the loop's end starts a new 5-second loop there (moving on through the song); an
+      end at or before the start is ignored, with a short note saying why (it used to make a new
+      loop somewhere unexpected). */
   function setEdge(edge: "start" | "end", t: number) {
     const clamped = Math.min(duration, Math.max(0, t));
-    setLoop((prev) => {
-      const base = prev ?? { start: clamped, end: Math.min(duration, clamped + 5) };
-      const next = { ...base, [edge]: clamped };
-      if (next.end - next.start < 0.05) {
-        if (edge === "start") next.start = Math.max(0, next.end - 0.05);
-        else next.end = Math.min(duration, next.start + 0.05);
-      }
-      return next;
-    });
+    let next: LoopRegion;
+    if (edge === "start") {
+      next = loop && clamped < loop.end - MIN_LOOP_SECONDS ? { ...loop, start: clamped } : { start: clamped, end: Math.min(duration, clamped + 5) };
+      if (next.end - next.start < MIN_LOOP_SECONDS) next.start = Math.max(0, next.end - MIN_LOOP_SECONDS);
+    } else {
+      if (clamped <= (loop ? loop.start : 0) + MIN_LOOP_SECONDS) return showLoopNote("End must be after the start");
+      next = loop ? { ...loop, end: clamped } : { start: Math.max(0, clamped - 5), end: clamped };
+    }
+    setLoopNote(null);
+    setLoop(next);
     setLoopOn(true);
+  }
+
+  /** A short note under the loop buttons that clears itself. */
+  function showLoopNote(text: string) {
+    setLoopNote(text);
+    if (loopNoteTimer.current) clearTimeout(loopNoteTimer.current);
+    loopNoteTimer.current = setTimeout(() => setLoopNote(null), 3000);
+  }
+
+  function clearLoop() {
+    setLoop(null);
+    setLoopOn(false);
   }
 
   function zoomAt(factor: number, anchor: number) {
@@ -388,13 +418,7 @@ export default function SlowDowner() {
       ...(loop
         ? [
             { label: "Zoom to loop", onSelect: zoomToLoop },
-            {
-              label: "Clear loop",
-              onSelect: () => {
-                setLoop(null);
-                setLoopOn(false);
-              },
-            },
+            { label: "Clear loop", onSelect: clearLoop },
           ]
         : []),
     ];
@@ -421,125 +445,137 @@ export default function SlowDowner() {
 
   const zoomed = duration > 0 && view.span < duration - 0.01;
 
+  // The options, as chips right under the main display (passing them to ToolLayout's `options`
+  // would pin them to the bottom of the page, far below the drop zone on a big screen).
+  const options = (
+    <OptionsCard id="slow-downer">
+      <OptionSection title="Speed" icon={StopwatchIcon} summary={`${speed}%`}>
+        <label className="flex flex-col gap-2 text-sm">
+          <span className="flex items-center justify-between font-medium text-muted">
+            Playback speed
+            <span className="tabular-nums text-foreground">{speed}%</span>
+          </span>
+          <input
+            type="range"
+            min={MIN_SPEED}
+            max={MAX_SPEED}
+            step={5}
+            value={speed}
+            onChange={(e) => updateSettings({ speed: Number(e.target.value) })}
+            style={sliderStyle(speed, MIN_SPEED, MAX_SPEED)}
+            className="slider h-6 w-full cursor-pointer"
+          />
+        </label>
+        <Hint>How fast the file plays back, as a percentage of its original speed.</Hint>
+        <div className="flex flex-wrap gap-2">
+          {SPEED_PRESETS.map((preset) => (
+            <PoolPill key={preset} on={speed === preset} onClick={() => updateSettings({ speed: preset })} plainClassName="rounded-md px-3 py-1.5 text-sm font-medium tabular-nums">
+              {preset}%
+            </PoolPill>
+          ))}
+        </div>
+        <SwitchRow
+          label="Keep original pitch"
+          checked={preservePitch}
+          onChange={(checked) => updateSettings({ preservePitch: checked })}
+          hint="Corrects the pitch so slowing down doesn't also drop it (or speeding up raise it)."
+        />
+      </OptionSection>
+
+      <OptionSection title="Volume" icon={SpeakerIcon} summary={`${Math.round(volume * 100)}%`}>
+        <label className="flex flex-col gap-2 text-sm">
+          <span className="flex items-center justify-between font-medium text-muted">
+            Volume
+            <span className="tabular-nums text-foreground">{Math.round(volume * 100)}%</span>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={volume}
+            onChange={(e) => updateSettings({ volume: Number(e.target.value) })}
+            style={sliderStyle(volume, 0, 1)}
+            className="slider h-6 w-full cursor-pointer"
+          />
+        </label>
+        <Hint>Playback volume for this file.</Hint>
+      </OptionSection>
+
+      <OptionSection title="Markers" icon={FlagIcon} summary={markers.length ? `${markers.length}` : "None"}>
+        {markers.length === 0 ? (
+          <p className="text-sm text-muted">
+            <span className={MOUSE_ONLY}>No markers yet. Right-click the waveform to add one at that spot, or add one at the playhead.</span>
+            <span className={TOUCH_ONLY}>No markers yet. Move the playhead to a spot and tap Add marker.</span>
+          </p>
+        ) : (
+          <ul className="flex max-h-96 flex-col divide-y divide-foreground/10 overflow-y-auto pr-1">
+            {markers.map((marker) => (
+              <li
+                key={marker.id}
+                className="flex flex-col gap-1.5 py-2 text-sm first:pt-0"
+              >
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => seek(marker.time)}
+                    title="Jump to marker"
+                    className="h-8 w-16 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-left tabular-nums transition-colors hover:bg-surface-hover"
+                  >
+                    {formatTime(marker.time)}
+                  </button>
+                  <input
+                    value={marker.label}
+                    onChange={(e) => updateMarker(marker.id, { label: e.target.value })}
+                    aria-label="Marker name"
+                    className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 outline-none focus:ring-2 focus:ring-accent/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMarkers((prev) => prev.filter((m) => m.id !== marker.id))}
+                    aria-label={`Delete ${marker.label}`}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <textarea
+                  value={marker.note}
+                  onChange={(e) => updateMarker(marker.id, { note: e.target.value })}
+                  placeholder="Add notes…"
+                  aria-label={`Notes for ${marker.label}`}
+                  rows={2}
+                  className="w-full resize-y rounded-md bg-foreground/[0.05] px-2 py-1.5 text-sm outline-none placeholder:text-muted focus:ring-2 focus:ring-accent/40"
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+        <button
+          type="button"
+          onClick={() => addMarker(time)}
+          disabled={!file}
+          className="inline-flex h-8 items-center justify-center self-start rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50"
+        >
+          Add marker at playhead
+        </button>
+      </OptionSection>
+    </OptionsCard>
+  );
+  const optionChips = (
+    <ChipsModeContext.Provider value={true}>
+      <div className="flex w-full flex-col items-center gap-3 pt-2">
+        <SettingsBar>{options}</SettingsBar>
+      </div>
+    </ChipsModeContext.Provider>
+  );
+
   return (
     <ToolLayout
       title="Slow Downer"
       presets={toolPresets("slow-downer", settings, updateSettings, ["maximized"])}
       layout="stacked"
-      options={
-        <OptionsCard id="slow-downer">
-          <OptionSection title="Speed" icon={StopwatchIcon} summary={`${speed}%`}>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="flex items-center justify-between font-medium text-muted">
-                Playback speed
-                <span className="tabular-nums text-foreground">{speed}%</span>
-              </span>
-              <input
-                type="range"
-                min={MIN_SPEED}
-                max={MAX_SPEED}
-                step={5}
-                value={speed}
-                onChange={(e) => updateSettings({ speed: Number(e.target.value) })}
-                style={sliderStyle(speed, MIN_SPEED, MAX_SPEED)}
-                className="slider h-6 w-full cursor-pointer"
-              />
-            </label>
-            <Hint>How fast the file plays back, as a percentage of its original speed.</Hint>
-            <div className="flex flex-wrap gap-2">
-              {SPEED_PRESETS.map((preset) => (
-                <PoolPill key={preset} on={speed === preset} onClick={() => updateSettings({ speed: preset })} plainClassName="rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums">
-                  {preset}%
-                </PoolPill>
-              ))}
-            </div>
-            <SwitchRow
-              label="Keep original pitch"
-              checked={preservePitch}
-              onChange={(checked) => updateSettings({ preservePitch: checked })}
-              hint="Corrects the pitch so slowing down doesn't also drop it (or speeding up raise it)."
-            />
-          </OptionSection>
-
-          <OptionSection title="Volume" icon={SpeakerIcon} summary={`${Math.round(volume * 100)}%`}>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="flex items-center justify-between font-medium text-muted">
-                Volume
-                <span className="tabular-nums text-foreground">{Math.round(volume * 100)}%</span>
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={volume}
-                onChange={(e) => updateSettings({ volume: Number(e.target.value) })}
-                style={sliderStyle(volume, 0, 1)}
-                className="slider h-6 w-full cursor-pointer"
-              />
-            </label>
-            <Hint>Playback volume for this file.</Hint>
-          </OptionSection>
-
-          <OptionSection title="Markers" icon={FlagIcon} summary={markers.length ? `${markers.length}` : "None"}>
-            {markers.length === 0 ? (
-              <p className="text-sm text-muted">
-                No markers yet. Right-click the waveform to add one at that spot.
-              </p>
-            ) : (
-              <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
-                {markers.map((marker) => (
-                  <li
-                    key={marker.id}
-                    className="flex flex-col gap-1.5 rounded-xl bg-background/60 p-2 text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => seek(marker.time)}
-                        title="Jump to marker"
-                        className="w-16 shrink-0 rounded-lg bg-background px-2 py-1.5 text-left tabular-nums hover:bg-surface-hover"
-                      >
-                        {formatTime(marker.time)}
-                      </button>
-                      <input
-                        value={marker.label}
-                        onChange={(e) => updateMarker(marker.id, { label: e.target.value })}
-                        aria-label="Marker name"
-                        className="min-w-0 flex-1 rounded-lg bg-background px-2 py-1.5 outline-none focus:ring-2 focus:ring-accent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setMarkers((prev) => prev.filter((m) => m.id !== marker.id))}
-                        aria-label={`Delete ${marker.label}`}
-                        className="rounded-lg px-2 py-1.5 text-muted hover:text-danger"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <textarea
-                      value={marker.note}
-                      onChange={(e) => updateMarker(marker.id, { note: e.target.value })}
-                      placeholder="Add notes…"
-                      aria-label={`Notes for ${marker.label}`}
-                      rows={2}
-                      className="w-full resize-y rounded-lg bg-background px-2 py-1.5 text-sm outline-none placeholder:text-muted focus:ring-2 focus:ring-accent"
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button
-              type="button"
-              onClick={() => addMarker(time)}
-              disabled={!file}
-              className="rounded-lg bg-background px-3 py-1.5 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
-            >
-              Add marker at playhead
-            </button>
-          </OptionSection>
-        </OptionsCard>
-      }
+      options={null}
     >
       <video
         ref={mediaRef}
@@ -592,11 +628,15 @@ export default function SlowDowner() {
               const dropped = e.dataTransfer.files?.[0];
               if (dropped) loadFile(dropped);
             }}
-            className={`flex w-full flex-col items-center gap-4 rounded-2xl border-2 border-dashed px-6 py-14 transition-colors ${
-              dragOver ? "border-accent bg-accent/10" : "border-surface-hover bg-surface"
+            className={`flex w-full max-w-2xl flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-14 transition-colors ${
+              dragOver ? "border-accent bg-accent/10" : "border-foreground/15"
             }`}
           >
-            <p className="text-lg font-semibold">Drop an audio or video file here</p>
+            {/* Touch screens can't drop a file. */}
+            <p className="text-base font-medium">
+              <span className={MOUSE_ONLY}>Drop an audio or video file here</span>
+              <span className={TOUCH_ONLY}>Choose an audio or video file</span>
+            </p>
             <p className="max-w-xs text-sm text-muted">
               MP3, WAV, M4A, FLAC, MP4 and more. For video files only the audio is used. Nothing is
               uploaded — files are saved in this browser so they&apos;re here next time.
@@ -604,7 +644,7 @@ export default function SlowDowner() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className="mt-1 inline-flex h-12 items-center rounded-full bg-accent px-8 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
             >
               Choose a file
             </button>
@@ -614,12 +654,12 @@ export default function SlowDowner() {
               aria-label="Saved files"
               className="flex w-full max-w-2xl flex-col gap-2 text-left"
             >
-              <h2 className="text-sm font-semibold text-muted">Saved in this browser</h2>
-              <ul className="flex flex-col gap-1.5">
+              <h2 className="text-sm font-medium">Saved in this browser</h2>
+              <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
                 {library.map((entry) => (
                   <li
                     key={entry.id}
-                    className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-sm"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface-hover"
                   >
                     <button
                       type="button"
@@ -634,7 +674,7 @@ export default function SlowDowner() {
                       onClick={() => void removeSaved(entry)}
                       aria-label={`Remove ${entry.name}`}
                       title="Remove from this browser"
-                      className="rounded-lg px-2 py-1 text-muted hover:text-danger"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-background hover:text-danger"
                     >
                       ✕
                     </button>
@@ -675,9 +715,9 @@ export default function SlowDowner() {
             />
           </div>
 
-          <p className="text-5xl font-bold tabular-nums">
+          <p className="text-5xl font-semibold tabular-nums tracking-tight">
             {formatTime(time)}
-            <span className="text-xl font-semibold text-muted"> / {formatTime(duration)}</span>
+            <span className="text-xl font-medium text-muted"> / {formatTime(duration)}</span>
           </p>
 
           <div className={`relative w-full ${maximized ? "min-h-64 flex-1" : ""}`}>
@@ -706,10 +746,10 @@ export default function SlowDowner() {
                 aria-pressed={loopOn}
                 aria-label={loopOn ? "Looping — click to turn off" : "Loop off — click to turn on"}
                 title={loopOn ? "Looping — click to turn off" : "Loop off — click to turn on"}
-                className={`absolute right-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full shadow transition-colors ${
+                className={`absolute right-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
                   loopOn
-                    ? "bg-accent text-accent-foreground hover:bg-accent-hover"
-                    : "bg-surface-hover text-muted hover:text-foreground"
+                    ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
+                    : "border-foreground/15 bg-surface text-muted hover:text-foreground"
                 }`}
               >
                 <RepeatIcon className="h-4 w-4" />
@@ -717,10 +757,14 @@ export default function SlowDowner() {
             )}
           </div>
 
-          <div className="flex w-full items-center justify-between text-xs text-muted">
-            <span>
-              {analyzing ? "Analyzing audio…" : peaks ? "" : "Waveform unavailable for this file"}
-            </span>
+          <div className="flex w-full flex-wrap items-center justify-between gap-y-2 text-xs text-muted">
+            {/* Touch screens have no Shift + drag, so say how to make a loop there (its own line). */}
+            {peaks && !analyzing && (
+              <p className="hidden basis-full text-center [@media(pointer:coarse)]:block">
+                {loop ? "Drag the loop's edges to change it" : "Drag across the wave to loop a section"}
+              </p>
+            )}
+            <span>{analyzing ? "Analyzing audio…" : peaks ? "" : "Waveform unavailable for this file"}</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -742,7 +786,7 @@ export default function SlowDowner() {
               >
                 ▶
               </button>
-              <span className="mx-1 h-5 w-px bg-surface-hover" />
+              <span className="mx-1 h-5 w-px bg-foreground/10" />
               <button
                 type="button"
                 onClick={() => zoom(1.5)}
@@ -772,17 +816,17 @@ export default function SlowDowner() {
               >
                 Fit
               </button>
-              <span className="mx-1 h-5 w-px bg-surface-hover" />
+              <span className="mx-1 h-5 w-px bg-foreground/10" />
               <button
                 type="button"
                 onClick={() => updateSettings({ maximized: !maximized })}
                 aria-pressed={maximized}
                 aria-label={maximized ? "Shrink waveform" : "Maximise waveform height"}
                 title={maximized ? "Shrink waveform" : "Maximise waveform height"}
-                className={`rounded-lg px-2.5 py-1 text-sm font-semibold transition-colors ${
+                className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
                   maximized
-                    ? "bg-accent text-accent-foreground hover:bg-accent-hover"
-                    : "bg-surface hover:bg-surface-hover"
+                    ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
+                    : "border-foreground/15 hover:bg-surface-hover"
                 }`}
               >
                 {maximized ? (
@@ -821,9 +865,36 @@ export default function SlowDowner() {
             </TransportButton>
           </div>
 
+          {/* Loops and markers without Shift-drag or right-click (phones and tablets). */}
+          <div role="group" aria-label="Loop and markers" className="flex flex-wrap items-center justify-center gap-2">
+            <button type="button" onClick={() => setEdge("start", time)} disabled={!duration} title="Start the loop at the playhead" className={loopButton}>
+              <RepeatIcon className="h-4 w-4 text-muted" />
+              Loop start
+            </button>
+            <button type="button" onClick={() => setEdge("end", time)} disabled={!duration} title="End the loop at the playhead" className={loopButton}>
+              Loop end
+            </button>
+            {loop && (
+              <span className={`text-sm tabular-nums ${loopOn ? "text-foreground" : "text-muted"}`} title={loopOn ? "The loop" : "The loop (off)"}>
+                Loop {formatTime(loop.start)}–{formatTime(loop.end)}
+              </span>
+            )}
+            <button type="button" onClick={clearLoop} disabled={!loop} className={loopButton}>
+              Clear loop
+            </button>
+            <span className="mx-1 hidden h-5 w-px bg-foreground/10 sm:block" aria-hidden />
+            <button type="button" onClick={() => addMarker(time)} disabled={!duration} title="Add a marker at the playhead" className={loopButton}>
+              <FlagIcon className="h-4 w-4 text-muted" />
+              Add marker
+            </button>
+          </div>
+          <p role="status" aria-live="polite" className={`-mt-3 text-sm text-muted ${loopNote ? "" : "sr-only"}`}>
+            {loopNote}
+          </p>
+
           <ul
             aria-label="Controls"
-            className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-muted"
+            className={`flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-muted ${MOUSE_ONLY}`}
           >
             {CONTROL_HINTS.map(([keys, action]) => (
               <li key={keys}>
@@ -833,6 +904,8 @@ export default function SlowDowner() {
           </ul>
         </>
       )}
+
+      {optionChips}
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {pendingDelete && (

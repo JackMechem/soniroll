@@ -31,12 +31,12 @@ export default function AdvancedSlider({
   const round = value === max || (max - min >= 20 && value % 10 === 0) || (max - min < 20 && max - min >= 5 && value % 5 === 0);
   return (
     <label className="flex flex-col gap-2 text-sm">
-      <span className={`flex items-center justify-between ${reward ? "font-semibold text-foreground" : "font-medium text-muted"}`}>
+      <span className="flex items-center justify-between text-xs font-medium text-muted">
         {label}
         {reward ? (
           <span className="flex items-center gap-1.5">
             <Sparkle show={round && !disabled} at={value} color={reward.color} />
-            <span key={pop} className={`rounded-full bg-background px-2.5 py-0.5 text-sm font-extrabold tabular-nums ${pop ? "reward-pop" : ""}`}>
+            <span key={pop} className={`rounded-md bg-foreground/[0.05] px-2 py-0.5 text-sm font-semibold tabular-nums ${pop ? "reward-pop" : ""}`}>
               {value}
               {unit}
             </span>

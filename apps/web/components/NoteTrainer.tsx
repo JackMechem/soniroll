@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from "@/lib/instruments";
+import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
@@ -65,6 +65,7 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
 
 const MIN_INTERVAL_SECONDS = 0.5;
 const MAX_INTERVAL_SECONDS = 10;
@@ -152,7 +153,7 @@ type HistoryEntry = {
   config: HistoryConfig;
 };
 
-const PANEL_IDS = ["notes", "note-listen", "note-sound"];
+const PANEL_IDS = ["notes", "note-timing", "note-listen", "note-sound"];
 const SETTINGS_KEY = "jam-practice-note-trainer";
 const DEFAULT_SETTINGS = {
   instrumentId: INSTRUMENTS[0].id,
@@ -346,6 +347,9 @@ export default function NoteTrainer() {
     : isCustom
       ? customRange
       : (INSTRUMENTS.find((i) => i.id === instrumentId)?.range ?? "");
+  // The chip names the instrument too ("Bass · E1–G4"), since the range alone doesn't say what
+  // it's set up for.
+  const rangeSummary = `${instrumentShortName(instrumentId)} · ${ignoreOctave ? "any octave" : rangeInput.replace("-", "–")}`;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -840,8 +844,9 @@ export default function NoteTrainer() {
       title="Note Trainer"
       presets={toolPresets("note-trainer", settings, updateSettings)}
       credit="Idea by Rob Moreno"
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
-        listenMode && (
+        listenMode && (history.length > 0 || weakEntries.length > 0) && (
           <>
             <CollapsiblePanel
               id="history"
@@ -850,7 +855,7 @@ export default function NoteTrainer() {
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
             {bestMs !== null && (
-              <p className="text-sm font-semibold tabular-nums">
+              <p className="text-sm font-medium tabular-nums">
                 Best {formatDuration(bestMs)}
               </p>
             )}
@@ -859,13 +864,13 @@ export default function NoteTrainer() {
                 No attempts yet with these settings.
               </p>
             ) : (
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              <div className={PANEL_LIST}>
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                      className={PANEL_ROW}
                     >
                       <div className="flex flex-col">
                         <span className="font-medium tabular-nums">
@@ -903,7 +908,7 @@ export default function NoteTrainer() {
                     ),
                   })
                 }
-                className="self-start text-sm font-medium text-muted hover:text-danger"
+                className={TEXT_BUTTON_DANGER}
               >
                 Clear these times
               </button>
@@ -921,11 +926,11 @@ export default function NoteTrainer() {
                   No struggles tracked yet — a wrong or partial note in listen mode adds it here.
                 </p>
               ) : (
-                <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+                <div className={PANEL_LIST}>
                   {weakEntries.map((entry) => (
                     <div
                       key={entry.key}
-                      className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                      className={PANEL_ROW}
                     >
                       <span className="font-medium tabular-nums">
                         {noteLabel(entry.key)}
@@ -953,7 +958,7 @@ export default function NoteTrainer() {
                 type="button"
                 onClick={() => void start({ kind: "weak" })}
                 disabled={running || weakCountInRange === 0}
-                className="self-start rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+                className={PRIMARY_BUTTON_SM}
               >
                 Shed weak notes{weakCountInRange > 0 && ` (${weakCountInRange})`}
               </button>
@@ -962,7 +967,7 @@ export default function NoteTrainer() {
                   type="button"
                   onClick={clearNoteStats}
                   disabled={running}
-                  className="self-start text-sm font-medium text-muted hover:text-danger disabled:opacity-50"
+                  className={TEXT_BUTTON_DANGER}
                 >
                   Clear stats
                 </button>
@@ -987,7 +992,7 @@ export default function NoteTrainer() {
       options={
         <>
           <PanelsToggle ids={PANEL_IDS} />
-          <CollapsiblePanel id="notes" title="Notes" icon={NoteIcon} summary={rangeInput}>
+          <CollapsiblePanel id="notes" title="Range" icon={NoteIcon} summary={rangeSummary}>
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1016,7 +1021,7 @@ export default function NoteTrainer() {
                 options={[
                   ...INSTRUMENTS.map((instrument) => ({
                     value: instrument.id,
-                    label: `${instrument.label} (${instrument.range})`,
+                    label: `${instrument.label} (${instrument.range.replace("-", "–")})`,
                   })),
                   { value: CUSTOM_INSTRUMENT_ID, label: "Custom range…" },
                 ]}
@@ -1033,7 +1038,7 @@ export default function NoteTrainer() {
                   onChange={(e) => setCustomRange(e.target.value)}
                   disabled={running}
                   placeholder="A1-A6"
-                  className="rounded-lg bg-background px-3 py-2 text-foreground disabled:opacity-60"
+                  className="h-9 rounded-md bg-foreground/[0.05] px-3 text-foreground outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60"
                 />
               </label>
             )}
@@ -1051,7 +1056,7 @@ export default function NoteTrainer() {
                       type="button"
                       onClick={() => void start({ kind: "string", stringIndex: i })}
                       disabled={running}
-                      className="rounded-lg bg-background px-3 py-1.5 text-sm font-medium tabular-nums hover:bg-surface-hover disabled:opacity-50"
+                      className={`${SECONDARY_BUTTON_SM} tabular-nums`}
                     >
                       {spellNote(openNote, accidentalStyle, i, false)}
                     </button>
@@ -1066,18 +1071,42 @@ export default function NoteTrainer() {
               </div>
             )}
 
-            {/* In listen mode this becomes "Max time", shown in the Listen mode section instead. */}
-            {!listenMode && (
+          </CollapsiblePanel>
+
+          {/* Timing in its own chip: how long each note shows (Timed), or how long you have to play
+              it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
+          <CollapsiblePanel
+            id="note-timing"
+            title={listenMode ? "Time to play" : "Time per note"}
+            icon={StopwatchIcon}
+            summary={`${intervalSeconds} s`}
+          >
+            <AdvancedSlider
+              label={listenMode ? "Time to play" : "Time per note"}
+              value={intervalSeconds}
+              unit="s"
+              min={MIN_INTERVAL_SECONDS}
+              max={MAX_INTERVAL_SECONDS}
+              step={0.5}
+              disabled={running}
+              onChange={setIntervalSeconds}
+              hint={
+                listenMode
+                  ? "How long you have to play each note before it's marked a miss and moves on."
+                  : "How long each note stays on screen before the next one shows."
+              }
+            />
+            {listenMode && (
               <AdvancedSlider
-                label="Interval"
-                value={intervalSeconds}
+                label="Time between notes"
+                value={advanceDelayMs / 1000}
                 unit="s"
-                min={MIN_INTERVAL_SECONDS}
-                max={MAX_INTERVAL_SECONDS}
-                step={0.5}
+                min={MIN_ADVANCE_DELAY_MS / 1000}
+                max={MAX_ADVANCE_DELAY_MS / 1000}
+                step={0.25}
                 disabled={running}
-                onChange={setIntervalSeconds}
-                hint="How long each note stays on screen before the next one shows."
+                hint="How long the graded note (with its countdown ring) stays on screen before the next one starts."
+                onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
               />
             )}
           </CollapsiblePanel>
@@ -1093,30 +1122,6 @@ export default function NoteTrainer() {
               disabled: running,
             }}
           >
-            <AdvancedSlider
-              label="Max time"
-              value={intervalSeconds}
-              unit="s"
-              min={MIN_INTERVAL_SECONDS}
-              max={MAX_INTERVAL_SECONDS}
-              step={0.5}
-              disabled={running}
-              onChange={setIntervalSeconds}
-              hint="How long you have to play each note before it's marked a miss and moves on."
-            />
-
-            <AdvancedSlider
-              label="Time between notes"
-              value={advanceDelayMs / 1000}
-              unit="s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              disabled={running}
-              hint="How long the graded note (with its countdown ring) stays on screen before the next one starts."
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-            />
-
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1261,7 +1266,7 @@ export default function NoteTrainer() {
                   })
                 }
                 disabled={running}
-                className="self-start rounded-lg bg-background px-3 py-1.5 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+                className={`self-start ${SECONDARY_BUTTON_SM}`}
               >
                 Reset advanced settings
               </button>
@@ -1308,11 +1313,11 @@ export default function NoteTrainer() {
       <div className="flex flex-col items-center gap-2">
         {status && running && listenMode && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold text-muted">
+            <span className="text-xs font-medium text-muted">
               Next note in
             </span>
             <span
-              className="text-3xl font-bold tabular-nums sm:text-4xl"
+              className="text-3xl font-semibold tabular-nums sm:text-4xl"
               style={{ color: GRADE_COLOR[status] }}
             >
               <CountdownLabel active={running} timerRef={noteTimerRef} />
@@ -1322,8 +1327,8 @@ export default function NoteTrainer() {
         <div className="relative">
           <div className="relative flex h-40 w-40 items-center justify-center sm:h-48 sm:w-48">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
-            <h1
-              className={`relative z-10 font-bold tabular-nums transition-[color,text-shadow] duration-200 ${
+            <p
+              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
                 mainLabelIsDouble
                   ? "text-3xl sm:text-4xl"
                   : "text-6xl sm:text-7xl"
@@ -1332,18 +1337,25 @@ export default function NoteTrainer() {
                 glow
                   ? {
                       color: glow,
-                      textShadow: `0 0 12px ${glow}, 0 0 32px ${glow}, 0 0 64px ${glow}`,
                     }
                   : undefined
               }
             >
               {mainLabel}
-            </h1>
+            </p>
+            {/* Before the first round, say what's about to happen. */}
+            {!note && !running && (
+              <p className="absolute inset-x-0 bottom-0 z-10 text-sm text-muted sm:bottom-3">
+                {listenMode
+                  ? "Press Start, then play each note. The mic checks it."
+                  : "Press Start, then play each note shown."}
+              </p>
+            )}
           </div>
           {showNext && nextNote && running && (
             <span
               aria-label={`Next note ${noteLabel(nextNote, noteSeed + 1)}`}
-              className="absolute bottom-1 left-full ml-3 text-xl font-semibold tabular-nums text-muted sm:text-2xl"
+              className="absolute bottom-1 left-full ml-3 text-xl font-medium tabular-nums text-muted sm:text-2xl"
             >
               {noteLabel(nextNote, noteSeed + 1)}
             </span>
@@ -1363,7 +1375,7 @@ export default function NoteTrainer() {
               <button
                 type="button"
                 onClick={() => skipRef.current?.()}
-                className="mt-2 rounded-full bg-surface px-4 py-1.5 text-sm font-medium text-foreground hover:bg-surface-hover"
+                className={`mt-2 ${SECONDARY_BUTTON}`}
               >
                 Skip note
               </button>
@@ -1375,20 +1387,20 @@ export default function NoteTrainer() {
       {summary && !running && (
         <section
           aria-label="Results"
-          className="flex w-full flex-col gap-4 rounded-2xl bg-surface p-4 text-left sm:p-6"
+          className={RESULTS_PANEL}
         >
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-muted">Results</p>
-              <p className="text-4xl font-bold tabular-nums">
+              <p className="text-sm font-medium text-muted">Results</p>
+              <p className="text-3xl font-semibold tabular-nums">
                 {score % 1 === 0 ? score : score.toFixed(1)}
-                <span className="text-xl font-semibold text-muted">
+                <span className="text-lg font-medium text-muted">
                   {" "}
                   / {summary.results.length}
                 </span>
               </p>
             </div>
-            <p className="text-2xl font-semibold tabular-nums text-muted">
+            <p className="text-xl font-medium tabular-nums text-muted">
               {summary.results.length
                 ? Math.round((score / summary.results.length) * 100)
                 : 0}
@@ -1411,16 +1423,16 @@ export default function NoteTrainer() {
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             {(["correct", "partial", "incorrect"] as const).map((grade) => (
-              <div key={grade} className="rounded-xl bg-background px-2 py-3">
+              <div key={grade} className="flex items-baseline gap-1.5">
                 <p
-                  className="text-2xl font-bold tabular-nums"
+                  className="font-semibold tabular-nums"
                   style={{ color: GRADE_COLOR[grade] }}
                 >
                   {tally(grade)}
                 </p>
-                <p className="text-xs text-muted">{GRADE_LABEL[grade]}</p>
+                <p className="text-muted">{GRADE_LABEL[grade]}</p>
               </div>
             ))}
           </div>
@@ -1430,7 +1442,7 @@ export default function NoteTrainer() {
               <span
                 key={i}
                 title={GRADE_LABEL[summary.results[i]]}
-                className="rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums"
+                className={`${GRADE_TAG} tabular-nums`}
                 style={{
                   color: GRADE_COLOR[summary.results[i]],
                   background: `color-mix(in srgb, ${GRADE_COLOR[summary.results[i]]} 15%, transparent)`,
@@ -1444,14 +1456,14 @@ export default function NoteTrainer() {
             <button
               type="button"
               onClick={() => void start(lastRequest)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className={PRIMARY_BUTTON}
             >
               Try again
             </button>
             <button
               type="button"
               onClick={() => setSummary(null)}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className={SECONDARY_BUTTON}
             >
               Close
             </button>
@@ -1464,11 +1476,7 @@ export default function NoteTrainer() {
       <button
         type="button"
         onClick={running ? stop : () => void start()}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-          running
-            ? "bg-surface hover:bg-surface-hover"
-            : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={startButtonClass(running)}
       >
         {running ? "Stop" : "Start"}
       </button>

@@ -16,8 +16,8 @@ import { useSiteStatus } from "@/lib/useSiteStatus";
 /** Same button shape as Sidebar's ThemeButton (collapsed/large props, identical styling) so this
     drops into either sidebar footer without special-casing. */
 function buttonClass(collapsed?: boolean, large?: boolean) {
-  return `flex w-full items-center gap-3 ${large ? "rounded-2xl" : "rounded-xl"} px-3 font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${
-    large ? "py-3 text-base" : "py-2 text-sm"
+  return `flex w-full items-center gap-2.5 rounded-md px-2 text-foreground/75 transition-colors hover:bg-surface-hover/60 hover:text-foreground ${
+    large ? "h-11 text-base" : "h-9 text-sm"
   } ${collapsed ? "justify-center" : ""}`;
 }
 
@@ -112,7 +112,7 @@ export function AuthForm({
     return (
       <>
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-lg font-semibold">Check your email</h2>
+          <h2 className="text-base font-semibold">Check your email</h2>
           <p className="text-sm text-muted">
             Enter the code we sent to {email} to finish{" "}
             {flow === "signUp" ? "creating your account" : "signing in"}.
@@ -128,7 +128,7 @@ export function AuthForm({
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+              className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
           </label>
           {error && <p className="text-sm text-danger">{error}</p>}
@@ -139,14 +139,14 @@ export function AuthForm({
                 setStep("credentials");
                 setError(null);
               }}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
             >
               Back
             </button>
             <button
               type="submit"
               disabled={submitting || !code}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+              className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
             >
               Confirm
             </button>
@@ -159,11 +159,11 @@ export function AuthForm({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-base font-semibold">
           {flow === "signIn" ? "Sign in" : "Create an account"}
         </h2>
         {flow === "signUp" && site?.signupsPaused && (
-          <p className="rounded-xl bg-amber-500/15 px-3 py-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+          <p className="rounded-md bg-amber-500/15 px-3 py-2 text-sm font-medium text-amber-700 dark:text-amber-300">
             New sign-ups are paused for a bit. Every tool still works without an account — try again later.
           </p>
         )}
@@ -183,7 +183,7 @@ export function AuthForm({
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -195,7 +195,7 @@ export function AuthForm({
             autoComplete={flow === "signIn" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-accent"
+            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
         </label>
 
@@ -240,14 +240,14 @@ export function AuthForm({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || !email || password.length < 8}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+              className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
             >
               {flow === "signIn" ? "Sign in" : "Sign up"}
             </button>
@@ -256,16 +256,16 @@ export function AuthForm({
       </form>
 
       <div className="flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-background" />
+        <div className="h-px flex-1 bg-foreground/10" />
         or
-        <div className="h-px flex-1 bg-background" />
+        <div className="h-px flex-1 bg-foreground/10" />
       </div>
 
       <button
         type="button"
         onClick={() => void onGoogle()}
         disabled={googleSubmitting}
-        className="flex items-center justify-center gap-2 rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+        className="flex h-9 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
       >
         <GoogleIcon className="h-4 w-4" />
         Continue with Google
@@ -294,7 +294,7 @@ export function SignInModal({ onClose, initialFlow = "signIn" }: { onClose: () =
       <div
         role="dialog"
         aria-label="Sign in"
-        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
         <AuthForm onClose={onClose} initialFlow={initialFlow} />

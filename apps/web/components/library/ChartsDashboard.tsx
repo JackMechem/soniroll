@@ -6,32 +6,35 @@ import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { menuPosition } from "@/components/library/shared";
-import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, PlaylistCard, RecentStrip, Rows } from "@/components/library/ui";
+import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, PlaylistItem, RecentStrip, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
-import { useTuneLists } from "@/components/library/useTuneActions";
-import { LibraryIcon, ChordChartIcon, DownloadIcon, PlusIcon } from "@/components/tools";
+import { LibraryIcon, DownloadIcon, PlusIcon } from "@/components/tools";
 import { formatComposer } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import StoragePill from "@/components/files/StoragePill";
 
+/** Up to this many charts are listed on the tab itself (all of them when there are no folders). */
+const LIST_ON_TAB_MAX = 40;
+
 export const chartHref = (id: string) => `/chord-charts/view?id=${encodeURIComponent(id)}`;
 export const playlistHref = (id: string) => `/chord-charts/playlist?id=${encodeURIComponent(id)}`;
 
 /**
- * The Chord Charts page — modeled on the mobile app's Chord Charts tab: search across every chart,
- * counts (charts / playlists / charts linked to one of your tunes), the charts you opened most
- * recently, and your playlists as folders (each opens its own page; ⋮ to delete). The + makes a
- * new chart or playlist, or imports. A chart opens on its own page (`ChartViewPage`); every chart
- * row has the chart ⋮ menu (`useChartActions`).
+ * Library's Chord Charts tab — search across every chart, a slim row of the charts you opened
+ * lately, then the folders as the main view: All charts first, then each folder (a row each,
+ * ⋮ to delete) and a quiet "New folder" row. With no folders or only a few charts, the charts
+ * themselves are listed below too. (Folders are `playlists` in the data and
+ * in Convex — only the name people see changed.) The "+ New" menu makes a chart or a folder,
+ * or imports. A chart opens on its own page (`ChartViewPage`); every chart row has the chart ⋮
+ * menu (`useChartActions`).
  */
 export default function ChartsDashboard() {
   const router = useRouter();
   const { playlists: raw, allSongs, totalSongs, loading, createPlaylist } = useChordChartsLibrary(null);
   const { openSongMenu, openPlaylistMenu, element } = useChartActions();
   const recent = useRecentCharts();
-  const lists = useTuneLists();
   const [query, setQuery] = useState("");
   const [addMenu, setAddMenu] = useState<MenuState | null>(null);
   const [naming, setNaming] = useState(false);
@@ -54,7 +57,13 @@ export default function ChartsDashboard() {
     );
   }, [q, index]);
 
-  const linked = new Set([...lists.tunes.tunes, ...lists.learn.tunes].map((t) => t.chordChartId).filter((id): id is string => !!id && index.has(id))).size;
+  // With no folders (a new library) or only a few charts, the charts are listed right here under
+  // the folder rows, so they aren't hidden one tap away in "All charts".
+  const listed = useMemo(
+    () => (playlists.length === 0 || totalSongs <= LIST_ON_TAB_MAX ? sortByText([...index.values()], (h) => h.song.title).slice(0, LIST_ON_TAB_MAX) : []),
+    [playlists.length, totalSongs, index],
+  );
+
   const recentCards = recent.ids
     .map((id) => index.get(id))
     .filter((x) => x !== undefined)
@@ -65,11 +74,10 @@ export default function ChartsDashboard() {
       ...menuPosition(e),
       items: [
         { label: "New chord chart", onSelect: () => router.push("/chord-charts/new") },
-        { label: "New playlist", onSelect: () => setNaming(true) },
+        { label: "New folder", onSelect: () => setNaming(true) },
         { label: "Import charts", onSelect: () => router.push("/chord-charts/import") },
       ],
     });
-  const sortedTitles = (songs: { title: string }[]) => sortByText(songs, (x) => x.title).map((x) => x.title);
 
   return (
     <LibraryPage>
@@ -79,23 +87,13 @@ export default function ChartsDashboard() {
         titleExtra={<StoragePill />}
         helpTopic="chord-charts"
         tabs={<LibraryTabs active="charts" />}
-        subtitle={
-          loading ? (
-            "Loading…"
-          ) : (
-            <>
-              {totalSongs} chart{totalSongs === 1 ? "" : "s"} · {playlists.length} playlist{playlists.length === 1 ? "" : "s"} · {linked} linked to your tunes
-            </>
-          )
-        }
-        actions={
-          <>
-            <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
-            <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} />
-          </>
-        }
       >
-        <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts by title, composer or style…`} />
+        <Toolbar>
+          <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts…`} />
+          {/* Phones: Import is in the New menu, so the toolbar stays search + one labelled button. */}
+          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" className="max-sm:hidden" />
+          <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} />
+        </Toolbar>
       </Hero>
 
       {loading ? (
@@ -105,7 +103,7 @@ export default function ChartsDashboard() {
       ) : hits ? (
         <Panel title="Results" detail={hits.length} flush>
           {hits.length === 0 ? (
-            <EmptyState icon={ChordChartIcon} title={`No charts match “${query}”`} body="Try part of a title, a composer or a style." />
+            <EmptyState title={`No charts match “${query}”`} body="Try part of a title, a composer or a style." />
           ) : (
             <Rows>
               {hits.slice(0, 200).map((h) => (
@@ -121,58 +119,72 @@ export default function ChartsDashboard() {
           )}
         </Panel>
       ) : totalSongs === 0 && playlists.length === 0 ? (
-        <div className="rounded-2xl bg-surface">
-          <EmptyState
-            icon={ChordChartIcon}
-            title="No chord charts yet"
-            body="Build a chart bar by bar, or import a chart link or a whole playlist."
-            action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <Pill primary icon={PlusIcon} label="New chord chart" href="/chord-charts/new" />
-                <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
-              </div>
-            }
-          />
-        </div>
-      ) : (
-        <>
-          {recentCards.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <h2 className="px-1 text-sm font-bold text-muted">Jump back in</h2>
-              <RecentStrip items={recentCards} />
-            </section>
-          )}
-
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <h2 className="text-lg font-bold">Playlists</h2>
-              <button type="button" onClick={() => setNaming(true)} className="flex items-center gap-1 text-sm font-semibold text-accent hover:underline">
-                <PlusIcon className="h-4 w-4" />
-                New playlist
-              </button>
+        <EmptyState
+          boxed
+          title="No chord charts yet"
+          body="Build a chart bar by bar, or import a chart link or a whole iReal Pro playlist."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Pill primary icon={PlusIcon} label="New chord chart" href="/chord-charts/new" />
+              <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
             </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1900px]:grid-cols-6">
-              <PlaylistCard featured name="All charts" count={totalSongs} href={playlistHref(ALL_CHARTS_ID)} titles={sortedTitles(allSongs).slice(0, 3)} />
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <RecentStrip items={recentCards.slice(0, 8)} />
+
+          <div className="overflow-hidden rounded-lg bg-surface">
+            <Rows>
+              <PlaylistItem all name="All charts" count={totalSongs} href={playlistHref(ALL_CHARTS_ID)} />
               {playlists.map((p) => (
-                <PlaylistCard
+                <PlaylistItem
                   key={p.id}
                   name={p.name}
                   count={p.songs.length}
                   href={playlistHref(p.id)}
-                  titles={sortedTitles(p.songs).slice(0, 3)}
                   onMenu={(e) => openPlaylistMenu(e, { id: p.id, name: p.name, count: p.songs.length })}
                 />
               ))}
-            </div>
-          </section>
-        </>
+              <button
+                type="button"
+                onClick={() => setNaming(true)}
+                className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              >
+                <PlusIcon className="h-4 w-4 shrink-0" />
+                New folder
+              </button>
+            </Rows>
+          </div>
+
+          {listed.length > 0 && (
+            <Panel
+              title="Charts"
+              detail={totalSongs}
+              flush
+              href={totalSongs > listed.length ? playlistHref(ALL_CHARTS_ID) : undefined}
+            >
+              <Rows>
+                {listed.map((h) => (
+                  <ChartItem
+                    key={h.song.id}
+                    song={h.song}
+                    subtitle={[h.song.composer ? formatComposer(h.song.composer) : null, h.playlistName].filter(Boolean).join(" · ")}
+                    href={chartHref(h.song.id)}
+                    onMenu={(e) => openSongMenu(e, h.song, null)}
+                  />
+                ))}
+              </Rows>
+            </Panel>
+          )}
+        </div>
       )}
 
       {element}
       {addMenu && <ContextMenu menu={addMenu} onClose={() => setAddMenu(null)} />}
       {naming && (
         <PromptDialog
-          title="New playlist"
+          title="New folder"
           initialValue=""
           onSubmit={(name) => {
             if (name.trim()) void createPlaylist(name.trim());

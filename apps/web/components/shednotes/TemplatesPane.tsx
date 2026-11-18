@@ -84,24 +84,23 @@ export default function TemplatesPane({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={onBack} className="flex shrink-0 items-center gap-1 rounded-full bg-surface py-1.5 pl-2 pr-3 text-sm font-semibold hover:bg-surface-hover">
+        <button type="button" onClick={onBack} className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium transition-colors hover:bg-surface-hover">
           <ChevronLeftIcon className="h-4 w-4" /> Notes
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-2xl font-extrabold tracking-tight">Templates</h2>
-        <button type="button" onClick={() => void newTemplate()} className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+        <h2 className="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight">Templates</h2>
+        <button type="button" onClick={() => void newTemplate()} className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
           <PlusIcon className="h-4 w-4" /> New template
         </button>
       </div>
 
       {templates.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-foreground/10 p-10 text-center">
-          <DocumentIcon className="h-10 w-10 text-accent" />
-          <p className="text-lg font-bold">No templates yet</p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
+          <p className="text-sm font-medium">No templates yet</p>
           <p className="max-w-sm text-sm text-muted">A template is a note to start from. Put {"{{blanks}}"} in it, like {"{{tune}}"} or {"{{student}}"}, and you&apos;ll fill them in when you make a note from it.</p>
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
-          <ul className="flex shrink-0 gap-1 overflow-x-auto md:w-56 md:flex-col md:overflow-y-auto">
+          <ul className="flex shrink-0 gap-1 overflow-x-auto border-b border-foreground/10 pb-2 md:w-56 md:flex-col md:gap-px md:overflow-y-auto md:border-b-0 md:border-r md:pb-0 md:pr-3">
             {templates.map((t) => (
               <li key={t.id} className="shrink-0">
                 <button
@@ -110,9 +109,9 @@ export default function TemplatesPane({
                     flush();
                     setOpenId(t.id);
                   }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm ${t.id === open?.id ? "bg-accent/15 font-semibold" : "hover:bg-surface-hover"}`}
+                  className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${t.id === open?.id ? "bg-surface-hover font-medium" : "text-foreground/80 hover:bg-surface-hover/60 hover:text-foreground"}`}
                 >
-                  <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${t.id === open?.id ? "text-accent" : "text-muted"}`} />
+                  <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${t.id === open?.id ? "text-foreground" : "text-muted"}`} />
                   <span className="truncate">{t.name}</span>
                 </button>
               </li>
@@ -174,14 +173,14 @@ function TemplateEditor({
           }}
           aria-label="Template name"
           placeholder="Template name"
-          className="min-w-0 flex-1 bg-transparent text-2xl font-extrabold tracking-tight outline-none sm:text-3xl"
+          className="min-w-0 flex-1 bg-transparent text-2xl font-semibold tracking-tight outline-none"
         />
-        <button type="button" onClick={onDelete} aria-label="Delete template" title="Delete template" className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-danger">
+        <button type="button" onClick={onDelete} aria-label="Delete template" title="Delete template" className="shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-hover hover:text-danger">
           <TrashIcon className="h-4 w-4" />
         </button>
       </div>
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-muted">Title for new notes</span>
+        <span className="text-xs font-medium text-muted">Title for new notes</span>
         <input
           value={title}
           onChange={(e) => {
@@ -189,18 +188,18 @@ function TemplateEditor({
             onChange({ title: e.target.value });
           }}
           placeholder="Blank to type a title each time, or e.g. {{date}} lesson with {{student}}"
-          className="h-10 rounded-xl bg-surface px-3 text-sm outline-none ring-accent focus:ring-2"
+          className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-accent/40"
         />
       </label>
       <p className="text-xs text-muted">
         {vars.length ? (
           <>
-            Asked for: <span className="font-semibold text-foreground">{vars.join(", ")}</span>.{" "}
+            Asked for: <span className="font-medium text-foreground">{vars.join(", ")}</span>.{" "}
           </>
         ) : null}
         Type {"{{name}}"} to make a blank. {"{{date}}"}, {"{{time}}"} and {"{{title}}"} fill in by themselves.
       </p>
-      <div className="relative min-h-[50vh] rounded-2xl md:min-h-0 md:flex-1">
+      <div className="relative min-h-[50vh] rounded-lg md:min-h-0 md:flex-1">
         <NoteEditor
           initialText={template.body}
           config={config}

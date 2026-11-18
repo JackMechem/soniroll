@@ -50,7 +50,7 @@ export default function PublicSetlist({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <Link href={chartsHref()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent py-2.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
+        <Link href={chartsHref()} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-accent text-sm font-medium text-accent-foreground hover:bg-accent-hover">
           <SlidesIcon className="h-4 w-4" />
           View all charts
         </Link>
@@ -79,7 +79,7 @@ export default function PublicSetlist({
         </p>
       )}
 
-      <ol className="overflow-hidden rounded-2xl bg-surface">
+      <ol className="overflow-hidden rounded-lg bg-surface">
         {tunes.map((t, i) => {
           const tempo = t.setTempo ?? t.tempos.find((x) => x.enabled)?.value;
           const detail = [
@@ -90,21 +90,21 @@ export default function PublicSetlist({
             .filter(Boolean)
             .join(" · ");
           return (
-            <li key={`${t.id}-${i}`} className={i ? "border-t border-background" : ""}>
+            <li key={`${t.id}-${i}`} className={i ? "border-t border-foreground/10" : ""}>
               <Link href={chartsHref(i)} className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover">
-                <span className="w-6 text-right font-bold tabular-nums text-accent">{i + 1}</span>
+                <span className="w-6 text-right text-sm tabular-nums text-muted">{i + 1}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{t.name}</span>
-                  <span className="block truncate text-sm text-muted">{detail}</span>
+                  <span className="block truncate text-sm font-medium">{t.name}</span>
+                  <span className="block truncate text-xs text-muted">{detail}</span>
                 </span>
-                {t.linkedChart && <ChordChartIcon className="h-4 w-4 shrink-0 text-accent" />}
+                {t.linkedChart && <ChordChartIcon className="h-4 w-4 shrink-0 text-muted" />}
               </Link>
               {/* The owner's recordings of this tune — playable by anyone the setlist is shared with. */}
               {t.recordings && t.recordings.length > 0 && (
                 <ul className="flex flex-col gap-2 px-3 pb-3 pl-12">
                   {t.recordings.map((r) => (
-                    <li key={r.id} className="flex flex-col gap-1 rounded-lg bg-background p-2">
-                      <span className="truncate text-sm font-semibold">{r.name}</span>
+                    <li key={r.id} className="flex flex-col gap-1 rounded-md bg-foreground/[0.05] p-2">
+                      <span className="truncate text-sm font-medium">{r.name}</span>
                       {r.url && <audio controls preload="none" src={r.url} className="h-9 w-full" />}
                     </li>
                   ))}

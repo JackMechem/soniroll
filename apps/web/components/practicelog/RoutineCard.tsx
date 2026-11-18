@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import { AttachmentList } from "@/components/practicelog/Attachments";
@@ -12,7 +14,8 @@ import RoutineTimePicker from "@/components/practicelog/RoutineTime";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import Subtasks from "@/components/practicelog/Subtasks";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
-import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon } from "@/components/tools";
+import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
   type DayRoutine,
   type RoutineTask,
@@ -39,7 +42,8 @@ import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 type Log = ReturnType<typeof usePracticeLog>;
 
 /** One routine on one day: its tasks to check off (with when each one is), Start (runs it on the
-    Practice Timer), what's attached, notes for the day, and the clips recorded for it that day. */
+    Practice Timer), what's attached, notes for the day, and the clips recorded for it that day.
+    On a day that's gone, there's nothing to start: Log time puts time on it instead. */
 export default function RoutineCard({
   date,
   item,
@@ -56,7 +60,12 @@ export default function RoutineCard({
   const { routine, occurrence, added } = item;
   const { engine, startRoutine, runningTask } = useRoutineTimer();
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [confirming, setConfirming] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [editingTime, setEditingTime] = useState(false);
+  const [logging, setLogging] = useState<{ target: LogTarget; minutes?: number } | null>(null);
+  const today = todayKey();
+  const past = date < today;
+  const logTask = (task: RoutineTask) => setLogging({ target: { kind: "routine", routineId: routine.id, taskId: task.id }, minutes: task.minutes || undefined });
   const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
   const { done, total } = progressOf(routine, occurrence);
   const complete = total > 0 && done === total;
@@ -93,7 +102,24 @@ export default function RoutineCard({
           ? { label: "Uncheck every task", onSelect: () => log.setAllTasks(date, routine.id, false) }
           : { label: "Check every task", onSelect: () => log.setAllTasks(date, routine.id, true) },
         added
-          ? { label: "Remove from this day", danger: true, onSelect: () => log.removeFromDay(date, routine.id) }
+          ? {
+              label: "Remove from this day",
+              danger: true,
+              onSelect: () => {
+                // Ask first when it would take ticks, time or notes with it.
+                const o = occurrence;
+                const hasWork =
+                  (o.done?.length ?? 0) > 0 || (o.subDone?.length ?? 0) > 0 || Object.values(o.spentMs ?? {}).some((ms) => ms > 0) || !!o.notes?.trim() || (o.extraTasks?.length ?? 0) > 0;
+                const remove = () => log.removeFromDay(date, routine.id);
+                if (!hasWork) return remove();
+                setConfirming({
+                  title: "Remove it from this day?",
+                  message: `${routine.name || "This routine"} comes off ${formatShortDate(date)}, with what you checked off, timed and noted for it there.`,
+                  label: "Remove",
+                  run: remove,
+                });
+              },
+            }
           : skipped
             ? { label: "Don't skip this day", onSelect: () => log.updateOccurrence(date, routine.id, (o) => ({ ...o, skipped: false })) }
             : { label: "Skip this day", onSelect: () => log.updateOccurrence(date, routine.id, (o) => ({ ...o, skipped: true })) },
@@ -103,22 +129,22 @@ export default function RoutineCard({
 
   return (
     <article
-      className={`relative flex flex-col gap-3 rounded-2xl bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}
+      className={`relative flex flex-col gap-3 overflow-hidden rounded-lg bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}
       style={timeIsNow ? { boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
     >
-      <span aria-hidden className="absolute bottom-7 left-2 top-7 w-1 rounded-full" style={{ background: color }} />
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
       <header className="flex items-start gap-3 pl-1">
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0 flex-1">
-          <Link href={`/shed-log/routine?id=${encodeURIComponent(routine.id)}`} className={`block truncate text-lg font-bold hover:underline ${skipped ? "line-through" : ""}`}>
+          <Link href={`/shed-log/routine?id=${encodeURIComponent(routine.id)}`} className={`block truncate text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
             {routine.name || "Untitled routine"}
           </Link>
-          {routine.assigned && <span className="text-[11px] font-semibold text-accent">From {routine.assigned.teacher}</span>}
+          {routine.assigned && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
             {span ? (
               <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span>
             ) : (
-              <button type="button" onClick={() => setEditingTime(true)} className="font-semibold text-accent hover:underline" title="Set a time">
+              <button type="button" onClick={() => setEditingTime(true)} className="font-medium text-foreground/80 hover:text-foreground hover:underline" title="Set a time">
                 Any time · Set a time
               </button>
             )}
@@ -132,23 +158,23 @@ export default function RoutineCard({
               )}
             </span>
             {skipped && <span className="font-semibold text-foreground">· Skipped</span>}
-            {!skipped && routineStatus(item, date, todayKey()) === "missed" && <span className="font-semibold text-red-500">· Missed</span>}
-            {routineStatus(item, date, todayKey()) === "partial" && <span className="font-semibold text-amber-600 dark:text-amber-400">· Partly done</span>}
+            {!skipped && routineStatus(item, date, today) === "missed" && <span className="text-muted">· Missed</span>}
+            {routineStatus(item, date, today) === "partial" && <span className="font-semibold text-warning">· Partly done</span>}
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${complete ? "text-white" : "bg-background text-muted"}`}
+          className={`shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-medium tabular-nums ${complete ? "text-white" : "text-muted"}`}
           style={complete ? { background: color } : undefined}
         >
           {done}/{total}
         </span>
-        <button type="button" onClick={openMenu} aria-label="Routine options" className="-mr-1 shrink-0 rounded-full p-1.5 text-muted hover:bg-background hover:text-foreground">
+        <button type="button" onClick={openMenu} aria-label="Routine options" className="-mr-1 shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
           <DotsVerticalIcon className="h-4 w-4" />
         </button>
       </header>
 
       {total > 0 && (
-        <div className="-mt-1 h-1.5 overflow-hidden rounded-full bg-background">
+        <div className="-mt-1 h-1 overflow-hidden rounded-full bg-foreground/10">
           <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${(done / total) * 100}%`, background: color }} />
         </div>
       )}
@@ -156,13 +182,13 @@ export default function RoutineCard({
       {editingTime && <RoutineTimePicker date={date} routine={routine} occurrence={occurrence} log={log} onDone={() => setEditingTime(false)} />}
 
       {engine && running ? (
-        <div className="flex items-center gap-4 rounded-xl bg-background p-3">
+        <div className="flex items-center gap-4 rounded-md bg-background p-3">
           <PracticeTimerRing size="sm" startedAt={engine.startedAt} durationMs={engine.durationMs} paused={engine.paused} remainingMsAtPause={engine.remainingMsAtPause} alarming={engine.alarming} />
           <div className="min-w-0 flex-1">
             <div className={`text-xs font-semibold ${engine.alarming ? "animate-pulse text-danger" : "text-muted"}`}>
               {engine.alarming ? "Time's up" : engine.paused ? "Paused" : "Now"}
             </div>
-            <div className="truncate font-semibold">{engine.current.title}</div>
+            <div className="truncate font-medium">{engine.current.title}</div>
             <div className="truncate text-xs text-muted">{engine.next ? `Next: ${engine.next.title}` : "Last task"}</div>
           </div>
           <div className="flex shrink-0 gap-1">
@@ -191,16 +217,26 @@ export default function RoutineCard({
         </div>
       ) : (
         !skipped &&
-        firstOpen && (
+        firstOpen &&
+        (past ? (
+          <button
+            type="button"
+            onClick={() => logTask(firstOpen)}
+            className="flex h-9 items-center justify-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+          >
+            <StopwatchIcon className="h-4 w-4" />
+            Log time
+          </button>
+        ) : (
           <button
             type="button"
             onClick={() => startRoutine(routine, date, done > 0 ? firstOpen.id : undefined, false, occurrence)}
-            className="flex items-center justify-center gap-1.5 self-start rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+            className="flex h-9 items-center justify-center gap-1.5 self-start rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
           >
             <PlayIcon className="h-4 w-4" />
             {done > 0 ? `Continue from ${firstOpen.title || "the next task"}` : "Start routine"}
           </button>
-        )
+        ))
       )}
 
       {allTasks.length > 0 && (
@@ -210,7 +246,7 @@ export default function RoutineCard({
             const spent = occurrence.spentMs?.[task.id];
             const isNow = running === task.id;
             return (
-              <li key={task.id} className={`group flex items-start gap-3 rounded-xl px-1 py-2 ${isNow ? "bg-accent/10" : ""}`}>
+              <li key={task.id} className={`group flex items-start gap-3 rounded-md px-1 py-2 ${isNow ? "bg-accent/10" : ""}`}>
                 <button
                   type="button"
                   role="checkbox"
@@ -220,25 +256,25 @@ export default function RoutineCard({
                     if (!checked) burstAt(e.currentTarget, color);
                     log.toggleTask(date, routine.id, task.id);
                   }}
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${checked ? "log-check border-transparent text-white" : "border-surface-hover hover:border-muted"}`}
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors ${checked ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-muted"}`}
                   style={checked ? { background: color } : undefined}
                 >
                   {checked && <CheckIcon className="h-3.5 w-3.5" />}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <div className={`font-medium ${checked ? "text-muted line-through" : ""}`}>
+                  <div className={`text-sm font-medium ${checked ? "text-muted line-through" : ""}`}>
                     {task.title || "Untitled task"}
-                    {extraIds.has(task.id) && <span className="ml-1.5 rounded-full bg-background px-1.5 py-0.5 align-middle text-[10px] font-bold text-muted">Today only</span>}
+                    {extraIds.has(task.id) && <span className="ml-1.5 rounded-sm bg-foreground/[0.05] px-1 py-px align-middle text-[10px] font-medium text-muted">Today only</span>}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                    {start !== null && <span className={task.time ? "font-semibold" : ""}>{formatTime(start)}</span>}
+                    {start !== null && <span className={task.time ? "font-medium" : ""}>{formatTime(start)}</span>}
                     <span>{formatMinutesShort(task.minutes)}</span>
                     {spent ? <span>· {formatMinutesShort(spent / 60000)} logged</span> : null}
                     {checked && !spent && task.minutes > 0 && (
                       <button
                         type="button"
                         onClick={() => log.updateOccurrence(date, routine.id, (o) => ({ ...o, spentMs: { ...(o.spentMs ?? {}), [task.id]: task.minutes * 60000 } }))}
-                        className="rounded-full bg-accent/15 px-2 py-0.5 font-semibold text-accent hover:bg-accent/25"
+                        className="rounded-md bg-foreground/[0.05] px-2 py-0.5 font-medium text-foreground hover:bg-surface-hover"
                         title="Checked off without the timer — log its time"
                       >
                         + Log {formatMinutesShort(task.minutes)}
@@ -269,13 +305,24 @@ export default function RoutineCard({
                     </div>
                   )}
                 </div>
-                {!skipped && task.minutes > 0 && !isNow && (
+                {!skipped && past && !checked && (
+                  <button
+                    type="button"
+                    onClick={() => logTask(task)}
+                    aria-label={`Log time on ${task.title || "this task"}`}
+                    title="Log time on this task"
+                    className="shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
+                  >
+                    <StopwatchIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {!skipped && !past && task.minutes > 0 && !isNow && (
                   <button
                     type="button"
                     onClick={() => startRoutine(routine, date, task.id, true, occurrence)}
                     aria-label={`Time just ${task.title || "this task"}`}
                     title="Time just this task"
-                    className="shrink-0 rounded-full p-1.5 text-muted opacity-100 hover:bg-background hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
+                    className="shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
                   >
                     <PlayIcon className="h-3.5 w-3.5" />
                   </button>
@@ -283,10 +330,20 @@ export default function RoutineCard({
                 {extraIds.has(task.id) && (
                   <button
                     type="button"
-                    onClick={() => setExtra((list) => list.filter((t) => t.id !== task.id))}
+                    onClick={() => {
+                      const remove = () => setExtra((list) => list.filter((t) => t.id !== task.id));
+                      // Ticked or timed: ask first, it takes that with it.
+                      if (!(occurrence.done ?? []).includes(task.id) && !((occurrence.spentMs ?? {})[task.id] > 0)) return remove();
+                      setConfirming({
+                        title: "Remove this task?",
+                        message: `"${task.title || "Task"}" comes off ${routine.name || "this routine"} for ${formatShortDate(date)}, with the time logged on it.`,
+                        label: "Remove",
+                        run: remove,
+                      });
+                    }}
                     aria-label={`Remove ${task.title || "this task"} from today`}
                     title="Remove from today"
-                    className="shrink-0 rounded-full p-1.5 text-muted hover:bg-background hover:text-danger"
+                    className="shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-danger"
                   >
                     <CloseIcon className="h-3.5 w-3.5" />
                   </button>
@@ -297,7 +354,7 @@ export default function RoutineCard({
         </ul>
       )}
       {!skipped && (
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-1.5">
+        <div className="flex items-center gap-2 rounded-md border border-dashed border-foreground/15 px-3 py-1.5">
           <PlusIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
           <input
             value={newTitle}
@@ -308,7 +365,7 @@ export default function RoutineCard({
                 setNewTitle("");
               }
             }}
-            placeholder="Add a task to this routine, just for today"
+            placeholder={`Add a task to this routine, just for ${date === today ? "today" : formatShortDate(date)}`}
             className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none"
           />
         </div>
@@ -339,6 +396,22 @@ export default function RoutineCard({
         <RecordClip date={date} routineId={routine.id} routines={dayRoutines} compact />
       </AttachedNotes>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {logging && <LogTimeDialog date={date} log={log} initial={logging.target} initialMinutes={logging.minutes} onClose={() => setLogging(null)} />}
+      {/* On <body>: a skipped card is faded, and the fade would carry into the dialog. */}
+      {confirming &&
+        createPortal(
+          <ConfirmDialog
+            title={confirming.title}
+            message={confirming.message}
+            confirmLabel={confirming.label}
+            onCancel={() => setConfirming(null)}
+            onConfirm={() => {
+              confirming.run();
+              setConfirming(null);
+            }}
+          />,
+          document.body,
+        )}
     </article>
   );
 }
@@ -350,7 +423,7 @@ function TimerButton({ label, onClick, primary = false, children }: { label: str
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-9 w-9 items-center justify-center rounded-full ${primary ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-surface hover:bg-surface-hover"}`}
+      className={`flex h-9 w-9 items-center justify-center rounded-md ${primary ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "hover:bg-surface-hover"}`}
     >
       {children}
     </button>

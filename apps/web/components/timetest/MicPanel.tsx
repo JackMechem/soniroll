@@ -116,7 +116,7 @@ export default function MicPanel({
         <Hint>Use one audio interface for both the mic and the click if you can. Two separate devices drift apart a little over a long take.</Hint>
       </OptionGroup>
 
-      <OptionGroup title="Sensitivity" aside={<span className="text-sm font-semibold tabular-nums">{Math.round(sensitivity * 100)}%</span>}>
+      <OptionGroup title="Sensitivity" aside={<span className="text-sm font-medium tabular-nums">{Math.round(sensitivity * 100)}%</span>}>
         <input
           type="range"
           min={0}
@@ -135,7 +135,7 @@ export default function MicPanel({
       <OptionGroup
         title="Latency"
         aside={
-          <span className={`text-sm font-semibold tabular-nums ${calibrated ? "" : "text-muted"}`}>
+          <span className={`text-sm font-medium tabular-nums ${calibrated ? "" : "text-muted"}`}>
             {latencyMs.toFixed(1)} ms{calibrated ? "" : " · a guess"}
           </span>
         }
@@ -144,7 +144,7 @@ export default function MicPanel({
           type="button"
           onClick={onCalibrate}
           disabled={busy || calibrating}
-          className="rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {calibrating ? "Listening… stay quiet" : calibrated ? "Calibrate again" : "Calibrate"}
         </button>

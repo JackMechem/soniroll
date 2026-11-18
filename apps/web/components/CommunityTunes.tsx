@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import { Id } from "@jam-practice/convex/_generated/dataModel";
 import UserAvatar from "@/components/UserAvatar";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import {
   CalendarIcon,
   ChordChartIcon,
   CheckIcon,
+  DotsVerticalIcon,
   EyeOffIcon,
   HeartIcon,
   NoteIcon,
@@ -22,8 +25,10 @@ import { shareLink } from "@/lib/shareLink";
 import { type ProgressCard, type PublicRoutine, formatMinutesShort } from "@/lib/practiceLog";
 import { ProgressCardView } from "@/components/practicelog/ProgressCard";
 
+/** "Oct 17", with the year only when it isn't this year (keeps a post's top line on one row on phones). */
 function formatDate(ms: number) {
-  return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  const thisYear = new Date(ms).getFullYear() === new Date().getFullYear();
+  return new Date(ms).toLocaleDateString(undefined, thisYear ? { month: "short", day: "numeric" } : { year: "numeric", month: "short", day: "numeric" });
 }
 
 export type TunePostSummary = {
@@ -89,6 +94,7 @@ export function PostListItem({
   const router = useRouter();
   const toggleLike = useMutation(api.communityTunes.toggleLike);
   const [copied, setCopied] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
   const isSetlist = post.kind === "setlist";
   const routine = post.kind === "routine" && post.payload && "tasks" in post.payload ? post.payload : null;
   const card = post.kind === "milestone" && post.payload && "levels" in post.payload ? post.payload : null;
@@ -109,6 +115,7 @@ export function PostListItem({
   }
 
   return (
+    <>
     <li
       role="link"
       tabIndex={0}
@@ -119,52 +126,71 @@ export function PostListItem({
           open();
         }
       }}
-      className="flex cursor-pointer flex-col gap-3 rounded-3xl border border-transparent bg-surface px-4 pb-2 pt-4 text-left transition-colors hover:border-surface-hover hover:bg-surface-hover/60 sm:px-5"
+      className="flex cursor-pointer flex-col gap-3 rounded-lg bg-surface px-4 pb-2 pt-4 text-left transition-colors hover:border-foreground/20"
     >
       <div className="flex items-center gap-2 text-sm">
         {post.authorUsername && (
           <Link
             href={`/u/${post.authorUsername}`}
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-2 font-semibold hover:underline"
+            className="flex min-w-0 items-center gap-2 font-medium hover:underline"
           >
             <UserAvatar url={post.authorAvatarUrl ?? null} />
-            {post.authorUsername}
+            <span className="truncate">{post.authorUsername}</span>
           </Link>
         )}
-        <span className="text-muted">
+        <span className="shrink-0 whitespace-nowrap text-muted">
           {post.authorUsername ? "· " : ""}
           {timeAgo(post.createdAt)}
         </span>
         <span className="flex-1" />
         {post.unlisted && <EyeOffIcon className="h-4 w-4 text-muted" />}
         {isSetlist && (
-          <span className="flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-bold text-accent">
+          <span className="flex items-center gap-1 rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium text-muted">
             <SetlistIcon className="h-3.5 w-3.5" />
             Setlist
           </span>
         )}
         {(routine || card) && (
-          <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${routine ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/15 text-amber-600 dark:text-amber-400"}`}>
+          <span className="flex items-center gap-1 rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium text-muted">
             <CalendarIcon className="h-3.5 w-3.5" />
             {routine ? "Routine" : "Milestone"}
           </span>
         )}
+        {/* Your own post: Delete sits in a ⋮ menu (it asks first), away from Like and Share. */}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              setMenu({ x: r.right - 208, y: r.bottom + 4, items: [{ label: "Delete post", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: onDelete }] });
+            }}
+            // Enter/Space press this button, not the card (Escape still reaches the menu).
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.stopPropagation()}
+            aria-label="More for this post"
+            aria-haspopup="menu"
+            title="More"
+            className="-my-2 -mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
+          >
+            <DotsVerticalIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="line-clamp-2 text-lg font-extrabold leading-snug tracking-tight">{post.title}</p>
+        <p className="line-clamp-2 text-base font-semibold leading-snug">{post.title}</p>
         {post.description && <p className="line-clamp-2 text-sm text-muted">{post.description}</p>}
       </div>
 
       {preview.length > 0 && (
-        <div className="flex flex-col gap-1 rounded-xl bg-background px-3 py-2.5">
+        <div className="flex flex-col gap-1 rounded-md bg-foreground/[0.05] px-3 py-2.5">
           {preview.map((name, i) => (
             <div key={`${name}-${i}`} className="flex items-center gap-2.5 text-sm">
               {isSetlist || routine ? (
-                <span className="w-4 text-right font-bold tabular-nums text-accent">{i + 1}</span>
+                <span className="w-4 text-right tabular-nums text-muted">{i + 1}</span>
               ) : (
-                <NoteIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
+                <NoteIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
               )}
               <span className="min-w-0 flex-1 truncate">{name}</span>
             </div>
@@ -179,7 +205,7 @@ export function PostListItem({
         </div>
       )}
 
-      <div className="flex items-center gap-4 text-xs font-semibold tabular-nums text-muted">
+      <div className="flex items-center gap-4 text-xs font-medium tabular-nums text-muted">
         {routine ? (
           <span className="flex items-center gap-1">
             <CalendarIcon className="h-4 w-4" />
@@ -198,26 +224,12 @@ export function PostListItem({
           </span>
         )}
         <span className="flex-1" />
-        {onDelete && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            aria-label="Delete post"
-            title="Delete post"
-            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-background hover:text-danger"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
-        )}
         <button
           type="button"
           onClick={(e) => void handleShare(e)}
           aria-label="Share this post"
           title={copied ? "Link copied" : "Share"}
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-background hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-surface-hover hover:text-foreground"
         >
           {copied ? <CheckIcon className="h-4 w-4 text-accent" /> : <ShareIcon className="h-4 w-4" />}
         </button>
@@ -228,12 +240,15 @@ export function PostListItem({
             void toggleLike({ id: post.id });
           }}
           aria-label={liked ? "Unlike this post" : "Like this post"}
-          className={`flex h-9 items-center gap-1.5 rounded-full px-2 text-sm font-bold hover:bg-background ${liked ? "text-danger" : "hover:text-foreground"}`}
+          className={`flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium hover:bg-surface-hover ${liked ? "text-danger" : "hover:text-foreground"}`}
         >
-          <HeartIcon className="h-5 w-5" filled={liked} />
+          <HeartIcon className="h-4 w-4" filled={liked} />
           {post.likeCount}
         </button>
       </div>
     </li>
+    {/* Outside the card (and the list), so a pick in the menu doesn't also open the post. */}
+    {menu && createPortal(<ContextMenu menu={menu} onClose={() => setMenu(null)} />, document.body)}
+    </>
   );
 }

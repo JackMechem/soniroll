@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import { NAV_LINKS } from "@/components/tools";
 import { RewardProvider } from "@/components/reward/Reward";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
-import { PresetsChip } from "@/components/PresetsChip";
+import { PresetsButton } from "@/components/PresetsChip";
 import type { ToolPresets } from "@/lib/toolPresets";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
@@ -36,6 +36,7 @@ export default function ToolLayout({
   sidePanel,
   credit,
   presets,
+  actions,
   children,
 }: {
   title: string;
@@ -48,15 +49,20 @@ export default function ToolLayout({
   help?: React.ReactNode;
   /** Extra panels (history, logs), shown as chips just above the main display. */
   sidePanel?: React.ReactNode;
-  /** Small, unobtrusive text pinned to the bottom-right corner of the page (e.g. an idea credit). */
+  /** Small, unobtrusive text (e.g. an idea credit): the page's bottom-right corner on desktop,
+      under the option chips on phones. */
   credit?: React.ReactNode;
   /** A mode selector shown above the option chips (e.g. Timed / Listen), for a choice that
       decides which chips there are. */
   optionsMode?: React.ReactNode;
   options: React.ReactNode;
-  /** Saved presets of the tool's options: a "Presets" chip first in the chips. Build it with
-      `toolPresets(id, settings, update)` (`lib/toolPresets.ts`). Hidden whenever `options` is. */
+  /** Saved presets of the tool's options: a Presets button in the top bar (desktop) or the row at
+      the top of the page (phones). Build it with `toolPresets(id, settings, update)`
+      (`lib/toolPresets.ts`). */
   presets?: ToolPresets;
+  /** Page-level buttons (e.g. Score Writer's Import / New score): on the right of the header bar
+      (desktop), or in the row at the top of the page (phones). */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const stacked = layout === "stacked";
@@ -73,50 +79,63 @@ export default function ToolLayout({
   const page = (
     <LayoutContext.Provider value={layout}>
       <div className={`relative flex min-h-full flex-1 flex-col bg-background text-foreground ${rewardOn ? "reward-scope" : ""}`}>
-        <div className="absolute left-0 right-0 top-[calc(env(safe-area-inset-top)+0.75rem)] flex h-10 items-center pl-16 pr-4 sm:pl-[4.5rem] lg:top-3 lg:pl-8">
-          <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {TitleIcon && <TitleIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" />}
-            <span className="truncate">{title}</span>
+        {/* The header bar (desktop). On phones the title is in the app's top bar, and the ? and the
+            stats sit at the top of the page instead. */}
+        <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 px-8 lg:flex">
+          <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
+            {TitleIcon && <TitleIcon className="h-[18px] w-[18px] shrink-0 text-muted" />}
+            <span className="truncate" title={title}>{title}</span>
           </h1>
-          {topic && <div className="ml-1.5"><IntroButton onClick={intro.show} label={`How ${title} works`} /></div>}
-          {help && <div className="ml-3">{help}</div>}
-          {titleExtra && <div className="ml-4 pr-4">{titleExtra}</div>}
-          {statsHref && (
-            <div className="ml-4 hidden min-w-0 flex-1 lg:block">
-              <ToolStats href={statsHref} />
+          {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
+          {help && <div className="ml-1">{help}</div>}
+          {titleExtra && <div className="ml-3 pr-4">{titleExtra}</div>}
+          {(presets || statsHref || actions) && (
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {presets && <PresetsButton tool={presets} />}
+              {statsHref && <ToolStats href={statsHref} />}
+              {actions}
             </div>
           )}
         </div>
 
+        {/* Phones: the same row, pinned just under the app's top bar. */}
+        <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.25rem)] sm:inset-x-6 lg:hidden">
+          <PhoneBar href={statsHref} presets={presets} actions={actions} intro={topic ? <IntroButton onClick={intro.show} label={`How ${title} works`} /> : null} help={help} />
+        </div>
+
         {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
 
+        {/* Desktop: pinned to the bottom-right corner. Phones: in the page, under the chips (pinned,
+            it covered the last chip). */}
         {credit && (
-          <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 text-xs text-muted/70">
+          <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 hidden text-xs text-muted/70 lg:block">
             {credit}
           </p>
         )}
 
         {stacked ? (
-          <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16">
+          <main className="flex w-full flex-1 flex-col gap-6 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+7rem)] sm:px-6 lg:pt-20">
             <section
               className={`flex w-full min-w-0 flex-1 flex-col items-center gap-6 text-center ${
-                topAligned ? "justify-start" : "justify-center"
+                topAligned ? "justify-start" : "justify-start lg:justify-center"
               }`}
             >
-              {statsHref && <PhoneStats href={statsHref} />}
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
               {children}
             </section>
-            {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
+            {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
+            {credit && <PhoneCredit>{credit}</PhoneCredit>}
           </main>
         ) : (
-          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16 xl:max-w-5xl">
+          // Phones and tablets: from the top, just under the row of presets/stats (centred, a short
+          // tool left a blank band above it and pushed its chips down). Desktop: centred.
+          <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-start gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+7.75rem)] sm:px-6 lg:justify-center lg:pt-24 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
-                {statsHref && <PhoneStats href={statsHref} />}
-                {sidePanel && <TopChips>{sidePanel}</TopChips>}
+                  {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
-                {options && <OptionChips mode={optionsMode} presets={presets}>{options}</OptionChips>}
+                {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
+                {credit && <PhoneCredit>{credit}</PhoneCredit>}
               </div>
             </section>
           </main>
@@ -136,26 +155,22 @@ export default function ToolLayout({
 
 /** A tool's options, as a row of setting chips under its main display (each `CollapsiblePanel` /
     `OptionSection` becomes a chip that opens a popover). Replaces the old hideable options column. */
-function OptionChips({
-  children,
-  mode,
-  presets,
-}: {
-  children: React.ReactNode;
-  mode?: React.ReactNode;
-  presets?: ToolPresets;
-}) {
+function OptionChips({ children, mode }: { children: React.ReactNode; mode?: React.ReactNode }) {
   return (
     <ChipsModeContext.Provider value={true}>
       <div className="flex w-full flex-col items-center gap-3 pt-2">
         {mode}
         <SettingsBar>
-          {presets && <PresetsChip tool={presets} />}
           {children}
         </SettingsBar>
       </div>
     </ChipsModeContext.Provider>
   );
+}
+
+/** An idea credit in the page's flow, under the option chips (below `lg`). */
+function PhoneCredit({ children }: { children: React.ReactNode }) {
+  return <p className="text-center text-xs text-muted/70 lg:hidden">{children}</p>;
 }
 
 /** The side panels (history, struggles, logs) as a small row of chips above the main display. */
@@ -167,11 +182,25 @@ function TopChips({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Below `lg` the stats pills sit at the top of the page, a row you swipe sideways. */
-function PhoneStats({ href }: { href: string }) {
+/** Below `lg`, a small row at the top of the page: presets, the tool's stats and Log button, and
+    its ?. */
+function PhoneBar({ href, presets, actions, intro, help }: { href: string | null; presets?: ToolPresets; actions?: React.ReactNode; intro: React.ReactNode; help?: React.ReactNode }) {
+  if (!href && !presets && !actions && !intro && !help) return null;
   return (
-    <div className="w-full max-w-[100vw] text-left lg:hidden">
-      <ToolStats href={href} />
+    // Always one line that fits (360–390 wide): the presets button is the part that gives way
+    // (its name truncates; `[&>div]` reaches SettingChip's wrapper), the ? never moves off screen.
+    <div className="flex w-full min-w-0 items-center gap-2 text-left lg:hidden">
+      {presets && (
+        <div className="flex min-w-[2.5rem] shrink [&>div]:min-w-0">
+          <PresetsButton tool={presets} />
+        </div>
+      )}
+      {href && <div className="flex shrink-0"><ToolStats href={href} /></div>}
+      {actions}
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {help}
+        {intro}
+      </div>
     </div>
   );
 }

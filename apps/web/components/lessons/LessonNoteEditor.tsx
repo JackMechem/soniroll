@@ -49,16 +49,16 @@ export default function LessonNoteEditor({
   return (
     <div className="flex flex-col gap-2">
       {editable && (
-        <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1 bg-background px-1 py-1.5">
+        <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-0.5 border-b border-foreground/10 bg-background px-1 py-1.5">
           {FORMAT.map((f) => (
-            <button key={f.command} type="button" title={f.title} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`shrink-0 rounded-lg bg-surface px-2.5 py-1 text-xs text-foreground hover:bg-surface-hover ${f.className ?? "font-semibold"}`}>
+            <button key={f.command} type="button" title={f.title} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`h-7 min-w-7 shrink-0 rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${f.className ?? "font-medium"}`}>
               {f.label}
             </button>
           ))}
-          <button type="button" title="Write music notation" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
+          <button type="button" title="Write music notation" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
           </button>
-          <button type="button" title="Insert a file or picture (or paste one)" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex shrink-0 items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-surface-hover">
+          <button type="button" title="Insert a file or picture (or paste one)" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
             <ImageIcon className="h-3.5 w-3.5" /> File
           </button>
           <span className="flex-1" />

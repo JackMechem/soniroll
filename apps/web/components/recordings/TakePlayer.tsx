@@ -86,7 +86,7 @@ export default function TakePlayer({ url, durationSec, compact = false }: { url:
 
   const progress = dur > 0 ? Math.min(100, (pos / dur) * 100) : 0;
   return (
-    <div className={`flex flex-col gap-1 ${compact ? "" : "rounded-2xl bg-background/60 p-2"}`}>
+    <div className={`flex flex-col gap-1 ${compact ? "" : "rounded-lg bg-surface p-2"}`}>
       <div className="flex items-center gap-3">
         <button
           type="button"

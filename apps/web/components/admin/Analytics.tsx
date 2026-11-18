@@ -36,7 +36,8 @@ const METRICS: Record<string, MetricDef> = {
   feedback: { label: "Feedback", group: "Inbox", agg: "sum" },
 };
 const GROUPS = ["Usage", "Accounts", "Practice", "Community", "Content", "Lessons", "Inbox"];
-const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#0ea5e9", "#d946ef", "#84cc16", "#f97316"];
+// Series colours come from the theme: the accent turned around the colour wheel (see globals.css).
+const PALETTE = ["var(--cat-0)", "var(--cat-1)", "var(--cat-2)", "var(--cat-3)", "var(--cat-4)", "var(--cat-5)", "var(--cat-6)", "var(--muted)"];
 
 type ChartType = "line" | "area" | "bar" | "stacked";
 type Bucket = "day" | "week" | "month";
@@ -140,13 +141,15 @@ export default function Analytics() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-full bg-surface p-1 ring-1 ring-foreground/5">
+        <div role="radiogroup" aria-label="Period" className="flex max-w-full gap-0.5 overflow-x-auto rounded-md bg-surface p-0.5">
           {RANGES.map((r) => (
             <button
               key={r}
               type="button"
+              role="radio"
+              aria-checked={range === r}
               onClick={() => setRange(r)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${range === r ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}
+              className={`shrink-0 whitespace-nowrap rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors ${range === r ? "bg-surface-hover text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
             >
               {r === 365 ? "1 year" : `${r} days`}
             </button>
@@ -155,14 +158,14 @@ export default function Analytics() {
         <button
           type="button"
           onClick={() => setRefresh((n) => n + 1)}
-          className="rounded-full bg-surface px-4 py-2 text-sm font-semibold ring-1 ring-foreground/5 hover:bg-surface-hover"
+          className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
         >
           Refresh
         </button>
         {loading && data && <LoadingSpinner size="sm" />}
-        <span className="ml-auto text-xs text-muted">Usage counts are anonymous daily totals. Admins aren&apos;t counted. Days are UTC.</span>
+        <span className="w-full text-xs text-muted sm:ml-auto sm:w-auto">Usage counts are anonymous daily totals. Admins aren&apos;t counted. Days are UTC.</span>
       </div>
-      {error && <p className="rounded-2xl bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
       {!data ? (
         <div className="flex justify-center py-20">
           <LoadingSpinner />
@@ -188,13 +191,13 @@ export default function Analytics() {
                 }}
               />
             ))}
-            <div className="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-foreground/10 p-8">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/15 p-6">
               <button
                 type="button"
                 onClick={() =>
                   saveCharts([...charts, { id: `c${Date.now()}`, title: "New chart", metrics: ["pageViews"], type: "line", bucket: "day", cumulative: false }])
                 }
-                className="flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-indigo-700"
+                className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
               >
                 <PlusIcon className="h-4 w-4" /> Add a chart
               </button>
@@ -230,7 +233,8 @@ function Kpis({ data, current, previous }: { data: Data; current: string[]; prev
     { metric: "feedback" },
   ];
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="flex flex-col gap-2">
+    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-foreground/[0.05] bg-foreground/10 md:grid-cols-4">
       {items.map(({ metric, label }) => {
         const m = METRICS[metric];
         const now = sumOver(data, metric, current);
@@ -238,31 +242,30 @@ function Kpis({ data, current, previous }: { data: Data; current: string[]; prev
         const change = before > 0 ? ((now - before) / before) * 100 : now > 0 ? 100 : 0;
         const s = data.series[metric] ?? {};
         return (
-          <div key={metric} className="flex flex-col gap-1 rounded-3xl bg-surface p-4 ring-1 ring-foreground/5">
-            <span className="text-xs font-semibold text-muted">{label ?? m.label}</span>
-            <span className="text-2xl font-extrabold tabular-nums">
+          <div key={metric} className="flex min-w-0 flex-col gap-1 bg-surface p-4">
+            <span className="truncate text-xs text-muted">{label ?? m.label}</span>
+            <span className="text-2xl font-semibold tabular-nums tracking-tight">
               {fmt(now, m.round)}
-              {m.unit && <span className="ml-1 text-sm font-semibold text-muted">{m.unit}</span>}
+              {m.unit && <span className="ml-1 text-sm font-normal text-muted">{m.unit}</span>}
             </span>
             <div className="flex items-center justify-between gap-2">
-              <span
-                className={`text-xs font-bold ${change > 0 ? "text-emerald-600 dark:text-emerald-400" : change < 0 ? "text-rose-600 dark:text-rose-400" : "text-muted"}`}
-              >
-                {change > 0 ? "▲" : change < 0 ? "▼" : "•"} {Math.abs(Math.round(change))}% <span className="font-medium text-muted">vs before</span>
+              <span className={`truncate text-xs font-medium ${change > 0 ? "text-foreground" : change < 0 ? "text-danger" : "text-muted"}`}>
+                {change > 0 ? "▲" : change < 0 ? "▼" : "•"} {Math.abs(Math.round(change))}% <span className="font-normal text-muted">vs before</span>
               </span>
               <Sparkline values={current.map((d) => s[d] ?? 0)} />
             </div>
           </div>
         );
       })}
-      <div className="col-span-2 flex flex-wrap gap-x-6 gap-y-1 rounded-3xl bg-surface px-4 py-3 text-sm ring-1 ring-foreground/5 md:col-span-4">
+    </div>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted">
         <span>
-          <b>{data.totals.accounts}</b> <span className="text-muted">accounts in all</span>
+          <span className="font-medium tabular-nums text-foreground">{data.totals.accounts}</span> accounts in all
         </span>
         <span>
-          <b>{data.totals.publicProfiles}</b> <span className="text-muted">public profiles</span>
+          <span className="font-medium tabular-nums text-foreground">{data.totals.publicProfiles}</span> public profiles
         </span>
-      </div>
+      </p>
     </div>
   );
 }
@@ -273,7 +276,7 @@ function Sparkline({ values }: { values: number[] }) {
   const h = 18;
   const pts = values.map((v, i) => `${(i / Math.max(1, values.length - 1)) * w},${h - (v / max) * h}`).join(" ");
   return (
-    <svg width={w} height={h} className="shrink-0 overflow-visible text-indigo-500">
+    <svg width={w} height={h} className="shrink-0 overflow-visible text-accent">
       <polyline points={pts} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
@@ -354,23 +357,23 @@ function ChartCard({
   const total = (vals: number[], m: string) => (cfg.cumulative && METRICS[m].agg === "sum" ? (vals[vals.length - 1] ?? 0) : vals.reduce((a, b) => a + b, 0));
 
   return (
-    <section className={`flex flex-col gap-3 rounded-3xl bg-surface p-5 ring-1 ring-foreground/5 ${cfg.wide ? "xl:col-span-2" : ""}`}>
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-extrabold">{cfg.title}</h3>
-          <p className="text-xs text-muted">
-            {{ day: "Per day", week: "Per week", month: "Per month" }[cfg.bucket]}
-            {cfg.cumulative ? " · running total" : ""}
-          </p>
-        </div>
+    <section className={`flex min-w-0 flex-col overflow-hidden rounded-lg bg-surface ${cfg.wide ? "xl:col-span-2" : ""}`}>
+      <div className="flex h-11 shrink-0 items-center gap-2 px-4">
+        <h3 className="min-w-0 truncate text-sm font-medium">{cfg.title}</h3>
+        <span className="hidden truncate text-xs text-muted sm:block">
+          {{ day: "Per day", week: "Per week", month: "Per month" }[cfg.bucket]}
+          {cfg.cumulative ? " · running total" : ""}
+        </span>
         <button
           type="button"
           onClick={() => setEditing((v) => !v)}
-          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${editing ? "bg-foreground text-background" : "bg-background hover:bg-surface-hover"}`}
+          aria-expanded={editing}
+          className={`ml-auto flex h-7 shrink-0 items-center rounded-md px-2 text-xs font-medium transition-colors ${editing ? "bg-surface-hover text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
         >
           {editing ? "Done" : "Customize"}
         </button>
       </div>
+      <div className="flex flex-col gap-3 p-4">
 
       {editing && <ChartEditor cfg={cfg} onChange={onChange} onRemove={onRemove} onMove={onMove} />}
 
@@ -382,10 +385,11 @@ function ChartCard({
               key={l.metric}
               type="button"
               onClick={() => setHidden((h) => (off ? h.filter((x) => x !== l.metric) : [...h, l.metric]))}
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-foreground/10 ${off ? "opacity-40" : ""}`}
+              aria-pressed={!off}
+              className={`flex h-7 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2 text-xs font-medium transition-colors hover:bg-surface-hover ${off ? "opacity-40" : ""}`}
               title={off ? "Show" : "Hide"}
             >
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorOf(l.metric) }} />
+              <span className="h-2 w-2 rounded-full" style={{ background: colorOf(l.metric) }} />
               {l.label}
               <span className="tabular-nums text-muted">{fmt(total(l.values, l.metric), l.round)}</span>
             </button>
@@ -398,19 +402,22 @@ function ChartCard({
       ) : (
         <TimeChart type={cfg.type} bucket={cfg.bucket} buckets={buckets} lines={shown} colorOf={colorOf} />
       )}
+      </div>
     </section>
   );
 }
 
 function Seg<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
-    <div className="flex flex-wrap rounded-full bg-background p-1">
+    <div role="radiogroup" className="flex flex-wrap gap-0.5 rounded-md bg-background p-0.5">
       {options.map(([v, label]) => (
         <button
           key={v}
           type="button"
+          role="radio"
+          aria-checked={value === v}
           onClick={() => onChange(v)}
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${value === v ? "bg-foreground text-background" : "text-muted"}`}
+          className={`rounded-sm px-2 py-1 text-xs font-medium transition-colors ${value === v ? "bg-surface-hover text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
         >
           {label}
         </button>
@@ -422,12 +429,12 @@ function Seg<T extends string>({ value, options, onChange }: { value: T; options
 function ChartEditor({ cfg, onChange, onRemove, onMove }: { cfg: ChartCfg; onChange: (c: ChartCfg) => void; onRemove: () => void; onMove: (d: -1 | 1) => void }) {
   const toggle = (m: string) => onChange({ ...cfg, metrics: cfg.metrics.includes(m) ? cfg.metrics.filter((x) => x !== m) : [...cfg.metrics, m].slice(0, 8) });
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-background/60 p-3 ring-1 ring-foreground/5">
+    <div className="flex flex-col gap-3 rounded-md bg-background p-3">
       <input
         value={cfg.title}
         onChange={(e) => onChange({ ...cfg, title: e.target.value.slice(0, 60) })}
         aria-label="Chart title"
-        className="rounded-xl bg-surface px-3 py-2 text-sm font-semibold outline-none ring-1 ring-foreground/10 focus:ring-2 focus:ring-indigo-500"
+        className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
       />
       <div className="flex flex-wrap items-center gap-2">
         <Seg
@@ -449,18 +456,18 @@ function ChartEditor({ cfg, onChange, onRemove, onMove }: { cfg: ChartCfg; onCha
             ["month", "Monthly"],
           ]}
         />
-        <label className="flex items-center gap-2 text-xs font-semibold">
-          <input type="checkbox" checked={cfg.cumulative} onChange={(e) => onChange({ ...cfg, cumulative: e.target.checked })} className="accent-indigo-600" />
+        <label className="flex items-center gap-2 text-xs font-medium">
+          <input type="checkbox" checked={cfg.cumulative} onChange={(e) => onChange({ ...cfg, cumulative: e.target.checked })} className="accent-[var(--accent)]" />
           Running total
         </label>
-        <label className="flex items-center gap-2 text-xs font-semibold">
-          <input type="checkbox" checked={!!cfg.wide} onChange={(e) => onChange({ ...cfg, wide: e.target.checked })} className="accent-indigo-600" />
+        <label className="flex items-center gap-2 text-xs font-medium">
+          <input type="checkbox" checked={!!cfg.wide} onChange={(e) => onChange({ ...cfg, wide: e.target.checked })} className="accent-[var(--accent)]" />
           Full width
         </label>
       </div>
       {GROUPS.map((g) => (
         <div key={g} className="flex flex-wrap items-center gap-1.5">
-          <span className="w-20 shrink-0 text-[11px] font-bold text-muted">{g}</span>
+          <span className="w-20 shrink-0 text-xs font-medium text-muted">{g}</span>
           {Object.entries(METRICS)
             .filter(([, m]) => m.group === g)
             .map(([id, m]) => {
@@ -470,7 +477,8 @@ function ChartEditor({ cfg, onChange, onRemove, onMove }: { cfg: ChartCfg; onCha
                   key={id}
                   type="button"
                   onClick={() => toggle(id)}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${on ? "bg-indigo-600 text-white" : "bg-surface ring-1 ring-foreground/10 hover:ring-indigo-500"}`}
+                  aria-pressed={on}
+                  className={`h-7 rounded-md border px-2 text-xs font-medium transition-colors ${on ? "border-foreground/40 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:text-foreground"}`}
                 >
                   {m.label}
                 </button>
@@ -478,14 +486,14 @@ function ChartEditor({ cfg, onChange, onRemove, onMove }: { cfg: ChartCfg; onCha
             })}
         </div>
       ))}
-      <div className="flex flex-wrap gap-2 border-t border-foreground/5 pt-3">
-        <button type="button" onClick={() => onMove(-1)} className="rounded-full bg-surface px-3 py-1 text-xs font-semibold ring-1 ring-foreground/10">
+      <div className="flex flex-wrap gap-2 border-t border-foreground/10 pt-3">
+        <button type="button" onClick={() => onMove(-1)} className="h-8 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover">
           ← Move earlier
         </button>
-        <button type="button" onClick={() => onMove(1)} className="rounded-full bg-surface px-3 py-1 text-xs font-semibold ring-1 ring-foreground/10">
+        <button type="button" onClick={() => onMove(1)} className="h-8 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover">
           Move later →
         </button>
-        <button type="button" onClick={onRemove} className="ml-auto flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-danger hover:bg-danger/10">
+        <button type="button" onClick={onRemove} className="ml-auto flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10">
           <CloseIcon className="h-3 w-3" /> Remove chart
         </button>
       </div>
@@ -628,22 +636,22 @@ function TimeChart({
       )}
       {hover !== null && buckets[hover] && (
         <div
-          className="pointer-events-none absolute top-1 z-10 min-w-36 rounded-xl bg-foreground px-3 py-2 text-xs text-background shadow-xl"
+          className="pointer-events-none absolute top-1 z-10 min-w-36 rounded-md bg-foreground px-3 py-2 text-xs text-background shadow-lg"
           style={{ left: Math.min(Math.max(0, xc(hover) - 72), w - 150) }}
         >
-          <p className="mb-1 font-bold">{bucketLabel(buckets[hover], bucket)}</p>
+          <p className="mb-1 font-medium">{bucketLabel(buckets[hover], bucket)}</p>
           {lines.map((l) => (
             <p key={l.metric} className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full" style={{ background: colorOf(l.metric) }} />
                 {l.label}
               </span>
-              <b className="tabular-nums">{fmt(l.values[hover], l.round)}</b>
+              <span className="font-medium tabular-nums">{fmt(l.values[hover], l.round)}</span>
             </p>
           ))}
           {type === "stacked" && lines.length > 1 && (
             <p className="mt-1 flex justify-between border-t border-background/20 pt-1">
-              Total <b className="tabular-nums">{fmt(stackedTotals[hover])}</b>
+              Total <span className="font-medium tabular-nums">{fmt(stackedTotals[hover])}</span>
             </p>
           )}
         </div>
@@ -733,10 +741,10 @@ function BreakdownCard({
   const total = sorted.reduce((a, e) => a + e.value, 0);
   const max = Math.max(1, ...sorted.map((e) => e.value));
   return (
-    <section className="flex flex-col gap-3 rounded-3xl bg-surface p-5 ring-1 ring-foreground/5">
-      <div className="flex flex-wrap items-start gap-2">
+    <section className="flex min-w-0 flex-col overflow-hidden rounded-lg bg-surface">
+      <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 px-4 py-2">
         <div className="min-w-0 flex-1">
-          <h3 className="font-extrabold">{title}</h3>
+          <h3 className="text-sm font-medium">{title}</h3>
           <p className="text-xs text-muted">{subtitle}</p>
         </div>
         {extra}
@@ -749,22 +757,20 @@ function BreakdownCard({
           ]}
         />
       </div>
+      <div className="flex flex-col gap-3 p-4">
       {sorted.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted">{empty}</p>
+        <p className="py-8 text-center text-sm text-muted">{empty}</p>
       ) : kind === "bars" ? (
         <ul className="flex flex-col gap-2">
-          {top.map((e, i) => (
+          {top.map((e) => (
             <li key={e.label} className="flex items-center gap-3 text-sm">
-              <span className={`w-36 shrink-0 truncate ${mono ? "font-mono text-xs" : "font-semibold"}`} title={e.label}>
+              <span className={`w-28 shrink-0 truncate sm:w-36 ${mono ? "font-mono text-xs" : ""}`} title={e.label}>
                 {e.label}
               </span>
-              <span className="relative h-6 flex-1 overflow-hidden rounded-lg bg-background">
-                <span
-                  className="absolute inset-y-0 left-0 rounded-lg"
-                  style={{ width: `${(e.value / max) * 100}%`, background: PALETTE[i % PALETTE.length], opacity: 0.85 }}
-                />
+              <span className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                <span className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${(e.value / max) * 100}%` }} />
               </span>
-              <span className="w-14 shrink-0 text-right tabular-nums text-muted">{fmt(e.value, true)}</span>
+              <span className="w-12 shrink-0 text-right tabular-nums text-muted">{fmt(e.value, true)}</span>
             </li>
           ))}
         </ul>
@@ -772,10 +778,11 @@ function BreakdownCard({
         <Donut entries={top} total={total} />
       )}
       {sorted.length > 8 && (
-        <button type="button" onClick={() => setAll((v) => !v)} className="self-start text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-300">
+        <button type="button" onClick={() => setAll((v) => !v)} className="self-start text-xs text-muted transition-colors hover:text-foreground">
           {all ? "Show fewer" : `Show all ${sorted.length}`}
         </button>
       )}
+      </div>
     </section>
   );
 }
@@ -810,7 +817,7 @@ function Donut({ entries, total }: { entries: { label: string; value: number }[]
             />
           );
         })}
-        <text x={80} y={80} textAnchor="middle" dominantBaseline="middle" transform="rotate(90 80 80)" className="fill-foreground text-xl font-extrabold">
+        <text x={80} y={80} textAnchor="middle" dominantBaseline="middle" transform="rotate(90 80 80)" className="fill-foreground text-xl font-semibold">
           {hover !== null ? fmt(entries[hover].value, true) : fmt(total, true)}
         </text>
       </svg>
@@ -822,8 +829,8 @@ function Donut({ entries, total }: { entries: { label: string; value: number }[]
             onMouseLeave={() => setHover(null)}
             className={`flex items-center gap-2 ${hover !== null && hover !== i ? "opacity-50" : ""}`}
           >
-            <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
-            <span className="min-w-0 flex-1 truncate font-semibold">{e.label}</span>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: PALETTE[i % PALETTE.length] }} />
+            <span className="min-w-0 flex-1 truncate">{e.label}</span>
             <span className="tabular-nums text-muted">
               {fmt(e.value, true)} · {Math.round((e.value / Math.max(1, total)) * 100)}%
             </span>

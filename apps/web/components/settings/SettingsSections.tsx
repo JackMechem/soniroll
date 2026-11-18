@@ -10,7 +10,7 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { VIEW_DEFAULTS, VIEW_KEY } from "@/components/PracticeLog";
 import GoalDialog from "@/components/practicelog/GoalDialog";
 import SwitchRow from "@/components/SwitchRow";
-import { ThemePicker } from "@/components/ThemeModal";
+import { ClassicLookSwitch, ThemePicker } from "@/components/ThemeModal";
 import { NAV_LINKS, groupByCategory } from "@/components/tools";
 import { DISPLAY_DEFAULTS, DISPLAY_KEY, TEXT_SIZES } from "@/lib/display";
 import { HintsContext } from "@/lib/hints";
@@ -20,35 +20,63 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
-/** A settings card: a title, an optional line under it, and a "?" that shows each option's description. */
-function SettingsCard({ title, description, hints = true, children }: { title: string; description?: string; hints?: boolean; children: ReactNode }) {
+/** A settings section: a filled panel with a title, an optional line under it, and a "?" that
+    shows each option's description; then its controls. `footer` is a strip along the bottom (a
+    note and a button), like a form's save row. Also used by the account page's own sections. */
+export function SettingsCard({
+  title,
+  description,
+  hints = true,
+  danger = false,
+  footer,
+  children,
+}: {
+  title: string;
+  description?: ReactNode;
+  hints?: boolean;
+  danger?: boolean;
+  footer?: ReactNode;
+  children?: ReactNode;
+}) {
   const [showHints, setShowHints] = useState(false);
   return (
-    <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          {description && <p className="text-sm text-muted">{description}</p>}
+    <section className="overflow-hidden rounded-lg bg-surface text-left">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className={`text-base font-semibold ${danger ? "text-danger" : ""}`}>{title}</h2>
+            {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+          </div>
+          {hints && <HintsButton on={showHints} onToggle={() => setShowHints(!showHints)} />}
         </div>
-        {hints && <HintsButton on={showHints} onToggle={() => setShowHints(!showHints)} />}
+        {children && <HintsContext.Provider value={showHints}>{children}</HintsContext.Provider>}
       </div>
-      <HintsContext.Provider value={showHints}>{children}</HintsContext.Provider>
+      {footer && (
+        <div className={`flex flex-wrap items-center gap-3 border-t px-4 py-3 text-sm text-muted sm:px-5 ${danger ? "border-danger/30" : "border-foreground/10"}`}>
+          {footer}
+        </div>
+      )}
     </section>
   );
 }
 
+/** Buttons for settings sections. */
+export const BUTTON_PRIMARY = "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50";
+export const BUTTON_SECONDARY = "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:opacity-50";
+export const INPUT = "h-9 rounded-md bg-foreground/[0.05] px-3 text-base text-foreground outline-none transition-colors focus:ring-2 focus:ring-accent/40 sm:text-sm";
+
 function FieldLabel({ children }: { children: ReactNode }) {
-  return <span className="text-xs font-semibold text-muted">{children}</span>;
+  return <span className="text-xs font-medium text-muted">{children}</span>;
 }
 
-/** Pill toggles: lit = shown. */
+/** Toggles for a pool of tools: lit = shown, struck through = hidden. */
 function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${on ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-background text-muted line-through hover:text-foreground"}`}
+      className={`h-8 rounded-md px-2.5 text-xs font-medium transition-colors ${on ? "bg-foreground/[0.08] text-foreground hover:bg-surface-hover" : "text-muted line-through hover:bg-surface-hover hover:text-foreground"}`}
     >
       {children}
     </button>
@@ -66,6 +94,8 @@ export function GeneralSettings() {
       <SettingsCard title="Times">
         <div className="flex flex-col gap-2">
           <FieldLabel>Clock</FieldLabel>
+          {/* Two short choices: don't stretch them across the whole card. */}
+          <div className="w-full max-w-xs">
           <Segmented
             label="Clock"
             value={site.clock}
@@ -75,6 +105,7 @@ export function GeneralSettings() {
               { value: "24", label: "15:00" },
             ]}
           />
+          </div>
         </div>
       </SettingsCard>
       <SettingsCard title="Features" description="Turn off the parts of soniroll you don't use. Nothing is deleted, and you can turn them back on any time.">
@@ -87,14 +118,16 @@ export function GeneralSettings() {
         <SwitchRow label="Confetti and sparkles" checked={site.celebrations} onChange={(celebrations) => update({ celebrations })} hint="The burst when you tick something off and the confetti when you reach a goal or finish a routine." />
         <SwitchRow label="Bug report button" checked={!fabHidden} onChange={(on) => (on ? showFeedbackFab() : hideFeedbackFab())} hint="The button in the bottom corner of every page. Send feedback is still in the sidebar's ⋮ menu. Saved on this device." />
       </SettingsCard>
-      <SettingsCard title="Start over" hints={false}>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-sm text-muted">Put every setting on this page back to how it started. Your theme stays.</p>
-          <button type="button" onClick={() => setResetting(true)} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+      <SettingsCard
+        title="Start over"
+        description="Put every setting on this page back to how it started. Your theme stays."
+        hints={false}
+        footer={
+          <button type="button" onClick={() => setResetting(true)} className={`ml-auto ${BUTTON_SECONDARY}`}>
             Reset settings
           </button>
-        </div>
-      </SettingsCard>
+        }
+      />
       {resetting && (
         <ConfirmDialog
           title="Reset settings?"
@@ -131,6 +164,7 @@ export function AppearanceSettings() {
           onChange={(lessMotion) => setDisplay({ lessMotion })}
           hint="Turns off animations and sliding. If your device is already set to reduce motion, soniroll follows it either way."
         />
+        <ClassicLookSwitch />
       </SettingsCard>
     </>
   );
@@ -171,7 +205,7 @@ export function SidebarSettings() {
           </div>
         ))}
         {site.hiddenTools.length > 0 && (
-          <button type="button" onClick={() => update({ hiddenTools: [] })} className="self-start text-sm font-semibold text-accent hover:underline">
+          <button type="button" onClick={() => update({ hiddenTools: [] })} className="self-start text-sm font-medium text-accent hover:underline">
             Show every tool
           </button>
         )}
@@ -187,11 +221,11 @@ export function DashboardSettings() {
   return (
     <SettingsCard title="Dashboard" description="Choose your cards, their order and their sizes right on the dashboard: press Edit at the top of it." hints={false}>
       <div className="flex flex-wrap gap-2">
-        <Link href="/dashboard?edit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+        <Link href="/dashboard?edit" className={BUTTON_PRIMARY}>
           Edit the dashboard
         </Link>
         {site.dashboard && (
-          <button type="button" onClick={() => update({ dashboard: null, hiddenCards: [] })} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={() => update({ dashboard: null, hiddenCards: [] })} className={BUTTON_SECONDARY}>
             Back to the default cards
           </button>
         )}
@@ -239,7 +273,7 @@ export function ToolSettings() {
               setIntrosReset(true);
             }}
             disabled={introsReset}
-            className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover disabled:opacity-50"
+            className={BUTTON_SECONDARY}
           >
             Show them again
           </button>
@@ -267,17 +301,17 @@ export function PracticeSettings() {
           {perDay ? (
             <div className="flex gap-1">
               {by!.map((m, i) => (
-                <span key={i} className="flex w-10 flex-col items-center rounded-xl bg-background py-1.5">
-                  <span className="text-[11px] font-bold text-muted">{WEEKDAY_LETTER[i]}</span>
-                  <span className="text-xs font-extrabold tabular-nums">{m > 0 ? m : "–"}</span>
+                <span key={i} className="flex w-10 flex-col items-center rounded-md bg-foreground/[0.05] py-1.5">
+                  <span className="text-[11px] text-muted">{WEEKDAY_LETTER[i]}</span>
+                  <span className="text-xs font-medium tabular-nums">{m > 0 ? m : "–"}</span>
                 </span>
               ))}
             </div>
           ) : (
-            <span className="text-3xl font-extrabold tabular-nums">{formatMinutesShort(data.prefs.dailyGoal)}</span>
+            <span className="text-xl font-semibold tabular-nums">{formatMinutesShort(data.prefs.dailyGoal)}</span>
           )}
           <span className="text-sm text-muted">{perDay ? "minutes, by weekday" : "every day"}</span>
-          <button type="button" onClick={() => setGoalOpen(true)} className="ml-auto rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={() => setGoalOpen(true)} className={`ml-auto ${BUTTON_SECONDARY}`}>
             Change
           </button>
         </div>
@@ -307,7 +341,7 @@ export function PracticeSettings() {
           onChange={(on) => setView({ dayHidden: !on })}
           hint="On wider screens, the selected day's routines sit to the left of the calendar. Saved on this device."
         />
-        <Link href="/shed-log" className="self-start text-sm font-semibold text-accent hover:underline">
+        <Link href="/shed-log" className="self-start text-sm font-medium text-accent hover:underline">
           Open the Shed Log →
         </Link>
       </SettingsCard>

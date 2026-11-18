@@ -21,8 +21,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Message({ title, text, children }: { title: string; text: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 py-24 text-center">
-      <DocumentIcon className="h-9 w-9 text-accent" />
-      <h1 className="text-xl font-semibold">{title}</h1>
+      <DocumentIcon className="h-5 w-5 text-muted" />
+      <h1 className="text-lg font-semibold">{title}</h1>
       <p className="max-w-sm text-sm text-muted">{text}</p>
       {children}
     </div>
@@ -90,29 +90,29 @@ export default function SharedNotePage({ token, note }: { token: string; note?: 
   const updated = new Date(shared.updatedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   return (
     <Shell>
-      <header className="flex flex-col gap-3">
+      <header className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
         {shared.parent && <BackButton href={base} label={shared.parent.title} />}
-        <p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-muted">
-          <DocumentIcon className="h-4 w-4 text-accent" /> Shed Note · shared by
+        <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
+          <DocumentIcon className="h-4 w-4 text-muted" /> Shed Note · shared by
           {shared.owner ? (
-            <Link href={`/u/${shared.owner}`} className="text-accent hover:underline">
+            <Link href={`/u/${shared.owner}`} className="font-medium text-foreground hover:underline">
               @{shared.owner}
             </Link>
           ) : (
             <span>{shared.ownerName}</span>
           )}
-          <span className="font-normal">· edited {updated}</span>
+          <span>· edited {updated}</span>
         </p>
-        <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl" style={font ? { fontFamily: font } : undefined}>
+        <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl" style={font ? { fontFamily: font } : undefined}>
           {shared.title}
         </h1>
         <div className="flex flex-wrap gap-2">
           {shared.role && (
-            <Link href={`/shed-notes?id=${encodeURIComponent(shared.id)}`} className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+            <Link href={`/shed-notes?id=${encodeURIComponent(shared.id)}`} className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
               {shared.role === "owner" || shared.role === "write" ? "Edit in Shed Notes" : "Open in Shed Notes"}
             </Link>
           )}
-          <button type="button" onClick={() => setPrinting(true)} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={() => setPrinting(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             <DownloadIcon className="h-4 w-4" /> Save as PDF
           </button>
         </div>

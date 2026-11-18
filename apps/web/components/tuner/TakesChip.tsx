@@ -5,6 +5,7 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Hint from "@/components/Hint";
 import PromptDialog from "@/components/PromptDialog";
+import { SettingChip } from "@/components/SettingsBar";
 import { DownloadIcon, ListIcon, PencilIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt } from "@/lib/recordings";
 import { type TunerTake, deleteTake, downloadTake, renameTake } from "@/lib/tunerTakes";
@@ -38,16 +39,8 @@ export default function TakesChip({
   const fileInput = useRef<HTMLInputElement>(null);
   const count = takes?.length ?? 0;
 
-  return (
+  const body = (
     <>
-      <CollapsiblePanel
-        id="tuner-takes"
-        title="Takes"
-        icon={ListIcon}
-        summary={count ? `${count} take${count === 1 ? "" : "s"}` : "None yet"}
-        open={popover}
-        onOpenChange={setPopover}
-      >
         <Hint>
           Takes are kept in this browser, on this device only. They aren&apos;t uploaded or saved to your account, and clearing the browser&apos;s data
           deletes them. Play one to watch the needle follow it, with a graph of how sharp or flat each note was.
@@ -55,7 +48,7 @@ export default function TakesChip({
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          className="flex items-center justify-center gap-2 rounded-xl bg-background px-4 py-2.5 text-sm font-semibold hover:bg-surface-hover"
+          className="flex h-9 items-center justify-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
         >
           <UploadIcon className="h-4 w-4" />
           Open a file
@@ -83,11 +76,11 @@ export default function TakesChip({
         {takes === null ? null : takes.length === 0 ? (
           <p className="text-sm text-muted">No takes yet. Press Record to make one, or open an audio file.</p>
         ) : (
-          <ul className="-mx-2 flex flex-col">
+          <ul className="flex flex-col divide-y divide-foreground/10">
             {takes.map((take) => {
               const isOpen = take.id === openId;
               return (
-                <li key={take.id} className={`flex items-center gap-1 rounded-xl px-2 py-1.5 ${isOpen ? "bg-accent/10" : ""}`}>
+                <li key={take.id} className="flex items-center gap-1 py-1.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -95,13 +88,13 @@ export default function TakesChip({
                       onOpen(take);
                     }}
                     aria-label={`Play ${take.name} in the tuner`}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1 text-left"
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md py-1 text-left"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${isOpen ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 text-muted"}`}>
                       <PlayIcon className="ml-0.5 h-3.5 w-3.5" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{take.name}</span>
+                      <span className="block truncate text-sm font-medium">{take.name}</span>
                       <span className="block text-xs tabular-nums text-muted">
                         {formatRecordedAt(take.added)} · {formatDuration(take.meta.durationSec)}
                       </span>
@@ -121,7 +114,36 @@ export default function TakesChip({
             })}
           </ul>
         )}
-      </CollapsiblePanel>
+    </>
+  );
+
+  return (
+    <>
+      {count === 0 ? (
+        // No takes yet: a small, quiet link instead of a chip leading the page (it still opens a
+        // file from here).
+        <SettingChip
+          icon={ListIcon}
+          label="Takes"
+          open={popover}
+          onOpenChange={setPopover}
+          trigger={{
+            className: "flex h-8 items-center gap-1.5 rounded-full px-3 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground",
+            content: (
+              <>
+                <ListIcon className="h-4 w-4" />
+                Takes
+              </>
+            ),
+          }}
+        >
+          {body}
+        </SettingChip>
+      ) : (
+        <CollapsiblePanel id="tuner-takes" title="Takes" icon={ListIcon} summary={`${count} take${count === 1 ? "" : "s"}`} open={popover} onOpenChange={setPopover}>
+          {body}
+        </CollapsiblePanel>
+      )}
 
       {renaming && (
         <PromptDialog
@@ -158,7 +180,7 @@ function IconButton({ label, danger, onClick, children }: { label: string; dange
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-background ${danger ? "hover:text-danger" : "hover:text-foreground"}`}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover ${danger ? "hover:text-danger" : "hover:text-foreground"}`}
     >
       {children}
     </button>

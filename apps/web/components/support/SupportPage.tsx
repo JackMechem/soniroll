@@ -31,18 +31,18 @@ export default function SupportPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
-      <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">
+      <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
         <span className="shrink-0" style={{ color: HEART }}>
-          <HeartIcon className="h-6 w-6 sm:h-7 sm:w-7" filled />
+          <HeartIcon className="h-5 w-5" filled />
         </span>
         Support soniroll
       </h1>
       <section
-        className="relative flex flex-col items-center gap-4 overflow-hidden rounded-3xl px-6 py-8 text-center sm:py-10"
+        className="relative flex flex-col items-start gap-4 overflow-hidden rounded-3xl px-5 py-6 text-left sm:items-center sm:px-6 sm:py-10 sm:text-center"
         style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${HEART} 16%, var(--surface)) 0%, var(--surface) 80%)` }}
       >
-        <p className="max-w-xl text-base text-muted">
+        <p className="max-w-xl text-sm text-muted sm:text-base">
           soniroll is free, with no ads and no tool behind a paywall. It&apos;s made by one person, Jack Mechem, a musician and developer. Keeping it
           running costs money every month — if soniroll helps your practice, chipping in keeps it going.
         </p>

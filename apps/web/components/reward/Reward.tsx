@@ -19,9 +19,13 @@ import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
 type Reward = {
   color: string;
-  /** Whether a choice (an id like "sound:wood") has been tried — false shows a "New" badge. */
+  /** Whether a choice (an id like "sound:wood") gets a "New" badge: not tried yet, in a pool the
+      visitor has started exploring (see `poolStarted`). */
   isNew: (id: string) => boolean;
-  /** Marks a choice as tried; the first time, a burst of sparkles comes out of `el`. */
+  /** Whether a choice hasn't been tried (or seen as the current one) yet, badge or not. */
+  unseen: (id: string) => boolean;
+  /** Marks a choice as tried; the first time, and if it was showing "New", a burst of sparkles
+      comes out of `el`. */
   tried: (id: string, el?: Element | null) => void;
 };
 
@@ -31,6 +35,20 @@ export const useReward = () => useContext(RewardContext);
 const TRIED_KEY = "jam-practice-tried-options";
 const DEFAULT_TRIED: { tools: Record<string, string[]> } = { tools: {} };
 
+/** The pool a choice belongs to: "sound" for "sound:wood", "meter" for "meter:3/4". */
+function poolOf(id: string) {
+  const i = id.indexOf(":");
+  return i < 0 ? id : id.slice(0, i);
+}
+
+/** "New" badges only show in a pool once the visitor has tried something in it besides what they
+    started on (which is marked as tried just by being the current choice). So a first visit shows
+    none, instead of "New" on nearly every option. */
+function poolStarted(list: string[], id: string) {
+  const pool = poolOf(id);
+  return list.filter((x) => poolOf(x) === pool).length >= 2;
+}
+
 export function RewardProvider({ href, color, children }: { href: string; color: string; children: ReactNode }) {
   const [stored, update, ready] = useSyncedSettings(TRIED_KEY, DEFAULT_TRIED);
   const value = useMemo<Reward>(() => {
@@ -38,10 +56,11 @@ export function RewardProvider({ href, color, children }: { href: string; color:
     return {
       color,
       // Until the list has loaded, nothing is "New" (so badges don't flash on and off).
-      isNew: (id) => ready && !list.includes(id),
+      isNew: (id) => ready && !list.includes(id) && poolStarted(list, id),
+      unseen: (id) => ready && !list.includes(id),
       tried: (id, el) => {
         if (!ready || list.includes(id)) return;
-        if (el) burstAt(el, color);
+        if (el && poolStarted(list, id)) burstAt(el, color);
         update({ tools: { ...stored.tools, [href]: [...list, id].slice(-200) } });
       },
     };
@@ -68,8 +87,8 @@ export function usePopKey(value: string): number {
 /** A small dot on a choice you haven't tried yet. */
 export function NewBadge({ color }: { color: string }) {
   return (
-    <span aria-hidden title="Not tried yet" className="pointer-events-none absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
-      <span className="relative inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-surface" style={{ background: color }} />
+    <span title="You haven't tried this one yet" className="absolute right-1 top-1 rounded-sm px-1 text-[9px] font-semibold leading-4" style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}>
+      New
     </span>
   );
 }
@@ -96,7 +115,7 @@ export function RewardCard({
   const color = reward?.color ?? "var(--accent)";
   const fresh = !on && !!reward?.isNew(id);
   // What you're already using counts as tried (no dot, no burst).
-  const unseenCurrent = on && !!reward?.isNew(id);
+  const unseenCurrent = on && !!reward?.unseen(id);
   useEffect(() => {
     if (unseenCurrent) reward?.tried(id);
   }, [unseenCurrent, reward, id]);
@@ -111,12 +130,12 @@ export function RewardCard({
         onPick();
         reward?.tried(id, e.currentTarget);
       }}
-      className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl transition active:scale-95 ${
-        on ? "text-accent-foreground shadow-md" : "bg-background text-foreground hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-sm"
+      className={`relative flex flex-col items-center justify-center gap-1 rounded-md border transition-colors ${
+        on ? "text-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
       } ${className}`}
-      style={on ? { background: rewardGradient(color), boxShadow: `0 6px 18px -6px color-mix(in srgb, ${color} 70%, transparent)` } : undefined}
+      style={on ? { borderColor: color, background: `color-mix(in srgb, ${color} 12%, var(--background))` } : undefined}
     >
-      {on && <span key={id} className="reward-glow pointer-events-none absolute inset-0 rounded-2xl" style={{ "--reward": color } as React.CSSProperties} />}
+      {on && <span key={id} className="reward-glow pointer-events-none absolute inset-0 rounded-md" style={{ "--reward": color } as React.CSSProperties} />}
       <span key={on ? "on" : "off"} className={`flex flex-col items-center gap-1 ${on ? "reward-pop" : ""}`}>
         {children}
       </span>
@@ -135,9 +154,9 @@ export function Sparkle({ show, at, color }: { show: boolean; at: string | numbe
   );
 }
 
-/** One choice in a pool you pick several from (which intervals, which chords, which ratios):
-    with the reward look it's a chunky pill that lights up with a check; otherwise the plain
-    accent pill the tools always had (`plainClassName` keeps each tool's own sizing). */
+/** One choice in a pool you pick several from (which intervals, which chords, which ratios): a
+    small bordered toggle, filled with the accent while it's on. With the reward look it fills
+    with the tool's colour and a check pops in (`plainClassName` keeps each tool's own sizing). */
 export function PoolPill({
   on,
   onClick,
@@ -162,7 +181,7 @@ export function PoolPill({
         title={title}
         onClick={onClick}
         disabled={disabled}
-        className={`${plainClassName} transition-colors disabled:opacity-60 ${on ? "bg-accent text-accent-foreground" : "bg-background text-foreground hover:bg-surface-hover"}`}
+        className={`${plainClassName} border transition-colors disabled:opacity-60 ${on ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"}`}
       >
         {children}
       </button>
@@ -175,10 +194,10 @@ export function PoolPill({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex items-center gap-1 rounded-full py-2 text-sm font-bold tabular-nums transition active:scale-95 disabled:opacity-60 ${
-        on ? "pl-2.5 pr-3.5 text-accent-foreground shadow-sm" : "bg-background px-3.5 text-muted hover:-translate-y-0.5 hover:bg-surface-hover hover:text-foreground"
+      className={`relative flex items-center gap-1 rounded-full border py-1.5 text-sm font-medium tabular-nums transition-colors disabled:opacity-60 ${
+        on ? "pl-2 pr-3 text-accent-foreground" : "border-foreground/15 bg-background px-3 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
-      style={on ? { background: rewardGradient(reward.color) } : undefined}
+      style={on ? { background: reward.color, borderColor: reward.color } : undefined}
     >
       {on && <CheckIcon key="on" className="reward-pop h-3.5 w-3.5" />}
       {children}

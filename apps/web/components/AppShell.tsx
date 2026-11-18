@@ -38,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PracticeLogGlobal />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background lg:my-2 lg:ml-2 lg:mr-2 lg:rounded-3xl">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <TilingLayout />
       </div>
     </>
@@ -74,8 +74,10 @@ function AnimatedPage({ children }: { children: React.ReactNode }) {
     return () => slide.cancel();
   }, [pathname]);
 
+  // Phones: room under the page for the floating bug-report button (bottom right), so the last
+  // row, a footer link or a tool's option chips can always sit clear of it.
   return (
-    <div ref={pageRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background lg:my-2 lg:ml-2 lg:mr-2 lg:rounded-3xl">
+    <div ref={pageRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
       {children}
     </div>
   );

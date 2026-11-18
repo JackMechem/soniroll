@@ -68,10 +68,20 @@ export default function LearningPath({
   const summary = summarizeTrack(track, progress);
   const listRef = useRef<HTMLOListElement | null>(null);
 
-  // Bring the level being worked on into view when the path first shows.
+  // Bring the level being worked on into view when the path first shows, in the middle of three
+  // whole levels: the view starts on the level before it (at its connector line, or the list's top
+  // padding for the first level), so no node is cut by the fades. Only the list scrolls:
+  // `scrollIntoView` would scroll the page too, opening it part-way down.
   useEffect(() => {
-    const el = listRef.current?.querySelector<HTMLElement>(`[data-level="${Math.min(current, levels.length - 1)}"]`);
-    el?.scrollIntoView({ block: "center" });
+    const list = listRef.current;
+    const above = Math.min(current, levels.length - 1) - 1;
+    if (!list) return;
+    if (above < 1) {
+      list.scrollTop = 0;
+      return;
+    }
+    const el = list.querySelector<HTMLElement>(`[data-level="${above}"]`);
+    if (el) list.scrollTop = el.offsetTop;
   }, [current, levels.length]);
 
   const done = summary.passed === summary.total;
@@ -79,17 +89,17 @@ export default function LearningPath({
 
   return (
     <section aria-label="Learning path" className="flex w-full max-w-sm flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-left">
+      <div className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-left">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-sm font-semibold">
+          <p className="text-sm font-medium">
             {done ? "Path complete!" : `Level ${current + 1} of ${levels.length}`}
           </p>
-          <p className="flex items-center gap-1 text-sm font-semibold tabular-nums text-amber-500">
+          <p className="flex items-center gap-1 text-sm font-medium tabular-nums text-amber-500">
             ★ {summary.stars}
             <span className="font-normal text-muted">/ {summary.maxStars}</span>
           </p>
         </div>
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-background">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
           <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${pct}%` }} />
         </div>
         <p className="text-xs text-muted">
@@ -99,7 +109,14 @@ export default function LearningPath({
         </p>
       </div>
 
-      <ol ref={listRef} className="relative flex max-h-[26rem] flex-col items-center gap-1 overflow-y-auto py-3">
+      {/* The trail scrolls inside itself, with no scrollbar. Its height is exactly three levels
+          (each 4.75rem: a 1.5rem connector and a 3rem node, then a 0.25rem gap) plus one
+          connector, so the opening view shows whole nodes and only connector lines sit in the
+          top and bottom fades. */}
+      <ol
+        ref={listRef}
+        className="relative flex max-h-[15.75rem] flex-col items-center gap-1 overflow-y-auto py-6 [mask-image:linear-gradient(to_bottom,transparent,black_1.5rem,black_calc(100%-1.5rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {levels.map((level, i) => {
           const passed = isPassed(progress, level.id);
           const unlocked = i <= current;
@@ -107,41 +124,72 @@ export default function LearningPath({
           const isSelected = i === selected;
           const stars = levelStars(progress, level.id);
           const offset = WIND[i % WIND.length] * 2.25;
+          // Where the previous node sits relative to this one (rem), for the connector.
+          const dx = i > 0 ? WIND[(i - 1) % WIND.length] * 2.25 - offset : 0;
           return (
-            <li key={level.id} data-level={i} className="flex flex-col items-center" style={{ transform: `translateX(${offset}rem)` }}>
-              {i > 0 && (
-                <span
-                  aria-hidden
-                  className={`mb-1 h-5 w-1 rounded-full ${unlocked ? "bg-accent/50" : "bg-foreground/10"}`}
-                />
-              )}
-              <div className="flex items-center gap-3">
+            // Each level stacks above the next, so the connector reaching up from the next level
+            // passes under this level's node.
+            <li
+              key={level.id}
+              data-level={i}
+              className="relative flex items-end gap-3"
+              style={{ transform: `translateX(${offset}rem)`, zIndex: levels.length - i }}
+            >
+              <div className="relative flex w-12 shrink-0 flex-col items-center">
+                {i > 0 && (
+                  <>
+                    {/* The space for the connector (1.5rem), and the connector itself: a line from
+                        the previous node's centre to this one's, drawn under both nodes so only
+                        the part between them shows. */}
+                    <span aria-hidden className="h-6" />
+                    <svg
+                      aria-hidden
+                      className={`pointer-events-none absolute overflow-visible ${unlocked ? "text-accent/50" : "text-foreground/10"}`}
+                      style={{
+                        left: `calc(50% + ${Math.min(dx, 0)}rem)`,
+                        top: "-1.75rem",
+                        width: `${Math.abs(dx)}rem`,
+                        height: "4.75rem",
+                      }}
+                    >
+                      <line
+                        x1={dx > 0 ? "100%" : dx < 0 ? "0" : "50%"}
+                        y1="0"
+                        x2={dx > 0 ? "0" : dx < 0 ? "100%" : "50%"}
+                        y2="100%"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </>
+                )}
                 <button
                   type="button"
                   disabled={!unlocked}
                   onClick={() => (isSelected && unlocked ? onStart() : onSelect(i))}
                   aria-label={`Level ${i + 1}: ${level.title}${passed ? ", passed" : unlocked ? "" : ", locked"}`}
                   aria-pressed={isSelected}
-                  className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-bold transition-transform outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-base font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     passed
-                      ? "bg-accent text-accent-foreground shadow-[0_4px_0_0_color-mix(in_srgb,var(--accent)_60%,black)] hover:-translate-y-0.5"
+                      ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
                       : isCurrent
-                        ? "level-pulse bg-surface text-accent ring-4 ring-accent hover:-translate-y-0.5"
-                        : "bg-surface text-muted/60"
-                  } ${isSelected && unlocked ? "scale-110" : ""}`}
+                        ? "border-2 border-accent bg-surface text-accent hover:bg-surface-hover"
+                        : "border-foreground/10 bg-surface text-muted/60"
+                  } ${isSelected && unlocked ? "ring-2 ring-accent/40 ring-offset-2 ring-offset-background" : ""}`}
                 >
-                  {passed ? <CheckIcon className="h-6 w-6" /> : unlocked ? i + 1 : <LockIcon className="h-5 w-5" />}
+                  {passed ? <CheckIcon className="h-5 w-5" /> : unlocked ? i + 1 : <LockIcon className="h-4 w-4" />}
                 </button>
-                <div className="flex w-36 flex-col items-start text-left">
-                  <span className={`text-sm font-semibold ${unlocked ? "" : "text-muted/60"}`}>{level.title}</span>
-                  {passed ? (
-                    <Stars count={stars} />
-                  ) : isCurrent ? (
-                    <span className="text-xs font-medium text-accent">{isSelected ? "Up next" : "Current level"}</span>
-                  ) : (
-                    <span className="text-xs text-muted/60">Level {i + 1}</span>
-                  )}
-                </div>
+              </div>
+              <div className="flex min-h-12 w-36 flex-col items-start justify-center text-left">
+                <span className={`text-sm font-medium ${unlocked ? "" : "text-muted/60"}`}>{level.title}</span>
+                {passed ? (
+                  <Stars count={stars} />
+                ) : isCurrent ? (
+                  <span className="text-xs font-medium text-accent">{isSelected ? "Up next" : "Current level"}</span>
+                ) : (
+                  <span className="text-xs text-muted/60">Level {i + 1}</span>
+                )}
               </div>
             </li>
           );

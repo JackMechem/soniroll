@@ -11,7 +11,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import { menuPosition } from "@/components/library/shared";
 import { EmptyState, Hero, LibraryPage, Pill } from "@/components/library/ui";
-import { CapIcon, ItemCard, ItemDialog, KindFilter, MoreButton, PersonBadge, useSortedItems, type LessonItem } from "@/components/lessons/parts";
+import { CapIcon, ItemCard, ItemDialog, KindFilter, MoreButton, PersonBadge, btnSmall, useSortedItems, type LessonItem } from "@/components/lessons/parts";
 import { notesHref } from "@/components/lessons/NotesPage";
 import { NewLessonDialog, sessionWhen } from "@/components/lessons/sessions";
 import { lessonHref } from "@/components/lessons/NotesPage";
@@ -58,7 +58,7 @@ export default function LessonPage({ pair, id }: { pair: string; id: string }) {
   if (!data)
     return (
       <LibraryPage>
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState
             icon={CapIcon}
             title="Lesson not found"
@@ -137,14 +137,14 @@ export default function LessonPage({ pair, id }: { pair: string; id: string }) {
         }
       >
         {teacher && s?.hiddenUntil && (
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-background px-4 py-3 text-sm">
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-surface px-4 py-3 text-sm">
             <span className="min-w-0 flex-1">
-              <b>{data.studentName} can&apos;t see this yet.</b> <span className="text-muted">It opens for them when the lesson starts — get it ready now.</span>
+              <b className="font-medium">{data.studentName} can&apos;t see this yet.</b> <span className="text-muted">It opens for them when the lesson starts — get it ready now.</span>
             </span>
             <button
               type="button"
               onClick={() => void updateSession({ sessionId: s.id, hidden: false })}
-              className="rounded-full bg-surface px-3.5 py-1.5 text-xs font-semibold ring-1 ring-foreground/10 hover:bg-surface-hover"
+              className={btnSmall}
             >
               Show it now
             </button>
@@ -155,7 +155,7 @@ export default function LessonPage({ pair, id }: { pair: string; id: string }) {
       {s && list && <LessonNav lessonId={lessonId} currentId={s.id} sessions={list.sessions} />}
       {data.items.length > 0 && <KindFilter items={data.items as LessonItem[]} value={filter} onChange={setFilter} />}
       {items.length === 0 ? (
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState
             icon={CapIcon}
             title={filter === "all" ? "Nothing in this lesson yet" : "Nothing here"}
@@ -257,7 +257,7 @@ function LessonNav({ lessonId, currentId, sessions }: { lessonId: Id<"lessonStud
       {older ? (
         <Link
           href={lessonHref(lessonId, older.id)}
-          className="flex min-w-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-muted hover:bg-surface hover:text-foreground"
+          className="flex h-8 min-w-0 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <ChevronLeftIcon className="h-4 w-4 shrink-0" />
           <span className="truncate">
@@ -270,7 +270,7 @@ function LessonNav({ lessonId, currentId, sessions }: { lessonId: Id<"lessonStud
       {newer && (
         <Link
           href={lessonHref(lessonId, newer.id)}
-          className="flex min-w-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-muted hover:bg-surface hover:text-foreground"
+          className="flex h-8 min-w-0 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <span className="truncate">
             Next · {newer.title} <span className="font-normal">({day(newer.start)})</span>

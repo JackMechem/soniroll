@@ -4,6 +4,20 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.6] - 2026-11-17
+
+- **A cleaner look** throughout, the same as the website's: less clutter, smaller corners, fewer
+  outlines, a simpler sidebar with colour-coded tools. **Classic look** (Settings → Appearance)
+  brings back the old feel.
+- Search (/) finds tools, your tunes and chord charts, pages, settings and help.
+- Presets sit in every tool's top bar; −10/−5/+5/+10 tempo buttons; Space always starts and stops.
+- Shed Log: quieter missed days, minutes and progress on every day, log time on past days, and
+  Stats can step back through past weeks.
+- Library: chord charts in folders with a Recent row, a Recordings tab, Write the chart from a
+  tune, and Play along to open a chart in Rhythm Section.
+- Slow Downer: Loop start / Loop end buttons; Practice Timer: a quick timer.
+- Signed in, your own things load first instead of waiting for your whole chart library.
+
 ## [0.1.5] - 2026-11-16
 
 - New **Rhythm Section** tool, replacing Bass Genius and the Drum Generator: drums in over 30 styles,

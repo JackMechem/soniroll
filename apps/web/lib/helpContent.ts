@@ -28,7 +28,7 @@ export type HelpTopic = {
   shot?: string;
 };
 
-export const HELP_GROUPS = ["Getting started", "Your library", "Play along", "Time & rhythm", "Ear training", "On your instrument", "Drums", "Practice tools"];
+export const HELP_GROUPS = ["Getting started", "Your library", "People", "Play along", "Time & rhythm", "Ear training", "On your instrument", "Drums", "Practice tools"];
 
 export const HELP_TOPICS: HelpTopic[] = [
   // ---------------------------------------------------------------- getting started
@@ -43,11 +43,11 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Check today", text: "Your goal ring, streak, this week and total hours sit at the top." },
       { title: "Do what's on today", text: "Start a routine or tick off today's tasks right from the dashboard." },
       { title: "Pick up where you left off", text: "The tools, tunes and charts you used last are one click away." },
-      { title: "Find anything", text: "Search tools and your tunes from the box at the top." },
+      { title: "Find anything", text: "Search tools, your tunes, your chord charts, pages and settings from the box at the top." },
       { title: "Make it yours", text: "Press Edit to drag cards around, change their size, take some off or add others. Done saves it." },
     ],
     features: ["Today's goal, streak, week and hours", "On today: routines and tasks", "Days practiced, as a grid", "Tune of the day", "Favorites and recent tools", "More cards to add: your library, setlists, practice sessions, ear training, every tool"],
-    tips: ["Press / anywhere to search every tool.", "Star tools in the sidebar to pin them as Favorites.", "Reset (while editing) brings back the default cards."],
+    tips: ["Press / anywhere to search every tool, tune and chart.", "Star tools in the sidebar to pin them as Favorites.", "Reset (while editing) brings back the default cards."],
     shot: "dashboard",
   },
   {
@@ -61,7 +61,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Make a routine", text: "Press +, pick Routine, add tasks with minutes and choose the days it repeats." },
       { title: "Practice", text: "Tick a task to log its minutes, or press Start to run the routine on the timer." },
       { title: "Let the day timer run", text: "It counts the whole day — routines, tasks and any tool you use." },
-      { title: "Watch it fill in", text: "Hit your daily goal to keep the streak; done days go green, missed ones red." },
+      { title: "Watch it fill in", text: "Hit your daily goal to keep the streak; done days go green, partly done ones amber, and missed ones show a quiet dot." },
     ],
     features: [
       "Repeating routines with tasks, subtasks and times",
@@ -147,6 +147,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Start a score", text: "Press New score, give it a title, then pick the clef, key, time signature and tempo." },
       { title: "Write notes", text: "Type a letter (A–G) to add a note in the key, 3–7 to pick its length, R for a rest. Or press Write and click notes onto the staff." },
+      { title: "On a phone or tablet", text: "Tap a length, then a note name; More has sharps, ties and chords. In Write, hold a finger on the staff to see the note, slide to change it, and lift to add it." },
       { title: "Fix things up", text: "Click a note, then ↑/↓ to move it (Shift for an octave), # or - for sharp or flat, . to dot it, T for a triplet, + to tie it." },
       { title: "Add chords and play", text: "Ctrl/⌘-K puts a chord symbol above the selected note. Play (or Space) plays from the bar you're in." },
     ],
@@ -160,7 +161,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       "Shown in Shed Notes: press Notation in a note",
     ],
     options: [
-      { name: "Select / Write", text: "Select: clicks only pick a note or bars. Write: clicking the staff adds a note there, or changes the one under the pointer." },
+      { name: "Select / Write", text: "Select: clicks only pick a note or bars. Write: clicking the staff adds a note there, or changes the one under the pointer. On a touch screen, hold on the staff to see which note it is and lift to add it; scroll away to cancel." },
       { name: "Key", text: "Letters you type and notes you click follow the key signature (F in G major is F♯). Accidentals show against the key." },
       { name: "Time", text: "Changing it moves the notes into the new bars, as long as no note would cross a bar line." },
       { name: "Export / Import", text: "Save a score as a file, or bring one in (Rhythm Section bass transcriptions too)." },
@@ -181,7 +182,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Saved sessions", "Pomodoro with named work cycles", "Alarm mode that waits for you", "Keeps running across pages and reloads"],
     options: [
-      { name: "New session", text: "Opens the editor. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
+      { name: "Quick timer", text: "Type the minutes and press Start for one plain countdown. Nothing is saved." },
+      { name: "New session", text: "Opens the editor. Start now runs it without saving. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
       { name: "Pomodoro cycles", text: "Set number stops after the work cycles you choose; Keep going runs until you stop it. Long break every N cycles sets when the longer break comes. Each work cycle can have its own name." },
       { name: "Sound", text: "Which tone plays when a step ends, and whether it plays at all." },
       { name: "Alarm mode", text: "Instead of moving on by itself, the timer waits and keeps ringing until you press Continue." },
@@ -234,7 +236,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Sign in or sign up", text: "From the bottom of the sidebar — email and password, or Google." },
       { title: "Pick a username", text: "It's how others find you in Community." },
-      { title: "Make it yours", text: "Choose from 30 themes in the sidebar's ⋮ menu → Theme." },
+      { title: "Make it yours", text: "Settings is at the bottom of the sidebar; the palette button beside it goes straight to the theme, text size and Classic look (signed out, it's Theme and display)." },
     ],
     features: ["Sync across devices", "A public profile (optional)", "Recordings saved to your account", "30 color themes"],
   },
@@ -243,7 +245,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: "community",
     title: "Community",
-    group: "Your library",
+    group: "People",
     href: "/community",
     tagline: "Find musicians and what they're working on.",
     purpose: "Search public profiles, follow people, and browse posted tunes, setlists, routines and progress.",
@@ -263,20 +265,21 @@ export const HELP_TOPICS: HelpTopic[] = [
   },
   {
     id: "tunes",
-    title: "Tunes & setlists",
+    title: "Library",
     group: "Your library",
     href: "/tunes",
-    tagline: "Every tune you know, and the ones you're learning.",
+    tagline: "Your tunes, setlists, chord charts and files.",
     purpose: "Keep your repertoire with keys, tempos, notes and linked charts, and put tunes in order for a gig.",
     steps: [
-      { title: "Add tunes", text: "Pick from 600+ jazz standards or add your own." },
-      { title: "Open a tune", text: "See its chart, the keys you know it in, notes and recordings." },
+      { title: "Add tunes", text: "Pick from 600+ jazz standards (choose Tunes I Know or Tunes to Learn at the bottom of the picker) or add your own. Standards come with a key and tempo, not chords: write the chart or import yours." },
+      { title: "Open a tune", text: "See its chart, the keys you know it in, notes and recordings. Play along opens the chart in Rhythm Section." },
       { title: "Make a setlist", text: "Order tunes for a gig, with a key and tempo for each." },
     ],
     features: ["Tunes I Know and Tunes to Learn", "Keys, tempos and notes per tune", "Files on each tune", "Share a tune by link", "Setlists with drag to reorder", "Read all a setlist's charts in a row", "Share setlists by link"],
     options: [
       { name: "Tunes I Know / Tunes to Learn", text: "Two lists: what you can play now, and what you're working on." },
-      { name: "A tune's page", text: "The chart linked to it (transposable), the keys you know it in, tempos, notes, files, recordings and the song to play along with." },
+      { name: "A tune's page", text: "The chart linked to it (Show in changes only how it's shown), the keys you know it in (tap a key to tick it), tempos, a quick note, Shed Notes, files, recordings and the song to play along with. With no chart linked, a chart with the same name is offered to link in one tap. Play along opens the chart in Rhythm Section, in the key shown." },
+      { name: "Quick note and Shed Notes", text: "The quick note is a few lines kept with the tune itself. Shed Notes are full notes (links, notation, search) that show on the tune's page and in Shed Notes." },
       { name: "Share a tune", text: "Share on a tune's page makes a link anyone can open: the tune with its chord chart, files and recordings (never your notes). They can save a copy. Stop sharing whenever you like." },
       { name: "Setlists", text: "Tunes in order, each with its own key and tempo for that set. Drag to reorder, share by link, or read all the charts in a row." },
     ],
@@ -288,18 +291,20 @@ export const HELP_TOPICS: HelpTopic[] = [
     group: "Your library",
     href: "/chord-charts",
     tagline: "Read, build and transpose charts.",
-    purpose: "Import iReal-style playlists or build your own charts, then read them full screen in any key.",
+    purpose: "Import iReal-style charts or build your own, keep them in folders, then read them full screen in any key.",
     steps: [
-      { title: "Import or build", text: "Paste a playlist link, or make a chart with the on-screen chord keypad." },
+      { title: "Import or build", text: "Paste an iReal Pro playlist link (it comes in as a folder), or make a chart with the on-screen chord keypad." },
       { title: "Read it", text: "Open a chart; pick a key to transpose it; go full screen." },
-      { title: "Organize", text: "Keep charts in playlists and link them to your tunes." },
+      { title: "Organize", text: "Keep charts in folders and link them to your tunes, or add a chart to Tunes I Know from its page." },
     ],
-    features: ["Import playlists", "Chart builder with sections, repeats and codas", "Transpose to any key", "Playlists", "Linked to tunes and setlists"],
+    features: ["Import iReal Pro playlists", "Chart builder with sections, repeats and codas", "Transpose to any key", "Folders", "Linked to tunes and setlists"],
     options: [
-      { name: "Import", text: "Paste a playlist link to add its charts. Update charts you already have replaces older copies." },
-      { name: "New chart", text: "Type chords bar by bar with a keypad for symbols; add sections, repeats, endings and codas." },
+      { name: "Import", text: "Paste an iReal Pro playlist link to add its charts, as a folder of the same name. Update charts you already have replaces older copies." },
+      { name: "New chart", text: "Type chords bar by bar with a keypad for symbols; add sections, repeats, endings and codas. Started from a tune (Write the chart), it begins with the tune's name, key and time and is linked to the tune when you save. Leaving with unsaved changes asks first. Empty bars at the end are dropped when you save." },
       { name: "Key", text: "Shows the chart in any key without changing the saved one." },
-      { name: "Playlists", text: "Charts live once in your library; playlists just list them, so a chart can be in several." },
+      { name: "Play along", text: "Opens the chart in Rhythm Section, in the key you're viewing, so a band plays it with you." },
+      { name: "Folders", text: "Charts live once in your library; folders just list them, so a chart can be in several. With no folders (or only a few charts), the charts are listed on the tab itself, and the ones you open, write or edit show under Recent." },
+      { name: "Your tunes", text: "A chart's page shows the tunes that use it, and can add it to Tunes I Know or Tunes to Learn in one tap." },
     ],
     shot: "chord-charts",
   },
@@ -316,6 +321,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Link it", text: "Attach a take to a tune or a Shed Log routine." },
       { title: "Listen back", text: "Play it on its own or over the tune's song with a mixer." },
     ],
+    tips: ["Find this page from the Recordings tab in the Library, or search for it with /.", "Each recording's ⋮ menu (or right-click) opens, renames, shares, downloads or deletes it; its tune name opens the tune."],
     features: ["Saved to your account", "Linked to tunes and Shed Log days", "Play over the original song", "Notes per take"],
   },
 
@@ -329,7 +335,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Upload", text: "Upload on the Files page (or drop files on it), or in the Files section of any tune's page." },
       { title: "Attach to a tune", text: "A file on a tune shows on the tune's page and goes along when you share the tune." },
-      { title: "Find anything", text: "Search, filter by where it came from (uploads, recordings, songs, lessons) and by type, sort by any column, and open it right there." },
+      { title: "Find anything", text: "Search, filter by where it came from (uploads, recordings, songs, lessons) and by type (on a phone, one Show menu), sort by any column, and open it right there." },
       { title: "Manage it", text: "Every file has a ⋮ menu (or right-click it): rename, share a link, download, attach to a tune, delete. Tick several to delete them together." },
     ],
     features: ["PDFs, images, audio and video open in place", "Rename, share and delete anything", "Share one file by link", "Attach files to tunes", "Recordings, songs and lesson files in the same list", "100 MB of storage per account"],
@@ -345,7 +351,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: "lessons",
     title: "Lessons",
-    group: "Getting started",
+    group: "People",
     href: "/lessons",
     tagline: "For teachers and their students.",
     purpose: "Each student's lessons, one page per lesson — its notes, assignments (they hand in files, text or links), PDFs and charts — plus Shed Log routines and their practice, day by day.",
@@ -388,7 +394,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Your tunes or 600+ standards", "Random key and tempo", "Count-off", "Keep going one after another"],
     options: [
-      { name: "Tunes", text: "Your list of tunes to draw from — your own or the jazz standards. Each tune can have several tempos and keys; only the ones switched on can be picked." },
+      { name: "Tunes", text: "Your list of tunes to draw from — your own or the jazz standards. Search to add a standard, or type any name and add it as your own tune in one tap (More details adds tempos, keys and notes). Each tune can have several tempos and keys; only the ones switched on can be picked." },
       { name: "Count-off", text: "How many bars of clicks before you start, and whether beat one is accented." },
       { name: "Keep metronome going", text: "Keeps clicking after the count-off so you play along with the time." },
       { name: "Keep going", text: "Picks the next tune automatically when you're done with one." },
@@ -423,7 +429,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Bass", text: "Off, or the upright. On swing, the Computer walks a line from scratch (walking in 4 or a two feel); your own players (and the built-in one) play from the transcriptions you add: Their phrases reuses their lines, Their style writes new lines the way they play. Touch is how hard it's plucked." },
       { name: "Chords", text: "Off, piano or Rhodes. On swing, Comping plays varied rhythms and Held plays one chord per change; other styles hold the chords." },
       { name: "Mix", text: "Levels for bass, chords, drums, the click and the room sound, and a fader for each part of the kit." },
-      { name: "Bass players", text: "The second tab: add players and transcribe their lines (or import MusicXML), so the bass can play like them. The idea and the built-in Ray Brown transcription are Rob Moreno's." },
+      { name: "Bass players", text: "The tab next to Band: add players and transcribe their lines (or import MusicXML), so the bass can play like them. The idea and the built-in Ray Brown transcription are Rob Moreno's." },
     ],
     shot: "rhythm-section",
   },
@@ -441,9 +447,10 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Timed and Listen modes", "Per-string drills for string players", "Struggles and history", "Count-down rings"],
     options: [
-      { name: "Notes", text: "Your instrument, which sets the range of notes that can come up, and how sharps and flats are spelled." },
+      { name: "Range", text: "Your instrument (the chip shows it, e.g. Bass · E1–G4), which sets the range of notes that can come up, and how sharps and flats are spelled." },
+      { name: "Time per note / Time to play", text: "Timed: how long each note stays on screen. Listen: how long you have to play it, and the pause before the next one." },
       { name: "Timed / Listen", text: "Timed shows a note and moves on after a set time. Listen uses your microphone and grades what you play as correct, close or wrong." },
-      { name: "Listen settings", text: "Max time to play each note, the time between notes, tuning tolerance (how many cents off still counts), how long the note must be held, and half credit after a wrong note." },
+      { name: "Listen settings", text: "Tuning tolerance (how many cents off still counts), how long the note must be held, and half credit after a wrong note." },
       { name: "Drill every note", text: "Goes through every note in the range once; anything you miss comes back." },
       { name: "Ignore octave", text: "Accepts the right note in any octave and drops the octave number from the display." },
       { name: "Sound & display", text: "Play the note out loud, show the next note ahead, and click sound feedback during the countdown." },
@@ -467,7 +474,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     features: ["30+ scales and modes", "Listen mode with partial credit", "Drill every scale", "Struggles by key and mode"],
     options: [
       { name: "Scales", text: "Which scales and modes can come up — major modes, harmonic and melodic minor, pentatonics, blues and symmetric scales." },
-      { name: "Range", text: "The register the scales are played in." },
+      { name: "Range", text: "Your instrument (the chip shows it, e.g. Bass · E1–G4), which sets the register the scales are played in." },
+      { name: "Time per scale / Time to play", text: "Timed: how long each scale stays on screen. Listen: how long you have to play it, and the pause before the next one." },
       { name: "Timed / Listen", text: "Timed shows a scale for a set time. Listen follows you note by note through the mic, root to root." },
       { name: "Partial credit", text: "Gives each note one retry: a fixed mistake counts as partial instead of failing the scale." },
       { name: "Ignore repeated notes", text: "Playing the same note twice in a row isn't counted as a mistake." },
@@ -491,8 +499,9 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["All intervals in an octave", "Up and down", "Chained mode", "Struggles and drill"],
     options: [
-      { name: "Intervals", text: "Which intervals can come up, from a minor 2nd to an octave, and whether they can go down as well as up." },
-      { name: "Range", text: "The register the starting notes come from." },
+      { name: "Intervals", text: "Which intervals can come up, from a minor 2nd to an octave (none selected means all of them), and whether they can go down as well as up." },
+      { name: "Range", text: "Your instrument (the chip shows it, e.g. Bass · E1–G4), which sets the register the starting notes come from, and how sharps and flats are spelled." },
+      { name: "Time per interval / Time to play", text: "Timed: how long each interval stays on screen. Listen: how long you have to play it, and the pause before the next one." },
       { name: "Timed / Listen", text: "Timed shows each interval for a set time. Listen grades the two notes you play into the mic." },
       { name: "Continue from previous note", text: "Each interval starts on the note the last one ended on, so you keep moving around the instrument." },
       { name: "Drill every interval", text: "Every chosen interval, in each direction, from all 12 notes." },
@@ -562,11 +571,9 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["29 progressions", "Numerals or chord names", "Learn mode levels", "Per-chord grading"],
     options: [
-      { name: "Answer with", text: "Roman numerals (ii7 V7 I^7) or chord names (Dm7 G7 Cmaj7)." },
-      { name: "Type chord qualities", text: "On, the whole chord is graded. Off, only the root (or numeral) and major vs. minor count." },
+      { name: "Answer", text: "Answer with Roman numerals (ii7 V7 I^7) or chord names (Dm7 G7 Cmaj7), and whether to type chord qualities: on, the whole chord is graded; off, only the root (or numeral) and major vs. minor count." },
       { name: "Progressions", text: "Which progressions can come up: jazz, pop and rock, minor, cadences and blues." },
-      { name: "Key", text: "A random key every round or one fixed key, and whether the key's tonic chord plays first so you know where home is." },
-      { name: "Sound", text: "Chord length, block or arpeggiated, piano or Rhodes." },
+      { name: "Key & sound", text: "A random key every round or one fixed key, and whether the key's tonic chord plays first so you know where home is. Also chord length, block or arpeggiated, piano or Rhodes." },
       { name: "Timing", text: "Max time to answer, time between rounds, number of rounds or drill every progression." },
       { name: "Practice / Learn", text: "Learn walks you through levels, starting from I–IV–V–I." },
     ],
@@ -591,13 +598,13 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Roots", text: "Which roots can come up, and how high the voicing sits." },
       { name: "Voicing", text: "The chord on top in root position, in any inversion, or as left-hand A (from the 3rd) and B (from the 7th) voicings. Also whether to show the voicing's own name, and piano or Rhodes." },
       { name: "Rounds", text: "How many rounds, whether the next one starts by itself, and half credit when you find the root after a wrong note." },
-      { name: "Listen", text: "Which mic, whether to listen while the chord is still sounding (use headphones), and how fussy the pitch check is." },
+      { name: "Microphone", text: "Which mic, whether to listen while the chord is still sounding (use headphones), and how fussy the pitch check is." },
       { name: "Struggles and History", text: "Which chords you miss most, with a Shed weak chords run, and your past scores." },
     ],
     tips: [
       "Without the voicing's name it's harder: you have to hear what the notes are, not just work it out.",
       "A 7♭9 voicing is a diminished 7th, which fits four roots a minor 3rd apart. Any of them counts.",
-      "Sing with headphones on, or turn off Listen while it plays, so the mic doesn't hear the piano.",
+      "Sing with headphones on, or turn off listening while it plays (Microphone), so the mic doesn't hear the piano.",
     ],
   },
   {
@@ -614,13 +621,13 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Odd and changing meters (structures)", "Subdivisions with their own accents", "Tempo by any note value", "5 click sounds", "Tap tempo"],
     options: [
-      { name: "Tempo", text: "Drag the slider, use − and +, type it, or tap it in. The note above the number sets which note value the BPM counts (e.g. quarter = 120 in 6/8)." },
+      { name: "Tempo", text: "Drag the slider, use − and + (or −10, −5, +5, +10), type it, or tap it in. The note under the number sets which note value the BPM counts (e.g. quarter = 120 in 6/8). A ✦ by it marks a round tempo (a multiple of 10)." },
       { name: "Time", text: "The time signature — any number of beats over any note value, or one of the quick picks (4/4, 3/4, 6/8, 7/8…)." },
       { name: "Subdivision", text: "Clicks between the beats: eighths, triplets, sixteenths and more." },
       { name: "Accents", text: "Tap a beat (or a subdivision) in the strip to step it through accent, normal, soft and silent. Its bars fill up with how loud it is: three for an accent, two for normal, one for soft." },
       { name: "One meter / Changing meters", text: "Changing meters lets you build sections (each with its own time signature, subdivision and accents) and put them in a form, like 2 bars of 11/8 then a bar of 12/8, looping." },
       { name: "Sound", text: "Five click sounds and the volume." },
-      { name: "Your stats", text: "The pills by the title: your Metronome streak (days in a row with at least a minute of use), today's time while it actually runs, this week, and in total. Tap the total for your day-by-day history. A dot on a choice means you haven't tried it yet." },
+      { name: "Your stats", text: "The pills by the title: your Metronome streak (days in a row with at least a minute of use), today's time while it actually runs, this week, and in total. Tap the total for your day-by-day history. Once you've tried a second choice in a group, the ones you haven't tried yet say New." },
       { name: "Log to Shed Log", text: "Adds today's Metronome time to your Shed Log (and your daily total). Its time isn't added on its own — press Log when you're done. Needs an account." },
     ],
     tips: ["Space starts and stops it."],
@@ -662,7 +669,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Mute cycles", "Same meters and sounds as the Metronome"],
     options: [
-      { name: "Mute cycle", text: "How many bars the click plays, then how many bars it goes silent." },
+      { name: "Mute cycle", text: "How many bars the click plays, then how many bars it goes silent. The line under the beats says the current cycle." },
       { name: "Time, Subdivision, Sections", text: "The same meter controls as the Metronome, including changing meters." },
       { name: "Sound", text: "The click sound and volume." },
     ],
@@ -703,15 +710,15 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Load a song", text: "Any audio file from your device." },
       { title: "Set the speed", text: "Slower, without the pitch dropping." },
-      { title: "Loop it", text: "Drag a loop on the waveform; add markers with notes." },
+      { title: "Loop it", text: "Drag across the waveform on a phone, Shift-drag with a mouse, or use Loop start and Loop end at the playhead; add markers with notes." },
     ],
     features: ["Speed without pitch change", "A–B loops", "Markers with notes", "Zoom and pan the waveform"],
     options: [
       { name: "Speed", text: "How fast it plays, from very slow to faster than normal." },
       { name: "Keep original pitch", text: "On, slowing down keeps the pitch. Off, it drops like a slowed record." },
       { name: "Volume", text: "How loud the file plays." },
-      { name: "Loop", text: "Shift-drag on the waveform to loop a section; it repeats until you clear it. The ⏮ button (or B) jumps back to the loop's start." },
-      { name: "Markers", text: "Named points with notes, to jump between sections." },
+      { name: "Loop", text: "Drag across the waveform on a phone, Shift-drag with a mouse, or press Loop start and Loop end at the playhead, to loop a section; its start and end times show beside Clear loop, and it repeats until you press Clear loop. Drag a loop's edge to move it; a quick tap just moves the playhead. Loop end only works after the loop's start. The ⏮ button (or B) jumps back to the loop's start." },
+      { name: "Markers", text: "Named points with notes, to jump between sections. Press Add marker at the playhead, or right-click the waveform." },
       { name: "Saved files", text: "Files you've loaded stay in this browser to open again." },
     ],
     shot: "slow-downer",
@@ -791,7 +798,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     tagline: "How close to the click are you, really?",
     purpose: "Play along to the click on a practice pad. The mic hears every stroke and shows how early or late it was, by how much, and where.",
     steps: [
-      { title: "Calibrate once", text: "Mic → Calibrate measures your setup's delay, so a stroke right on the click scores 0 ms." },
+      { title: "Calibrate once", text: "Press Calibrate… (or open Mic) to measure your setup's delay, so a stroke right on the click scores 0 ms." },
       { title: "Check the mic", text: "In the Mic options, hit the pad: every stroke should flash, and nothing else should." },
       { title: "Record", text: "Press Record (or Space or R), play after the count-in, then stop to see how you did." },
     ],

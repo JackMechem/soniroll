@@ -40,6 +40,11 @@ function segmentPath(centerDegrees: number) {
 }
 
 /** A ring of the 12 notes (C at the top) with the tuner readout in the middle. */
+/** "C#" → "C♯", "Db" → "D♭", for the labels on the dial. */
+function glyphs(name: string) {
+  return name.replace("#", "♯").replace(/^([A-G])b/, "$1♭");
+}
+
 export default function TunerDial({
   detectedPc,
   detectedColor,
@@ -56,7 +61,7 @@ export default function TunerDial({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[380px]">
+    <div className="relative mx-auto aspect-square w-full max-w-[380px] [@media(min-width:1024px)_and_(max-height:960px)]:max-w-[330px]">
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="h-full w-full"
@@ -106,26 +111,26 @@ export default function TunerDial({
               />
               <text
                 x={tx}
-                y={alt ? ty - 4 : ty}
+                y={alt ? ty - 7 : ty}
                 textAnchor="middle"
                 dominantBaseline="central"
                 className={`select-none text-[26px] font-semibold ${
                   isDetected ? "fill-background" : "fill-foreground"
                 }`}
               >
-                {main}
+                {glyphs(main)}
               </text>
               {alt && (
                 <text
                   x={tx}
-                  y={ty + 18}
+                  y={ty + 17}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className={`select-none text-[15px] ${
-                    isDetected ? "fill-background" : "fill-muted"
+                  className={`select-none text-[19px] font-medium ${
+                    isDetected ? "fill-background" : "fill-foreground/75"
                   }`}
                 >
-                  {alt}
+                  {glyphs(alt)}
                 </text>
               )}
             </g>

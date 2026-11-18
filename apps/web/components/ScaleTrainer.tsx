@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from "@/lib/instruments";
+import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
@@ -72,6 +72,7 @@ import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
+import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 const MIN_INTERVAL_SECONDS = 1;
 const MAX_INTERVAL_SECONDS = 20;
@@ -153,7 +154,7 @@ type HistoryEntry = {
   config: HistoryConfig;
 };
 
-const PANEL_IDS = ["scale-modes", "scale-range", "scale-listen", "scale-sound"];
+const PANEL_IDS = ["scale-modes", "scale-range", "scale-timing", "scale-listen", "scale-sound"];
 const SETTINGS_KEY = "jam-practice-scale-trainer";
 const DEFAULT_SETTINGS = {
   instrumentId: INSTRUMENTS[0].id,
@@ -360,6 +361,9 @@ export default function ScaleTrainer() {
   const rangeInput = isCustom
     ? customRange
     : (INSTRUMENTS.find((i) => i.id === instrumentId)?.range ?? "");
+  // The chip names the instrument too ("Bass · E1–G4"), since the range alone doesn't say what
+  // it's set up for.
+  const rangeSummary = `${instrumentShortName(instrumentId)} · ${ignoreOctave ? "any octave" : rangeInput.replace("-", "–")}`;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -933,8 +937,9 @@ export default function ScaleTrainer() {
     <ToolLayout
       title="Scale Trainer"
       presets={toolPresets("scale-trainer", settings, updateSettings)}
+      // Hidden until there's something in them, so a first visit leads with the tool itself.
       sidePanel={
-        listenMode && (
+        listenMode && (history.length > 0 || weakEntries.length > 0) && (
           <>
             <CollapsiblePanel
               id="history"
@@ -943,7 +948,7 @@ export default function ScaleTrainer() {
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
             {bestMs !== null && (
-              <p className="text-sm font-semibold tabular-nums">
+              <p className="text-sm font-medium tabular-nums">
                 Best {formatDuration(bestMs)}
               </p>
             )}
@@ -952,13 +957,13 @@ export default function ScaleTrainer() {
                 No attempts yet with these settings.
               </p>
             ) : (
-              <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+              <div className={PANEL_LIST}>
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                      className={PANEL_ROW}
                     >
                       <div className="flex flex-col">
                         <span className="font-medium tabular-nums">
@@ -996,7 +1001,7 @@ export default function ScaleTrainer() {
                     ),
                   })
                 }
-                className="self-start text-sm font-medium text-muted hover:text-danger"
+                className={TEXT_BUTTON_DANGER}
               >
                 Clear these times
               </button>
@@ -1014,11 +1019,11 @@ export default function ScaleTrainer() {
                   No struggles tracked yet — a wrong or partial scale in listen mode adds it here.
                 </p>
               ) : (
-                <div className="flex max-h-72 flex-col gap-1 overflow-y-auto">
+                <div className={PANEL_LIST}>
                   {weakEntries.map((entry) => (
                     <div
                       key={entry.key}
-                      className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                      className={PANEL_ROW}
                     >
                       <span className="font-medium">
                         {pitchClassLabel(entry.pitchClass)} {entry.mode.label}
@@ -1046,7 +1051,7 @@ export default function ScaleTrainer() {
                 type="button"
                 onClick={() => void start("weak")}
                 disabled={running || weakEntries.length === 0}
-                className="self-start rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+                className={PRIMARY_BUTTON_SM}
               >
                 Shed weak scales{weakEntries.length > 0 && ` (${weakEntries.length})`}
               </button>
@@ -1055,7 +1060,7 @@ export default function ScaleTrainer() {
                   type="button"
                   onClick={clearScaleStats}
                   disabled={running}
-                  className="self-start text-sm font-medium text-muted hover:text-danger disabled:opacity-50"
+                  className={TEXT_BUTTON_DANGER}
                 >
                   Clear stats
                 </button>
@@ -1085,14 +1090,14 @@ export default function ScaleTrainer() {
               <span className="font-medium text-muted">
                 {pool.length} of {SCALE_MODES.length} selected
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={() =>
                     updateSettings({ scaleModes: SCALE_MODES.map((m) => m.id) })
                   }
                   disabled={running}
-                  className="font-medium text-accent hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   All
                 </button>
@@ -1100,7 +1105,7 @@ export default function ScaleTrainer() {
                   type="button"
                   onClick={() => updateSettings({ scaleModes: [] })}
                   disabled={running}
-                  className="font-medium text-muted hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   None
                 </button>
@@ -1110,7 +1115,7 @@ export default function ScaleTrainer() {
 
             {SCALE_CATEGORIES.map((category) => (
               <div key={category} className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-muted">
+                <span className="text-xs font-medium text-muted">
                   {category}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -1118,7 +1123,7 @@ export default function ScaleTrainer() {
                     (mode) => {
                       const selected = settings.scaleModes.includes(mode.id);
                       return (
-                        <PoolPill key={mode.id} on={selected} onClick={() => toggleScaleMode(mode.id)} disabled={running} title={mode.aka} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
+                        <PoolPill key={mode.id} on={selected} onClick={() => toggleScaleMode(mode.id)} disabled={running} title={mode.aka} plainClassName="rounded-md px-3 py-1.5 text-xs font-medium">
                           {mode.label}
                         </PoolPill>
                       );
@@ -1129,7 +1134,7 @@ export default function ScaleTrainer() {
             ))}
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="scale-range" title="Range" icon={NoteIcon} summary={rangeInput}>
+          <CollapsiblePanel id="scale-range" title="Range" icon={NoteIcon} summary={rangeSummary}>
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1158,7 +1163,7 @@ export default function ScaleTrainer() {
                 options={[
                   ...INSTRUMENTS.map((instrument) => ({
                     value: instrument.id,
-                    label: `${instrument.label} (${instrument.range})`,
+                    label: `${instrument.label} (${instrument.range.replace("-", "–")})`,
                   })),
                   { value: CUSTOM_INSTRUMENT_ID, label: "Custom range…" },
                 ]}
@@ -1175,7 +1180,7 @@ export default function ScaleTrainer() {
                   onChange={(e) => setCustomRange(e.target.value)}
                   disabled={running}
                   placeholder="A1-A6"
-                  className="rounded-lg bg-background px-3 py-2 text-foreground disabled:opacity-60"
+                  className="h-9 rounded-md bg-foreground/[0.05] px-3 text-foreground outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60"
                 />
               </label>
             )}
@@ -1183,18 +1188,42 @@ export default function ScaleTrainer() {
               <Hint>The lowest and highest notes to draw scale roots from, e.g. A1-A6.</Hint>
             )}
 
-            {/* In listen mode this becomes "Max time", shown in the Listen mode section instead. */}
-            {!listenMode && (
+          </CollapsiblePanel>
+
+          {/* Timing in its own chip: how long each scale shows (Timed), or how long you have to play
+              it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
+          <CollapsiblePanel
+            id="scale-timing"
+            title={listenMode ? "Time to play" : "Time per scale"}
+            icon={StopwatchIcon}
+            summary={`${intervalSeconds} s`}
+          >
+            <AdvancedSlider
+              label={listenMode ? "Time to play" : "Time per scale"}
+              value={intervalSeconds}
+              unit="s"
+              min={MIN_INTERVAL_SECONDS}
+              max={MAX_INTERVAL_SECONDS}
+              step={0.5}
+              disabled={running}
+              onChange={setIntervalSeconds}
+              hint={
+                listenMode
+                  ? "How long you have to finish playing each scale before it's marked a miss and moves on."
+                  : "How long each scale stays on screen before the next one shows."
+              }
+            />
+            {listenMode && (
               <AdvancedSlider
-                label="Interval"
-                value={intervalSeconds}
+                label="Time between scales"
+                value={advanceDelayMs / 1000}
                 unit="s"
-                min={MIN_INTERVAL_SECONDS}
-                max={MAX_INTERVAL_SECONDS}
-                step={0.5}
+                min={MIN_ADVANCE_DELAY_MS / 1000}
+                max={MAX_ADVANCE_DELAY_MS / 1000}
+                step={0.25}
                 disabled={running}
-                onChange={setIntervalSeconds}
-                hint="How long each scale stays on screen before the next one shows."
+                hint="How long the graded scale (with its countdown ring) stays on screen before the next one starts."
+                onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
               />
             )}
           </CollapsiblePanel>
@@ -1210,30 +1239,6 @@ export default function ScaleTrainer() {
               disabled: running,
             }}
           >
-            <AdvancedSlider
-              label="Max time"
-              value={intervalSeconds}
-              unit="s"
-              min={MIN_INTERVAL_SECONDS}
-              max={MAX_INTERVAL_SECONDS}
-              step={0.5}
-              disabled={running}
-              onChange={setIntervalSeconds}
-              hint="How long you have to finish playing each scale before it's marked a miss and moves on."
-            />
-
-            <AdvancedSlider
-              label="Time between scales"
-              value={advanceDelayMs / 1000}
-              unit="s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              disabled={running}
-              hint="How long the graded scale (with its countdown ring) stays on screen before the next one starts."
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-            />
-
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1376,7 +1381,7 @@ export default function ScaleTrainer() {
                   })
                 }
                 disabled={running}
-                className="self-start rounded-lg bg-background px-3 py-1.5 text-sm font-medium hover:bg-surface-hover disabled:opacity-50"
+                className={`self-start ${SECONDARY_BUTTON_SM}`}
               >
                 Reset advanced settings
               </button>
@@ -1430,11 +1435,11 @@ export default function ScaleTrainer() {
       <div className="flex flex-col items-center gap-3">
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold text-muted">
+            <span className="text-xs font-medium text-muted">
               Next scale in
             </span>
             <span
-              className="text-3xl font-bold tabular-nums sm:text-4xl"
+              className="text-3xl font-semibold tabular-nums sm:text-4xl"
               style={{ color: GRADE_COLOR[status] }}
             >
               <CountdownLabel active={running} timerRef={noteTimerRef} />
@@ -1444,27 +1449,34 @@ export default function ScaleTrainer() {
         <div className="relative">
           <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
-            <h1
+            <p
               title={round?.mode.aka}
-              className={`relative z-10 font-bold transition-[color,text-shadow] duration-200 ${
+              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
                 mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
               }`}
               style={
                 glow
                   ? {
                       color: glow,
-                      textShadow: `0 0 12px ${glow}, 0 0 32px ${glow}, 0 0 64px ${glow}`,
                     }
                   : undefined
               }
             >
               {mainLabel}
-            </h1>
+            </p>
+            {/* Before the first round, say what's about to happen. */}
+            {!round && !running && (
+              <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">
+                {listenMode
+                  ? "Press Start, then play each scale. The mic follows along."
+                  : "Press Start, then play each scale shown."}
+              </p>
+            )}
           </div>
           {showNext && nextRound && running && (
             <span
               aria-label={`Next scale ${roundLabel(nextRound, roundSeed + 1)}`}
-              className="absolute bottom-1 left-full ml-3 max-w-[9rem] text-sm font-semibold text-muted sm:text-base"
+              className="absolute bottom-1 left-full ml-3 max-w-[9rem] text-sm font-medium text-muted sm:text-base"
             >
               {roundLabel(nextRound, roundSeed + 1)}
             </span>
@@ -1490,13 +1502,14 @@ export default function ScaleTrainer() {
               return (
                 <span
                   key={i}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors ${
-                    current ? "ring-2 ring-accent" : ""
+                  className={`rounded-md border px-2.5 py-1 text-xs font-medium tabular-nums transition-colors ${
+                    current ? "border-accent" : color ? "" : "border-foreground/15"
                   }`}
                   style={{
                     color,
+                    borderColor: color && !current ? color : undefined,
                     background: color
-                      ? `color-mix(in srgb, ${color} 15%, transparent)`
+                      ? `color-mix(in srgb, ${color} 12%, transparent)`
                       : undefined,
                   }}
                 >
@@ -1521,7 +1534,7 @@ export default function ScaleTrainer() {
               <button
                 type="button"
                 onClick={() => skipRef.current?.()}
-                className="mt-2 rounded-full bg-surface px-4 py-1.5 text-sm font-medium text-foreground hover:bg-surface-hover"
+                className={`mt-2 ${SECONDARY_BUTTON}`}
               >
                 Skip scale
               </button>
@@ -1533,20 +1546,20 @@ export default function ScaleTrainer() {
       {summary && !running && (
         <section
           aria-label="Results"
-          className="flex w-full flex-col gap-4 rounded-2xl bg-surface p-4 text-left sm:p-6"
+          className={RESULTS_PANEL}
         >
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-muted">Results</p>
-              <p className="text-4xl font-bold tabular-nums">
+              <p className="text-sm font-medium text-muted">Results</p>
+              <p className="text-3xl font-semibold tabular-nums">
                 {score % 1 === 0 ? score : score.toFixed(1)}
-                <span className="text-xl font-semibold text-muted">
+                <span className="text-lg font-medium text-muted">
                   {" "}
                   / {summary.results.length}
                 </span>
               </p>
             </div>
-            <p className="text-2xl font-semibold tabular-nums text-muted">
+            <p className="text-xl font-medium tabular-nums text-muted">
               {summary.results.length
                 ? Math.round((score / summary.results.length) * 100)
                 : 0}
@@ -1569,16 +1582,16 @@ export default function ScaleTrainer() {
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             {(["correct", "partial", "incorrect"] as const).map((grade) => (
-              <div key={grade} className="rounded-xl bg-background px-2 py-3">
+              <div key={grade} className="flex items-baseline gap-1.5">
                 <p
-                  className="text-2xl font-bold tabular-nums"
+                  className="font-semibold tabular-nums"
                   style={{ color: GRADE_COLOR[grade] }}
                 >
                   {tally(grade)}
                 </p>
-                <p className="text-xs text-muted">{GRADE_LABEL[grade]}</p>
+                <p className="text-muted">{GRADE_LABEL[grade]}</p>
               </div>
             ))}
           </div>
@@ -1588,7 +1601,7 @@ export default function ScaleTrainer() {
               <span
                 key={i}
                 title={GRADE_LABEL[summary.results[i]]}
-                className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                className={GRADE_TAG}
                 style={{
                   color: GRADE_COLOR[summary.results[i]],
                   background: `color-mix(in srgb, ${GRADE_COLOR[summary.results[i]]} 15%, transparent)`,
@@ -1602,14 +1615,14 @@ export default function ScaleTrainer() {
             <button
               type="button"
               onClick={() => void start(lastMode)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+              className={PRIMARY_BUTTON}
             >
               Try again
             </button>
             <button
               type="button"
               onClick={() => setSummary(null)}
-              className="rounded-lg bg-background px-4 py-2 text-sm font-medium hover:bg-surface-hover"
+              className={SECONDARY_BUTTON}
             >
               Close
             </button>
@@ -1622,11 +1635,7 @@ export default function ScaleTrainer() {
       <button
         type="button"
         onClick={running ? stop : () => void start()}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-          running
-            ? "bg-surface hover:bg-surface-hover"
-            : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={startButtonClass(running)}
       >
         {running ? "Stop" : "Start"}
       </button>

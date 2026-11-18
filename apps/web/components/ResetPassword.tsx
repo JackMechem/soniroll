@@ -6,8 +6,8 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import Logo from "@/components/Logo";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
 
-const INPUT = "rounded-xl bg-background px-3 py-2.5 outline-none ring-1 ring-foreground/10 focus:ring-2 focus:ring-accent";
-const PRIMARY = "rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover disabled:opacity-50";
+const INPUT = "h-10 rounded-md bg-foreground/[0.05] px-3 text-base outline-none transition-colors focus:ring-2 focus:ring-accent/40 sm:text-sm";
+const PRIMARY = "flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50";
 
 /** The forgot-password page: request a link (no token), or set a new password (with one). A
     standalone page without the app's sidebar, like the landing page (`AppChrome`). */
@@ -17,7 +17,7 @@ export default function ResetPassword({ email, token }: { email: string; token: 
       <Link href={LANDING_PATH} aria-label="soniroll" className="mb-8">
         <Logo height={46} />
       </Link>
-      <div className="flex w-full max-w-sm flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]">
+      <div className="flex w-full max-w-sm flex-col gap-5 rounded-xl bg-surface p-6">
         {token && email ? <NewPassword email={email} token={token} /> : <RequestLink initialEmail={email} />}
       </div>
       <Link href={DASHBOARD_PATH} className="mt-6 text-sm font-medium text-muted hover:text-foreground">
@@ -61,12 +61,12 @@ function RequestLink({ initialEmail }: { initialEmail: string }) {
     return (
       <>
         <Heading title="Check your email">
-          If there&apos;s a soniroll account with a password for <span className="font-semibold text-foreground">{email.trim()}</span>, we&apos;ve sent it a link to reset the password. It expires in an hour.
+          If there&apos;s a soniroll account with a password for <span className="font-medium text-foreground">{email.trim()}</span>, we&apos;ve sent it a link to reset the password. It expires in an hour.
         </Heading>
         <p className="text-sm text-muted">
           Signed up with Google? Use “Continue with Google” instead; there&apos;s no password to reset.
         </p>
-        <button type="button" onClick={() => setSent(false)} className="self-start text-sm font-semibold text-accent hover:underline">
+        <button type="button" onClick={() => setSent(false)} className="self-start text-sm font-medium text-accent hover:underline">
           Use a different email
         </button>
       </>
@@ -78,7 +78,7 @@ function RequestLink({ initialEmail }: { initialEmail: string }) {
       <Heading title="Forgot your password?">Enter your account&apos;s email and we&apos;ll send you a link to choose a new one.</Heading>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-muted">Email</span>
+          <span className="text-xs font-medium text-muted">Email</span>
           <input type="email" required autoFocus autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
         </label>
         <button type="submit" disabled={submitting || !email.trim()} className={PRIMARY}>
@@ -142,15 +142,15 @@ function NewPassword({ email, token }: { email: string; token: string }) {
   return (
     <>
       <Heading title="Choose a new password">
-        For <span className="font-semibold text-foreground">{email}</span>. At least 8 characters.
+        For <span className="font-medium text-foreground">{email}</span>. At least 8 characters.
       </Heading>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-muted">New password</span>
+          <span className="text-xs font-medium text-muted">New password</span>
           <input type="password" required minLength={8} autoFocus autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT} />
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-muted">Confirm new password</span>
+          <span className="text-xs font-medium text-muted">Confirm new password</span>
           <input type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={INPUT} />
         </label>
         {error && <p className="text-sm text-danger">{error}</p>}

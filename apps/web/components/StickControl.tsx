@@ -7,7 +7,7 @@ import Select from "@/components/Select";
 import StickControlStave from "@/components/StickControlStave";
 import SwitchRow from "@/components/SwitchRow";
 import AdvancedSlider from "@/components/AdvancedSlider";
-import { SteppedField, SoundOptions, TempoHero } from "@/components/MeterFields";
+import { BIG_PRIMARY, BIG_SECONDARY, SteppedField, SoundOptions, TempoHero } from "@/components/MeterFields";
 import { ListIcon, RepeatIcon, SpeakerIcon } from "@/components/tools";
 import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
@@ -192,7 +192,7 @@ export default function StickControl() {
         <OptionsCard id="stick-control">
           <OptionSection title="Pattern" icon={ListIcon} summary={ROLL_TYPES.find((r) => r.value === rollType)?.label}>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Roll type</span>
+              <span className="text-xs font-medium text-muted">Roll type</span>
               <Select
                 value={rollType}
                 onChange={(v) => updateSettings({ rollType: v })}
@@ -220,10 +220,10 @@ export default function StickControl() {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => toggleRollType(opt.value)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                           selected
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-background text-foreground hover:bg-surface-hover"
+                            ? "border-accent bg-accent text-accent-foreground"
+                            : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
                         }`}
                       >
                         {opt.label}
@@ -252,10 +252,10 @@ export default function StickControl() {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => toggleTripletSticking(opt.value)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                           selected
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-background text-foreground hover:bg-surface-hover"
+                            ? "border-accent bg-accent text-accent-foreground"
+                            : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
                         }`}
                       >
                         {opt.label}
@@ -301,7 +301,7 @@ export default function StickControl() {
               hint="After the repeat count finishes, automatically shuffle a new pattern and keep going (with a fresh count-off) instead of stopping."
             />
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Click</span>
+              <span className="text-xs font-medium text-muted">Click</span>
               <Select
                 value={clickMode}
                 onChange={(v) => updateSettings({ clickMode: v })}
@@ -325,57 +325,58 @@ export default function StickControl() {
         </OptionsCard>
       }
     >
-      <div className="flex w-full flex-col items-center gap-4">
-        <div className="flex w-full max-w-5xl flex-col items-center gap-4">
-          <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
+      {/* Phones (CSS order): the pattern first, then New pattern / Start, then the tempo and beats,
+          then the next pattern — so the music and Start are both on the first screen. Bigger
+          screens: tempo, beats, the patterns, then the buttons. */}
+      <div className="flex w-full max-w-5xl flex-col items-center gap-4 max-sm:order-3">
+        <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
 
-          <BeatIndicator
-            accents={accents}
-            currentBeat={running ? currentBeat : null}
-            onCycle={cycleBeat}
-          />
-        </div>
-
-        {/* Deliberately NOT capped at max-w-5xl like the controls above: StickControlStave measures
-            its own container's real width (via ResizeObserver) to decide how many bars fit on one
-            row, and capping that width artificially forces it to wrap sooner than the screen
-            actually requires — reported directly ("the music lines should be able to be in one line
-            if the screen is big enough"). The notation gets the full width ToolLayout's own stacked
-            layout already gives this page's content section. */}
-        {pattern && <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />}
-
-        {nextPattern && (
-          <div className="flex w-full flex-col items-center gap-2">
-            <p className="text-sm font-semibold text-muted">Next</p>
-            <StickControlStave
-              pattern={nextPattern}
-              activeBarIndex={null}
-              background="background"
-            />
-          </div>
-        )}
-
-        {phaseLabel && (
-          <p className="text-sm font-semibold text-accent">{phaseLabel}</p>
-        )}
+        <BeatIndicator
+          accents={accents}
+          currentBeat={running ? currentBeat : null}
+          onCycle={cycleBeat}
+        />
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Deliberately NOT capped at max-w-5xl like the controls above: StickControlStave measures
+          its own container's real width (via ResizeObserver) to decide how many bars fit on one
+          row, and capping that width artificially forces it to wrap sooner than the screen
+          actually requires — reported directly ("the music lines should be able to be in one line
+          if the screen is big enough"). The notation gets the full width ToolLayout's own stacked
+          layout already gives this page's content section. */}
+      {pattern && (
+        <div className="flex w-full flex-col items-center max-sm:order-1">
+          <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />
+        </div>
+      )}
+
+      {nextPattern && (
+        <div className="flex w-full flex-col items-center gap-2 max-sm:order-4">
+          <p className="text-xs font-medium text-muted">Next</p>
+          <StickControlStave
+            pattern={nextPattern}
+            activeBarIndex={null}
+            background="background"
+          />
+        </div>
+      )}
+
+      {phaseLabel && (
+        <p className="-my-2 text-sm font-medium text-accent max-sm:order-2">{phaseLabel}</p>
+      )}
+
+      <div className="flex items-center gap-3 max-sm:order-2">
         <button
           type="button"
           onClick={() => advanceStickControlPattern()}
-          className="rounded-full bg-surface px-5 py-3 text-base font-semibold transition-colors hover:bg-surface-hover"
+          className={BIG_SECONDARY}
         >
           New pattern
         </button>
         <button
           type="button"
           onClick={running ? stop : start}
-          className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-            running
-              ? "bg-surface hover:bg-surface-hover"
-              : "bg-accent text-accent-foreground hover:bg-accent-hover"
-          }`}
+          className={running ? BIG_SECONDARY : BIG_PRIMARY}
         >
           {running ? "Stop" : "Start"}
         </button>

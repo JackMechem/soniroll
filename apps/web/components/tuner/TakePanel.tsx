@@ -49,10 +49,10 @@ export default function TakePanel({
   const source = take.meta.source === "file" ? "Opened file" : take.meta.source === "recording" ? "From your recordings" : "Recorded here";
 
   return (
-    <section aria-label={`Take: ${name}`} className="flex w-full flex-col gap-3 rounded-3xl bg-surface p-3 text-left sm:p-4 xl:w-[44rem]">
+    <section aria-label={`Take: ${name}`} className="flex w-full flex-col gap-3 rounded-lg bg-surface p-3 text-left sm:p-4 xl:w-[44rem]">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold">{name}</h2>
+          <h2 className="truncate text-sm font-medium">{name}</h2>
           <p className="text-xs text-muted">
             {source} · {formatRecordedAt(take.added)}
           </p>
@@ -62,7 +62,7 @@ export default function TakePanel({
           onClick={onClose}
           aria-label="Close the take and go back to listening"
           title="Close the take"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <CloseIcon className="h-4 w-4" />
         </button>
@@ -94,7 +94,7 @@ export default function TakePanel({
                 onClick={() => zoomOut !== undefined && onZoom(zoomOut)}
                 disabled={zoomOut === undefined}
                 aria-label="Zoom out"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-lg leading-none hover:bg-surface-hover disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
               >
                 −
               </button>
@@ -104,7 +104,7 @@ export default function TakePanel({
                 onClick={() => zoomIn !== undefined && onZoom(zoomIn)}
                 disabled={zoomIn === undefined}
                 aria-label="Zoom in"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-lg leading-none hover:bg-surface-hover disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
               >
                 +
               </button>

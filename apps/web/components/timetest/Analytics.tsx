@@ -26,19 +26,19 @@ function useWidth<T extends HTMLElement>() {
 
 function Card({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
-    <section id={id} className="flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-4 sm:p-5">
-      <h3 className="text-base font-semibold">{title}</h3>
-      {children}
+    <section id={id} className="flex min-w-0 flex-col rounded-lg bg-surface">
+      <h3 className="flex h-11 items-center px-4 text-sm font-medium">{title}</h3>
+      <div className="flex min-w-0 flex-col gap-3 p-4">{children}</div>
     </section>
   );
 }
 
 function Tile({ label, value, sub, status }: { label: string; value: ReactNode; sub?: ReactNode; status?: Status }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 rounded-2xl bg-surface px-4 py-3">
-      <span className="text-xs font-semibold text-muted">{label}</span>
-      <span className="flex items-center gap-2 text-2xl font-bold leading-tight tabular-nums">
-        {status && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: STATUS_COLOR[status] }} aria-label={STATUS_LABEL[status]} />}
+    <div className="flex min-w-0 flex-col gap-0.5 bg-surface px-4 py-3">
+      <span className="text-xs text-muted">{label}</span>
+      <span className="flex items-center gap-2 text-2xl font-semibold leading-tight tabular-nums">
+        {status && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: STATUS_COLOR[status] }} aria-label={STATUS_LABEL[status]} />}
         {value}
       </span>
       {sub && <span className="text-xs text-muted">{sub}</span>}
@@ -57,7 +57,7 @@ function StatusLegend({ tol }: { tol: number }) {
       {items.map(([s, d]) => (
         <span key={s} className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COLOR[s] }} />
-          <span className="font-semibold text-foreground">{STATUS_LABEL[s]}</span> {d}
+          <span className="font-medium text-foreground">{STATUS_LABEL[s]}</span> {d}
         </span>
       ))}
     </div>
@@ -104,7 +104,7 @@ function Tooltip({ tip }: { tip: Tip }) {
   if (!tip) return null;
   return (
     <div
-      className="pointer-events-none absolute z-10 w-max max-w-60 -translate-x-1/2 -translate-y-full rounded-xl bg-surface px-3 py-2 text-xs shadow-lg ring-1 ring-foreground/10"
+      className="pointer-events-none absolute z-10 w-max max-w-60 -translate-x-1/2 -translate-y-full rounded-md ring-1 ring-foreground/[0.06] bg-surface px-3 py-2 text-xs shadow-lg"
       style={{ left: tip.x, top: tip.y - 10 }}
     >
       {tip.content}
@@ -115,7 +115,7 @@ function Tooltip({ tip }: { tip: Tip }) {
 function HitTip({ h, a }: { h: Hit; a: Analysis }) {
   return (
     <>
-      <div className="flex items-center gap-1.5 font-semibold">
+      <div className="flex items-center gap-1.5 font-medium">
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: STATUS_COLOR[statusOf(h.errorMs, a.toleranceMs)] }} />
         {describeMs(h.errorMs, a.toleranceMs)}
       </div>
@@ -298,7 +298,7 @@ function Breakdown({ rows, tol, range }: { rows: { label: string; meanMs: number
     <div className="flex flex-col gap-2">
       {rows.map((r) => (
         <div key={r.label} className="grid grid-cols-[3.25rem_1fr_5.5rem] items-center gap-3 text-sm">
-          <span className="truncate font-semibold">{r.label}</span>
+          <span className="truncate font-medium">{r.label}</span>
           <div className="relative h-6 rounded-md bg-background">
             <div className="absolute inset-y-1" style={{ left: `${pct(-tol)}%`, width: `${pct(tol) - pct(-tol)}%`, background: tint(STATUS_COLOR.good, 15) }} />
             <div className="absolute inset-y-0 left-1/2 w-px bg-muted" />
@@ -335,7 +335,7 @@ function Breakdown({ rows, tol, range }: { rows: { label: string; meanMs: number
   );
 }
 
-const roundButton = "flex h-8 min-w-8 items-center justify-center rounded-full bg-background px-2 text-sm font-semibold text-muted hover:bg-surface-hover hover:text-foreground";
+const roundButton = "flex h-8 min-w-8 items-center justify-center rounded-md bg-foreground/[0.05] px-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground";
 
 /** The results of one take. Give it a new `key` for each take: the view starts again then. */
 export default function Analytics({
@@ -437,17 +437,17 @@ export default function Analytics({
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-extrabold tracking-tight">How you did</h2>
+        <h2 className="text-xl font-semibold tracking-tight">How you did</h2>
         <p className="max-w-3xl text-sm leading-relaxed">{verdict(a, bpm)}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-foreground/[0.05] bg-foreground/10 sm:grid-cols-3 lg:grid-cols-6">
         <Tile
           label="Score"
           value={
             <>
               {Math.round(s.score)}
-              <span className="text-sm font-semibold text-muted">/100</span>
+              <span className="text-sm font-normal text-muted">/100</span>
             </>
           }
           sub="Full marks within tolerance"
@@ -490,13 +490,13 @@ export default function Analytics({
         )}
       </div>
 
-      <section id="time-test-waveform" className="flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-4 sm:p-5">
+      <section id="time-test-waveform" className="flex min-w-0 flex-col gap-3 rounded-lg bg-surface p-4">
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => (playing ? onStopPlayback() : onPlay(cursor))}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              playing ? "bg-background hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
+            className={`flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${
+              playing ? "hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
             }`}
           >
             {playing ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
@@ -506,7 +506,7 @@ export default function Analytics({
             type="button"
             aria-pressed={playClick}
             onClick={() => setPlayClick(!playClick)}
-            className={`rounded-full px-3 py-2 text-sm font-semibold transition ${playClick ? "bg-background text-foreground" : "text-muted hover:bg-background"}`}
+            className={`h-8 rounded-md border px-3 text-sm font-medium transition-colors ${playClick ? "border-foreground/15 bg-surface-hover text-foreground" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
           >
             {playClick ? "With click" : "Without click"}
           </button>
@@ -560,17 +560,17 @@ export default function Analytics({
           {worst.length === 0 ? (
             <p className="text-sm text-muted">Nothing to show.</p>
           ) : (
-            <ul className="flex flex-col gap-1.5">
+            <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-md bg-foreground/[0.05]">
               {worst.map((h, i) => (
                 <li key={i}>
                   <button
                     type="button"
                     onClick={() => jump(h.t)}
-                    className="flex w-full items-center gap-3 rounded-xl bg-background px-3 py-2 text-left text-sm hover:bg-surface-hover"
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-surface-hover"
                   >
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: STATUS_COLOR[statusOf(h.errorMs, tol)] }} />
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: STATUS_COLOR[statusOf(h.errorMs, tol)] }} />
                     <span className="min-w-0 flex-1 truncate">{whereLabel(h.bar, h.beat, h.pos, h.n)}</span>
-                    <span className="font-semibold tabular-nums">{describeMs(h.errorMs, tol).replace(", on time", "")}</span>
+                    <span className="font-medium tabular-nums">{describeMs(h.errorMs, tol).replace(", on time", "")}</span>
                     <span className="w-12 text-right text-xs tabular-nums text-muted">{fmtTime(h.t)}</span>
                   </button>
                 </li>

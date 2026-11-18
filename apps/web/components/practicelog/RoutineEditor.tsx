@@ -35,6 +35,9 @@ import {
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noopSubscribe = () => () => {};
+const LABEL = "text-xs font-medium text-muted";
+const INPUT = "h-9 min-w-0 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40";
+const TEXTAREA = "resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
 
 /** `/shed-log/routine/edit?id=…` (or `?date=…` for a new one starting that day). */
 export default function RoutineEditorPage({ id, date }: { id?: string; date?: string }) {
@@ -52,7 +55,7 @@ export default function RoutineEditorPage({ id, date }: { id?: string; date?: st
     return (
       <PageShell>
         <BackButton href="/shed-log" label="Shed Log" />
-        <p className="rounded-2xl bg-surface p-4 text-muted">That routine doesn&apos;t exist anymore.</p>
+        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">That routine doesn&apos;t exist anymore.</p>
       </PageShell>
     );
   }
@@ -109,54 +112,63 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
   return (
     <PageShell>
-      <BackButton onClick={() => router.back()} />
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => router.back()} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-surface">
-            Cancel
-          </button>
-          <button type="button" onClick={save} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
-            Save
-          </button>
+      <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
+        <BackButton onClick={() => router.back()} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => router.back()} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
+              Cancel
+            </button>
+            <button type="button" onClick={save} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+              Save
+            </button>
+          </div>
         </div>
       </div>
-      {error && <p className="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{error}</p>}
+      {error && <p className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <Card title="Routine">
-        <div className="flex items-center gap-3">
-        <RoutineIcon icon={r.icon} color={r.color} size="lg" />
-        <input
-          autoFocus={isNew}
-          value={r.name}
-          onChange={(e) => {
-            set({ name: e.target.value });
-            setError(null);
-          }}
-          placeholder="Name — e.g. Morning warm-up"
-          className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2.5 text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-        </div>
-        <textarea
-          value={r.description}
-          onChange={(e) => set({ description: e.target.value })}
-          rows={2}
-          placeholder="What it's for (optional)"
-          className="resize-y rounded-xl bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted">Color</span>
-          {ROUTINE_COLORS.map((c, i) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => set({ color: i })}
-              aria-label={`Color ${i + 1}`}
-              aria-pressed={r.color === i}
-              className={`h-7 w-7 rounded-full transition-transform ${r.color === i ? "scale-110 ring-2 ring-foreground ring-offset-2 ring-offset-surface" : "hover:scale-110"}`}
-              style={{ background: c }}
+        <label className="flex flex-col gap-1.5">
+          <span className={LABEL}>Name</span>
+          <div className="flex items-center gap-2">
+            <RoutineIcon icon={r.icon} color={r.color} size="md" />
+            <input
+              autoFocus={isNew}
+              value={r.name}
+              onChange={(e) => {
+                set({ name: e.target.value });
+                setError(null);
+              }}
+              placeholder="e.g. Morning warm-up"
+              className={`${INPUT} flex-1`}
             />
-          ))}
+          </div>
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className={LABEL}>What it&apos;s for (optional)</span>
+          <textarea
+            value={r.description}
+            onChange={(e) => set({ description: e.target.value })}
+            rows={2}
+            className={TEXTAREA}
+          />
+        </label>
+        <div className="flex flex-col gap-1.5">
+          <span className={LABEL}>Color</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {ROUTINE_COLORS.map((c, i) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => set({ color: i })}
+                aria-label={`Color ${i + 1}`}
+                aria-pressed={r.color === i}
+                className={`h-7 w-7 rounded-full ${r.color === i ? "ring-2 ring-foreground ring-offset-2 ring-offset-surface" : ""}`}
+                style={{ background: c }}
+              />
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -169,7 +181,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         {r.repeat.freq !== "once" && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="text-muted">Every</span>
-            <Stepper onSurface value={r.repeat.interval} min={1} max={12} onChange={(interval) => setRepeat({ interval })} />
+            <Stepper value={r.repeat.interval} min={1} max={12} onChange={(interval) => setRepeat({ interval })} />
             <span className="text-muted">
               {UNIT[r.repeat.freq]}
               {r.repeat.interval === 1 ? "" : "s"}
@@ -191,7 +203,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                     const next = on ? weekdays.filter((d) => d !== i) : [...weekdays, i as Weekday];
                     if (next.length) setRepeat({ weekdays: next.sort() as Weekday[] });
                   }}
-                  className={`h-9 w-9 rounded-full text-sm font-bold ${on ? "text-white" : "bg-background text-muted hover:bg-surface-hover"}`}
+                  className={`h-9 w-9 rounded-md border text-sm font-medium transition-colors ${on ? "border-transparent text-white" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
                   style={on ? { background: color } : undefined}
                 >
                   {letter}
@@ -201,18 +213,18 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           </div>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">{r.repeat.freq === "once" ? "On" : "Starts"}</span>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className={LABEL}>{r.repeat.freq === "once" ? "On" : "Starts"}</span>
             <input
               type="date"
               value={r.repeat.start}
               onChange={(e) => isDateKey(e.target.value) && setRepeat({ start: e.target.value })}
-              className="rounded-xl bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className={INPUT}
             />
           </label>
           {r.repeat.freq !== "once" && (
-            <div className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-muted">Ends</span>
+            <div className="flex flex-col gap-1.5 text-sm">
+              <span className={LABEL}>Ends</span>
               <Segmented
                 label="Ends"
                 value={r.repeat.end ? "date" : "never"}
@@ -228,7 +240,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   value={r.repeat.end}
                   min={r.repeat.start}
                   onChange={(e) => isDateKey(e.target.value) && setRepeat({ end: e.target.value })}
-                  className="mt-1 rounded-xl bg-background px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className={`${INPUT} mt-1`}
                 />
               )}
             </div>
@@ -241,14 +253,15 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       <Card title="Tasks" detail={r.tasks.length ? formatMinutesShort(totalMinutes(r)) : undefined}>
         <ol className="flex flex-col gap-3">
           {r.tasks.map((task, i) => (
-            <li key={task.id} className="flex flex-col gap-2 rounded-xl bg-background p-3">
+            <li key={task.id} className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
               <div className="flex items-center gap-2">
-                <span className="w-5 shrink-0 text-center text-sm font-bold tabular-nums text-muted">{i + 1}</span>
+                <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
                 <input
                   value={task.title}
                   onChange={(e) => setTask(i, { title: e.target.value })}
                   placeholder="Task — e.g. Scales in all 12 keys"
-                  className="min-w-0 flex-1 rounded-lg bg-surface px-3 py-2 font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-label={`Task ${i + 1}`}
+                  className={`${INPUT} flex-1`}
                 />
                 <div className="flex shrink-0">
                   <IconButton label="Move up" disabled={i === 0} onClick={() => moveTask(i, -1)}>
@@ -281,18 +294,19 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   onChange={(e) => setTask(i, { notes: e.target.value })}
                   rows={1}
                   placeholder="Notes (optional) — what to focus on"
-                  className="w-full resize-y rounded-lg bg-surface px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  aria-label="Notes"
+                  className={`${TEXTAREA} w-full py-1.5`}
                 />
               </div>
               <div className="flex flex-col gap-1 pl-7">
                 {(task.subtasks ?? []).map((sub, j) => (
                   <div key={sub.id} className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 shrink-0 rounded border-[1.5px] border-surface-hover" />
+                    <span className="h-3.5 w-3.5 shrink-0 rounded-sm border-[1.5px] border-foreground/25" />
                     <input
                       value={sub.title}
                       onChange={(e) => setTask(i, { subtasks: (task.subtasks ?? []).map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })}
                       placeholder="Subtask"
-                      className="min-w-0 flex-1 rounded-md bg-surface px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
                     />
                     <IconButton label="Remove subtask" onClick={() => setTask(i, { subtasks: (task.subtasks ?? []).filter((_, k) => k !== j) })}>
                       <CloseIcon className="h-3.5 w-3.5" />
@@ -302,7 +316,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 <button
                   type="button"
                   onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })}
-                  className="flex items-center gap-1 self-start text-xs font-semibold text-muted hover:text-foreground"
+                  className="flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground"
                 >
                   <PlusIcon className="h-3 w-3" /> Subtask
                 </button>
@@ -316,7 +330,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         <button
           type="button"
           onClick={() => set({ tasks: [...r.tasks, newTask()] })}
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-surface-hover py-2.5 text-sm font-semibold text-muted hover:border-accent hover:text-foreground"
+          className="flex h-9 items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/20 text-sm font-medium text-muted hover:border-foreground/40 hover:text-foreground"
         >
           <PlusIcon className="h-4 w-4" /> Add a task
         </button>
@@ -330,7 +344,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       </Card>
 
       {!isNew && (
-        <button type="button" onClick={() => setConfirmDelete(true)} className="flex items-center gap-1.5 self-start rounded-full px-4 py-2 text-sm font-semibold text-danger hover:bg-surface">
+        <button type="button" onClick={() => setConfirmDelete(true)} className="flex h-9 items-center gap-1.5 self-start rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-danger hover:bg-surface-hover">
           <TrashIcon className="h-4 w-4" /> Delete routine
         </button>
       )}
@@ -352,29 +366,29 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
 function Card({ title, detail, children }: { title: string; detail?: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4 sm:p-5">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-bold">{title}</h2>
-        {detail && <span className="text-sm tabular-nums text-muted">{detail}</span>}
+    <section className="rounded-lg bg-surface">
+      <div className="flex h-11 items-center justify-between gap-2 px-4">
+        <h2 className="text-sm font-medium">{title}</h2>
+        {detail && <span className="text-xs tabular-nums text-muted">{detail}</span>}
       </div>
-      {children}
+      <div className="flex flex-col gap-4 p-4">{children}</div>
     </section>
   );
 }
 
 function IconButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-foreground disabled:opacity-30">
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent">
       {children}
     </button>
   );
 }
 
-function Stepper({ value, min, max, step = 1, onChange, onSurface = false }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; onSurface?: boolean }) {
+function Stepper({ value, min, max, step = 1, onChange }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void }) {
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
   return (
-    <div className={`flex items-center rounded-full ${onSurface ? "bg-background" : "bg-surface"}`}>
-      <button type="button" onClick={() => onChange(clamp(value - step))} aria-label="Less" className="h-8 w-8 rounded-full font-bold hover:bg-surface-hover">
+    <div className="flex h-8 items-center overflow-hidden rounded-md bg-background">
+      <button type="button" onClick={() => onChange(clamp(value - step))} aria-label="Less" className="h-full w-8 text-muted hover:bg-surface-hover hover:text-foreground">
         −
       </button>
       <input
@@ -384,9 +398,9 @@ function Stepper({ value, min, max, step = 1, onChange, onSurface = false }: { v
           const n = Number(e.target.value);
           if (Number.isFinite(n)) onChange(clamp(n));
         }}
-        className="w-10 bg-transparent text-center font-semibold tabular-nums outline-none"
+        className="w-10 bg-transparent text-center text-sm font-medium tabular-nums outline-none"
       />
-      <button type="button" onClick={() => onChange(clamp(value + step))} aria-label="More" className="h-8 w-8 rounded-full font-bold hover:bg-surface-hover">
+      <button type="button" onClick={() => onChange(clamp(value + step))} aria-label="More" className="h-full w-8 text-muted hover:bg-surface-hover hover:text-foreground">
         +
       </button>
     </div>
@@ -395,19 +409,18 @@ function Stepper({ value, min, max, step = 1, onChange, onSurface = false }: { v
 
 /** A time of day, or none ("Any time" / "Follows on"). */
 function TimeField({ label, value, onChange, emptyLabel, inline = false }: { label: string; value: string | null; onChange: (v: string | null) => void; emptyLabel: string; inline?: boolean }) {
-  const bg = inline ? "bg-surface" : "bg-background";
   return (
     <div className={`flex items-center gap-2 text-sm ${inline ? "" : "flex-wrap"}`}>
-      <span className="font-medium text-muted">{label}</span>
+      <span className={inline ? "text-muted" : LABEL}>{label}</span>
       {value ? (
         <>
-          <input type="time" value={value} onChange={(e) => onChange(e.target.value || null)} className={`rounded-lg ${bg} px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-accent`} />
-          <button type="button" onClick={() => onChange(null)} aria-label="Clear the time" className="rounded-full p-1 text-muted hover:bg-surface hover:text-foreground">
+          <input type="time" value={value} onChange={(e) => onChange(e.target.value || null)} aria-label={label} className="h-8 rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40" />
+          <button type="button" onClick={() => onChange(null)} aria-label="Clear the time" className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-3.5 w-3.5" />
           </button>
         </>
       ) : (
-        <button type="button" onClick={() => onChange("08:00")} className={`rounded-lg ${bg} px-2.5 py-1 font-medium text-muted hover:bg-surface-hover hover:text-foreground`}>
+        <button type="button" onClick={() => onChange("08:00")} className="h-8 rounded-md bg-foreground/[0.05] px-2.5 text-sm text-muted hover:bg-surface-hover hover:text-foreground">
           {emptyLabel} · set a time
         </button>
       )}

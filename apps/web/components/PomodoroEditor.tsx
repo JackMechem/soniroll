@@ -28,9 +28,9 @@ function formatTotal(minutes: number) {
 
 /** A small "label, then − number +" card, three of which sit side by side. */
 function MinutesCard({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void }) {
-  const step = "flex h-7 w-7 items-center justify-center rounded-full text-muted transition hover:bg-surface-hover hover:text-foreground active:scale-90 disabled:opacity-30";
+  const step = "flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30";
   return (
-    <div className="flex flex-col items-center gap-1 rounded-2xl bg-background px-2 py-2.5">
+    <div className="flex flex-col items-center gap-1 rounded-md bg-background px-1.5 py-2.5">
       <span className="text-xs font-medium text-muted">{label}</span>
       <div className="flex items-center">
         <button type="button" aria-label={`Less ${label.toLowerCase()}`} className={step} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}>
@@ -42,7 +42,7 @@ function MinutesCard({ label, value, min, max, onChange }: { label: string; valu
           min={min}
           max={max}
           onChange={onChange}
-          className="w-10 rounded-md bg-transparent text-center text-xl font-bold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="w-10 rounded-md bg-transparent text-center text-xl font-semibold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         />
         <button type="button" aria-label={`More ${label.toLowerCase()}`} className={step} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}>
           +
@@ -54,15 +54,15 @@ function MinutesCard({ label, value, min, max, onChange }: { label: string; valu
 }
 
 function CountRow({ label, value, min, max, onChange, suffix }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void; suffix: string }) {
-  const step = "flex h-8 w-8 items-center justify-center rounded-full bg-background text-muted transition hover:text-foreground active:scale-90 disabled:opacity-30";
+  const step = "flex h-8 w-8 items-center justify-center rounded-md bg-background text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30";
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="font-medium text-muted">{label}</span>
+      <span className="text-muted">{label}</span>
       <div className="flex items-center gap-1.5">
         <button type="button" aria-label={`Fewer: ${label}`} className={step} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}>
           −
         </button>
-        <span className="w-16 text-center font-semibold tabular-nums">
+        <span className="w-16 text-center font-medium tabular-nums">
           {value} {suffix}
         </span>
         <button type="button" aria-label={`More: ${label}`} className={step} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}>
@@ -131,33 +131,33 @@ export default function PomodoroEditor({ config, onChange }: { config: PomodoroC
         <div className="flex flex-col gap-1.5">
           {Array.from({ length: slots }, (_, i) => (
             <label key={i} className="flex items-center gap-3">
-              <span className="w-6 shrink-0 text-right text-sm font-bold tabular-nums text-muted">{i + 1}</span>
+              <span className="w-6 shrink-0 text-right text-sm tabular-nums text-muted">{i + 1}</span>
               <input
                 type="text"
                 value={config.workTitles[i] ?? ""}
                 onChange={(e) => setName(i, e.target.value)}
                 placeholder="Work"
                 aria-label={`Name for work cycle ${i + 1}`}
-                className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2 text-sm outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-accent"
+                className="h-9 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none placeholder:text-muted/70 focus:ring-2 focus:ring-accent/40"
               />
             </label>
           ))}
         </div>
       </OptionGroup>
 
-      <OptionGroup title="Preview" aside={<span className="text-xs font-semibold tabular-nums">{forever ? `${formatTotal(total)} per round` : formatTotal(total)}</span>}>
+      <OptionGroup title="Preview" aside={<span className="text-xs font-medium tabular-nums">{forever ? `${formatTotal(total)} per round` : formatTotal(total)}</span>}>
         <div className="flex flex-wrap items-center gap-1.5">
           {steps.map((s, i) => (
             <span
               key={i}
-              className={`rounded-lg px-2 py-1 text-xs font-semibold ${
-                s.kind === "work" ? "bg-accent/15 text-accent" : s.kind === "long" ? "bg-foreground/10 text-foreground" : "bg-background text-muted"
+              className={`rounded-md border px-2 py-1 text-xs font-medium ${
+                s.kind === "work" ? "border-accent/40 text-accent" : s.kind === "long" ? "border-foreground/25 text-foreground" : "border-foreground/10 text-muted"
               }`}
             >
               {s.label} <span className="font-normal opacity-80">{s.minutes}m</span>
             </span>
           ))}
-          {forever && <span className="text-xs font-semibold text-muted">↻ then repeats</span>}
+          {forever && <span className="text-xs font-medium text-muted">↻ then repeats</span>}
         </div>
       </OptionGroup>
     </div>

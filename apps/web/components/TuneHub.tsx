@@ -1,7 +1,7 @@
 "use client";
 
 import { ChartPaper } from "@/components/library/chartView";
-import { Chip, Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
+import { Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
 import { displayKey } from "@jam-practice/core/setlistKeys";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
@@ -11,16 +11,20 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ChordChart from "@/components/ChordChart";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { menuPosition } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
+import { playAlongHref } from "@/components/library/usePlayAlong";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
 import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
-import { ChordChartIcon, LinkIcon, PencilIcon, ShareIcon, TrashIcon } from "@/components/tools";
+import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { makeId, type Tune } from "@/lib/types";
+import { STANDARDS, nameId } from "@/lib/standards";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import { useRecentTunes } from "@/lib/recents";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
@@ -53,9 +57,10 @@ function isMinorKey(value: string) {
  * saved as you type. Edit opens the usual tune form; the tune can be moved between Tunes I Know
  * and Tunes to Learn, or deleted. Linked from every tune in the account's tune lists.
  */
-/** Phones: whether a tune's chart fits the screen (else full size, scrolling sideways). */
+/** Phones: whether a tune's chart fits the screen (else full size, scrolling sideways). Fits by
+    default, so nothing's cut off on the right; "Zoom in" is remembered once picked. */
 const CHART_VIEW_KEY = "jam-practice-tune-chart-view";
-const CHART_VIEW_DEFAULTS = { fit: false };
+const CHART_VIEW_DEFAULTS = { fit: true };
 
 export default function TuneHub({ id, list: listParam }: { id: string; list?: string }) {
   const router = useRouter();
@@ -129,6 +134,7 @@ function Hub({
   const [editing, setEditing] = useState(false);
   const [picking, setPicking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
 
   function patch(update: Partial<Tune>) {
     setTunes((prev) =>
@@ -168,20 +174,26 @@ function Hub({
     else patch({ keys: [...tune.keys, { id: makeId(), value: `${KEY_NAMES[pc]}${suffix}`, enabled: true }] });
   }
 
-  // Charts whose title matches the tune's name — a one-tap link when none is linked.
+  // Charts whose title matches the tune's name — a one-tap link when none is linked, or when the
+  // linked one is gone from the library.
   const matches = useMemo(() => {
-    if (tune.chordChartId) return [];
+    if (chart || libraryLoading) return [];
     const want = titleKey(tune.name);
     const out: { song: LibrarySongMeta; playlist: string }[] = [];
     for (const s of allSongs) if (titleKey(s.title) === want) out.push({ song: s, playlist: s.playlistNames });
     return out.slice(0, 3);
-  }, [tune.chordChartId, tune.name, allSongs]);
+  }, [chart, libraryLoading, tune.name, allSongs]);
+
+  const isStandard = useMemo(() => STANDARDS.some((st) => nameId(st.name) === nameId(tune.name)), [tune.name]);
 
   const shownChart = useMemo(() => {
     if (!chart || !previewKey) return chart;
     const semis = (KEY_NAMES.indexOf(previewKey) - keyPitchClass(chart.key) + 12) % 12;
     return semis ? transposeSong(chart, semis) : chart;
   }, [chart, previewKey]);
+
+  const chartLoading = !!tune.chordChartId && (selectedSongLoading || libraryLoading);
+  const chartShowing = chartLoading || !!shownChart;
 
   const tempos = tune.tempos.map((t) => t.value);
   const other: ListId = list === "tunes" ? "learn" : "tunes";
@@ -202,7 +214,15 @@ function Hub({
   }, [tune.id]);
 
   const firstKey = tune.keys.find((k) => k.enabled)?.value ?? (chart?.key || null);
-  const btn = "inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold hover:bg-surface-hover";
+  // "Write the chart" starts the builder from this tune and links the result back to it.
+  const writeChartHref = `/chord-charts/new?${new URLSearchParams({
+    tune: `${list}:${tune.id}`,
+    title: tune.name,
+    ...(firstKey ? { key: firstKey } : {}),
+    ...(tune.timeSignature ? { time: tune.timeSignature } : {}),
+  }).toString()}`;
+  const btn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
+  const iconBtn = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9";
 
   return (
     <LibraryPage>
@@ -211,30 +231,39 @@ function Hub({
         color={keyColor(firstKey)}
         back={() => router.back()}
         leading={<KeyBadge label={firstKey} size="lg" />}
-        subtitle={
-          <span className="mt-1 flex flex-wrap gap-1">
-            <Chip accent>{LIST_LABEL[list]}</Chip>
-            {tune.timeSignature && <Chip>{tune.timeSignature}</Chip>}
-            {tempos.map((t, i) => (
-              <Chip key={i}>{t} BPM</Chip>
-            ))}
-            <Chip>{knownPcs.size} of 12 keys</Chip>
-            {chart && <Chip>Chart in {chart.key ? displayKey(chart.key) : "—"}</Chip>}
-          </span>
-        }
+        subtitle={[
+          LIST_LABEL[list],
+          tune.timeSignature || null,
+          ...tempos.map((t) => `${t} BPM`),
+          chart ? `Chart in ${chart.key ? displayKey(chart.key) : "—"}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <>
+            {/* With a chart: the band (Rhythm Section) plays it, in the key shown. */}
+            {chart && tune.chordChartId && (
+              <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(tune.chordChartId!, previewKey))} />
+            )}
             <Pill icon={PencilIcon} label="Edit" onClick={() => setEditing(true)} />
             {isAuthenticated && <Pill icon={ShareIcon} label="Share" onClick={() => setSharing(true)} />}
-            {(other === "tunes" || canUseLearn) && <Pill label={`Move to ${LIST_LABEL[other]}`} onClick={() => moveTo(other)} />}
+            {/* The rarer actions in a ⋮, so the header stays one row on phones. */}
             <button
               type="button"
-              onClick={() => setConfirmDelete(true)}
-              aria-label="Delete tune"
-              title="Delete tune"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-danger"
+              onClick={(e) =>
+                setMenu({
+                  ...menuPosition(e),
+                  items: [
+                    ...(other === "tunes" || canUseLearn ? [{ label: `Move to ${LIST_LABEL[other]}`, icon: <RepeatIcon className="h-4 w-4 text-muted" />, onSelect: () => moveTo(other) }] : []),
+                    { label: "Delete tune", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: () => setConfirmDelete(true) },
+                  ],
+                })
+              }
+              aria-label="More for this tune"
+              title="More"
+              className={iconBtn}
             >
-              <TrashIcon className="h-4 w-4" />
+              <DotsVerticalIcon className="h-4 w-4" />
             </button>
           </>
         }
@@ -242,109 +271,164 @@ function Hub({
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="flex min-w-0 flex-col gap-4">
-          {/* Chord chart */}
-          <ChartPaper
-            className="max-sm:-mx-4 max-sm:rounded-none max-sm:ring-0"
-            top={
-              <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                <h2 className="flex items-center gap-2 font-bold">
-                  <ChordChartIcon className="h-4 w-4 text-accent" />
-                  Chord chart
-                  {chart && <span className="text-sm font-medium text-muted">{chart.title !== tune.name ? `· ${chart.title}` : ""}</span>}
-                </h2>
-                {chart && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Select
-                      value={previewKey}
-                      onChange={setPreviewKey}
-                      options={[{ value: "", label: `Original (${chart.key || "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
-                      className="min-w-32"
-                    />
-                    {/* Phones: the chart is full size and scrolls sideways, or fits the screen. */}
-                    <button type="button" onClick={() => setChartView({ fit: !chartFit })} aria-pressed={chartFit} className={`${btn} sm:hidden`}>
-                      {chartFit ? "Full size" : "Fit to screen"}
-                    </button>
-                    <button type="button" onClick={openInChordCharts} className={btn}>
-                      Open
-                    </button>
-                    <button type="button" onClick={() => setPicking(true)} className={btn}>
-                      Change
-                    </button>
-                    <button type="button" onClick={() => patch({ chordChartId: undefined })} className={btn}>
-                      Unlink
-                    </button>
-                  </div>
-                )}
-              </div>
-            }
-          >
-            {tune.chordChartId && (selectedSongLoading || libraryLoading) ? (
-              <div className="flex justify-center py-10">
-                <LoadingSpinner />
-              </div>
-            ) : shownChart ? (
-              <ChordChart song={shownChart} hideHeader scroll={!chartFit} />
-            ) : (
+          {/* Chord chart: edge to edge on phones only while a chart (or its spinner) is showing;
+              otherwise an ordinary card, like Files and Recordings below. */}
+          {chartShowing ? (
+            <ChartPaper
+              className="max-sm:-mx-4 max-sm:rounded-none max-sm:border-x-0"
+              top={
+                <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                  <h2 className="flex items-center gap-2 text-sm font-medium">
+                    <ChordChartIcon className="h-4 w-4 text-muted" />
+                    Chord chart
+                    {chart && <span className="text-sm font-normal text-muted">{chart.title !== tune.name ? `· ${chart.title}` : ""}</span>}
+                  </h2>
+                  {chart && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Only changes how the chart is shown (the keys you know are on the right). */}
+                      <span className="text-xs text-muted">Show in</span>
+                      <Select
+                        value={previewKey}
+                        onChange={setPreviewKey}
+                        options={[{ value: "", label: `${chart.key || "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                        className="min-w-32"
+                      />
+                      {/* Phones: the chart fits the screen, or is zoomed in and scrolls sideways.
+                          (Opening the chart's own page is in the ⋮ there, so the two don't read
+                          alike.) */}
+                      <button type="button" onClick={() => setChartView({ fit: !chartFit })} aria-pressed={!chartFit} className={`${btn} sm:hidden`}>
+                        {chartFit ? "Zoom in" : "Fit to screen"}
+                      </button>
+                      <button type="button" onClick={openInChordCharts} className={`${btn} max-sm:hidden`}>
+                        Open chart page
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          setMenu({
+                            ...menuPosition(e),
+                            items: [
+                              { label: "Open chart page", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: openInChordCharts },
+                              { label: "Link a different chart", icon: <LinkIcon className="h-4 w-4 text-muted" />, onSelect: () => setPicking(true) },
+                              { label: "Unlink the chart", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: () => patch({ chordChartId: undefined }) },
+                            ],
+                          })
+                        }
+                        aria-label="More for the chart"
+                        title="More"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+                      >
+                        <DotsVerticalIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              {chartLoading ? (
+                <div className="flex justify-center py-10">
+                  <LoadingSpinner />
+                </div>
+              ) : shownChart ? (
+                <ChordChart song={shownChart} hideHeader scroll={!chartFit} />
+              ) : null}
+            </ChartPaper>
+          ) : (
+            <section className="flex flex-col gap-3 rounded-lg bg-surface p-4 sm:p-5">
+              <h2 className="flex items-center gap-2 text-sm font-medium">
+                <ChordChartIcon className="h-4 w-4 text-muted" />
+                Chord chart
+              </h2>
               <div className="flex flex-col gap-3">
-                <p className="px-1 text-sm text-muted">
-                  {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : "No chord chart linked yet."}
+                <p className="text-sm text-muted">
+                  {tune.chordChartId
+                    ? "The linked chart isn't in your chord charts anymore."
+                    : matches.length > 0
+                      ? "No chord chart linked yet."
+                      : // Tunes added from the jazz standards list are a name, key and tempo — no
+                        // chords come with them (none are bundled), so say how to get a chart.
+                        `No chord chart yet${isStandard ? " — the standards list adds a tune's name, key and tempo, not its chords" : ""}. Write the chart, or import yours: one called “${tune.name}” shows up here to link.`}
+                  {matches.length > 0 && ` ${matches.length === 1 ? "This one has" : "These have"} the same name:`}
                 </p>
                 {matches.map((m) => (
-                  <div key={m.song.id} className="flex items-center gap-3 rounded-xl bg-background p-3">
+                  <div key={m.song.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] p-3">
                     <KeyBadge label={m.song.key} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">{m.song.title}</div>
-                      <div className="truncate text-xs text-muted">{["Same name", m.playlist].filter(Boolean).join(" · ")}</div>
+                      <div className="truncate text-sm font-medium">{m.song.title}</div>
+                      <div className="truncate text-xs text-muted">{[m.song.composer, m.playlist].filter(Boolean).join(" · ") || "In your chord charts"}</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => patch({ chordChartId: m.song.id })}
-                      className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                      className="inline-flex h-9 shrink-0 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
                     >
                       Link it
                     </button>
                   </div>
                 ))}
-                <div>
-                  <button type="button" onClick={() => setPicking(true)} className={btn}>
-                    <LinkIcon className="h-4 w-4" /> Link a chart
-                  </button>
+                {/* Ways forward: pick another chart, write one, or bring some in. */}
+                <div className="flex flex-wrap gap-2">
+                  {allSongs.length > 0 && (
+                    <button type="button" onClick={() => setPicking(true)} className={btn}>
+                      <LinkIcon className="h-4 w-4" /> {matches.length ? "Link a different chart" : "Link a chart"}
+                    </button>
+                  )}
+                  <Link
+                    href={writeChartHref}
+                    className={
+                      matches.length || allSongs.length
+                        ? btn
+                        : "inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+                    }
+                  >
+                    <PencilIcon className="h-4 w-4" /> Write the chart
+                  </Link>
+                  <Link href="/chord-charts/import" className={btn}>
+                    <DownloadIcon className="h-4 w-4" /> Import charts
+                  </Link>
                 </div>
               </div>
-            )}
-          </ChartPaper>
+            </section>
+          )}
 
           <TuneFiles tuneId={tune.id} tuneName={tuneName} />
 
-          <div className="rounded-2xl bg-surface p-4 sm:p-5">
+          <div className="rounded-lg bg-surface p-4 sm:p-5">
             <TuneRecordings tuneId={tune.id} />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:sticky xl:top-6 xl:grid-cols-1">
-          {/* Keys */}
-          <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-bold">Keys I know it in</h2>
-              <span className="text-sm font-semibold tabular-nums text-muted">{knownPcs.size} / 12</span>
+          {/* Keys you know it in: toggles that save to the tune (unlike the chart's "Show in",
+              which only changes how the chart is shown). Check marks and an outline style keep
+              them from reading like the chart page's key picker. */}
+          <section className="flex flex-col gap-3 rounded-lg bg-surface p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-medium">Keys I know it in</h2>
+                <p className="text-xs text-muted">Tap the keys you know.</p>
+              </div>
+              <span className="text-xs tabular-nums text-muted">{knownPcs.size} / 12</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-background">
-              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(knownPcs.size / 12) * 100}%` }} />
-            </div>
-            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4">
+            <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Keys I know it in">
               {KEY_NAMES.map((name, pc) => {
                 const known = knownPcs.has(pc);
-                const color = `var(--key-${pc}, var(--accent))`;
                 return (
                   <button
                     key={name}
                     type="button"
                     onClick={() => toggleKey(pc)}
                     aria-pressed={known}
-                    title={known ? "Known — click to unmark" : "Click to mark as known"}
-                    className="rounded-xl py-2.5 text-sm font-bold transition-colors"
-                    style={known ? { background: color, color: "var(--accent-foreground)" } : { background: "var(--background)", color: "var(--muted)" }}
+                    title={known ? "You know it in this key — tap to unmark" : "Tap to mark as a key you know"}
+                    className={`flex items-center justify-center gap-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
+                      known ? "bg-accent/15 text-foreground ring-1 ring-inset ring-accent/50" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+                    }`}
                   >
+                    {known ? (
+                      <CheckIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
+                    ) : (
+                      <span aria-hidden className="h-3 w-3 shrink-0 rounded-full border border-current opacity-40" />
+                    )}
                     {name}
                     {suffix}
                   </button>
@@ -354,9 +438,10 @@ function Hub({
             <p className="text-xs text-muted">Jam Practice picks from the keys you mark here.</p>
           </section>
 
-          {/* Notes */}
-          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-            <h2 className="font-bold">Notes</h2>
+          {/* A quick note kept on the tune itself (stored as the tune's `notes`); Shed Notes below
+              are full notes, with links and search, in the Shed Notes tool. */}
+          <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+            <h2 className="text-sm font-medium">Quick note</h2>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -368,20 +453,26 @@ function Hub({
               onBlur={flushNotes}
               placeholder="Form, tricky changes, voicings, recordings to check out…"
               rows={7}
-              className="w-full resize-y rounded-xl bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="w-full resize-y rounded-md bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
-            <p className="text-xs text-muted">Saved as you type.</p>
+            <p className="text-xs text-muted">
+              {isAuthenticated ? "A few lines kept with the tune, saved as you type. For longer notes, use Shed Notes." : "A few lines kept with the tune, saved as you type."}
+            </p>
           </section>
 
           {isAuthenticated && (
-            <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-              <h2 className="font-bold">Shed Notes</h2>
+            <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
+              <div>
+                <h2 className="text-sm font-medium">Shed Notes</h2>
+                <p className="text-xs text-muted">Full notes on this tune, in your Shed Notes.</p>
+              </div>
               <AttachedNotes target={{ kind: "tune", tuneId: tune.id }} label={tune.name || "Untitled tune"} newTitle={tune.name || "Untitled tune"} />
             </section>
           )}
         </div>
       </div>
 
+      {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
       {sharing && <TuneShareDialog tuneId={tune.id} tuneName={tune.name} hasChart={!!chart} onClose={() => setSharing(false)} />}
       {editing && <TuneEditorModal initial={tune} isNew={false} onSave={(t) => { patch(t); setEditing(false); }} onClose={() => setEditing(false)} />}
       {picking && (

@@ -80,7 +80,7 @@ export default function TunesManager({
         <div
           role="dialog"
           aria-label="Manage tunes"
-          className="w-full max-w-3xl overflow-hidden rounded-2xl bg-surface text-left text-foreground shadow-2xl shadow-black/30 ring-1 ring-foreground/10"
+          className="w-full max-w-3xl overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-left text-foreground shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-4 border-b border-surface-hover px-5 py-4 sm:px-6 sm:py-5">
@@ -97,7 +97,7 @@ export default function TunesManager({
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+              className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
             >
               Done
             </button>
@@ -114,7 +114,7 @@ export default function TunesManager({
               return (
                 <li
                   key={tune.id}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
+                  className={`flex items-center gap-3 rounded-md px-3 py-2.5 ${
                     isSelected ? "bg-surface-hover" : "hover:bg-surface-hover/60"
                   }`}
                 >
@@ -146,7 +146,7 @@ export default function TunesManager({
                     onClick={() => onEdit(tune)}
                     aria-label={`Edit ${tune.name}`}
                     title="Edit"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </button>
@@ -155,7 +155,7 @@ export default function TunesManager({
                     onClick={() => onDeleteTune(tune.id)}
                     aria-label={`Delete ${tune.name}`}
                     title="Delete"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-danger"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -169,7 +169,7 @@ export default function TunesManager({
               type="button"
               onClick={toggleAllShown}
               disabled={shown.length === 0}
-              className="rounded-lg px-2 py-1.5 font-medium text-muted hover:text-foreground disabled:opacity-50"
+              className="rounded-md px-2 py-1.5 font-medium text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
             >
               {allShownSelected ? "Deselect all" : "Select all"}
             </button>
@@ -179,7 +179,7 @@ export default function TunesManager({
                 type="button"
                 onClick={() => downloadTunesCsv(chosen, "jam-practice-selected-tunes.csv")}
                 disabled={chosen.length === 0}
-                className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover disabled:opacity-50"
+                className="rounded-md bg-foreground/[0.05] px-3 py-1.5 font-medium hover:bg-surface-hover disabled:opacity-50"
               >
                 Export
               </button>
@@ -187,7 +187,7 @@ export default function TunesManager({
                 type="button"
                 onClick={() => setConfirming(true)}
                 disabled={chosen.length === 0}
-                className="rounded-lg bg-background px-3 py-1.5 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
+                className="rounded-md bg-foreground/[0.05] px-3 py-1.5 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
               >
                 Delete
               </button>

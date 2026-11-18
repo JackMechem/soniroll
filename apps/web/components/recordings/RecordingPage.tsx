@@ -98,7 +98,7 @@ export default function RecordingPage({ id }: { id: string }) {
         actions={
           <>
             {dirty && (
-              <button type="button" onClick={save} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+              <button type="button" onClick={save} className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                 Save
               </button>
             )}
@@ -109,9 +109,9 @@ export default function RecordingPage({ id }: { id: string }) {
                 disabled={toTuner === "busy"}
                 aria-label="Open in Tuner"
                 title="Play it through the Tuner to see your intonation"
-                className="flex h-9 items-center gap-2 rounded-lg bg-surface px-3 text-sm font-semibold hover:bg-surface-hover disabled:opacity-60"
+                className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-60"
               >
-                {toTuner === "busy" ? <LoadingSpinner size="sm" inline label="Opening in the Tuner" /> : <TunerIcon className="h-4 w-4 text-accent" />}
+                {toTuner === "busy" ? <LoadingSpinner size="sm" inline label="Opening in the Tuner" /> : <TunerIcon className="h-4 w-4 text-muted" />}
                 <span className="hidden sm:inline">Open in Tuner</span>
               </button>
             )}
@@ -120,7 +120,7 @@ export default function RecordingPage({ id }: { id: string }) {
               onClick={() => setConfirmDelete(true)}
               aria-label="Delete recording"
               title="Delete recording"
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface text-muted hover:bg-surface-hover hover:text-danger"
+              className="flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-danger"
             >
               <TrashIcon className="h-4 w-4" />
             </button>
@@ -130,7 +130,7 @@ export default function RecordingPage({ id }: { id: string }) {
       {toTuner !== "idle" && toTuner !== "busy" && <p className="text-sm text-danger">{toTuner}</p>}
       {rec.url &&
         (song?.url ? (
-          <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
+          <div className="flex flex-col gap-2 rounded-lg bg-surface p-4">
             <div className="text-sm text-muted">
               Playing over <span className="font-medium text-foreground">{song.name}</span>
             </div>
@@ -141,20 +141,20 @@ export default function RecordingPage({ id }: { id: string }) {
         ))}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-muted">Name</span>
-        <input value={shownName} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-surface px-4 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+        <span className="text-xs font-medium text-muted">Name</span>
+        <input value={shownName} onChange={(e) => setName(e.target.value)} className="h-10 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:h-9 sm:text-sm" />
       </label>
 
       <div className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-muted">Tune</span>
-        <div className="flex items-center gap-3 rounded-xl bg-surface px-4 py-3">
-          <LinkIcon className={`h-4 w-4 ${linked ? "text-accent" : "text-muted"}`} />
+        <span className="text-xs font-medium text-muted">Tune</span>
+        <div className="flex min-h-10 items-center gap-3 rounded-md bg-surface px-3 py-2">
+          <LinkIcon className="h-4 w-4 shrink-0 text-muted" />
           {linked ? (
-            <Link href={`/tunes/tune?id=${linked.tune.id}&list=${linked.list}`} className="min-w-0 flex-1 truncate text-base font-semibold hover:underline">
+            <Link href={`/tunes/tune?id=${linked.tune.id}&list=${linked.list}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:underline">
               {linked.tune.name}
             </Link>
           ) : (
-            <span className="flex-1 text-base text-muted">{rec.tuneId ? "Its tune was deleted." : "Not linked to a tune."}</span>
+            <span className="flex-1 text-sm text-muted">{rec.tuneId ? "Its tune was deleted." : "Not linked to a tune."}</span>
           )}
           <button type="button" onClick={() => setPicking(true)} className="text-sm font-medium text-accent hover:underline">
             {linked ? "Change" : "Link a tune"}
@@ -168,13 +168,13 @@ export default function RecordingPage({ id }: { id: string }) {
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-muted">Notes</span>
+        <span className="text-xs font-medium text-muted">Notes</span>
         <textarea
           value={shownNotes}
           onChange={(e) => setNotes(e.target.value)}
           rows={8}
           placeholder="How did it go? What to work on…"
-          className="resize-y rounded-2xl bg-surface p-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="resize-y rounded-md bg-background p-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
         />
       </label>
 

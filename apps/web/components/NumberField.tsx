@@ -38,6 +38,8 @@ export default function NumberField({
         if (/^\d+$/.test(next) && n >= min && n <= max) onChange(n);
       }}
       onBlur={() => setDraft(null)}
+      // Select it all on focus, so typing replaces the number instead of adding to it.
+      onFocus={(e) => e.currentTarget.select()}
       onKeyDown={(e) => {
         if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
         e.preventDefault();
@@ -47,7 +49,7 @@ export default function NumberField({
       }}
       className={`${
         className ??
-        "w-full rounded-lg bg-background px-3 py-2 tabular-nums outline-none focus:ring-2 focus:ring-accent"
+        "w-full rounded-lg bg-foreground/[0.05] px-3 py-2 tabular-nums outline-none focus:ring-2 focus:ring-accent"
       } ${valid ? "" : "text-danger"}`}
     />
   );

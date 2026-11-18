@@ -104,7 +104,7 @@ const ROUTES: Route[] = [
     path: "/rhythm-section",
     render: (_, query) => (
       <NativeTool>
-        <RhythmSection initialTab={opt(query, "tab")} initialPlay={opt(query, "play")} />
+        <RhythmSection initialTab={opt(query, "tab")} initialPlay={opt(query, "play")} initialChart={opt(query, "chart")} initialKey={opt(query, "key")} />
       </NativeTool>
     ),
   },
@@ -203,6 +203,8 @@ function redirectFor(pathname: string, query: Query): string | null {
   if (pathname === "/tunes/setlists") return "/tunes?tab=setlists";
   if (pathname === "/chord-charts") return "/tunes?tab=charts";
   if (pathname === "/files") return "/tunes?tab=files";
+  if (pathname === "/library") return "/tunes";
+  if (pathname === "/setlist-charts" && !query.get("mine") && !query.get("post") && !query.get("shared")) return "/tunes?tab=setlists";
   if (pathname === "/settings") return `/account?tab=${encodeURIComponent(query.get("tab") || "general")}`;
   if (pathname === "/lessons/availability") return "/lessons/settings#hours";
   // Bass Genius and the Drum Generator became Rhythm Section.

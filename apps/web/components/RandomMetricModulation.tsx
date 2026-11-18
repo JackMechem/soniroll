@@ -7,6 +7,8 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Hint from "@/components/Hint";
 import SwitchRow from "@/components/SwitchRow";
 import {
+  BIG_PRIMARY,
+  BIG_SECONDARY,
   MeterOptions,
   SoundOptions,
   SteppedField,
@@ -204,6 +206,16 @@ export default function RandomMetricModulation() {
   useToolActivity("/random-metric-modulation", running);
   const tap = useTapTempo(setBpm);
 
+  // What Start will do, in one line on the main display ("Tempo changes every 4 bars · 3:2, 2:3,
+  // 4:3…"),
+  // so the tool doesn't look like a plain metronome before it runs.
+  const pool = enabledRatios.length ? MODULATIONS.filter((m) => enabledRatios.includes(m.id)) : MODULATIONS;
+  const plan = `${
+    matchToRealignment
+      ? "Tempo changes once the tempos realign"
+      : `Tempo changes every ${minBarsPerModulation === 1 ? "bar" : `${minBarsPerModulation} bars`}`
+  } · ${pool.slice(0, 3).map((m) => shortRatio(m.label)).join(", ")}${pool.length > 3 ? "…" : ""}${returnToOriginal ? " · back to your tempo in between" : ""}`;
+
   function changeBeats(n: number) {
     updateSettings({ beatsPerBar: n, accents: defaultAccents(n, accents) });
   }
@@ -243,7 +255,7 @@ export default function RandomMetricModulation() {
               {[...log].reverse().map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between gap-3 border-b border-background/70 py-2 text-sm last:border-b-0"
+                  className="flex items-center justify-between gap-3 border-b border-foreground/10 py-2 text-sm last:border-b-0"
                 >
                   <span className="text-xs text-muted">
                     {shortRatio(entry.label)}
@@ -295,6 +307,17 @@ export default function RandomMetricModulation() {
             id="modulation"
             title="Modulation"
             icon={ShuffleIcon}
+            summary={`${
+              matchToRealignment
+                ? "When tempos realign"
+                : `Every ${minBarsPerModulation} bar${minBarsPerModulation === 1 ? "" : "s"}`
+            } · ${
+              enabledRatios.length === 0 || enabledRatios.length === MODULATIONS.length
+                ? "all ratios"
+                : enabledRatios.length === 1
+                  ? shortRatio(MODULATIONS.find((m) => m.id === enabledRatios[0])!.label)
+                  : `${enabledRatios.length} ratios`
+            }`}
           >
             <SteppedField
               label={
@@ -352,7 +375,7 @@ export default function RandomMetricModulation() {
                 {MODULATIONS.map((m) => {
                   const on = enabledRatios.includes(m.id);
                   return (
-                    <PoolPill key={m.id} on={on} onClick={() => toggleRatio(m.id)} disabled={running} title={m.label} plainClassName="rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums">
+                    <PoolPill key={m.id} on={on} onClick={() => toggleRatio(m.id)} disabled={running} title={m.label} plainClassName="rounded-md px-3 py-1.5 text-sm font-medium tabular-nums">
                       {shortRatio(m.label)}
                     </PoolPill>
                   );
@@ -413,10 +436,10 @@ export default function RandomMetricModulation() {
         {running && playingReference && (
           <div className="flex flex-col items-center gap-2 opacity-80">
             <div className="flex flex-col items-center">
-              <span className="text-4xl font-bold tabular-nums">
+              <span className="text-4xl font-semibold tracking-tight tabular-nums">
                 {Math.round(referenceBpmDisplay)}
               </span>
-              <span className="text-xs font-medium text-muted">
+              <span className="text-xs text-muted">
                 {engineState.returnToOriginal ? "Original" : "Previous"} · {beatsPerBar}/
                 {beatUnit}
               </span>
@@ -448,18 +471,17 @@ export default function RandomMetricModulation() {
           onCycleSub={cycleSub}
         />
 
-        {running && (
-          <p className="text-sm text-muted tabular-nums">
-            Bar {barsIntoInterval + 1} of {effectiveBars}
-          </p>
-        )}
+        <p className="text-sm text-muted tabular-nums">
+          {plan}
+          {running && <span className="block">Bar {barsIntoInterval + 1} of {effectiveBars}</span>}
+        </p>
 
         {running && nextPreview && (
-          <div className="flex flex-col items-center gap-1 rounded-2xl bg-surface px-6 py-3">
-            <span className="text-xs font-semibold text-muted">
+          <div className="flex flex-col items-center gap-1 rounded-lg bg-surface px-6 py-3">
+            <span className="text-xs text-muted">
               Next modulation
             </span>
-            <span className="text-3xl font-bold tabular-nums text-accent">
+            <span className="text-3xl font-semibold tabular-nums text-accent">
               {shortRatio(nextPreview.label)}
             </span>
             <span className="text-sm font-medium tabular-nums">
@@ -480,11 +502,7 @@ export default function RandomMetricModulation() {
       <button
         type="button"
         onClick={running ? stop : start}
-        className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-          running
-            ? "bg-surface hover:bg-surface-hover"
-            : "bg-accent text-accent-foreground hover:bg-accent-hover"
-        }`}
+        className={running ? BIG_SECONDARY : BIG_PRIMARY}
       >
         {running ? "Stop" : "Start"}
       </button>

@@ -131,10 +131,10 @@ export function ago(ms: number) {
 
 /** Someone's picture, or their first letter on a tile. */
 export function PersonBadge({ url, name, size = "md" }: { url: string | null | undefined; name: string; size?: "sm" | "md" | "lg" }) {
-  const dim = size === "lg" ? "h-14 w-14 text-xl" : size === "sm" ? "h-8 w-8 text-xs" : "h-11 w-11 text-sm";
+  const dim = size === "lg" ? "h-12 w-12 text-base" : size === "sm" ? "h-8 w-8 text-xs" : "h-11 w-11 text-sm";
   if (url) return <img src={url} alt="" className={`${dim} shrink-0 rounded-full object-cover ring-1 ring-foreground/10`} />;
   return (
-    <span className={`${dim} flex shrink-0 items-center justify-center rounded-full bg-accent/15 font-extrabold text-accent`}>
+    <span className={`${dim} flex shrink-0 items-center justify-center rounded-full bg-foreground/10 font-semibold text-foreground/70`}>
       {name.replace(/^@/, "").charAt(0).toUpperCase() || "?"}
     </span>
   );
@@ -153,9 +153,9 @@ export function KindFilter({ items, value, onChange }: { items: LessonItem[]; va
             type="button"
             onClick={() => onChange(f.id)}
             aria-pressed={value === f.id}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${value === f.id ? "bg-accent text-accent-foreground" : "bg-surface hover:bg-surface-hover"}`}
+            className={`h-8 rounded-md px-2.5 text-xs font-medium transition-colors ${value === f.id ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
           >
-            {f.label} <span className="tabular-nums opacity-70">{n}</span>
+            {f.label} <span className={`tabular-nums ${value === f.id ? "text-accent/80" : "text-muted"}`}>{n}</span>
           </button>
         );
       })}
@@ -170,7 +170,7 @@ export function FileView({ url, name, type }: { url: string; name: string; type:
   if (type.startsWith("image/")) {
     return (
       <>
-        <button type="button" onClick={() => setOpen(true)} className="block overflow-hidden rounded-xl bg-background ring-1 ring-foreground/5">
+        <button type="button" onClick={() => setOpen(true)} className="block overflow-hidden rounded-md bg-background">
           <img src={url} alt={name} className="max-h-96 w-full object-contain" />
         </button>
         {open && (
@@ -180,7 +180,7 @@ export function FileView({ url, name, type }: { url: string; name: string; type:
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-md bg-white/15 text-white hover:bg-white/25"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
@@ -191,8 +191,8 @@ export function FileView({ url, name, type }: { url: string; name: string; type:
   }
   if (type.startsWith("audio/")) {
     return (
-      <div className="flex flex-col gap-1 rounded-xl bg-background p-2.5">
-        <span className="truncate text-xs font-semibold">{name}</span>
+      <div className="flex flex-col gap-1 rounded-md bg-background p-2.5">
+        <span className="truncate text-xs font-medium">{name}</span>
         <audio controls src={url} preload="none" className="h-9 w-full" />
       </div>
     );
@@ -200,21 +200,19 @@ export function FileView({ url, name, type }: { url: string; name: string; type:
   const pdf = type === "application/pdf" || name.toLowerCase().endsWith(".pdf");
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-background p-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-          <FileIcon className="h-4 w-4" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-md bg-background py-2 pl-3 pr-2">
+        <FileIcon className="h-4 w-4 shrink-0 text-muted" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
         {pdf && (
-          <button type="button" onClick={() => setOpen((o) => !o)} className="rounded-full bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={() => setOpen((o) => !o)} className={btnSmall}>
             {open ? "Hide" : "Preview"}
           </button>
         )}
-        <a href={url} target="_blank" rel="noreferrer" className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover">
+        <a href={url} target="_blank" rel="noreferrer" className={btnSmallPrimary}>
           Open
         </a>
       </div>
-      {pdf && open && <iframe src={url} title={name} className="h-[70vh] w-full rounded-xl bg-white ring-1 ring-foreground/5" />}
+      {pdf && open && <iframe src={url} title={name} className="h-[70vh] w-full rounded-md bg-foreground/[0.05] bg-white" />}
     </div>
   );
 }
@@ -226,7 +224,7 @@ function ChartView({ chart, saveAs }: { chart: IRealSong; saveAs?: string }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setOpen((o) => !o)} className="rounded-full bg-background px-3.5 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+        <button type="button" onClick={() => setOpen((o) => !o)} className={btnSmall}>
           {open ? "Hide chart" : "Show chart"}
         </button>
         {saveAs && (
@@ -241,7 +239,7 @@ function ChartView({ chart, saveAs }: { chart: IRealSong; saveAs?: string }) {
                 setSaved(e instanceof Error ? e.message : "Couldn't save it.");
               }
             }}
-            className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
+            className={`${btnSmallPrimary} disabled:opacity-60`}
           >
             Save to my charts
           </button>
@@ -259,11 +257,11 @@ function ChartView({ chart, saveAs }: { chart: IRealSong; saveAs?: string }) {
 
 function RoutineSummary({ routine }: { routine: Routine }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-background p-3">
+    <div className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
       <div className="flex items-center gap-2.5">
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0">
-          <div className="truncate font-bold">{routine.name}</div>
+          <div className="truncate text-sm font-medium">{routine.name}</div>
           <div className="truncate text-xs text-muted">
             {describeRepeat(routine.repeat)}
             {routine.startTime ? ` at ${routine.startTime}` : ""} · {formatMinutesShort(totalMinutes(routine))}
@@ -273,7 +271,7 @@ function RoutineSummary({ routine }: { routine: Routine }) {
       <ol className="flex flex-col gap-0.5 pl-1 text-sm">
         {routine.tasks.map((t, i) => (
           <li key={t.id} className="flex gap-2">
-            <span className="w-4 shrink-0 text-right text-xs font-bold tabular-nums text-muted">{i + 1}</span>
+            <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted">{i + 1}</span>
             <span className="min-w-0 flex-1 truncate">{t.title}</span>
             <span className="shrink-0 text-xs tabular-nums text-muted">{formatMinutesShort(t.minutes)}</span>
           </li>
@@ -317,22 +315,22 @@ export function ItemCard({
   /** Hand-in assignments show their hand-in status instead of "Done". */
   const shownDone = item.done && !item.submit;
   return (
-    <article className={`flex flex-col gap-3 rounded-2xl bg-surface p-4 ring-1 ${overdue ? "ring-danger/30" : "ring-foreground/5"}`}>
+    <article className={`flex flex-col gap-3 rounded-lg border bg-surface p-4 ${overdue ? "border-danger/40" : "border-foreground/10"}`}>
       <header className="flex items-start gap-3">
         {item.kind === "assignment" && item.submit ? (
           <span
-            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
               item.submission?.status === "reviewed"
                 ? "bg-emerald-500 text-white"
                 : item.submission?.status === "submitted"
                   ? "bg-accent text-accent-foreground"
                   : item.submission?.status === "changes"
                     ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                    : "bg-accent/12 text-accent"
+                    : "text-muted"
             }`}
           >
             {item.submission?.status === "reviewed" || item.submission?.status === "submitted" ? (
-              <CheckIcon className="h-5 w-5" />
+              <CheckIcon className="h-4 w-4" />
             ) : (
               <ClipboardIcon className="h-4 w-4" />
             )}
@@ -345,24 +343,24 @@ export function ItemCard({
             aria-label={item.done ? "Mark as not done" : "Mark as done"}
             disabled={!onToggleDone}
             onClick={() => onToggleDone?.(!item.done)}
-            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 transition-colors ${
+            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
               item.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-foreground/20 text-transparent"
             } ${onToggleDone ? "hover:border-emerald-500" : "cursor-default"}`}
           >
-            <CheckIcon className="h-5 w-5" />
+            <CheckIcon className="h-4 w-4" />
           </button>
         ) : (
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-accent">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-muted">
             <Icon className="h-4 w-4" />
           </span>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <h3 className={`font-bold ${item.done && !item.submit ? "text-muted line-through" : ""}`}>{item.title}</h3>
+            <h3 className={`text-sm font-medium ${item.done && !item.submit ? "text-muted line-through" : ""}`}>{item.title}</h3>
             <Chip>{KIND_LABEL[item.kind]}</Chip>
             {item.kind === "assignment" && item.dueDate && (
               <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${overdue ? "bg-danger/15 text-danger" : shownDone ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-background text-muted"}`}
+                className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${overdue ? "bg-danger/15 text-danger" : shownDone ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "text-muted"}`}
               >
                 {shownDone ? "Done" : overdue ? "Overdue · " : "Due "}
                 {!shownDone && dateLabel(item.dueDate)}
@@ -370,7 +368,7 @@ export function ItemCard({
             )}
             {item.submission && <StatusChip status={item.submission.status} />}
             {item.kind === "assignment" && item.done && !item.dueDate && !item.submit && (
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">Done</span>
+              <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Done</span>
             )}
           </div>
           <p className="text-xs text-muted">
@@ -386,7 +384,7 @@ export function ItemCard({
                 onClick={onEdit}
                 aria-label={`Edit ${item.title}`}
                 title="Edit"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 <PencilIcon className="h-4 w-4" />
               </button>
@@ -397,7 +395,7 @@ export function ItemCard({
                 onClick={onRemove}
                 aria-label={`Remove ${item.title}`}
                 title="Remove"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-danger"
               >
                 <TrashIcon className="h-4 w-4" />
               </button>
@@ -409,7 +407,7 @@ export function ItemCard({
         <>
           {item.body.trim() && <p className="line-clamp-3 text-sm leading-relaxed text-foreground/80">{noteSnippet(item.body, 320)}</p>}
           {notesHref && (
-            <Link href={notesHref} className="self-start rounded-full bg-background px-3.5 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+            <Link href={notesHref} className={`self-start ${btnSmall}`}>
               {teacher ? "Open in notes" : "Read the notes"}
             </Link>
           )}
@@ -424,7 +422,7 @@ export function ItemCard({
       {item.kind === "routine" && !teacher && (
         <Link
           href={`/shed-log/routine?id=${encodeURIComponent(lessonRoutineId(item.id))}`}
-          className="self-start rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover"
+          className={`self-start ${btnSmallPrimary}`}
         >
           Open in your Shed Log
         </Link>
@@ -447,16 +445,16 @@ export function Dialog({ title, onClose, children, wide = false }: { title: stri
       <div
         role="dialog"
         aria-label={title}
-        className={`flex max-h-[92dvh] w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} flex-col gap-4 overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-2xl sm:rounded-3xl`}
+        className={`flex max-h-[92dvh] w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} flex-col gap-4 overflow-y-auto rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 shadow-2xl sm:rounded-xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-extrabold">{title}</h2>
+          <h2 className="text-base font-semibold">{title}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted hover:text-foreground"
+            className="-mr-1 flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
           >
             <CloseIcon className="h-4 w-4" />
           </button>
@@ -467,7 +465,18 @@ export function Dialog({ title, onClose, children, wide = false }: { title: stri
   );
 }
 
-export const field = "w-full rounded-xl bg-background px-3.5 py-2.5 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent";
+export const field = "w-full rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
+
+/** Buttons for the Lessons pages: a primary (one per area), a bordered secondary, and small ones. */
+export const btnPrimary =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40";
+export const btnSecondary =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
+export const btnGhost = "inline-flex h-9 shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground";
+export const btnSmall =
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
+export const btnSmallPrimary =
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40";
 
 /** Add or edit a note, an assignment or a file (title, text, due date, the file). */
 export function ItemDialog({
@@ -528,9 +537,9 @@ export function ItemDialog({
   return (
     <Dialog title={heading} onClose={onClose}>
       {(kind === "file" || (kind === "assignment" && !editing)) && !editing && (
-        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-foreground/15 p-5 text-center text-sm hover:border-accent">
-          <FileIcon className="h-6 w-6 text-accent" />
-          <span className="font-semibold">
+        <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-foreground/20 p-5 text-center text-sm transition-colors hover:border-foreground/40">
+          <FileIcon className="h-5 w-5 text-muted" />
+          <span className="font-medium">
             {file ? file.name : kind === "file" ? "Choose a PDF, image or audio file" : "Attach a sheet, an image or a recording (optional)"}
           </span>
           <span className="text-xs text-muted">Up to {MAX_FILE_MB} MB</span>
@@ -546,7 +555,7 @@ export function ItemDialog({
           />
         </label>
       )}
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Title
         <input
           value={title}
@@ -556,7 +565,7 @@ export function ItemDialog({
           autoFocus={kind !== "file"}
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         {kind === "note" ? "Notes" : kind === "assignment" ? "Details" : "Note (optional)"}
         <textarea
           value={body}
@@ -567,7 +576,7 @@ export function ItemDialog({
         />
       </label>
       {kind === "assignment" && (
-        <label className="flex flex-col gap-1 text-sm font-semibold">
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           Due (optional)
           <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={field} />
         </label>
@@ -575,14 +584,14 @@ export function ItemDialog({
       {kind === "assignment" && <SubmitSettings value={submit} onChange={setSubmit} />}
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+        <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
         <button
           type="button"
           onClick={() => void save()}
           disabled={busy || (needsFile && !file) || (!title.trim() && !file)}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnPrimary}
         >
           {busy ? "Saving…" : editing ? "Save" : "Add"}
         </button>
@@ -609,14 +618,14 @@ export function RoutinePickDialog({
         Your student gets a copy in their Shed Log, and you&apos;ll see how each day of it goes. Changing it here later updates theirs.
       </p>
       {routines.length === 0 ? (
-        <p className="rounded-xl bg-background p-4 text-sm text-muted">You don&apos;t have any routines yet.</p>
+        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">You don&apos;t have any routines yet.</p>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-foreground/[0.05]">
           {routines.map((r) => (
-            <button key={r.id} type="button" onClick={() => onPick(r)} className="flex items-center gap-3 rounded-xl bg-background p-3 text-left hover:bg-surface-hover">
+            <button key={r.id} type="button" onClick={() => onPick(r)} className="flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover">
               <RoutineIcon icon={r.icon} color={r.color} size="md" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{r.name}</span>
+                <span className="block truncate text-sm font-medium">{r.name}</span>
                 <span className="block truncate text-xs text-muted">
                   {r.tasks.length} task{r.tasks.length === 1 ? "" : "s"} · {formatMinutesShort(totalMinutes(r))} · {describeRepeat(r.repeat)}
                 </span>
@@ -625,7 +634,7 @@ export function RoutinePickDialog({
           ))}
         </div>
       )}
-      <Link href="/shed-log/routine/edit" className="self-start text-sm font-semibold text-accent hover:underline">
+      <Link href="/shed-log/routine/edit" className="self-start text-sm font-medium text-accent hover:underline">
         Make a new routine in your Shed Log →
       </Link>
     </Dialog>
@@ -638,13 +647,13 @@ const STATUS_STYLE: Record<string, string> = {
   done: "bg-emerald-500 text-white",
   partial: "bg-amber-400 text-black",
   missed: "bg-danger text-white",
-  today: "bg-accent/20 text-accent",
+  today: "bg-foreground/10 text-muted",
 };
 
 function StatusDot({ status }: { status: string | null }) {
   const s = status ?? "today";
   return (
-    <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-[10px] font-extrabold ${STATUS_STYLE[s]}`}>
+    <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-sm px-1 text-[10px] font-semibold ${STATUS_STYLE[s]}`}>
       {s === "done" ? "✓" : s === "partial" ? "–" : s === "missed" ? "✕" : "•"}
     </span>
   );
@@ -671,16 +680,16 @@ export function RoutineReportView({ itemId }: { itemId: Id<"lessonItems"> }) {
   const [showAll, setShowAll] = useState(false);
   if (data === undefined) return <LoadingSpinner size="sm" />;
   if (!data) return null;
-  if (!data.joined) return <p className="rounded-xl bg-background p-3 text-sm text-muted">Once your student joins, you&apos;ll see how each day of this routine goes.</p>;
+  if (!data.joined) return <p className="rounded-md border border-dashed border-foreground/15 p-3 text-sm text-muted">Once your student joins, you&apos;ll see how each day of this routine goes.</p>;
   const report = data.report as RoutineReport | null;
   if (!report)
-    return <p className="rounded-xl bg-background p-3 text-sm text-muted">It&apos;s on its way to their Shed Log — it appears the next time they open soniroll.</p>;
+    return <p className="rounded-md border border-dashed border-foreground/15 p-3 text-sm text-muted">It&apos;s on its way to their Shed Log — it appears the next time they open soniroll.</p>;
   const t = report.totals;
   const days = showAll ? report.days : report.days.slice(0, 7);
   const rate = t.tasksTotal ? Math.round((t.tasksDone / t.tasksTotal) * 100) : null;
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-background p-3">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="flex flex-col gap-3 rounded-md bg-foreground/[0.05] p-3">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
         <Stat label="Days done" value={String(t.done)} tone="text-emerald-600 dark:text-emerald-400" />
         <Stat label="Partly done" value={String(t.partial)} tone="text-amber-600 dark:text-amber-400" />
         <Stat label="Missed" value={String(t.missed)} tone="text-danger" />
@@ -689,16 +698,16 @@ export function RoutineReportView({ itemId }: { itemId: Id<"lessonItems"> }) {
       {report.days.length === 0 ? (
         <p className="text-sm text-muted">No days for it yet.</p>
       ) : (
-        <ol className="flex flex-col gap-1.5">
+        <ol className="flex flex-col divide-y divide-foreground/10 border-t border-foreground/10">
           {days.map((d) => (
-            <li key={d.date} className="rounded-xl bg-surface p-3">
+            <li key={d.date} className="py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusDot status={d.status} />
-                <span className="text-sm font-bold">{dateLabel(d.date)}</span>
+                <span className="text-sm font-medium">{dateLabel(d.date)}</span>
                 {d.status === null && <span className="text-xs text-muted">Today</span>}
                 {d.skipped && <Chip>Skipped</Chip>}
                 {d.added && <Chip>Added that day</Chip>}
-                <span className="ml-auto text-xs font-semibold tabular-nums text-muted">{d.minutes ? formatMinutesShort(d.minutes) : "No time logged"}</span>
+                <span className="ml-auto text-xs tabular-nums text-muted">{d.minutes ? formatMinutesShort(d.minutes) : "No time logged"}</span>
               </div>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {d.tasks.map((task) => (
@@ -723,24 +732,24 @@ export function RoutineReportView({ itemId }: { itemId: Id<"lessonItems"> }) {
                   </li>
                 ))}
               </ul>
-              {d.notes && <p className="mt-2 whitespace-pre-wrap rounded-lg bg-background p-2 text-xs italic text-foreground/80">“{d.notes}”</p>}
+              {d.notes && <p className="mt-2 whitespace-pre-wrap border-l-2 border-foreground/15 pl-2 text-xs italic text-foreground/80">“{d.notes}”</p>}
             </li>
           ))}
         </ol>
       )}
       {report.days.length > 7 && (
-        <button type="button" onClick={() => setShowAll((s) => !s)} className="self-start text-xs font-semibold text-accent hover:underline">
+        <button type="button" onClick={() => setShowAll((s) => !s)} className="self-start text-xs font-medium text-muted hover:text-foreground">
           {showAll ? "Show the last week only" : `Show all ${report.days.length} days`}
         </button>
       )}
       {data.recordings.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h4 className="flex items-center gap-1.5 text-sm font-bold">
-            <MicIcon className="h-4 w-4 text-accent" /> Recordings
+          <h4 className="flex items-center gap-1.5 text-sm font-medium">
+            <MicIcon className="h-4 w-4 text-muted" /> Recordings
           </h4>
           {data.recordings.map((r) => (
-            <div key={r.id} className="flex flex-col gap-1 rounded-xl bg-surface p-2.5">
-              <span className="text-xs font-semibold">
+            <div key={r.id} className="flex flex-col gap-1 rounded-md bg-foreground/[0.05] p-2.5">
+              <span className="text-xs font-medium">
                 {r.name}
                 <span className="font-normal text-muted"> · {r.date ? dateLabel(r.date) : ago(r.createdAt)}</span>
               </span>
@@ -755,9 +764,9 @@ export function RoutineReportView({ itemId }: { itemId: Id<"lessonItems"> }) {
 
 function Stat({ label, value, sub, tone = "" }: { label: string; value: string; sub?: string; tone?: string }) {
   return (
-    <div className="rounded-xl bg-surface p-2.5">
-      <div className={`text-xl font-extrabold tabular-nums ${tone}`}>{value}</div>
-      <div className="text-[11px] font-semibold text-muted">{label}</div>
+    <div>
+      <div className="text-xs text-muted">{label}</div>
+      <div className={`text-base font-semibold tabular-nums ${tone}`}>{value}</div>
       {sub && <div className="text-[11px] text-muted">{sub}</div>}
     </div>
   );
@@ -780,9 +789,9 @@ export function MoreButton({ onClick, label }: { onClick: (e: React.MouseEvent) 
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-foreground"
+      className="flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
     >
-      <DotsVerticalIcon className="h-5 w-5" />
+      <DotsVerticalIcon className="h-4 w-4" />
     </button>
   );
 }
@@ -846,12 +855,12 @@ export function EmailInviteForm({
           placeholder={`${name}'s email`}
           aria-label={`${name}'s email`}
           autoComplete="off"
-          className="min-w-0 flex-1 basis-56 rounded-xl bg-surface px-3.5 py-2.5 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+          className="h-9 min-w-0 flex-1 basis-56 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
         />
         <button
           type="submit"
           disabled={!valid || busy}
-          className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+          className={btnPrimary}
         >
           {busy ? "Sending…" : sentTo ? "Email it again" : "Email invite"}
         </button>
@@ -863,10 +872,10 @@ export function EmailInviteForm({
           rows={3}
           maxLength={1000}
           placeholder="A note to go with it (optional) — e.g. Looking forward to our first lesson on Tuesday!"
-          className="w-full resize-y rounded-xl bg-surface px-3.5 py-2.5 text-sm outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
+          className={`${field} resize-y`}
         />
       ) : (
-        <button type="button" onClick={() => setNoteOpen(true)} className="self-start text-xs font-semibold text-accent hover:underline">
+        <button type="button" onClick={() => setNoteOpen(true)} className="self-start text-xs font-medium text-muted hover:text-foreground">
           + Add a note to the email
         </button>
       )}
@@ -918,16 +927,16 @@ export function AddStudentDialog({ onClose, onAdded }: { onClose: () => void; on
   return (
     <Dialog title="Add a student" onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm font-semibold">
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" className={field} autoFocus disabled={!!added} />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-semibold">
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
           Email <span className="font-normal text-muted">(optional — we&apos;ll email them their invite link)</span>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="sam@example.com" className={field} />
         </label>
         {email.trim() && (
-          <label className="flex flex-col gap-1 text-sm font-semibold">
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
             A note with the invite <span className="font-normal text-muted">(optional)</span>
             <textarea
               value={message}
@@ -941,23 +950,23 @@ export function AddStudentDialog({ onClose, onAdded }: { onClose: () => void; on
         )}
         {!emailOk && <p className="text-sm text-danger">That doesn&apos;t look like an email address.</p>}
         {error && (
-          <div className="flex flex-col gap-2 rounded-xl bg-danger/10 p-3 text-sm">
+          <div className="flex flex-col gap-2 rounded-md border border-danger/30 bg-danger/10 p-3 text-sm">
             <p className="text-danger">{error}</p>
             {added && (
-              <button type="button" onClick={() => onAdded(added)} className="self-start font-semibold text-accent hover:underline">
+              <button type="button" onClick={() => onAdded(added)} className="self-start font-medium text-accent hover:underline">
                 Go to {name} without emailing →
               </button>
             )}
           </div>
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold hover:bg-background">
+          <button type="button" onClick={onClose} className={btnSecondary}>
             Cancel
           </button>
           <button
             type="submit"
             disabled={!name.trim() || !emailOk || busy}
-            className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+            className={btnPrimary}
           >
             {busy ? (email.trim() ? "Sending…" : "Adding…") : email.trim() ? "Add and email invite" : "Add student"}
           </button>

@@ -74,11 +74,11 @@ export default function BannerPicker({ banner }: { banner: BannerValue }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <span className="text-sm font-medium text-muted">Banner</span>
+      <span className="text-xs font-medium text-muted">Banner</span>
       <div className="relative">
-        <ProfileBanner banner={banner} className="h-24 rounded-2xl sm:h-32" />
+        <ProfileBanner banner={banner} className="h-24 rounded-md sm:h-32" />
         {busy && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30">
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/30">
             <LoadingSpinner size="sm" />
           </div>
         )}
@@ -92,7 +92,7 @@ export default function BannerPicker({ banner }: { banner: BannerValue }) {
             aria-pressed={current === b.id}
             aria-label={b.label}
             title={b.label}
-            className={`relative h-12 overflow-hidden rounded-xl ring-2 ring-offset-2 ring-offset-surface transition ${current === b.id ? "ring-accent" : "ring-transparent hover:ring-surface-hover"}`}
+            className={`relative h-10 overflow-hidden rounded-md ring-offset-2 ring-offset-surface transition ${current === b.id ? "ring-2 ring-accent" : "ring-1 ring-foreground/10 hover:ring-foreground/30"}`}
             style={b.style}
           >
             {current === b.id && (
@@ -108,12 +108,12 @@ export default function BannerPicker({ banner }: { banner: BannerValue }) {
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="flex items-center gap-1.5 rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover disabled:opacity-60"
+          className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-60"
         >
           <PlusIcon className="h-4 w-4" /> {uploaded ? "Upload a different image" : "Upload your own"}
         </button>
         {uploaded && (
-          <button type="button" onClick={() => void setPreset({ preset: DEFAULT_BANNER })} className="rounded-full px-3 py-2 text-sm font-semibold text-muted hover:bg-background hover:text-foreground">
+          <button type="button" onClick={() => void setPreset({ preset: DEFAULT_BANNER })} className="h-9 rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
             Remove image
           </button>
         )}

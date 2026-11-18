@@ -47,14 +47,14 @@ function ScoreEmbed({ scoreId, view, context }: { scoreId: string; view: EditorV
   return (
     <div ref={box} className="flex flex-col gap-1">
       <div className="flex items-center gap-2 text-sm">
-        <ScoreIcon className="h-4 w-4 shrink-0 text-accent" />
-        <span className="min-w-0 flex-1 truncate font-semibold">{score ? score.title : score === null ? "Score not found" : "Loading…"}</span>
+        <ScoreIcon className="h-4 w-4 shrink-0 text-muted" />
+        <span className="min-w-0 flex-1 truncate font-medium">{score ? score.title : score === null ? "Score not found" : "Loading…"}</span>
         {score && canEdit && (
           <>
-            <button type="button" onClick={edit} className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-semibold hover:bg-surface-hover">
+            <button type="button" onClick={edit} className="h-7 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover">
               Edit
             </button>
-            <Link href={`/score-writer?id=${encodeURIComponent(scoreId)}`} className="hidden rounded-full px-2.5 py-0.5 text-xs font-semibold text-muted hover:bg-surface hover:text-foreground sm:inline">
+            <Link href={`/score-writer?id=${encodeURIComponent(scoreId)}`} className="hidden h-7 items-center rounded-md px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground sm:inline-flex">
               Open in Score Writer
             </Link>
           </>

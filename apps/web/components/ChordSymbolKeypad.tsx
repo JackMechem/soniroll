@@ -38,7 +38,7 @@ export default function ChordSymbolKeypad({
     <div
       role="group"
       aria-label="Chord symbol keypad"
-      className="grid grid-cols-5 gap-1 rounded-xl bg-surface p-1.5"
+      className="grid grid-cols-5 gap-1"
     >
       {SYMBOL_KEYS.map((key) => (
         <button
@@ -48,7 +48,7 @@ export default function ChordSymbolKeypad({
           aria-label={key.title}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onInsert(key.insert)}
-          className="flex flex-col items-center gap-0.5 rounded-lg bg-background px-2 py-1.5 hover:bg-surface-hover"
+          className="flex flex-col items-center gap-0.5 rounded-md bg-foreground/[0.05] px-2 py-1.5 hover:bg-surface-hover"
         >
           <span className="text-base font-semibold leading-none">{prettyQuality(key.insert)}</span>
           <span className="text-[0.6rem] leading-none text-muted">{key.caption}</span>

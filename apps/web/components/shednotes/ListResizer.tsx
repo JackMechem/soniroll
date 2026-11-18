@@ -60,10 +60,10 @@ export default function ListResizer({ width, onPreview, onCommit }: { width: num
       title="Drag to resize · double-click to reset"
       className="group absolute -right-5 top-0 z-10 hidden h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none lg:flex"
     >
-      <div className={`absolute inset-y-3 w-px transition-colors ${dragging ? "bg-accent/50" : "group-hover:bg-foreground/10 group-focus-visible:bg-accent/50"}`} />
+      <div className={`absolute inset-y-0 w-px transition-colors ${dragging ? "bg-accent/60" : "bg-foreground/10 group-hover:bg-foreground/25 group-focus-visible:bg-accent/50"}`} />
       <div
-        className={`relative w-1 rounded-full transition-all duration-150 ${
-          dragging ? "h-14 bg-accent" : "h-10 bg-foreground/15 group-hover:h-14 group-hover:bg-accent/70 group-focus-visible:bg-accent"
+        className={`relative h-10 w-1 rounded-full transition-opacity duration-150 ${
+          dragging ? "bg-accent opacity-100" : "bg-foreground/30 opacity-0 group-hover:opacity-100 group-focus-visible:bg-accent group-focus-visible:opacity-100"
         }`}
       />
     </div>

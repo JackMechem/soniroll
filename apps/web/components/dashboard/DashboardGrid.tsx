@@ -188,7 +188,7 @@ export default function DashboardGrid({
             ) : (
               <div
                 onPointerDown={(e) => startDrag(e, item.id, false)}
-                className={`flex h-full flex-col gap-2 rounded-[1.75rem] p-2 outline-2 transition-shadow ${
+                className={`flex h-full flex-col gap-2 rounded-xl p-2 outline-2 transition-shadow ${
                   isDragging ? "cursor-grabbing bg-background shadow-2xl outline-accent" : "cursor-grab outline-dashed outline-accent/40"
                 }`}
               >
@@ -203,17 +203,17 @@ export default function DashboardGrid({
                     onKeyDown={(e) => onHandleKey(e, item.id)}
                     aria-label={`Move ${label} (arrow keys move it)`}
                     title="Drag to move"
-                    className="flex h-9 w-9 shrink-0 touch-none items-center justify-center rounded-full bg-accent text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                    className="flex h-8 w-8 shrink-0 touch-none items-center justify-center rounded-md bg-accent text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-foreground"
                   >
                     <DragIcon className="h-4 w-4" />
                   </button>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{label}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
                   {sizes.length > 1 && (
                     <button
                       type="button"
                       onClick={() => update(item.id, { size: nextSize(item.id, item.size) })}
                       title="Change the size"
-                      className="hidden h-9 shrink-0 items-center rounded-full bg-surface px-3 text-xs font-semibold hover:bg-surface-hover md:flex"
+                      className="hidden h-8 shrink-0 items-center rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium hover:bg-surface-hover md:flex"
                     >
                       {SIZE_LABELS[item.size]}
                     </button>
@@ -223,14 +223,14 @@ export default function DashboardGrid({
                     onClick={() => update(item.id, null)}
                     aria-label={`Take ${label} off the dashboard`}
                     title="Take off the dashboard"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
                   >
                     <CloseIcon className="h-4 w-4" />
                   </button>
                 </div>
                 <div inert className="min-h-0 flex-1 select-none opacity-60">
                   {node ?? (
-                    <div className="flex h-full min-h-24 items-center rounded-3xl bg-surface p-5">
+                    <div className="flex h-full min-h-24 items-center rounded-lg bg-surface p-5">
                       <p className="text-sm text-muted">{emptyText(item.id)}</p>
                     </div>
                   )}
@@ -252,9 +252,9 @@ export default function DashboardGrid({
       })}
 
       {editing && (
-        <section className="flex flex-col gap-3 rounded-3xl border-2 border-dashed border-foreground/10 p-5 md:col-span-2 lg:col-span-12">
+        <section className="flex flex-col gap-3 rounded-lg border border-dashed border-foreground/15 p-5 md:col-span-2 lg:col-span-12">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-muted">Add a card</h2>
+            <h2 className="text-sm font-medium">Add a card</h2>
             {missing.length > 0 && <HintsButton on={showHints} onToggle={() => setShowHints((on) => !on)} />}
           </div>
           {missing.length ? (
@@ -265,13 +265,11 @@ export default function DashboardGrid({
                     key={c.id}
                     type="button"
                     onClick={() => onChange([...items, { id: c.id, size: defaultSize(c.id) }])}
-                    className="flex items-start gap-3 rounded-2xl bg-surface p-3 text-left transition-colors hover:bg-surface-hover"
+                    className="flex items-start gap-3 rounded-md bg-surface p-3 text-left transition-colors hover:border-foreground/25"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                      <PlusIcon className="h-4 w-4" />
-                    </span>
+                    <PlusIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
                     <span className="flex min-w-0 flex-col gap-0.5 self-center">
-                      <span className="text-sm font-semibold">{c.label}</span>
+                      <span className="text-sm font-medium">{c.label}</span>
                       <Hint>{c.hint}</Hint>
                     </span>
                   </button>

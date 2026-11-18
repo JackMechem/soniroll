@@ -21,8 +21,8 @@ export default function FileEmbeds({ owner, context }: { owner: string; context?
 /** The ref a stored item goes into a note by: an upload's id, or `<kind>/<id>` for the rest. */
 export const refOf = (item: Pick<StoredEntry, "kind" | "id">) => (item.kind === "file" ? item.id : `${item.kind}/${item.id}`);
 
-const card = "flex items-center gap-3 rounded-xl bg-surface p-2.5 pr-3";
-const pill = "print:hidden inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-background px-3 text-xs font-semibold hover:bg-surface-hover";
+const card = "flex items-center gap-3 rounded-lg bg-surface p-2.5 pr-3";
+const pill = "print:hidden inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover";
 
 /**
  * One file in a note: a picture as itself (double-click or ⤢ for full size), a PDF in a frame
@@ -54,13 +54,13 @@ export function FileEmbedView({ fileRef, name, width, context, view }: { fileRef
   const ready = file === null || (file !== undefined && (kind !== "image" || loaded));
 
   let body;
-  if (file === undefined) body = <div className="h-24 rounded-xl bg-surface motion-safe:animate-pulse" />;
+  if (file === undefined) body = <div className="h-24 rounded-lg bg-surface motion-safe:animate-pulse" />;
   else if (file === null || !file.url) {
     body = (
       <div className={card}>
         <FileTypeIcon kind="other" size="sm" />
         <p className="min-w-0 flex-1 text-sm text-muted">
-          <span className="font-semibold text-foreground">{name || "A file"}</span> isn&apos;t available — it was deleted, or it isn&apos;t shared with you.
+          <span className="font-medium text-foreground">{name || "A file"}</span> isn&apos;t available — it was deleted, or it isn&apos;t shared with you.
         </p>
       </div>
     );
@@ -76,7 +76,7 @@ export function FileEmbedView({ fileRef, name, width, context, view }: { fileRef
           onError={() => setLoaded(true)}
           onDoubleClick={() => setOpen(true)}
           style={width ? { width: `${width}px` } : undefined}
-          className="block max-h-[36rem] max-w-full rounded-xl object-contain"
+          className="block max-h-[36rem] max-w-full rounded-lg object-contain"
         />
         {view && (
           <button
@@ -84,7 +84,7 @@ export function FileEmbedView({ fileRef, name, width, context, view }: { fileRef
             onClick={() => setOpen(true)}
             aria-label={`Open ${file.name} full size`}
             title="Full size"
-            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground opacity-0 shadow backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md bg-background/85 text-foreground opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
           >
             <MaximizeIcon className="h-4 w-4" />
           </button>
@@ -96,7 +96,7 @@ export function FileEmbedView({ fileRef, name, width, context, view }: { fileRef
       <div className={card}>
         <FileTypeIcon kind={kind ?? "other"} size="sm" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{name || file.name}</span>
+          <span className="block truncate text-sm font-medium">{name || file.name}</span>
           <span className="block truncate text-xs text-muted">{fileDetail(file)}</span>
         </span>
         {kind === "pdf" || kind === "video" ? (
@@ -114,9 +114,9 @@ export function FileEmbedView({ fileRef, name, width, context, view }: { fileRef
       <div className="flex flex-col gap-1.5">
         {header}
         {kind === "audio" && <audio controls preload="metadata" src={file.url} className="w-full" />}
-        {kind === "video" && <video controls preload="metadata" src={file.url} className="max-h-[28rem] max-w-full rounded-xl bg-background" />}
+        {kind === "video" && <video controls preload="metadata" src={file.url} className="max-h-[28rem] max-w-full rounded-lg bg-background" />}
         {/* Phones don't draw PDFs in a frame — Open shows it full screen instead. */}
-        {kind === "pdf" && <iframe src={file.url} title={file.name} className="hidden h-[32rem] w-full rounded-xl border-0 bg-background sm:block print:hidden" />}
+        {kind === "pdf" && <iframe src={file.url} title={file.name} className="hidden h-[32rem] w-full rounded-lg bg-background sm:block print:hidden" />}
       </div>
     );
   }
@@ -146,10 +146,10 @@ export function FilePickDialog({ onPick, onUpload, onClose }: { onPick: (ref: st
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Insert a file" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Insert a file" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <h2 className="min-w-0 flex-1 text-lg font-bold">Insert a file</h2>
-          <button type="button" onClick={() => input.current?.click()} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <h2 className="min-w-0 flex-1 text-base font-semibold">Insert a file</h2>
+          <button type="button" onClick={() => input.current?.click()} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
             <UploadIcon className="h-4 w-4" /> Upload
           </button>
           <input
@@ -164,9 +164,9 @@ export function FilePickDialog({ onPick, onUpload, onClose }: { onPick: (ref: st
             }}
           />
         </div>
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
+        <div className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 transition-colors focus-within:ring-2 focus-within:ring-accent/40">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your files" className="min-w-0 flex-1 bg-transparent outline-none" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your files" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
         </div>
         <div className="-mx-1 flex flex-col gap-0.5 overflow-y-auto">
           {storage === undefined ? (

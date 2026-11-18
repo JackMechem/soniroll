@@ -98,7 +98,7 @@ export default function CollapsiblePanel({
                 type="button"
                 onClick={() => toggle.onChange(true)}
                 disabled={toggle.disabled}
-                className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+                className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
               >
                 Turn on
               </button>
@@ -113,14 +113,14 @@ export default function CollapsiblePanel({
   const bodyId = `panel-${id}`;
 
   return (
-    <section className="w-full rounded-2xl bg-surface text-left">
+    <section className="w-full rounded-lg bg-surface text-left">
       <div className="flex items-center">
         <button
           type="button"
           onClick={() => canExpand && update({ open: !storedOpen })}
           aria-expanded={open}
           aria-controls={bodyId}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent sm:px-6"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-4 py-3 text-left text-sm font-medium text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent sm:px-6"
         >
           <Icon className="h-4 w-4 shrink-0" />
           {title}
@@ -131,7 +131,7 @@ export default function CollapsiblePanel({
           aria-label={showHints ? "Hide option descriptions" : "Show option descriptions"}
           title={showHints ? "Hide option descriptions" : "Show option descriptions"}
           onClick={toggleHints}
-          className={`mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
+          className={`mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
             showHints
               ? "bg-accent text-accent-foreground"
               : "text-muted hover:bg-background hover:text-foreground"
@@ -148,11 +148,11 @@ export default function CollapsiblePanel({
             onClick={() => toggle.onChange(!toggle.checked)}
             disabled={toggle.disabled}
             className={`relative mr-1 h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-              toggle.checked ? "bg-accent" : "bg-background"
+              toggle.checked ? "bg-accent" : "bg-foreground/15"
             }`}
           >
             <span
-              className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-foreground transition-transform ${
+              className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
                 toggle.checked ? "translate-x-4" : ""
               }`}
             />
@@ -212,7 +212,7 @@ export function HintsButton({ on, onToggle }: { on: boolean; onToggle: () => voi
       aria-label={on ? "Hide option descriptions" : "Show option descriptions"}
       title={on ? "Hide option descriptions" : "Show option descriptions"}
       onClick={onToggle}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
         on ? "bg-accent text-accent-foreground" : "text-muted hover:bg-background hover:text-foreground"
       }`}
     >

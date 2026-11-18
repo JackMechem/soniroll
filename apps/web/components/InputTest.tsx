@@ -103,8 +103,8 @@ export default function InputTest({
         type="button"
         onClick={toggle}
         disabled={disabled}
-        className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
-          active ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"
+        className={`h-9 rounded-md border px-3 text-sm font-medium transition-colors disabled:opacity-50 ${
+          active ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover" : "border-foreground/15 hover:bg-surface-hover"
         }`}
       >
         {active ? "Stop testing" : "Test input"}
@@ -112,12 +112,12 @@ export default function InputTest({
       {error && <p className="text-xs text-danger">{error}</p>}
 
       {active && (
-        <div className="flex flex-col items-center gap-3 rounded-xl bg-background p-4 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg bg-background p-4 text-center">
           <div className="flex h-16 flex-col items-center justify-center">
             {shown ? (
               <>
                 <span
-                  className="text-5xl font-bold tabular-nums"
+                  className="text-5xl font-semibold tabular-nums"
                   style={{ color: inTune ? markerColor : undefined }}
                 >
                   {shown.note}
@@ -133,7 +133,7 @@ export default function InputTest({
           </div>
 
           <div
-            className="relative h-2 w-full rounded-full bg-surface"
+            className="relative h-1.5 w-full rounded-full bg-foreground/10"
             role="meter"
             aria-label="Tuning offset"
             aria-valuemin={-50}
@@ -155,7 +155,7 @@ export default function InputTest({
 
           <div className="flex w-full items-center gap-2 text-xs text-muted">
             <span>Level</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
               <div
                 className="h-full rounded-full bg-accent transition-[width] duration-75"
                 style={{ width: `${level * 100}%` }}

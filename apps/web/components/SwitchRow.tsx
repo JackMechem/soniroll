@@ -2,8 +2,7 @@
 
 import { useId } from "react";
 import Hint from "@/components/Hint";
-import { rewardGradient, usePopKey, useReward } from "@/components/reward/Reward";
-import { CheckIcon } from "@/components/tools";
+import { usePopKey, useReward } from "@/components/reward/Reward";
 
 export default function SwitchRow({
   label,
@@ -22,7 +21,7 @@ export default function SwitchRow({
   const reward = useReward();
   const pop = usePopKey(String(checked));
   if (reward) {
-    // Reward look: the whole row is a card you tap; on, the switch lights up with a check.
+    // Reward look: the whole row is a bordered row you tap; on, the switch takes the tool's colour.
     return (
       <div className="flex flex-col gap-1">
         <button
@@ -32,26 +31,22 @@ export default function SwitchRow({
           aria-labelledby={id}
           onClick={() => onChange(!checked)}
           disabled={disabled}
-          className="relative flex items-center justify-between gap-3 rounded-2xl bg-background py-2.5 pl-3.5 pr-2.5 text-left text-sm transition hover:bg-surface-hover active:scale-[0.98] disabled:opacity-50"
+          className="relative flex items-center justify-between gap-3 rounded-md bg-foreground/[0.05] py-2 pl-3 pr-2.5 text-left text-sm transition-colors hover:bg-surface-hover disabled:opacity-50"
         >
-          <span id={id} className={`font-semibold ${checked ? "text-foreground" : "text-muted"}`}>
+          <span id={id} className={`font-medium ${checked ? "text-foreground" : "text-muted"}`}>
             {label}
           </span>
           <span
-            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${checked ? "" : "bg-surface"}`}
-            style={checked ? { background: rewardGradient(reward.color) } : undefined}
+            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? "" : "bg-foreground/15"}`}
+            style={checked ? { background: reward.color } : undefined}
           >
             <span
               key={pop}
-              className={`absolute left-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-full shadow transition-transform ${
-                checked ? "translate-x-5 bg-accent-foreground text-accent" : "bg-foreground/80"
-              } ${pop ? "reward-pop" : ""}`}
-            >
-              {checked && <CheckIcon className="h-3.5 w-3.5" />}
-            </span>
+              className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${checked ? "translate-x-4" : ""} ${pop ? "reward-pop" : ""}`}
+            />
           </span>
           {pop > 0 && checked && (
-            <span key={`g${pop}`} aria-hidden className="reward-glow pointer-events-none absolute inset-0 rounded-2xl" style={{ "--reward": reward.color } as React.CSSProperties} />
+            <span key={`g${pop}`} aria-hidden className="reward-glow pointer-events-none absolute inset-0 rounded-md" style={{ "--reward": reward.color } as React.CSSProperties} />
           )}
         </button>
         {hint && <Hint>{hint}</Hint>}
@@ -71,13 +66,13 @@ export default function SwitchRow({
           aria-labelledby={id}
           onClick={() => onChange(!checked)}
           disabled={disabled}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-            checked ? "bg-accent" : "bg-background"
+          className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+            checked ? "bg-accent" : "bg-foreground/15"
           }`}
         >
           <span
-            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-foreground transition-transform ${
-              checked ? "translate-x-5" : ""
+            className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
+              checked ? "translate-x-4" : ""
             }`}
           />
         </button>

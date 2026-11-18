@@ -14,10 +14,11 @@ import UserAvatar from "@/components/UserAvatar";
 import ProfileBanner from "@/components/ProfileBanner";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { shareLink } from "@/lib/shareLink";
-import { CalendarIcon, CheckIcon, FlagIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
+import { CheckIcon, FlagIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { BackButton } from "@/components/library/shared";
+import { useEdgeFade } from "@/components/library/ui";
 import { useRouter } from "next/navigation";
 import { type PublicPracticeStats, todayKey } from "@/lib/practiceLog";
 
@@ -52,6 +53,8 @@ export default function PublicProfilePage({ username }: { username: string }) {
   const following = useQuery(api.follows.listFollowing, userId ? { userId } : "skip");
   const likedIds = useQuery(api.communityTunes.myLikes);
   const [tab, setTab] = useState<ProfileTab | null>(null);
+  // The tabs scroll sideways on a phone: fade the edge that has more.
+  const { attach: tabFadeRef, style: tabFadeStyle } = useEdgeFade<HTMLDivElement>();
   const [copied, setCopied] = useState(false);
 
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
@@ -85,10 +88,9 @@ export default function PublicProfilePage({ username }: { username: string }) {
   ];
   const current: ProfileTab = tab ?? (viewer && (posts?.length ?? 0) > 0 ? "posts" : profile.tunes.length ? "tunes" : "posts");
   const stats: [string, number | undefined][] = [
-    ["Posts", viewer ? posts?.length : undefined],
-    ["Followers", followers?.length],
-    ["Following", following?.length],
-    ["Tunes", profile.tunes.length],
+    ["followers", followers?.length],
+    ["following", following?.length],
+    ["posts", viewer ? posts?.length : undefined],
   ];
 
   async function share() {
@@ -101,15 +103,15 @@ export default function PublicProfilePage({ username }: { username: string }) {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
       <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/community"))} className="self-start" />
-      <section className="overflow-hidden rounded-3xl bg-surface">
-        <ProfileBanner banner={profile.banner} className="h-28 sm:h-40" />
-        <div className="-mt-12 flex flex-col gap-4 px-5 pb-5 sm:-mt-14 sm:px-6">
+      <section className="overflow-hidden rounded-lg bg-surface">
+        <ProfileBanner banner={profile.banner} className="h-24 sm:h-32" />
+        <div className="-mt-10 flex flex-col gap-3 px-4 pb-4 sm:px-6 sm:pb-5">
           <div className="flex items-end gap-3">
-            <span className="relative z-10 rounded-full ring-[6px] ring-surface">
-              <UserAvatar url={profile.avatarUrl} size="xl" />
+            <span className="relative z-10 rounded-full ring-4 ring-surface">
+              <UserAvatar url={profile.avatarUrl} size="lg" className="sm:h-20 sm:w-20" />
             </span>
-            <div className="ml-auto flex shrink-0 items-center gap-2 self-start pt-14 sm:pt-16">
-              <button type="button" onClick={() => void share()} aria-label="Share profile" className="flex h-9 items-center gap-1.5 rounded-full bg-background px-3 sm:px-3.5 text-sm font-semibold hover:bg-surface-hover">
+            <div className="ml-auto flex shrink-0 items-center gap-2 self-start pt-12">
+              <button type="button" onClick={() => void share()} aria-label="Share profile" className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
                 {copied ? <CheckIcon className="h-4 w-4 text-accent" /> : <ShareIcon className="h-4 w-4" />} <span className="hidden sm:inline">{copied ? "Copied" : "Share"}</span>
               </button>
               {!isOwnProfile && (
@@ -118,52 +120,41 @@ export default function PublicProfilePage({ username }: { username: string }) {
                   onClick={() => openFeedback({ kind: "report", target: { type: "profile", id: profile.userId, label: `@${profile.username}` } })}
                   aria-label="Report this profile"
                   title="Report this profile"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-danger"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-danger"
                 >
                   <FlagIcon className="h-4 w-4" />
                 </button>
               )}
               {isOwnProfile ? (
-                <Link href="/account?tab=profile" className="flex h-9 items-center rounded-full bg-background px-4 text-sm font-semibold hover:bg-surface-hover">
+                <Link href="/account?tab=profile" className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
                   Edit profile
                 </Link>
               ) : viewer ? (
                 <FollowButton targetUserId={profile.userId as Id<"users">} />
               ) : (
-                <Link href={SIGN_IN_PATH} className="flex h-9 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+                <Link href={SIGN_IN_PATH} className="flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                   Sign in to follow
                 </Link>
               )}
             </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">@{profile.username}</h1>
-            {profile.instruments.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {profile.instruments.map((name) => (
-                  <span key={name} className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-                    {name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted">Musician on soniroll</p>
-            )}
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {stats.map(([label, n]) => (
-              <div key={label} className="flex flex-col items-center rounded-2xl bg-background py-2.5">
-                <span className="text-xl font-extrabold tabular-nums">{n ?? "–"}</span>
-                <span className="text-[11px] font-semibold text-muted">{label}</span>
-              </div>
-            ))}
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-semibold tracking-tight">@{profile.username}</h1>
+            <p className="mt-0.5 text-sm text-muted">{profile.instruments.length > 0 ? profile.instruments.join(" · ") : "Musician on soniroll"}</p>
+            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+              {stats.map(([label, n]) => (
+                <span key={label}>
+                  <span className="font-medium tabular-nums text-foreground">{n ?? "–"}</span> {label}
+                </span>
+              ))}
+            </p>
           </div>
         </div>
       </section>
 
       {profile.practice && <PracticeCard stats={profile.practice} username={profile.username} />}
 
-      <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="tablist">
+      <div ref={tabFadeRef} style={tabFadeStyle} className="-mx-4 flex gap-5 overflow-x-auto border-b border-foreground/10 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="tablist">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -171,10 +162,10 @@ export default function PublicProfilePage({ username }: { username: string }) {
             role="tab"
             aria-selected={current === t.id}
             onClick={() => setTab(t.id)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${current === t.id ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:text-foreground"}`}
+            className={`-mb-px flex h-10 shrink-0 items-center gap-1.5 border-b-2 text-sm transition-colors ${current === t.id ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
           >
             {t.label}
-            {t.count !== undefined && <span className={`tabular-nums ${current === t.id ? "opacity-80" : "opacity-60"}`}>{t.count}</span>}
+            {t.count !== undefined && <span className="text-xs font-normal tabular-nums text-muted">{t.count}</span>}
           </button>
         ))}
       </div>
@@ -182,7 +173,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
       {current === "posts" &&
         (!viewer ? (
           <Empty>
-            <Link href={SIGN_IN_PATH} className="font-semibold text-accent hover:underline">
+            <Link href={SIGN_IN_PATH} className="font-medium text-accent hover:underline">
               Sign in
             </Link>{" "}
             to see @{profile.username}&apos;s posts.
@@ -194,7 +185,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
         ) : posts.length === 0 ? (
           <Empty>No posts yet.</Empty>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {posts.map((post) => (
               <PostListItem key={post.id} post={post} liked={likedSet.has(post.id)} />
             ))}
@@ -203,7 +194,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
 
       {current === "tunes" &&
         (profile.tunes.length ? (
-          <div className="rounded-3xl bg-surface p-4 sm:p-5">
+          <div className="rounded-lg bg-surface p-4">
             <PublicTuneList tunes={profile.tunes} canAdd={canAdd} />
           </div>
         ) : (
@@ -212,7 +203,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
 
       {current === "learn" &&
         (profile.tunesToLearn.length ? (
-          <div className="rounded-3xl bg-surface p-4 sm:p-5">
+          <div className="rounded-lg bg-surface p-4">
             <PublicTuneList tunes={profile.tunesToLearn} canAdd={canAdd} />
           </div>
         ) : (
@@ -220,7 +211,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
         ))}
 
       {current === "ear" && earTraining && (
-        <div className="rounded-3xl bg-surface p-4 sm:p-5">
+        <div className="rounded-lg bg-surface p-4">
           <EarTrainingProgress summaries={earTraining} links={isOwnProfile} />
         </div>
       )}
@@ -229,10 +220,10 @@ export default function PublicProfilePage({ username }: { username: string }) {
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-3xl bg-surface p-6 text-center text-sm text-muted">{children}</p>;
+  return <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">{children}</p>;
 }
 
-const LEVEL_BG = ["var(--background)", "#0e4429", "#006d32", "#26a641", "#39d353"];
+const LEVEL_BG = ["var(--surface-hover)", "var(--heat-1)", "var(--heat-2)", "var(--heat-3)", "var(--heat-4)"];
 
 /** Their Shed Log, as far as a profile shows it: the streak (and best), hours, days, goal days,
     the last 26 weeks of practice, and the milestones reached. */
@@ -240,43 +231,33 @@ function PracticeCard({ stats, username }: { stats: PublicPracticeStats; usernam
   const lit = stats.streak > 0;
   const fmtH = (h: number) => (h < 10 ? String(Math.round(h * 10) / 10) : String(Math.floor(h)));
   const tiles: [string, string][] = [
-    [String(stats.best), "best streak"],
-    [fmtH(stats.hours), "hours practiced"],
-    [String(stats.days), "days this year"],
-    [fmtH(stats.weekHours), "hours this week"],
+    ["Best streak", `${stats.best} ${stats.best === 1 ? "day" : "days"}`],
+    ["Practiced", `${fmtH(stats.hours)} h`],
+    ["This year", `${stats.days} ${stats.days === 1 ? "day" : "days"}`],
+    ["This week", `${fmtH(stats.weekHours)} h`],
   ];
   const weeks = Math.ceil(stats.levels.length / 7);
   return (
-    <section className="flex flex-col gap-4 rounded-3xl bg-surface p-5 sm:p-6">
-      <div className="flex items-center gap-2">
-        <CalendarIcon className="h-5 w-5 text-accent" />
-        <h2 className="text-lg font-extrabold">Shed Log</h2>
+    <section className="overflow-hidden rounded-lg bg-surface">
+      <div className="flex h-11 items-center gap-2 px-4">
+        <h2 className="text-sm font-medium">Shed Log</h2>
+        <span className="ml-auto flex items-center gap-1 text-xs text-muted">
+          <FlameIcon className={`h-3.5 w-3.5 ${lit ? "log-flame text-foreground" : ""}`} />
+          <span className={lit ? "font-medium text-foreground" : ""}>{stats.streak}</span> day streak
+        </span>
       </div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <span
-            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${lit ? "text-white" : "text-orange-500"}`}
-            style={{ background: lit ? "linear-gradient(160deg, #fb923c, #ef4444)" : "color-mix(in srgb, #f97316 14%, transparent)" }}
-          >
-            <FlameIcon className={`h-8 w-8 ${lit ? "log-flame" : ""}`} />
-          </span>
-          <div>
-            <div className="text-4xl font-extrabold tabular-nums leading-none">{stats.streak}</div>
-            <div className="text-sm font-semibold text-muted">day streak</div>
+      <div className="flex flex-col gap-4 p-4">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+        {tiles.map(([l, v]) => (
+          <div key={l} className="min-w-0">
+            <dt className="text-xs text-muted">{l}</dt>
+            <dd className="text-sm font-medium tabular-nums">{v}</dd>
           </div>
-        </div>
-        <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
-          {tiles.map(([v, l]) => (
-            <div key={l} className="flex flex-col rounded-2xl bg-background px-3 py-2.5">
-              <span className="text-xl font-extrabold tabular-nums">{v}</span>
-              <span className="text-[11px] font-semibold text-muted">{l}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        ))}
+      </dl>
 
       <div>
-        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs font-semibold text-muted">
+        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs text-muted">
           <span>Last {weeks} weeks</span>
           <span>{stats.goalDays} of the last 30 days on goal</span>
         </div>
@@ -289,23 +270,22 @@ function PracticeCard({ stats, username }: { stats: PublicPracticeStats; usernam
 
       {stats.achievements.length > 0 && (
         <div>
-          <h3 className="mb-2 text-xs font-semibold text-muted">Milestones</h3>
-          <div className="flex flex-wrap gap-2">
+          <h3 className="mb-2 text-xs font-medium text-muted">Milestones</h3>
+          <div className="flex flex-wrap gap-1.5">
             {stats.achievements.map((a) => (
               <span
                 key={`${a.kind}${a.value}`}
                 title={a.kind === "streak" ? `Practiced ${a.value} days in a row` : `${a.value} hours of practice logged`}
-                className={`flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-sm font-bold ${a.kind === "streak" ? "bg-orange-500/12 text-orange-600 dark:text-orange-400" : "bg-accent/12 text-accent"}`}
+                className="flex items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2 py-1 text-xs font-medium"
               >
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-white ${a.kind === "streak" ? "bg-gradient-to-br from-orange-400 to-red-500" : "bg-accent"}`}>
-                  {a.kind === "streak" ? <FlameIcon className="h-3.5 w-3.5" /> : <StopwatchIcon className="h-3.5 w-3.5" />}
-                </span>
+                {a.kind === "streak" ? <FlameIcon className="h-3.5 w-3.5 text-muted" /> : <StopwatchIcon className="h-3.5 w-3.5 text-muted" />}
                 {a.kind === "streak" ? `${a.value}-day streak` : `${a.value} ${a.value === 1 ? "hour" : "hours"}`}
               </span>
             ))}
           </div>
         </div>
       )}
+      </div>
       <p className="sr-only">Shed Log stats for @{username}</p>
     </section>
   );

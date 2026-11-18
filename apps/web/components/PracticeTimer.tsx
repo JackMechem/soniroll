@@ -10,7 +10,11 @@ import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import PomodoroEditor, { normalizePomodoro } from "@/components/PomodoroEditor";
+import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
+import { BIG_PRIMARY } from "@/components/MeterFields";
+import { RewardProvider } from "@/components/reward/Reward";
+import { useSiteSettings } from "@/lib/siteSettings";
 import { toolPresets } from "@/lib/toolPresets";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import {
@@ -20,7 +24,6 @@ import {
   PlusIcon,
   SpeakerIcon,
   StopIcon,
-  StopwatchIcon,
   TrashIcon,
 } from "@/components/tools";
 import {
@@ -89,6 +92,7 @@ export default function PracticeTimer() {
     DEFAULT_SOUND_SETTINGS,
   );
   const { soundEnabled, toneId, alarmMode, fullScreenAlert } = settings;
+  const [{ rewardChips }] = useSiteSettings();
   const [draft, setDraft] = useState<Draft | null>(null);
   // The session editor is the "New session" chip's popover; an Edit button on a saved session
   // opens it too. Closing it keeps an unsaved draft (Save / Cancel are what end it).
@@ -96,11 +100,47 @@ export default function PracticeTimer() {
   function closeEditor() {
     setDraft(null);
     setEditorOpen(false);
+    setNameMissing(false);
   }
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Set when Save is pressed with no name: we ask for one instead of saving "Untitled session".
+  const [nameMissing, setNameMissing] = useState(false);
+  // The quick timer's length: a plain countdown, no session needed. Not saved.
+  const [quickMinutes, setQuickMinutes] = useState(10);
 
   function startSession(session: PracticeSession) {
     start(session, soundEnabled, toneId, alarmMode, fullScreenAlert);
+  }
+
+  function startQuickTimer() {
+    startSession({
+      id: "quick-timer",
+      name: "",
+      type: "custom",
+      segments: [{ ...newSegment(), title: "Timer", minutes: quickMinutes }],
+      updatedAt: 0,
+    });
+  }
+
+  /** Runs what's in the editor right now, without saving it. */
+  function startDraft() {
+    if (!draft) return;
+    const name = draft.name.trim();
+    startSession(
+      draft.type === "custom"
+        ? {
+            id: draft.id ?? "unsaved-session",
+            name,
+            type: "custom",
+            segments: draft.segments.map((seg, i) => ({
+              ...seg,
+              title: seg.title.trim() || (draft.segments.length === 1 ? "Timer" : `Part ${i + 1}`),
+            })),
+            updatedAt: 0,
+          }
+        : { id: draft.id ?? "unsaved-session", name, type: "pomodoro", pomodoro: normalizePomodoro(draft.pomodoro), updatedAt: 0 },
+    );
+    setEditorOpen(false);
   }
 
   // Full-screen alert only means anything while alarm mode is also on (there's no "alarming, held
@@ -143,7 +183,12 @@ export default function PracticeTimer() {
 
   async function saveDraft() {
     if (!draft) return;
-    const name = draft.name.trim() || "Untitled session";
+    const name = draft.name.trim();
+    if (!name) {
+      setNameMissing(true);
+      return;
+    }
+    setNameMissing(false);
     if (draft.id === null) {
       const input: SessionInput =
         draft.type === "custom"
@@ -171,7 +216,9 @@ export default function PracticeTimer() {
       title="Practice Timer"
       presets={toolPresets("practice-timer", settings, updateSoundSettings)}
       options={
-        <>
+        // The same round option chips as the other tools (ToolLayout only gives them to tools on
+        // the Shed Log's Log button, and this one logs itself).
+        <OptionChipLook on={rewardChips}>
           <PanelsToggle ids={PANEL_IDS} />
 
           <CollapsiblePanel
@@ -189,32 +236,33 @@ export default function PracticeTimer() {
               {draft && (
               <>
               <label className="flex flex-col gap-1 text-left text-sm">
-                <span className="font-medium text-muted">Name</span>
+                <span className="text-xs font-medium text-muted">Name</span>
                 <input
                   type="text"
                   value={draft.name}
-                  onChange={(e) => updateDraft({ name: e.target.value })}
+                  onChange={(e) => {
+                    updateDraft({ name: e.target.value });
+                    if (e.target.value.trim()) setNameMissing(false);
+                  }}
                   placeholder="e.g. Morning warmup"
-                  className="w-full rounded-lg bg-background px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-accent"
+                  aria-invalid={nameMissing}
+                  autoFocus={nameMissing}
+                  className={`w-full h-9 rounded-md bg-foreground/[0.05] px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/40 ${nameMissing ? "ring-2 ring-danger/50" : ""}`}
                 />
+                {nameMissing && (
+                  <span className="text-xs text-danger">Give it a name to save it, or press Start now to just run it.</span>
+                )}
               </label>
 
-              <div className="flex gap-2">
-                {(["custom", "pomodoro"] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => updateDraft({ type })}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      draft.type === type
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-background text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {type === "custom" ? "Custom" : "Pomodoro"}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                label="Session type"
+                value={draft.type}
+                onChange={(type) => updateDraft({ type })}
+                options={[
+                  { value: "custom", label: "Custom" },
+                  { value: "pomodoro", label: "Pomodoro" },
+                ]}
+              />
               <Hint>
                 Custom chains named timers back to back, in order. Pomodoro alternates work
                 intervals with breaks automatically, with a longer break every few cycles.
@@ -229,7 +277,7 @@ export default function PracticeTimer() {
                         value={segment.title}
                         onChange={(e) => updateSegment(i, { title: e.target.value })}
                         placeholder="e.g. Scales"
-                        className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent"
+                        className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/40"
                       />
                       <NumberField
                         value={Math.round(segment.minutes)}
@@ -237,7 +285,7 @@ export default function PracticeTimer() {
                         max={180}
                         onChange={(minutes) => updateSegment(i, { minutes })}
                         label={`${segment.title || "Segment"} minutes`}
-                        className="w-16 shrink-0 rounded-lg bg-background px-2 py-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent"
+                        className="h-9 w-16 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
                       />
                       <span className="shrink-0 text-xs text-muted">min</span>
                       <button
@@ -246,7 +294,7 @@ export default function PracticeTimer() {
                         disabled={i === 0}
                         aria-label="Move up"
                         title="Move up"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-foreground disabled:opacity-30"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
                       >
                         ↑
                       </button>
@@ -256,7 +304,7 @@ export default function PracticeTimer() {
                         disabled={i === draft.segments.length - 1}
                         aria-label="Move down"
                         title="Move down"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-foreground disabled:opacity-30"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
                       >
                         ↓
                       </button>
@@ -265,7 +313,7 @@ export default function PracticeTimer() {
                         onClick={() => removeSegment(i)}
                         aria-label="Remove segment"
                         title="Remove"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-background hover:text-danger"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                       >
                         <TrashIcon className="h-3.5 w-3.5" />
                       </button>
@@ -274,7 +322,7 @@ export default function PracticeTimer() {
                   <button
                     type="button"
                     onClick={() => updateDraft({ segments: [...draft.segments, newSegment()] })}
-                    className="flex items-center justify-center gap-1.5 rounded-lg bg-background px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                    className="flex h-9 items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/20 px-3 text-sm font-medium text-muted transition-colors hover:border-foreground/40 hover:text-foreground"
                   >
                     <PlusIcon className="h-4 w-4" /> Add segment
                   </button>
@@ -287,14 +335,22 @@ export default function PracticeTimer() {
                 <button
                   type="button"
                   onClick={saveDraft}
-                  className="flex-1 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+                  className="h-9 flex-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
                 >
                   Save
                 </button>
                 <button
                   type="button"
+                  onClick={startDraft}
+                  title="Run it now without saving"
+                  className="h-9 flex-1 whitespace-nowrap rounded-md bg-foreground/[0.05] px-2 text-sm font-medium transition-colors hover:bg-surface-hover"
+                >
+                  Start now
+                </button>
+                <button
+                  type="button"
                   onClick={closeEditor}
-                  className="flex-1 rounded-lg bg-background px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                  className="h-9 flex-1 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
                 >
                   Cancel
                 </button>
@@ -312,7 +368,7 @@ export default function PracticeTimer() {
             />
             {soundEnabled && (
               <label className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-muted">Tone</span>
+                <span className="text-muted">Tone</span>
                 <Select
                   value={toneId}
                   onChange={(toneId) => updateSoundSettings({ toneId })}
@@ -335,7 +391,7 @@ export default function PracticeTimer() {
               hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a sound. Only applies while alarm mode is on."
             />
           </CollapsiblePanel>
-        </>
+        </OptionChipLook>
       }
     >
       {engineState ? (
@@ -347,7 +403,7 @@ export default function PracticeTimer() {
           >
             {engineState.alarming ? "Time's up" : engineState.paused ? "Paused" : "Now running"}
           </p>
-          <h2 className="break-words text-3xl font-bold sm:text-4xl">
+          <h2 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">
             {engineState.current.title}
           </h2>
           <PracticeTimerRing
@@ -367,7 +423,7 @@ export default function PracticeTimer() {
               <button
                 type="button"
                 onClick={skip}
-                className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                className="flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
               >
                 <PlayIcon className="h-4 w-4" /> Continue
               </button>
@@ -375,7 +431,7 @@ export default function PracticeTimer() {
               <button
                 type="button"
                 onClick={resume}
-                className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                className="flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
               >
                 <PlayIcon className="h-4 w-4" /> Resume
               </button>
@@ -383,7 +439,7 @@ export default function PracticeTimer() {
               <button
                 type="button"
                 onClick={pause}
-                className="flex items-center gap-1.5 rounded-full bg-surface px-5 py-2.5 text-sm font-medium hover:bg-surface-hover"
+                className="flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
               >
                 <PauseIcon className="h-4 w-4" /> Pause
               </button>
@@ -392,7 +448,7 @@ export default function PracticeTimer() {
               <button
                 type="button"
                 onClick={skip}
-                className="rounded-full bg-surface px-5 py-2.5 text-sm font-medium hover:bg-surface-hover"
+                className="h-10 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
               >
                 Skip
               </button>
@@ -400,29 +456,47 @@ export default function PracticeTimer() {
             <button
               type="button"
               onClick={stop}
-              className="flex items-center gap-1.5 rounded-full bg-surface px-5 py-2.5 text-sm font-medium text-danger hover:bg-surface-hover"
+              className="flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium text-danger transition-colors hover:bg-surface-hover"
             >
               <StopIcon className="h-4 w-4" /> Stop
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex w-full flex-col items-center gap-4 text-center">
-          <StopwatchIcon className="h-12 w-12 text-muted" />
+        <div className="flex w-full flex-col items-center gap-3 text-center">
+          {/* The quick way: one plain countdown, nothing to build or save. Its Start is the page's
+              main button, the same round pill as other tools'. */}
+          <div className="flex w-full max-w-sm flex-col items-center gap-4 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Quick timer</span>
+              <NumberField
+                value={quickMinutes}
+                min={1}
+                max={180}
+                onChange={setQuickMinutes}
+                label="Quick timer minutes"
+                className="h-9 w-14 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
+              />
+              <span className="text-sm text-muted">min</span>
+            </div>
+            <button type="button" onClick={startQuickTimer} className={BIG_PRIMARY}>
+              <PlayIcon className="h-4 w-4" /> Start
+            </button>
+          </div>
           {loading ? (
             <LoadingSpinner />
           ) : sessions.length === 0 ? (
-            <p className="max-w-xs text-muted">
-              Use New session below to chain timers back to back, or run a Pomodoro.
+            <p className="w-full max-w-sm rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
+              To chain timers back to back or run a Pomodoro, use New session below.
             </p>
           ) : (
             <>
-              <p className="text-muted">Pick a saved session to start it, or make a new one below.</p>
-              <div className="flex w-full max-w-sm flex-col">
+              <p className="text-sm text-muted">Pick a saved session to start it, or make a new one below.</p>
+              <div className="flex w-full max-w-sm flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
                 {sessions.map((session) => (
                   <div
                     key={session.id}
-                    className="flex items-center gap-2 border-b border-surface-hover py-2.5 text-left last:border-b-0"
+                    className="flex items-center gap-1 py-2 pl-3 pr-2 text-left"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
@@ -435,7 +509,7 @@ export default function PracticeTimer() {
                       onClick={() => startSession(session)}
                       aria-label={`Start ${session.name || "session"}`}
                       title="Start"
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-surface-hover"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-accent transition-colors hover:bg-surface-hover"
                     >
                       <PlayIcon className="h-4 w-4" />
                     </button>
@@ -447,7 +521,7 @@ export default function PracticeTimer() {
                       }}
                       aria-label={`Edit ${session.name || "session"}`}
                       title="Edit"
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -456,7 +530,7 @@ export default function PracticeTimer() {
                       onClick={() => setDeletingId(session.id)}
                       aria-label={`Delete ${session.name || "session"}`}
                       title="Delete"
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -478,5 +552,15 @@ export default function PracticeTimer() {
         />
       )}
     </ToolLayout>
+  );
+}
+
+function OptionChipLook({ on, children }: { on: boolean; children: React.ReactNode }) {
+  return on ? (
+    <RewardProvider href="/practice-timer" color="var(--accent)">
+      {children}
+    </RewardProvider>
+  ) : (
+    <>{children}</>
   );
 }

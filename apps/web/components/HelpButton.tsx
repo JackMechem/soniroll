@@ -29,7 +29,7 @@ export default function HelpButton({ title, groups }: { title: string; groups: H
         onClick={() => setOpen(true)}
         aria-label={`${title} help`}
         title="Help and controls"
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-surface text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
       >
         <HelpIcon className="h-4 w-4" />
       </button>
@@ -42,7 +42,7 @@ export default function HelpButton({ title, groups }: { title: string; groups: H
           <div
             role="dialog"
             aria-label={`${title} help`}
-            className="flex max-h-[85dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface text-left text-foreground shadow-2xl shadow-black/20"
+            className="flex max-h-[85dvh] w-full max-w-2xl flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-left text-foreground shadow-2xl shadow-black/20"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 pt-5 sm:px-6">
@@ -51,7 +51,7 @@ export default function HelpButton({ title, groups }: { title: string; groups: H
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
+                className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface-hover"
               >
                 ✕
               </button>

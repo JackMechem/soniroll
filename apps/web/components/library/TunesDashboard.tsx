@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { menuPosition, tuneSummary } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, RecentStrip, Rows, SetlistCard, ShelfCard, TuneItem } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, RecentList, Rows, SetlistItem, Toolbar, TuneItem } from "@/components/library/ui";
 import { tuneHref, TUNE_LIST_LABEL, useTuneActions, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { setlistHref } from "@/components/library/setlistParts";
 import PromptDialog from "@/components/PromptDialog";
 import StandardsPicker from "@/components/StandardsPicker";
-import { LibraryIcon, NoteIcon, PlusIcon, SetlistIcon, StarIcon } from "@/components/tools";
+import { LibraryIcon, PlusIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
@@ -24,9 +24,8 @@ function blankTune(name = ""): Tune {
 }
 
 /**
- * The Tunes page — a dashboard for your tune lists, modeled on the mobile app's Tunes tab: Tunes I
- * Know, Tunes to Learn and your setlists, with counts (each opens the full list), the tunes you
- * opened most recently, your latest setlists, and the tunes you added most recently in each list.
+ * The Tunes page — Library's first tab: the tunes you opened most recently, then Tunes I Know,
+ * Tunes to Learn and your setlists as panels (newest first; each panel's title opens the full list).
  * One search covers both lists. The + makes a setlist or adds a jazz standard, a new tune, or a
  * tune to learn. Every tune opens its own page
  * (`TuneHub`) and has a ⋮ menu (`useTuneActions`).
@@ -46,7 +45,6 @@ export default function TunesDashboard() {
 
   const tunes = lists.tunes.tunes;
   const learn = lists.learn.tunes;
-  const withChart = tunes.filter((t) => t.chordChartId).length;
 
   const q = query.trim().toLowerCase();
   const results = useMemo(() => {
@@ -102,13 +100,9 @@ export default function TunesDashboard() {
         titleExtra={<StoragePill />}
         helpTopic="tunes"
         tabs={<LibraryTabs active="tunes" />}
-        subtitle={
-          <>
-            {tunes.length} tune{tunes.length === 1 ? "" : "s"} you know
-            {isAuthenticated ? ` · ${learn.length} to learn` : ""} · {setlists.length} setlist{setlists.length === 1 ? "" : "s"}
-          </>
-        }
-        actions={
+      >
+        <Toolbar>
+          <HeroSearch value={query} onChange={setQuery} placeholder="Search your tunes…" />
           <Pill
             primary
             icon={PlusIcon}
@@ -126,9 +120,7 @@ export default function TunesDashboard() {
               })
             }
           />
-        }
-      >
-        <HeroSearch value={query} onChange={setQuery} placeholder="Search your tunes…" />
+        </Toolbar>
       </Hero>
 
       {results ? (
@@ -144,57 +136,23 @@ export default function TunesDashboard() {
             </Panel>
           )}
           {results.tunes.length + results.learn.length === 0 && (
-            <div className="rounded-2xl bg-surface lg:col-span-2">
-              <EmptyState icon={NoteIcon} title={`Nothing matches “${query}”`} body="Try a different name, key or tempo." />
+            <div className="lg:col-span-2">
+              <EmptyState boxed title={`Nothing matches “${query}”`} body="Try a different name, key or tempo." />
             </div>
           )}
         </div>
       ) : (
         <>
-          <div className={`grid gap-3 ${isAuthenticated ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
-            <ShelfCard
-              href="/tunes/list?list=tunes"
-              icon={NoteIcon}
-              count={tunes.length}
-              label={TUNE_LIST_LABEL.tunes}
-              preview={[...tunes].reverse().map((t) => t.name)}
-              empty="Add the tunes you can play"
-            />
-            {isAuthenticated && (
-              <ShelfCard
-                href="/tunes/list?list=learn"
-                icon={StarIcon}
-                count={learn.length}
-                label={TUNE_LIST_LABEL.learn}
-                preview={[...learn].reverse().map((t) => t.name)}
-                empty="Tunes you're working towards"
-                color="var(--key-4, var(--accent))"
-              />
-            )}
-            <ShelfCard
-              href="/tunes?tab=setlists"
-              icon={SetlistIcon}
-              count={setlists.length}
-              label="Setlists"
-              preview={sortedSetlists.map((s) => s.name)}
-              empty="For gigs and sessions"
-              color="var(--key-9, var(--accent))"
-            />
-          </div>
-
-          {recentCards.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <h2 className="px-1 text-sm font-bold text-muted">Jump back in</h2>
-              <RecentStrip items={recentCards} />
-            </section>
-          )}
-
-          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
             <div className="flex min-w-0 flex-col gap-4">
+              {recentCards.length > 0 && (
+                <Panel title="Jump back in" flush>
+                  <RecentList items={recentCards.slice(0, PREVIEW)} />
+                </Panel>
+              )}
               <Panel
                 title={TUNE_LIST_LABEL.tunes}
-                icon={NoteIcon}
-                detail={tunes.length ? `${withChart} of ${tunes.length} with a chart` : undefined}
+                detail={tunes.length ? `${tunes.length} · newest first` : undefined}
                 href="/tunes/list?list=tunes"
                 onAdd={(e) => openListAdd(e, "tunes")}
                 addLabel="Add to Tunes I Know"
@@ -202,43 +160,42 @@ export default function TunesDashboard() {
               >
                 {tunes.length === 0 ? (
                   <EmptyState
-                    icon={NoteIcon}
                     title="No tunes yet"
                     body="Add a jazz standard or your own tune. Each one gets a page for its chart, keys and notes."
                     action={<Pill primary icon={PlusIcon} label="Add a tune" onClick={(e) => openListAdd(e, "tunes")} />}
                   />
                 ) : (
-                  <>
-                    <p className="px-4 pb-1 text-xs text-muted">Latest additions</p>
-                    <Rows>{recentlyAdded.map(row("tunes"))}</Rows>
-                  </>
+                  <Rows>{recentlyAdded.map(row("tunes"))}</Rows>
                 )}
               </Panel>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-4">
               {isAuthenticated && (
-                <Panel title={TUNE_LIST_LABEL.learn} icon={StarIcon} detail={learn.length || undefined} href="/tunes/list?list=learn" onAdd={(e) => openListAdd(e, "learn")} addLabel="Add to Tunes to Learn" flush>
+                <Panel title={TUNE_LIST_LABEL.learn} detail={learn.length || undefined} href="/tunes/list?list=learn" onAdd={(e) => openListAdd(e, "learn")} addLabel="Add to Tunes to Learn" flush>
                   {learn.length === 0 ? (
-                    <p className="px-4 pb-3 text-sm text-muted">Tunes you want to learn, kept apart from the ones you know.</p>
+                    <p className="px-4 py-3 text-sm text-muted">Tunes you want to learn, kept apart from the ones you know.</p>
                   ) : (
                     <Rows>{[...learn].reverse().slice(0, PREVIEW).map(row("learn"))}</Rows>
                   )}
                 </Panel>
               )}
-            </div>
 
-            <Panel title="Setlists" icon={SetlistIcon} detail={setlists.length || undefined} href={setlists.length ? "/tunes?tab=setlists" : undefined} onAdd={() => setNamingSetlist(true)} addLabel="New setlist">
-              {setlists.length === 0 ? (
-                <button type="button" onClick={() => setNamingSetlist(true)} className="flex w-full items-center gap-3 rounded-xl bg-background p-3 text-left text-sm text-muted hover:bg-surface-hover">
-                  <SetlistIcon className="h-5 w-5 shrink-0 text-accent" />
-                  Make a setlist for a gig or a session — share it by link or post it to Community.
-                </button>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {sortedSetlists.slice(0, PREVIEW).map((sl) => (
-                    <SetlistCard key={sl.id} setlist={sl} href={setlistHref(sl.id)} tuneNames={sl.tuneIds.map((id) => tuneNameById.get(id)).filter((n): n is string => !!n)} />
-                  ))}
-                </div>
-              )}
-            </Panel>
+              <Panel title="Setlists" detail={setlists.length || undefined} href={setlists.length ? "/tunes?tab=setlists" : undefined} onAdd={() => setNamingSetlist(true)} addLabel="New setlist" flush>
+                {setlists.length === 0 ? (
+                  <div className="flex flex-col items-start gap-3 p-4">
+                    <p className="text-sm text-muted">Make a setlist for a gig or a session — share it by link or post it to Community.</p>
+                    <Pill icon={PlusIcon} label="New setlist" onClick={() => setNamingSetlist(true)} />
+                  </div>
+                ) : (
+                  <Rows>
+                    {sortedSetlists.slice(0, PREVIEW).map((sl) => (
+                      <SetlistItem key={sl.id} setlist={sl} href={setlistHref(sl.id)} tuneNames={sl.tuneIds.map((id) => tuneNameById.get(id)).filter((n): n is string => !!n)} />
+                    ))}
+                  </Rows>
+                )}
+              </Panel>
+            </div>
           </div>
         </>
       )}
@@ -262,6 +219,12 @@ export default function TunesDashboard() {
         <StandardsPicker
           tunes={lists[addingStandard].tunes}
           setTunes={lists[addingStandard].setTunes}
+          // Say (and let you switch) which list the standards go into. Tunes to Learn needs an account.
+          listChoice={{
+            value: addingStandard,
+            options: (isAuthenticated ? (["tunes", "learn"] as TuneListId[]) : (["tunes"] as TuneListId[])).map((l) => ({ value: l, label: TUNE_LIST_LABEL[l] })),
+            onChange: (l) => setAddingStandard(l as TuneListId),
+          }}
           onClose={() => setAddingStandard(null)}
           onCreateCustom={(name) => {
             setCreating({ list: addingStandard, tune: blankTune(name) });

@@ -10,7 +10,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuItem, type MenuState } from "@/components/ContextMenu";
 import PromptDialog from "@/components/PromptDialog";
 import { BackButton, MenuButton, menuPosition } from "@/components/library/shared";
-import { Chip, EmptyState, Hero, KeyBadge, LibraryPage, nameColor, Pill, tint } from "@/components/library/ui";
+import { EmptyState, Hero, KeyBadge, LibraryPage, Pill } from "@/components/library/ui";
 import { DraggableList, PlayInfoLine, SetlistTuneDialog, TunePickerModal, playInfo } from "@/components/library/setlistParts";
 import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { ChordChartIcon, DotsVerticalIcon, DragIcon, PlusIcon, SetlistIcon, ShareIcon, SlidesIcon, UsersIcon } from "@/components/tools";
@@ -56,9 +56,7 @@ export default function SetlistPage({ id }: { id: string }) {
     return (
       <LibraryPage>
         <BackButton href="/tunes?tab=setlists" label="Setlists" />
-        <div className="rounded-2xl bg-surface">
-          <EmptyState icon={SetlistIcon} title="Setlist not found" body="It may have been deleted." action={<Pill label="All setlists" href="/tunes?tab=setlists" />} />
-        </div>
+        <EmptyState boxed title="Setlist not found" body="It may have been deleted." action={<Pill label="All setlists" href="/tunes?tab=setlists" />} />
       </LibraryPage>
     );
   }
@@ -141,7 +139,6 @@ export default function SetlistPage({ id }: { id: string }) {
 
   const settings = settingsFor ? info(settingsFor) : null;
 
-  const color = nameColor(setlist.name);
   const withCharts = tunes.filter((t) => t.chordChartId).length;
   const changed = tunes.filter((t) => setlist.overrides?.[t.id]).length;
 
@@ -149,34 +146,30 @@ export default function SetlistPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={setlist.name}
-        color={color}
+        icon={SetlistIcon}
         backHref="/tunes?tab=setlists"
         backLabel="Setlists"
-        leading={
-          <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl leading-none" style={{ background: tint(color, 20), color }}>
-            <span className="text-2xl font-extrabold tabular-nums">{tunes.length}</span>
-            <span className="text-[10px] font-bold">{tunes.length === 1 ? "tune" : "tunes"}</span>
-          </span>
-        }
         subtitle={
           <span className="flex flex-col gap-1">
-            {setlist.description ? <span className="whitespace-pre-line text-foreground/80">{setlist.description}</span> : <span>Setlist</span>}
-            <span className="flex flex-wrap gap-1">
-              <Chip>{withCharts} of {tunes.length} with a chart</Chip>
-              {changed > 0 && <Chip accent>{changed} with a key or tempo for this set</Chip>}
+            {setlist.description && <span className="whitespace-pre-line text-foreground/80">{setlist.description}</span>}
+            <span className="flex flex-wrap items-center gap-x-1.5">
+              <span>
+                {tunes.length} tune{tunes.length === 1 ? "" : "s"} · {withCharts} with a chart
+              </span>
+              {changed > 0 && <span>· {changed} with a key or tempo for this set</span>}
               {setlist.shareId && (
-                <Chip accent>
-                  <ShareIcon className="h-3 w-3" /> Shared by link
-                </Chip>
+                <span className="inline-flex items-center gap-1">
+                  · <ShareIcon className="h-3 w-3" /> Shared by link
+                </span>
               )}
             </span>
           </span>
         }
         actions={
           <>
-            <Pill primary icon={PlusIcon} label="Add tunes" onClick={() => setPicking(true)} iconOnlyOnPhone />
-            <button type="button" onClick={openSetlistMenu} aria-label="Setlist options" className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-foreground">
-              <DotsVerticalIcon className="h-5 w-5" />
+            <Pill icon={PlusIcon} label="Add tunes" onClick={() => setPicking(true)} iconOnlyOnPhone />
+            <button type="button" onClick={openSetlistMenu} aria-label="Setlist options" className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9">
+              <DotsVerticalIcon className="h-4 w-4" />
             </button>
           </>
         }
@@ -185,16 +178,14 @@ export default function SetlistPage({ id }: { id: string }) {
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="flex min-w-0 flex-col gap-3">
           {found.length === 0 ? (
-            <div className="rounded-2xl bg-surface">
-              <EmptyState
-                icon={SetlistIcon}
-                title="No tunes yet"
-                body="Add tunes from your lists, or a jazz standard. Drag them into order once they're here."
-                action={<Pill primary icon={PlusIcon} label="Add tunes" onClick={() => setPicking(true)} />}
-              />
-            </div>
+            <EmptyState
+              boxed
+              title="No tunes yet"
+              body="Add tunes from your lists, or a jazz standard. Drag them into order once they're here."
+              action={<Pill primary icon={PlusIcon} label="Add tunes" onClick={() => setPicking(true)} />}
+            />
           ) : (
-            <div className="overflow-hidden rounded-2xl bg-surface py-1.5">
+            <div className="overflow-hidden rounded-lg bg-surface">
               <DraggableList
                 keys={found.map((f) => f.tune.id)}
                 onReorder={(order) => patch(setlist.id, { tuneIds: [...order, ...setlist.tuneIds.filter((x) => !order.includes(x))] })}
@@ -202,20 +193,20 @@ export default function SetlistPage({ id }: { id: string }) {
                   const { tune, list } = found.find((f) => f.tune.id === key)!;
                   const playing = info(tune);
                   return (
-                    <div className={`group mx-1.5 flex items-center rounded-xl ${dragging ? "bg-surface-hover shadow-lg" : "hover:bg-background/60"}`}>
+                    <div className={`group flex items-center border-b border-foreground/10 pl-1 ${dragging ? "bg-surface-hover shadow-lg" : "bg-surface hover:bg-surface-hover"}`}>
                       {handle(
                         <span aria-label={`Drag to reorder ${tune.name}`} className="flex h-14 w-8 items-center justify-center text-muted/60 group-hover:text-muted">
                           <DragIcon className="h-4 w-4" />
                         </span>,
                       )}
                       <Link href={tuneHref(list, tune.id)} className="flex min-w-0 flex-1 items-center gap-3 py-2">
-                        <span className="w-5 text-right text-sm font-extrabold tabular-nums text-muted">{i + 1}</span>
+                        <span className="w-5 text-right text-sm tabular-nums text-muted">{i + 1}</span>
                         <KeyBadge label={playing.key} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5">
-                            <span className="truncate font-semibold">{tune.name}</span>
+                            <span className="truncate text-sm font-medium">{tune.name}</span>
                             {tune.chordChartId && (
-                              <span title="Has a chord chart" className="shrink-0 text-accent">
+                              <span title="Has a chord chart" className="shrink-0 text-muted">
                                 <ChordChartIcon className="h-3.5 w-3.5" />
                               </span>
                             )}
@@ -230,8 +221,8 @@ export default function SetlistPage({ id }: { id: string }) {
                   );
                 }}
               />
-              <div className="mx-1.5 mt-1 border-t border-foreground/[0.06] pt-1.5">
-                <button type="button" onClick={() => setPicking(true)} className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold text-accent hover:bg-background/60">
+              <div>
+                <button type="button" onClick={() => setPicking(true)} className="flex h-11 w-full items-center justify-center gap-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
                   <PlusIcon className="h-4 w-4" />
                   Add tunes
                 </button>
@@ -240,27 +231,27 @@ export default function SetlistPage({ id }: { id: string }) {
           )}
         </div>
 
-        <aside className="flex flex-col gap-2 rounded-2xl bg-surface p-3 lg:sticky lg:top-6">
+        <aside className="flex flex-col gap-2 rounded-lg bg-surface p-3 lg:sticky lg:top-6">
           {found.length > 0 && (
-            <Link href={`/setlist-charts?mine=${encodeURIComponent(setlist.id)}`} className="flex items-center gap-3 rounded-xl bg-accent p-3 text-accent-foreground hover:bg-accent-hover">
-              <SlidesIcon className="h-5 w-5 shrink-0" />
+            <Link href={`/setlist-charts?mine=${encodeURIComponent(setlist.id)}`} className="flex items-center gap-3 rounded-md bg-accent p-3 text-accent-foreground hover:bg-accent-hover">
+              <SlidesIcon className="h-4 w-4 shrink-0" />
               <span className="min-w-0">
-                <span className="block font-bold">View all charts</span>
+                <span className="block text-sm font-medium">View all charts</span>
                 <span className="block text-xs opacity-80">Every chart in order, in this set&apos;s keys</span>
               </span>
             </Link>
           )}
-          <button type="button" onClick={() => void doShare()} disabled={busy} className="flex items-center gap-3 rounded-xl bg-background p-3 text-left hover:bg-surface-hover disabled:opacity-50">
-            <ShareIcon className="h-5 w-5 shrink-0 text-accent" />
+          <button type="button" onClick={() => void doShare()} disabled={busy} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] p-3 text-left hover:bg-surface-hover disabled:opacity-50">
+            <ShareIcon className="h-4 w-4 shrink-0 text-muted" />
             <span className="min-w-0">
-              <span className="block text-sm font-bold">{busy ? "Sharing…" : "Share link"}</span>
+              <span className="block text-sm font-medium">{busy ? "Sharing…" : "Share link"}</span>
               <span className="block text-xs text-muted">Anyone with it can open the setlist</span>
             </span>
           </button>
-          <button type="button" onClick={post} className="flex items-center gap-3 rounded-xl bg-background p-3 text-left hover:bg-surface-hover">
-            <UsersIcon className="h-5 w-5 shrink-0 text-accent" />
+          <button type="button" onClick={post} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] p-3 text-left hover:bg-surface-hover">
+            <UsersIcon className="h-4 w-4 shrink-0 text-muted" />
             <span className="min-w-0">
-              <span className="block text-sm font-bold">{postId ? "View post" : "Post to Community"}</span>
+              <span className="block text-sm font-medium">{postId ? "View post" : "Post to Community"}</span>
               <span className="block text-xs text-muted">{postId ? "It stays in sync with this setlist" : "Share it with other musicians"}</span>
             </span>
           </button>

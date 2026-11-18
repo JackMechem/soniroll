@@ -57,16 +57,16 @@ export default function RecordClip({
   return (
     <>
       {recording ? (
-        <div className="flex items-center gap-2 rounded-full bg-danger/10 py-1 pl-3 pr-1">
+        <div className="flex h-9 items-center gap-2 rounded-md border border-danger/30 pl-3 pr-1">
           <span className="h-2 w-2 animate-pulse rounded-full bg-danger" />
           <Elapsed since={rec.startedAt} />
-          <span className="h-1.5 w-12 overflow-hidden rounded-full bg-surface-hover">
+          <span className="h-1.5 w-12 overflow-hidden rounded-full bg-foreground/10">
             <span className="block h-full bg-danger transition-[width]" style={{ width: `${Math.round(Math.min(1, rec.level * 3) * 100)}%` }} />
           </span>
           <button
             type="button"
             onClick={() => void toggle()}
-            className="flex items-center gap-1 rounded-full bg-danger px-3 py-1 text-xs font-semibold text-white"
+            className="flex h-7 items-center gap-1 rounded-md bg-danger px-2.5 text-xs font-medium text-white hover:opacity-90"
           >
             <StopIcon className="h-3.5 w-3.5" /> Stop
           </button>
@@ -77,7 +77,7 @@ export default function RecordClip({
           onClick={() => void toggle()}
           disabled={busy}
           title={busy ? "Already recording" : undefined}
-          className={`flex items-center gap-1.5 rounded-full bg-background font-medium hover:bg-surface-hover disabled:opacity-50 ${compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"}`}
+          className={`flex items-center gap-1.5 rounded-md bg-foreground/[0.05] font-medium hover:bg-surface-hover disabled:opacity-50 ${compact ? "h-7 px-2 text-xs" : "h-8 px-3 text-sm"}`}
         >
           <MicIcon className="h-3.5 w-3.5 text-danger" /> {compact ? "Record" : "Record a clip"}
         </button>
@@ -103,5 +103,5 @@ function Elapsed({ since }: { since: number | null }) {
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, []);
-  return <span className="text-xs font-semibold tabular-nums text-danger">{since ? formatDuration((now - since) / 1000) : "Starting…"}</span>;
+  return <span className="text-xs font-medium tabular-nums text-danger">{since ? formatDuration((now - since) / 1000) : "Starting…"}</span>;
 }

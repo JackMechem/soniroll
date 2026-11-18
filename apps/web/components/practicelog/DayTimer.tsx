@@ -51,13 +51,13 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
   const isToday = date === todayKey();
   if (!isToday && ms === 0) return null;
   return (
-    <div className={`flex items-center gap-3 rounded-2xl border ${running ? "border-accent/30 bg-accent/10" : "border-transparent bg-surface"} ${compact ? "px-3 py-2" : "px-4 py-3"}`}>
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${running ? "bg-accent text-accent-foreground" : "bg-background text-muted"}`}>
-        <StopwatchIcon className={`h-5 w-5 ${running ? "animate-pulse" : ""}`} />
-      </span>
+    // Filled, no outline: the faint row fill inside a card (the dashboard's compact one), the card
+    // fill on the page (the Shed Log's day panel); an accent tint while it runs.
+    <div className={`flex items-center gap-3 ${running ? "bg-accent/10" : compact ? "bg-foreground/[0.05]" : "bg-surface"} ${compact ? "rounded-md px-3 py-2" : "rounded-lg px-4 py-3"}`}>
+      <StopwatchIcon className={`h-5 w-5 shrink-0 ${running ? "animate-pulse text-accent" : "text-muted"}`} />
       <div className="min-w-0 flex-1">
-        <div className={`font-extrabold tabular-nums ${compact ? "text-xl" : "text-2xl"}`}>{formatStopwatch(ms)}</div>
-        <div className="text-xs font-semibold text-muted">
+        <div className={`font-semibold tabular-nums ${compact ? "text-lg" : "text-xl"}`}>{formatStopwatch(ms)}</div>
+        <div className="text-xs text-muted">
           {running ? "Practiced today · timer running" : isToday ? (ms ? "Practiced today · timer paused" : "Day timer — start it when you sit down to play") : "Practiced this day"}
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
           onClick={() => setConfirming(true)}
           aria-label="Clear this day's time"
           title="Clear this day's time"
-          className="shrink-0 rounded-full p-2 text-muted hover:bg-background hover:text-danger"
+          className="shrink-0 rounded-md p-2 text-muted hover:bg-surface-hover hover:text-danger"
         >
           <TrashIcon className="h-4 w-4" />
         </button>
@@ -87,11 +87,11 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
       )}
       {isToday &&
         (running ? (
-          <button type="button" onClick={pauseDayPractice} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={pauseDayPractice} className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
             <PauseIcon className="h-4 w-4" /> Pause
           </button>
         ) : (
-          <button type="button" onClick={startDayTimer} className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={startDayTimer} className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             <PlayIcon className="h-4 w-4" /> {ms ? "Resume" : "Start"}
           </button>
         ))}

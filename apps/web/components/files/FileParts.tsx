@@ -14,7 +14,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { tint } from "@/components/library/ui";
 import { CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon } from "@/components/tools";
 import {
   type FileKind,
@@ -35,16 +34,6 @@ import {
 
 // ---------------------------------------------------------------- icons
 
-const KIND_COLOR: Record<FileKind, string> = {
-  pdf: "var(--cat-0, var(--accent))",
-  image: "var(--cat-1, var(--accent))",
-  audio: "var(--cat-2, var(--accent))",
-  video: "var(--cat-3, var(--accent))",
-  notation: "var(--cat-4, var(--accent))",
-  document: "var(--cat-5, var(--accent))",
-  other: "var(--muted)",
-};
-
 const KIND_ICON: Record<FileKind, React.ComponentType<{ className?: string }>> = {
   pdf: DocumentIcon,
   image: ImageIcon,
@@ -55,14 +44,13 @@ const KIND_ICON: Record<FileKind, React.ComponentType<{ className?: string }>> =
   other: FileIcon,
 };
 
-/** A file's type as a small coloured tile. */
+/** A file's type as a plain muted icon (in a bordered square at `lg`). */
 export function FileTypeIcon({ kind, size = "md" }: { kind: FileKind; size?: "sm" | "md" | "lg" }) {
   const Icon = KIND_ICON[kind];
-  const color = KIND_COLOR[kind];
-  const dims = size === "lg" ? "h-14 w-14 rounded-2xl" : size === "sm" ? "h-8 w-8 rounded-lg" : "h-10 w-10 rounded-xl";
+  const dims = size === "lg" ? "h-12 w-12 rounded-lg bg-foreground/[0.05]" : size === "sm" ? "h-5 w-5" : "h-8 w-5";
   return (
-    <span className={`flex shrink-0 items-center justify-center ${dims}`} style={{ background: tint(color, 16), color }} aria-hidden>
-      <Icon className={size === "lg" ? "h-7 w-7" : "h-4 w-4"} />
+    <span className={`flex shrink-0 items-center justify-center text-muted ${dims}`} aria-hidden>
+      <Icon className={size === "lg" ? "h-6 w-6" : "h-4 w-4"} />
     </span>
   );
 }
@@ -90,11 +78,11 @@ export function FileRow({
 }) {
   const kind = fileKind(mimeType, name);
   return (
-    <div onContextMenu={onContextMenu} className="group flex items-center gap-1 rounded-xl hover:bg-surface-hover">
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 px-2.5 py-2 text-left">
+    <div onContextMenu={onContextMenu} className="group flex items-center gap-1 rounded-md pr-1 transition-colors hover:bg-surface-hover">
+      <button type="button" onClick={onOpen} className="flex min-h-12 min-w-0 flex-1 items-center gap-3 px-2.5 py-2 text-left">
         <FileTypeIcon kind={kind} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold">{name}</span>
+          <span className="block truncate text-sm font-medium">{name}</span>
           <span className="block truncate text-xs text-muted">{detail}</span>
         </span>
       </button>
@@ -162,17 +150,17 @@ export function FilePreviewDialog({ file, actions, onClose }: { file: PreviewFil
       <div
         role="dialog"
         aria-label={file.name}
-        className="flex w-full max-w-5xl flex-col overflow-hidden bg-surface shadow-xl sm:rounded-2xl"
+        className="flex w-full max-w-5xl flex-col overflow-hidden ring-1 ring-foreground/[0.06] bg-surface shadow-xl sm:rounded-xl sm:border sm:border-foreground/10"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 border-b border-foreground/[0.06] px-4 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:pt-3">
+        <div className="flex items-center gap-3 border-b border-foreground/10 px-4 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:pt-3">
           <FileTypeIcon kind={kind} size="sm" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-bold">{file.name}</h2>
+            <h2 className="truncate text-sm font-medium">{file.name}</h2>
             <p className="truncate text-xs text-muted">{fileDetail(file)}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground">
-            <CloseIcon className="h-5 w-5" />
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
@@ -180,9 +168,9 @@ export function FilePreviewDialog({ file, actions, onClose }: { file: PreviewFil
           <FileViewer file={file} autoPlay />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-foreground/[0.06] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-foreground/10 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-3">
           {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer" download={file.name} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+            <a href={url} target="_blank" rel="noopener noreferrer" download={file.name} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
               <DownloadIcon className="h-4 w-4" />
               {canPreview(kind) ? "Open in a new tab" : "Download"}
             </a>
@@ -195,7 +183,7 @@ export function FilePreviewDialog({ file, actions, onClose }: { file: PreviewFil
   );
 }
 
-const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold hover:bg-surface-hover";
+const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
 
 // ---------------------------------------------------------------- uploading
 
@@ -495,10 +483,10 @@ export function FileSelectDialog({
   }, [files, excludeTuneId, query]);
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Add from your files" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-2xl bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">
+      <div role="dialog" aria-label="Add from your files" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your files" className="min-w-0 flex-1 bg-transparent outline-none" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your files" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
         </div>
         <div className="flex flex-col gap-0.5 overflow-y-auto">
           {files === undefined ? (
@@ -536,17 +524,17 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
   return (
     <section
       {...(isAuthenticated ? uploader.drop : {})}
-      className={`flex flex-col gap-3 rounded-2xl bg-surface p-4 sm:p-5 ${uploader.dragging ? "ring-2 ring-accent" : ""}`}
+      className={`flex flex-col gap-3 rounded-lg bg-surface p-4 ${uploader.dragging ? "ring-2 ring-accent" : ""}`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-bold">Files</h2>
-        {files && files.length > 0 && <span className="text-sm tabular-nums text-muted">{files.length}</span>}
+        <h2 className="text-sm font-medium">Files</h2>
+        {files && files.length > 0 && <span className="text-xs tabular-nums text-muted">{files.length}</span>}
         {isAuthenticated && (
           <div className="ml-auto flex flex-wrap gap-2">
-            <button type="button" onClick={uploader.pick} disabled={!!uploader.progress} className="flex items-center gap-1.5 rounded-lg bg-background px-3 py-2 text-sm font-medium hover:bg-surface-hover disabled:opacity-50">
+            <button type="button" onClick={uploader.pick} disabled={!!uploader.progress} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover disabled:opacity-50">
               <UploadIcon className="h-4 w-4" /> Upload
             </button>
-            <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1.5 rounded-lg bg-background px-3 py-2 text-sm font-medium hover:bg-surface-hover">
+            <button type="button" onClick={() => setAdding(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               <LinkIcon className="h-4 w-4" /> From my files
             </button>
           </div>
@@ -560,7 +548,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
         <button
           type="button"
           onClick={uploader.pick}
-          className="flex flex-col items-center gap-1 rounded-xl border-2 border-dashed border-foreground/10 px-4 py-6 text-center text-sm text-muted hover:border-accent/50 hover:text-foreground"
+          className="flex flex-col items-center gap-1 rounded-lg border border-dashed border-foreground/15 px-4 py-6 text-center text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           <UploadIcon className="h-5 w-5" />
           Drop files here, or click to upload a PDF, image, recording or any other file.

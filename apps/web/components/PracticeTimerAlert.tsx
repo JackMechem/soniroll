@@ -34,16 +34,16 @@ export default function PracticeTimerAlert() {
       aria-label="Segment time is up"
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-6 bg-background/97 p-6 text-center backdrop-blur-sm"
     >
-      <StopwatchIcon className="h-16 w-16 animate-pulse text-danger" />
+      <StopwatchIcon className="h-10 w-10 animate-pulse text-danger" />
       <div className="flex flex-col gap-1.5">
-        <p className="text-sm font-semibold text-danger">
+        <p className="text-sm font-medium text-danger">
           Time&apos;s up
         </p>
-        <h1 className="break-words text-3xl font-bold sm:text-5xl">{state.current.title}</h1>
+        <h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">{state.current.title}</h1>
         {state.next ? (
-          <p className="text-lg text-muted">Next: {state.next.title}</p>
+          <p className="text-base text-muted">Next: {state.next.title}</p>
         ) : (
-          <p className="text-lg text-muted">Last step of this session.</p>
+          <p className="text-base text-muted">Last step of this session.</p>
         )}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -51,14 +51,14 @@ export default function PracticeTimerAlert() {
           type="button"
           onClick={skip}
           autoFocus
-          className="flex items-center gap-2 rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
+          className="flex h-11 items-center gap-2 rounded-md bg-accent px-6 text-base font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
         >
-          <PlayIcon className="h-5 w-5" /> Continue
+          <PlayIcon className="h-4 w-4" /> Continue
         </button>
         <button
           type="button"
           onClick={stop}
-          className="flex items-center gap-2 rounded-full bg-surface px-6 py-3 text-base font-medium text-danger transition-colors hover:bg-surface-hover"
+          className="flex h-11 items-center gap-2 rounded-md bg-foreground/[0.05] px-6 text-base font-medium text-danger transition-colors hover:bg-surface-hover"
         >
           <StopIcon className="h-4 w-4" /> Stop
         </button>

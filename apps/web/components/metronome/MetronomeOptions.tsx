@@ -106,7 +106,7 @@ function Arrow({ dir, label, onClick, disabled }: { dir: "left" | "right"; label
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition hover:bg-background hover:text-foreground active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
+      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
     >
       <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d={dir === "left" ? "M10 3.5L5.5 8l4.5 4.5" : "M6 3.5L10.5 8 6 12.5"} />
@@ -131,7 +131,7 @@ export function TimeSignatureControl({
   const noteName = (NOTE_VALUE_NAMES[beatUnit] ?? `1/${beatUnit} note`).toLowerCase();
   return (
     <div className="flex items-center gap-4">
-      <div className="flex flex-col items-center rounded-2xl bg-background px-1 py-1.5">
+      <div className="flex flex-col items-center rounded-lg bg-background px-1 py-1.5">
         <div className="flex items-center">
           <Arrow dir="left" label="Fewer beats per bar" onClick={() => onChangeBeats(beatsPerBar - 1)} disabled={beatsPerBar <= 1} />
           <NumberField
@@ -140,21 +140,21 @@ export function TimeSignatureControl({
             min={1}
             max={MAX_BEATS}
             onChange={onChangeBeats}
-            className="w-12 rounded-lg bg-transparent text-center text-3xl font-bold tabular-nums leading-none outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="w-12 rounded-md bg-transparent text-center text-3xl font-semibold tabular-nums leading-none outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           />
           <Arrow dir="right" label="More beats per bar" onClick={() => onChangeBeats(beatsPerBar + 1)} disabled={beatsPerBar >= MAX_BEATS} />
         </div>
         <div className="my-1 h-0.5 w-10 rounded-full bg-foreground/70" />
         <div className="flex items-center">
           <Arrow dir="left" label="Longer beat" onClick={() => onSetBeatUnit(NOTE_VALUES[unitIndex - 1])} disabled={unitIndex <= 0} />
-          <span className="w-12 text-center text-3xl font-bold tabular-nums leading-none" aria-label={`Beat unit ${beatUnit}`}>
+          <span className="w-12 text-center text-3xl font-semibold tabular-nums leading-none" aria-label={`Beat unit ${beatUnit}`}>
             {beatUnit}
           </span>
           <Arrow dir="right" label="Shorter beat" onClick={() => onSetBeatUnit(NOTE_VALUES[unitIndex + 1])} disabled={unitIndex < 0 || unitIndex >= NOTE_VALUES.length - 1} />
         </div>
       </div>
       <p className="min-w-0 text-sm leading-snug text-muted">
-        <span className="block text-lg font-semibold leading-tight text-foreground">
+        <span className="block text-base font-medium leading-tight text-foreground">
           {beatsPerBar} {beatsPerBar === 1 ? noteName : `${noteName}s`}
         </span>
         per bar
@@ -183,7 +183,7 @@ export function StepperPill({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center rounded-2xl bg-background px-1 py-1">
+      <div className="flex items-center rounded-md bg-background p-0.5">
         <Arrow dir="left" label={`Fewer ${unit[1]}`} onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} />
         <NumberField
           label={label}
@@ -191,11 +191,11 @@ export function StepperPill({
           min={min}
           max={max}
           onChange={onChange}
-          className="w-12 rounded-lg bg-transparent text-center text-2xl font-bold tabular-nums leading-none outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="w-12 rounded-md bg-transparent text-center text-xl font-semibold tabular-nums leading-none outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         />
         <Arrow dir="right" label={`More ${unit[1]}`} onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} />
       </div>
-      <span className="text-lg font-semibold">{value === 1 ? unit[0] : unit[1]}</span>
+      <span className="text-sm font-medium">{value === 1 ? unit[0] : unit[1]}</span>
     </div>
   );
 }
@@ -210,7 +210,7 @@ export function SubdivisionPicker({ value, onChange, showTitle = true }: { value
           <span className="flex h-8 items-end">
             <SubdivisionIcon count={s.value} />
           </span>
-          <span className="text-xs font-bold">{SUB_LABELS[s.value] ?? s.label}</span>
+          <span className="text-xs font-medium">{SUB_LABELS[s.value] ?? s.label}</span>
         </RewardCard>
       ))}
     </div>
@@ -227,14 +227,14 @@ export function SubdivisionPicker({ value, onChange, showTitle = true }: { value
               title={s.label}
               aria-label={s.label}
               onClick={() => onChange(s.value)}
-              className={`flex h-[4.25rem] flex-col items-center justify-center gap-1 rounded-xl transition active:scale-[0.97] ${
-                on ? "bg-accent text-accent-foreground" : "bg-background text-foreground hover:bg-surface-hover"
+              className={`flex h-[4.25rem] flex-col items-center justify-center gap-1 rounded-md border transition-colors ${
+                on ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
               }`}
             >
               <span className="flex h-7 items-end">
                 <SubdivisionIcon count={s.value} />
               </span>
-              <span className={`text-[11px] font-semibold ${on ? "" : "text-muted"}`}>{SUB_LABELS[s.value] ?? s.label}</span>
+              <span className={`text-xs font-medium ${on ? "" : "text-muted"}`}>{SUB_LABELS[s.value] ?? s.label}</span>
             </button>
           );
         })}
@@ -298,18 +298,13 @@ export function ClickSoundCards({
                 onChange(c.id);
                 previewSound(c.id, volume);
               }}
-              className="h-14 !flex-row !justify-start px-2"
+              className="h-11 !flex-row !justify-start px-3"
             >
               <span className="flex flex-row items-center gap-2.5">
-                <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${on ? "bg-accent-foreground/15" : "text-accent-foreground"}`}
-                  style={on ? undefined : { background: rewardGradient(reward.color) }}
-                >
-                  <svg viewBox="0 0 16 16" className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden>
-                    <path d="M5 3.2v9.6a.8.8 0 001.2.7l7.5-4.8a.8.8 0 000-1.4L6.2 2.5A.8.8 0 005 3.2z" />
-                  </svg>
-                </span>
-                <span className="truncate text-sm font-bold">{c.label}</span>
+                <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0" style={{ color: reward.color }} fill="currentColor" aria-hidden>
+                  <path d="M5 3.2v9.6a.8.8 0 001.2.7l7.5-4.8a.8.8 0 000-1.4L6.2 2.5A.8.8 0 005 3.2z" />
+                </svg>
+                <span className="truncate text-sm font-medium">{c.label}</span>
               </span>
             </RewardCard>
           );
@@ -331,11 +326,11 @@ export function ClickSoundCards({
               onChange(c.id);
               previewSound(c.id, volume);
             }}
-            className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
-              on ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"
+            className={`flex h-11 items-center gap-2.5 rounded-md border px-3 text-left text-sm font-medium transition-colors ${
+              on ? "border-accent bg-accent/10" : "border-foreground/15 bg-background hover:bg-surface-hover"
             }`}
           >
-            <svg viewBox="0 0 16 16" className={`h-4 w-4 shrink-0 ${on ? "" : "text-accent"}`} fill="currentColor" aria-hidden>
+            <svg viewBox="0 0 16 16" className={`h-4 w-4 shrink-0 ${on ? "text-accent" : "text-muted"}`} fill="currentColor" aria-hidden>
               <path d="M5 3.2v9.6a.8.8 0 001.2.7l7.5-4.8a.8.8 0 000-1.4L6.2 2.5A.8.8 0 005 3.2z" />
             </svg>
             <span className="truncate">{c.label}</span>
@@ -368,7 +363,7 @@ export function SoundPicker({
       <OptionGroup
         title="Volume"
         aside={
-          <span className="flex items-center gap-1 text-sm font-semibold tabular-nums">
+          <span className="flex items-center gap-1 text-sm font-medium tabular-nums">
             {reward && <Sparkle show={pct % 25 === 0 && pct > 0} at={pct} color={reward.color} />}
             {pct}%
           </span>

@@ -70,7 +70,7 @@ export default function MaterialsPage({ pair }: { pair: string }) {
   if (!data)
     return (
       <LibraryPage>
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Not found" body="You're not part of these lessons." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
       </LibraryPage>
@@ -104,7 +104,7 @@ export default function MaterialsPage({ pair }: { pair: string }) {
       {all.length > 0 && <KindFilter items={all} value={filter} onChange={setFilter} />}
 
       {all.length === 0 ? (
-        <div className="rounded-2xl bg-surface">
+        <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState
             icon={CapIcon}
             title="Nothing yet"
@@ -116,20 +116,20 @@ export default function MaterialsPage({ pair }: { pair: string }) {
           />
         </div>
       ) : shown === 0 ? (
-        <p className="rounded-2xl bg-surface p-6 text-center text-sm text-muted">Nothing matches.</p>
+        <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">Nothing matches.</p>
       ) : (
         <div className="flex flex-col gap-6">
           {groups.map((g) => {
             const sessionKey = g.session ? g.session.id : "earlier";
             return (
               <section key={g.key} className="flex flex-col gap-2">
-                <Link href={lessonHref(pair, sessionKey)} className="group flex items-center gap-2 self-start rounded-full px-1 py-0.5">
-                  <span className="text-base font-bold group-hover:underline">{g.session ? g.session.title : "Before lessons"}</span>
+                <Link href={lessonHref(pair, sessionKey)} className="group flex items-center gap-2 self-start py-0.5">
+                  <span className="text-sm font-medium group-hover:underline">{g.session ? g.session.title : "Before lessons"}</span>
                   {g.session && <span className="text-xs text-muted">{dayFmt.format(g.session.start)}</span>}
                   {teacher && g.session?.hidden && (
-                    <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted">Hidden until it starts</span>
+                    <span className="rounded-md bg-foreground/[0.05] px-1.5 py-0.5 text-[11px] font-medium text-muted">Hidden until it starts</span>
                   )}
-                  <ChevronRightIcon className="h-3.5 w-3.5 text-muted transition-transform group-hover:translate-x-0.5" />
+                  <ChevronRightIcon className="h-3.5 w-3.5 text-muted" />
                 </Link>
                 <div className="grid items-start gap-3 2xl:grid-cols-2">
                   {g.items.map((item) => (

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { BackButton, MenuButton, tuneSummary } from "@/components/library/shared";
-import { ChevronRightIcon, ChordChartIcon, FileIcon, NoteIcon, SearchIcon, SetlistIcon, ShareIcon } from "@/components/tools";
+import { ChevronRightIcon, ChordChartIcon, NoteIcon, PlusIcon, SearchIcon, ShareIcon } from "@/components/tools";
 import { formatComposer, keyPitchClass } from "@/lib/iRealPro";
 import { topicById } from "@/lib/helpContent";
 import type { Tune } from "@/lib/types";
@@ -13,9 +13,10 @@ import type { LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import type { Setlist } from "@/lib/useSetlists";
 import { displayKey } from "@jam-practice/core/setlistKeys";
 
-/** The look of the Tunes and Chord Charts pages (`components/library/*`): a header card with the
-    page's search in it, rows grouped in cards with a coloured key badge, and playlists / setlists /
-    lists as cards. Colours come from the theme (`--key-0…11` in globals.css, from the accent). */
+/** The look of the Library pages (`components/library/*`): a plain title with underline tabs,
+    a search-and-buttons toolbar, then bordered panels holding divided rows (each tune or chart
+    with its coloured key badge). Colours come from the theme (`--key-0…11` in globals.css, from
+    the accent). */
 
 // ---------- colour ----------
 
@@ -45,18 +46,19 @@ export function FolderIcon({ className }: { className?: string }) {
   );
 }
 
-/** A tune's or chart's key in a little tile of the key's colour ("Gm", "Bb"). */
+/** A tune's or chart's key in a little tile of the key's colour ("Gm", "Bb"). The colour says
+    which key it is, so this is the one tinted tile the library keeps. */
 export function KeyBadge({ label, size = "md" }: { label: string | null | undefined; size?: "sm" | "md" | "lg" }) {
   const color = keyColor(label);
   const text = label ? displayKey(label) : "";
   const dims =
-    size === "lg" ? "h-12 w-12 rounded-2xl text-lg sm:h-16 sm:w-16 sm:text-2xl" : size === "sm" ? "h-8 w-8 rounded-lg text-xs" : "h-11 w-11 rounded-xl text-sm";
+    size === "lg" ? "h-12 w-12 rounded-lg text-base sm:h-14 sm:w-14 sm:text-lg" : size === "sm" ? "h-7 w-7 rounded-md text-[11px]" : "h-9 w-9 rounded-md text-xs";
   return (
-    <span className={`flex shrink-0 items-center justify-center font-extrabold tracking-tight ${dims}`} style={{ background: tint(color, 16), color }} aria-hidden>
+    <span className={`flex shrink-0 items-center justify-center font-semibold tracking-tight ${dims}`} style={{ background: tint(color, 14), color }} aria-hidden>
       {text ? (
         <span className="max-w-full truncate px-0.5">{text.length > 4 ? text.slice(0, 4) : text}</span>
       ) : (
-        <NoteIcon className={size === "lg" ? "h-7 w-7" : "h-4 w-4"} />
+        <NoteIcon className={size === "lg" ? "h-6 w-6" : "h-4 w-4"} />
       )}
     </span>
   );
@@ -66,14 +68,16 @@ export function Chip({ children, accent = false, title }: { children: ReactNode;
   return (
     <span
       title={title}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${accent ? "bg-accent/15 text-accent" : "bg-background text-muted"}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-[11px] font-medium ${accent ? "bg-accent/10 text-accent" : "bg-foreground/[0.05] text-muted"}`}
     >
       {children}
     </span>
   );
 }
 
-/** A pill button — `primary` filled with the accent, else plain. A link with `href`. */
+/** A button — `primary` filled with the accent, else a faint fill (the secondary look every
+    page header uses). A link with `href`. (Named Pill from when it was round; it's a plain
+    rectangular button now.) */
 export function Pill({
   icon: Icon,
   label,
@@ -82,6 +86,7 @@ export function Pill({
   primary = false,
   disabled = false,
   iconOnlyOnPhone = false,
+  className = "",
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   label: string;
@@ -90,10 +95,11 @@ export function Pill({
   primary?: boolean;
   disabled?: boolean;
   iconOnlyOnPhone?: boolean;
+  className?: string;
 }) {
-  const cls = `inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 ${
-    iconOnlyOnPhone && Icon ? "w-10 sm:w-auto sm:px-4" : "px-4"
-  } ${primary ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-background text-foreground hover:bg-surface-hover"}`;
+  const cls = `${className} inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50 sm:h-9 ${
+    iconOnlyOnPhone && Icon ? "w-10 sm:w-auto sm:px-3" : "px-3"
+  } ${primary ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"}`;
   const inner = (
     <>
       {Icon && <Icon className="h-4 w-4 shrink-0" />}
@@ -111,6 +117,36 @@ export function Pill({
   );
 }
 
+/** For a row that scrolls sideways (tabs, chips): fades whichever edge has more to scroll to,
+    so a phone shows there's more off screen. Pass `attach` as the scrolling element's `ref`, and `style`. */
+export function useEdgeFade<T extends HTMLElement>() {
+  // A callback ref (kept in state), so a row that mounts later — after data loads — is still seen.
+  const [el, setEl] = useState<T | null>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useEffect(() => {
+    if (!el) return;
+    const update = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges((p) => (p.left === left && p.right === right ? p : { left, right }));
+    };
+    // The observer also fires once straight away, which sets the first state.
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    for (const child of el.children) observer.observe(child);
+    el.addEventListener("scroll", update, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", update);
+    };
+  }, [el]);
+  const mask =
+    edges.left || edges.right
+      ? `linear-gradient(to right, ${edges.left ? "transparent, black 2rem" : "black, black"}, ${edges.right ? "black calc(100% - 2rem), transparent" : "black"})`
+      : undefined;
+  return { attach: setEl, style: mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined };
+}
+
 export type LibraryTab = "tunes" | "setlists" | "charts" | "files";
 export const LIBRARY_TABS: readonly LibraryTab[] = ["tunes", "setlists", "charts", "files"];
 
@@ -119,28 +155,20 @@ export function libraryHref(tab: LibraryTab): string {
   return tab === "tunes" ? "/tunes" : `/tunes?tab=${tab}`;
 }
 
-/** Tunes · Setlists · Chord Charts · Files — Library's tabs, under its title. They swap the
-    `?tab=` query in place (replace, no scroll) rather than going to another page. */
-export function LibraryTabs({ active }: { active: LibraryTab }) {
+/** Tunes · Setlists · Chord Charts · Files · Recordings — Library's tabs, under its title. They
+    swap the `?tab=` query in place (replace, no scroll) rather than going to another page;
+    Recordings is its own page (`/recordings`) but sits here too, so it's found from the Library. */
+export function LibraryTabs({ active }: { active: LibraryTab | "recordings" }) {
   const tabs = [
-    { id: "tunes", label: "Tunes", href: libraryHref("tunes"), icon: NoteIcon },
-    {
-      id: "setlists",
-      label: "Setlists",
-      href: libraryHref("setlists"),
-      icon: SetlistIcon,
-    },
-    {
-      id: "charts",
-      label: "Chord Charts",
-      short: "Charts",
-      href: libraryHref("charts"),
-      icon: ChordChartIcon,
-    },
-    { id: "files", label: "Files", href: libraryHref("files"), icon: FileIcon },
+    { id: "tunes", label: "Tunes", href: libraryHref("tunes") },
+    { id: "setlists", label: "Setlists", href: libraryHref("setlists") },
+    { id: "charts", label: "Chord Charts", short: "Charts", href: libraryHref("charts") },
+    { id: "files", label: "Files", href: libraryHref("files") },
+    { id: "recordings", label: "Recordings", href: "/recordings" },
   ] as const;
+  const { attach: fadeRef, style: fadeStyle } = useEdgeFade<HTMLElement>();
   return (
-    <nav className="-mx-1 flex max-w-full gap-1 overflow-x-auto border-b border-foreground/10 px-1 [scrollbar-width:none] sm:gap-2" aria-label="Library">
+    <nav ref={fadeRef} style={fadeStyle} className="flex max-w-full overflow-x-auto border-b border-foreground/10 [scrollbar-width:none] sm:gap-2" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
@@ -148,11 +176,10 @@ export function LibraryTabs({ active }: { active: LibraryTab }) {
           replace
           scroll={false}
           aria-current={active === t.id ? "page" : undefined}
-          className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 pb-2.5 pt-1 text-sm font-semibold transition-colors sm:px-3 ${
-            active === t.id ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
+          className={`-mb-px flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-2 text-sm transition-colors sm:px-3 ${
+            active === t.id ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"
           }`}
         >
-          <t.icon className={`hidden h-4 w-4 sm:block ${active === t.id ? "text-accent" : ""}`} />
           {"short" in t ? (
             <>
               <span className="sm:hidden">{t.short}</span>
@@ -171,25 +198,24 @@ export function LibraryTabs({ active }: { active: LibraryTab }) {
 
 export function LibraryPage({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-8">
       {children}
     </main>
   );
 }
 
 /**
- * The title row every library page starts with, styled like the tool and Shed Log titles: an
- * optional back button, the accent icon (or any `leading` element, e.g. a key badge), the title and
- * a line under it, the page's buttons, then `tabs` (Library's sub-pages) and `children` (usually
- * its search box) below. `color`
- * colors the icon.
+ * The header every library page starts with: an optional back button, a muted icon (or any
+ * `leading` element, e.g. a key badge), the title and a line under it, the page's buttons, then
+ * `tabs` (Library's sub-pages) and `children` (usually a search toolbar) below. Without tabs it
+ * ends with a hairline, like the dashboard's header. `color` colours the icon when given.
  */
 export function Hero({
   title,
   subtitle,
   icon: Icon,
   leading,
-  color = "var(--accent)",
+  color,
   tabs,
   back,
   backHref,
@@ -197,6 +223,7 @@ export function Hero({
   actions,
   helpTopic,
   titleExtra,
+  rule = true,
   children,
 }: {
   title: string;
@@ -210,8 +237,10 @@ export function Hero({
   backLabel?: string;
   actions?: ReactNode;
   helpTopic?: string;
-  /** Beside the title, e.g. Library's storage pill. */
+  /** Beside the title, e.g. Library's storage meter. */
   titleExtra?: ReactNode;
+  /** The hairline under a header without tabs; off when a search toolbar ends the header. */
+  rule?: boolean;
   children?: ReactNode;
 }) {
   const topic = helpTopic ? topicById(helpTopic) : undefined;
@@ -219,7 +248,7 @@ export function Hero({
   const TopicIcon = topic ? ICON_BY_ID[topic.id] : undefined;
   const ShownIcon = Icon ?? TopicIcon;
   return (
-    <header className="flex flex-col gap-4">
+    <header className={`flex flex-col gap-4 ${tabs || !rule ? "" : "border-b border-foreground/10 pb-6"}`}>
       {(back || backHref) && (
         <div>
           <BackButton onClick={back} href={backHref} label={backLabel} />
@@ -231,24 +260,22 @@ export function Hero({
         <div className={`flex items-center gap-3 ${tabs ? "min-w-0 flex-1" : "min-w-[min(100%,16rem)] flex-1 basis-72"}`}>
           {leading}
           <div className={`min-w-0 ${titleExtra ? "max-sm:flex-1" : "flex-1"}`}>
-            <div className="flex min-w-0 items-center gap-1.5">
-              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            <div className="flex min-w-0 items-center gap-1">
+              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
                 {!leading && ShownIcon && (
-                  <span className="shrink-0" style={{ color }}>
-                    <ShownIcon className="h-6 w-6 sm:h-7 sm:w-7" />
+                  <span className={`shrink-0 ${color ? "" : "text-accent"}`} style={color ? { color } : undefined}>
+                    <ShownIcon className="h-5 w-5" />
                   </span>
                 )}
                 <span className="line-clamp-2 break-words">{title}</span>
               </h1>
               {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
             </div>
-            {subtitle && <div className={`text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
-            {/* Phones: under the title, so it never squeezes it. */}
-            {titleExtra && <div className="mt-1.5 sm:hidden">{titleExtra}</div>}
+            {subtitle && <div className={`mt-0.5 text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
           </div>
-          {titleExtra && <div className="hidden shrink-0 sm:ml-1 sm:block">{titleExtra}</div>}
+          {titleExtra && <div className="ml-auto shrink-0">{titleExtra}</div>}
         </div>
-        {/* Buttons here sit on the page background, so the "on a card" bg-background ones turn surface. */}
+        {/* Buttons here sit on the page background, so any "on a card" bg-background ones turn surface. */}
         {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
       </div>
       {tabs}
@@ -260,17 +287,17 @@ export function Hero({
 
 export function HeroSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex items-center gap-2.5 rounded-2xl bg-surface px-4 py-3 shadow-sm ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
+    <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md bg-foreground/[0.05] pl-3 pr-2 transition-colors focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
       <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
+        className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm [&::-webkit-search-cancel-button]:hidden"
       />
       {value && (
-        <button type="button" onClick={() => onChange("")} className="text-xs font-semibold text-muted hover:text-foreground">
+        <button type="button" onClick={() => onChange("")} className="rounded-md px-1.5 py-0.5 text-xs text-muted hover:bg-surface-hover hover:text-foreground">
           Clear
         </button>
       )}
@@ -278,7 +305,12 @@ export function HeroSearch({ value, onChange, placeholder }: { value: string; on
   );
 }
 
-/** A titled card: header (title, detail, a small +, "See all") and its content. */
+/** A search box with the page's buttons beside it — the row under Library's tabs. */
+export function Toolbar({ children }: { children: ReactNode }) {
+  return <div className="flex min-w-0 items-center gap-2">{children}</div>;
+}
+
+/** A bordered panel: a header row (title, detail, a small +, "See all") over its content. */
 export function Panel({
   title,
   detail,
@@ -304,58 +336,67 @@ export function Panel({
   flush?: boolean;
 }) {
   return (
-    <section className={`flex min-w-0 flex-col overflow-hidden rounded-2xl bg-surface ${className}`}>
-      <div className="flex items-center gap-2 px-4 pb-2 pt-3.5">
-        {Icon && <Icon className="h-4 w-4 text-accent" />}
-        <h2 className="truncate font-bold">{title}</h2>
-        {detail != null && <span className="hidden text-xs font-semibold tabular-nums text-muted sm:inline">{detail}</span>}
-        {onAdd && (
-          <button
-            type="button"
-            onClick={onAdd}
-            aria-label={addLabel ?? `Add to ${title}`}
-            title={addLabel ?? `Add to ${title}`}
-            className="flex h-6 w-6 items-center justify-center rounded-full bg-background text-accent hover:bg-surface-hover"
-          >
-            <span className="text-base leading-none">+</span>
-          </button>
-        )}
-        {href && (
-          <Link href={href} className="ml-auto flex shrink-0 items-center text-xs font-semibold text-accent hover:underline">
-            {hrefLabel}
-            <ChevronRightIcon className="h-3.5 w-3.5" />
+    <section className={`flex min-w-0 flex-col overflow-hidden rounded-lg bg-surface ${className}`}>
+      <div className="flex h-11 shrink-0 items-center gap-2 pl-4 pr-2">
+        {Icon && <Icon className="h-4 w-4 shrink-0 text-muted" />}
+        {href ? (
+          <Link href={href} className="truncate text-sm font-medium hover:underline">
+            {title}
           </Link>
+        ) : (
+          <h2 className="truncate text-sm font-medium">{title}</h2>
         )}
+        {detail != null && <span className="shrink-0 text-xs tabular-nums text-muted">{detail}</span>}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {href && (
+            <Link href={href} className="flex h-8 items-center rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
+              {hrefLabel}
+              <ChevronRightIcon className="h-3.5 w-3.5" />
+            </Link>
+          )}
+          {onAdd && (
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label={addLabel ?? `Add to ${title}`}
+              title={addLabel ?? `Add to ${title}`}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
-      <div className={flush ? "pb-1.5" : "px-4 pb-4"}>{children}</div>
+      <div className={flush ? "" : "p-4"}>{children}</div>
     </section>
   );
 }
 
-/** Rows inside a `Panel` (or any card), separated by hairlines. */
+/** Rows inside a `Panel` (or any bordered box), separated by hairlines. */
 export function Rows({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col divide-y divide-foreground/[0.06] px-1.5">{children}</div>;
+  return <div className="flex flex-col divide-y divide-foreground/10">{children}</div>;
 }
 
+/** A short "nothing here" message: a line, an optional sentence and one action. `boxed` draws the
+    dashed outline it uses on its own on a page; inside a panel leave it off. */
 export function EmptyState({
-  icon: Icon,
   title,
   body,
   action,
+  boxed = false,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  /** Kept for callers; empty states don't show an icon any more. */
+  icon?: React.ComponentType<{ className?: string }>;
   title: string;
   body?: ReactNode;
   action?: ReactNode;
+  boxed?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-        <Icon className="h-6 w-6" />
-      </span>
-      <p className="font-bold">{title}</p>
+    <div className={`flex flex-col items-center gap-1 px-6 py-8 text-center ${boxed ? "rounded-lg border border-dashed border-foreground/15" : ""}`}>
+      <p className="text-sm font-medium">{title}</p>
       {body && <p className="max-w-sm text-sm text-muted">{body}</p>}
-      {action && <div className="mt-2">{action}</div>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
@@ -371,33 +412,38 @@ function RowShell({
   onMenu,
   menuLabel,
   trailing,
+  reserveMenu = false,
 }: {
   href: string;
-  leading: ReactNode;
+  leading?: ReactNode;
   title: string;
   extra?: ReactNode;
   meta?: ReactNode;
   onMenu?: (e: React.MouseEvent) => void;
   menuLabel?: string;
   trailing?: ReactNode;
+  /** No ⋮ on this row, but keep its space so `trailing` lines up with rows that have one. */
+  reserveMenu?: boolean;
 }) {
   return (
-    <div className="group flex items-center gap-1 rounded-xl transition-colors hover:bg-background/60">
-      <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 px-2.5 py-2">
+    <div className="group flex items-center gap-1 transition-colors hover:bg-surface-hover">
+      <Link href={href} className="flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3 py-2">
         {leading}
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate font-semibold">{title}</span>
+            <span className="truncate text-sm font-medium">{title}</span>
             {extra}
           </span>
           {meta && <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1 overflow-hidden text-xs text-muted">{meta}</span>}
         </span>
         {trailing}
       </Link>
-      {onMenu && (
+      {onMenu ? (
         <div className="pr-1.5">
           <MenuButton label={menuLabel ?? `Options for ${title}`} onClick={onMenu} />
         </div>
+      ) : (
+        reserveMenu && <div aria-hidden className="w-8 shrink-0 box-content pr-1.5" />
       )}
     </div>
   );
@@ -407,6 +453,7 @@ function RowShell({
 export function TuneItem({ tune, href, onMenu }: { tune: Tune; href: string; onMenu?: (e: React.MouseEvent) => void }) {
   const keys = tune.keys.filter((k) => k.enabled);
   const tempo = tune.tempos.find((t) => t.enabled)?.value;
+  const meta = [tempo != null ? `${tempo} BPM` : null, tune.timeSignature || null, keys.length > 1 ? `${keys.length} keys` : null].filter(Boolean).join(" · ");
   return (
     <RowShell
       href={href}
@@ -414,19 +461,12 @@ export function TuneItem({ tune, href, onMenu }: { tune: Tune; href: string; onM
       title={tune.name}
       extra={
         tune.chordChartId && (
-          <span title="Has a chord chart" className="shrink-0 text-accent">
+          <span title="Has a chord chart" className="shrink-0 text-muted">
             <ChordChartIcon className="h-3.5 w-3.5" />
           </span>
         )
       }
-      meta={
-        <>
-          {tempo != null && <Chip>{tempo} BPM</Chip>}
-          {tune.timeSignature && <Chip>{tune.timeSignature}</Chip>}
-          {keys.length > 1 && <Chip>{keys.length} keys</Chip>}
-          {!tempo && !keys.length && <span className="truncate">{tuneSummary(tune) || "No key or tempo yet"}</span>}
-        </>
-      }
+      meta={<span className="truncate">{!tempo && !keys.length ? tuneSummary(tune) || "No key or tempo yet" : meta}</span>}
       onMenu={onMenu}
     />
   );
@@ -440,55 +480,8 @@ export function ChartItem({ song, href, subtitle, onMenu }: { song: LibrarySongM
   );
 }
 
-// ---------- cards ----------
-
-/** One of your lists on a dashboard: icon, a big count, its name and the first few in it. */
-export function ShelfCard({
-  href,
-  icon: Icon,
-  count,
-  label,
-  preview,
-  color = "var(--accent)",
-  empty,
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  count: number;
-  label: string;
-  preview: string[];
-  color?: string;
-  empty?: string;
-}) {
-  return (
-    <Link href={href} className="group flex min-w-0 flex-col gap-3 rounded-2xl bg-surface p-4 transition-colors hover:bg-surface-hover">
-      <div className="flex items-center justify-between">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: tint(color, 16), color }}>
-          <Icon className="h-5 w-5" />
-        </span>
-        <ChevronRightIcon className="h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5" />
-      </div>
-      <div>
-        <div className="text-3xl font-extrabold tabular-nums leading-none">{count}</div>
-        <div className="mt-1 text-sm font-semibold text-muted">{label}</div>
-      </div>
-      <div className="flex min-h-[2.75rem] flex-col justify-end gap-0.5 border-t border-foreground/[0.06] pt-2 text-xs text-muted">
-        {preview.length ? (
-          preview.slice(0, 2).map((p, i) => (
-            <span key={i} className="truncate">
-              {p}
-            </span>
-          ))
-        ) : (
-          <span>{empty}</span>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-/** Recently opened tunes or charts: a scrolling row of small cards with their key. */
-export function RecentStrip({
+/** Recently opened tunes or charts, as rows with their key (inside a `Panel`). */
+export function RecentList({
   items,
 }: {
   items: {
@@ -500,109 +493,80 @@ export function RecentStrip({
   }[];
 }) {
   return (
-    <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
+    <Rows>
       {items.map((it) => (
-        <Link
-          key={it.key}
-          href={it.href}
-          className="flex w-52 shrink-0 snap-start items-center gap-3 rounded-2xl bg-surface p-3 transition-colors hover:bg-surface-hover"
-        >
-          <KeyBadge label={it.keyLabel} />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold">{it.title}</span>
-            <span className="block truncate text-xs text-muted">{it.detail}</span>
-          </span>
-        </Link>
+        <RowShell key={it.key} href={it.href} leading={<KeyBadge label={it.keyLabel} />} title={it.title} meta={it.detail ? <span className="truncate">{it.detail}</span> : undefined} />
       ))}
+    </Rows>
+  );
+}
+
+/** Recently opened charts (or tunes) as one slim row of chips — key badge and title — under a
+    small "Recent" label. Scrolls sideways when it doesn't fit (phones), with a faded edge. */
+export function RecentStrip({ items }: { items: { key: string; title: string; href: string; keyLabel?: string | null; detail?: string }[] }) {
+  const { attach: fadeRef, style: fadeStyle } = useEdgeFade<HTMLDivElement>();
+  if (items.length === 0) return null;
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span className="shrink-0 text-xs font-medium text-muted">Recent</span>
+      <div ref={fadeRef} style={fadeStyle} className="-mr-4 min-w-0 flex-1 overflow-x-auto pr-4 [scrollbar-width:none] sm:mr-0 sm:pr-0 [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max gap-1.5">
+          {items.map((it) => (
+            <Link
+              key={it.key}
+              href={it.href}
+              title={it.detail ? `${it.title} · ${it.detail}` : it.title}
+              className="flex h-10 max-w-[14rem] shrink-0 items-center gap-2 rounded-md bg-surface pl-1.5 pr-3 text-sm font-medium transition-colors hover:bg-surface-hover sm:h-9"
+            >
+              <KeyBadge label={it.keyLabel} size="sm" />
+              <span className="truncate">{it.title}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
-/** A playlist as a card: a cover in the playlist's colour with its first charts, then its name. */
-export function PlaylistCard({
-  name,
-  count,
-  href,
-  titles,
-  onMenu,
-  featured = false,
-}: {
-  name: string;
-  count: number;
-  href: string;
-  titles: string[];
-  onMenu?: (e: React.MouseEvent) => void;
-  featured?: boolean;
-}) {
-  const color = featured ? "var(--accent)" : nameColor(name);
+/** A folder of charts as a row: a folder icon, its name, how many charts, and its ⋮ menu. */
+export function PlaylistItem({ name, count, href, onMenu, all = false }: { name: string; count: number; href: string; onMenu?: (e: React.MouseEvent) => void; all?: boolean }) {
   return (
-    <div className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl bg-surface transition-colors hover:bg-surface-hover">
-      <Link href={href} className="flex flex-col">
-        <div
-          className="relative h-28 overflow-hidden px-4 pt-4"
-          style={{
-            background: `linear-gradient(140deg, ${tint(color, 34)}, ${tint(color, 10)})`,
-          }}
-        >
-          <div className="flex flex-col gap-1.5">
-            {(titles.length ? titles.slice(0, 3) : ["", "", ""]).map((t, i) => (
-              <div
-                key={i}
-                className="flex h-6 items-center gap-2 rounded-md bg-surface/85 px-2 text-[11px] font-semibold shadow-sm"
-                style={{
-                  marginLeft: i * 10,
-                  marginRight: (2 - i) * 6,
-                  opacity: 1 - i * 0.18,
-                }}
-              >
-                <span className="shrink-0" style={{ color }}>
-                  <ChordChartIcon className="h-3 w-3" />
-                </span>
-                <span className="truncate">{t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-3 pr-12">
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold">{name}</span>
-            <span className="block text-xs text-muted">
-              {count} chart{count === 1 ? "" : "s"}
-            </span>
-          </span>
-        </div>
-      </Link>
-      {onMenu && (
-        <div className="absolute bottom-2.5 right-2">
-          <MenuButton label={`Options for ${name}`} onClick={onMenu} alwaysVisible />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** A setlist as a card: its colour, name, count, shared, and the first tunes in it. */
-export function SetlistCard({ setlist, href, tuneNames }: { setlist: Setlist; href: string; tuneNames: string[] }) {
-  const n = setlist.tuneIds.length;
-  const color = nameColor(setlist.name);
-  return (
-    <Link href={href} className="group flex min-w-0 gap-3 rounded-2xl bg-surface p-3.5 transition-colors hover:bg-surface-hover">
-      <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl leading-none" style={{ background: tint(color, 18), color }}>
-        <span className="text-lg font-extrabold tabular-nums">{n}</span>
-        <span className="text-[9px] font-bold">{n === 1 ? "tune" : "tunes"}</span>
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="truncate font-bold">{setlist.name}</span>
-          {setlist.shareId && (
-            <span title="Shared by link">
-              <ShareIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
-            </span>
-          )}
+    <RowShell
+      href={href}
+      leading={all ? <ChordChartIcon className="h-4 w-4 shrink-0 text-muted" /> : <FolderIcon className="h-4 w-4 shrink-0 text-muted" />}
+      title={name}
+      trailing={
+        <span className="shrink-0 text-xs tabular-nums text-muted">
+          {count} chart{count === 1 ? "" : "s"}
         </span>
-        <span className="mt-0.5 block truncate text-xs text-muted">{setlist.description || (tuneNames.length ? tuneNames.slice(0, 4).join(" · ") : "No tunes yet")}</span>
-      </span>
-      <ChevronRightIcon className="h-4 w-4 shrink-0 self-center text-muted transition-transform group-hover:translate-x-0.5" />
-    </Link>
+      }
+      onMenu={onMenu}
+      reserveMenu={all}
+    />
+  );
+}
+
+/** A setlist as a row: its name (and a share mark), its description or first tunes, how many. */
+export function SetlistItem({ setlist, href, tuneNames }: { setlist: Setlist; href: string; tuneNames: string[] }) {
+  const n = setlist.tuneIds.length;
+  return (
+    <RowShell
+      href={href}
+      title={setlist.name}
+      extra={
+        setlist.shareId && (
+          <span title="Shared by link" className="shrink-0 text-muted">
+            <ShareIcon className="h-3.5 w-3.5" />
+          </span>
+        )
+      }
+      meta={<span className="truncate">{setlist.description || (tuneNames.length ? tuneNames.slice(0, 4).join(" · ") : "No tunes yet")}</span>}
+      trailing={
+        <span className="flex shrink-0 items-center gap-1 text-xs tabular-nums text-muted">
+          {n} tune{n === 1 ? "" : "s"}
+          <ChevronRightIcon className="h-3.5 w-3.5" />
+        </span>
+      }
+    />
   );
 }

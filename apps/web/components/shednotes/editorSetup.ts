@@ -33,7 +33,7 @@ export const editorTheme = EditorView.theme({
   ".cm-placeholder": { color: "var(--muted)" },
   ".cm-panels": { backgroundColor: "var(--surface)", color: "var(--foreground)" },
   ".cm-panels.cm-panels-top": { borderBottom: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)" },
-  // Vim's status: a floating pill in the bottom-left corner, not a full-width bar.
+  // Vim's status: a small floating box in the bottom-left corner, not a full-width bar.
   ".cm-panels.cm-panels-bottom": { position: "absolute", left: "12px", bottom: "12px", right: "auto", zIndex: "5", backgroundColor: "transparent", border: "none" },
   ".cm-vim-panel": {
     display: "flex",
@@ -41,10 +41,10 @@ export const editorTheme = EditorView.theme({
     gap: "8px",
     minHeight: "0",
     padding: "5px 12px 5px 10px",
-    borderRadius: "999px",
+    borderRadius: "6px",
     backgroundColor: "var(--surface)",
     border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)",
-    boxShadow: "0 6px 20px rgb(0 0 0 / 0.18)",
+    boxShadow: "0 4px 12px rgb(0 0 0 / 0.12)",
     fontFamily: "inherit",
     fontSize: "12px",
     lineHeight: "1.2",
@@ -55,7 +55,7 @@ export const editorTheme = EditorView.theme({
   ".cm-vim-panel input": { flex: "1", color: "var(--foreground)", background: "transparent", outline: "none", border: "none", font: "inherit" },
   ".cm-vim-panel > span:last-child:not(:empty)": { fontFamily: "var(--font-mono, ui-monospace), monospace", color: "var(--muted)" },
   // The mode label: "--NORMAL--" hidden, a dot and a name in its place.
-  ".cm-vim-mode": { display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0", fontWeight: "700", cursor: "pointer" },
+  ".cm-vim-mode": { display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0", fontWeight: "500", cursor: "pointer" },
   ".cm-vim-mode::before": { content: "''", width: "7px", height: "7px", borderRadius: "999px", backgroundColor: "var(--muted)" },
   ".cm-vim-mode::after": { content: "'Normal'", fontSize: "12px", color: "var(--foreground)" },
   "&[data-vim-mode=normal] .cm-vim-mode::before": { backgroundColor: "var(--accent)" },
@@ -67,16 +67,16 @@ export const editorTheme = EditorView.theme({
   "&[data-vim-mode=visual] .cm-vim-mode::after": { content: "'Visual'" },
   "&[data-vim-mode=replace] .cm-vim-mode::after": { content: "'Replace'" },
   ".cm-search": { padding: "6px 10px", fontSize: "13px" },
-  ".cm-search input, .cm-search button": { borderRadius: "8px" },
+  ".cm-search input, .cm-search button": { borderRadius: "4px" },
   ".cm-textfield": { backgroundColor: "var(--background)", border: "1px solid color-mix(in oklab, var(--foreground) 15%, transparent)", color: "var(--foreground)", padding: "2px 6px" },
   ".cm-button": { backgroundImage: "none", backgroundColor: "var(--background)", border: "1px solid color-mix(in oklab, var(--foreground) 15%, transparent)", color: "var(--foreground)" },
   ".cm-searchMatch": { backgroundColor: "color-mix(in oklab, var(--accent) 22%, transparent)" },
   ".cm-searchMatch-selected": { backgroundColor: "color-mix(in oklab, var(--accent) 45%, transparent)" },
-  ".cm-tooltip": { backgroundColor: "var(--surface)", color: "var(--foreground)", border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)", borderRadius: "12px", overflow: "hidden", boxShadow: "0 10px 30px rgb(0 0 0 / 0.18)" },
-  // The suggestion menu: padded, rounded rows, an icon per kind, the folder as a small pill.
+  ".cm-tooltip": { backgroundColor: "var(--surface)", color: "var(--foreground)", border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)", borderRadius: "8px", overflow: "hidden", boxShadow: "0 8px 24px rgb(0 0 0 / 0.14)" },
+  // The suggestion menu: padded rows, an icon per kind, the folder as a small muted label.
   ".cm-tooltip.cm-tooltip-autocomplete": { padding: "4px" },
   ".cm-tooltip.cm-tooltip-autocomplete > ul": { fontFamily: "inherit", maxHeight: "18rem", minWidth: "15rem", maxWidth: "min(26rem, 90vw)", fontSize: "0.9em" },
-  ".cm-tooltip-autocomplete > ul > li": { display: "flex", alignItems: "center", gap: "8px", padding: "5px 8px !important", borderRadius: "8px", lineHeight: "1.4" },
+  ".cm-tooltip-autocomplete > ul > li": { display: "flex", alignItems: "center", gap: "8px", padding: "5px 8px !important", borderRadius: "4px", lineHeight: "1.4" },
   ".cm-tooltip-autocomplete > ul > li::before": {
     content: "''",
     flexShrink: "0",
@@ -85,10 +85,10 @@ export const editorTheme = EditorView.theme({
     backgroundColor: "var(--muted)",
     mask: `${ICON_DOC} center / contain no-repeat`,
   },
-  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "color-mix(in oklab, var(--accent) 18%, transparent)", color: "var(--foreground)" },
-  ".cm-tooltip-autocomplete > ul > li[aria-selected]::before": { backgroundColor: "var(--accent)" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "color-mix(in oklab, var(--foreground) 9%, transparent)", color: "var(--foreground)" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]::before": { backgroundColor: "var(--foreground)" },
   ".cm-completionLabel": { minWidth: "0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "800" },
+  ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "700" },
   ".cm-completionDetail": {
     marginLeft: "auto !important",
     flexShrink: "0",
@@ -101,22 +101,22 @@ export const editorTheme = EditorView.theme({
     fontWeight: "500",
     color: "var(--muted)",
     backgroundColor: "color-mix(in oklab, var(--foreground) 7%, transparent)",
-    padding: "1px 7px",
-    borderRadius: "999px",
+    padding: "1px 6px",
+    borderRadius: "3px",
   },
   ".cm-completionIcon": { display: "none" },
   // Word suggestions (the wordCompletion setting): plain words, no icon.
   ".cm-tooltip-autocomplete > ul > li.cm-completion-word::before": { display: "none" },
   // "Create “…”" — the last choice when linking a note that doesn't exist yet.
-  ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "600", marginTop: "2px" },
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "500", marginTop: "2px" },
   ".cm-tooltip-autocomplete > ul > li.cm-completion-create::before": { backgroundColor: "var(--accent)", mask: `${ICON_PLUS} center / contain no-repeat` },
   // "New from “…”" — making a note from a template, at the top of the `[[` suggestions.
-  ".cm-tooltip-autocomplete > ul > li.cm-completion-template": { color: "var(--accent)", fontWeight: "600" },
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-template": { color: "var(--accent)", fontWeight: "500" },
   ".cm-tooltip-autocomplete > ul > li.cm-completion-template::before": { backgroundColor: "var(--accent)", mask: `${ICON_NOTE_PLUS} center / contain no-repeat` },
-  ".cm-tooltip-autocomplete > ul > completion-section": { display: "block", borderBottom: "none !important", padding: "6px 8px 3px", fontSize: "11px", fontWeight: "600", color: "var(--muted)", opacity: "1" },
+  ".cm-tooltip-autocomplete > ul > completion-section": { display: "block", borderBottom: "none !important", padding: "6px 8px 3px", fontSize: "11px", fontWeight: "500", color: "var(--muted)", opacity: "1" },
   ".cm-tooltip-autocomplete > ul > completion-section:not(:first-child)": { marginTop: "4px", paddingTop: "8px", borderTop: "1px solid color-mix(in oklab, var(--foreground) 8%, transparent)" },
   // A template's {{blank}}.
-  ".cm-template-var": { backgroundColor: "color-mix(in oklab, var(--accent) 14%, transparent)", color: "var(--accent)", borderRadius: "6px", padding: "0 2px", fontWeight: "600" },
+  ".cm-template-var": { backgroundColor: "color-mix(in oklab, var(--accent) 14%, transparent)", color: "var(--accent)", borderRadius: "3px", padding: "0 2px", fontWeight: "600" },
   ".cm-diagnostic-error": { borderLeftColor: "var(--danger)" },
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--danger)" },
 
@@ -137,7 +137,7 @@ export const editorTheme = EditorView.theme({
   ".cm-wikilink:hover": { textDecoration: "underline" },
   ".cm-wikilink-missing": { opacity: "0.65" },
   // Tables: drawn (cursor elsewhere), or their source lined up in a fixed-width font.
-  ".cm-table-wrap": { overflowX: "auto", borderRadius: "12px", border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)", cursor: "text" },
+  ".cm-table-wrap": { overflowX: "auto", borderRadius: "6px", border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)", cursor: "text" },
   ".cm-table-wrap table": { borderCollapse: "collapse", width: "100%", fontSize: "0.95em", lineHeight: "1.45" },
   ".cm-table-wrap th, .cm-table-wrap td": { padding: "6px 12px", textAlign: "left", verticalAlign: "top", borderTop: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)" },
   ".cm-table-wrap th + th, .cm-table-wrap td + td": { borderLeft: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)" },
@@ -150,12 +150,12 @@ export const editorTheme = EditorView.theme({
   ".cm-table-src .cm-inline-code, .cm-table-src .cm-tag, .cm-table-src .cm-page-pill": { padding: "0", fontSize: "1em" },
   ".cm-table-src .cm-page-pill::before": { display: "none" },
 
-  // A link to a note or to a page of the site: a rounded pill with a page icon.
+  // A link to a note or to a page of the site: a tinted tag with a page icon.
   ".cm-page-pill": {
     backgroundColor: "color-mix(in oklab, var(--accent) 14%, transparent)",
     color: "var(--accent)",
-    borderRadius: "999px",
-    padding: "0.05em 0.6em 0.1em 0.5em",
+    borderRadius: "4px",
+    padding: "0.05em 0.45em 0.1em 0.4em",
     fontWeight: "600",
     fontSize: "0.92em",
     textDecoration: "none !important",
@@ -179,20 +179,20 @@ export const editorTheme = EditorView.theme({
   ".cm-md-link": { color: "var(--accent)", cursor: "pointer", textDecoration: "underline", textDecorationColor: "color-mix(in oklab, var(--accent) 45%, transparent)" },
   ".cm-inline-code": { backgroundColor: "color-mix(in oklab, var(--foreground) 8%, transparent)", borderRadius: "4px", padding: "0 3px" },
   ".cm-highlight": { backgroundColor: "color-mix(in oklab, var(--accent) 25%, transparent)", borderRadius: "3px" },
-  ".cm-tag": { color: "var(--accent)", backgroundColor: "color-mix(in oklab, var(--accent) 12%, transparent)", borderRadius: "999px", padding: "0 6px" },
-  ".cm-abc": { position: "relative", padding: "10px 12px", borderRadius: "14px", backgroundColor: "var(--background)", color: "var(--foreground)", cursor: "text" },
+  ".cm-tag": { color: "var(--accent)", backgroundColor: "color-mix(in oklab, var(--accent) 12%, transparent)", borderRadius: "4px", padding: "0 4px" },
+  ".cm-abc": { position: "relative", padding: "10px 12px", borderRadius: "6px", border: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)", backgroundColor: "var(--background)", color: "var(--foreground)", cursor: "text" },
   ".cm-abc-editing": { border: "1px dashed color-mix(in oklab, var(--accent) 50%, transparent)" },
   ".cm-abc-paper svg": { maxWidth: "100%" },
   ".cm-abc-empty, .cm-abc-warning": { margin: "0", fontSize: "12px", color: "var(--muted)" },
-  ".cm-score": { padding: "10px 12px", borderRadius: "14px", backgroundColor: "var(--surface)", color: "var(--foreground)", cursor: "text", whiteSpace: "normal", lineHeight: "1.4" },
+  ".cm-score": { padding: "10px 12px", borderRadius: "6px", border: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)", backgroundColor: "var(--surface)", color: "var(--foreground)", cursor: "text", whiteSpace: "normal", lineHeight: "1.4" },
   // A file in the note: drawn by FileEmbeds (React) inside this box.
   ".cm-file": { color: "var(--foreground)", cursor: "text", whiteSpace: "normal", lineHeight: "1.4" },
-  ".cm-file-editing": { padding: "6px", borderRadius: "14px", border: "1px dashed color-mix(in oklab, var(--accent) 50%, transparent)" },
-  ".cm-upload": { display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "12px", backgroundColor: "var(--surface)", color: "var(--muted)", fontSize: "13px", whiteSpace: "normal", lineHeight: "1.4" },
+  ".cm-file-editing": { padding: "6px", borderRadius: "8px", border: "1px dashed color-mix(in oklab, var(--accent) 50%, transparent)" },
+  ".cm-upload": { display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "6px", border: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)", backgroundColor: "var(--surface)", color: "var(--muted)", fontSize: "13px", whiteSpace: "normal", lineHeight: "1.4" },
   ".cm-upload:not(.cm-upload-failed)::before": { content: '""', flex: "none", width: "8px", height: "8px", borderRadius: "999px", backgroundColor: "var(--accent)", animation: "cm-upload-pulse 1s ease-in-out infinite alternate" },
   ".cm-upload-failed": { color: "var(--danger)", backgroundColor: "color-mix(in oklab, var(--danger) 10%, transparent)" },
   ".cm-upload span": { flex: "1", minWidth: "0" },
-  ".cm-upload button": { flex: "none", width: "24px", height: "24px", borderRadius: "999px", fontSize: "16px", lineHeight: "1", color: "inherit", cursor: "pointer" },
+  ".cm-upload button": { flex: "none", width: "24px", height: "24px", borderRadius: "4px", fontSize: "16px", lineHeight: "1", color: "inherit", cursor: "pointer" },
   "@keyframes cm-upload-pulse": { from: { opacity: "0.3" }, to: { opacity: "1" } },
   "@media (prefers-reduced-motion: reduce)": { ".cm-upload::before": { animation: "none" } },
 });

@@ -67,7 +67,7 @@ export default function NativeAudioChip({ input = false }: { input?: boolean }) 
           {input && (
             <>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-muted">Input</span>
+                <span className="text-xs font-medium text-muted">Input</span>
                 <Select
                   value={devices ? inputId : ""}
                   onChange={(inputDeviceId) => setPrefs({ inputDeviceId })}
@@ -81,7 +81,7 @@ export default function NativeAudioChip({ input = false }: { input?: boolean }) 
             </>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Output</span>
+            <span className="text-xs font-medium text-muted">Output</span>
             <Select
               value={prefs.outputDeviceId}
               onChange={(outputDeviceId) => setPrefs({ outputDeviceId })}
@@ -93,7 +93,7 @@ export default function NativeAudioChip({ input = false }: { input?: boolean }) 
           </label>
           <Hint>Where every sound plays: clicks, tones and samples. Pick your audio interface for the lowest delay.</Hint>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-muted">Buffer size</span>
+            <span className="text-xs font-medium text-muted">Buffer size</span>
             <Select
               value={prefs.bufferFrames || DEFAULTS.bufferFrames}
               onChange={(bufferFrames) => setPrefs({ bufferFrames })}
@@ -101,7 +101,7 @@ export default function NativeAudioChip({ input = false }: { input?: boolean }) 
             />
           </label>
           <Hint>Smaller is quicker to respond. If you hear crackles, go one size up.</Hint>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl bg-background p-3 text-sm">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-lg bg-foreground/[0.05] p-3 text-sm">
             <dt className="text-muted">Playing through</dt>
             <dd className="truncate text-right font-medium">{status?.running ? status.device_name || "Default" : "Nothing yet"}</dd>
             <dt className="text-muted">Audio system</dt>
@@ -116,8 +116,8 @@ export default function NativeAudioChip({ input = false }: { input?: boolean }) 
                 </dd>
                 <dt className="text-muted">Device delay</dt>
                 <dd className="text-right font-medium">{ms(status.output_latency_ms)}</dd>
-                <dt className="font-semibold">Total delay</dt>
-                <dd className="text-right font-bold text-accent">{ms(total ?? 0)}</dd>
+                <dt className="font-medium">Total delay</dt>
+                <dd className="text-right font-semibold text-accent">{ms(total ?? 0)}</dd>
               </>
             )}
           </dl>
