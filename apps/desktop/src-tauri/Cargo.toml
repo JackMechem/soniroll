@@ -25,6 +25,9 @@ url = "2"
 web-audio-api = { version = "1.7", default-features = false, features = ["cpal"] }
 # The Recorder: MP3 encoding (LAME, built from source by the crate; see recorder.rs)
 mp3lame-encoder = "0.2.5"
+# Updates: checked at launch (src/updater.tsx); installed on macOS and Windows, announced on Linux.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [dev-dependencies]
 # LAME's decoder, so the Recorder's tests can decode what they encode.

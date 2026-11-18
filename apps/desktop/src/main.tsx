@@ -16,6 +16,7 @@ import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import Sidebar from "@/components/Sidebar";
 import UsernamePrompt from "@/components/UsernamePrompt";
 import GoogleSignIn from "./GoogleSignIn";
+import Updater from "./Updater";
 import { installDownloads } from "./downloads";
 import { installFileDrop } from "./fileDrop";
 import { installExternalLinks } from "./links";
@@ -41,6 +42,7 @@ createRoot(document.getElementById("root")!).render(
     {/* Tokens live in localStorage (the website keeps them in cookies via its server). */}
     <ConvexAuthProvider client={convex} shouldHandleCode={false}>
       <GoogleSignIn />
+      <Updater />
       <SiteSettingsEffects />
       <PracticeTimerAlert />
       <UsernamePrompt />

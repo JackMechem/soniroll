@@ -690,3 +690,38 @@ Jack: "make download links for the desktop app, should be prominent".
 - Checked: tsc, eslint; signed out at 1440 and 390 (no overflow, no console errors; the button
   pointed at the 0.1.6 AppImage on Linux); the landing hero; the sidebar row signed in.
 
+## 2026-11-17 — Updates at launch (Tauri updater)
+
+Jack: check for updates when the app launches; install them on macOS and Windows; on Linux just say
+there's a new version.
+
+- **App:** `tauri-plugin-updater` + `tauri-plugin-process` (Rust and JS), allowed in
+  `capabilities/default.json` (`updater:default`, `process:allow-restart`). `src/Updater.tsx`
+  (mounted in `main.tsx`; nothing in dev builds) checks 3 s after launch. macOS / Windows: downloads
+  and installs straight away with a small card ("Updating to X…", a progress bar), then
+  `relaunch()` (Windows: the NSIS installer runs passively, `installMode: "passive"`, and reopens the
+  app). Linux: a card "soniroll X is out" with Get it → soniroll.com/download (the .deb/.rpm/Nix
+  package update through their package managers). A failure shows a card with the download link.
+- **Signing:** every update is signed; the public key is in `tauri.conf.json` (`plugins.updater`).
+  The private key was generated with `tauri signer generate` (no password) at
+  `~/.tauri/soniroll-updater.key` on Jack's computer — never in the repo — and must be the GitHub
+  secret `TAURI_SIGNING_PRIVATE_KEY` (`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` empty). **Losing it means
+  installed apps can't verify future updates** (they'd need a manual reinstall); keep a copy safe.
+- **Release workflow:** with the secret set, `tauri build` gets `--config {"bundle":
+  {"createUpdaterArtifacts":true}}` (a temp file), so CI and the Nix build never need the key. It
+  uploads `…AppImage.sig`, `…macos-universal.app.tar.gz` (+ `.sig`) and `…windows-x86_64-setup.exe.sig`
+  with the usual stable names, and the publish job writes **`latest.json`** (version, the changelog
+  section as notes, `pub_date`, and per platform the signature and download URL; the universal Mac
+  build is listed as `darwin-aarch64`, `darwin-x86_64` and `darwin-universal`). Without the secret
+  it warns and builds as before.
+- **Endpoint:** `https://www.soniroll.com/api/desktop-update` (`apps/web/app/api/desktop-update/
+  route.ts`) returns the newest Stable release's `latest.json` (the newest of all while every release
+  is a pre-release; `?channel=unstable` for the newest of all), or 204 = no update. GitHub's answers
+  are cached 5 minutes. It has to be deployed (main) before apps can update.
+- **What doesn't update itself:** installs older than the first release with the updater (0.1.6 and
+  before) — they need one manual download.
+- Checked: `cargo check` with the plugins, `tsc`/`eslint` (desktop, web), the manifest script on
+  fake signatures (right keys and URLs), the endpoint locally (204: no release has `latest.json`
+  yet). The Nix pnpm hash updated. **Not checked:** a real signed release, an install, a download,
+  a relaunch — needs the secret and a release.
+

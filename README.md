@@ -73,7 +73,13 @@ nix run github:JackMechem/soniroll/desktop-stable
 publishes the GitHub release (`.github/workflows/desktop-release.yml`) and moves the channel
 branches. For an Unstable release, give the version a suffix (`0.2.0-beta.1`, in all three files
 and the changelog heading) and tag `desktop-v0.2.0-beta.1`. Never commit to `desktop-stable` or
-`desktop-unstable`; only the release workflow moves them. Every push that touches the
+`desktop-unstable`; only the release workflow moves them.
+
+**Updates.** The app checks for updates at launch (installs them on macOS and Windows, says so on
+Linux). Releases need the signing key as the GitHub secret `TAURI_SIGNING_PRIVATE_KEY` (its private
+half lives at `~/.tauri/soniroll-updater.key` on the maintainer's machine; the public half is in
+`tauri.conf.json`); without it a release builds but installed apps won't update to it. The app asks
+`https://www.soniroll.com/api/desktop-update`, which serves the newest release's `latest.json`. Every push that touches the
 app, the website or the packages runs the desktop checks (`desktop-ci.yml`). If `pnpm-lock.yaml`
 changes, the flake's `pnpm` hash for the desktop package changes too: set it to `""`, run
 `nix build .#soniroll-desktop`, and copy in the hash it prints.
