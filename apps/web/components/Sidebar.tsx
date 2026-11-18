@@ -17,7 +17,7 @@ import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
-import { PlansRow } from "@/components/plans/PlansRow";
+import { AppAndPlansRow, PlansRow } from "@/components/plans/PlansRow";
 import { DesktopAppRow, DOWNLOAD_PATH } from "@/components/download/DesktopAppRow";
 import { PLAN_HREF } from "@/lib/storagePlan";
 import {
@@ -991,8 +991,14 @@ export default function Sidebar() {
           className="mt-2 flex flex-col gap-1 border-t border-foreground/10 pt-2"
         >
           <PracticeTimerWidget collapsed={collapsed} />
-          <DesktopAppRow collapsed={collapsed} active={currentPath === DOWNLOAD_PATH} />
-          <PlansRow collapsed={collapsed} path={currentPath} />
+          {collapsed ? (
+            <>
+              <DesktopAppRow active={currentPath === DOWNLOAD_PATH} />
+              <PlansRow collapsed path={currentPath} />
+            </>
+          ) : (
+            <AppAndPlansRow path={currentPath} />
+          )}
           {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
           <SettingsRow collapsed={collapsed} signedIn={isAuthenticated} onOpenTheme={() => setThemeOpen(true)} />
           {collapsed && (

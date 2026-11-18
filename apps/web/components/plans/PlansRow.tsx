@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { navIconButtonClass, navRowClass } from "@/components/navRow";
-import { CloudIcon } from "@/components/tools";
+import { CloudIcon, DownloadIcon } from "@/components/tools";
+import { DOWNLOAD_PATH } from "@/components/download/DesktopAppRow";
+import { inDesktopApp } from "@/lib/deviceFiles";
 import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 
 export const PLANS_PATH = "/plans";
@@ -48,3 +50,30 @@ export function PlansRow({ collapsed = false, large = false, path, onNavigate }:
     </Link>
   );
 }
+
+/** The expanded sidebar's one row for both: "Desktop app" and "Storage" side by side (two full rows
+    were too much next to Support and Settings). Inside the desktop app it's just the plans row. */
+export function AppAndPlansRow({ path }: { path: string }) {
+  const storage = useStoragePlan();
+  const plan = storage?.plan ?? null;
+  const onSection = useOnAccountSection(path);
+  const plansActive = path === PLANS_PATH || onSection;
+  const inApp = useSyncExternalStore(noSubscribe, inDesktopApp, () => false);
+  if (inApp) return <PlansRow path={path} />;
+  // "Desktop app" takes the width it needs; "Storage" gets the rest.
+  const half = (active: boolean, grow: boolean) => `${navRowClass(active, false)} !w-auto gap-2 ${grow ? "flex-1" : "flex-none"}`;
+  return (
+    <div className="flex gap-1">
+      <Link href={DOWNLOAD_PATH} title="Get the desktop app for macOS, Windows and Linux" className={half(path === DOWNLOAD_PATH, false)}>
+        <DownloadIcon className="h-4 w-4 shrink-0 text-accent" />
+        <span className="min-w-0 truncate">Desktop app</span>
+      </Link>
+      <Link href={storage ? PLAN_HREF : PLANS_PATH} title={plan ? `Your storage plan: ${plan.storageGb} GB` : "Storage plans: your files on every device"} className={half(plansActive, true)}>
+        <CloudIcon className="h-4 w-4 shrink-0 text-accent" />
+        <span className="min-w-0 truncate">{plan ? `${plan.storageGb} GB plan` : "Storage"}</span>
+      </Link>
+    </div>
+  );
+}
+
+const noSubscribe = () => () => {};
