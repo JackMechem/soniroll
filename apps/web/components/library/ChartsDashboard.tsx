@@ -15,13 +15,17 @@ import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import StoragePill from "@/components/files/StoragePill";
 
+/** Up to this many charts are listed on the tab itself (all of them when there are no folders). */
+const LIST_ON_TAB_MAX = 40;
+
 export const chartHref = (id: string) => `/chord-charts/view?id=${encodeURIComponent(id)}`;
 export const playlistHref = (id: string) => `/chord-charts/playlist?id=${encodeURIComponent(id)}`;
 
 /**
  * Library's Chord Charts tab — search across every chart, a slim row of the charts you opened
  * lately, then the folders as the main view: All charts first, then each folder (a row each,
- * ⋮ to delete) and a quiet "New folder" row. (Folders are `playlists` in the data and
+ * ⋮ to delete) and a quiet "New folder" row. With no folders or only a few charts, the charts
+ * themselves are listed below too. (Folders are `playlists` in the data and
  * in Convex — only the name people see changed.) The "+ New" menu makes a chart or a folder,
  * or imports. A chart opens on its own page (`ChartViewPage`); every chart row has the chart ⋮
  * menu (`useChartActions`).
@@ -52,6 +56,13 @@ export default function ChartsDashboard() {
       (h) => h.song.title,
     );
   }, [q, index]);
+
+  // With no folders (a new library) or only a few charts, the charts are listed right here under
+  // the folder rows, so they aren't hidden one tap away in "All charts".
+  const listed = useMemo(
+    () => (playlists.length === 0 || totalSongs <= LIST_ON_TAB_MAX ? sortByText([...index.values()], (h) => h.song.title).slice(0, LIST_ON_TAB_MAX) : []),
+    [playlists.length, totalSongs, index],
+  );
 
   const recentCards = recent.ids
     .map((id) => index.get(id))
@@ -145,6 +156,27 @@ export default function ChartsDashboard() {
               </button>
             </Rows>
           </div>
+
+          {listed.length > 0 && (
+            <Panel
+              title="Charts"
+              detail={totalSongs}
+              flush
+              href={totalSongs > listed.length ? playlistHref(ALL_CHARTS_ID) : undefined}
+            >
+              <Rows>
+                {listed.map((h) => (
+                  <ChartItem
+                    key={h.song.id}
+                    song={h.song}
+                    subtitle={[h.song.composer ? formatComposer(h.song.composer) : null, h.playlistName].filter(Boolean).join(" · ")}
+                    href={chartHref(h.song.id)}
+                    onMenu={(e) => openSongMenu(e, h.song, null)}
+                  />
+                ))}
+              </Rows>
+            </Panel>
+          )}
         </div>
       )}
 

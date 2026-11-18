@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from "@/lib/instruments";
+import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
 import InputTest from "@/components/InputTest";
@@ -73,7 +73,7 @@ import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -151,6 +151,7 @@ type HistoryEntry = {
 const PANEL_IDS = [
   "interval-set",
   "interval-range",
+  "interval-timing",
   "interval-listen",
   "interval-sound",
 ];
@@ -371,6 +372,8 @@ export default function IntervalTrainer() {
   const rangeInput = isCustom
     ? customRange
     : (INSTRUMENTS.find((i) => i.id === instrumentId)?.range ?? "");
+  // The chip names the instrument too ("Bass · E1–G4"), like the Note and Scale Trainers.
+  const rangeSummary = `${instrumentShortName(instrumentId)} · ${rangeInput.replace("-", "–")}`;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -1116,14 +1119,14 @@ export default function IntervalTrainer() {
               <span className="font-medium text-muted">
                 {picked.length} of {INTERVALS.length} selected
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={() =>
                     updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })
                   }
                   disabled={running}
-                  className="font-medium text-accent hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   All
                 </button>
@@ -1131,7 +1134,7 @@ export default function IntervalTrainer() {
                   type="button"
                   onClick={() => updateSettings({ intervalIds: [] })}
                   disabled={running}
-                  className="font-medium text-muted hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   None
                 </button>
@@ -1160,7 +1163,7 @@ export default function IntervalTrainer() {
             />
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="interval-range" title="Range" icon={NoteIcon} summary={rangeInput}>
+          <CollapsiblePanel id="interval-range" title="Range" icon={NoteIcon} summary={rangeSummary}>
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1189,7 +1192,7 @@ export default function IntervalTrainer() {
                 options={[
                   ...INSTRUMENTS.map((instrument) => ({
                     value: instrument.id,
-                    label: `${instrument.label} (${instrument.range})`,
+                    label: `${instrument.label} (${instrument.range.replace("-", "–")})`,
                   })),
                   { value: CUSTOM_INSTRUMENT_ID, label: "Custom range…" },
                 ]}
@@ -1214,18 +1217,42 @@ export default function IntervalTrainer() {
               <Hint>The lowest and highest notes to draw starting notes from, e.g. A1-A6.</Hint>
             )}
 
-            {/* In listen mode this becomes "Max time", shown in the Listen mode section instead. */}
-            {!listenMode && (
+          </CollapsiblePanel>
+
+          {/* Timing in its own chip: how long each round shows (Timed), or how long you have to play
+              it and the pause after (Listen). Same setting (`roundSeconds`) either way. */}
+          <CollapsiblePanel
+            id="interval-timing"
+            title={listenMode ? "Time to play" : "Time per interval"}
+            icon={StopwatchIcon}
+            summary={`${roundSeconds} s`}
+          >
+            <AdvancedSlider
+              label={listenMode ? "Time to play" : "Time per interval"}
+              value={roundSeconds}
+              unit="s"
+              min={MIN_ROUND_SECONDS}
+              max={MAX_ROUND_SECONDS}
+              step={0.5}
+              disabled={running}
+              onChange={setRoundSeconds}
+              hint={
+                listenMode
+                  ? "How long you have to finish playing each round before it's marked a miss and moves on."
+                  : "How long each round stays on screen before the next one shows."
+              }
+            />
+            {listenMode && (
               <AdvancedSlider
-                label="Interval"
-                value={roundSeconds}
+                label="Time between rounds"
+                value={advanceDelayMs / 1000}
                 unit="s"
-                min={MIN_ROUND_SECONDS}
-                max={MAX_ROUND_SECONDS}
-                step={0.5}
+                min={MIN_ADVANCE_DELAY_MS / 1000}
+                max={MAX_ADVANCE_DELAY_MS / 1000}
+                step={0.25}
                 disabled={running}
-                onChange={setRoundSeconds}
-                hint="How long each round stays on screen before the next one shows."
+                hint="How long the graded round (with its countdown ring) stays on screen before the next one starts."
+                onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
               />
             )}
           </CollapsiblePanel>
@@ -1241,30 +1268,6 @@ export default function IntervalTrainer() {
               disabled: running,
             }}
           >
-            <AdvancedSlider
-              label="Max time"
-              value={roundSeconds}
-              unit="s"
-              min={MIN_ROUND_SECONDS}
-              max={MAX_ROUND_SECONDS}
-              step={0.5}
-              disabled={running}
-              onChange={setRoundSeconds}
-              hint="How long you have to finish playing each round before it's marked a miss and moves on."
-            />
-
-            <AdvancedSlider
-              label="Time between rounds"
-              value={advanceDelayMs / 1000}
-              unit="s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              disabled={running}
-              hint="How long the graded round (with its countdown ring) stays on screen before the next one starts."
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-            />
-
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}

@@ -24,12 +24,13 @@ import {
   SidebarSettings,
   ToolSettings,
 } from "@/components/settings/SettingsSections";
-import Select from "@/components/Select";
+import { BackButton } from "@/components/library/shared";
 import TunesTab from "@/components/TunesTab";
 import TunesToLearnTab from "@/components/TunesToLearnTab";
 import {
   BookIcon,
   CalendarIcon,
+  ChevronRightIcon,
   GearIcon,
   HomeIcon,
   SlidersIcon,
@@ -646,7 +647,8 @@ const isView = (v: string | null | undefined): v is AccountView => !!v && (ALL_V
     You (profile), Library (Tunes I Know / to Learn), Community (posts, following), Settings
     (site-wide: features, theme, sidebar, dashboard, tools, the Shed Log — `components/settings/`;
     `/settings` redirects here), Account (password and Google, delete). On a
-    phone the nav is a dropdown above the section. The section is kept in the address
+    phone the sections are a list first (when no `?tab=` was asked for); tapping one opens it, with
+    a back button to the list. The section is kept in the address
     bar (`?tab=`), so other pages can link straight to one. Signed out it says so (no redirect). */
 export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -657,6 +659,9 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [view, setView] = useState<AccountView>(isView(initialTab) ? initialTab : "profile");
+  // Phones: the list of sections, until one is picked (or a link asked for one). Wider screens
+  // always show the nav and a section side by side, so this only changes what phones show.
+  const [phoneList, setPhoneList] = useState(!isView(initialTab));
   // A link to another section while you're here (the sidebar's Settings row and its palette
   // button) only changes `?tab=`, so follow the address. (Picking a section below writes the same
   // `?tab=` back, so that never fights it.)
@@ -664,15 +669,20 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const [seenTab, setSeenTab] = useState(urlTab);
   if (urlTab !== seenTab) {
     setSeenTab(urlTab);
-    if (isView(urlTab) && urlTab !== view) setView(urlTab);
+    if (isView(urlTab) && urlTab !== view) {
+      setView(urlTab);
+      setPhoneList(false);
+    }
   }
 
   useEffect(() => {
     const url = new URL(window.location.href);
     if (url.pathname !== "/account") return;
-    url.searchParams.set("tab", view);
+    // A phone showing the list keeps no tab, so reloading shows the list again.
+    if (phoneList && window.matchMedia("(max-width: 767px)").matches) url.searchParams.delete("tab");
+    else url.searchParams.set("tab", view);
     window.history.replaceState(window.history.state, "", url);
-  }, [view]);
+  }, [view, phoneList]);
 
   if (isLoading) {
     return (
@@ -708,6 +718,7 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
 
   function pick(id: AccountView) {
     setView(id);
+    setPhoneList(false);
     window.scrollTo({ top: 0 });
   }
 
@@ -739,15 +750,30 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
       </header>
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
-        {/* Phones: one dropdown for the section. */}
-        <div className="md:hidden">
-          <Select
-            value={view}
-            onChange={pick}
-            className="w-full"
-            options={NAV.flatMap((g) => g.items).map((item) => ({ value: item.id, label: item.label, icon: <item.icon className="h-4 w-4 text-muted" /> }))}
-          />
-        </div>
+        {/* Phones: every section as a list first; tapping one opens it (with a back to the list). */}
+        {phoneList && (
+          <nav aria-label="Account sections" className="flex flex-col gap-5 md:hidden">
+            {NAV.map((g) => (
+              <div key={g.group}>
+                <h2 className="mb-1.5 px-1 text-xs font-medium text-muted">{g.group}</h2>
+                <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
+                  {g.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => pick(item.id)}
+                      className={`flex min-h-12 items-center gap-3 px-4 text-left text-sm transition-colors hover:bg-surface-hover ${item.danger ? "text-danger" : "text-foreground"}`}
+                    >
+                      <item.icon className={`h-4 w-4 shrink-0 ${item.danger ? "" : "text-muted"}`} />
+                      <span className="flex-1">{item.label}</span>
+                      <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+        )}
         <nav aria-label="Account sections" className="hidden w-52 shrink-0 flex-col gap-5 md:sticky md:top-6 md:flex">
           {NAV.map((g) => (
             <div key={g.group}>
@@ -774,8 +800,11 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           ))}
         </nav>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-6">
-          <h2 className="hidden text-xl font-semibold tracking-tight md:block">{current.label}</h2>
+        <div className={`min-w-0 flex-1 flex-col gap-6 ${phoneList ? "hidden md:flex" : "flex"}`}>
+          <div className="flex flex-col gap-3">
+            <BackButton onClick={() => { setPhoneList(true); window.scrollTo({ top: 0 }); }} label="All settings" className="md:hidden" />
+            <h2 className="text-xl font-semibold tracking-tight">{current.label}</h2>
+          </div>
 
           {view === "profile" && <PublicProfileEditor />}
 

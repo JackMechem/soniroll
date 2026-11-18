@@ -26,6 +26,9 @@ import {
   HeartIcon,
   HelpIcon,
   ShieldIcon,
+  DocumentIcon,
+  ShareIcon,
+  UserIcon,
   NAV_LINKS,
   SearchIcon,
   findToolLink,
@@ -1076,16 +1079,47 @@ export default function Sidebar() {
 
 /** The phone top bar's middle: the page you're on (its icon and name), or the logo on pages that
     aren't in the tool list. Library pages all count as Library. */
+/** The phone top bar's name for pages that aren't a tool or a Library/Community/Lessons page. */
+const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { match: (p) => p === "/account" || p === "/settings", label: "Account", href: "/account", icon: GearIcon },
+  { match: (p) => p.startsWith("/u/"), label: "Profile", icon: UserIcon },
+  { match: (p) => p === "/help" || p.startsWith("/help/"), label: "Help", href: "/help", icon: HelpIcon },
+  { match: (p) => p === "/changelog", label: "What's new", href: "/changelog", icon: MegaphoneIcon },
+  { match: (p) => p === "/feedback", label: "Feedback", href: "/feedback", icon: FeedbackIcon },
+  { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
+  { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
+  { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
+  { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },
+  { match: (p) => p === "/admin" || p.startsWith("/admin/"), label: "Admin", href: "/admin", icon: ShieldIcon },
+  { match: (p) => p === "/reset-password", label: "Reset password", icon: ShieldIcon },
+  { match: (p) => /^\/(setlist|routine|tune|file|note)\//.test(p), label: "Shared", icon: ShareIcon },
+];
+
 function MobileBarTitle({ path }: { path: string }) {
-  const link = findToolLink(isLibraryPath(path) || path.startsWith("/tunes/") ? "/tunes" : path) ?? NAV_LINKS.find((l) => l.href !== "/" && path.startsWith(`${l.href}/`));
-  if (path === DASHBOARD_PATH || !link) {
+  const link =
+    findToolLink(isLibraryPath(path) || path.startsWith("/tunes/") ? "/tunes" : path) ??
+    NAV_LINKS.find((l) => l.href !== "/" && (path.startsWith(`${l.href}/`) || (l.href === "/community" && path.startsWith("/post"))));
+  const page = link ? null : PAGE_TITLES.find((t) => t.match(path));
+  const item = link
+    ? { href: link.href, label: link.label.length > 24 && link.short ? link.short : link.label, Icon: link.icon }
+    : page
+      ? { href: page.href, label: page.label, Icon: page.icon }
+      : null;
+  if (path === DASHBOARD_PATH || !item) {
     return (
       <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex items-center rounded-md px-1 py-1">
         <Logo height={24} />
       </Link>
     );
   }
-  const Icon = link.icon;
+  const { Icon } = item;
+  const inner = (
+    <>
+      <Icon className="h-4 w-4 shrink-0 text-muted" />
+      {/* Only very long names use the short one: "Chords" alone would be unclear up here. */}
+      <span className="truncate">{item.label}</span>
+    </>
+  );
   return (
     <div className="flex min-w-0 items-center gap-2">
       <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex shrink-0 items-center rounded-md p-1">
@@ -1093,16 +1127,19 @@ function MobileBarTitle({ path }: { path: string }) {
       </Link>
       <span className="text-foreground/30">/</span>
       {/* The section's name goes to the section (Library → /tunes, a tool → the tool), so from a
-          tune, a chart or a Shed Log day one tap gets you back to its start. */}
-      <Link
-        href={link.href}
-        aria-current={path === link.href ? "page" : undefined}
-        className="-mx-1 flex h-10 min-w-0 items-center gap-1.5 rounded-md px-1 text-sm font-medium hover:bg-surface-hover"
-      >
-        <Icon className="h-4 w-4 shrink-0 text-muted" />
-        {/* Only very long names use the short one: "Chords" alone would be unclear up here. */}
-        <span className="truncate">{link.label.length > 24 && link.short ? link.short : link.label}</span>
-      </Link>
+          tune, a chart or a Shed Log day one tap gets you back to its start. Pages with nowhere
+          further up (a profile, a shared link) show the name alone. */}
+      {item.href ? (
+        <Link
+          href={item.href}
+          aria-current={path === item.href ? "page" : undefined}
+          className="-mx-1 flex h-10 min-w-0 items-center gap-1.5 rounded-md px-1 text-sm font-medium hover:bg-surface-hover"
+        >
+          {inner}
+        </Link>
+      ) : (
+        <span className="flex h-10 min-w-0 items-center gap-1.5 text-sm font-medium">{inner}</span>
+      )}
     </div>
   );
 }

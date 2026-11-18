@@ -124,15 +124,46 @@ export default function LearningPath({
           const isSelected = i === selected;
           const stars = levelStars(progress, level.id);
           const offset = WIND[i % WIND.length] * 2.25;
+          // Where the previous node sits relative to this one (rem), for the connector.
+          const dx = i > 0 ? WIND[(i - 1) % WIND.length] * 2.25 - offset : 0;
           return (
-            <li key={level.id} data-level={i} className="flex flex-col items-center" style={{ transform: `translateX(${offset}rem)` }}>
-              {i > 0 && (
-                <span
-                  aria-hidden
-                  className={`mb-1 h-5 w-0.5 rounded-full ${unlocked ? "bg-accent/50" : "bg-foreground/10"}`}
-                />
-              )}
-              <div className="flex items-center gap-3">
+            // Each level stacks above the next, so the connector reaching up from the next level
+            // passes under this level's node.
+            <li
+              key={level.id}
+              data-level={i}
+              className="relative flex items-end gap-3"
+              style={{ transform: `translateX(${offset}rem)`, zIndex: levels.length - i }}
+            >
+              <div className="relative flex w-12 shrink-0 flex-col items-center">
+                {i > 0 && (
+                  <>
+                    {/* The space for the connector (1.5rem), and the connector itself: a line from
+                        the previous node's centre to this one's, drawn under both nodes so only
+                        the part between them shows. */}
+                    <span aria-hidden className="h-6" />
+                    <svg
+                      aria-hidden
+                      className={`pointer-events-none absolute overflow-visible ${unlocked ? "text-accent/50" : "text-foreground/10"}`}
+                      style={{
+                        left: `calc(50% + ${Math.min(dx, 0)}rem)`,
+                        top: "-1.75rem",
+                        width: `${Math.abs(dx)}rem`,
+                        height: "4.75rem",
+                      }}
+                    >
+                      <line
+                        x1={dx > 0 ? "100%" : dx < 0 ? "0" : "50%"}
+                        y1="0"
+                        x2={dx > 0 ? "0" : dx < 0 ? "100%" : "50%"}
+                        y2="100%"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </>
+                )}
                 <button
                   type="button"
                   disabled={!unlocked}
@@ -149,16 +180,16 @@ export default function LearningPath({
                 >
                   {passed ? <CheckIcon className="h-5 w-5" /> : unlocked ? i + 1 : <LockIcon className="h-4 w-4" />}
                 </button>
-                <div className="flex w-36 flex-col items-start text-left">
-                  <span className={`text-sm font-medium ${unlocked ? "" : "text-muted/60"}`}>{level.title}</span>
-                  {passed ? (
-                    <Stars count={stars} />
-                  ) : isCurrent ? (
-                    <span className="text-xs font-medium text-accent">{isSelected ? "Up next" : "Current level"}</span>
-                  ) : (
-                    <span className="text-xs text-muted/60">Level {i + 1}</span>
-                  )}
-                </div>
+              </div>
+              <div className="flex min-h-12 w-36 flex-col items-start justify-center text-left">
+                <span className={`text-sm font-medium ${unlocked ? "" : "text-muted/60"}`}>{level.title}</span>
+                {passed ? (
+                  <Stars count={stars} />
+                ) : isCurrent ? (
+                  <span className="text-xs font-medium text-accent">{isSelected ? "Up next" : "Current level"}</span>
+                ) : (
+                  <span className="text-xs text-muted/60">Level {i + 1}</span>
+                )}
               </div>
             </li>
           );

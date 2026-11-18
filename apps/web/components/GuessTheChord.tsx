@@ -64,7 +64,7 @@ import { cumulativeItems, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 5;
 const MAX_ROUND_SECONDS = 45;
@@ -890,14 +890,14 @@ export default function GuessTheChord() {
               <span className="font-medium text-muted">
                 {pool.length} of {CHORD_QUALITIES.length} selected
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={() =>
                     updateSettings({ chordIds: CHORD_QUALITIES.map((q) => q.id) })
                   }
                   disabled={running}
-                  className="font-medium text-accent hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   All
                 </button>
@@ -905,7 +905,7 @@ export default function GuessTheChord() {
                   type="button"
                   onClick={() => updateSettings({ chordIds: [] })}
                   disabled={running}
-                  className="font-medium text-muted hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   None
                 </button>

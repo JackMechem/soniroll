@@ -49,7 +49,8 @@ export default function ToolLayout({
   help?: React.ReactNode;
   /** Extra panels (history, logs), shown as chips just above the main display. */
   sidePanel?: React.ReactNode;
-  /** Small, unobtrusive text pinned to the bottom-right corner of the page (e.g. an idea credit). */
+  /** Small, unobtrusive text (e.g. an idea credit): the page's bottom-right corner on desktop,
+      under the option chips on phones. */
   credit?: React.ReactNode;
   /** A mode selector shown above the option chips (e.g. Timed / Listen), for a choice that
       decides which chips there are. */
@@ -104,8 +105,10 @@ export default function ToolLayout({
 
         {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
 
+        {/* Desktop: pinned to the bottom-right corner. Phones: in the page, under the chips (pinned,
+            it covered the last chip). */}
         {credit && (
-          <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 text-xs text-muted/70">
+          <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 hidden text-xs text-muted/70 lg:block">
             {credit}
           </p>
         )}
@@ -121,6 +124,7 @@ export default function ToolLayout({
               {children}
             </section>
             {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
+            {credit && <PhoneCredit>{credit}</PhoneCredit>}
           </main>
         ) : (
           // Phones and tablets: from the top, just under the row of presets/stats (centred, a short
@@ -131,6 +135,7 @@ export default function ToolLayout({
                   {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
                 {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
+                {credit && <PhoneCredit>{credit}</PhoneCredit>}
               </div>
             </section>
           </main>
@@ -163,6 +168,11 @@ function OptionChips({ children, mode }: { children: React.ReactNode; mode?: Rea
   );
 }
 
+/** An idea credit in the page's flow, under the option chips (below `lg`). */
+function PhoneCredit({ children }: { children: React.ReactNode }) {
+  return <p className="text-center text-xs text-muted/70 lg:hidden">{children}</p>;
+}
+
 /** The side panels (history, struggles, logs) as a small row of chips above the main display. */
 function TopChips({ children }: { children: React.ReactNode }) {
   return (
@@ -177,11 +187,17 @@ function TopChips({ children }: { children: React.ReactNode }) {
 function PhoneBar({ href, presets, actions, intro, help }: { href: string | null; presets?: ToolPresets; actions?: React.ReactNode; intro: React.ReactNode; help?: React.ReactNode }) {
   if (!href && !presets && !actions && !intro && !help) return null;
   return (
-    <div className="flex w-full items-center gap-2 text-left lg:hidden">
-      {presets && <PresetsButton tool={presets} />}
-      {href && <ToolStats href={href} />}
+    // Always one line that fits (360–390 wide): the presets button is the part that gives way
+    // (its name truncates; `[&>div]` reaches SettingChip's wrapper), the ? never moves off screen.
+    <div className="flex w-full min-w-0 items-center gap-2 text-left lg:hidden">
+      {presets && (
+        <div className="flex min-w-[2.5rem] shrink [&>div]:min-w-0">
+          <PresetsButton tool={presets} />
+        </div>
+      )}
+      {href && <div className="flex shrink-0"><ToolStats href={href} /></div>}
       {actions}
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         {help}
         {intro}
       </div>

@@ -31,6 +31,11 @@ export const PRIMARY_BUTTON_SM =
 export const SECONDARY_BUTTON_SM =
   "inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50";
 
+/** "All" / "None" / "Reset" above a pool of pill toggles (which intervals, which chords): small
+    round pills, big enough to tap (32px). */
+export const POOL_BUTTON =
+  "inline-flex h-8 items-center justify-center rounded-full bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50";
+
 /** A quiet text-only action ("I don't know", "Clear these times"). */
 export const TEXT_BUTTON = "text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50";
 export const TEXT_BUTTON_DANGER = "self-start text-sm font-medium text-muted transition-colors hover:text-danger disabled:opacity-50";

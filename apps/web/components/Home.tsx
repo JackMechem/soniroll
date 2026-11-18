@@ -88,6 +88,40 @@ function urlAsksToEdit() {
 /** How many weeks the "Days practiced" grid shows at each size. The squares fill the card's
     width, so fewer weeks make them bigger: a small card shows a season (13 weeks) with squares big
     enough to fill it beside Favorites instead of leaving its bottom half empty. */
+/** Columns each size takes in the 12-column desktop grid. */
+const SPAN: Record<CardSize, number> = { small: 4, medium: 6, large: 8, full: 12 };
+
+/** The cards with any row that would end short widened to fill it. Places them the way the grid
+    does outside Edit (in order, each in the first row with room — `grid-flow-row-dense`), then a
+    row that still ends early has its last card grown into the gap when that card is allowed the
+    size it needs. Later cards didn't fit that gap, so growing into it moves nothing else. Display
+    only — the saved sizes don't change. */
+function fillRowGaps(items: DashboardItem[]): DashboardItem[] {
+  const out = items.map((i) => ({ ...i }));
+  const rows: boolean[][] = [];
+  const placed: { item: DashboardItem; row: number; end: number }[] = [];
+  for (const item of out) {
+    const span = SPAN[item.size];
+    for (let r = 0; ; r++) {
+      rows[r] ??= Array(12).fill(false);
+      const col = rows[r].findIndex((_, c) => c + span <= 12 && rows[r].slice(c, c + span).every((taken) => !taken));
+      if (col < 0) continue;
+      for (let c = col; c < col + span; c++) rows[r][c] = true;
+      placed.push({ item, row: r, end: col + span });
+      break;
+    }
+  }
+  rows.forEach((_, r) => {
+    const inRow = placed.filter((p) => p.row === r);
+    const last = inRow.reduce<(typeof inRow)[number] | null>((a, p) => (!a || p.end > a.end ? p : a), null);
+    if (!last || last.end === 12) return;
+    const want = (Object.keys(SPAN) as CardSize[]).find((size) => SPAN[size] === SPAN[last.item.size] + 12 - last.end);
+    const allowed: readonly CardSize[] = cardDef(last.item.id)?.sizes ?? [];
+    if (want && allowed.includes(want)) last.item.size = want;
+  });
+  return out;
+}
+
 const GRID_WEEKS: Record<CardSize, number> = { small: 13, medium: 26, large: 40, full: 52 };
 
 /**
@@ -549,7 +583,9 @@ export default function Home() {
           </div>
         ) : (
           <DashboardGrid
-            items={layout}
+            // Outside Edit, cards that show nothing are left out and a row's hole is closed by
+            // widening a card beside it (signed out, "Pick up where you left off" sat alone).
+            items={editing ? layout : fillRowGaps(layout.filter((i) => available(i.id) && renderCard(i) != null))}
             editing={editing}
             onChange={(dashboard) => updateSite({ dashboard })}
             renderCard={renderCard}

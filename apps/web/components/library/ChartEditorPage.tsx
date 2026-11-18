@@ -6,6 +6,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { PageShell } from "@/components/library/shared";
 import { useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
+import { useRecentCharts } from "@/lib/recents";
 
 /** `?tune=<list>:<id>` — the tune a new chart is being written for (from its page). */
 function parseTune(value: string | null): { list: TuneListId; id: string } | null {
@@ -29,6 +30,8 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
   const { playlists, loading, selectedSong, selectedSongLoading, importSongs, updateSong } = useChordChartsLibrary(editId ?? null);
   const lists = useTuneLists();
   const names = playlists.map((p) => p.name);
+  // A chart you just wrote or edited goes into "Recently opened", like one you opened.
+  const { record: recordRecent } = useRecentCharts();
 
   const forTune = editId ? null : parseTune(params?.get("tune") ?? null);
   const tune = forTune ? lists[forTune.list].tunes.find((t) => t.id === forTune.id) : undefined;
@@ -57,7 +60,10 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
   return (
     <PageShell wide>
       {editId && selectedSong ? (
-        <ChordChartEditor key={editId} initial={selectedSong} onSave={(song) => updateSong(editId, song)} onClose={() => router.back()} />
+        <ChordChartEditor key={editId} initial={selectedSong} onSave={async (song) => {
+            await updateSong(editId, song);
+            recordRecent(editId);
+          }} onClose={() => router.back()} />
       ) : (
         <ChordChartEditor
           playlists={names}
@@ -66,6 +72,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
           onSave={async (song, playlistName) => {
             const { added, ids } = await importSongs([song], playlistName);
             if (added === 0) throw new Error("A chart with this title, composer and key is already in your library.");
+            if (ids[0]) recordRecent(ids[0]);
             // Written for a tune: link it, so the tune's page shows it straight away.
             if (forTune && ids[0]) {
               lists[forTune.list].setTunes((prev) => prev.map((t) => (t.id === forTune.id ? { ...t, chordChartId: ids[0] } : t)));

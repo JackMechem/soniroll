@@ -63,3 +63,57 @@ Hover states, audio. Help screenshots in `public/help/` still show the old look.
   layout, Help's screenshots (need a signed-in retake), Learn mode's inner scroll.
 - The headless browser played the Metronome through Jack's speakers once; it now always runs with
   `--mute-audio` (docs/guides/testing.md).
+
+## Review rounds 4–8, signed in (2026-11-17, later)
+
+Jack asked for five more rounds, signed in to his own account (dev deployment) and with a
+first-impression score for every tool and page. Each round: one UI reviewer, one UX reviewer for
+the tools (signed out, touch-emulated at 390) and one for the other pages (signed in, view only),
+then three fix agents with separate files. The headless Chromium ran with a persistent profile
+(not `--incognito`) so one sign-in served every agent; anything that saves was tested in fresh
+signed-out contexts. Reviewers starred a sidebar tool by accident three times (loose selectors next
+to the favorite stars) — each was undone and checked; later briefs said to navigate with
+`page.goto` and never use `[aria-label*=…]` on the signed-in context.
+
+Scores (UI · tools UX/ease · pages UX/ease): r4 7 · 7.5/7.5 · 7/7; r5 7 · 7.5/7 · 7.5/7;
+r6 8 · 8/8.5 · 8/8; r7 7.5 · 7.5/7.5 · 8/8; r8 7.5 · 8/8 · 8/8. Different reviewers each round,
+so the numbers wobble; the per-page tables in the round reports had most pages at 8–9.
+
+What changed, roughly by area (details in the round commits, 42a8ab3 → the r8 commit):
+- **Shed Log:** missed days are quiet (no red wash/✕; a muted date and dot); month and week views
+  show routine marks filled by progress plus minutes and done/total; past days offer Log time;
+  phones get Today / Calendar tabs and labelled header buttons; Stats steps back through weeks;
+  `--success` / `--warning` tokens; destructive one-taps confirm.
+- **Loading bug Jack saw** (page half signed in for a while): Convex answers a page's first query
+  batch together, and the 386 KB `chordCharts:library` was in it on the dashboard, Shed Log and
+  Library. `useChordChartsLibrary` now subscribes only after `users.current` answers. Not
+  reproduced cold; the most likely cause removed.
+- **Library:** Chord Charts tab is folders-first ("playlist" → "folder" in all UI text; data and
+  Convex names unchanged), a Recent chip row, charts listed on the tab when there are few; Write
+  the chart from a tune pre-fills and links; the editor guards unsaved work (`useLeaveGuard`);
+  chart pages add their tune to a list; Play along → `/rhythm-section?chart=&key=` (web and
+  desktop); Recordings tab with the Files ⋮ menu; standards picker chooses the list; tune-page key
+  grid reads as "keys I know" toggles; chord charts scale crowded bars and keep the time
+  signature clear of marks.
+- **Navigation:** `/` palette and phone menu search find pages, settings, help topics, tunes and
+  charts; Settings row in the sidebar; sidebar scrolls to the current page; phone top-bar name is
+  a link and covers every page; the bug-report button lives in the phone top bar
+  (`FeedbackBarButton`), floating only on desktop; a styled 404; Account on phones lists sections.
+- **Tools:** all chip rows share the reward look (Sticking Warmup left `PLAIN_OPTIONS`); empty
+  History/Struggles chips hidden until there's a result; phone tool pages top-aligned; presets in
+  every tool's top bar (Rhythm Section and Syncopation too); the phone top row always fits;
+  "New" tags only after a second choice in a group; trainers say what to do before round one,
+  name the instrument and have their own timing chip; Slow Downer loops by touch with Loop
+  start/end buttons and shows loop times; Score Writer works on phones (wrapping toolbar, folded
+  fields, cursor kept in view, press-and-release entry); Practice Timer quick timer; Jam Practice
+  empty-state actions and one-tap custom tunes; Interval Trainer with none selected = all.
+- **Theme:** heatmap greens follow light/dark; 7 presets got more surface contrast; thin
+  theme-coloured scrollbars on non-touch screens.
+
+Left for Jack: the Rhodes license before any paid plan (see `support-and-donations.md` /
+PROJECT.md), Help and landing screenshots (retake signed in), the browser Back button not closing
+sheets, the dashboard gap at two-column widths, the Shed Log header icon.
+
+Not verified across these rounds: anything that writes to a signed-in account (logging, linking,
+saving charts, week-view dragging), audio by ear, hover styles, real phones and Safari, the
+desktop app at runtime (tsc only).

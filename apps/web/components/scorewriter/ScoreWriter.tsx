@@ -72,10 +72,10 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
     <ScoreShell
       actions={
         <>
-          <button type="button" onClick={() => fileInput.current?.click()} className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
+          <button type="button" onClick={() => fileInput.current?.click()} className="flex h-8 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             <UploadIcon className="h-4 w-4" /> Import
           </button>
-          <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+          <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
             <PlusIcon className="h-4 w-4" /> New score
           </button>
         </>
@@ -104,7 +104,7 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           <p className="max-w-sm text-sm text-muted">
             {/* Touch screens have no keyboard to type notes with. */}
             <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</span>
-            <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap the note names (C to B) to add notes, or switch to Write and tap the staff.</span>
+            <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap a length and a note name (C to B) to add notes, or switch to Write, hold a finger on the staff and lift to add one.</span>
           </p>
           <button type="button" onClick={() => void make()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             New score
@@ -201,7 +201,7 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
   const [deleting, setDeleting] = useState(false);
   const { change, flush, saveState } = useAutosave((t: Transcription) => save(id, t));
 
-  const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
+  const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
   return (
     <ScoreShell>
       <ScoreEditor

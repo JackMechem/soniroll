@@ -289,9 +289,10 @@ export default function NoteList({
         </button>
       </div>
       {!query && (
-        <div className="flex items-center gap-4 border-b border-foreground/10 px-1 text-xs">
+        <div className="flex items-center gap-1 border-b border-foreground/10 text-sm">
+          {/* The same underline tabs as the Library's. */}
           {(["folders", "recent"] as const).map((s) => (
-            <button key={s} type="button" onClick={() => setSort(s)} aria-pressed={sort === s} className={`-mb-px border-b-2 py-1.5 font-medium transition-colors ${sort === s ? "border-foreground text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
+            <button key={s} type="button" onClick={() => setSort(s)} aria-pressed={sort === s} className={`-mb-px flex h-10 items-center border-b-2 px-2 transition-colors ${sort === s ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
               {s === "folders" ? "Folders" : "Recent"}
             </button>
           ))}

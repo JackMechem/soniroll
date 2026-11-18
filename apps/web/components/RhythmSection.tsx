@@ -8,6 +8,7 @@ import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
+import { RewardProvider } from "@/components/reward/Reward";
 import ToolLayout from "@/components/ToolLayout";
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import BassPlayersTab from "@/components/bassgenius/BassPlayersTab";
@@ -1241,19 +1242,23 @@ export default function RhythmSection({
       options={null}
       presets={presets}
     >
-      <Segmented
-        onPage
-        label="Rhythm Section section"
-        value={tab}
-        onChange={(v) => {
-          if (v !== "play") stop();
-          update({ tab: v });
-        }}
-        options={[
-          { value: "play", label: "Band" },
-          { value: "players", label: "Bass players" },
-        ]}
-      />
+      {/* The shared switch in its reward look (the gradient), like the other tools' mode switches
+          and the Shed Log's views; the rest of this page keeps its own plain options. */}
+      <RewardProvider href="/rhythm-section" color="var(--accent)">
+        <Segmented
+          onPage
+          label="Rhythm Section section"
+          value={tab}
+          onChange={(v) => {
+            if (v !== "play") stop();
+            update({ tab: v });
+          }}
+          options={[
+            { value: "play", label: "Band" },
+            { value: "players", label: "Bass players" },
+          ]}
+        />
+      </RewardProvider>
       {tab === "play" && transport}
       {tab === "players" ? (
         <BassPlayersTab />

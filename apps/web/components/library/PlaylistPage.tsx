@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { chartHref } from "@/components/library/ChartsDashboard";
-import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, Pill, Rows } from "@/components/library/ui";
+import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, Pill, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
 import { ChordChartIcon, DotsVerticalIcon, PlusIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
@@ -50,25 +50,26 @@ export default function PlaylistPage({ id }: { id: string }) {
         backHref="/tunes?tab=charts"
         backLabel="Chord Charts"
         subtitle={playlist ? `${isAll ? "Every chart in your library" : "Folder"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
-        actions={
-          playlist ? (
-            <>
-              <Pill primary icon={PlusIcon} label="New chart" href={isAll ? "/chord-charts/new" : `/chord-charts/new?playlist=${encodeURIComponent(playlist.name)}`} iconOnlyOnPhone />
-              {!isAll && (
-                <button
-                  type="button"
-                  onClick={(e) => openPlaylistMenu(e, { id: playlist.id, name: playlist.name, count: playlist.songs.length })}
-                  aria-label={`Options for ${playlist.name}`}
-                  className="flex h-10 w-10 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
-                >
-                  <DotsVerticalIcon className="h-4 w-4" />
-                </button>
-              )}
-            </>
-          ) : undefined
-        }
+        rule={false}
       >
-        {playlist && !loading && <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${playlist.songs.length} in ${playlist.name}…`} />}
+        {/* Search, then a labelled New chart and the folder's ⋮ on the same row (phones too). */}
+        {playlist && !loading && (
+          <Toolbar>
+            <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${playlist.songs.length} in ${playlist.name}…`} />
+            <Pill primary icon={PlusIcon} label="New chart" href={isAll ? "/chord-charts/new" : `/chord-charts/new?playlist=${encodeURIComponent(playlist.name)}`} />
+            {!isAll && (
+              <button
+                type="button"
+                onClick={(e) => openPlaylistMenu(e, { id: playlist.id, name: playlist.name, count: playlist.songs.length })}
+                aria-label={`Options for ${playlist.name}`}
+                title="More"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
+              >
+                <DotsVerticalIcon className="h-4 w-4" />
+              </button>
+            )}
+          </Toolbar>
+        )}
       </Hero>
       {loading ? (
         <div className="flex justify-center py-16">

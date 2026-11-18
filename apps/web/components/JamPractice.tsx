@@ -299,9 +299,13 @@ export default function JamPractice() {
         </p>
       )}
 
+      {/* Nothing to pick from (no tunes, standards off): disabled; the empty state above has the
+          two ways in. */}
       <button
         type="button"
         onClick={pickRandom}
+        disabled={!pickFromStandards && tunes.length === 0}
+        title={!pickFromStandards && tunes.length === 0 ? "Add a tune or use the jazz standards first" : undefined}
         className={BIG_PRIMARY}
       >
         {pick ? "Pick another" : "Pick a tune"}

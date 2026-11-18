@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from "@/lib/instruments";
+import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
@@ -64,7 +64,7 @@ import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learnin
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -828,14 +828,14 @@ export default function GuessTheInterval() {
               <span className="font-medium text-muted">
                 {pool.length} of {INTERVALS.length} selected
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={() =>
                     updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })
                   }
                   disabled={running}
-                  className="font-medium text-accent hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   All
                 </button>
@@ -843,7 +843,7 @@ export default function GuessTheInterval() {
                   type="button"
                   onClick={() => updateSettings({ intervalIds: [] })}
                   disabled={running}
-                  className="font-medium text-muted hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   None
                 </button>
@@ -875,7 +875,7 @@ export default function GuessTheInterval() {
           </CollapsiblePanel>
           )}
 
-          <CollapsiblePanel id="guess-range" title="Range" icon={NoteIcon} summary={rangeInput}>
+          <CollapsiblePanel id="guess-range" title="Range" icon={NoteIcon} summary={`${instrumentShortName(instrumentId)} · ${rangeInput.replace("-", "–")}`}>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Instrument</span>
               <Select
@@ -885,7 +885,7 @@ export default function GuessTheInterval() {
                 options={[
                   ...INSTRUMENTS.map((instrument) => ({
                     value: instrument.id,
-                    label: `${instrument.label} (${instrument.range})`,
+                    label: `${instrument.label} (${instrument.range.replace("-", "–")})`,
                   })),
                   { value: CUSTOM_INSTRUMENT_ID, label: "Custom range…" },
                 ]}

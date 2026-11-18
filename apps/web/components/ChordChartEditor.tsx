@@ -168,7 +168,21 @@ function toRealBar(eb: EditableBar): Bar {
     elsewhere. */
 const NO_PLAYLIST = "\u0000none";
 
-/** The chart the editor's fields describe. */
+/** A bar with nothing in it at all: no chords, no "%", no marks, nothing carried from an import. */
+function isBlankBar(eb: EditableBar) {
+  return (
+    !eb.text.trim() &&
+    !eb.isRepeatBar &&
+    !eb.hasSection &&
+    !eb.startRepeat &&
+    !eb.endRepeat &&
+    !eb.coda &&
+    !(eb.extra && Object.keys(eb.extra).length > 0)
+  );
+}
+
+/** The chart the editor's fields describe. Empty bars at the end are left off (Enter after the
+    last bar adds one, ready to type into), keeping at least one bar. */
 function songOf(f: { title: string; composer: string; style: string; key: string; top: number; bottom: number; bars: EditableBar[] }): IRealSong {
   return {
     title: f.title.trim(),
@@ -176,8 +190,14 @@ function songOf(f: { title: string; composer: string; style: string; key: string
     style: f.style.trim(),
     key: f.key.trim(),
     timeSignature: { top: f.top, bottom: f.bottom },
-    bars: f.bars.map(toRealBar),
+    bars: trimTrailingBlank(f.bars).map(toRealBar),
   };
+}
+
+function trimTrailingBlank(bars: EditableBar[]) {
+  let end = bars.length;
+  while (end > 1 && isBlankBar(bars[end - 1])) end--;
+  return end === bars.length ? bars : bars.slice(0, end);
 }
 
 export default function ChordChartEditor({

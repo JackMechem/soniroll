@@ -624,7 +624,7 @@ export default function ScoreEditor({
               {(
                 [
                   ["select", "Select", "Clicks only select a note, or a whole bar (Shift+click for a range). Esc"],
-                  ["write", "Write", "Clicking the staff adds a note, or re-pitches the one in that spot. W"],
+                  ["write", "Write", "Clicking the staff adds a note, or re-pitches the one in that spot (on a touch screen, hold to see the note, lift to add it). W"],
                 ] as const
               ).map(([m, label, title]) => (
                 <button
@@ -814,8 +814,12 @@ export default function ScoreEditor({
         </div>
 
         <details className="px-1 text-xs text-muted">
-          <summary className="cursor-pointer select-none font-medium hover:text-foreground">Keyboard and mouse shortcuts</summary>
-          <p className="mt-2">{KEY_HELP}</p>
+          <summary className="cursor-pointer select-none font-medium hover:text-foreground">
+            <span className="[@media(pointer:coarse)]:hidden">Keyboard and mouse shortcuts</span>
+            <span className="hidden [@media(pointer:coarse)]:inline">How to write on a touch screen</span>
+          </summary>
+          <p className="mt-2 [@media(pointer:coarse)]:hidden">{KEY_HELP}</p>
+          <p className="mt-2 hidden [@media(pointer:coarse)]:block">{TOUCH_HELP}</p>
         </details>
       </div>
     </div>
@@ -824,6 +828,9 @@ export default function ScoreEditor({
 
 const KEY_HELP =
   "Select mode (Esc): clicks only select — a note, or a whole bar (click beside its notes; Shift+click another bar for a range); right-click bars to copy, paste or clear their chords (Ctrl+C / Ctrl+V). Write mode (W): clicking the staff adds notes. Keys: A–G add a note (nearest the last one) · 3 4 5 6 7 = 16th, 8th, quarter, half, whole · . dot · T triplet · 0 or R rest · ↑ ↓ semitone, Shift+↑ ↓ octave · # sharp, - flat, N natural · + tie · X ghost note · ← → move · Backspace turns a note into a rest · Space play · Ctrl+Z undo. Chords: select a note, then + Chord (Ctrl+K), type it, Enter — Space/Tab goes on to the next note's, an empty one removes it, click a chord to edit it. In write mode, click the staff to add a note there, or above/below an existing note to change its pitch (the preview shows which); click a note's head (or arrow to it) to select it — typing then overwrites it and moves on, keeping the rhythm — then the note-value, dot and triplet buttons change that note; Esc goes back to entering. New notes go after the cursor.";
+
+const TOUCH_HELP =
+  "Tap a length, then a note name (C to B) to add a note after the cursor; the rest button adds a rest and ⌫ deletes. More has sharps and flats, octaves, ties, ghost notes and chords. In Write, hold a finger on the staff to see which note it is, slide up or down to change it, and lift to add it (or to re-pitch the note in that spot); scroll away to cancel. Tap a note to select it: a length, dot or triplet then changes that note, and a note name overwrites it.";
 
 /** Scrolls the line of music with the cursor in it (the row holding the caret) into view inside
     whatever scrolls the editor (the page, or a dialog), clear of the stuck palette above it, but

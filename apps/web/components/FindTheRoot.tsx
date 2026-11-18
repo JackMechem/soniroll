@@ -74,7 +74,7 @@ import { useToolActivity } from "@/lib/toolTime";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
-import { PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 /** How long the voicing rings. */
 const CHORD_SECONDS = 2.2;
@@ -718,18 +718,18 @@ export default function FindTheRoot() {
                 <span className="font-medium text-muted">
                   {chosenTypes.length || ROOTLESS_TYPES.length} of {ROOTLESS_TYPES.length} in play
                 </span>
-                <div className="flex gap-3">
+                <div className="flex gap-1.5">
                   <button
                     type="button"
                     onClick={() => updateSettings({ typeIds: ROOTLESS_TYPES.map((t) => t.id) })}
-                    className="font-medium text-accent hover:underline"
+                    className={POOL_BUTTON}
                   >
                     All
                   </button>
                   <button
                     type="button"
                     onClick={() => updateSettings({ typeIds: [...DEFAULT_ROOTLESS_TYPE_IDS] })}
-                    className="font-medium text-muted hover:underline"
+                    className={POOL_BUTTON}
                   >
                     Reset
                   </button>
@@ -774,7 +774,7 @@ export default function FindTheRoot() {
                   <button
                     type="button"
                     onClick={() => updateSettings({ roots: [] })}
-                    className="font-medium text-accent hover:underline"
+                    className={POOL_BUTTON}
                   >
                     All
                   </button>
@@ -980,6 +980,15 @@ export default function FindTheRoot() {
             {!round ? "—" : status && target ? chordLabel(target) : "?"}
           </p>
         </div>
+
+        {/* Before the first round, say what's about to happen (like the other ear trainers). */}
+        {!round && !running && (
+          <p className="max-w-xs text-center text-sm text-muted">
+            {answerMode === "sing"
+              ? "Press Start, listen to the chord, then sing or play its root."
+              : "Press Start, listen to the chord, then pick its root."}
+          </p>
+        )}
 
         {round && (
           <div className="flex flex-col items-center gap-1 text-center">

@@ -535,7 +535,12 @@ export function TempoHero({
       {/* Its own row under the −/number/+ one (not inside the number's column), so a note-value
           picker can be wider than the number without crowding the steppers. */}
       <span className={`flex items-center gap-1.5 text-sm text-muted ${tempoNote ? "mt-1" : ""}`}>
-        {reward && <Sparkle show={!locked && bpm % 10 === 0} at={bpm} color={reward.color} />}
+        {/* The ✦ marks a round tempo (a multiple of 10), with a tooltip saying so. */}
+        {reward && !locked && bpm % 10 === 0 && (
+          <span role="img" aria-label="Round tempo" title="Round tempo: a multiple of 10" className="flex cursor-help">
+            <Sparkle show at={bpm} color={reward.color} />
+          </span>
+        )}
         {tempoNote}
         <span>
           BPM · {beatsPerBar}/{beatUnit}

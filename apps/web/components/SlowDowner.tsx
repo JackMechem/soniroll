@@ -58,6 +58,9 @@ function sliderStyle(value: number, min: number, max: number) {
 const MOUSE_ONLY = "[@media(pointer:coarse)]:hidden";
 const TOUCH_ONLY = "hidden [@media(pointer:coarse)]:inline";
 
+/** The shortest loop the Loop start / Loop end buttons make, in seconds. */
+const MIN_LOOP_SECONDS = 0.05;
+
 const loopButton =
   "inline-flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
 
@@ -125,6 +128,8 @@ export default function SlowDowner() {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
   const [pendingDelete, setPendingDelete] = useState<LibraryEntry | null>(null);
+  const [loopNote, setLoopNote] = useState<string | null>(null);
+  const loopNoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mediaRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -318,24 +323,30 @@ export default function SlowDowner() {
     setLoopOn(true);
   }
 
-  /** Sets one end of the loop. With no loop yet, or an end that would land on the wrong side of
-      the other one, a new 5-second loop starts (or ends) there instead. */
+  /** Sets one end of the loop. With no loop yet, a new 5-second loop starts (or ends) there. A
+      start past the loop's end starts a new 5-second loop there (moving on through the song); an
+      end at or before the start is ignored, with a short note saying why (it used to make a new
+      loop somewhere unexpected). */
   function setEdge(edge: "start" | "end", t: number) {
     const clamped = Math.min(duration, Math.max(0, t));
-    setLoop((prev) => {
-      let next: LoopRegion;
-      if (edge === "start") {
-        next = prev && clamped < prev.end - 0.05 ? { ...prev, start: clamped } : { start: clamped, end: Math.min(duration, clamped + 5) };
-      } else {
-        next = prev && clamped > prev.start + 0.05 ? { ...prev, end: clamped } : { start: Math.max(0, clamped - 5), end: clamped };
-      }
-      if (next.end - next.start < 0.05) {
-        if (edge === "start") next.start = Math.max(0, next.end - 0.05);
-        else next.end = Math.min(duration, next.start + 0.05);
-      }
-      return next;
-    });
+    let next: LoopRegion;
+    if (edge === "start") {
+      next = loop && clamped < loop.end - MIN_LOOP_SECONDS ? { ...loop, start: clamped } : { start: clamped, end: Math.min(duration, clamped + 5) };
+      if (next.end - next.start < MIN_LOOP_SECONDS) next.start = Math.max(0, next.end - MIN_LOOP_SECONDS);
+    } else {
+      if (clamped <= (loop ? loop.start : 0) + MIN_LOOP_SECONDS) return showLoopNote("End must be after the start");
+      next = loop ? { ...loop, end: clamped } : { start: Math.max(0, clamped - 5), end: clamped };
+    }
+    setLoopNote(null);
+    setLoop(next);
     setLoopOn(true);
+  }
+
+  /** A short note under the loop buttons that clears itself. */
+  function showLoopNote(text: string) {
+    setLoopNote(text);
+    if (loopNoteTimer.current) clearTimeout(loopNoteTimer.current);
+    loopNoteTimer.current = setTimeout(() => setLoopNote(null), 3000);
   }
 
   function clearLoop() {
@@ -746,10 +757,14 @@ export default function SlowDowner() {
             )}
           </div>
 
-          <div className="flex w-full items-center justify-between text-xs text-muted">
-            <span>
-              {analyzing ? "Analyzing audio…" : peaks ? "" : "Waveform unavailable for this file"}
-            </span>
+          <div className="flex w-full flex-wrap items-center justify-between gap-y-2 text-xs text-muted">
+            {/* Touch screens have no Shift + drag, so say how to make a loop there (its own line). */}
+            {peaks && !analyzing && (
+              <p className="hidden basis-full text-center [@media(pointer:coarse)]:block">
+                {loop ? "Drag the loop's edges to change it" : "Drag across the wave to loop a section"}
+              </p>
+            )}
+            <span>{analyzing ? "Analyzing audio…" : peaks ? "" : "Waveform unavailable for this file"}</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -873,6 +888,9 @@ export default function SlowDowner() {
               Add marker
             </button>
           </div>
+          <p role="status" aria-live="polite" className={`-mt-3 text-sm text-muted ${loopNote ? "" : "sr-only"}`}>
+            {loopNote}
+          </p>
 
           <ul
             aria-label="Controls"

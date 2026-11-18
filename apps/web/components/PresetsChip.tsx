@@ -46,14 +46,15 @@ export function PresetsButton({ tool }: { tool: ToolPresets }) {
       open={open}
       onOpenChange={setOpen}
       trigger={{
-        className: "flex h-8 max-w-[14rem] shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover",
+        // min-w-0 (no shrink-0): on a phone's crowded top row the name truncates rather than
+        // pushing the row off screen (`ToolLayout`'s PhoneBar lets it shrink).
+        className: "flex h-8 min-w-0 max-w-[14rem] items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover",
         content: (
           <>
             <BookmarkIcon className="h-4 w-4 shrink-0 text-accent" />
-            {/* Phones: just the preset in use, or "Presets" while there's none to show. */}
-            <span className={state.active ? "hidden text-muted sm:inline" : "text-muted"}>Presets</span>
-            {(state.active || state.presets.length > 0) && <span className="truncate font-medium">{currentLabel(state)}</span>}
-            {!state.active && state.presets.length === 0 && <span className="hidden truncate font-medium sm:inline">{currentLabel(state)}</span>}
+            {/* Phones: just the preset in use, or "Presets" while none is (no "Custom"/"None"). */}
+            <span className={state.active ? "hidden text-muted sm:inline" : "truncate text-muted"}>Presets</span>
+            <span className={`truncate font-medium ${state.active ? "" : "hidden sm:inline"}`}>{currentLabel(state)}</span>
           </>
         ),
       }}

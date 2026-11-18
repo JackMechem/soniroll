@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
-import { CheckIcon, CloseIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
+import { CheckIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
 import RoutineIcon, { routineIconElement } from "@/components/practicelog/RoutineIcon";
 import { hasFixedTimes } from "@/components/practicelog/RoutineTime";
 import WeekPopover, { type WeekTarget } from "@/components/practicelog/WeekPopover";
@@ -86,8 +86,8 @@ export function MonthView({
           const past = key < today;
           const { done, total } = dayProgress(data, key);
           // A past day: green with a check when everything was done, yellow with a dash when some
-          // of it was. A day where nothing was done only gets a quiet muted X by the date — a run
-          // of missed days shouldn't read as a wall of errors.
+          // of it was. A day where nothing was done only gets a muted date and a faint dot (no X —
+          // that read as close/delete); a run of missed days shouldn't read as a wall of errors.
           const status = dayStatus(data, key, today);
           const tint = status && status !== "missed" ? status : null;
           // Names only where they tell you something: today and the days to come (what's planned).
@@ -122,7 +122,7 @@ export function MonthView({
                 <span className="flex items-center gap-1">
                   <span
                     className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-medium tabular-nums ${
-                      key === today ? "bg-accent text-accent-foreground" : inMonth ? "" : "text-muted"
+                      key === today ? "bg-accent text-accent-foreground" : inMonth && status !== "missed" ? "" : "text-muted"
                     }`}
                   >
                     {d.getDate()}
@@ -1136,9 +1136,7 @@ function DayGoal({
         {minutes > 0 ? (
           formatMinutesShort(Math.round(minutes))
         ) : status === "missed" ? (
-          <>
-            <CloseIcon className="h-2.5 w-2.5" /> Missed
-          </>
+          "Missed"
         ) : (
           "0 min"
         )}
@@ -1247,12 +1245,13 @@ const STATUS_COLOR: Record<DayStatus, string> = { done: "var(--success)", partia
 const STATUS_LABEL: Record<DayStatus, string> = { done: "Everything done", partial: "Partly done", missed: "Missed" };
 
 /** The mark by a past day's date: a green check, a yellow dash — or, when nothing was done, just a
-    small muted X (quiet on purpose: a run of missed days shouldn't fill the month with red). */
+    faint dot (quiet on purpose: a run of missed days shouldn't fill the month with red, and an X
+    read as a button to close or delete the day). */
 function StatusBadge({ status }: { status: DayStatus }) {
   if (status === "missed")
     return (
-      <span className="flex h-4 w-4 items-center justify-center text-muted/70" title={STATUS_LABEL[status]}>
-        <CloseIcon className="h-2.5 w-2.5" />
+      <span className="flex h-4 w-4 items-center justify-center" title={STATUS_LABEL[status]} role="img" aria-label={STATUS_LABEL[status]}>
+        <span className="h-1.5 w-1.5 rounded-full bg-foreground/25" />
       </span>
     );
   return (

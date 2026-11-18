@@ -219,6 +219,12 @@ export default function TunesDashboard() {
         <StandardsPicker
           tunes={lists[addingStandard].tunes}
           setTunes={lists[addingStandard].setTunes}
+          // Say (and let you switch) which list the standards go into. Tunes to Learn needs an account.
+          listChoice={{
+            value: addingStandard,
+            options: (isAuthenticated ? (["tunes", "learn"] as TuneListId[]) : (["tunes"] as TuneListId[])).map((l) => ({ value: l, label: TUNE_LIST_LABEL[l] })),
+            onChange: (l) => setAddingStandard(l as TuneListId),
+          }}
           onClose={() => setAddingStandard(null)}
           onCreateCustom={(name) => {
             setCreating({ list: addingStandard, tune: blankTune(name) });

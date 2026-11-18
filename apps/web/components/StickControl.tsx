@@ -325,9 +325,10 @@ export default function StickControl() {
         </OptionsCard>
       }
     >
-      {/* On phones Start comes straight after the tempo and beats (CSS order), so it's on screen
-          without scrolling past the patterns; on bigger screens it sits under them. */}
-      <div className="flex w-full max-w-5xl flex-col items-center gap-4">
+      {/* Phones (CSS order): the pattern first, then New pattern / Start, then the tempo and beats,
+          then the next pattern — so the music and Start are both on the first screen. Bigger
+          screens: tempo, beats, the patterns, then the buttons. */}
+      <div className="flex w-full max-w-5xl flex-col items-center gap-4 max-sm:order-3">
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
 
         <BeatIndicator
@@ -337,32 +338,34 @@ export default function StickControl() {
         />
       </div>
 
-      <div className="flex w-full flex-col items-center gap-4 max-sm:order-1">
-        {/* Deliberately NOT capped at max-w-5xl like the controls above: StickControlStave measures
-            its own container's real width (via ResizeObserver) to decide how many bars fit on one
-            row, and capping that width artificially forces it to wrap sooner than the screen
-            actually requires — reported directly ("the music lines should be able to be in one line
-            if the screen is big enough"). The notation gets the full width ToolLayout's own stacked
-            layout already gives this page's content section. */}
-        {pattern && <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />}
-
-        {nextPattern && (
-          <div className="flex w-full flex-col items-center gap-2">
-            <p className="text-xs font-medium text-muted">Next</p>
-            <StickControlStave
-              pattern={nextPattern}
-              activeBarIndex={null}
-              background="background"
-            />
-          </div>
-        )}
-      </div>
-
-      {phaseLabel && (
-        <p className="-my-2 text-sm font-medium text-accent">{phaseLabel}</p>
+      {/* Deliberately NOT capped at max-w-5xl like the controls above: StickControlStave measures
+          its own container's real width (via ResizeObserver) to decide how many bars fit on one
+          row, and capping that width artificially forces it to wrap sooner than the screen
+          actually requires — reported directly ("the music lines should be able to be in one line
+          if the screen is big enough"). The notation gets the full width ToolLayout's own stacked
+          layout already gives this page's content section. */}
+      {pattern && (
+        <div className="flex w-full flex-col items-center max-sm:order-1">
+          <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />
+        </div>
       )}
 
-      <div className="flex items-center gap-3">
+      {nextPattern && (
+        <div className="flex w-full flex-col items-center gap-2 max-sm:order-4">
+          <p className="text-xs font-medium text-muted">Next</p>
+          <StickControlStave
+            pattern={nextPattern}
+            activeBarIndex={null}
+            background="background"
+          />
+        </div>
+      )}
+
+      {phaseLabel && (
+        <p className="-my-2 text-sm font-medium text-accent max-sm:order-2">{phaseLabel}</p>
+      )}
+
+      <div className="flex items-center gap-3 max-sm:order-2">
         <button
           type="button"
           onClick={() => advanceStickControlPattern()}

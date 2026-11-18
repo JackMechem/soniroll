@@ -52,7 +52,8 @@ type Drag =
       moved: boolean;
     }
   | { kind: "tap"; startX: number; lastX: number; lastY: number; moved: boolean }
-  | { kind: "handle"; edge: "start" | "end" }
+  /** A loop edge: grabbed once the pointer moves past `threshold` px; a short tap seeks instead. */
+  | { kind: "handle"; edge: "start" | "end"; startX: number; threshold: number; moved: boolean }
   | { kind: "select"; anchorX: number; anchorTime: number; moved: boolean };
 
 /**
@@ -432,7 +433,15 @@ export default function Waveform({
       return;
     }
     const edge = (e.target as HTMLElement).dataset.edge as "start" | "end" | undefined;
-    if (edge) dragRef.current = { kind: "handle", edge };
+    // A finger wobbles more than a mouse, so it needs to travel further before it grabs the edge.
+    if (edge)
+      dragRef.current = {
+        kind: "handle",
+        edge,
+        startX: e.clientX,
+        threshold: e.pointerType === "touch" ? 10 : DRAG_THRESHOLD_PX,
+        moved: false,
+      };
     else if (e.shiftKey || (mode === "pan" && e.pointerType === "touch")) {
       dragRef.current = {
         kind: "select",
@@ -517,6 +526,8 @@ export default function Waveform({
     }
     const t = timeAt(e.clientX);
     if (drag.kind === "handle" && loop) {
+      if (!drag.moved && Math.abs(e.clientX - drag.startX) < drag.threshold) return;
+      drag.moved = true;
       onLoopChange(
         drag.edge === "start"
           ? { start: Math.min(t, loop.end - MIN_LOOP), end: loop.end }
@@ -558,7 +569,8 @@ export default function Waveform({
     }
     if (drag.kind === "pan") {
       if (!drag.moved && drag.seek) onSeek(timeAt(e.clientX));
-    } else if (drag.kind === "select" && !drag.moved) {
+    } else if ((drag.kind === "select" || drag.kind === "handle") && !drag.moved) {
+      // A tap (on empty wave, or on a loop edge) just moves the playhead.
       onSeek(timeAt(e.clientX));
     } else if (loop) {
       onLoopCommit(loop);

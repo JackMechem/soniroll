@@ -95,6 +95,11 @@ export function VimSwitch({ on, onChange, keys }: { on: boolean; onChange: (on: 
  * preview or source, Vim, notation, links panel, ⋮), formatting buttons, the editor, and the
  * links panel beside it (below it on narrower screens).
  */
+/** Phones and tablets: a note opens to read, and the keyboard comes up only when you tap into it. */
+function isTouchScreen() {
+  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+}
+
 export default function NotePane({
   id,
   notes,
@@ -426,7 +431,7 @@ export default function NotePane({
               viewRef.current = v;
               onView(v);
             }}
-            autoFocus={!focusTitle}
+            autoFocus={!focusTitle && !isTouchScreen()}
             placeholder="Start writing. [[ links a note, # makes a heading, - [ ] a checkbox."
             className="h-full lg:absolute lg:inset-0"
           />

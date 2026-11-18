@@ -70,7 +70,7 @@ export function PageHeader({
         )}
         <div className="flex min-w-0 items-center gap-1">
           <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
-            {Icon && <Icon className="h-5 w-5 shrink-0 text-muted" />}
+            {Icon && <Icon className="h-5 w-5 shrink-0 text-accent" />}
             <span className="truncate">{title}</span>
           </h1>
           {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}

@@ -14,6 +14,7 @@ export default function StandardsPicker({
   onAddCustom,
   tunes: tunesOverride,
   setTunes: setTunesOverride,
+  listChoice,
 }: {
   onClose: () => void;
   onCreateCustom: (name: string) => void;
@@ -29,6 +30,9 @@ export default function StandardsPicker({
       instead of always Jam Practice's own list. */
   tunes?: Tune[];
   setTunes?: (update: Tune[] | ((prev: Tune[]) => Tune[])) => void;
+  /** Lets the footer say, and switch, which list picked tunes go into (the Library passes Tunes I
+      Know / Tunes to Learn). Callers that fix the list leave it out. */
+  listChoice?: { value: string; options: { value: string; label: string }[]; onChange: (value: string) => void };
 }) {
   const [ownTunes, setOwnTunes] = useSyncedTunes();
   const tunes = tunesOverride ?? ownTunes;
@@ -207,9 +211,36 @@ export default function StandardsPicker({
           )}
         </ul>
 
-        <div className="flex items-center gap-3 border-t border-surface-hover px-5 py-3 text-sm sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-surface-hover px-5 py-3 text-sm sm:px-6">
+          {listChoice && listChoice.options.length === 1 && (
+            <span className="text-muted">
+              Adds to <span className="font-medium text-foreground">{listChoice.options[0].label}</span>
+            </span>
+          )}
+          {listChoice && listChoice.options.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-muted">Add to</span>
+              <div role="radiogroup" aria-label="Add to" className="flex rounded-full bg-foreground/[0.05] p-0.5">
+                {listChoice.options.map((o) => {
+                  const on = o.value === listChoice.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => listChoice.onChange(o.value)}
+                      className={`h-8 rounded-full px-3 text-sm font-medium transition-colors ${on ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <span className="text-muted">
-            {tunes.length} in your list · <span className="[@media(pointer:coarse)]:hidden">Enter or click to add</span>
+            {tunes.length} in {listChoice ? "that list" : "your list"} · <span className="[@media(pointer:coarse)]:hidden">Enter or click to add</span>
             <span className="hidden [@media(pointer:coarse)]:inline">Tap a tune to add it</span>
           </span>
         </div>

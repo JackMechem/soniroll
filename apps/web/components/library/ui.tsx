@@ -223,6 +223,7 @@ export function Hero({
   actions,
   helpTopic,
   titleExtra,
+  rule = true,
   children,
 }: {
   title: string;
@@ -238,6 +239,8 @@ export function Hero({
   helpTopic?: string;
   /** Beside the title, e.g. Library's storage meter. */
   titleExtra?: ReactNode;
+  /** The hairline under a header without tabs; off when a search toolbar ends the header. */
+  rule?: boolean;
   children?: ReactNode;
 }) {
   const topic = helpTopic ? topicById(helpTopic) : undefined;
@@ -245,7 +248,7 @@ export function Hero({
   const TopicIcon = topic ? ICON_BY_ID[topic.id] : undefined;
   const ShownIcon = Icon ?? TopicIcon;
   return (
-    <header className={`flex flex-col gap-4 ${tabs ? "" : "border-b border-foreground/10 pb-6"}`}>
+    <header className={`flex flex-col gap-4 ${tabs || !rule ? "" : "border-b border-foreground/10 pb-6"}`}>
       {(back || backHref) && (
         <div>
           <BackButton onClick={back} href={backHref} label={backLabel} />
@@ -260,7 +263,7 @@ export function Hero({
             <div className="flex min-w-0 items-center gap-1">
               <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
                 {!leading && ShownIcon && (
-                  <span className={`shrink-0 ${color ? "" : "text-muted"}`} style={color ? { color } : undefined}>
+                  <span className={`shrink-0 ${color ? "" : "text-accent"}`} style={color ? { color } : undefined}>
                     <ShownIcon className="h-5 w-5" />
                   </span>
                 )}

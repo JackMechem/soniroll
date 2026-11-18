@@ -185,6 +185,15 @@ body {
   font-family: var(--app-font, var(--font-sans)), Arial, Helvetica, sans-serif;
 }
 
+/* The page's scroll area (AppShell's, a direct child of <body>) keeps room for its scrollbar, so
+   switching between a page that scrolls and one that doesn't (Library's tabs) doesn't shift the
+   page sideways. Not on phones: their scrollbars float over the page and take no room. */
+@media (min-width: 768px) {
+  body > div.overflow-y-auto {
+    scrollbar-gutter: stable;
+  }
+}
+
 input[type="range"].slider {
   appearance: none;
   -webkit-appearance: none;

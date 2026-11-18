@@ -222,6 +222,10 @@ export default function TempoTrainer() {
   // tempo without any cue, visual or audible. Idle (never started) and the audible phase both show
   // everything normally, same as a plain metronome always has.
   const silentNow = running && phase === "off";
+  // What Start will do, in one line under the beats, so the tool doesn't look like a plain
+  // metronome (the same idea as Metric Modulation's plan line).
+  const bars = (n: number) => (n === 1 ? "1 bar" : `${n} bars`);
+  const plan = `Click plays ${bars(onBars)}, then goes silent for ${bars(offBars)}`;
 
   return (
     <ToolLayout
@@ -366,6 +370,7 @@ export default function TempoTrainer() {
                 onCycleSub={handleCycleSub}
               />
             )}
+            <p className="text-sm text-muted tabular-nums">{plan}</p>
           </>
         )}
       </div>

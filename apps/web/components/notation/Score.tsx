@@ -57,6 +57,8 @@ type Hover = {
   after: number;
   /** Over an existing note's column: overwrite that note instead. */
   replace: number | null;
+  /** From a finger held on the staff: the pitch is drawn larger and above it, clear of the finger. */
+  touch?: boolean;
 };
 
 
@@ -183,6 +185,10 @@ export default function TranscriptionScore({
   const [hover, setHover] = useState<Hover | null>(null);
   const [width, setWidth] = useState(0);
   const hitsRef = useRef<Hit[][]>([]);
+  // Write mode on a touch screen: a finger on the staff previews the note (with its name) and
+  // adds it when lifted; moving off to scroll cancels it. Its click is then ignored.
+  const touchRef = useRef<number | null>(null);
+  const skipClickRef = useRef(false);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -540,14 +546,54 @@ export default function TranscriptionScore({
     };
   };
 
-  const onMove = (e: React.MouseEvent) => {
+  const sameHover = (h: Hover | null, next: Hover | null) =>
+    h && next && h.row === next.row && h.y === next.y && Math.abs(h.x - next.x) < 2 && h.after === next.after && h.replace === next.replace && h.touch === next.touch;
+
+  const onMove = (e: React.PointerEvent) => {
     if (mode === "select") return;
+    if (e.pointerType === "touch") {
+      if (touchRef.current !== e.pointerId) return;
+      const at = locate(e);
+      const next = at?.kind === "staff" ? { ...at.hover, touch: true } : null;
+      setHover((h) => (sameHover(h, next) ? h : next));
+      return;
+    }
     const at = locate(e);
     const next = at?.kind === "staff" ? at.hover : null;
-    setHover((h) => (h && next && h.row === next.row && h.y === next.y && Math.abs(h.x - next.x) < 2 && h.after === next.after && h.replace === next.replace ? h : next));
+    setHover((h) => (sameHover(h, next) ? h : next));
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    skipClickRef.current = false;
+    if (e.pointerType !== "touch" || mode !== "write" || e.shiftKey) return;
+    const at = locate(e);
+    if (at?.kind !== "staff") return; // a note or chord: the tap selects it, as before
+    touchRef.current = e.pointerId;
+    setHover({ ...at.hover, touch: true });
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (touchRef.current !== e.pointerId) return;
+    touchRef.current = null;
+    skipClickRef.current = true;
+    setHover(null);
+    const at = locate(e);
+    if (at?.kind !== "staff") return;
+    if (at.hover.replace !== null) onReplace(at.hover.measure, at.hover.replace, at.hover.pitch);
+    else onAdd(at.hover.measure, at.hover.after, at.hover.pitch);
+  };
+
+  const onPointerCancel = (e: React.PointerEvent) => {
+    if (touchRef.current !== e.pointerId) return;
+    touchRef.current = null;
+    setHover(null);
   };
 
   const onClick = (e: React.MouseEvent) => {
+    if (skipClickRef.current) {
+      skipClickRef.current = false;
+      return;
+    }
     const at = locate(e);
     if (!at) return;
     const measureOf = at.kind === "chord" ? at.chord.measure : at.kind === "note" ? at.note.measure : at.measure.measure;
@@ -566,8 +612,13 @@ export default function TranscriptionScore({
   return (
     <div
       className="relative w-full"
-      onMouseMove={onMove}
-      onMouseLeave={() => setHover(null)}
+      onPointerMove={onMove}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onPointerLeave={(e) => {
+        if (touchRef.current === null || e.pointerType !== "touch") setHover(null);
+      }}
       onClick={onClick}
       onContextMenu={(e) => {
         if (!onMenu) return;
@@ -587,7 +638,17 @@ export default function TranscriptionScore({
             <line key={ly} x1={hover.x - 11} x2={hover.x + 11} y1={ly} y2={ly} stroke={accentVar} strokeOpacity={0.6} strokeWidth={1.2} />
           ))}
           <ellipse cx={hover.x} cy={hover.y} rx={6.2} ry={4.6} transform={`rotate(-20 ${hover.x} ${hover.y})`} fill={accentVar} fillOpacity={0.5} />
-          <text x={hover.x + 11} y={hover.y - 9} fontSize={11} fontWeight={700} fill={accentVar} stroke="var(--surface)" strokeWidth={3} paintOrder="stroke">
+          <text
+            x={hover.touch ? hover.x : hover.x + 11}
+            y={hover.touch ? hover.y - 30 : hover.y - 9}
+            textAnchor={hover.touch ? "middle" : "start"}
+            fontSize={hover.touch ? 16 : 11}
+            fontWeight={700}
+            fill={accentVar}
+            stroke="var(--surface)"
+            strokeWidth={3}
+            paintOrder="stroke"
+          >
             {pitchName(hover.pitch)}
           </text>
         </svg>

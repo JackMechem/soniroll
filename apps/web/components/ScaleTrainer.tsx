@@ -72,7 +72,7 @@ import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 const MIN_INTERVAL_SECONDS = 1;
 const MAX_INTERVAL_SECONDS = 20;
@@ -154,7 +154,7 @@ type HistoryEntry = {
   config: HistoryConfig;
 };
 
-const PANEL_IDS = ["scale-modes", "scale-range", "scale-listen", "scale-sound"];
+const PANEL_IDS = ["scale-modes", "scale-range", "scale-timing", "scale-listen", "scale-sound"];
 const SETTINGS_KEY = "jam-practice-scale-trainer";
 const DEFAULT_SETTINGS = {
   instrumentId: INSTRUMENTS[0].id,
@@ -1090,14 +1090,14 @@ export default function ScaleTrainer() {
               <span className="font-medium text-muted">
                 {pool.length} of {SCALE_MODES.length} selected
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={() =>
                     updateSettings({ scaleModes: SCALE_MODES.map((m) => m.id) })
                   }
                   disabled={running}
-                  className="font-medium text-accent hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   All
                 </button>
@@ -1105,7 +1105,7 @@ export default function ScaleTrainer() {
                   type="button"
                   onClick={() => updateSettings({ scaleModes: [] })}
                   disabled={running}
-                  className="font-medium text-muted hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   None
                 </button>
@@ -1163,7 +1163,7 @@ export default function ScaleTrainer() {
                 options={[
                   ...INSTRUMENTS.map((instrument) => ({
                     value: instrument.id,
-                    label: `${instrument.label} (${instrument.range})`,
+                    label: `${instrument.label} (${instrument.range.replace("-", "–")})`,
                   })),
                   { value: CUSTOM_INSTRUMENT_ID, label: "Custom range…" },
                 ]}
@@ -1188,18 +1188,42 @@ export default function ScaleTrainer() {
               <Hint>The lowest and highest notes to draw scale roots from, e.g. A1-A6.</Hint>
             )}
 
-            {/* In listen mode this becomes "Max time", shown in the Listen mode section instead. */}
-            {!listenMode && (
+          </CollapsiblePanel>
+
+          {/* Timing in its own chip: how long each scale shows (Timed), or how long you have to play
+              it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
+          <CollapsiblePanel
+            id="scale-timing"
+            title={listenMode ? "Time to play" : "Time per scale"}
+            icon={StopwatchIcon}
+            summary={`${intervalSeconds} s`}
+          >
+            <AdvancedSlider
+              label={listenMode ? "Time to play" : "Time per scale"}
+              value={intervalSeconds}
+              unit="s"
+              min={MIN_INTERVAL_SECONDS}
+              max={MAX_INTERVAL_SECONDS}
+              step={0.5}
+              disabled={running}
+              onChange={setIntervalSeconds}
+              hint={
+                listenMode
+                  ? "How long you have to finish playing each scale before it's marked a miss and moves on."
+                  : "How long each scale stays on screen before the next one shows."
+              }
+            />
+            {listenMode && (
               <AdvancedSlider
-                label="Interval"
-                value={intervalSeconds}
+                label="Time between scales"
+                value={advanceDelayMs / 1000}
                 unit="s"
-                min={MIN_INTERVAL_SECONDS}
-                max={MAX_INTERVAL_SECONDS}
-                step={0.5}
+                min={MIN_ADVANCE_DELAY_MS / 1000}
+                max={MAX_ADVANCE_DELAY_MS / 1000}
+                step={0.25}
                 disabled={running}
-                onChange={setIntervalSeconds}
-                hint="How long each scale stays on screen before the next one shows."
+                hint="How long the graded scale (with its countdown ring) stays on screen before the next one starts."
+                onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
               />
             )}
           </CollapsiblePanel>
@@ -1215,30 +1239,6 @@ export default function ScaleTrainer() {
               disabled: running,
             }}
           >
-            <AdvancedSlider
-              label="Max time"
-              value={intervalSeconds}
-              unit="s"
-              min={MIN_INTERVAL_SECONDS}
-              max={MAX_INTERVAL_SECONDS}
-              step={0.5}
-              disabled={running}
-              onChange={setIntervalSeconds}
-              hint="How long you have to finish playing each scale before it's marked a miss and moves on."
-            />
-
-            <AdvancedSlider
-              label="Time between scales"
-              value={advanceDelayMs / 1000}
-              unit="s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              disabled={running}
-              hint="How long the graded scale (with its countdown ring) stays on screen before the next one starts."
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-            />
-
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}

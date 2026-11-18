@@ -9,13 +9,13 @@ import Link from "next/link";
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
 import { playlistHref } from "@/components/library/ChartsDashboard";
 import { BackButton } from "@/components/library/shared";
-import { EmptyState, FolderIcon, KeyBadge, LibraryPage, Pill } from "@/components/library/ui";
+import { EmptyState, FolderIcon, Hero, KeyBadge, LibraryPage, Pill } from "@/components/library/ui";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { BassIcon, ChevronLeftIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PlusIcon } from "@/components/tools";
+import { BassIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PlusIcon } from "@/components/tools";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -83,7 +83,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   }
   const inList = (list: TuneListId) => linkedTunes.some((l) => l.list === list);
 
-  const keyOptions = chart ? [{ value: "", label: `Original (${chart.key ? displayKey(chart.key) : "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))] : [];
+  const keyOptions = chart ? [{ value: "", label: `${chart.key ? displayKey(chart.key) : "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))] : [];
 
   if (loading || selectedSongLoading) {
     return (
@@ -109,37 +109,30 @@ export default function ChartViewPage({ id }: { id: string }) {
 
   return (
     <LibraryPage>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          aria-label="Back"
-          title="Back"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground sm:h-9 sm:w-9"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </button>
-        <KeyBadge label={shown.key} />
-        <div className="min-w-0 flex-1 basis-48">
-          <h1 className="line-clamp-2 text-2xl font-semibold leading-tight tracking-tight">{chart.title}</h1>
-          {chart.composer && <p className="truncate text-sm text-muted">{formatComposer(chart.composer)}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {/* The band (Rhythm Section) plays this chart, in the key shown. */}
-          <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(id, transposeKey))} />
-          <span className="xl:hidden">
-            <Select value={transposeKey} onChange={setTransposeKey} options={keyOptions} className="min-w-32" />
-          </span>
-          <RoundButton label="Full screen" onClick={() => setFullscreen(true)}>
-            <MaximizeIcon className="h-4 w-4" />
-          </RoundButton>
-          {meta && (
-            <RoundButton label="Chart options" onClick={(e) => openSongMenu(e, meta, null)}>
-              <DotsVerticalIcon className="h-4 w-4" />
+      <Hero
+        title={chart.title}
+        subtitle={chart.composer ? formatComposer(chart.composer) : undefined}
+        back={() => router.back()}
+        leading={<KeyBadge label={shown.key} size="lg" />}
+        actions={
+          // One row on phones too: the key select takes what's left, so ⋮ never wraps on its own.
+          <div className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
+            {/* The band (Rhythm Section) plays this chart, in the key shown. */}
+            <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(id, transposeKey))} />
+            <span className="min-w-0 flex-1 sm:flex-none xl:hidden">
+              <Select value={transposeKey} onChange={setTransposeKey} options={keyOptions} className="w-full sm:min-w-32" />
+            </span>
+            <RoundButton label="Full screen" onClick={() => setFullscreen(true)}>
+              <MaximizeIcon className="h-4 w-4" />
             </RoundButton>
-          )}
-        </div>
-      </div>
+            {meta && (
+              <RoundButton label="Chart options" onClick={(e) => openSongMenu(e, meta, null)}>
+                <DotsVerticalIcon className="h-4 w-4" />
+              </RoundButton>
+            )}
+          </div>
+        }
+      />
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <ChartPaper top={<ChartMeta song={shown} originalKey={chart.key} composer={false} />}>

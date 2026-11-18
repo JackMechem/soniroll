@@ -60,7 +60,7 @@ import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -845,12 +845,12 @@ export default function GuessTheProgression() {
               <span className="font-medium text-muted">
                 {pool.length} of {PROGRESSIONS.length} selected
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={() => updateSettings({ progressionIds: PROGRESSIONS.map((p) => p.id) })}
                   disabled={running}
-                  className="font-medium text-accent hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   All
                 </button>
@@ -858,7 +858,7 @@ export default function GuessTheProgression() {
                   type="button"
                   onClick={() => updateSettings({ progressionIds: [] })}
                   disabled={running}
-                  className="font-medium text-muted hover:underline disabled:opacity-50"
+                  className={POOL_BUTTON}
                 >
                   None
                 </button>
@@ -1094,6 +1094,10 @@ export default function GuessTheProgression() {
             {centerLabel}
           </span>
         </div>
+        )}
+        {/* Before the first round, say what's about to happen (like the other ear trainers). */}
+        {!learnMode && !round && !running && (
+          <p className="max-w-sm text-center text-sm text-muted">Press Start, listen to the chords, then write them down.</p>
         )}
 
         {round && running && (

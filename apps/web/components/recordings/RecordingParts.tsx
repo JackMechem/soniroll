@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { MenuButton } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MixPlayer, { SavedMixPlayer } from "@/components/recordings/MixPlayer";
 import TakePlayer from "@/components/recordings/TakePlayer";
@@ -25,26 +26,46 @@ import {
   useTuneSong,
 } from "@/lib/recordings";
 
-/** A recording in a list: name (links to its page), date · length (· tune), and a player — over
+/** A recording in a list: name (links to its page), date · length (· the tune, a link to it), a ⋮
+    menu when `onMenu` is given (rename, share, delete — the Files page's menu), and a player — over
     the tune's song, with the mixer, when `songUrl` is given. */
 export function RecordingCard({
   recording,
   tuneName,
   songUrl,
   songName,
+  onMenu,
+  onContextMenu,
 }: {
   recording: Recording;
   tuneName?: string | null;
   songUrl?: string | null;
   songName?: string;
+  onMenu?: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
-  const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec), tuneName].filter(Boolean).join(" · ");
+  const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec)].filter(Boolean).join(" · ");
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-surface p-3">
-      <Link href={`/recordings/view?id=${recording._id}`} className="min-w-0 hover:underline">
-        <div className="truncate text-sm font-medium">{recording.name}</div>
-        <div className="truncate text-xs text-muted">{detail}</div>
-      </Link>
+    <div className="flex flex-col gap-2 rounded-lg bg-surface p-3" onContextMenu={onContextMenu}>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <Link href={`/recordings/view?id=${recording._id}`} className="block truncate text-sm font-medium hover:underline">
+            {recording.name}
+          </Link>
+          <div className="truncate text-xs text-muted">
+            {detail}
+            {tuneName && recording.tuneId && (
+              <>
+                {" · "}
+                <Link href={`/tunes/tune?id=${encodeURIComponent(recording.tuneId)}`} className="hover:text-foreground hover:underline">
+                  {tuneName}
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+        {onMenu && <MenuButton label={`Options for ${recording.name}`} onClick={onMenu} alwaysVisible />}
+      </div>
       {recording.url &&
         (songUrl ? (
           <SavedMixPlayer recording={recording} songUrl={songUrl} songName={songName} compact lazy />

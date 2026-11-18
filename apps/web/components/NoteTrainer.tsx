@@ -153,7 +153,7 @@ type HistoryEntry = {
   config: HistoryConfig;
 };
 
-const PANEL_IDS = ["notes", "note-listen", "note-sound"];
+const PANEL_IDS = ["notes", "note-timing", "note-listen", "note-sound"];
 const SETTINGS_KEY = "jam-practice-note-trainer";
 const DEFAULT_SETTINGS = {
   instrumentId: INSTRUMENTS[0].id,
@@ -992,7 +992,7 @@ export default function NoteTrainer() {
       options={
         <>
           <PanelsToggle ids={PANEL_IDS} />
-          <CollapsiblePanel id="notes" title="Notes" icon={NoteIcon} summary={rangeSummary}>
+          <CollapsiblePanel id="notes" title="Range" icon={NoteIcon} summary={rangeSummary}>
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1021,7 +1021,7 @@ export default function NoteTrainer() {
                 options={[
                   ...INSTRUMENTS.map((instrument) => ({
                     value: instrument.id,
-                    label: `${instrument.label} (${instrument.range})`,
+                    label: `${instrument.label} (${instrument.range.replace("-", "–")})`,
                   })),
                   { value: CUSTOM_INSTRUMENT_ID, label: "Custom range…" },
                 ]}
@@ -1071,18 +1071,42 @@ export default function NoteTrainer() {
               </div>
             )}
 
-            {/* In listen mode this becomes "Max time", shown in the Listen mode section instead. */}
-            {!listenMode && (
+          </CollapsiblePanel>
+
+          {/* Timing in its own chip: how long each note shows (Timed), or how long you have to play
+              it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
+          <CollapsiblePanel
+            id="note-timing"
+            title={listenMode ? "Time to play" : "Time per note"}
+            icon={StopwatchIcon}
+            summary={`${intervalSeconds} s`}
+          >
+            <AdvancedSlider
+              label={listenMode ? "Time to play" : "Time per note"}
+              value={intervalSeconds}
+              unit="s"
+              min={MIN_INTERVAL_SECONDS}
+              max={MAX_INTERVAL_SECONDS}
+              step={0.5}
+              disabled={running}
+              onChange={setIntervalSeconds}
+              hint={
+                listenMode
+                  ? "How long you have to play each note before it's marked a miss and moves on."
+                  : "How long each note stays on screen before the next one shows."
+              }
+            />
+            {listenMode && (
               <AdvancedSlider
-                label="Interval"
-                value={intervalSeconds}
+                label="Time between notes"
+                value={advanceDelayMs / 1000}
                 unit="s"
-                min={MIN_INTERVAL_SECONDS}
-                max={MAX_INTERVAL_SECONDS}
-                step={0.5}
+                min={MIN_ADVANCE_DELAY_MS / 1000}
+                max={MAX_ADVANCE_DELAY_MS / 1000}
+                step={0.25}
                 disabled={running}
-                onChange={setIntervalSeconds}
-                hint="How long each note stays on screen before the next one shows."
+                hint="How long the graded note (with its countdown ring) stays on screen before the next one starts."
+                onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
               />
             )}
           </CollapsiblePanel>
@@ -1098,30 +1122,6 @@ export default function NoteTrainer() {
               disabled: running,
             }}
           >
-            <AdvancedSlider
-              label="Max time"
-              value={intervalSeconds}
-              unit="s"
-              min={MIN_INTERVAL_SECONDS}
-              max={MAX_INTERVAL_SECONDS}
-              step={0.5}
-              disabled={running}
-              onChange={setIntervalSeconds}
-              hint="How long you have to play each note before it's marked a miss and moves on."
-            />
-
-            <AdvancedSlider
-              label="Time between notes"
-              value={advanceDelayMs / 1000}
-              unit="s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              disabled={running}
-              hint="How long the graded note (with its countdown ring) stays on screen before the next one starts."
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-            />
-
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
