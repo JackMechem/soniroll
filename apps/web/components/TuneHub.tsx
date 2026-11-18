@@ -1,8 +1,7 @@
 "use client";
 
 import { ChartPaper } from "@/components/library/chartView";
-import { Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
-import { displayKey } from "@jam-practice/core/setlistKeys";
+import { gridKeyName, Hero, KeyBadge, keyColor, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
@@ -23,6 +22,7 @@ import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
 import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
+import { goBackOr } from "@/lib/goBack";
 import { makeId, type Tune } from "@/lib/types";
 import { STANDARDS, nameId } from "@/lib/standards";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
@@ -102,7 +102,7 @@ export default function TuneHub({ id, list: listParam }: { id: string; list?: st
         lists[target].setTunes((prev) => [...prev, t]);
       }}
       canUseLearn={isAuthenticated}
-      onDeleted={() => router.back()}
+      onDeleted={() => goBackOr(router, "/tunes")}
     />
   );
 }
@@ -229,13 +229,13 @@ function Hub({
       <Hero
         title={tune.name}
         color={keyColor(firstKey)}
-        back={() => router.back()}
+        back={() => goBackOr(router, "/tunes")}
         leading={<KeyBadge label={firstKey} size="lg" />}
         subtitle={[
           LIST_LABEL[list],
           tune.timeSignature || null,
           ...tempos.map((t) => `${t} BPM`),
-          chart ? `Chart in ${chart.key ? displayKey(chart.key) : "—"}` : null,
+          chart ? `Chart in ${chart.key ? prettyKey(chart.key) : "—"}` : null,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -290,7 +290,7 @@ function Hub({
                       <Select
                         value={previewKey}
                         onChange={setPreviewKey}
-                        options={[{ value: "", label: `${chart.key || "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                        options={[{ value: "", label: `${chart.key ? prettyKey(chart.key) : "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: prettyKey(k) }))]}
                         className="min-w-32"
                       />
                       {/* Phones: the chart fits the screen, or is zoomed in and scrolls sideways.
@@ -347,7 +347,7 @@ function Hub({
                       ? "No chord chart linked yet."
                       : // Tunes added from the jazz standards list are a name, key and tempo — no
                         // chords come with them (none are bundled), so say how to get a chart.
-                        `No chord chart yet${isStandard ? " — the standards list adds a tune's name, key and tempo, not its chords" : ""}. Write the chart, or import yours: one called “${tune.name}” shows up here to link.`}
+                        `No chord chart yet.${isStandard ? " Standards come with a name, key and tempo, not chords." : ""} Write one, or import a chart called “${tune.name}” and you can link it here.`}
                   {matches.length > 0 && ` ${matches.length === 1 ? "This one has" : "These have"} the same name:`}
                 </p>
                 {matches.map((m) => (
@@ -429,8 +429,7 @@ function Hub({
                     ) : (
                       <span aria-hidden className="h-3 w-3 shrink-0 rounded-full border border-current opacity-40" />
                     )}
-                    {name}
-                    {suffix}
+                    {gridKeyName(name, minor)}
                   </button>
                 );
               })}

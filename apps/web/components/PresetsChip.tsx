@@ -52,8 +52,9 @@ export function PresetsButton({ tool }: { tool: ToolPresets }) {
         content: (
           <>
             <BookmarkIcon className="h-4 w-4 shrink-0 text-accent" />
-            {/* Phones: just the preset in use, or "Presets" while none is (no "Custom"/"None"). */}
-            <span className={state.active ? "hidden text-muted sm:inline" : "truncate text-muted"}>Presets</span>
+            {/* Phones: just the preset in use, or "Presets" while none is (no "Custom"/"None"); on
+                the narrowest phones just the icon then, so the row beside it fits. */}
+            <span className={state.active ? "hidden text-muted sm:inline" : "hidden truncate text-muted min-[400px]:inline"}>Presets</span>
             <span className={`truncate font-medium ${state.active ? "" : "hidden sm:inline"}`}>{currentLabel(state)}</span>
           </>
         ),

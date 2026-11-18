@@ -406,6 +406,9 @@ export default function RhythmSection({
   // starts lower down, then sticks as the page scrolls), with no scrollbar of its own.
   const asideRef = useRef<HTMLElement>(null);
   useStickyPanel(asideRef, tab === "play");
+  // ...and so does the music's column with Play at its top, when the options reach further down.
+  const columnRef = useRef<HTMLDivElement>(null);
+  useStickyPanel(columnRef, tab === "play");
   const startingRef = useRef(false);
   const [starting, setStarting] = useState(false);
 
@@ -1162,9 +1165,17 @@ export default function RhythmSection({
               }`
             : "";
 
-  // Phones: Play/Stop and Options stay pinned under the top bar while the notation scrolls.
-  const transport = (
-    <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 -mt-2 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:self-auto lg:bg-transparent lg:px-0 lg:pt-0 lg:backdrop-blur-none">
+  // Play/Stop, Options (phones) and the status line. Phones: pinned under the top bar while the
+  // notation scrolls. Desktop: at the top of the music's column, which stays in view (as the
+  // options panel does), with Play pinned to the top of the window while the music is taller.
+  const transport = (desktop: boolean) => (
+    <div
+      className={
+        desktop
+          ? "sticky top-0 z-10 hidden flex-col items-center gap-1.5 bg-background/95 pb-1 pt-3 backdrop-blur lg:flex"
+          : "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 -mt-2 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden"
+      }
+    >
       <div className="flex max-w-full items-center gap-2">
         <button
           type="button"
@@ -1234,7 +1245,7 @@ export default function RhythmSection({
           ]}
         />
       </RewardProvider>
-      {tab === "play" && transport}
+      {tab === "play" && transport(false)}
       {tab === "players" ? (
         <BassPlayersTab />
       ) : (
@@ -1242,7 +1253,8 @@ export default function RhythmSection({
           <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:rounded-lg">
             {panel}
           </aside>
-          <div className="grid min-w-0 gap-6">
+          <div ref={columnRef} className="grid min-w-0 gap-6 lg:sticky lg:top-4">
+            {transport(true)}
             {!noTune && (
               <div className={`grid min-w-0 gap-6 ${scored && song && settings.showChart ? "xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start" : ""}`}>
                 {scored && (
@@ -1313,7 +1325,7 @@ export default function RhythmSection({
                   </div>
                 )}
                 {(!song || !scored || settings.showChart) && (
-                  <div className="min-w-0 xl:sticky xl:top-4">
+                  <div className="min-w-0 xl:sticky xl:top-28">
                     {typed ? (
                       song ? (
                         <div className="w-full rounded-lg bg-surface p-2 text-left sm:p-6">

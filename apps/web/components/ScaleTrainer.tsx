@@ -20,6 +20,7 @@ import {
   ScaleIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -62,7 +63,6 @@ import {
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -71,8 +71,10 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { micErrorMessage } from "@/lib/micError";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_DASH, IDLE_HINT, bestPassingMs, passedRound, noteGlyphs } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
+import { LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_DASH, IDLE_HINT, bestPassingMs, passedRound, noteGlyphs } from "@/components/learning/quizUi";
 
 /** Mode names that are proper nouns, kept capitalised by `scaleName`. */
 const PROPER_SCALE_WORDS = new Set(["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian", "Hindu"]);
@@ -720,10 +722,8 @@ export default function ScaleTrainer() {
         inputRef.current = input;
         // Device labels only become available once permission is granted.
         void listAudioInputs().then(setInputs);
-      } catch {
-        setError(
-          "Couldn't open the audio input. Check the browser's microphone permission.",
-        );
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
         return;
       }
       const queue = weak
@@ -917,7 +917,6 @@ export default function ScaleTrainer() {
   const roundLabel = (r: ScaleRound, seq = 0) =>
     `${rootLabel(r, seq)} ${scaleName(r.mode.label)}`;
   const mainLabel = running && round ? roundLabel(round, roundSeed) : "—";
-  const mainLabelLong = mainLabel.length > 16;
   const glow = running && status ? GRADE_COLOR[status] : null;
   const showCountdown = running;
   const score = summary ? scoreOf(summary.results) : 0;
@@ -956,7 +955,7 @@ export default function ScaleTrainer() {
             <CollapsiblePanel
               id="history"
               title="History"
-              icon={StopwatchIcon}
+              icon={ListIcon}
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
             {bestMs !== null && (
@@ -1040,21 +1039,7 @@ export default function ScaleTrainer() {
                       <span className="font-medium">
                         {pitchClassLabel(entry.pitchClass)} {scaleName(entry.mode.label)}
                       </span>
-                      <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                        {entry.counts.incorrect > 0 && (
-                          <span style={{ color: GRADE_COLOR.incorrect }}>
-                            ✕{entry.counts.incorrect}
-                          </span>
-                        )}
-                        {entry.counts.partial > 0 && (
-                          <span style={{ color: GRADE_COLOR.partial }}>
-                            ~{entry.counts.partial}
-                          </span>
-                        )}
-                        <span className="text-muted">
-                          /{attempts(entry.counts)}
-                        </span>
-                      </span>
+                      <StruggleCounts counts={entry.counts} />
                     </div>
                   ))}
                 </div>
@@ -1098,6 +1083,7 @@ export default function ScaleTrainer() {
         <>
           <PanelsToggle ids={PANEL_IDS} />
           <CollapsiblePanel id="scale-modes" title="Scales" icon={ScaleIcon} summary={`${pool.length} of ${SCALE_MODES.length}`}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-muted">
                 {pool.length} of {SCALE_MODES.length} selected
@@ -1147,6 +1133,7 @@ export default function ScaleTrainer() {
           </CollapsiblePanel>
 
           <CollapsiblePanel id="scale-range" title="Range" icon={NoteIcon} summary={rangeSummary}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1210,10 +1197,11 @@ export default function ScaleTrainer() {
             icon={StopwatchIcon}
             summary={`${intervalSeconds} s`}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
               label={listenMode ? "Time to play" : "Time per scale"}
               value={intervalSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_INTERVAL_SECONDS}
               max={MAX_INTERVAL_SECONDS}
               step={0.5}
@@ -1229,7 +1217,7 @@ export default function ScaleTrainer() {
               <AdvancedSlider
                 label="Time between scales"
                 value={advanceDelayMs / 1000}
-                unit="s"
+                unit=" s"
                 min={MIN_ADVANCE_DELAY_MS / 1000}
                 max={MAX_ADVANCE_DELAY_MS / 1000}
                 step={0.25}
@@ -1252,6 +1240,7 @@ export default function ScaleTrainer() {
               disabled: running,
             }}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1269,31 +1258,18 @@ export default function ScaleTrainer() {
             />
 
             {!drillMode && (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of scales
-                  <span className="tabular-nums text-foreground">
-                    {scaleCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_SCALE_COUNT}
-                  max={MAX_SCALE_COUNT}
-                  step={1}
-                  value={scaleCount}
-                  onChange={(e) => setScaleCount(Number(e.target.value))}
-                  disabled={running || !listenMode}
-                  style={
-                    {
-                      "--progress": `${((scaleCount - MIN_SCALE_COUNT) / (MAX_SCALE_COUNT - MIN_SCALE_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of scales"
+                value={scaleCount}
+                unit=""
+                min={MIN_SCALE_COUNT}
+                max={MAX_SCALE_COUNT}
+                step={1}
+                disabled={running || !listenMode}
+                onChange={(v) => setScaleCount(v)}
+                hint="How many random scales make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many random scales make up one session.</Hint>}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
@@ -1464,9 +1440,7 @@ export default function ScaleTrainer() {
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
               title={round?.mode.aka && scaleName(round.mode.aka)}
-              className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-                mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
-              }`}
+              className={!running ? IDLE_DASH : "relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200"}
               style={
                 glow
                   ? {
@@ -1475,7 +1449,16 @@ export default function ScaleTrainer() {
                   : undefined
               }
             >
-              {mainLabel}
+              {running && round ? (
+                // The note on its own line, the scale under it, smaller, so a long scale name
+                // never fills the ring edge to edge.
+                <span className="flex flex-col items-center gap-1">
+                  <span className="whitespace-nowrap text-4xl leading-none sm:text-5xl">{rootLabel(round, roundSeed)}</span>
+                  <span className="text-balance text-lg leading-tight sm:text-2xl">{scaleName(round.mode.label)}</span>
+                </span>
+              ) : (
+                mainLabel
+              )}
             </p>
             {/* Before the first round, say what's about to happen. */}
             {!running && (
@@ -1645,6 +1628,8 @@ export default function ScaleTrainer() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1652,6 +1637,7 @@ export default function ScaleTrainer() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop
       </KeyHint>

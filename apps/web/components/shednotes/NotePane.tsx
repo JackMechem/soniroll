@@ -1,6 +1,6 @@
 "use client";
 
-import { titleKey } from "@jam-practice/core/shedNotes";
+import { cleanTitle, noteSnippet, titleKey } from "@jam-practice/core/shedNotes";
 import type { SharedNote } from "./NoteList";
 
 import { useMutation } from "convex/react";
@@ -96,6 +96,21 @@ export function VimSwitch({ on, onChange, keys }: { on: boolean; onChange: (on: 
  * preview or source, Vim, notation, links panel, ⋮), formatting buttons, the editor, and the
  * links panel beside it (below it on narrower screens).
  */
+/** The title a new note gets until you name it ("Untitled", "Untitled - 2"). */
+const DEFAULT_TITLE = /^Untitled( - \d+)?$/;
+
+/** A title from a note's first line ("# Ii-V-I in all keys" → "Ii-V-I in all keys"), once that
+    line is finished (there's a line after it), so a half-typed word never becomes the title.
+    Nothing when the note starts with a code or notation block. */
+function titleFromBody(text: string): string | null {
+  const lines = text.split("\n");
+  const i = lines.findIndex((l) => l.trim());
+  if (i < 0 || i === lines.length - 1) return null;
+  const line = lines[i].trim();
+  if (/^(```|~~~|---|\|)/.test(line)) return null;
+  return cleanTitle(noteSnippet(line, 80)) || null;
+}
+
 /** Phones and tablets: a note opens to read, and the keyboard comes up only when you tap into it. */
 function isTouchScreen() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -166,6 +181,8 @@ export default function NotePane({
   }, [titleText]);
   const viewRef = useRef<EditorView | null>(null);
   const loaded = !!note;
+  // A note still called "Untitled" takes its first line as its title (once).
+  const autoTitled = useRef(false);
 
   useEffect(() => {
     if (focusTitle && loaded) {
@@ -268,13 +285,15 @@ export default function NotePane({
     // The first key only, and none on phones (no keyboard).
     const hint = (command: string) => (window.innerWidth >= 640 ? keysFor(command, config.keybindings).split(" or ")[0] : "") || undefined;
     const icon = "h-4 w-4";
+    const touch = isTouchScreen();
     const fontName = note?.view?.font ? getFont(note.view.font).label : "Site font";
     const template = note?.templateId ? (templates.find((t) => t.id === note.templateId)?.name ?? "deleted") : null;
     setMenu({
       ...at,
       items: [
         { label: "Live preview", icon: <EyeIcon className={icon} />, checked: config.livePreview, hint: hint("view:toggle-live-preview"), onSelect: () => setConfig("livePreview", !config.livePreview) },
-        { label: "Vim keys", icon: <KeyboardIcon className={icon} />, checked: config.vimMode, hint: hint("view:toggle-vim"), onSelect: () => setConfig("vimMode", !config.vimMode) },
+        // Vim keys and the command palette need a keyboard: not on phones and tablets.
+        ...(touch ? [] : [{ label: "Vim keys", icon: <KeyboardIcon className={icon} />, checked: config.vimMode, hint: hint("view:toggle-vim"), onSelect: () => setConfig("vimMode", !config.vimMode) }]),
         { label: "Line numbers", icon: <ListIcon className={icon} />, checked: config.lineNumbers, onSelect: () => setConfig("lineNumbers", !config.lineNumbers) },
         ...(mine
           ? [
@@ -292,8 +311,8 @@ export default function NotePane({
             ]
           : []),
         { label: "Export as PDF", icon: <DownloadIcon className={icon} />, hint: hint("note:export-pdf"), divider: !mine, onSelect: () => actions.exportPdf?.() },
-        { label: "Command palette", icon: <CommandIcon className={icon} />, hint: hint("app:command-palette"), divider: true, onSelect: () => actions.openCommandPalette?.() },
-        { label: "Open a note…", icon: <SearchIcon className={icon} />, hint: hint("app:quick-switcher"), onSelect: () => actions.openQuickSwitcher?.() },
+        ...(touch ? [] : [{ label: "Command palette", icon: <CommandIcon className={icon} />, hint: hint("app:command-palette"), divider: true, onSelect: () => actions.openCommandPalette?.() }]),
+        { label: "Open a note…", icon: <SearchIcon className={icon} />, hint: hint("app:quick-switcher"), divider: touch, onSelect: () => actions.openQuickSwitcher?.() },
         { label: "Settings file", icon: <GearIcon className={icon} />, hint: hint("app:open-settings"), onSelect: () => actions.openSettings?.() },
         ...(mine ? [{ label: "Delete note", icon: <TrashIcon className={icon} />, danger: true, divider: true, onSelect: () => actions.deleteNote?.() }] : []),
       ],
@@ -381,14 +400,14 @@ export default function NotePane({
 
         <div className={`${canEdit ? "flex" : "hidden"} items-center gap-0.5 overflow-x-auto border-b border-foreground/10 pb-1.5 [scrollbar-width:none] ${canEdit ? "sm:flex-wrap" : ""} [&::-webkit-scrollbar]:hidden`} ref={toolbarFadeRef} style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto", width: "100%" }), ...toolbarFade }}>
           {FORMAT.map((f) => (
-            <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`h-7 min-w-7 shrink-0 rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${f.className ?? "font-medium"}`}>
+            <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`h-7 min-w-7 shrink-0 rounded-md px-2 text-xs text-muted transition-colors pointer-coarse:h-10 pointer-coarse:min-w-10 hover:bg-surface-hover hover:text-foreground ${f.className ?? "font-medium"}`}>
               {f.label}
             </button>
           ))}
-          {mine && <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
+          {mine && <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground pointer-coarse:h-10">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
           </button>}
-          {canEdit && <button type="button" title={withKeys("Insert a file or picture (or paste one)", "editor:insert-file")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
+          {canEdit && <button type="button" title={withKeys("Insert a file or picture (or paste one)", "editor:insert-file")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground pointer-coarse:h-10">
             <ImageIcon className="h-3.5 w-3.5" /> File
           </button>}
         </div>
@@ -426,6 +445,13 @@ export default function NotePane({
             onChange={(text) => {
               setBody(text);
               setEmpty(!text.trim());
+              if (mine && draft === null && !autoTitled.current && DEFAULT_TITLE.test(note.title)) {
+                const title = titleFromBody(text);
+                if (title) {
+                  autoTitled.current = true;
+                  void rename({ id: note.id as Id<"shedNotes">, title, unique: true }).catch(() => {});
+                }
+              }
             }}
             readOnly={!canEdit}
             scoreContext={mine ? undefined : { noteId: id }}

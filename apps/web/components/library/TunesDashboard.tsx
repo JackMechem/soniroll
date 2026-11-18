@@ -91,6 +91,12 @@ export default function TunesDashboard() {
   const tuneNameById = new Map([...tunes, ...learn].map((t) => [t.id, t.name]));
   const sortedSetlists = [...setlists].sort((a, b) => b.updatedAt - a.updatedAt);
   const recentlyAdded = [...tunes].reverse().slice(0, PREVIEW + 1);
+  const learnPreview = [...learn].reverse().slice(0, PREVIEW);
+  // "Jump back in" only when it adds something: with a few tunes, the lists below already show
+  // every recent one.
+  const shownBelow = new Set([...recentlyAdded, ...(isAuthenticated ? learnPreview : [])].map((t) => t.id));
+  const jumpBackIn = recentCards.slice(0, PREVIEW);
+  const showJumpBackIn = jumpBackIn.some((c) => !shownBelow.has(c.key));
 
   return (
     <LibraryPage>
@@ -144,9 +150,9 @@ export default function TunesDashboard() {
         <>
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
             <div className="flex min-w-0 flex-col gap-4">
-              {recentCards.length > 0 && (
+              {showJumpBackIn && (
                 <Panel title="Jump back in" flush>
-                  <RecentList items={recentCards.slice(0, PREVIEW)} />
+                  <RecentList items={jumpBackIn} />
                 </Panel>
               )}
               <Panel
@@ -175,7 +181,7 @@ export default function TunesDashboard() {
                   {learn.length === 0 ? (
                     <EmptyState title="No tunes to learn yet" body="Tunes you want to learn, kept apart from the ones you know." />
                   ) : (
-                    <Rows>{[...learn].reverse().slice(0, PREVIEW).map(row("learn"))}</Rows>
+                    <Rows>{learnPreview.map(row("learn"))}</Rows>
                   )}
                 </Panel>
               )}

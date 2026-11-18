@@ -295,6 +295,21 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   const channels = settings.mono ? settings.monoSource : "stereo";
   const meterValue = useStructure ? `${structure.sections.length ? "Changing meters" : "No sections yet"}` : `${beatsPerBar}/${beatUnit}`;
 
+  // Recent takes: a chip with the other options, under the record button (the full list is on the
+  // Recordings page). Hidden until there's a take, so a fresh page doesn't lead with "0".
+  const takesPanel = recordings && recordings.length > 0 && (
+    <SettingChip icon={RecordIcon} label="Recent takes" wide value={String(recordings.length)}>
+      <div className="flex flex-col gap-2 text-left">
+        {recordings.slice(0, 5).map((r) => (
+          <RecordingCard key={r._id} recording={r} tuneName={r.tuneId ? byId.get(r.tuneId)?.tune.name : null} />
+        ))}
+        <Link href="/recordings" className="self-end text-sm font-medium text-accent hover:underline">
+          All recordings
+        </Link>
+      </div>
+    </SettingChip>
+  );
+
   const options = (
     <>
       <SettingChip icon={MicIcon} label="Microphone" wide value={`${deviceLabel ?? "Default mic"} · ${Math.round(gain * 100)}%`}>
@@ -481,25 +496,8 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           </div>
         </SettingChip>
       )}
+      {takesPanel}
     </>
-  );
-
-  // Recent takes: a chip above the display (the full list is on the Recordings page).
-  const takesPanel = (
-    <SettingChip icon={RecordIcon} label="Recent takes" wide value={recordings === undefined ? "…" : String(recordings.length)}>
-      <div className="flex flex-col gap-2 text-left">
-        {recordings === undefined ? (
-          <LoadingSpinner />
-        ) : recordings.length === 0 ? (
-          <p className="text-sm text-muted">No recordings yet.</p>
-        ) : (
-          recordings.slice(0, 5).map((r) => <RecordingCard key={r._id} recording={r} tuneName={r.tuneId ? byId.get(r.tuneId)?.tune.name : null} />)
-        )}
-        <Link href="/recordings" className="self-end text-sm font-medium text-accent hover:underline">
-          All recordings
-        </Link>
-      </div>
-    </SettingChip>
   );
 
   if (isLoading) {
@@ -528,7 +526,6 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
     <ToolLayout
       title="Recorder"
       options={options}
-      sidePanel={takesPanel}
       presets={toolPresets("recorder", settings, updateSettings, ["inputDeviceId", "inputGain", "autoGainOn", "mono", "monoSource", "playSong", "songVolume", "metronome"])}
     >
       <div className="flex w-full max-w-xl flex-col items-center gap-5">
@@ -562,8 +559,10 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
             />
           ))}
 
-        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div className="flex justify-end">
+        {/* The caption is inside the record button (so it's tappable too); the Level button lines
+            up with the circle. */}
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start gap-4">
+          <div className="flex h-24 items-center justify-end">
             <button
               type="button"
               onClick={() => (rec.monitoring ? stopMonitor() : void startMonitor(input))}
@@ -584,21 +583,23 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
             onClick={() => void onRecord()}
             aria-label={busy ? "Stop recording" : "Start recording"}
             title={busy ? "Stop (Space)" : "Record (Space)"}
-            className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-foreground/15 transition-colors hover:border-foreground/30"
+            className="group flex flex-col items-center gap-2 rounded-2xl"
           >
-            {busy ? (
-              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-danger text-white">
-                <StopIcon className="h-6 w-6" />
-              </span>
-            ) : (
-              <span className="h-[74px] w-[74px] rounded-full bg-danger" />
-            )}
+            <span className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-foreground/15 transition-colors group-hover:border-foreground/30">
+              {busy ? (
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-danger text-white">
+                  <StopIcon className="h-6 w-6" />
+                </span>
+              ) : (
+                <span className="h-[74px] w-[74px] rounded-full bg-danger" />
+              )}
+            </span>
+            <span className="text-sm font-semibold">{busy ? "Stop" : "Record"}</span>
           </button>
           <div aria-hidden />
         </div>
-        {/* A caption under the button (the count-in note too), so nothing beside it moves it. */}
-        <div className="-mt-2 flex flex-col items-center gap-0.5 text-center">
-          <span className="text-sm font-semibold">{busy ? "Stop" : "Record"}</span>
+        {/* The count-in note under the button, so nothing beside it moves it. */}
+        <div className="-mt-4 flex flex-col items-center text-center">
           <span className="h-4 text-xs text-muted">
             {settings.metronome && !busy && settings.countInBars > 0 && `${settings.countInBars}-bar count-in`}
           </span>

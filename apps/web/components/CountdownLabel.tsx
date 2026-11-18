@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-/** A ticking "2s" readout that counts down to zero as a timer runs out — the mirror image of
+/** A ticking "2 s" readout that counts down to zero as a timer runs out — the mirror image of
     ElapsedTimer. Writes straight to the DOM via rAF, like CountdownRing and ElapsedTimer, so it
     doesn't force the whole page to re-render every frame. Shared by the drill-style trainers. */
 export default function CountdownLabel({
@@ -24,7 +24,7 @@ export default function CountdownLabel({
         durationMs - (performance.now() - startedAt),
       );
       if (spanRef.current) {
-        spanRef.current.textContent = `${Math.ceil(remainingMs / 1000)}s`;
+        spanRef.current.textContent = `${Math.ceil(remainingMs / 1000)} s`;
       }
       frame = requestAnimationFrame(tick);
     };

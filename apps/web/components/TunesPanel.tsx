@@ -122,7 +122,7 @@ export default function TunesPanel({
               disabled={tunes.length === 0}
               aria-label="Manage tunes"
               title="Manage tunes"
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-40"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:w-10"
             >
               <ChecklistIcon className="h-4 w-4" />
             </button>
@@ -131,7 +131,7 @@ export default function TunesPanel({
               onClick={() => setPickerOpen(true)}
               aria-label="Add tune"
               title="Add tune"
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground hover:bg-accent-hover"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground hover:bg-accent-hover pointer-coarse:h-10 pointer-coarse:w-10"
             >
               <PlusIcon className="h-4 w-4" />
             </button>
@@ -168,8 +168,8 @@ export default function TunesPanel({
                       type="button"
                       onClick={() => setEditing({ tune, isNew: false })}
                       aria-label={`Edit ${tune.name}`}
-                      title="Edit"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                      title={`Edit ${tune.name}`}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground pointer-coarse:h-10 pointer-coarse:w-10"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -177,8 +177,8 @@ export default function TunesPanel({
                       type="button"
                       onClick={() => onDeleteTune(tune.id)}
                       aria-label={`Delete ${tune.name}`}
-                      title="Delete"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                      title={`Delete ${tune.name}`}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger pointer-coarse:h-10 pointer-coarse:w-10"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>

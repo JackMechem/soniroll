@@ -145,7 +145,10 @@ export default function Momentum({
         <Note>{goalDays > 0 ? `Goal hit ${daysHit} of ${goalDays} days` : "Set a daily goal to track your week"}</Note>
       </Card>
 
-      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />} value={<Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />}>
+      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />} value={
+          // Under an hour in minutes ("1 min", not "0.0 h"), like the week beside it.
+          hours < 1 ? <Value value={formatMinutesShort(Math.round(hours * 60))} /> : <Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />
+        }>
         <Bar frac={Math.max(0.03, Math.min(1, (hours - ms.from) / (ms.to - ms.from)))} />
         <Note>
           {hours === 0 ? "Your first hour starts with one session" : `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to ${ms.to} hour${ms.to === 1 ? "" : "s"}`}

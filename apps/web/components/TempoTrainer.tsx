@@ -340,15 +340,14 @@ export default function TempoTrainer() {
           tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={setTempoNoteValue} />}
         />
         <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
-        {silentNow ? (
-          <div className="flex h-16 w-full max-w-xs flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center">
-            <EyeOffIcon className="h-5 w-5 text-muted" />
-            <span className="text-sm text-muted">
-              Keep the tempo going — the click will come back
-            </span>
-          </div>
-        ) : (
-          <>
+        {/* The silent stretch hides the beats and plan but keeps their space (the card sits on top
+            of them), so the page doesn't jump when the click drops out and comes back. */}
+        <div className="grid w-full justify-items-center">
+          <div
+            aria-hidden={silentNow}
+            inert={silentNow}
+            className={`flex w-full flex-col items-center gap-4 [grid-area:1/1] ${silentNow ? "invisible" : ""}`}
+          >
             {useStructure && activeSection && (
               <p className="text-sm font-medium text-muted">
                 Section <span className="text-foreground">{activeSection.name}</span> · bar{" "}
@@ -369,8 +368,14 @@ export default function TempoTrainer() {
               />
             )}
             <p className="text-sm text-muted tabular-nums">{plan}</p>
-          </>
-        )}
+          </div>
+          {silentNow && (
+            <div className="flex w-full max-w-xs flex-col items-center justify-center gap-1.5 self-center rounded-lg bg-surface px-4 py-3 text-center [grid-area:1/1]">
+              <EyeOffIcon className="h-5 w-5 text-muted" />
+              <span className="text-sm text-muted">Keep the tempo going — the click will come back</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <button

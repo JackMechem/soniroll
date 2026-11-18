@@ -12,10 +12,11 @@ import RoutineCard from "@/components/practicelog/RoutineCard";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
-import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
+import { SHARE_PROGRESS_EVENT } from "@/components/practicelog/Celebrations";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import Subtasks from "@/components/practicelog/Subtasks";
-import { TOUCH_CHECK, TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
+import TaskCheck from "@/components/practicelog/TaskCheck";
+import { TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import DayTimer, { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { CheckIcon, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MicIcon, findToolLink, PencilIcon, PlayIcon, PlusIcon, RepeatIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
@@ -72,6 +73,8 @@ export default function DayPanel({
   const progressParts = items.filter((i) => !i.occurrence.skipped && progressOf(i.routine, i.occurrence).total > 0).length + ((day.tasks?.length ?? 0) > 0 ? 1 : 0);
   const showProgress = progress.total > 0 && progressParts > 1;
   const isToday = date === todayKey();
+  // The day timer shows today, or another day that has time; with neither, no empty "Progress".
+  const hasProgress = showProgress || isToday || watch.ms > 0;
   // A day that's gone: nothing to start, so logging time for it comes first.
   const past = date < todayKey();
   const dayRoutines = items.map((i) => ({ id: i.routine.id, name: i.routine.name || "Untitled routine" }));
@@ -167,7 +170,7 @@ export default function DayPanel({
         {controls && <div className="ml-auto">{controls}</div>}
       </div>
 
-      {progressSection}
+      {hasProgress && progressSection}
 
       {past && logTimeSection}
 
@@ -332,29 +335,22 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
             const time = parseTime(t.time);
             return (
               <li key={t.id} className={`group flex items-start gap-3 rounded-md px-1 py-2.5 lg:py-2 ${isNow ? "bg-accent/10" : ""}`}>
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={t.done}
-                  aria-label={`${t.title} done`}
-                  onClick={(e) => {
-                    if (!t.done) burstAt(e.currentTarget, "var(--accent)");
-                    log.toggleDayTask(date, t.id);
-                  }}
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border transition-colors lg:h-5 lg:w-5 ${TOUCH_CHECK} ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
-                >
-                  {t.done && <CheckIcon className="h-3.5 w-3.5" />}
-                </button>
                 <div className="min-w-0 flex-1">
-                <button type="button" onClick={() => setEditing({ task: t, isNew: false })} className="w-full text-left">
-                  <div className={`text-sm font-medium ${t.done ? "text-muted line-through" : ""}`}>{t.title}</div>
-                  <div className="flex flex-wrap gap-x-2 text-xs text-muted">
-                    {time !== null && <span className="font-medium">{formatTime(time)}</span>}
-                    <span>{formatMinutesShort(t.minutes)}</span>
-                    {t.spentMs ? <span>· {formatMinutesShort(t.spentMs / 60000)} logged</span> : null}
-                  </div>
-                  {t.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{t.notes}</p>}
-                </button>
+                {/* The box, the name and its minutes are one target that ticks it (Edit is in ⋮). */}
+                <TaskCheck
+                  checked={t.done}
+                  label={t.title}
+                  color="var(--accent)"
+                  boxClass="h-6 w-6 lg:h-5 lg:w-5"
+                  onToggle={() => log.toggleDayTask(date, t.id)}
+                  meta={[
+                    time !== null && <span className="font-medium">{formatTime(time)}</span>,
+                    formatMinutesShort(t.minutes),
+                    !!t.spentMs && `${formatMinutesShort(t.spentMs / 60000)} logged`,
+                  ]}
+                />
+                <div className="pl-9 lg:pl-8">
+                {t.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{t.notes}</p>}
                 {t.done && !t.spentMs && t.minutes > 0 && (
                   <button
                     type="button"
@@ -372,6 +368,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                   onAdd={(title) => log.saveDayTask(date, { ...t, subtasks: [...(t.subtasks ?? []), newSubtask(title)] })}
                   onRemove={(id) => log.saveDayTask(date, { ...t, subtasks: (t.subtasks ?? []).filter((x) => x.id !== id) })}
                 />
+                </div>
                 </div>
                 {isNow && engine ? (
                   <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[11px] font-medium text-accent-foreground">{engine.paused ? "Paused" : "Timing"}</span>

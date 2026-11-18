@@ -159,6 +159,7 @@ export default function TimeTest() {
   // The Mic chip's popover (where Calibrate is), also opened from the "Calibrate first" note.
   const [micOpen, setMicOpen] = useState(false);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
+  const [calibrateError, setCalibrateError] = useState<string | null>(null);
   const [recStart, setRecStart] = useState(0);
   const [now, setNow] = useState(0);
   const [micHints, setMicHints] = useState(false);
@@ -269,13 +270,16 @@ export default function TimeTest() {
 
   const calibrate = () => {
     setError(null);
+    setCalibrateError(null);
     setCalibration(null);
     void runCalibration(micSettings.inputDeviceId, soundId, volume)
       .then((c) => {
         setCalibration(c);
         if (c.ok) updateMic({ latencyMs: Math.round(c.latencyMs * 10) / 10, calibrated: true });
       })
-      .catch((e) => setError(errorText(e)));
+      // Shown under the Calibrate button in the Microphone popover (the page's own error line is
+      // behind the popover).
+      .catch((e) => setCalibrateError(errorText(e)));
   };
 
   const play = (from: number) => {
@@ -525,6 +529,7 @@ export default function TimeTest() {
                   calibrating={calibrating}
                   onCalibrate={calibrate}
                   lastCalibration={calibration}
+                  calibrateError={calibrateError}
                   micError={engine.micError}
                   busy={recording}
                 />

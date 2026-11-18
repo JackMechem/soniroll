@@ -74,9 +74,9 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Settings", href: "/account?tab=general", label: "General", detail: "Settings", words: "settings preferences features turn off hide clock confetti celebrations bug report button reset", icon: GearIcon, account: true },
   { group: "Settings", href: "/account?tab=appearance", label: "Appearance", detail: "Settings", words: "settings theme dark mode light colors colours font text size bigger smaller classic look motion display", icon: EyeIcon, account: true },
   { group: "Settings", href: "/account?tab=sidebar", label: "Sidebar", detail: "Settings", words: "settings menu hide tools folded streak", icon: ListIcon, account: true },
-  { group: "Settings", href: "/account?tab=dashboard", label: "Dashboard", detail: "Settings", words: "settings home cards layout edit", icon: HomeIcon, account: true },
-  { group: "Settings", href: "/account?tab=tools", label: "Tools", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
-  { group: "Settings", href: "/account?tab=practice", label: "Shed Log", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
+  { group: "Settings", href: "/account?tab=dashboard", label: "Dashboard settings", detail: "Settings", words: "settings home cards layout edit", icon: HomeIcon, account: true },
+  { group: "Settings", href: "/account?tab=tools", label: "Tool settings", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
+  { group: "Settings", href: "/account?tab=practice", label: "Shed Log settings", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
   { group: "Settings", href: "/account?tab=storage", label: "Storage plan", detail: "Account", words: "storage plan subscription subscribe cancel billing payment receipts card upgrade gb cloud", icon: CloudIcon, account: true },
   { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password email google login sign in", icon: ShieldIcon, account: true },
 ];

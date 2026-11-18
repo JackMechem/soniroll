@@ -179,7 +179,14 @@ export default function JamPractice() {
             onAddOpenChange={setAdding}
           />
 
-          <CollapsiblePanel id="jam-countoff" title="Count-off" icon={StopwatchIcon} summary={`${countOffBars} bars`}>
+          {/* The click: how long it counts you in, and whether it keeps going. Its value says what the
+              number means ("8-bar count-off", not a bare "8 bars" that could be the tune's length). */}
+          <CollapsiblePanel
+            id="jam-countoff"
+            title="Click"
+            icon={StopwatchIcon}
+            summary={`${countOffBars}-bar count-off${keepGoingIndefinitely ? ", keeps going" : ""}`}
+          >
             <label className="flex items-center justify-between gap-3 text-sm">
               <span className="text-muted">Count-off bars</span>
               <Select

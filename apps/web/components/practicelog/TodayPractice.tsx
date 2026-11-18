@@ -8,7 +8,6 @@ import Momentum from "@/components/practicelog/Momentum";
 import DayTimer from "@/components/practicelog/DayTimer";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { TOUCH_CHECK } from "@/components/practicelog/touch";
 import { CheckIcon, PlayIcon, PlusIcon } from "@/components/tools";
 import {
   ROUTINE_COLORS,
@@ -129,23 +128,29 @@ export default function TodayPractice() {
         );
       })}
       {tasks.map((t) => (
-        <div key={t.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] px-3 py-2">
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={t.done}
-            aria-label={`${t.title} done`}
-            onClick={(e) => {
-              if (!t.done) burstAt(e.currentTarget, "var(--accent)");
-              log.toggleDayTask(today, t.id);
-            }}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${TOUCH_CHECK} ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
+        // The whole row ticks it, not just the box.
+        <button
+          key={t.id}
+          type="button"
+          role="checkbox"
+          aria-checked={t.done}
+          aria-label={`${t.title} done`}
+          onClick={(e) => {
+            if (!t.done) burstAt(e.currentTarget.querySelector("[data-check]") ?? e.currentTarget, "var(--accent)");
+            log.toggleDayTask(today, t.id);
+          }}
+          className="group/check flex items-center gap-3 rounded-md bg-foreground/[0.05] px-3 py-2 text-left hover:bg-surface-hover pointer-coarse:py-2.5"
+        >
+          <span
+            data-check
+            aria-hidden
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 group-hover/check:border-muted"}`}
           >
             {t.done && <CheckIcon className="h-4 w-4" />}
-          </button>
+          </span>
           <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-muted line-through" : ""}`}>{t.title}</span>
           <span className="shrink-0 text-xs text-muted">{formatMinutesShort(t.minutes)}</span>
-        </div>
+        </button>
       ))}
       {/* A form, so Enter or a phone keyboard's Done adds it; Add shows once something's typed. */}
       <form

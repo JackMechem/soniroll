@@ -45,6 +45,15 @@ export default function Landing({ initialSignedIn, initialAuth = null }: { initi
   const openApp = goDashboard;
   const signUp = () => setAuth("signUp");
   const logIn = () => setAuth("signIn");
+  // Closing the dialog takes `?auth=` off the address, so a reload doesn't open it again. A plain
+  // history.replaceState (not the router, which would re-render the page) keeps Next's own state.
+  const closeAuth = () => {
+    setAuth(null);
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("auth")) return;
+    url.searchParams.delete("auth");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  };
 
   return (
     <div className="landing relative min-h-[100dvh] bg-background text-foreground" style={{ fontFamily: "var(--font-geist-sans), sans-serif" }}>
@@ -59,7 +68,7 @@ export default function Landing({ initialSignedIn, initialAuth = null }: { initi
       <Note />
       <FinalCta signedIn={signedIn} onSignUp={signUp} onOpenApp={openApp} onDashboard={goDashboard} />
       <Footer />
-      {auth && <AuthModal mode={auth} onClose={() => setAuth(null)} onSuccess={goDashboard} />}
+      {auth && <AuthModal mode={auth} onClose={closeAuth} onSuccess={goDashboard} />}
     </div>
   );
 }
@@ -145,7 +154,7 @@ function Shot({ name, alt, width, height, priority, className = "" }: { name: st
 function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () => void; onSignUp: () => void }) {
   return (
     <div className="sticky top-0 z-30 px-4 pt-4">
-      <nav className="mx-auto flex h-14 max-w-5xl items-center gap-2 rounded-full border border-foreground/[0.07] bg-surface/75 pl-5 pr-2 shadow-[0_8px_30px_-12px_color-mix(in_srgb,var(--foreground)_25%,transparent)] backdrop-blur-xl">
+      <nav className="mx-auto flex h-14 max-w-5xl items-center gap-2 rounded-full border border-foreground/[0.07] bg-surface/95 pl-5 pr-2 shadow-[0_8px_30px_-12px_color-mix(in_srgb,var(--foreground)_25%,transparent)] backdrop-blur-xl">
         <Link href="/" aria-label="soniroll home" className="shrink-0">
           <Logo height={34} />
         </Link>
@@ -357,7 +366,8 @@ function TeachingSection() {
             Invite a student with a link. Each lesson gets its own page, the week&apos;s work goes in their Shed Log, and nothing gets lost in a text thread.
           </p>
         </Reveal>
-        <div className="relative mt-12 grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
+        {/* Not on phones: desktop screenshots that small can't be read. */}
+        <div className="relative mt-12 hidden items-start gap-6 sm:grid lg:grid-cols-[1.25fr_1fr]">
           <Reveal className="overflow-hidden rounded-[24px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)]">
             <div className="overflow-hidden rounded-[18px]">
               <Shot name="lessons" alt="A student's page in soniroll: their lessons, practice stats and booking" width={2560} height={1600} />
@@ -410,7 +420,11 @@ function Showcase() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-[28px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)]">
+        {/* Phones get the phone screenshot: the desktop one shrunk to this width is unreadable. */}
+        <div className="mx-auto w-60 overflow-hidden rounded-[30px] border-4 border-foreground/10 bg-surface shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)] sm:hidden">
+          <Shot name="phone" alt="soniroll on a phone: the Home dashboard with today's practice and streak" width={780} height={1400} />
+        </div>
+        <div className="hidden overflow-hidden rounded-[28px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)] sm:block">
           <div className="flex items-center gap-1.5 px-3 pb-2 pt-1">
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
@@ -494,7 +508,10 @@ function FeaturePreview({ id }: { id: string }) {
     default:
       return (
         <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-foreground/[0.06] shadow-[0_24px_60px_-24px_color-mix(in_srgb,var(--foreground)_40%,transparent)]">
-          <Shot name="setlist" alt="A setlist in soniroll, with each tune's key and tempo" width={2048} height={1280} />
+          {/* On phones, the left half at twice the size (the setlist's name and tunes), so it reads. */}
+          <div className="w-[200%] sm:w-full">
+            <Shot name="setlist" alt="A setlist in soniroll, with each tune's key and tempo" width={2048} height={1280} />
+          </div>
         </div>
       );
   }
@@ -678,7 +695,7 @@ function Bento() {
                 <h3 className="text-xl font-semibold tracking-tight">Split your screen</h3>
                 <p className="mt-1.5 text-sm text-muted">Tile the metronome next to a warmup or a chord chart. Each pane keeps playing while you work in another.</p>
               </div>
-              <div className="-mr-6 mt-auto overflow-hidden rounded-tl-2xl border-l border-t border-foreground/10 sm:-mr-8">
+              <div className="-mr-6 mt-auto hidden overflow-hidden rounded-tl-2xl border-l border-t border-foreground/10 sm:-mr-8 sm:block">
                 <Shot name="split" alt="Two tools side by side in soniroll's split view" width={2100} height={1100} />
               </div>
             </div>

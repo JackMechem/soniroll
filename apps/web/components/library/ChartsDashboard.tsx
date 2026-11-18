@@ -89,7 +89,7 @@ export default function ChartsDashboard() {
         tabs={<LibraryTabs active="charts" />}
       >
         <Toolbar>
-          <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts…`} />
+          <HeroSearch value={query} onChange={setQuery} placeholder={totalSongs > 1 ? `Search ${totalSongs} charts…` : "Search charts…"} />
           {/* Phones: Import is in the New menu, so the toolbar stays search + one labelled button. */}
           <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" className="max-sm:hidden" />
           <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} />

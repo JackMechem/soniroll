@@ -21,6 +21,11 @@ function buttonClass(collapsed?: boolean, large?: boolean) {
   } ${collapsed ? "justify-center" : ""}`;
 }
 
+/** Roughly an email address: something@something.something (the server checks it properly). */
+function looksLikeEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 /** The sign-in / sign-up form, inside a dialog that has its own × to cancel. `onClose` closes the
     dialog (the "Forgot your password?" link, and success unless `onSuccess` is given —
     the landing page uses that to go into the app once signed in). */
@@ -44,6 +49,8 @@ export function AuthForm({
   // covers both a fresh sign-up and any pre-existing account that's never verified its email.
   const [step, setStep] = useState<"credentials" | "code">("credentials");
   const [email, setEmail] = useState("");
+  // Shown once you leave the email field with something that isn't an address yet.
+  const [emailBad, setEmailBad] = useState(false);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -183,9 +190,15 @@ export function AuthForm({
             autoFocus
             autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailBad && looksLikeEmail(e.target.value)) setEmailBad(false);
+            }}
+            onBlur={() => setEmailBad(!!email.trim() && !looksLikeEmail(email))}
+            aria-invalid={emailBad}
             className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
+          {emailBad && <span className="text-xs text-danger">Enter a full email address, like name@example.com.</span>}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-muted">Password</span>

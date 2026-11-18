@@ -13,6 +13,7 @@ import {
 	Tuplet,
 	Voice,
 } from "vexflow";
+import { useMusicFontVersion } from "@/lib/musicFont";
 import {
 	CELL_BEAT_FRACTION,
 	type CellSpeed,
@@ -150,10 +151,11 @@ function StickControlRow({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [barRects, setBarRects] = useState<BarRect[]>([]);
 	const [totalWidth, setTotalWidth] = useState(0);
+	const fontVersion = useMusicFontVersion();
 
 	useEffect(() => {
 		const el = containerRef.current;
-		if (!el) return;
+		if (!el || !fontVersion) return;
 		el.innerHTML = "";
 
 		// Pass 1: build each bar's own notes/voice and measure its own natural minimum width.
@@ -259,7 +261,7 @@ function StickControlRow({
 		// `rowBars` only ever changes reference when the pattern itself is regenerated or the row
 		// layout changes — a tick-driven re-render for `activeIndexInRow` alone leaves it
 		// referentially stable, so this effect correctly skips redrawing the SVG for those.
-	}, [rowBars, beatsPerBar, isFirstRow, isLastRow]);
+	}, [rowBars, beatsPerBar, isFirstRow, isLastRow, fontVersion]);
 
 	return (
 		<div
@@ -308,6 +310,8 @@ export default function StickControlStave({
 }) {
 	const wrapperRef = useRef<HTMLDivElement>(null);
 	const [containerWidth, setContainerWidth] = useState(DEFAULT_CONTAINER_WIDTH);
+	// Bar widths are measured with the music font, so re-measure once it has loaded.
+	const fontVersion = useMusicFontVersion();
 
 	useLayoutEffect(() => {
 		const el = wrapperRef.current;
@@ -329,6 +333,7 @@ export default function StickControlStave({
 	// this, a tick-driven re-render for `activeBarIndex` alone (every playback tick) would rebuild
 	// every bar's `Voice`/`Formatter` just to re-derive the same answer.
 	const { rows, barsPerRow } = useMemo(() => {
+		if (!fontVersion) return { rows: [bars], barsPerRow: bars.length };
 		function naturalBarWidth(cells: NoteCell[]): number {
 			const beamGroups = buildBeamGroups(cells);
 			const voice = new Voice({ numBeats: beatsPerBar, beatValue: 4 });
@@ -358,7 +363,7 @@ export default function StickControlStave({
 			grouped.push(bars.slice(i, i + perRow));
 		}
 		return { rows: grouped, barsPerRow: perRow };
-	}, [bars, beatsPerBar, containerWidth]);
+	}, [bars, beatsPerBar, containerWidth, fontVersion]);
 
 	return (
 		<div

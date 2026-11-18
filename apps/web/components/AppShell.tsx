@@ -77,7 +77,7 @@ function AnimatedPage({ children }: { children: React.ReactNode }) {
   // Phones: room under the page for the floating bug-report button (bottom right), so the last
   // row, a footer link or a tool's option chips can always sit clear of it.
   return (
-    <div ref={pageRef} className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+    <div ref={pageRef} data-page-scroll className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
       {children}
     </div>
   );

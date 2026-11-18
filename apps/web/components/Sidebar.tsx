@@ -525,7 +525,7 @@ function NavItems({
       </div>
     );
     return (
-      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-8 [mask-image:linear-gradient(to_bottom,black_calc(100%-2rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {group("start", "Dashboard", <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />)}
         {group(
           "shed",
@@ -1176,7 +1176,7 @@ function MobileBarTitle({ path }: { path: string }) {
       : null;
   if (path === DASHBOARD_PATH || !item) {
     return (
-      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex items-center rounded-md px-1 py-1">
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex h-10 items-center rounded-md px-1">
         <Logo height={24} />
       </Link>
     );
@@ -1191,7 +1191,8 @@ function MobileBarTitle({ path }: { path: string }) {
   );
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex shrink-0 items-center rounded-md p-1">
+      {/* A 40px target, a little more than the mark itself. */}
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="-mx-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-md">
         <LogoMark size={22} />
       </Link>
       <span className="text-foreground/30">/</span>
@@ -1202,6 +1203,12 @@ function MobileBarTitle({ path }: { path: string }) {
         <Link
           href={item.href}
           aria-current={path === item.href ? "page" : undefined}
+          onClick={(e) => {
+            // Already there: back to the top instead of reloading the page.
+            if (path !== item.href) return;
+            e.preventDefault();
+            document.querySelector("[data-page-scroll]")?.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           className="-mx-1 flex h-10 min-w-0 items-center gap-1.5 rounded-md px-1 text-sm font-medium hover:bg-surface-hover"
         >
           {inner}

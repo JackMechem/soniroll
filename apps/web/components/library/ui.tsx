@@ -46,11 +46,26 @@ export function FolderIcon({ className }: { className?: string }) {
   );
 }
 
+/** A key as people read it: "Bb-" → "B♭m", "F#" → "F♯". Display only — the stored label keeps
+    its plain b/#. */
+export function prettyKey(label: string): string {
+  return displayKey(label).replace(/^([A-G])b/, "$1♭").replace(/^([A-G])#/, "$1♯");
+}
+
+/** Minor keys on a black key that are written with sharps (C♯m, not D♭m). */
+const MINOR_SHARP: Record<string, string> = { Db: "C♯", Gb: "F♯", Ab: "G♯" };
+
+/** One of the 12 key-grid buttons' names (`KEY_NAMES[pc]` plus "m" for a minor tune), spelled the
+    way it's usually written: D♭ but C♯m, A♭ but G♯m. Only for the grids, never a stored key. */
+export function gridKeyName(name: string, minor: boolean): string {
+  return minor ? `${MINOR_SHARP[name] ?? prettyKey(name)}m` : prettyKey(name);
+}
+
 /** A tune's or chart's key in a little tile of the key's colour ("Gm", "Bb"). The colour says
     which key it is, so this is the one tinted tile the library keeps. */
 export function KeyBadge({ label, size = "md" }: { label: string | null | undefined; size?: "sm" | "md" | "lg" }) {
   const color = keyColor(label);
-  const text = label ? displayKey(label) : "";
+  const text = label ? prettyKey(label) : "";
   const dims =
     size === "lg" ? "h-12 w-12 rounded-lg text-base sm:h-14 sm:w-14 sm:text-lg" : size === "sm" ? "h-7 w-7 rounded-md text-[11px]" : "h-9 w-9 rounded-md text-xs";
   return (
@@ -275,8 +290,9 @@ export function Hero({
           </div>
           {titleExtra && <div className="ml-auto shrink-0">{titleExtra}</div>}
         </div>
-        {/* Buttons here sit on the page background, so any "on a card" bg-background ones turn surface. */}
-        {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
+        {/* Buttons here sit on the page background, so any "on a card" bg-background ones turn surface.
+            min-w-0: on its own line it fits the page, and a select in it shrinks (a chart's key). */}
+        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
       </div>
       {tabs}
       {children && <div>{children}</div>}

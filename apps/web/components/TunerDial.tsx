@@ -55,7 +55,7 @@ export default function TunerDial({
   /** Pitch class currently heard, lit up on the ring. */
   detectedPc: number | null;
   detectedColor: string;
-  /** Pitch class of the tone being played, outlined on the ring. */
+  /** Pitch class of the tone being played, filled with the accent on the ring. */
   playingPc: number | null;
   onSelect: (pc: number) => void;
   children: React.ReactNode;
@@ -94,15 +94,15 @@ export default function TunerDial({
                 className={`transition-colors ${
                   isDetected
                     ? ""
-                    : alt
-                      ? "fill-surface-hover group-hover:fill-muted/30"
-                      : "fill-surface group-hover:fill-surface-hover"
+                    : isPlaying
+                      ? "fill-accent"
+                      : alt
+                        ? "fill-surface-hover group-hover:fill-muted/30"
+                        : "fill-surface group-hover:fill-surface-hover"
                 }`}
-                style={{
-                  ...(isDetected ? { fill: detectedColor } : {}),
-                  stroke: isPlaying ? "var(--accent)" : "transparent",
-                  strokeWidth: 4,
-                }}
+                // The playing note is filled rather than outlined: a stroke drew half outside the
+                // wedge and poked past the ring.
+                style={isDetected ? { fill: detectedColor } : undefined}
               />
               <path
                 d={segmentPath(degrees)}
@@ -115,7 +115,7 @@ export default function TunerDial({
                 textAnchor="middle"
                 dominantBaseline="central"
                 className={`select-none text-[26px] font-semibold ${
-                  isDetected ? "fill-background" : "fill-foreground"
+                  isDetected ? "fill-background" : isPlaying ? "fill-accent-foreground" : "fill-foreground"
                 }`}
               >
                 {glyphs(main)}

@@ -15,6 +15,7 @@ import {
 import { layoutRows, type PlacedBar } from "@jam-practice/core/chartLayout";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import NumberField from "@/components/NumberField";
+import Select from "@/components/Select";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { PlusIcon, TrashIcon } from "@/components/tools";
 import { encodeChartString } from "@/lib/chartString";
@@ -257,7 +258,7 @@ export default function ChordChartEditor({
   const song: IRealSong = songOf({ title, composer, style, key, top, bottom, bars });
   const dirty = JSON.stringify(song) !== baseline;
   // Close, Escape, browser Back and links elsewhere ask first when something changed.
-  const guard = useLeaveGuard(dirty, editing ? "Your changes to this chart haven't been saved." : "This chart hasn't been saved yet.");
+  const guard = useLeaveGuard(dirty, editing ? "Your changes to this chart haven't been saved." : "This chart hasn't been saved yet.", onClose);
   const closeRef = useRef(() => {});
   useEffect(() => {
     closeRef.current = () => guard.requestLeave(onClose);
@@ -408,19 +409,16 @@ export default function ChordChartEditor({
           <div className="flex flex-col gap-1 text-sm sm:col-span-2">
             <span className="text-xs font-medium text-muted">Folder</span>
             <div className="flex flex-wrap items-center gap-2">
-              <select
+              <Select
                 value={playlist}
-                onChange={(e) => setPlaylist(e.target.value)}
-                className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
-              >
-                <option value={NO_PLAYLIST}>No folder (All charts only)</option>
-                {playlists.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-                <option value="">New folder…</option>
-              </select>
+                onChange={setPlaylist}
+                options={[
+                  { value: NO_PLAYLIST, label: "No folder (All charts only)" },
+                  ...playlists.map((name) => ({ value: name, label: name })),
+                  { value: "", label: "New folder…" },
+                ]}
+                className="min-w-0 max-w-full"
+              />
               {playlist === "" && (
                 <input
                   value={newPlaylist}
@@ -462,7 +460,14 @@ export default function ChordChartEditor({
         </label>
         <div className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Key &amp; time signature</span>
-          <div className="flex items-center gap-2">
+          {/* The time signature's two number fields take digits only (a letter typed there would
+              just sit in red). */}
+          <div
+            className="flex items-center gap-2"
+            onBeforeInput={(e) => {
+              if ((e.target as HTMLInputElement).inputMode === "numeric" && /\D/.test(e.data ?? "")) e.preventDefault();
+            }}
+          >
             <input
               value={key}
               onChange={(e) => setKey(e.target.value)}
@@ -491,7 +496,8 @@ export default function ChordChartEditor({
       </div>
 
       <p className="text-xs text-muted">
-        Click a bar to type its chords — <code>C^7</code>, <code>F-7</code>, <code>Bb7#5/D</code>,{" "}
+        <span className="pointer-coarse:hidden">Click</span>
+        <span className="hidden pointer-coarse:inline">Tap</span> a bar to type its chords — <code>C^7</code>, <code>F-7</code>, <code>Bb7#5/D</code>,{" "}
         <code>NC</code> for no chord, or two chords separated by a space. Press Enter to move to
         the next bar. Use the row below to give the active bar a section, a repeat barline, or a
         coda.
@@ -518,8 +524,9 @@ export default function ChordChartEditor({
                       value={bars[globalIndex].text}
                       onChange={(e) => updateBar(globalIndex, { text: e.target.value })}
                       onKeyDown={(e) => handleBarKeyDown(globalIndex, e)}
-                      placeholder={bars[globalIndex].isRepeatBar ? "% (ignored while on)" : "C^7"}
-                      className={`w-full min-w-0 bg-transparent text-center outline-none ${
+                      placeholder={bars[globalIndex].isRepeatBar ? "% (ignored while on)" : "Type a chord"}
+                      // A plain, faint hint, so an empty bar never reads as one with a chord in it.
+                      className={`w-full min-w-0 bg-transparent text-center outline-none placeholder:font-sans placeholder:text-sm placeholder:text-muted/60 ${
                         bars[globalIndex].isRepeatBar ? "opacity-40" : ""
                       } ${chordFont.className}`}
                       style={{ fontSize: QUALITY_SIZE }}
@@ -766,7 +773,7 @@ function BarToggle({
             glyph
           )}
         </span>
-        <span className={`text-[0.6rem] leading-none ${active ? "" : "text-muted"}`}>{label}</span>
+        <span className={`text-xs leading-none ${active ? "" : "text-muted"}`}>{label}</span>
       </button>
     );
   }

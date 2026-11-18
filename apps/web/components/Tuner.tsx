@@ -239,7 +239,15 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
   }, [openTakeId]);
 
   useSpaceToggle(
-    openTake ? playback.toggle : recording ? () => void stopRecording() : listening ? stopListening : () => void startListening(),
+    openTake
+      ? playback.toggle
+      : recording
+        ? () => void stopRecording()
+        : playing
+          ? stopTone
+          : listening
+            ? stopListening
+            : () => void startListening(),
   );
 
   function stopTone() {
@@ -589,14 +597,16 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-3">
-        {/* While a take records the tuner listens too, so there's only the one Stop. */}
+        {/* While a take records the tuner listens too, so there's only the one Stop. While a tone
+            plays (the tuner doesn't listen then anyway), the first button stops it, so the row
+            never grows a third button and pushes the page down. */}
         {!recording && (
           <button
             type="button"
-            onClick={listening ? stopListening : () => void startListening()}
-            className={startButtonClass(listening)}
+            onClick={playing ? stopTone : listening ? stopListening : () => void startListening()}
+            className={startButtonClass(listening || playing !== null)}
           >
-            {listening ? "Stop" : "Start listening"}
+            {playing ? "Stop tone" : listening ? "Stop" : "Start listening"}
           </button>
         )}
         <button
@@ -619,7 +629,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             </>
           )}
         </button>
-        {playing && (
+        {playing && recording && (
           <button
             type="button"
             onClick={stopTone}
@@ -631,10 +641,10 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
       </div>
       {/* An error takes the key hint's place, so the page doesn't grow (and scroll) when one shows. */}
       {shownError ? (
-        <p className="text-center text-sm text-danger sm:w-max sm:max-w-[min(40rem,calc(100vw-2rem))]">{shownError}</p>
+        <p role="alert" className="-mt-3 text-center text-sm text-danger sm:w-max sm:max-w-[min(40rem,calc(100vw-2rem))]">{shownError}</p>
       ) : (
         <KeyHint>
-          Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : "start or stop listening"}
+          Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : playing ? "stop the tone" : "start or stop listening"}
         </KeyHint>
       )}
     </ToolLayout>

@@ -17,6 +17,8 @@ import PomodoroEditor, { normalizePomodoro } from "@/components/PomodoroEditor";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { BIG_PRIMARY } from "@/components/MeterFields";
+import KeyHint from "@/components/KeyHint";
+import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { RewardProvider } from "@/components/reward/Reward";
 import { useSiteSettings } from "@/lib/siteSettings";
 import { toolPresets } from "@/lib/toolPresets";
@@ -101,8 +103,12 @@ export default function PracticeTimer() {
   // The session editor is the "New session" chip's popover; an Edit button on a saved session
   // opens it too. Closing it keeps an unsaved draft (Save / Cancel are what end it).
   const [editorOpen, setEditorOpen] = useState(false);
+  // Whether the draft has been changed since it was opened. An untouched one is dropped when the
+  // editor closes, so the chip only says "Draft" when there's really something unsaved.
+  const [draftTouched, setDraftTouched] = useState(false);
   function closeEditor() {
     setDraft(null);
+    setDraftTouched(false);
     setEditorOpen(false);
     setNameMissing(false);
   }
@@ -122,6 +128,15 @@ export default function PracticeTimer() {
   // The quick timer's length: a plain countdown, no session needed. Not saved.
   const [quickMinutes, setQuickMinutes] = useState(10);
 
+  // Space starts the quick timer, then pauses and resumes (and dismisses the alarm), like every
+  // other tool's Space.
+  useSpaceToggle(() => {
+    if (!engineState) startQuickTimer();
+    else if (engineState.alarming) skip();
+    else if (engineState.paused) resume();
+    else pause();
+  });
+
   function startSession(session: PracticeSession) {
     start(session, soundEnabled, toneId, alarmMode, fullScreenAlert);
   }
@@ -131,7 +146,7 @@ export default function PracticeTimer() {
       id: "quick-timer",
       name: "",
       type: "custom",
-      segments: [{ ...newSegment(), title: "Timer", minutes: quickMinutes }],
+      segments: [{ ...newSegment(), title: `${quickMinutes} min timer`, minutes: quickMinutes }],
       updatedAt: 0,
     });
   }
@@ -165,10 +180,12 @@ export default function PracticeTimer() {
     updateSoundSettings(alarmMode ? { alarmMode } : { alarmMode, fullScreenAlert: false });
 
   function updateDraft(patch: Partial<Draft>) {
+    setDraftTouched(true);
     setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
   function updateSegment(index: number, patch: Partial<Segment>) {
+    setDraftTouched(true);
     setDraft((prev) => {
       if (!prev) return prev;
       const segments = prev.segments.map((s, i) => (i === index ? { ...s, ...patch } : s));
@@ -177,6 +194,7 @@ export default function PracticeTimer() {
   }
 
   function moveSegment(index: number, dir: -1 | 1) {
+    setDraftTouched(true);
     setDraft((prev) => {
       if (!prev) return prev;
       const target = index + dir;
@@ -188,6 +206,7 @@ export default function PracticeTimer() {
   }
 
   function removeSegment(index: number) {
+    setDraftTouched(true);
     setDraft((prev) => {
       if (!prev) return prev;
       const segments = prev.segments.filter((_, i) => i !== index);
@@ -243,8 +262,12 @@ export default function PracticeTimer() {
               wide
               open={editorOpen}
               onOpenChange={(open) => {
-                if (open && !draft) setDraft(blankDraft());
-                setEditorOpen(open);
+                if (open && !draft) {
+                  setDraft(blankDraft());
+                  setDraftTouched(false);
+                }
+                if (!open && !draftTouched) closeEditor();
+                else setEditorOpen(open);
               }}
               headerExtra={<HintsButton on={editorHints} onToggle={toggleEditorHints} />}
               trigger={{
@@ -254,7 +277,7 @@ export default function PracticeTimer() {
                   <>
                     {draft?.id ? <PencilIcon className="h-4 w-4 text-accent" /> : <PlusIcon className="h-4 w-4 text-accent" />}
                     {draft?.id ? "Edit session" : "New session"}
-                    {draft && !editorOpen && <span className="text-muted">· Unsaved</span>}
+                    {draft && draftTouched && !editorOpen && <span className="text-muted">· Draft, not saved</span>}
                   </>
                 ),
               }}
@@ -490,6 +513,9 @@ export default function PracticeTimer() {
               <StopIcon className="h-4 w-4" /> Stop
             </button>
           </div>
+          <KeyHint>
+            Press <KeyHint.Key>Space</KeyHint.Key> to {engineState.alarming ? "continue" : engineState.paused ? "resume" : "pause"}
+          </KeyHint>
         </div>
       ) : (
         <div className="flex w-full flex-col items-center gap-3 text-center">
@@ -511,11 +537,14 @@ export default function PracticeTimer() {
             <button type="button" onClick={startQuickTimer} className={BIG_PRIMARY}>
               <PlayIcon className="h-4 w-4" /> Start
             </button>
+            <KeyHint>
+              Press <KeyHint.Key>Space</KeyHint.Key> to start
+            </KeyHint>
           </div>
           {loading ? (
             <LoadingSpinner />
           ) : sessions.length === 0 ? (
-            <p className="w-full max-w-sm rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
+            <p className="w-full max-w-sm text-sm text-muted">
               To chain timers back to back or run a Pomodoro, use New session below.
             </p>
           ) : (
@@ -546,6 +575,7 @@ export default function PracticeTimer() {
                       type="button"
                       onClick={() => {
                         setDraft(draftFromSession(session));
+                        setDraftTouched(false);
                         setEditorOpen(true);
                       }}
                       aria-label={`Edit ${session.name || "session"}`}

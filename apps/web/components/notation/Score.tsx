@@ -19,6 +19,7 @@ import {
 } from "@/lib/bassTranscription";
 import { chordFont, chordSymbolFont, SMUFL_CHORD_GLYPH } from "@/components/ChordChart";
 import { prettyQuality } from "@/lib/iRealPro";
+import { useMusicFontVersion } from "@/lib/musicFont";
 
 // Draws a score as engraved notation (VexFlow) — the one notation view every editor uses (Score
 // Writer, Shed Notes, Bass Genius): treble or bass clef and the key signature at the start of each
@@ -184,6 +185,7 @@ export default function TranscriptionScore({
   const geomRef = useRef<{ topY: number; spacing: number }>({ topY: STAVE_Y + 10, spacing: 10 });
   const [hover, setHover] = useState<Hover | null>(null);
   const [width, setWidth] = useState(0);
+  const fontVersion = useMusicFontVersion();
   const hitsRef = useRef<Hit[][]>([]);
   // Write mode on a touch screen: a finger on the staff previews the note (with its name) and
   // adds it when lifted; moving off to scroll cancels it. Its click is then ignored.
@@ -201,7 +203,7 @@ export default function TranscriptionScore({
 
   useEffect(() => {
     const wrap = wrapRef.current;
-    if (!wrap || width <= 0) return;
+    if (!wrap || width <= 0 || !fontVersion) return;
     // Hold the old height while redrawing: the rows are rebuilt one by one and getBBox() forces
     // layout in between, so a momentarily shorter page would clamp the scroll position upward.
     wrap.style.minHeight = `${wrap.offsetHeight}px`;
@@ -468,7 +470,7 @@ export default function TranscriptionScore({
       }
     });
     wrap.style.minHeight = "";
-  }, [transcription, cursor, playing, width, range, firstBar]);
+  }, [transcription, cursor, playing, width, range, firstBar, fontVersion]);
 
   useImperativeHandle(
     handleRef,

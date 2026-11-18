@@ -7,7 +7,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
-import RoutineIcon, { RoutineIconPicker } from "@/components/practicelog/RoutineIcon";
+import { RoutineIconButton } from "@/components/practicelog/RoutineIcon";
 import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import {
@@ -137,11 +137,13 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       {error && <p ref={errorRef} className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <Card title="Routine">
-        <label className="flex flex-col gap-1.5">
-          <span className={LABEL}>Name</span>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="routine-name" className={LABEL}>Name</label>
           <div className="flex items-center gap-2">
-            <RoutineIcon icon={r.icon} color={r.color} size="md" />
+            {/* The icon: tap it to pick another (a popover). */}
+            <RoutineIconButton value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
             <input
+              id="routine-name"
               ref={nameRef}
               autoFocus={isNew}
               aria-invalid={error === "Give the routine a name." || undefined}
@@ -154,7 +156,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
               className={`${INPUT} flex-1 aria-[invalid]:ring-2 aria-[invalid]:ring-danger/60`}
             />
           </div>
-        </label>
+        </div>
         <label className="flex flex-col gap-1.5">
           <span className={LABEL}>What it&apos;s for (optional)</span>
           <textarea
@@ -305,9 +307,9 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 <textarea
                   value={task.notes}
                   onChange={(e) => setTask(i, { notes: e.target.value })}
-                  rows={1}
-                  placeholder="Notes (optional) — what to focus on"
-                  aria-label="Notes"
+                  rows={2}
+                  placeholder="Notes: what to focus on"
+                  aria-label="Notes (optional)"
                   className={`${TEXTAREA} w-full py-1.5`}
                 />
               </div>
@@ -351,10 +353,6 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         <p className="text-xs text-muted">
           A task without its own time follows the one before it{r.startTime ? ", starting from the routine's start time" : ""}. Start the routine on its day to run the tasks on the Practice Timer — each one is checked off as its time runs out.
         </p>
-      </Card>
-
-      <Card title="Icon">
-        <RoutineIconPicker value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
       </Card>
 
       <Card title="Attached">
@@ -448,7 +446,7 @@ function TimeField({ label, value, onChange, emptyLabel, inline = false }: { lab
         </>
       ) : (
         <button type="button" onClick={() => onChange("08:00")} className="h-8 rounded-md bg-foreground/[0.05] px-2.5 text-sm text-muted hover:bg-surface-hover hover:text-foreground">
-          {emptyLabel} · set a time
+          {emptyLabel} · Set a time
         </button>
       )}
     </div>

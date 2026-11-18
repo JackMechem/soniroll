@@ -64,8 +64,9 @@ const MIN_LOOP_SECONDS = 0.05;
 const loopButton =
   "inline-flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
 
+/** The waveform toolbar's buttons: full-contrast fills, 36px (40px on touch screens). */
 const zoomButton =
-  "flex h-8 min-w-8 items-center justify-center rounded-md bg-foreground/[0.05] px-2 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-40";
+  "flex h-9 min-w-9 items-center justify-center rounded-md bg-foreground/[0.05] px-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:min-w-10";
 
 const CONTROL_HINTS: [string, string][] = [
   ["Drag", "pan"],
@@ -98,7 +99,7 @@ function TransportButton({
       className={`flex items-center justify-center transition-colors ${
         primary
           ? "h-14 w-14 rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
-          : "h-11 min-w-11 rounded-md px-3 text-sm font-medium tabular-nums hover:bg-surface-hover"
+          : "h-11 min-w-11 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium tabular-nums hover:bg-surface-hover"
       }`}
     >
       {children}
@@ -767,28 +768,31 @@ export default function SlowDowner() {
               </p>
             )}
             <span>{analyzing ? "Analyzing audio…" : peaks ? "" : "Waveform unavailable for this file"}</span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => panBy(-view.span * 0.25)}
-                disabled={!zoomed}
-                aria-label="Pan left"
-                title="Pan left"
-                className={zoomButton}
-              >
-                ◀
-              </button>
-              <button
-                type="button"
-                onClick={() => panBy(view.span * 0.25)}
-                disabled={!zoomed}
-                aria-label="Pan right"
-                title="Pan right"
-                className={zoomButton}
-              >
-                ▶
-              </button>
-              <span className="mx-1 h-5 w-px bg-foreground/10" />
+            <div className="flex items-center gap-1.5">
+              {/* Panning only means anything zoomed in, so the arrows only show then. */}
+              {zoomed && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => panBy(-view.span * 0.25)}
+                    aria-label="Pan left"
+                    title="Pan left"
+                    className={zoomButton}
+                  >
+                    ◀
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => panBy(view.span * 0.25)}
+                    aria-label="Pan right"
+                    title="Pan right"
+                    className={zoomButton}
+                  >
+                    ▶
+                  </button>
+                  <span className="mx-1 h-5 w-px bg-foreground/10" />
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => zoom(1.5)}
@@ -798,7 +802,7 @@ export default function SlowDowner() {
               >
                 −
               </button>
-              <span className="w-12 text-center tabular-nums">
+              <span className="w-12 text-center tabular-nums text-foreground">
                 {duration > 0 ? `${(duration / view.span).toFixed(1)}×` : ""}
               </span>
               <button
@@ -825,10 +829,10 @@ export default function SlowDowner() {
                 aria-pressed={maximized}
                 aria-label={maximized ? "Shrink waveform" : "Maximise waveform height"}
                 title={maximized ? "Shrink waveform" : "Maximise waveform height"}
-                className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
+                className={`flex h-9 w-9 items-center justify-center rounded-md transition-colors pointer-coarse:h-10 pointer-coarse:w-10 ${
                   maximized
-                    ? "border-accent bg-accent text-accent-foreground hover:bg-accent-hover"
-                    : "border-foreground/15 hover:bg-surface-hover"
+                    ? "bg-accent text-accent-foreground hover:bg-accent-hover"
+                    : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
                 }`}
               >
                 {maximized ? (
@@ -840,7 +844,9 @@ export default function SlowDowner() {
             </div>
           </div>
 
+          {/* Hidden (its space kept) until you zoom in: at 1.0× a full-width bar reads like progress. */}
           <WaveScrollbar
+            hidden={!zoomed}
             view={view}
             duration={duration}
             onChange={(start) => setView((v) => ({ ...v, start }))}
@@ -894,16 +900,17 @@ export default function SlowDowner() {
             {loopNote}
           </p>
 
-          <ul
-            aria-label="Controls"
-            className={`flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-muted ${MOUSE_ONLY}`}
-          >
-            {CONTROL_HINTS.map(([keys, action]) => (
-              <li key={keys}>
-                <KeyHint.Key>{keys}</KeyHint.Key> {action}
-              </li>
-            ))}
-          </ul>
+          {/* Keyboard and mouse shortcuts, folded away (and not shown on touch screens). */}
+          <details className={`w-full text-xs text-muted ${MOUSE_ONLY}`}>
+            <summary className="mx-auto w-max cursor-pointer select-none font-medium hover:text-foreground">Shortcuts</summary>
+            <ul aria-label="Controls" className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
+              {CONTROL_HINTS.map(([keys, action]) => (
+                <li key={keys}>
+                  <KeyHint.Key>{keys}</KeyHint.Key> {action}
+                </li>
+              ))}
+            </ul>
+          </details>
         </>
       )}
 

@@ -44,8 +44,8 @@ export const SECONDARY_BUTTON_SM =
 export const POOL_BUTTON =
   "inline-flex h-8 items-center justify-center rounded-full bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50";
 
-/** A quiet text-only action ("I don't know", "Clear these times"). */
-export const TEXT_BUTTON = "text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50";
+/** A quiet text-only action ("I don't know"), with a 44px-tall hit area so it's easy to tap. */
+export const TEXT_BUTTON = "inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50";
 export const TEXT_BUTTON_DANGER = "self-start text-sm font-medium text-muted transition-colors hover:text-danger disabled:opacity-50";
 
 /** One answer in a quiz's grid of choices. `color` is set once the round is answered (right or
@@ -76,6 +76,20 @@ export const PANEL_ROW = "flex items-center justify-between gap-3 py-2 text-sm";
 
 /** "Level 3 · Fourths and fifths" above the display while a learning-path level runs. */
 export const LEVEL_LABEL = "text-xs font-medium text-muted";
+
+/** "Stop to change these." at the top of an options popover whose controls are locked while a
+    round runs, so the greyed-out controls have a reason next to them. */
+export const LOCKED_NOTE = "text-xs font-medium text-muted";
+
+/** A one-line feedback slot under a quiz's round display ("You picked …", the revealed notes).
+    Always there while a round runs, empty or not, so answering never moves the buttons below. */
+export const FEEDBACK_LINE = "h-5 max-w-full truncate text-sm font-medium leading-5";
+
+/** The typed-answer field in Guess the Chord / Progression: a lighter fill than the keypad keys
+    around it plus a faint inset edge (an accent one when focused), so it reads as the place to
+    type rather than another key. Read-only (dimmed) once the round is answered. */
+export const ANSWER_INPUT =
+  "h-11 w-full rounded-md bg-surface px-3 text-center text-lg text-foreground shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--foreground)_18%,transparent)] outline-none placeholder:text-muted focus:shadow-[inset_0_0_0_2px_var(--accent)] read-only:opacity-70";
 
 /** Text inputs in the quizzes (typed answers). */
 export const TEXT_INPUT =

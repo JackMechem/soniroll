@@ -143,6 +143,12 @@ export default function LessonsPage() {
                   body="Add a student to get their invite link. Give them lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — and see how their practice goes."
                   action={<Pill primary icon={PlusIcon} label="Add your first student" onClick={() => setAdding(true)} />}
                 />
+                {/* For a student who hasn't opened their invite yet: nothing above is for them. */}
+                {teachers!.length === 0 && (
+                  <p className="border-t border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
+                    <span className="font-medium text-foreground">Learning from a teacher?</span> Open the link they sent you, and everything they give you shows up here.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">

@@ -58,7 +58,7 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
       {timerDot}
       {show && goal > 0 && (
         <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted" title={`${Math.round(minutes)} of ${goal} minutes today`}>
-          {Math.round(minutes)}/{goal}m
+          {Math.round(minutes)} of {goal} min
           <GoalRing frac={frac} met={met} />
         </span>
       )}

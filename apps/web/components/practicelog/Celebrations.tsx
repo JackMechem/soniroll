@@ -63,6 +63,10 @@ function toast(t: Omit<Toast, "id">) {
   setTimeout(() => set({ toasts: state.toasts.filter((x) => x.id !== id) }), 4200);
 }
 
+function dismiss(id: number) {
+  set({ toasts: state.toasts.filter((x) => x.id !== id) });
+}
+
 function rain() {
   if (!effectsOn) return;
   const id = nextId++;
@@ -265,9 +269,17 @@ export default function Celebrations() {
             />
           ))}
       </div>
-      <div className="pointer-events-none fixed inset-x-0 top-4 z-[96] flex flex-col items-center gap-2 px-4" aria-live="polite">
+      {/* Phones: at the bottom, so they don't cover the top bar and the tool's own row (menu,
+          Presets, Log). Desktop: at the top. A tap on one puts it away. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[96] flex flex-col items-center gap-2 px-4 lg:bottom-auto lg:top-4" aria-live="polite">
         {s.toasts.map((t) => (
-          <div key={t.id} className="log-toast pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl bg-surface p-3 pr-4 shadow-2xl ring-1 ring-surface-hover">
+          <div
+            key={t.id}
+            onClick={(e) => {
+              if (!(e.target as HTMLElement).closest("button")) dismiss(t.id);
+            }}
+            className="log-toast pointer-events-auto flex w-full max-w-sm cursor-default items-center gap-3 rounded-2xl bg-surface p-3 pr-4 shadow-2xl ring-1 ring-surface-hover"
+          >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white" style={{ background: TOAST_COLOR[t.kind] }}>
               {t.kind === "streak" ? <FlameIcon className="h-5 w-5" /> : t.kind === "routine" || t.kind === "day" ? <CheckIcon className="h-5 w-5" /> : <StarIcon className="h-5 w-5" filled />}
             </span>

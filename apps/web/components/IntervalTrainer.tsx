@@ -20,6 +20,7 @@ import {
   NoteIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -63,7 +64,6 @@ import {
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -72,8 +72,10 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { micErrorMessage } from "@/lib/micError";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
+import { LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -708,10 +710,8 @@ export default function IntervalTrainer() {
         inputRef.current = input;
         // Device labels only become available once permission is granted.
         void listAudioInputs().then(setInputs);
-      } catch {
-        setError(
-          "Couldn't open the audio input. Check the browser's microphone permission.",
-        );
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
         return;
       }
       const queue = weak
@@ -924,7 +924,6 @@ export default function IntervalTrainer() {
   const roundLabel = (r: IntervalRound, seq = 0) =>
     `${rootLabel(r, seq)} ${arrow(r)} ${r.interval.label}`;
   const mainLabel = running && round ? roundLabel(round, roundSeed) : "—";
-  const mainLabelLong = mainLabel.length > 16;
   const glow = running && status ? GRADE_COLOR[status] : null;
   const showCountdown = running;
   const score = summary ? scoreOf(summary.results) : 0;
@@ -965,7 +964,7 @@ export default function IntervalTrainer() {
             <CollapsiblePanel
               id="history"
               title="History"
-              icon={StopwatchIcon}
+              icon={ListIcon}
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
               {bestMs !== null && (
@@ -1054,21 +1053,7 @@ export default function IntervalTrainer() {
                       <span className="font-medium">
                         {entry.interval.label} {entry.direction === 1 ? "↑" : "↓"}
                       </span>
-                      <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                        {entry.counts.incorrect > 0 && (
-                          <span style={{ color: GRADE_COLOR.incorrect }}>
-                            ✕{entry.counts.incorrect}
-                          </span>
-                        )}
-                        {entry.counts.partial > 0 && (
-                          <span style={{ color: GRADE_COLOR.partial }}>
-                            ~{entry.counts.partial}
-                          </span>
-                        )}
-                        <span className="text-muted">
-                          /{attempts(entry.counts)}
-                        </span>
-                      </span>
+                      <StruggleCounts counts={entry.counts} />
                     </div>
                   ))}
                 </div>
@@ -1112,6 +1097,7 @@ export default function IntervalTrainer() {
         <>
           <PanelsToggle ids={PANEL_IDS} />
           <CollapsiblePanel id="interval-set" title="Intervals" icon={IntervalIcon} summary={picked.length > 0 ? `${picked.length} of ${INTERVALS.length}` : `All ${INTERVALS.length}`}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-muted">
                 {picked.length} of {INTERVALS.length} selected
@@ -1161,6 +1147,7 @@ export default function IntervalTrainer() {
           </CollapsiblePanel>
 
           <CollapsiblePanel id="interval-range" title="Range" icon={NoteIcon} summary={rangeSummary}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1224,10 +1211,11 @@ export default function IntervalTrainer() {
             icon={StopwatchIcon}
             summary={`${roundSeconds} s`}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
               label={listenMode ? "Time to play" : "Time per interval"}
               value={roundSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_ROUND_SECONDS}
               max={MAX_ROUND_SECONDS}
               step={0.5}
@@ -1243,7 +1231,7 @@ export default function IntervalTrainer() {
               <AdvancedSlider
                 label="Time between rounds"
                 value={advanceDelayMs / 1000}
-                unit="s"
+                unit=" s"
                 min={MIN_ADVANCE_DELAY_MS / 1000}
                 max={MAX_ADVANCE_DELAY_MS / 1000}
                 step={0.25}
@@ -1266,6 +1254,7 @@ export default function IntervalTrainer() {
               disabled: running,
             }}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1291,31 +1280,18 @@ export default function IntervalTrainer() {
             />
 
             {!drillMode && (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of rounds
-                  <span className="tabular-nums text-foreground">
-                    {roundCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_ROUND_COUNT}
-                  max={MAX_ROUND_COUNT}
-                  step={1}
-                  value={roundCount}
-                  onChange={(e) => setRoundCount(Number(e.target.value))}
-                  disabled={running || !listenMode}
-                  style={
-                    {
-                      "--progress": `${((roundCount - MIN_ROUND_COUNT) / (MAX_ROUND_COUNT - MIN_ROUND_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of rounds"
+                value={roundCount}
+                unit=""
+                min={MIN_ROUND_COUNT}
+                max={MAX_ROUND_COUNT}
+                step={1}
+                disabled={running || !listenMode}
+                onChange={(v) => setRoundCount(v)}
+                hint="How many intervals make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many intervals make up one session.</Hint>}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
@@ -1485,9 +1461,7 @@ export default function IntervalTrainer() {
           <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-                mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
-              }`}
+              className={!running ? IDLE_DASH : "relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200"}
               style={
                 glow
                   ? {
@@ -1496,7 +1470,18 @@ export default function IntervalTrainer() {
                   : undefined
               }
             >
-              {mainLabel}
+              {running && round ? (
+                // The note and direction on one line, the interval under it, smaller, so it
+                // fits the ring on a phone.
+                <span className="flex flex-col items-center gap-1">
+                  <span className="whitespace-nowrap text-4xl leading-none sm:text-5xl">
+                    {rootLabel(round, roundSeed)} {arrow(round)}
+                  </span>
+                  <span className="whitespace-nowrap text-lg leading-tight sm:text-2xl">{round.interval.label}</span>
+                </span>
+              ) : (
+                mainLabel
+              )}
             </p>
             {/* Before the first round, say what's about to happen. */}
             {!running && (
@@ -1666,6 +1651,8 @@ export default function IntervalTrainer() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1673,6 +1660,7 @@ export default function IntervalTrainer() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop
       </KeyHint>

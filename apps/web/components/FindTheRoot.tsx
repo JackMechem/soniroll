@@ -15,6 +15,7 @@ import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { PoolPill } from "@/components/reward/Reward";
+import StruggleCounts from "@/components/learning/StruggleCounts";
 import {
   ChordIcon,
   FlagIcon,
@@ -23,6 +24,7 @@ import {
   PlayIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -64,13 +66,14 @@ import {
   voicingNoteNames,
   voicingSymbol,
 } from "@/lib/rootlessVoicings";
-import { GradeCounts, attempts, bumpGradeCounts, rankWeak } from "@/lib/struggleStats";
+import { GradeCounts, bumpGradeCounts, rankWeak } from "@/lib/struggleStats";
 import {
   DEFAULT_EAR_TRAINING_TONE_ID,
   EAR_TRAINING_TONES,
   playNotesTogether,
 } from "@/lib/tones";
 import { useToolActivity } from "@/lib/toolTime";
+import { micErrorMessage } from "@/lib/micError";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
@@ -159,8 +162,12 @@ function chordLabel(symbol: { root: string; suffix: string }) {
   return `${prettyNote(symbol.root)}${prettyQuality(symbol.suffix)}`;
 }
 
+/** A score with half points as a fraction ("1½", "½"), not "1.5" / "0.5": a root found on a
+    retry counts half. */
 function formatScore(score: number) {
-  return score % 1 === 0 ? String(score) : score.toFixed(1);
+  const whole = Math.floor(score);
+  const half = score - whole >= 0.5;
+  return half ? `${whole > 0 ? whole : ""}½` : String(whole);
 }
 
 /** The root keys, laid out like a piano: white keys below, black keys above them. */
@@ -460,8 +467,8 @@ export default function FindTheRoot() {
         inputRef.current = input;
         // Device names only show once the mic is allowed.
         void listAudioInputs().then(setInputs).catch(() => {});
-      } catch {
-        setError("Couldn't open the microphone. Check the browser's microphone permission, or switch to Pick.");
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, pick another input, or switch to Pick."));
         return;
       }
     }
@@ -611,7 +618,7 @@ export default function FindTheRoot() {
           <CollapsiblePanel
             id="history"
             title="History"
-            icon={StopwatchIcon}
+            icon={ListIcon}
             summary={bestPct !== null ? `Best ${bestPct}%` : undefined}
           >
             {history.length === 0 ? (
@@ -671,15 +678,7 @@ export default function FindTheRoot() {
                     className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.type.name}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                      {entry.counts.incorrect > 0 && (
-                        <span style={{ color: GRADE_COLOR.incorrect }}>✕{entry.counts.incorrect}</span>
-                      )}
-                      {entry.counts.partial > 0 && (
-                        <span style={{ color: GRADE_COLOR.partial }}>½{entry.counts.partial}</span>
-                      )}
-                      <span className="text-muted">/{attempts(entry.counts)}</span>
-                    </span>
+                    <StruggleCounts counts={entry.counts} partialLabel="on a retry" />
                   </div>
                 ))}
               </div>
@@ -851,27 +850,16 @@ export default function FindTheRoot() {
               icon={StopwatchIcon}
               summary={`${roundCount} rounds`}
             >
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of rounds
-                  <span className="tabular-nums text-foreground">{roundCount}</span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_ROUNDS}
-                  max={MAX_ROUNDS}
-                  step={1}
-                  value={roundCount}
-                  onChange={(e) => updateSettings({ roundCount: Number(e.target.value) })}
-                  style={
-                    {
-                      "--progress": `${((roundCount - MIN_ROUNDS) / (MAX_ROUNDS - MIN_ROUNDS)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer"
-                />
-              </label>
-              <Hint>How many voicings make up one run.</Hint>
+              <AdvancedSlider
+                label="Number of rounds"
+                value={roundCount}
+                unit=""
+                min={MIN_ROUNDS}
+                max={MAX_ROUNDS}
+                step={1}
+                onChange={(v) => updateSettings({ roundCount: v })}
+                hint="How many voicings make up one run."
+              />
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium text-muted">Next round</span>
                 <Select
@@ -1067,7 +1055,7 @@ export default function FindTheRoot() {
           <div
             role="group"
             aria-label="Pick the root"
-            className="grid w-full max-w-sm gap-1"
+            className="grid w-full max-w-sm gap-1 rounded-lg bg-foreground/10 p-1"
             style={{ gridTemplateColumns: "repeat(14, minmax(0, 1fr))" }}
           >
             {BLACK_KEYS.map(({ pc, col }) => (
@@ -1126,7 +1114,7 @@ export default function FindTheRoot() {
 
         {running && progress && (
           <p className="text-sm tabular-nums text-muted">
-            Round {progress.index} of {progress.total} · Score {formatScore(progress.score)}/{progress.done} ·{" "}
+            Round {progress.index} of {progress.total} · Score {formatScore(progress.score)} of {progress.done} ·{" "}
             <ElapsedTimer active={running} startRef={sessionStartRef} />
           </p>
         )}
@@ -1199,6 +1187,8 @@ export default function FindTheRoot() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1206,6 +1196,7 @@ export default function FindTheRoot() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop, <KeyHint.Key>Enter</KeyHint.Key> for the next one
       </KeyHint>
@@ -1248,7 +1239,7 @@ function RootKey({
       }}
       className={`rounded-md font-medium transition-colors disabled:cursor-default ${
         black
-          ? "h-11 bg-foreground text-xs text-background hover:opacity-85 sm:h-12"
+          ? "h-11 bg-foreground text-[0.8125rem] text-background hover:opacity-85 sm:h-12"
           : "h-14 bg-surface text-sm text-foreground hover:bg-surface-hover sm:h-16"
       } ${disabled && !color ? "opacity-60" : ""}`}
     >

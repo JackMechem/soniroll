@@ -65,7 +65,7 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState; onClos
               onClose();
               item.onSelect();
             }}
-            className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-surface-hover ${
+            className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left pointer-coarse:min-h-11 transition-colors hover:bg-surface-hover ${
               item.danger ? "text-danger" : ""
             }`}
           >

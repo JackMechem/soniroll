@@ -1,10 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Chip, KeyBadge } from "@/components/library/ui";
+import { Chip, KeyBadge, prettyKey } from "@/components/library/ui";
 import { ChevronLeftIcon } from "@/components/tools";
 import { formatComposer, type IRealSong } from "@/lib/iRealPro";
-import { displayKey } from "@jam-practice/core/setlistKeys";
 
 /** The frame around a chord chart wherever one is read (a chart's page, the setlist reader, a
     tune's page, full screen) — the chart itself is always the unchanged `ChordChart`. */
@@ -29,9 +28,9 @@ export function ChartMeta({ song, originalKey, tempo, extra, composer = true }: 
       {composer && song.composer && <span className="mr-1 truncate text-sm font-medium text-foreground/80">{formatComposer(song.composer)}</span>}
       {song.style && <Chip>{song.style}</Chip>}
       {song.key && (
-        <Chip accent={!!transposed} title={transposed ? `Written in ${displayKey(originalKey!)}` : undefined}>
-          {displayKey(song.key)}
-          {transposed ? ` · from ${displayKey(originalKey!)}` : ""}
+        <Chip accent={!!transposed} title={transposed ? `Written in ${prettyKey(originalKey!)}` : undefined}>
+          {prettyKey(song.key)}
+          {transposed ? ` · from ${prettyKey(originalKey!)}` : ""}
         </Chip>
       )}
       <Chip>

@@ -203,17 +203,20 @@ export default function FilesPage() {
         >
           {isAuthenticated && (
             <Toolbar>
-              <HeroSearch value={query} onChange={setQuery} placeholder="Search files and tunes" />
-              <button
-                type="button"
-                onClick={() => void backup.backUp(items)}
-                disabled={backup.busy || !items.length}
-                title="Download every file you can open here — online or on this device — as one .zip"
-                aria-label="Back up as a .zip"
-                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
-              >
-                <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
-              </button>
+              <HeroSearch value={query} onChange={setQuery} placeholder="Search files" />
+              {/* Only when there's something to back up (a greyed-out icon explained nothing). */}
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void backup.backUp(items)}
+                  disabled={backup.busy}
+                  title="Download every file you can open here — online or on this device — as one .zip"
+                  aria-label="Back up as a .zip"
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
+                >
+                  <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
+                </button>
+              )}
               <SaveWhere target={saveTarget} className="h-10 sm:h-9" />
               <button
                 type="button"

@@ -42,9 +42,9 @@ function Bar({
   } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;
   const content = (
     <>
-      {/* Top to bottom; they light from the bottom up. */}
+      {/* Top to bottom; they light from the bottom up. The top two carry the gap below them. */}
       {[2, 1, 0].map((i) => (
-        <span key={i} className={`block w-full ${seg} rounded-[3px] ${i < 2 ? "mb-[3px]" : ""} ${i < rank ? lit : "bg-foreground opacity-10"}`} />
+        <span key={i} className={`block w-full ${seg} rounded-[3px] ${i > 0 ? "mb-[3px]" : ""} ${i < rank ? lit : "bg-foreground opacity-10"}`} />
       ))}
       {number !== undefined && (
         <span

@@ -8,7 +8,7 @@ import StickControlStave from "@/components/StickControlStave";
 import SwitchRow from "@/components/SwitchRow";
 import AdvancedSlider from "@/components/AdvancedSlider";
 import { BIG_PRIMARY, BIG_SECONDARY, SteppedField, SoundOptions, TempoHero } from "@/components/MeterFields";
-import { ListIcon, RepeatIcon, SpeakerIcon } from "@/components/tools";
+import { ListIcon, RepeatIcon, ShuffleIcon, SpeakerIcon } from "@/components/tools";
 import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -362,28 +362,35 @@ export default function StickControl() {
         </div>
       )}
 
-      {/* The phase sits in the gap just above the buttons rather than taking a row of its own, so
-          starting doesn't push the page down (or the chips off a laptop screen). */}
-      <div className="relative flex items-center gap-3 max-sm:order-2">
-        {phaseLabel && (
-          <p className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-sm font-medium text-accent">
-            {phaseLabel}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={() => advanceStickControlPattern()}
-          className={BIG_SECONDARY}
-        >
-          New pattern
-        </button>
-        <button
-          type="button"
-          onClick={running ? stop : start}
-          className={running ? BIG_SECONDARY : BIG_PRIMARY}
-        >
-          {running ? "Stop" : "Start"}
-        </button>
+      {/* The phase ("Repeat 1 of 20") has its own reserved line above the buttons, so it has room
+          to breathe and starting doesn't push the page down. Start is centred like every other
+          tool's; New pattern is a smaller button beside it. */}
+      <div className="flex w-full flex-col items-center gap-3 max-sm:order-2">
+        <p aria-live="polite" className="h-5 whitespace-nowrap text-sm font-medium text-accent">
+          {phaseLabel}
+        </p>
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => advanceStickControlPattern()}
+              title="Shuffle a new pattern"
+              className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+            >
+              <ShuffleIcon className="h-4 w-4 text-muted" />
+              <span className="hidden sm:inline">New pattern</span>
+              <span className="sm:hidden">New</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={running ? stop : start}
+            className={running ? BIG_SECONDARY : BIG_PRIMARY}
+          >
+            {running ? "Stop" : "Start"}
+          </button>
+          <div aria-hidden />
+        </div>
       </div>
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop

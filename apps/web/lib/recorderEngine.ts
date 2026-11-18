@@ -31,6 +31,7 @@ import {
 import { getAudioContext } from "@/lib/metronome";
 import { sectionAt } from "@/lib/structure";
 import { beginMicUse, endMicUse } from "@/lib/iosAudio";
+import { micErrorMessage } from "@/lib/micError";
 
 /** Whether this engine currently holds the microphone (for the iOS audio session). */
 let micInUse = false;
@@ -223,10 +224,12 @@ async function openInput(options: RecorderInput): Promise<boolean> {
         channelCount: { ideal: 2 },
       },
     });
-  } catch {
+  } catch (e) {
     micInUse = false;
     endMicUse();
-    setSnapshot({ error: options.deviceId ? "Couldn't open that microphone. Pick another under Input." : "Microphone access is needed to record." });
+    const name = e instanceof Error ? e.name : "";
+    const missing = options.deviceId && (name === "NotFoundError" || name === "OverconstrainedError");
+    setSnapshot({ error: missing ? "Couldn't open that microphone. Pick another under Input." : micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input.") });
     return false;
   }
   const { out, meterFrom } = buildGraph(stream, options);

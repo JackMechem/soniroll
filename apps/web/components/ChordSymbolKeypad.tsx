@@ -17,8 +17,9 @@ export const SYMBOL_KEYS: { insert: string; caption: string; title: string }[] =
   { insert: "#", caption: "sharp", title: "Sharp" },
   { insert: "b", caption: "flat", title: "Flat" },
   { insert: "/", caption: "bass", title: "Slash (bass note)" },
-  { insert: "sus", caption: "sus", title: "Suspended" },
-  { insert: "add", caption: "add", title: "Add" },
+  // These two already read as words on the key, so they have no caption under them.
+  { insert: "sus", caption: "", title: "Suspended" },
+  { insert: "add", caption: "", title: "Add" },
 ];
 
 /** A little Sibelius-keypad-style palette of chord-symbol buttons, laid out as a tidy fixed grid
@@ -32,10 +33,13 @@ export const SYMBOL_KEYS: { insert: string; caption: string; title: string }[] =
 export default function ChordSymbolKeypad({
   onInsert,
   omit,
+  disabled,
 }: {
   onInsert: (text: string) => void;
   /** Keys (by their inserted text) to leave out, when the caller already has its own. */
   omit?: string[];
+  /** Greys the keys out (after a quiz round is answered) while keeping the keypad in place. */
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -51,10 +55,11 @@ export default function ChordSymbolKeypad({
           aria-label={key.title}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onInsert(key.insert)}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-2 py-1.5 hover:bg-surface-hover pointer-coarse:min-h-10"
+          disabled={disabled}
+          className="flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-2 py-1.5 hover:bg-surface-hover disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10"
         >
           <span className="text-base font-semibold leading-none">{prettyQuality(key.insert)}</span>
-          <span className="text-[0.6rem] leading-none text-muted">{key.caption}</span>
+          {key.caption && <span className="text-xs leading-none text-muted">{key.caption}</span>}
         </button>
       ))}
     </div>

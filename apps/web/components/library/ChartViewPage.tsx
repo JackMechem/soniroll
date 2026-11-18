@@ -9,13 +9,14 @@ import Link from "next/link";
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
 import { playlistHref } from "@/components/library/ChartsDashboard";
 import { BackButton } from "@/components/library/shared";
-import { EmptyState, FolderIcon, Hero, KeyBadge, LibraryPage, Pill } from "@/components/library/ui";
+import { EmptyState, FolderIcon, gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { BassIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PlusIcon } from "@/components/tools";
+import { BassIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon } from "@/components/tools";
+import { goBackOr } from "@/lib/goBack";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -27,7 +28,8 @@ import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
 export default function ChartViewPage({ id }: { id: string }) {
   const router = useRouter();
   const { selectedSong: chart, selectedSongLoading, loading, allSongs, playlists } = useChordChartsLibrary(id || null);
-  const { openSongMenu, element } = useChartActions({ onSongDeleted: () => router.back() });
+  const { openSongMenu, element } = useChartActions({ onSongDeleted: () => goBackOr(router, "/tunes?tab=charts") });
+  const back = () => goBackOr(router, "/tunes?tab=charts");
   const [transposeKey, setTransposeKey] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const lists = useTuneLists();
@@ -83,7 +85,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   }
   const inList = (list: TuneListId) => linkedTunes.some((l) => l.list === list);
 
-  const keyOptions = chart ? [{ value: "", label: `${chart.key ? displayKey(chart.key) : "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))] : [];
+  const keyOptions = chart ? [{ value: "", label: `${chart.key ? prettyKey(chart.key) : "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: prettyKey(k) }))] : [];
 
   if (loading || selectedSongLoading) {
     return (
@@ -97,7 +99,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   if (!chart || !shown) {
     return (
       <LibraryPage>
-        <BackButton onClick={() => router.back()} />
+        <BackButton onClick={back} />
         <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/tunes?tab=charts" />} />
       </LibraryPage>
     );
@@ -112,11 +114,12 @@ export default function ChartViewPage({ id }: { id: string }) {
       <Hero
         title={chart.title}
         subtitle={chart.composer ? formatComposer(chart.composer) : undefined}
-        back={() => router.back()}
+        back={back}
         leading={<KeyBadge label={shown.key} size="lg" />}
         actions={
           // One row on phones too: the key select takes what's left, so ⋮ never wraps on its own.
           <div className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
+            <Pill icon={PencilIcon} label="Edit" iconOnlyOnPhone href={`/chord-charts/edit?id=${encodeURIComponent(id)}`} />
             {/* The band (Rhythm Section) plays this chart, in the key shown. */}
             <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(id, transposeKey))} />
             <span className="min-w-0 flex-1 sm:flex-none xl:hidden">
@@ -145,7 +148,7 @@ export default function ChartViewPage({ id }: { id: string }) {
               <h2 className="text-sm font-medium">Key</h2>
               {transposeKey && (
                 <button type="button" onClick={() => setTransposeKey("")} className="text-xs text-muted hover:text-foreground">
-                  Back to {chart.key ? displayKey(chart.key) : "original"}
+                  Back to {chart.key ? prettyKey(chart.key) : "original"}
                 </button>
               )}
             </div>
@@ -159,18 +162,17 @@ export default function ChartViewPage({ id }: { id: string }) {
                     type="button"
                     onClick={() => setTransposeKey(pc === originalPc ? "" : name)}
                     aria-pressed={on}
-                    title={pc === originalPc ? "The key it's written in" : `Transpose to ${name}${minor ? "m" : ""}`}
+                    title={pc === originalPc ? "The key it's written in" : `Transpose to ${gridKeyName(name, minor)}`}
                     className={`relative rounded-md py-2 text-sm font-medium transition-colors ${on ? "" : "bg-foreground/[0.05] hover:bg-surface-hover hover:text-foreground"}`}
                     style={on ? { background: color, color: "var(--accent-foreground)" } : { color: "var(--muted)" }}
                   >
-                    {name}
-                    {minor ? "m" : ""}
+                    {gridKeyName(name, minor)}
                     {pc === originalPc && !on && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full" style={{ background: color }} />}
                   </button>
                 );
               })}
             </div>
-            <p className="text-xs text-muted">Only changes how it&apos;s shown — the chart itself stays in {chart.key ? displayKey(chart.key) : "its key"}.</p>
+            <p className="text-xs text-muted">Only changes how it&apos;s shown — the chart itself stays in {chart.key ? prettyKey(chart.key) : "its key"}.</p>
           </section>
 
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">

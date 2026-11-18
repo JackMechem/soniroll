@@ -126,7 +126,8 @@ export default function ToolIntro({ topic, onClose }: { topic: HelpTopic; onClos
         )}
         <ol className="divide-y divide-foreground/10 rounded-lg bg-foreground/[0.05]">
           {topic.steps.map((s, i) => (
-            <li key={s.title} className="flex gap-3 px-3 py-2.5">
+            // A touch-screen-only step is the topic's last, so leaving it out with a mouse keeps the numbering.
+            <li key={s.title} className={`gap-3 px-3 py-2.5 ${s.touch ? "hidden [@media(pointer:coarse)]:flex" : "flex"}`}>
               <span className="w-4 shrink-0 pt-px text-right text-sm tabular-nums text-muted">{i + 1}</span>
               <div className="min-w-0">
                 <div className="text-sm font-medium">{s.title}</div>

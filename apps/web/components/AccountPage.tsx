@@ -727,7 +727,7 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
     window.scrollTo({ top: 0 });
   }
 
-  const methods = [hasPassword ? "Password" : null, hasGoogle ? "Google" : null].filter(Boolean).join(" and ");
+  const methods = [hasPassword ? "a password" : null, hasGoogle ? "Google" : null].filter(Boolean).join(" and ");
 
   return (
     <PageShell wide>

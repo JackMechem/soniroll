@@ -1,5 +1,6 @@
 "use client";
 
+import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { tuneHref } from "@/components/library/useTuneActions";
@@ -103,7 +104,7 @@ export function AttachmentList({
         <button
           type="button"
           onClick={() => setPicking(true)}
-          className={`flex items-center gap-1 rounded-md border border-dashed border-foreground/20 ${compact ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-sm"} font-medium text-muted hover:border-foreground/40 hover:text-foreground`}
+          className={`flex items-center gap-1 rounded-md border border-dashed border-foreground/20 ${compact ? "h-6 px-2 text-xs" : "h-7 px-2.5 text-sm"} font-medium text-muted hover:border-foreground/40 hover:text-foreground ${TOUCH_TEXT}`}
         >
           <PlusIcon className="h-3.5 w-3.5" /> {addLabel}
         </button>

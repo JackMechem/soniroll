@@ -10,13 +10,18 @@ import { formatMinutesShort, formatShortDate, hourMilestone, weekdayOf } from "@
 import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
 import { bestStreak, historyOf, todayKey, toolStreak, totalMs, useToolUsage, usedMs, weekOf } from "@/lib/toolUsage";
 
-const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CHIP = `${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover`;
 
-/** "38 s" under a minute, then "12 min", "1 h 5 min". */
+/** "38 s" under a minute, then "12 min", "1 h 5 min". Every time in the popover uses it. */
 function formatUse(ms: number) {
   if (ms < 60_000) return `${Math.floor(ms / 1000)} s`;
   return formatMinutesShort(Math.floor(ms / 60_000));
+}
+
+/** The "in total" tile: like `formatUse`, but whole hours from 10 h ("12 h"), so it fits. */
+function formatTotal(ms: number) {
+  return ms >= 36_000_000 ? `${Math.floor(ms / 3_600_000)} h` : formatUse(ms);
 }
 
 /** The header chip's reading: whole minutes ("0 min", "12 min"), so a newcomer reads it as time
@@ -49,7 +54,8 @@ export default function ToolStats({ href }: { href: string }) {
   const week = weekOf(usage, href, today, liveMs);
   const weekMs = week.reduce((a, d) => a + d.ms, 0);
   const maxDay = Math.max(...week.map((d) => d.ms), 60_000);
-  const hours = (totalMs(usage, href) + liveMs) / 3_600_000;
+  const allMs = totalMs(usage, href) + liveMs;
+  const hours = allMs / 3_600_000;
   const ms = hourMilestone(hours);
   const unlogged = unloggedToday(usage, href, liveMs);
   const history = historyOf(usage, href);
@@ -97,7 +103,7 @@ export default function ToolStats({ href }: { href: string }) {
           <MiniStat value={String(s)} label="streak" />
           <MiniStat value={String(best)} label="best" />
           <MiniStat value={formatUse(weekMs)} label="this week" />
-          <MiniStat value={`${hours < 10 ? (Math.round(hours * 10) / 10).toFixed(1) : Math.floor(hours)} h`} label="in total" />
+          <MiniStat value={formatTotal(allMs)} label="in total" />
         </div>
         <div className="flex h-10 items-end gap-1" title="This week">
           {week.map((d) => (
@@ -109,7 +115,7 @@ export default function ToolStats({ href }: { href: string }) {
           ))}
         </div>
         <p className="text-xs text-muted">
-          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to go until ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
+          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.floor((ms.to * 3_600_000 - allMs) / 60_000)))} to go until ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
           minute of real use.
         </p>
         {history.length === 0 ? (
@@ -121,9 +127,15 @@ export default function ToolStats({ href }: { href: string }) {
               const all = d.logged >= d.ms - 999;
               return (
                 <li key={d.key} className="flex items-center gap-3 px-3 py-2">
-                  <span className="w-20 shrink-0 text-sm font-medium">
-                    {d.key === today ? "Today" : formatShortDate(d.key)}
-                    <span className="ml-1 text-xs font-normal text-muted">{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
+                  <span className="w-24 shrink-0 whitespace-nowrap text-sm font-medium">
+                    {d.key === today ? (
+                      "Today"
+                    ) : (
+                      <>
+                        {formatShortDate(d.key)}
+                        <span className="ml-1 text-xs font-normal text-muted">{WEEKDAY_SHORT[weekdayOf(d.key)]}</span>
+                      </>
+                    )}
                   </span>
                   <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
                     <span className="block h-full rounded-full" style={{ width: `${Math.max(4, (d.ms / max) * 100)}%`, background: color }} />

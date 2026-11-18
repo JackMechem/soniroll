@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AudioInput, startAudioInput } from "@/lib/audioInput";
 import { describePitch } from "@/lib/noteGrade";
+import { micErrorMessage } from "@/lib/micError";
 
 type Reading = { note: string; cents: number; freq: number };
 
@@ -73,9 +74,9 @@ export default function InputTest({
         if (cancelled) i.stop();
         else input = i;
       })
-      .catch(() => {
+      .catch((e) => {
         if (cancelled) return;
-        setError("Couldn't open the audio input. Check the browser's microphone permission.");
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
         setTesting(false);
       });
 

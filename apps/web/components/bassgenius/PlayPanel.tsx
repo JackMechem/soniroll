@@ -126,12 +126,13 @@ export function OptionsButton({ summary, onOpen }: { summary: string; onOpen: ()
       type="button"
       onClick={onOpen}
       aria-label={`Options: ${summary}`}
-      className="flex h-11 min-w-0 items-center gap-2 rounded-md bg-foreground/[0.05] pl-3 pr-4 text-left transition-colors hover:bg-surface-hover lg:hidden"
+      className="flex min-h-11 min-w-0 items-center gap-2 rounded-md bg-foreground/[0.05] py-1 pl-3 pr-4 text-left transition-colors hover:bg-surface-hover lg:hidden"
     >
       <SlidersIcon className="h-4 w-4 shrink-0 text-muted" />
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="text-[11px] font-medium text-muted">Options</span>
-        <span className="truncate text-sm font-semibold tabular-nums">{summary}</span>
+        {/* Two lines if it needs them (a long style name), rather than cutting it off. */}
+        <span className="line-clamp-2 text-sm font-semibold tabular-nums">{summary}</span>
       </span>
     </button>
   );
@@ -161,7 +162,8 @@ export function useStickyPanel(ref: React.RefObject<HTMLElement | null>, active 
   }, [ref, active]);
 }
 
-/** Phones: the properties panel as a bottom sheet (Esc, the ×, or a tap above it closes it). Its
+/** Phones: the properties panel as a bottom sheet (Esc, the ×, or a tap above it closes it), the
+    same inset, rounded sheet as every tool's setting chips (`SettingChip` on phones). Its
     sections start closed except `firstOpen` (the most used one), each time it opens. */
 export function OptionsSheet({ open, onClose, firstOpen, children }: { open: boolean; onClose: () => void; firstOpen?: string; children: React.ReactNode }) {
   useEffect(() => {
@@ -177,20 +179,20 @@ export function OptionsSheet({ open, onClose, firstOpen, children }: { open: boo
   }, [open, onClose]);
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-overlay lg:hidden" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex flex-col justify-end bg-overlay p-3 lg:hidden" onClick={onClose}>
       <div
         role="dialog"
         aria-label="Options"
-        className="flex max-h-[88dvh] flex-col rounded-t-xl border-t border-foreground/15 bg-surface pb-[env(safe-area-inset-bottom)] text-left shadow-xl"
+        className="settings-pop flex max-h-[80dvh] flex-col overflow-hidden rounded-3xl bg-surface text-left text-foreground shadow-[0_24px_60px_-16px_rgba(0,0,0,0.45)] ring-1 ring-foreground/[0.06]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-foreground/10 pl-4 pr-2">
-          <h2 className="text-sm font-semibold">Options</h2>
-          <button type="button" onClick={onClose} aria-label="Close options" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+        <div className="flex shrink-0 items-center gap-1 pb-2 pl-5 pr-3 pt-4">
+          <h2 className="min-w-0 flex-1 truncate text-base font-semibold">Options</h2>
+          <button type="button" onClick={onClose} aria-label="Close options" className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
           <SheetBody firstOpen={firstOpen}>{children}</SheetBody>
         </div>
       </div>

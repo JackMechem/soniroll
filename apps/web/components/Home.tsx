@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SUPPORT_PATH, SupportCard, useSupportCardHidden } from "@/components/support/SupportParts";
 import { DesktopAppCard, useDesktopCardApplies, useDesktopCardDismissed } from "@/components/download/DesktopAppCard";
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
@@ -50,7 +50,7 @@ import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
 import TodayPractice, { HeatGrid, TodayMomentum } from "@/components/practicelog/TodayPractice";
 import LessonsDashboard, { useLessonsData } from "@/components/lessons/LessonsDashboard";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import DashboardGrid from "@/components/dashboard/DashboardGrid";
+import DashboardGrid, { DashboardEditingContext } from "@/components/dashboard/DashboardGrid";
 import { DEFAULT_LEARNING_PROGRESS, LEARNING_KEY, summarizeLearning } from "@/lib/learningPath";
 
 type ToolLink = (typeof NAV_LINKS)[number];
@@ -343,7 +343,13 @@ export default function Home() {
       case "favorites":
         return (
           <Card title={favoriteTools.length ? "Favorites" : "Get started"} detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}>
-            <div className="grid auto-rows-fr content-start gap-2 max-sm:gap-1.5 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+            {/* Columns that the tiles fill evenly: four tiles (the starters) go 2 × 2, or 4 in a row
+                once that's wide enough, never 3 + 1 with one left alone. */}
+            <div
+              className={`grid auto-rows-fr content-start gap-2 max-sm:gap-1.5 ${
+                pinned.length <= 2 ? "@lg:grid-cols-2" : pinned.length === 4 ? "@lg:grid-cols-2 @7xl:grid-cols-4" : "@lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
+              }`}
+            >
               {pinned.map((item) => (
                 <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} canStar={canStar} onToggle={() => toggleFavorite(item.href)} />
               ))}
@@ -602,6 +608,7 @@ export default function Home() {
             renderCard={renderCard}
             available={available}
             emptyText={emptyText}
+            labelOf={(id) => (id === "favorites" && !favoriteTools.length ? "Get started" : id === "sessions" && timer ? "Practicing now" : undefined)}
           />
         )}
         {!editing && layout.every((i) => !available(i.id)) && !q && (
@@ -660,9 +667,11 @@ function Card({
   children: ReactNode;
 }) {
   const plain = tone === "plain";
+  // In Edit, the card's frame shows its name: leave the title row out so it isn't there twice.
+  const inEditFrame = useContext(DashboardEditingContext);
   return (
     <section className={`flex h-full min-w-0 flex-col ${plain ? "gap-3" : "overflow-hidden rounded-lg bg-surface"}`}>
-      <div className={`flex min-w-0 items-center gap-2 ${plain ? "px-1" : "h-11 shrink-0 px-4"}`}>
+      <div className={`flex min-w-0 items-center gap-2 ${plain ? "px-1" : "h-11 shrink-0 px-4"} ${inEditFrame ? "hidden" : ""}`}>
         <h2 className="shrink-0 text-sm font-medium">{title}</h2>
         {detail && <span className="truncate text-xs text-muted">{detail}</span>}
         {action && (

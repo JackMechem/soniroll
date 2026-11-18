@@ -10,6 +10,7 @@ import {
 } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
 import { startPadInput, type PadChunk, type PadInput } from "@/lib/padInput";
+import { micErrorMessage } from "@/lib/micError";
 import { calibrate as gradeCalibration, detectorFor, LiveGrader, type Calibration, type Take } from "./analysis";
 import { ClockMap } from "./clock";
 import { Detector, type Onset } from "./onset";
@@ -167,15 +168,8 @@ async function openMic(deviceId: string) {
   }
 }
 
-/** A friendly sentence for anything that went wrong opening the mic (or any other error's own
-    message). The Time Test's popover and its Record/Calibrate errors both use this. */
-export function micErrorMessage(error: unknown): string {
-  if (error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError")) {
-    return "soniroll isn't allowed to use the mic. Allow it in your browser's site settings, then try again.";
-  }
-  if (error instanceof DOMException && error.name === "NotFoundError") return "No microphone found. Plug one in, then try again.";
-  return error instanceof Error ? error.message : String(error);
-}
+/** Moved to `lib/micError.ts` (shared by every tool that listens); re-exported for old imports. */
+export { micErrorMessage };
 
 function closeMicNow() {
   mic?.stop();

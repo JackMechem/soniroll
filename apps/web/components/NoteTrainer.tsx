@@ -19,6 +19,7 @@ import {
   NoteIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -54,7 +55,6 @@ import {
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -65,7 +65,9 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import { micErrorMessage } from "@/lib/micError";
+import { LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
 
 const MIN_INTERVAL_SECONDS = 0.5;
 const MAX_INTERVAL_SECONDS = 10;
@@ -612,10 +614,8 @@ export default function NoteTrainer() {
         inputRef.current = input;
         // Device labels only become available once permission is granted.
         void listAudioInputs().then(setInputs);
-      } catch {
-        setError(
-          "Couldn't open the audio input. Check the browser's microphone permission.",
-        );
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
         return;
       }
       const queue = weak
@@ -848,7 +848,7 @@ export default function NoteTrainer() {
             <CollapsiblePanel
               id="history"
               title="History"
-              icon={StopwatchIcon}
+              icon={ListIcon}
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
             {bestMs !== null && (
@@ -932,21 +932,7 @@ export default function NoteTrainer() {
                       <span className="font-medium tabular-nums">
                         {noteLabel(entry.key)}
                       </span>
-                      <span className="flex items-center gap-2 text-xs tabular-nums">
-                        {entry.counts.incorrect > 0 && (
-                          <span style={{ color: GRADE_COLOR.incorrect }}>
-                            ✕{entry.counts.incorrect}
-                          </span>
-                        )}
-                        {entry.counts.partial > 0 && (
-                          <span style={{ color: GRADE_COLOR.partial }}>
-                            ~{entry.counts.partial}
-                          </span>
-                        )}
-                        <span className="text-muted">
-                          /{attempts(entry.counts)}
-                        </span>
-                      </span>
+                      <StruggleCounts counts={entry.counts} />
                     </div>
                   ))}
                 </div>
@@ -990,6 +976,7 @@ export default function NoteTrainer() {
         <>
           <PanelsToggle ids={PANEL_IDS} />
           <CollapsiblePanel id="notes" title="Range" icon={NoteIcon} summary={rangeSummary}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1078,10 +1065,11 @@ export default function NoteTrainer() {
             icon={StopwatchIcon}
             summary={`${intervalSeconds} s`}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
               label={listenMode ? "Time to play" : "Time per note"}
               value={intervalSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_INTERVAL_SECONDS}
               max={MAX_INTERVAL_SECONDS}
               step={0.5}
@@ -1097,7 +1085,7 @@ export default function NoteTrainer() {
               <AdvancedSlider
                 label="Time between notes"
                 value={advanceDelayMs / 1000}
-                unit="s"
+                unit=" s"
                 min={MIN_ADVANCE_DELAY_MS / 1000}
                 max={MAX_ADVANCE_DELAY_MS / 1000}
                 step={0.25}
@@ -1120,6 +1108,7 @@ export default function NoteTrainer() {
               disabled: running,
             }}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1145,31 +1134,18 @@ export default function NoteTrainer() {
                 hint="A note you got right after a wrong attempt goes back on the end of the queue too, not just full misses."
               />
             ) : (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of notes
-                  <span className="tabular-nums text-foreground">
-                    {noteCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_NOTE_COUNT}
-                  max={MAX_NOTE_COUNT}
-                  step={1}
-                  value={noteCount}
-                  onChange={(e) => setNoteCount(Number(e.target.value))}
-                  disabled={running || !listenMode}
-                  style={
-                    {
-                      "--progress": `${((noteCount - MIN_NOTE_COUNT) / (MAX_NOTE_COUNT - MIN_NOTE_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of notes"
+                value={noteCount}
+                unit=""
+                min={MIN_NOTE_COUNT}
+                max={MAX_NOTE_COUNT}
+                step={1}
+                disabled={running || !listenMode}
+                onChange={(v) => setNoteCount(v)}
+                hint="How many random notes make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many random notes make up one session.</Hint>}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
@@ -1471,6 +1447,8 @@ export default function NoteTrainer() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1478,6 +1456,7 @@ export default function NoteTrainer() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop
       </KeyHint>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, StopwatchIcon } from "@/components/tools";
 import { formatClock } from "@/lib/practiceTimer";
@@ -109,7 +110,10 @@ export default function PracticeTimerWidget({
   mobile?: boolean;
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const pathname = usePathname();
   if (!state) return null;
+  // The phone's top-right badge would only repeat the big timer on the tool's own page.
+  if (mobile && pathname === "/practice-timer") return null;
 
   const remaining = (
     <RemainingLabel

@@ -1,21 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import { AttachmentList } from "@/components/practicelog/Attachments";
-import { burstAt } from "@/components/practicelog/Celebrations";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import RecordClip from "@/components/practicelog/RecordClip";
 import RoutineTimePicker from "@/components/practicelog/RoutineTime";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import Subtasks from "@/components/practicelog/Subtasks";
-import { TOUCH_CHECK, TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
+import TaskCheck, { DotList } from "@/components/practicelog/TaskCheck";
+import { TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
-import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import { CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
   type DayRoutine,
@@ -86,6 +87,9 @@ export default function RoutineCard({
   const noteTarget = { kind: "routine" as const, date, routineId: routine.id };
   const noteLabel = `${routine.name || "Untitled routine"} · ${formatShortDate(date)}`;
   const clock = useClockMinute();
+  const router = useRouter();
+  const routineHref = `/shed-log/routine?id=${encodeURIComponent(routine.id)}`;
+  const [addingTask, setAddingTask] = useState(false);
   // Its time is now: outlined in its colour.
   const timeIsNow = !!clock && clock.today === date && isRoutineNow(item, clock.nowMin);
 
@@ -95,6 +99,8 @@ export default function RoutineCard({
       x: rect.right - 208,
       y: rect.bottom + 4,
       items: [
+        { label: "Open routine", onSelect: () => router.push(routineHref) },
+        { label: "Edit routine", onSelect: () => router.push(`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`) },
         { label: span ? "Change the time" : "Set a time", onSelect: () => setEditingTime(true) },
         ...(timeOverride
           ? [{ label: "Use the routine's own time", onSelect: () => log.updateOccurrence(date, routine.id, (o) => { const n = { ...o }; delete n.startTime; return n; }) }]
@@ -137,30 +143,39 @@ export default function RoutineCard({
       <header className="flex items-start gap-3 pl-1">
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0 flex-1">
-          <Link href={`/shed-log/routine?id=${encodeURIComponent(routine.id)}`} className={`block truncate text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
+          <Link href={routineHref} className={`block truncate text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
             {routine.name || "Untitled routine"}
           </Link>
           {routine.assigned && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
-          <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-            {span ? (
-              <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span>
-            ) : (
-              <button type="button" onClick={() => setEditingTime(true)} className={`font-medium text-foreground/80 hover:text-foreground hover:underline ${TOUCH_TEXT}`} title="Set a time">
-                Any time · Set a time
-              </button>
-            )}
-            <span>·</span>
-            <span>{formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0))}</span>
-            <span className="flex basis-full items-center gap-1">
-              {added ? "Added to this day" : (
-                <>
-                  <RepeatIcon className="h-3 w-3" /> {describeRepeat(routine.repeat)}
-                </>
+          <div className="flex flex-col gap-0.5 text-xs text-muted">
+            {/* Dots between items that never dangle when a line wraps (DotList). */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <DotList
+                items={[
+                  span ? <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span> : "Any time",
+                  formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
+                ]}
+              />
+              {!span && !skipped && (
+                <button type="button" onClick={() => setEditingTime(true)} className={`rounded-md bg-foreground/[0.05] px-2 py-0.5 font-medium text-foreground hover:bg-surface-hover ${TOUCH_TEXT}`}>
+                  Set a time
+                </button>
               )}
-            </span>
-            {skipped && <span className="font-semibold text-foreground">· Skipped</span>}
-            {!skipped && routineStatus(item, date, today) === "missed" && <span className="text-muted">· Missed</span>}
-            {routineStatus(item, date, today) === "partial" && <span className="font-semibold text-warning">· Partly done</span>}
+            </div>
+            <DotList
+              items={[
+                <span key="repeat" className="flex items-center gap-1">
+                  {added ? "Added to this day" : (
+                    <>
+                      <RepeatIcon className="h-3 w-3 shrink-0" /> {describeRepeat(routine.repeat)}
+                    </>
+                  )}
+                </span>,
+                skipped && <span className="font-semibold text-foreground">Skipped</span>,
+                !skipped && routineStatus(item, date, today) === "missed" && "Missed",
+                routineStatus(item, date, today) === "partial" && <span className="font-semibold text-warning">Partly done</span>,
+              ]}
+            />
           </div>
         </div>
         <span
@@ -249,40 +264,31 @@ export default function RoutineCard({
             const isNow = running === task.id;
             return (
               <li key={task.id} className={`group flex items-start gap-3 rounded-md px-1 py-2 ${isNow ? "bg-accent/10" : ""}`}>
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={checked}
-                  aria-label={`${task.title || "Task"} done`}
-                  onClick={(e) => {
-                    if (!checked) burstAt(e.currentTarget, color);
-                    log.toggleTask(date, routine.id, task.id);
-                  }}
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border transition-colors ${TOUCH_CHECK} ${checked ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-muted"}`}
-                  style={checked ? { background: color } : undefined}
-                >
-                  {checked && <CheckIcon className="h-3.5 w-3.5" />}
-                </button>
                 <div className="min-w-0 flex-1">
-                  <div className={`text-sm font-medium ${checked ? "text-muted line-through" : ""}`}>
-                    {task.title || "Untitled task"}
-                    {extraIds.has(task.id) && <span className="ml-1.5 rounded-sm bg-foreground/[0.05] px-1 py-px align-middle text-[10px] font-medium text-muted">Today only</span>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                    {start !== null && <span className={task.time ? "font-medium" : ""}>{formatTime(start)}</span>}
-                    <span>{formatMinutesShort(task.minutes)}</span>
-                    {spent ? <span>· {formatMinutesShort(spent / 60000)} logged</span> : null}
-                    {checked && !spent && task.minutes > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => log.updateOccurrence(date, routine.id, (o) => ({ ...o, spentMs: { ...(o.spentMs ?? {}), [task.id]: task.minutes * 60000 } }))}
-                        className={`rounded-md bg-foreground/[0.05] px-2 py-0.5 font-medium text-foreground hover:bg-surface-hover ${TOUCH_TEXT}`}
-                        title="Checked off without the timer — log its time"
-                      >
-                        + Log {formatMinutesShort(task.minutes)}
-                      </button>
-                    )}
-                  </div>
+                  {/* The box, the name and its minutes are one target that ticks it. */}
+                  <TaskCheck
+                    checked={checked}
+                    label={task.title}
+                    color={color}
+                    onToggle={() => log.toggleTask(date, routine.id, task.id)}
+                    badge={extraIds.has(task.id) && <span className="ml-1.5 rounded-sm bg-foreground/[0.05] px-1 py-px align-middle text-[10px] font-medium text-muted">Today only</span>}
+                    meta={[
+                      start !== null && <span className={task.time ? "font-medium" : ""}>{formatTime(start)}</span>,
+                      formatMinutesShort(task.minutes),
+                      !!spent && `${formatMinutesShort(spent / 60000)} logged`,
+                    ]}
+                  />
+                  <div className="pl-8 pointer-coarse:pl-9">
+                  {checked && !spent && task.minutes > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => log.updateOccurrence(date, routine.id, (o) => ({ ...o, spentMs: { ...(o.spentMs ?? {}), [task.id]: task.minutes * 60000 } }))}
+                      className={`mt-1 rounded-md bg-foreground/[0.05] px-2 py-0.5 text-xs font-medium text-foreground hover:bg-surface-hover ${TOUCH_TEXT}`}
+                      title="Checked off without the timer — log its time"
+                    >
+                      + Log {formatMinutesShort(task.minutes)}
+                    </button>
+                  )}
                   <Subtasks
                     items={task.subtasks ?? []}
                     color={color}
@@ -306,6 +312,7 @@ export default function RoutineCard({
                       <AttachmentList items={task.attachments} compact />
                     </div>
                   )}
+                  </div>
                 </div>
                 {!skipped && past && !checked && (
                   <button
@@ -355,33 +362,54 @@ export default function RoutineCard({
           })}
         </ul>
       )}
-      {!skipped && (
-        // A form, so a phone keyboard's Done/Go adds it too; Add shows once something's typed.
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newTitle.trim()) return;
-            setExtra((list) => [...list, newTask(newTitle.trim())]);
-            setNewTitle("");
-          }}
-          className="flex min-h-9 items-center gap-2 rounded-md border border-dashed border-foreground/15 py-1 pl-3 pr-1 pointer-coarse:min-h-10"
-        >
-          <PlusIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
-          <input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            enterKeyHint="done"
-            aria-label="New task for this day"
-            placeholder={`Add a task just for ${date === today ? "today" : formatShortDate(date)}`}
-            className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none pointer-coarse:text-base"
-          />
-          {newTitle.trim() && (
-            <button type="submit" className="h-7 shrink-0 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover pointer-coarse:h-8">
-              Add
-            </button>
-          )}
-        </form>
-      )}
+      {!skipped &&
+        (addingTask ? (
+          // A form, so a phone keyboard's Done/Go adds it too; Add shows once something's typed.
+          // Left empty, it folds back to the small "+ Task" button when it loses focus.
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newTitle.trim()) return;
+              setExtra((list) => [...list, newTask(newTitle.trim())]);
+              setNewTitle("");
+            }}
+            onBlur={(e) => {
+              if (!newTitle.trim() && !e.currentTarget.contains(e.relatedTarget as Node | null)) setAddingTask(false);
+            }}
+            className="flex min-h-9 items-center gap-2 rounded-md bg-foreground/[0.05] py-1 pl-3 pr-1 pointer-coarse:min-h-10"
+          >
+            <PlusIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
+            <input
+              autoFocus
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setNewTitle("");
+                  setAddingTask(false);
+                }
+              }}
+              enterKeyHint="done"
+              aria-label="New task for this day"
+              placeholder={`A task just for ${date === today ? "today" : formatShortDate(date)}`}
+              className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none pointer-coarse:text-base"
+            />
+            {newTitle.trim() && (
+              <button type="submit" className="h-7 shrink-0 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover pointer-coarse:h-8">
+                Add
+              </button>
+            )}
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAddingTask(true)}
+            title={`Add a task just for ${date === today ? "today" : formatShortDate(date)}`}
+            className={`-mt-1 flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground ${TOUCH_TEXT}`}
+          >
+            <PlusIcon className="h-3.5 w-3.5" /> Task
+          </button>
+        ))}
 
       {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} />}
 

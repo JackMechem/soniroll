@@ -14,7 +14,7 @@ import {
   SteppedField,
   TempoHero,
 } from "@/components/MeterFields";
-import { MeterIcon, ShuffleIcon, SpeakerIcon } from "@/components/tools";
+import { ListIcon, MeterIcon, ShuffleIcon, SpeakerIcon } from "@/components/tools";
 import { ClickSoundCards, OptionGroup, soundSummary } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -206,15 +206,15 @@ export default function RandomMetricModulation() {
   useToolActivity("/random-metric-modulation", running);
   const tap = useTapTempo(setBpm);
 
-  // What Start will do, in one line on the main display ("Tempo changes every 4 bars · 3:2, 2:3,
-  // 4:3…"),
-  // so the tool doesn't look like a plain metronome before it runs.
+  // What Start will do, on the main display ("Tempo changes every 4 bars · 3:2, 2:3, 4:3 and 7
+  // more"), so the tool doesn't look like a plain metronome before it runs. Says how many more
+  // rather than a trailing "…" that read as cut off; it wraps on a phone.
   const pool = enabledRatios.length ? MODULATIONS.filter((m) => enabledRatios.includes(m.id)) : MODULATIONS;
   const plan = `${
     matchToRealignment
       ? "Tempo changes once the tempos realign"
       : `Tempo changes every ${minBarsPerModulation === 1 ? "bar" : `${minBarsPerModulation} bars`}`
-  } · ${pool.slice(0, 3).map((m) => shortRatio(m.label)).join(", ")}${pool.length > 3 ? "…" : ""}${returnToOriginal ? " · back to your tempo in between" : ""}`;
+  } · ${pool.slice(0, pool.length > 4 ? 3 : 4).map((m) => shortRatio(m.label)).join(", ")}${pool.length > 4 ? ` and ${pool.length - 3} more` : ""}${returnToOriginal ? " · back to your tempo in between" : ""}`;
 
   function changeBeats(n: number) {
     updateSettings({ beatsPerBar: n, accents: defaultAccents(n, accents) });
@@ -247,9 +247,9 @@ export default function RandomMetricModulation() {
       sidePanel={
         <CollapsiblePanel
             id="modulation-log"
-            title="Modulations"
-            icon={ShuffleIcon}
-            summary={log.length > 0 ? `${log.length}` : "None yet"}
+            title="History"
+            icon={ListIcon}
+            summary={log.length > 0 ? `${log.length} tempo change${log.length === 1 ? "" : "s"}` : "None yet"}
           >
             {log.length === 0 && (
               <p className="text-sm text-muted">Each tempo change shows up here while it plays.</p>
@@ -353,6 +353,8 @@ export default function RandomMetricModulation() {
                   : "Extends each interval to however many bars it takes the new tempo to land back on a downbeat with the reference tempo."
               }
             />
+            {/* Says why it's greyed out: the previous tempo click turned it on and holds it there. */}
+            {playOriginalTempo && <p className="-mt-1 text-xs text-muted">On while Previous tempo click is on.</p>}
 
             <SwitchRow
               label="Return to original tempo"
@@ -500,7 +502,7 @@ export default function RandomMetricModulation() {
 
         {/* Always two lines: the plan, then where you are (running) or the last tempo change
             (stopped), so nothing moves when either appears. */}
-        <p className="text-sm text-muted tabular-nums">
+        <p className="text-balance text-center text-sm text-muted tabular-nums">
           {plan}
           {running ? (
             <span className="block">Bar {barsIntoInterval + 1} of {effectiveBars}</span>

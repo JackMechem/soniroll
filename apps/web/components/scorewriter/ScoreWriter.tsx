@@ -75,9 +75,12 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           <button type="button" onClick={() => fileInput.current?.click()} className="flex h-8 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             <UploadIcon className="h-4 w-4" /> Import
           </button>
-          <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
-            <PlusIcon className="h-4 w-4" /> New score
-          </button>
+          {/* With no scores yet, New score is the empty list's button instead (one is enough). */}
+          {scores && scores.length > 0 && (
+            <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+              <PlusIcon className="h-4 w-4" /> New score
+            </button>
+          )}
         </>
       }
     >
@@ -103,10 +106,12 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
           <p className="max-w-sm text-sm text-muted">
             {/* Touch screens have no keyboard to type notes with. */}
-            {/* "New score" is the header's button (one is enough). */}
             <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</span>
             <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap a length and a note name (C to B) to add notes, or switch to Write, hold a finger on the staff and lift to add one.</span>
           </p>
+          <button type="button" onClick={() => void make()} className="flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+            <PlusIcon className="h-4 w-4" /> New score
+          </button>
         </div>
       ) : (
         <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">

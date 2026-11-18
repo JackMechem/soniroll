@@ -288,7 +288,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
                     <p className="text-sm text-muted">
                       <span className="text-base font-semibold text-foreground">{price(p.priceCents, p.currency)}</span> a {p.interval}
                     </p>
-                    {saved > 0 && <p className="text-xs text-accent">Saves {price(saved, p.currency)} on paying monthly</p>}
+                    {saved > 0 && <p className="text-xs text-accent">Save {price(saved, p.currency)} vs monthly</p>}
                   </div>
                   {mine ? (
                     <span className="mt-auto inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-sm font-semibold text-accent">
@@ -318,7 +318,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
                   ) : (
                     <Link
                       href={SIGN_IN_PATH}
-                      className="mt-auto inline-flex h-10 items-center justify-center rounded-full bg-foreground/[0.05] px-4 text-sm font-semibold hover:bg-surface-hover"
+                      className="mt-auto inline-flex h-10 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
                     >
                       {isLoading ? "…" : "Sign in to subscribe"}
                     </Link>

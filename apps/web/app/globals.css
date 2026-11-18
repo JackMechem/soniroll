@@ -223,6 +223,8 @@ input[type="range"].slider::-moz-range-progress {
   background: var(--accent);
 }
 
+/* One look for every slider: an accent thumb with a ring in the card colour (the reward look
+   below only swaps in the tool's colour). */
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   height: 16px;
@@ -230,7 +232,7 @@ input[type="range"].slider::-webkit-slider-thumb {
   margin-top: -5px;
   border-radius: 9999px;
   border: 0;
-  background: var(--foreground);
+  background: var(--accent);
   box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
@@ -240,7 +242,7 @@ input[type="range"].slider::-moz-range-thumb {
   width: 16px;
   border-radius: 9999px;
   border: 0;
-  background: var(--foreground);
+  background: var(--accent);
   box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }

@@ -6,7 +6,8 @@
  * the explaining.
  */
 
-export type HelpStep = { title: string; text: string };
+/** `touch`: only for touch screens (the first-visit intro leaves it out with a mouse). */
+export type HelpStep = { title: string; text: string; touch?: boolean };
 
 /** One option of a tool, explained. */
 export type HelpOption = { name: string; text: string };
@@ -58,7 +59,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     tagline: "Your practice calendar: plan it, do it, watch it add up.",
     purpose: "Plan routines, check off tasks, time your practice and keep a streak going. Needs an account.",
     steps: [
-      { title: "Make a routine", text: "Press +, pick Routine, add tasks with minutes and choose the days it repeats." },
+      { title: "Make a routine", text: "Press New, pick Routine, add tasks with minutes and choose the days it repeats." },
       { title: "Practice", text: "Tick a task to log its minutes, or press Start to run the routine on the timer." },
       { title: "Let the day timer run", text: "It counts the whole day — routines, tasks and any tool you use." },
       { title: "Watch it fill in", text: "Hit your daily goal to keep the streak; done days go green, partly done ones amber, and missed ones show a quiet dot." },
@@ -75,7 +76,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Routine", text: "A named list of tasks that repeats: every day, on chosen weekdays, every few days or monthly. Pick an icon and color, an optional start time, and when it ends (never, or on a date)." },
       { name: "Tasks and subtasks", text: "Each task has minutes, an optional time of day, notes and attachments. Subtasks are a checklist inside a task. You can also add a task to a routine for just one day." },
-      { name: "Day tasks", text: "One-off tasks on a single day, not part of any routine. Add them from the Tasks card or the + menu." },
+      { name: "Day tasks", text: "One-off tasks on a single day, not part of any routine. Add them from the Tasks card or the New button." },
       { name: "Day timer", text: "A stopwatch for the whole day. It starts when you start a routine and keeps running after; its total is your practice time for the day." },
       { name: "Daily goal", text: "How many minutes count as a full day. Hitting it keeps your streak, fills the ring and turns the day green." },
       { name: "Log time", text: "Forgot the timer? Add minutes to the day or to one task by hand. Checking a task off logs its planned minutes; unchecking takes them back." },
@@ -98,7 +99,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     tagline: "Notes for your practice, linked together, with notation in them.",
     purpose: "Write notes in markdown, link them to each other, put music notation in them and attach them to your routines, days and tunes. Needs an account.",
     steps: [
-      { title: "Make a note", text: "Press New. Give it a title and start writing; it saves as you type." },
+      { title: "Make a note", text: "Press New and start writing; it saves as you type. Until you give it a title, its first line becomes one." },
       { title: "Link notes", text: "Type [[ and pick a note (or type a new name). Click the link to go there; the note you link to lists this one under Backlinks." },
       { title: "Write notation", text: "Press Notation: the Score Writer editor opens. Write the music, then Add to note. It shows as a score in the note; Edit changes it (in Score Writer too)." },
       { title: "Add pictures and files", text: "Paste a picture (a screenshot, a copied image) or drop files into a note: they're saved to your Files and shown in the note. File, above the note, puts in anything already in your Files (a PDF, a recording) or uploads one." },
@@ -147,9 +148,9 @@ export const HELP_TOPICS: HelpTopic[] = [
     steps: [
       { title: "Start a score", text: "Press New score, give it a title, then pick the clef, key, time signature and tempo." },
       { title: "Write notes", text: "Type a letter (A–G) to add a note in the key, 3–7 to pick its length, R for a rest. Or press Write and click notes onto the staff." },
-      { title: "On a phone or tablet", text: "Tap a length, then a note name; More has sharps, ties and chords. In Write, hold a finger on the staff to see the note, slide to change it, and lift to add it." },
       { title: "Fix things up", text: "Click a note, then ↑/↓ to move it (Shift for an octave), # or - for sharp or flat, . to dot it, T for a triplet, + to tie it." },
       { title: "Add chords and play", text: "Ctrl/⌘-K puts a chord symbol above the selected note. Play (or Space) plays from the bar you're in." },
+      { title: "On a phone or tablet", text: "Tap a length, then a note name; More has sharps, ties and chords. In Write, hold a finger on the staff to see the note, slide to change it, and lift to add it.", touch: true },
     ],
     features: [
       "Treble or bass clef, any key signature, common time signatures",
@@ -399,7 +400,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     features: ["Your tunes or 600+ standards", "Random key and tempo", "Count-off", "Keep going one after another"],
     options: [
       { name: "Tunes", text: "Your list of tunes to draw from — your own or the jazz standards. Search to add a standard, or type any name and add it as your own tune in one tap (More details adds tempos, keys and notes). Each tune can have several tempos and keys; only the ones switched on can be picked." },
-      { name: "Count-off", text: "How many bars of clicks before you start, and whether beat one is accented." },
+      { name: "Click", text: "The count-off: how many bars of clicks before you start, and whether beat one is accented." },
       { name: "Keep metronome going", text: "Keeps clicking after the count-off so you play along with the time." },
       { name: "Keep going", text: "Picks the next tune automatically when you're done with one." },
     ],

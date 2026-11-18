@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { Barline, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Tuplet, Voice } from "vexflow";
+import { useMusicFontVersion } from "@/lib/musicFont";
 import {
   barHits,
   barNotes,
@@ -103,6 +104,7 @@ function buildVoice(part: Written[], dir: 1 | -1, restKey: string, showRests: bo
 export default function SyncopationScore({ bars, ostinato }: { bars: SyncopationBar[]; ostinato: Ostinato }) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const fontVersion = useMusicFontVersion();
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -115,7 +117,7 @@ export default function SyncopationScore({ bars, ostinato }: { bars: Syncopation
 
   useLayoutEffect(() => {
     const el = box.current;
-    if (!el || width < 50) return;
+    if (!el || width < 50 || !fontVersion) return;
     el.style.minHeight = `${el.offsetHeight}px`;
     el.innerHTML = "";
     // Four bars (one line of the exercise) to a row, else two, else one.
@@ -177,7 +179,7 @@ export default function SyncopationScore({ bars, ostinato }: { bars: Syncopation
       svg.setAttribute("stroke", "currentColor");
     }
     el.style.minHeight = "";
-  }, [bars, ostinato, width]);
+  }, [bars, ostinato, width, fontVersion]);
 
   return <div ref={box} className="syncopation-score w-full text-foreground" />;
 }

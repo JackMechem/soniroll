@@ -17,6 +17,7 @@ import {
   PlayIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
@@ -49,7 +50,6 @@ import {
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -64,7 +64,8 @@ import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learnin
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
+import { FEEDBACK_LINE, GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -99,9 +100,11 @@ type Session = {
   rounds: IntervalRound[];
   queue: IntervalRound[];
   guessedId: string | null;
+  /** What was picked for each graded round (null: no answer), parallel to `results`. */
+  guesses: (string | null)[];
 };
 
-type Summary = { results: Grade[]; rounds: IntervalRound[] };
+type Summary = { results: Grade[]; rounds: IntervalRound[]; guesses: (string | null)[] };
 
 /** Everything that affects what's played, how it's timed, and how it's graded — two attempts
     only get compared against each other if all of this matches. */
@@ -502,6 +505,7 @@ export default function GuessTheInterval() {
       rounds: [],
       queue,
       guessedId: null,
+      guesses: [],
     };
     // Only ever reached from start() itself (a button's onClick, or a space-bar toggle) — see the
     // identical, longer note on lockInRound above; not called during render.
@@ -523,6 +527,7 @@ export default function GuessTheInterval() {
         if (session.round) {
           session.results.push(finishedGrade);
           session.rounds.push(session.round);
+          session.guesses.push(session.guessedId);
           bumpIntervalStat(session.round.interval.id, finishedGrade);
           // Drill mode: a miss goes back on the end of the queue — with a freshly randomized
           // octave for the retry, so a repeated miss doesn't look like the exact same round.
@@ -587,7 +592,7 @@ export default function GuessTheInterval() {
             setLastElapsedMs(elapsedMs);
             setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
-          setSummary({ results: session.results, rounds: session.rounds });
+          setSummary({ results: session.results, rounds: session.rounds, guesses: session.guesses });
           setRound(null);
           endSession();
           return;
@@ -704,7 +709,7 @@ export default function GuessTheInterval() {
           <CollapsiblePanel
             id="history"
             title="History"
-            icon={StopwatchIcon}
+            icon={ListIcon}
             summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
           >
             {bestMs !== null && (
@@ -786,16 +791,7 @@ export default function GuessTheInterval() {
                     className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.interval.label}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                      {entry.counts.incorrect > 0 && (
-                        <span style={{ color: GRADE_COLOR.incorrect }}>
-                          ✕{entry.counts.incorrect}
-                        </span>
-                      )}
-                      <span className="text-muted">
-                        /{attempts(entry.counts)}
-                      </span>
-                    </span>
+                    <StruggleCounts counts={entry.counts} />
                   </div>
                 ))}
               </div>
@@ -877,6 +873,14 @@ export default function GuessTheInterval() {
               disabled={running}
               hint="Lets a round play the interval below the starting note, not just above it — the choices are still just the interval's name, not its direction."
             />
+
+            <SwitchRow
+              label="Drill every interval"
+              checked={drillMode}
+              onChange={setDrillMode}
+              disabled={running}
+              hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
+            />
           </CollapsiblePanel>
           )}
 
@@ -919,11 +923,11 @@ export default function GuessTheInterval() {
             )}
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="guess-timing" title="Timing" icon={StopwatchIcon}>
+          <CollapsiblePanel id="guess-timing" title="Timing" icon={StopwatchIcon} summary={`${roundSeconds} s`}>
             <AdvancedSlider
               label="Max time to answer"
               value={roundSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_ROUND_SECONDS}
               max={MAX_ROUND_SECONDS}
               step={0.5}
@@ -935,7 +939,7 @@ export default function GuessTheInterval() {
             <AdvancedSlider
               label="Time between rounds"
               value={advanceDelayMs / 1000}
-              unit="s"
+              unit=" s"
               min={MIN_ADVANCE_DELAY_MS / 1000}
               max={MAX_ADVANCE_DELAY_MS / 1000}
               step={0.25}
@@ -944,50 +948,19 @@ export default function GuessTheInterval() {
               onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
             />
 
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={setSoundFeedback}
-              disabled={running}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-
-            {!learnMode && (
-            <SwitchRow
-              label="Drill every interval"
-              checked={drillMode}
-              onChange={setDrillMode}
-              disabled={running}
-              hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
-            />
-            )}
-
             {!drillMode && !learnMode && (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of rounds
-                  <span className="tabular-nums text-foreground">
-                    {roundCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_ROUND_COUNT}
-                  max={MAX_ROUND_COUNT}
-                  step={1}
-                  value={roundCount}
-                  onChange={(e) => setRoundCount(Number(e.target.value))}
-                  disabled={running}
-                  style={
-                    {
-                      "--progress": `${((roundCount - MIN_ROUND_COUNT) / (MAX_ROUND_COUNT - MIN_ROUND_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of rounds"
+                value={roundCount}
+                unit=""
+                min={MIN_ROUND_COUNT}
+                max={MAX_ROUND_COUNT}
+                step={1}
+                disabled={running}
+                onChange={setRoundCount}
+                hint="How many intervals make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many intervals make up one session.</Hint>}
           </CollapsiblePanel>
 
           <CollapsiblePanel
@@ -1018,6 +991,13 @@ export default function GuessTheInterval() {
               />
             </label>
             <Hint>Which sound plays the interval.</Hint>
+
+            <SwitchRow
+              label="Sound feedback"
+              checked={soundFeedback}
+              onChange={setSoundFeedback}
+              hint="A click each second of the countdown, plus a click the instant a round is graded."
+            />
 
             <SwitchRow
               label="Reveal notes after answering"
@@ -1059,16 +1039,6 @@ export default function GuessTheInterval() {
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
-        {status && running && (
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-medium text-muted">
-              Next interval in
-            </span>
-            <span className="text-3xl font-semibold tabular-nums text-muted sm:text-4xl">
-              <CountdownLabel active={running} timerRef={noteTimerRef} />
-            </span>
-          </div>
-        )}
         {!(learnMode && !running) && (
         <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
@@ -1091,8 +1061,13 @@ export default function GuessTheInterval() {
         </div>
         )}
 
-        {running && pickedLabel && (
-          <p className="text-sm font-medium text-danger">{pickedLabel}</p>
+        {/* Always there while a round runs, so answering doesn't push the answers down. */}
+        {running && round && (
+          <p className={FEEDBACK_LINE}>
+            {pickedLabel && <span className="text-danger">{pickedLabel}</span>}
+            {pickedLabel && revealedNotes && <span className="text-muted"> · </span>}
+            {revealedNotes && <span className="tabular-nums text-muted">{revealedNotes}</span>}
+          </p>
         )}
 
         {running && round && (
@@ -1104,12 +1079,6 @@ export default function GuessTheInterval() {
             <PlayIcon className="h-3.5 w-3.5" />
             Replay
           </button>
-        )}
-
-        {revealedNotes && (
-          <p className="text-sm font-medium tabular-nums text-muted">
-            {revealedNotes}
-          </p>
         )}
 
         {running && round && answerChoices.length > 0 && (
@@ -1141,14 +1110,24 @@ export default function GuessTheInterval() {
           </div>
         )}
 
-        {running && round && !status && (
-          <button
-            type="button"
-            onClick={() => submitGuess(null)}
-            className={TEXT_BUTTON}
-          >
-            I don&apos;t know
-          </button>
+        {/* "I don't know" until answered, then the countdown to the next one, in the same
+            44px-tall slot so nothing moves. */}
+        {running && round && (
+          <div className="flex min-h-11 items-center justify-center">
+            {!status ? (
+              <button
+                type="button"
+                onClick={() => submitGuess(null)}
+                className={TEXT_BUTTON}
+              >
+                I don&apos;t know
+              </button>
+            ) : (
+              <p className="text-sm font-medium text-muted">
+                Next interval in <CountdownLabel active={running} timerRef={noteTimerRef} />
+              </p>
+            )}
+          </div>
         )}
 
         {running && progress && (
@@ -1225,6 +1204,9 @@ export default function GuessTheInterval() {
                 }}
               >
                 {revealedLabel(r)}
+                {summary.results[i] === "incorrect" && (
+                  <span className="opacity-80"> · you: {summary.guesses[i] ?? "no answer"}</span>
+                )}
               </span>
             ))}
           </div>
@@ -1249,6 +1231,8 @@ export default function GuessTheInterval() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running && !learnMode) && (
       <button
         type="button"
         onClick={running ? stop : () => void start(learnMode ? "learn" : "normal")}
@@ -1256,6 +1240,7 @@ export default function GuessTheInterval() {
       >
         {running ? "Stop" : learnMode ? `Start level ${learn.selected + 1}` : "Start"}
       </button>
+      )}
       {learn.result && (
         <LevelComplete
           result={learn.result}

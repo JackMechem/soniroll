@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { hasInAppHistory } from "@/lib/goBack";
 
 type Pending = { kind: "back" } | { kind: "go"; run: () => void };
 
@@ -15,6 +16,12 @@ function pushGuard(guarded: { current: boolean }) {
   guarded.current = true;
 }
 
+/** The browser's Back, or `noHistory` when Back would leave the site. */
+function browserBack(noHistory: (() => void) | undefined) {
+  if (hasInAppHistory() || !noHistory) window.history.back();
+  else noHistory();
+}
+
 /**
  * Asks before leaving a page with unsaved work (the chart editor). While `dirty`:
  * - closing or reloading the tab gets the browser's own "Leave site?" prompt (`beforeunload`);
@@ -23,16 +30,20 @@ function pushGuard(guarded: { current: boolean }) {
  * `requestLeave(action)` is the page's own way out (Close, Escape): it asks only if something
  * changed. `leave(action)` goes without asking (after a save). Both first take the extra history
  * entry back off, so Back from the next page doesn't land on this page twice.
+ * `noHistory` runs in place of the browser's own Back when there's no soniroll page behind this
+ * one (opened from a bookmark or in a new tab), so leaving never lands on a blank tab.
  * Render `dialog` once.
  */
-export function useLeaveGuard(dirty: boolean, message = "Your changes haven't been saved.") {
+export function useLeaveGuard(dirty: boolean, message = "Your changes haven't been saved.", noHistory?: () => void) {
   const router = useRouter();
   const [pending, setPending] = useState<Pending | null>(null);
   const guarded = useRef(false);
   const afterPop = useRef<(() => void) | null>(null);
   const dirtyRef = useRef(dirty);
+  const noHistoryRef = useRef(noHistory);
   useEffect(() => {
     dirtyRef.current = dirty;
+    noHistoryRef.current = noHistory;
   });
 
   // Catch Back from the moment there's something to lose.
@@ -49,7 +60,7 @@ export function useLeaveGuard(dirty: boolean, message = "Your changes haven't be
       afterPop.current = null;
       if (then) then();
       else if (dirtyRef.current) setPending({ kind: "back" });
-      else window.history.back(); // nothing to lose any more: carry on back
+      else browserBack(noHistoryRef.current); // nothing to lose any more: carry on back
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -105,7 +116,7 @@ export function useLeaveGuard(dirty: boolean, message = "Your changes haven't be
       onConfirm={() => {
         if (pending.kind === "back") {
           setPending(null);
-          window.history.back();
+          browserBack(noHistoryRef.current);
         } else {
           leave(pending.run);
         }

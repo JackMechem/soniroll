@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ShedLogTour from "@/components/practicelog/ShedLogTour";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
+import { BackButton } from "@/components/library/shared";
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, PlayIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
 import { HELP_GROUPS, HELP_TOPICS, type HelpTopic, topicById } from "@/lib/helpContent";
 
@@ -65,9 +66,7 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
   const next = ORDERED[index + 1];
   return (
     <article className="settings-pop mx-auto flex w-full max-w-4xl flex-col gap-8">
-      <button type="button" onClick={onBack} className="-ml-2 flex h-8 items-center gap-1 self-start rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground lg:hidden">
-        <ChevronLeftIcon className="h-4 w-4" /> All topics
-      </button>
+      <BackButton onClick={onBack} label="All topics" className="lg:hidden" />
 
       <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6">
         <div className="min-w-0 flex-1">

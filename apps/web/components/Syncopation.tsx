@@ -122,6 +122,9 @@ export default function Syncopation() {
   // Desktop: the settings panel stays in view as the page scrolls, with no scrollbar of its own.
   const asideRef = useRef<HTMLElement>(null);
   useStickyPanel(asideRef);
+  // ...and so does the exercise with Play above it, when the options reach further down.
+  const columnRef = useRef<HTMLDivElement>(null);
+  useStickyPanel(columnRef);
 
   const setBpm = (v: number) => update({ bpm: Math.max(MIN_BPM, Math.min(MAX_BPM, Math.round(v))) });
   const tap = useTapTempo(setBpm);
@@ -307,30 +310,44 @@ export default function Syncopation() {
     </div>
   );
 
+  // Play/Stop, Options (phones) and the status line. Phones: pinned under the top bar, above the
+  // notation. Desktop: at the top of the exercise's column, which stays in view (as the options
+  // panel does), so Play is still there after scrolling down the options.
+  const transport = (desktop: boolean) => (
+    <div
+      className={
+        desktop
+          ? "sticky top-0 z-10 hidden flex-col items-center gap-1.5 bg-background/95 pb-1 pt-3 backdrop-blur lg:flex"
+          : "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden"
+      }
+    >
+      <div className="flex max-w-full items-center gap-2">
+        <button
+          type="button"
+          onClick={toggle}
+          className={`shrink-0 ${running || downloading ? BIG_SECONDARY : BIG_PRIMARY}`}
+        >
+          {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+          {running || downloading ? "Stop" : "Play"}
+        </button>
+        <OptionsButton summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
+      </div>
+      <p className="min-h-5 text-center text-sm text-muted" aria-live="polite">
+        {status}
+      </p>
+    </div>
+  );
+
   return (
     <ToolLayout title="Syncopation" layout="stacked" topAligned options={null} presets={toolPresets("syncopation", settings, update)}>
-      {/* Phones: Play/Stop and Options stay pinned under the top bar while the notation scrolls. */}
-      <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:self-auto lg:bg-transparent lg:px-0 lg:pt-0 lg:backdrop-blur-none">
-        <div className="flex max-w-full items-center gap-2">
-          <button
-            type="button"
-            onClick={toggle}
-            className={`shrink-0 ${running || downloading ? BIG_SECONDARY : BIG_PRIMARY}`}
-          >
-            {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
-            {running || downloading ? "Stop" : "Play"}
-          </button>
-          <OptionsButton summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
-        </div>
-        <p className="min-h-5 text-center text-sm text-muted" aria-live="polite">
-          {status}
-        </p>
-      </div>
+      {transport(false)}
 
       <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
         <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:rounded-lg">
           {panel}
         </aside>
+        <div ref={columnRef} className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-4">
+        {transport(true)}
         <div className="min-w-0 rounded-lg bg-surface p-3 sm:p-5">
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2 px-1">
             <div className="min-w-0">
@@ -356,6 +373,7 @@ export default function Syncopation() {
             <style>{`.syncopation-score g.syn-now{fill:var(--accent);stroke:var(--accent);color:var(--accent)}`}</style>
             <SyncopationScore bars={bars} ostinato={ostinato} />
           </div>
+        </div>
         </div>
       </div>
 
