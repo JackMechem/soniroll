@@ -269,3 +269,18 @@ sure nothing goes online without a subscription.
   says so), set back to Online; files deleted and the plan revoked afterwards. Not checked: the
   switch in the save-recording dialog (needs a mic) and the tune song panel by hand.
 
+## 2026-11-17 — Live: Polar production set up (release 0.10.6)
+
+- Production Convex (`grandiose-dolphin-564`) env: `POLAR_ORGANIZATION_TOKEN` (the live org token
+  Jack gave), `POLAR_SERVER=production`, `POLAR_WEBHOOK_SECRET` (piped from the API, never printed);
+  `SITE_URL` was already set.
+- Live Polar org `soniroll` (`1b5e76ad-…`): embed hosts `www.soniroll.com`, `soniroll.com`; webhook
+  `39b552f2-2992-4bfd-b52f-6a5713b387f9` → `https://grandiose-dolphin-564.convex.site/polar/events`;
+  products (metadata `storage_gb`, prices Jack can change in Polar): 5 GB $2/mo `57f3b507…`, $20/yr
+  `1a96c30d…`; 25 GB $5/mo `68358a2d…`, $50/yr `61b2d111…`; 100 GB $12/mo `555f5cf5…`, $120/yr
+  `4b8604d6…`. All six `product.created` deliveries 202; `billing:plans --prod` lists them; the live
+  `/plans` page shows them signed out.
+- `files:markNoteFiles --prod` run (marked 2).
+- Not done by Claude: Polar's own account verification and payouts (Jack), a real live purchase,
+  the Rhodes license and a refund policy before charging.
+
