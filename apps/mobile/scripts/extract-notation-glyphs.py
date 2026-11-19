@@ -38,6 +38,7 @@ RANGES = {
         (0xE0A0, 0xE0FF),  # noteheads
         (0xE1E7, 0xE1E7),  # augmentation dot
         (0xE240, 0xE25F),  # flags
+        (0xE260, 0xE26F),  # accidentals (the bass line's notation and key signatures)
         (0xE4E0, 0xE4FF),  # rests
         (0xE880, 0xE88F),  # tuplet digits
     ]),

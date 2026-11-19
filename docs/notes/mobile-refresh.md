@@ -163,3 +163,41 @@ Lessons.
   at a time (rests painted `muted`), rendered by `components/SyncopationScore.tsx`.
 - Checked on the emulator: the score renders (2 bars a row at phone width), Play loads the drums
   and the lit bar follows. Not heard (the emulator runs without audio), not on a phone.
+
+### Rhythm Section (2026-11-19)
+
+- `app/tool/rhythm-section.tsx`: the website's Band tab, same two settings keys and defaults
+  (`jam-practice-bass-genius`, `jam-practice-drum-generator`), so settings follow you. Play and a
+  sideways row of chips stay at the top: Tempo, Tune (no chart / a chart from the library with Key
+  / typed chords with presets, key and 3/4; How long; Count-in), Style (the style, its description,
+  the 35 styles as pills by country, then the groove: Swing, or timekeeping, cross-stick, woodblock,
+  clave direction, fills, variation, human feel; New groove), Drums (off / time / comping; the
+  hi-hat click when off; Drum settings; a fader per kit part), Bass and Chords (split chips: a
+  switch plus the sheet), Mix. Under them scroll the bass line card (Hide chart, New line, the
+  phrase chips of a modelled player opening how each phrase was made), the chart with the playing
+  bar tinted (`components/rhythmSection/RhythmChart.tsx`, built from `ChordChartView`'s rows) and
+  the drums card. The Bass players tab (making and editing players) is left to the website for
+  now; `lib/useBassPlayers.ts` reads the built-in Ray Brown and, signed in, your own players with
+  the website's queries (signed out the website keeps players in that browser, so the phone has
+  only the built-ins).
+- **Notation:** `lib/notation/scoreNotation.ts` + `components/notation/Score.tsx` port the
+  website's read-only `notation/Score.tsx` (clef, key, accidentals, beams, triplets, ties across
+  rows, dots, ghost notes, grey padding rests; chord symbols drawn as text in PetalumaScript;
+  `cursor`, `playing`, `range`, taps) for Score Writer to reuse; two bars a row on a phone, laid
+  out a little wider and scaled down. `lib/notation/drumNotation.ts` +
+  `components/rhythmSection/DrumScore.tsx` port `DrumScore` with its key. The playing bass note
+  and drum are lit like the website's: `vexflowNative.ts`'s `tagGroups` marks a note's group and
+  `flattenTree` carries the tag, and the lit note is drawn again in the accent on a layer above
+  (the score itself isn't redrawn).
+- **Fixed in `vexflowNative.ts`:** the glyph data had no accidentals (U+E260–E26F added to
+  `scripts/extract-notation-glyphs.py`, `glyphData.ts` regenerated), and VexFlow's
+  `Font.fromCSSString` needs a DOM (it crashed on the ghost-note brackets); it's replaced with the
+  file's own parser.
+- The drum layout runs on the JS thread while the band plays (a new window every 8 bars), so it's
+  laid out once from each bar's measured needs rather than by trial (about 40 ms per 8 bars in
+  V8's interpreter, the slowest style; a check after drawing catches the odd overflow). Checked by
+  script: every style × 6 seeds at 334 and 700 wide, every hit tagged, everything drawn for a
+  note inside its bar but 96 of 122,000 glyphs, which reach up to 4 px past the bar line.
+- `packages/core/drumKit.ts`: the kit parts, fader gain/dB, `styleVoices`, the key's legend
+  (moved from the website's `rhythmsection/kit.tsx` and `DrumScore.tsx`, which now import it).
+- Not checked: anything on a device or the emulator, audio, signed in (your own bass players).

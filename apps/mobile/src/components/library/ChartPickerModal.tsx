@@ -16,11 +16,14 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 export function ChartPickerModal({
   visible,
   initialQuery = '',
+  title = 'Link a chord chart',
   onPick,
   onClose,
 }: {
   visible: boolean;
   initialQuery?: string;
+  /** The heading (picking a chart to link, by default). */
+  title?: string;
   onPick: (song: LibrarySongMeta) => void;
   onClose: () => void;
 }) {
@@ -47,7 +50,7 @@ export function ChartPickerModal({
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
           <Text className="font-ui-bold text-xl font-bold" style={{ color: colors.foreground }}>
-            Link a chord chart
+            {title}
           </Text>
           <Pressable onPress={onClose} accessibilityLabel="Close" className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
             <CloseIcon color={colors.foreground} size={20} />
