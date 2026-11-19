@@ -316,6 +316,13 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of notes) await ctx.db.delete(row._id);
+    // Synced settings: the Shed Log, tunes, favorites, tool usage and every tool's settings. (These
+    // were missed until 2026-11-19 and stayed behind after an account was deleted.)
+    const settings = await ctx.db
+      .query("syncedSettings")
+      .withIndex("by_user_key", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of settings) await ctx.db.delete(row._id);
     // Notes shared by or with this account.
     for (const index of ["by_owner", "by_user"] as const) {
       const rows = await ctx.db
@@ -390,7 +397,8 @@ export const performDelete = internalMutation({
       .collect())
       await ctx.db.delete(a._id);
 
-    await ctx.db.delete(userId);
+    // Already gone when a delete is run again to finish clearing up.
+    if (await ctx.db.get(userId)) await ctx.db.delete(userId);
   },
 });
 
