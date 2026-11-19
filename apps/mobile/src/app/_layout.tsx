@@ -111,6 +111,20 @@ function RootNavigator() {
         <Stack.Screen name="tool/shed-log-routines" options={{ title: 'Routines' }} />
         <Stack.Screen name="tool/shed-log-routine" options={{ title: '' }} />
         <Stack.Screen name="tool/shed-log-routine-edit" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-notes" options={{ title: 'Shed Notes' }} />
+        <Stack.Screen name="tool/shed-notes-note" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-notes-templates" options={{ title: 'Templates' }} />
+        <Stack.Screen name="tool/shed-notes-settings" options={{ title: 'Shed Notes settings' }} />
+        <Stack.Screen name="tool/lessons" options={{ title: 'Lessons' }} />
+        <Stack.Screen name="tool/lessons-student" options={{ title: 'Lessons' }} />
+        <Stack.Screen name="tool/lessons-teacher" options={{ title: 'Lessons' }} />
+        <Stack.Screen name="tool/lessons-lesson" options={{ title: '' }} />
+        <Stack.Screen name="tool/lessons-notes" options={{ title: 'Lesson notes' }} />
+        <Stack.Screen name="tool/lessons-note" options={{ title: 'Lesson notes' }} />
+        <Stack.Screen name="tool/lessons-materials" options={{ title: '' }} />
+        <Stack.Screen name="tool/lessons-settings" options={{ title: 'Lesson settings' }} />
+        <Stack.Screen name="tool/lessons-join" options={{ title: 'Join lessons' }} />
+        <Stack.Screen name="tool/lessons-book" options={{ title: 'Pick a lesson time' }} />
         <Stack.Screen name="tool/tuner" options={{ title: 'Tuner' }} />
         <Stack.Screen name="account/public-profile" options={{ title: 'Public profile' }} />
         <Stack.Screen name="library/index" options={{ headerShown: false, animation: 'fade' }} />
