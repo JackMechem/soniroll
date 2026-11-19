@@ -10,18 +10,18 @@ import {
 } from '@jam-practice/core/stickControl';
 import { Stack } from 'expo-router';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { type LayoutChangeEvent, Pressable, Text, View } from 'react-native';
+import { type LayoutChangeEvent, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { SlidersIcon } from '@/components/icons';
-import { InfoButton } from '@/components/InfoButton';
-import { Pill, SoundOptions, TempoControls } from '@/components/MetronomeControls';
-import { NumberStepper } from '@/components/NumberStepper';
+import { RepeatIcon, ShuffleIcon, SpeakerIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { NOTATION_ROW_GAP, StickNotation } from '@/components/StickNotation';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import { BigButton, SoundPicker, TempoHero, soundSummary } from '@/components/tool/meter';
+import { ChipRow, ChoiceCards, CountField, ListIcon, OptionLabel, PillButton, PoolPills } from '@/components/tool/rhythm';
+import { SettingChip } from '@/components/tool/SettingChip';
+import { Slider } from '@/components/tool/Slider';
 import { MAX_ROW_BARS, ROW_HEIGHT_ESTIMATE, measureLayout, renderPatternRows } from '@/lib/notation/stickNotation';
 import {
   type ClickMode,
@@ -64,6 +64,9 @@ const ROLL_TYPE_PICKER_OPTIONS = ROLL_TYPES.filter(
   (o): o is { value: ConcreteRollType; label: string } => o.value !== 'random',
 );
 
+const MIN_REPEATS = 1;
+const MAX_REPEATS = 100;
+
 /** Card padding (p-2) and the "Next" label + gap — the non-scaling parts of the notation area. */
 const CARD_PAD = 8;
 const NEXT_LABEL = 30;
@@ -82,17 +85,16 @@ function towardBlack(hex: string, amount: number) {
 }
 
 /**
- * Native port of `apps/web/components/StickControl.tsx`. The notation is engraved by the same
- * VexFlow code as the website (see `components/StickNotation.tsx`); what's mobile-specific is only
- * how it's fitted to the screen: the current pattern and the "Next" preview share whatever height
- * is left under the controls, with the bars-per-row and scale picked to make the notes as large as
- * possible without the page ever scrolling (web instead fits bars-per-row to width and lets the
- * page scroll).
+ * Random Sticking Warmup, laid out like the website's phone layout (`apps/web/components/
+ * StickControl.tsx`): the pattern and the next one first, then New pattern / Start, then the tempo
+ * and beat strip, then the Pattern, Playback and Sound chips. The notation is engraved by the same
+ * VexFlow code as the website (see `components/StickNotation.tsx`) and fitted to whatever height is
+ * left, so the screen never scrolls; while it plays, the tempo shrinks to one row so the staves
+ * get more room.
  */
 function RandomStickingWarmupScreen() {
   const { colors } = useAppTheme();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const [area, setArea] = useState<{ width: number; height: number } | null>(null);
 
   const bpm = clampBpm(settings.bpm);
@@ -193,7 +195,6 @@ function RandomStickingWarmupScreen() {
 
   const ink = towardBlack(colors.foreground, 0.2);
   const muted = { color: colors.muted };
-  const fg = { color: colors.foreground };
 
   const phaseLabel =
     phase === 'countoff'
@@ -212,93 +213,24 @@ function RandomStickingWarmupScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Random Sticking Warmup' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 gap-3 px-4 pt-3" style={{ paddingBottom: 12 }}>
-          {running ? (
-            // While playing, tempo and the beat strip shrink to one row beside Options so both
-            // staves get the room; stop to change the tempo.
-            <View className="flex-row items-center gap-3">
-              <View className="items-center">
-                <Text className="text-2xl font-extrabold font-ui-extrabold" style={fg}>
-                  {bpm}
-                </Text>
-                <Text className="text-[10px] font-bold font-ui-bold" style={muted}>
-                  BPM
-                </Text>
-              </View>
-              <View className="flex-1 items-center">
-                <BeatIndicator accents={accents} currentBeat={currentBeat} onCycle={cycleBeat} size="sm" />
-              </View>
-              <Pressable
-                onPress={() => setOptionsOpen(true)}
-                hitSlop={8}
-                accessibilityLabel="Options"
-                className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-                style={{ backgroundColor: colors.surface }}
-              >
-                <SlidersIcon color={colors.foreground} size={18} />
-                <Text className="text-sm font-bold font-ui-bold" style={fg}>
-                  Options
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              <View className="flex-row justify-end">
-                <Pressable
-                  onPress={() => setOptionsOpen(true)}
-                  hitSlop={8}
-                  accessibilityLabel="Options"
-                  className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <SlidersIcon color={colors.foreground} size={18} />
-                  <Text className="text-sm font-bold font-ui-bold" style={fg}>
-                    Options
-                  </Text>
-                </Pressable>
-              </View>
-              <View className="items-center gap-3">
-                <TempoControls bpm={bpm} setBpm={(next) => updateSettings({ bpm: next })} onTap={tap} />
-                <BeatIndicator accents={accents} currentBeat={null} onCycle={cycleBeat} />
-              </View>
-            </>
-          )}
-
+        <View className="flex-1 gap-3 px-4 pb-4 pt-3">
+          {/* The pattern and the next one, as big as the space left over allows. */}
           <View className="flex-1" onLayout={onArea}>
             {pattern && layout ? (
               <View style={{ gap: CARD_GAP, flex: 1, justifyContent: 'center' }}>
                 <View className="rounded-xl" style={{ padding: CARD_PAD, backgroundColor: colors.surface }}>
-                  <StickNotation
-                    rows={layout.current}
-                    width={layout.width}
-                    activeBarIndex={currentBarIndex}
-                    ink={ink}
-                    accent={colors.accent}
-                  />
+                  <StickNotation rows={layout.current} width={layout.width} activeBarIndex={currentBarIndex} ink={ink} accent={colors.accent} />
                 </View>
                 {layout.next ? (
                   <>
                     <Text
-                      className="text-center text-sm font-semibold font-ui-semibold"
+                      className="font-ui-semibold text-center text-xs font-semibold"
                       style={[muted, { height: NEXT_LABEL - CARD_GAP, lineHeight: NEXT_LABEL - CARD_GAP }]}
                     >
                       Next
                     </Text>
-                    <View
-                      className="rounded-xl"
-                      style={{
-                        padding: CARD_PAD,
-                        borderWidth: 1,
-                        borderColor: colors['surface-hover'],
-                      }}
-                    >
-                      <StickNotation
-                        rows={layout.next}
-                        width={layout.width}
-                        activeBarIndex={null}
-                        ink={ink}
-                        accent={colors.accent}
-                      />
+                    <View className="rounded-xl" style={{ padding: CARD_PAD, backgroundColor: colors.surface, opacity: 0.75 }}>
+                      <StickNotation rows={layout.next} width={layout.width} activeBarIndex={null} ink={ink} accent={colors.accent} />
                     </View>
                   </>
                 ) : null}
@@ -306,195 +238,131 @@ function RandomStickingWarmupScreen() {
             ) : null}
           </View>
 
-          <Text className="text-center text-sm font-semibold font-ui-semibold" style={{ color: colors.accent, minHeight: 20 }}>
+          {/* The phase ("Repeat 1 of 20") just above the buttons, holding its line so Start
+              doesn't move anything. */}
+          <Text className="font-ui-semibold text-center text-sm font-semibold" style={{ color: colors.accent, height: 20, lineHeight: 20 }}>
             {phaseLabel ?? ''}
           </Text>
 
-          <View className="flex-row items-center justify-center gap-3">
-            <Pressable
-              onPress={advanceStickControlPattern}
-              className="items-center rounded-full px-6 py-4"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Text className="text-base font-bold font-ui-bold" style={fg}>
-                New pattern
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={running ? stopStickControl : startStickControl}
-              className="min-w-[140px] items-center rounded-full px-8 py-4"
-              style={{ backgroundColor: running ? colors.surface : colors.accent }}
-            >
-              <Text
-                className="text-base font-bold font-ui-bold"
-                style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
-              >
-                {running ? 'Stop' : 'Start'}
-              </Text>
-            </Pressable>
+          {/* Start centred like every tool's; New pattern a smaller button beside it. */}
+          <View className="flex-row items-center">
+            <View className="flex-1 items-end pr-3">
+              <PillButton label="New" Icon={ShuffleIcon} onPress={advanceStickControlPattern} />
+            </View>
+            <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stopStickControl : startStickControl} />
+            <View className="flex-1" />
           </View>
-        </View>
-      </SafeAreaView>
 
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Options"
-        tabs={[
-          {
-            key: 'pattern',
-            label: 'Pattern',
-            content: () => (
-              <>
-                <View className="gap-2">
-                  <View className="flex-row items-center gap-1.5">
-                    <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                      Roll type
-                    </Text>
-                    <InfoButton
-                      title="Roll type"
-                      size={16}
-                      text={
-                        '"Single stroke roll" is the same length/speed as the double-stroke roll, just plain alternating R/L instead of the RRLLRRLLR rudiment. "Triplets" writes the roll as 8th-note triplets instead, with a random sticking each time — straight alternation, or a broken-double shape (RRL or LLR). "Random" picks a fresh roll type for every pattern.'
-                      }
-                    />
-                  </View>
-                  <View className="flex-row flex-wrap gap-2">
-                    {ROLL_TYPES.map((o) => (
-                      <Pill
-                        key={o.value}
-                        label={o.label}
-                        selected={rollType === o.value}
-                        onPress={() => updateSettings({ rollType: o.value })}
-                      />
-                    ))}
-                  </View>
-                </View>
+          {running ? (
+            // While playing, the tempo and beats shrink to one row so the staves get the room.
+            <View className="flex-row items-center justify-center gap-4">
+              <View className="flex-row items-baseline gap-1">
+                <Text className="font-ui-bold text-3xl font-bold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+                  {bpm}
+                </Text>
+                <Text className="font-ui text-sm" style={muted}>
+                  BPM
+                </Text>
+              </View>
+              <BeatIndicator accents={accents} currentBeat={currentBeat} onCycle={cycleBeat} size="sm" />
+            </View>
+          ) : (
+            <View className="items-center gap-3">
+              <TempoHero bpm={bpm} setBpm={(next) => updateSettings({ bpm: clampBpm(next) })} beatsPerBar={4} beatUnit={4} onTap={tap} />
+              <BeatIndicator accents={accents} currentBeat={null} onCycle={cycleBeat} size="sm" />
+            </View>
+          )}
 
-                {rollType === 'random' ? (
-                  <View className="gap-2">
-                    <View className="flex-row items-center gap-1.5">
-                      <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                        Roll types
-                      </Text>
-                      <InfoButton
-                        title="Roll types"
-                        size={16}
-                        text='Which roll types "Random" can pick from. Falls back to all three if none are selected.'
-                      />
-                    </View>
-                    <View className="flex-row flex-wrap gap-2">
-                      {ROLL_TYPE_PICKER_OPTIONS.map((o) => (
-                        <Pill
-                          key={o.value}
-                          label={o.label}
-                          selected={enabledRollTypes.includes(o.value)}
-                          onPress={() => toggleRollType(o.value)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-
-                {showTripletPicker ? (
-                  <View className="gap-2">
-                    <View className="flex-row items-center gap-1.5">
-                      <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                        Triplet stickings
-                      </Text>
-                      <InfoButton
-                        title="Triplet stickings"
-                        size={16}
-                        text='Which of the two triplet stickings can be randomly picked. "Broken double" always plays whichever of RRL/LLR fits the hand it needs to start on. Falls back to both if neither is selected.'
-                      />
-                    </View>
-                    <View className="flex-row flex-wrap gap-2">
-                      {TRIPLET_STICKING_OPTIONS.map((o) => (
-                        <Pill
-                          key={o.value}
-                          label={o.label}
-                          selected={enabledTripletStickings.includes(o.value)}
-                          onPress={() => toggleTripletSticking(o.value)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'playback',
-            label: 'Playback',
-            content: () => (
-              <>
-                <NumberStepper
-                  label="Count-off bars"
-                  value={countOffBars}
-                  unit=""
-                  min={0}
-                  max={4}
-                  step={1}
-                  onChange={(n) => updateSettings({ countOffBars: Math.round(n) })}
-                  hint="Plain metronome bars played before the pattern starts, so you come in on time."
+          {/* One sideways row, so the notation keeps the height. */}
+          <ChipRow>
+            <SettingChip Icon={ListIcon} label="Pattern" value={ROLL_TYPES.find((r) => r.value === rollType)?.label ?? ''}>
+              <View className="gap-2.5">
+                <OptionLabel
+                  title="Roll type"
+                  hint={
+                    '"Single stroke roll" is the same length/speed as the double-stroke roll, just plain alternating R/L instead of the RRLLRRLLR rudiment. "Triplets" writes the roll as 8th-note triplets instead, with a random sticking each time — straight alternation, or a broken-double shape (RRL or LLR). "Random" picks a fresh roll type for every pattern.'
+                  }
                 />
-                <NumberStepper
-                  label="Repeat count"
-                  value={repeats}
-                  unit="x"
-                  min={1}
-                  max={100}
-                  step={1}
-                  onChange={(n) => updateSettings({ repeats: Math.round(n) })}
+                <ChoiceCards label="Roll type" options={ROLL_TYPES} value={rollType} onChange={(v) => updateSettings({ rollType: v })} />
+              </View>
+
+              {rollType === 'random' ? (
+                <View className="gap-2.5">
+                  <OptionLabel title="Roll types" hint='Which roll types "Random" can pick from. Falls back to all three if none are selected.' />
+                  <PoolPills label="Roll types" options={ROLL_TYPE_PICKER_OPTIONS} selected={enabledRollTypes} onToggle={toggleRollType} />
+                </View>
+              ) : null}
+
+              {showTripletPicker ? (
+                <View className="gap-2.5">
+                  <OptionLabel
+                    title="Triplet stickings"
+                    hint='Which of the two triplet stickings can be randomly picked. "Broken double" always plays whichever of RRL/LLR fits the hand it needs to start on. Falls back to both if neither is selected.'
+                  />
+                  <PoolPills
+                    label="Triplet stickings"
+                    options={TRIPLET_STICKING_OPTIONS}
+                    selected={enabledTripletStickings}
+                    onToggle={toggleTripletSticking}
+                  />
+                </View>
+              ) : null}
+            </SettingChip>
+
+            <SettingChip Icon={RepeatIcon} label="Playback" value={`${repeats}×`}>
+              <CountField
+                title="Count-off bars"
+                hint="Plain metronome bars played before the pattern starts, so you come in on time."
+                value={countOffBars}
+                min={0}
+                max={4}
+                unit={['bar', 'bars']}
+                onChange={(n) => updateSettings({ countOffBars: n })}
+              />
+              <View className="gap-1">
+                <OptionLabel
+                  title="Repeat count"
                   hint="How many times the pattern repeats before stopping (or moving to a new one, with “New pattern when done”)."
-                />
-                <SwitchRow
-                  label="New pattern when done"
-                  checked={autoAdvance}
-                  onChange={(v) => updateSettings({ autoAdvance: v })}
-                  hint="After the repeat count finishes, move straight on to the next pattern and keep going instead of stopping."
-                />
-                <View className="gap-2">
-                  <View className="flex-row items-center gap-1.5">
-                    <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                      Click
+                  aside={
+                    <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                      {repeats}×
                     </Text>
-                    <InfoButton
-                      title="Click"
-                      size={16}
-                      text={
-                        '"Steady pulse" clicks once per beat. "Every stroke" clicks every note of the pattern. "Pitch per hand" clicks a different pitch for every R vs. L stroke, so you can hear the sticking without watching the notation.'
-                      }
-                    />
-                  </View>
-                  <View className="flex-row flex-wrap gap-2">
-                    {CLICK_MODE_OPTIONS.map((o) => (
-                      <Pill
-                        key={o.value}
-                        label={o.label}
-                        selected={clickMode === o.value}
-                        onPress={() => updateSettings({ clickMode: o.value })}
-                      />
-                    ))}
-                  </View>
-                </View>
-              </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound',
-            content: () => (
-              <SoundOptions
+                  }
+                />
+                <Slider
+                  label="Repeat count"
+                  value={(repeats - MIN_REPEATS) / (MAX_REPEATS - MIN_REPEATS)}
+                  onChange={(v) => updateSettings({ repeats: Math.round(MIN_REPEATS + v * (MAX_REPEATS - MIN_REPEATS)) })}
+                />
+              </View>
+              <SwitchRow
+                label="New pattern when done"
+                checked={autoAdvance}
+                onChange={(v) => updateSettings({ autoAdvance: v })}
+                hint="After the repeat count finishes, move straight on to the next pattern and keep going instead of stopping."
+              />
+              <View className="gap-2.5">
+                <OptionLabel
+                  title="Click"
+                  hint={
+                    '"Steady pulse" clicks once per beat. "Every stroke" clicks every note of the pattern. "Pitch per hand" clicks a different pitch for every R vs. L stroke, so you can hear the sticking without watching the notation.'
+                  }
+                />
+                <ChoiceCards label="Click" options={CLICK_MODE_OPTIONS} value={clickMode} onChange={(v) => updateSettings({ clickMode: v })} />
+              </View>
+            </SettingChip>
+
+            <SettingChip Icon={SpeakerIcon} label="Sound" value={soundSummary(soundId, volume)}>
+              <SoundPicker
                 soundId={soundId}
                 setSoundId={(id) => updateSettings({ soundId: id })}
                 volume={volume}
                 setVolume={(next) => updateSettings({ volume: next })}
               />
-            ),
-          },
-        ]}
-      />
+            </SettingChip>
+          </ChipRow>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }

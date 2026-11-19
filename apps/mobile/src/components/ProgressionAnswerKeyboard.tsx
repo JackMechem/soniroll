@@ -44,7 +44,7 @@ export function ProgressionAnswerKeyboard({
   const quality = (q: string) => <ChordQualityText quality={q} style={{ fontSize: 20, color: colors.foreground }} />;
 
   return (
-    <View style={{ gap: 6, padding: 6, backgroundColor: colors.surface }}>
+    <View style={{ gap: 6, padding: 6, backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
       {numerals ? (
         <>
           <View className="flex-row" style={{ gap: 5 }}>

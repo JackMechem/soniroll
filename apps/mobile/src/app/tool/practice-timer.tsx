@@ -1,26 +1,17 @@
 import { describeSession, type PracticeSession } from '@jam-practice/core/practiceTimer';
 import { Stack } from 'expo-router';
-import { useState, useSyncExternalStore } from 'react';
+import { Fragment, useState, useSyncExternalStore } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import {
-  PauseIcon,
-  PencilIcon,
-  PlayIcon,
-  PlusIcon,
-  SkipForwardIcon,
-  SlidersIcon,
-  StopIcon,
-  StopwatchIcon,
-  TrashIcon,
-} from '@/components/icons';
+import { PauseIcon, PencilIcon, PlayIcon, PlusIcon, SpeakerIcon, StopIcon, TrashIcon, type IconProps } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { blankDraft, draftFromSession, PracticeSessionEditor, type Draft } from '@/components/PracticeSessionEditor';
 import { PracticeTimerRing } from '@/components/PracticeTimerRing';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import { PillButton } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { getSnapshot, pause, resume, skip, start, stop, subscribe, type EngineState } from '@/lib/practiceTimerEngine';
 import { usePracticeSessions, type SessionInput } from '@/lib/usePracticeSessions';
@@ -31,18 +22,14 @@ const SOUND_SETTINGS_KEY = 'jam-practice-timer-sound-settings';
 const DEFAULT_SOUND_SETTINGS = { soundEnabled: true, alarmMode: false, fullScreenAlert: false };
 
 /**
- * Native port of `apps/web/components/PracticeTimer.tsx`. Saved sessions sync to the *same*
- * Convex `practiceSessions` table web uses (`lib/usePracticeSessions.ts`), with this app's own
- * offline-first `AsyncStorage` fallback layered on top for the signed-out/offline case (see that
- * hook's own doc comment). Notifications and the repeating-vibration alarm are handled entirely by
- * `lib/practiceTimerEngine.ts` — this screen just reflects whatever it reports.
- *
- * Follows the same screen shape Metronome established: a running session's main display (the
- * ring, current/next step, transport controls) fits one screen with no scrolling, with a Sound
- * options button in the same top-right spot. The *idle* view — a library of saved sessions to
- * pick from — is inherently a variable-length list, so unlike Metronome's own always-small control
- * set, it scrolls like any normal list once there's more than a screen's worth; that's the session
- * editor's own content area too.
+ * The Practice Timer, laid out like the website's (`apps/web/components/PracticeTimer.tsx`).
+ * Running: what's playing ("Now running", the step's name, the ring, what's next) and round
+ * Pause/Resume/Continue, Skip and Stop buttons. Stopped: your saved sessions in a card (start,
+ * edit, delete each) and a New session button. The Sound chip sits under either. Saved sessions
+ * sync to the same Convex `practiceSessions` table the website uses (`lib/usePracticeSessions.ts`,
+ * with an offline `AsyncStorage` fallback); notifications and the alarm live in
+ * `lib/practiceTimerEngine.ts`. The session editor takes the whole screen (the website opens it in
+ * a popover; on a phone a long form with a keyboard is better as its own page).
  */
 function PracticeTimerScreen() {
   const { colors } = useAppTheme();
@@ -52,7 +39,6 @@ function PracticeTimerScreen() {
   const { soundEnabled, alarmMode, fullScreenAlert } = settings;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function startSession(session: PracticeSession) {
@@ -101,34 +87,14 @@ function PracticeTimerScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Practice Timer' }} />
-      {draft ? (
-        <SafeAreaView className="flex-1" edges={['bottom']}>
-          <PracticeSessionEditor
-            draft={draft}
-            onChange={setDraft}
-            onSave={saveDraft}
-            onCancel={() => setDraft(null)}
-            saving={saving}
-          />
-        </SafeAreaView>
-      ) : (
-        <SafeAreaView className="flex-1" edges={['bottom']}>
-          <View className="flex-1 px-6 py-4">
-            <View className="flex-row justify-end">
-              <Pressable
-                onPress={() => setOptionsOpen(true)}
-                hitSlop={8}
-                accessibilityLabel="Options"
-                className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-                style={{ backgroundColor: colors.surface }}
-              >
-                <SlidersIcon color={colors.foreground} size={18} />
-                <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
-                  Options
-                </Text>
-              </Pressable>
-            </View>
-
+      <SafeAreaView className="flex-1" edges={['bottom']}>
+        {draft ? (
+          <PracticeSessionEditor draft={draft} onChange={setDraft} onSave={saveDraft} onCancel={() => setDraft(null)} saving={saving} />
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          >
             {engineState ? (
               <RunningView engineState={engineState} />
             ) : (
@@ -141,20 +107,9 @@ function PracticeTimerScreen() {
                 onNew={() => setDraft(blankDraft())}
               />
             )}
-          </View>
-        </SafeAreaView>
-      )}
 
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Practice Timer options"
-        tabs={[
-          {
-            key: 'sound',
-            label: 'Sound',
-            content: () => (
-              <>
+            <SettingsBar>
+              <SettingChip Icon={SpeakerIcon} label="Sound" value={soundEnabled ? (alarmMode ? 'Alarm' : 'Chime') : 'Off'}>
                 <SwitchRow
                   label="Sound feedback"
                   checked={soundEnabled}
@@ -175,11 +130,11 @@ function PracticeTimerScreen() {
                   hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a chime. Only applies while alarm mode is on."
                 />
                 <ReliabilityHints />
-              </>
-            ),
-          },
-        ]}
-      />
+              </SettingChip>
+            </SettingsBar>
+          </ScrollView>
+        )}
+      </SafeAreaView>
 
       <ConfirmDialog
         visible={deletingId !== null}
@@ -195,85 +150,46 @@ function PracticeTimerScreen() {
 
 function RunningView({ engineState }: { engineState: EngineState }) {
   const { colors } = useAppTheme();
+  const { alarming, paused, next, index } = engineState;
   return (
-    <View className="flex-1 items-center justify-center gap-6">
-      <Text
-        className="text-xs font-bold font-ui-bold"
-        style={{ color: engineState.alarming ? colors.danger : colors.muted }}
-      >
-        {engineState.alarming ? "Time's up" : engineState.paused ? 'Paused' : 'Now running'}
+    <View className="items-center gap-5">
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: alarming ? colors.danger : colors.muted }}>
+        {alarming ? "Time's up" : paused ? 'Paused' : 'Now running'}
       </Text>
-      <Text
-        className="max-w-[300px] text-center text-2xl font-extrabold font-ui-extrabold"
-        style={{ color: colors.foreground }}
-      >
+      <Text className="font-ui-semibold text-center text-3xl font-semibold tracking-tight" style={{ color: colors.foreground }}>
         {engineState.current.title}
       </Text>
       <PracticeTimerRing
         startedAt={engineState.startedAt}
         durationMs={engineState.durationMs}
-        paused={engineState.paused}
+        paused={paused}
         remainingMsAtPause={engineState.remainingMsAtPause}
-        alarming={engineState.alarming}
+        alarming={alarming}
       />
-      <Text className="text-sm font-ui" style={{ color: colors.muted }}>
-        {engineState.next ? `Next: ${engineState.next.title}` : 'Last step of this session.'}
-      </Text>
+      {next ? (
+        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+          Next: {next.title}
+        </Text>
+      ) : index > 0 ? (
+        // Only for a session with steps before this one; a single timer has nothing to add.
+        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+          Last step of this session.
+        </Text>
+      ) : null}
+      {/* Round buttons like the Start that began the run: the main one (Pause, Resume or Continue)
+          is filled. Skip only shows when there's a next step. */}
       <View className="flex-row flex-wrap items-center justify-center gap-3">
-        {engineState.alarming ? (
-          <TransportButton onPress={skip} label="Continue" accent>
-            <PlayIcon color={colors['accent-foreground']} size={16} />
-          </TransportButton>
-        ) : engineState.paused ? (
-          <TransportButton onPress={resume} label="Resume" accent>
-            <PlayIcon color={colors['accent-foreground']} size={16} />
-          </TransportButton>
+        {alarming ? (
+          <PillButton primary label="Continue" Icon={PlayIcon} onPress={skip} />
+        ) : paused ? (
+          <PillButton primary label="Resume" Icon={PlayIcon} onPress={resume} />
         ) : (
-          <TransportButton onPress={pause} label="Pause">
-            <PauseIcon color={colors.foreground} size={16} />
-          </TransportButton>
+          <PillButton primary label="Pause" Icon={PauseIcon} onPress={pause} />
         )}
-        {!engineState.alarming ? (
-          <TransportButton onPress={skip} label="Skip">
-            <SkipForwardIcon color={colors.foreground} size={16} />
-          </TransportButton>
-        ) : null}
-        <TransportButton onPress={stop} label="Stop" danger>
-          <StopIcon color={colors.danger} size={16} />
-        </TransportButton>
+        {!alarming && next ? <PillButton label="Skip" onPress={skip} /> : null}
+        <PillButton danger label="Stop" Icon={StopIcon} onPress={stop} />
       </View>
     </View>
-  );
-}
-
-function TransportButton({
-  onPress,
-  label,
-  accent,
-  danger,
-  children,
-}: {
-  onPress: () => void;
-  label: string;
-  accent?: boolean;
-  danger?: boolean;
-  children: React.ReactNode;
-}) {
-  const { colors } = useAppTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      className="flex-row items-center gap-1.5 rounded-full px-5 py-2.5"
-      style={{ backgroundColor: accent ? colors.accent : colors.surface }}
-    >
-      {children}
-      <Text
-        className="text-sm font-bold font-ui-bold"
-        style={{ color: accent ? colors['accent-foreground'] : danger ? colors.danger : colors.foreground }}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -292,148 +208,124 @@ function LibraryView({
   onDelete: (id: string) => void;
   onNew: () => void;
 }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   return (
-    <View className="flex-1 items-center">
-      <View className="items-center gap-3 pt-6">
-        <StopwatchIcon color={colors.muted} size={40} />
-        {loading ? (
-          <LoadingSpinner />
-        ) : sessions.length === 0 ? (
-          <Text className="max-w-[260px] text-center font-ui" style={{ color: colors.muted }}>
-            Create a session to get started — chain timers back to back, or run a Pomodoro.
-          </Text>
-        ) : (
-          <Text className="font-ui" style={{ color: colors.muted }}>
-            Pick a saved session to start it, or create a new one.
-          </Text>
-        )}
-      </View>
-
-      <ScrollView className="w-full" contentContainerStyle={{ paddingVertical: 12, gap: 2 }}>
-        {sessions.map((session, i) => (
-          <View
-            key={session.id}
-            className="flex-row items-center gap-2 py-2.5"
-            style={{
-              borderBottomWidth: i < sessions.length - 1 ? 1 : 0,
-              borderBottomColor: colors['surface-hover'],
-            }}
-          >
-            <View className="min-w-0 flex-1">
-              <Text numberOfLines={1} className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-                {session.name || 'Untitled session'}
-              </Text>
-              <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
-                {describeSession(session)}
-              </Text>
-            </View>
-            <LibraryButton onPress={() => onStart(session)} label={`Start ${session.name || 'session'}`}>
-              <PlayIcon color={colors.accent} size={16} />
-            </LibraryButton>
-            <LibraryButton onPress={() => onEdit(session)} label={`Edit ${session.name || 'session'}`}>
-              <PencilIcon color={colors.muted} size={16} />
-            </LibraryButton>
-            <LibraryButton onPress={() => onDelete(session.id)} label={`Delete ${session.name || 'session'}`}>
-              <TrashIcon color={colors.muted} size={16} />
-            </LibraryButton>
-          </View>
-        ))}
-      </ScrollView>
-
-      <Pressable
-        onPress={onNew}
-        className="flex-row items-center gap-1.5 rounded-full px-6 py-3"
-        style={{ backgroundColor: colors.accent }}
-      >
-        <PlusIcon color={colors['accent-foreground']} size={16} />
-        <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
-          New session
+    <View className="items-center gap-4">
+      {loading ? (
+        <LoadingSpinner />
+      ) : sessions.length === 0 ? (
+        <Text className="font-ui max-w-xs text-center text-sm leading-5" style={{ color: colors.muted }}>
+          Make a session to chain timers back to back, or to run a Pomodoro.
         </Text>
-      </Pressable>
+      ) : (
+        <>
+          <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
+            Pick a saved session to start it, or make a new one.
+          </Text>
+          <View className="w-full overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
+            {sessions.map((session, i) => {
+              const name = session.name || 'Untitled session';
+              return (
+                <Fragment key={session.id}>
+                  {i > 0 ? <View className="mx-3 h-px" style={{ backgroundColor: derived.hairline }} /> : null}
+                  <View className="flex-row items-center gap-1 py-2 pl-4 pr-2">
+                    <Pressable onPress={() => onStart(session)} accessibilityRole="button" accessibilityLabel={`Start ${name}`} className="min-w-0 flex-1 py-1">
+                      <Text numberOfLines={1} className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
+                        {name}
+                      </Text>
+                      <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+                        {describeSession(session)}
+                      </Text>
+                    </Pressable>
+                    <RowIconButton Icon={PlayIcon} color={colors.accent} label={`Start ${name}`} onPress={() => onStart(session)} />
+                    <RowIconButton Icon={PencilIcon} color={colors.muted} label={`Edit ${name}`} onPress={() => onEdit(session)} />
+                    <RowIconButton Icon={TrashIcon} color={colors.muted} label={`Delete ${name}`} onPress={() => onDelete(session.id)} />
+                  </View>
+                </Fragment>
+              );
+            })}
+          </View>
+        </>
+      )}
+      <PillButton label="New session" Icon={PlusIcon} onPress={onNew} />
     </View>
   );
 }
 
-/** Two nudges toward reliability fixes this app genuinely can't apply from JS alone — both real,
-    commonly-reported Android limitations, not things the `'practice-timer'` HIGH-importance
-    channel or a correctly-`channelId`'d schedule can fully override on their own:
-    1. **Exact alarms** — `SCHEDULE_EXACT_ALARM` is declared in the manifest, but on Android 12+
-       that's only ever a *request*; actually using it for precise scheduling needs the user to
-       grant "Alarms & reminders" by hand in system settings, the same as this app's own
-       notification permission needs a runtime grant. `android.settings.
-       REQUEST_SCHEDULE_EXACT_ALARM` is a real, standard intent that jumps straight to that screen
-       for *this* app specifically — unlike battery optimization below, it needs no `package:` data
-       URI, so `Linking.sendIntent` (no native module needed) can fire it directly. Wrapped in a
-       try/catch since the action doesn't exist at all below API 31.
-    2. **Battery optimization** — a device's own "sleeping apps" policy can still delay or drop a
-       correctly-scheduled notification regardless of exact-alarm access. There's no single
-       standard intent for *this* one that doesn't also need a `package:` data URI (which
-       `Linking.sendIntent` can't set), so this just opens the app's own settings page
-       (`Linking.openSettings()`) and spells out which setting to look for once there.
-    Both Android-only — iOS has no equivalent concept for either. */
+function RowIconButton({ Icon, color, label, onPress }: { Icon: React.ComponentType<IconProps>; color: string; label: string; onPress: () => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={4}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+    >
+      <Icon color={color} size={18} />
+    </Pressable>
+  );
+}
+
+/** Two nudges toward reliability fixes this app can't apply from JS alone, both Android-only:
+    1. **Exact alarms** — `SCHEDULE_EXACT_ALARM` is only a request on Android 12+; the user grants
+       "Alarms & reminders" by hand. `android.settings.REQUEST_SCHEDULE_EXACT_ALARM` opens that
+       screen for this app (no `package:` URI needed, so `Linking.sendIntent` can fire it); it
+       doesn't exist below API 31, hence the catch.
+    2. **Battery optimization** — a phone's "sleeping apps" policy can still delay a correctly
+       scheduled notification. There's no standard intent for it without a `package:` URI, so this
+       opens the app's settings page and says what to look for. */
 function ReliabilityHints() {
   const { colors } = useAppTheme();
   if (Platform.OS !== 'android') return null;
   return (
-    <View className="gap-2 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
-      <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
-        If notifications or the sound feel inconsistent, two phone settings outside this app&apos;s
-        own control are the usual cause.
+    <View className="gap-3 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
+      <Text className="font-ui text-xs leading-4" style={{ color: colors.muted }}>
+        If notifications or the sound feel inconsistent, two phone settings outside this app are the usual cause.
       </Text>
-      <View className="gap-1">
-        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-          Alarms &amp; reminders
-        </Text>
-        <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
-          Lets segment-end notifications fire at the exact time instead of being delayed.
-        </Text>
-        <Pressable
-          onPress={() => {
-            Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM').catch(() => {
-              // Not available below Android 12 — nothing to open, nothing to do.
-            });
-          }}
-          className="self-start rounded-lg px-3 py-1.5"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.accent }}>
-            Allow exact alarms
-          </Text>
-        </Pressable>
-      </View>
-      <View className="gap-1">
-        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-          Battery
-        </Text>
-        <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
-          Open this app&apos;s settings, then look for &quot;Battery&quot; →
-          &quot;Unrestricted&quot; (wording varies by phone).
-        </Text>
-        <Pressable
-          onPress={() => void Linking.openSettings()}
-          className="self-start rounded-lg px-3 py-1.5"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.accent }}>
-            Open app settings
-          </Text>
-        </Pressable>
-      </View>
+      <ReliabilityRow
+        title="Alarms & reminders"
+        text="Lets segment-end notifications fire at the exact time instead of being delayed."
+        action="Allow exact alarms"
+        onPress={() => {
+          Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM').catch(() => {
+            // Not available below Android 12 — nothing to open, nothing to do.
+          });
+        }}
+      />
+      <ReliabilityRow
+        title="Battery"
+        text={'Open this app’s settings, then look for "Battery" → "Unrestricted" (wording varies by phone).'}
+        action="Open app settings"
+        onPress={() => void Linking.openSettings()}
+      />
     </View>
   );
 }
 
-function LibraryButton({ onPress, label, children }: { onPress: () => void; label: string; children: React.ReactNode }) {
+function ReliabilityRow({ title, text, action, onPress }: { title: string; text: string; action: string; onPress: () => void }) {
+  const { colors, derived } = useAppTheme();
   return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={6}
-      accessibilityLabel={label}
-      className="h-8 w-8 shrink-0 items-center justify-center rounded-full"
-    >
-      {children}
-    </Pressable>
+    <View className="gap-1">
+      <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.foreground }}>
+        {title}
+      </Text>
+      <Text className="font-ui text-xs leading-4" style={{ color: colors.muted }}>
+        {text}
+      </Text>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="mt-1 h-9 justify-center self-start overflow-hidden rounded-lg px-3"
+        style={{ backgroundColor: derived.fill }}
+      >
+        <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.accent }}>
+          {action}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 

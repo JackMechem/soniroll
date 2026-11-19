@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
  * Native port of `apps/web/components/TunerDial.tsx` — the exact same polar-coordinate SVG path
@@ -50,7 +50,13 @@ function segmentPath(centerDegrees: number) {
   return `M ${ox1} ${oy1} A ${OUTER} ${OUTER} 0 0 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${INNER} ${INNER} 0 0 0 ${ix1} ${iy1} Z`;
 }
 
-/** A ring of the 12 notes (C at the top) with the tuner readout in the middle. */
+/** "C#" → "C♯", "Db" → "D♭", for the labels on the dial. */
+function glyphs(name: string) {
+  return name.replace('#', '♯').replace(/^([A-G])b/, '$1♭');
+}
+
+/** A ring of the 12 notes (C at the top) with the tuner readout in the middle; tap a note to hear
+    it. The heard note is lit in its tuning colour, the one playing filled with the accent. */
 export function TunerDial({
   detectedPc,
   detectedColor,
@@ -75,20 +81,16 @@ export function TunerDial({
           const [tx, ty] = polar(MID, degrees);
           const isDetected = detectedPc === pc;
           const isPlaying = playingPc === pc;
-          const fill = isDetected ? detectedColor : alt ? colors['surface-hover'] : colors.surface;
-          const textColor = isDetected ? colors.background : colors.foreground;
-          const altColor = isDetected ? colors.background : colors.muted;
+          // The playing note is filled with the accent (like the website's), not outlined.
+          const fill = isDetected ? detectedColor : isPlaying ? colors.accent : alt ? colors['surface-hover'] : colors.surface;
+          const textColor = isDetected ? colors.background : isPlaying ? colors['accent-foreground'] : colors.foreground;
+          const altColor = isDetected ? colors.background : isPlaying ? colors['accent-foreground'] : withAlpha(colors.foreground, 0.75);
           return (
-            <G key={pc} onPress={() => onSelect(pc)}>
-              <Path
-                d={segmentPath(degrees)}
-                fill={fill}
-                stroke={isPlaying ? colors.accent : 'transparent'}
-                strokeWidth={4}
-              />
+            <G key={pc} onPress={() => onSelect(pc)} accessibilityRole="button" accessibilityLabel={`Play ${alt ? `${main} / ${alt}` : main}`}>
+              <Path d={segmentPath(degrees)} fill={fill} />
               <SvgText
                 x={tx}
-                y={alt ? ty - 4 : ty}
+                y={alt ? ty - 7 : ty}
                 textAnchor="middle"
                 alignmentBaseline="central"
                 fontSize={26}
@@ -96,19 +98,19 @@ export function TunerDial({
                 fontFamily="Geist_600SemiBold"
                 fill={textColor}
               >
-                {main}
+                {glyphs(main)}
               </SvgText>
               {alt ? (
                 <SvgText
                   x={tx}
-                  y={ty + 18}
+                  y={ty + 17}
                   textAnchor="middle"
                   alignmentBaseline="central"
-                  fontSize={15}
+                  fontSize={19}
                   fontFamily="Geist_400Regular"
                   fill={altColor}
                 >
-                  {alt}
+                  {glyphs(alt)}
                 </SvgText>
               ) : null}
             </G>

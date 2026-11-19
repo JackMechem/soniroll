@@ -70,17 +70,18 @@ export function PracticeTimerWidget() {
     >
       <Pressable
         onPress={() => router.push('/tool/practice-timer')}
-        className="flex-row items-center gap-2 rounded-full border px-4 py-3"
-        style={{ backgroundColor: colors.surface, borderColor: colors['surface-hover'] }}
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="flex-row items-center gap-2 overflow-hidden rounded-full py-2 pl-4 pr-2"
+        style={{ backgroundColor: colors.surface }}
       >
         <StopwatchIcon color={state.alarming ? colors.danger : colors.accent} size={18} />
         <View className="min-w-0 flex-1">
           <Text
             numberOfLines={1}
-            className="text-sm font-bold font-ui-bold"
+            className="font-ui-semibold text-sm font-semibold"
             style={{ color: state.alarming ? colors.danger : colors.foreground }}
           >
-            {state.alarming ? "Time's up!" : state.current.title}
+            {state.alarming ? "Time's up" : state.current.title}
           </Text>
           {!state.alarming && state.next ? (
             <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
@@ -89,7 +90,7 @@ export function PracticeTimerWidget() {
           ) : null}
         </View>
         <Text
-          className="shrink-0 text-base font-bold font-ui-bold tabular-nums"
+          className="font-ui-semibold shrink-0 text-base font-semibold tabular-nums"
           style={{ color: state.alarming ? colors.danger : colors.foreground }}
         >
           {formatClock(remainingMs)}
@@ -135,13 +136,15 @@ function WidgetButton({
   label: string;
   children: React.ReactNode;
 }) {
+  const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
       hitSlop={6}
       accessibilityLabel={label}
       accessibilityRole="button"
-      className="h-8 w-8 items-center justify-center rounded-full"
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-9 w-9 items-center justify-center overflow-hidden rounded-full"
     >
       {children}
     </Pressable>

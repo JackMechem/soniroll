@@ -106,6 +106,7 @@ export function ToolSheet({
               </Pressable>
             </View>
             <ScrollView
+              nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{
                 paddingHorizontal: 20,

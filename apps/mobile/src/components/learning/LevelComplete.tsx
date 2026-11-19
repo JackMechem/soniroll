@@ -5,7 +5,7 @@ import { Animated, Easing, Modal, Pressable, Text, View, useWindowDimensions } f
 import { STAR_COLOR } from '@/components/learning/LearningPath';
 import { playNote, type SampledInstrumentId } from '@/lib/sampledTones';
 import type { LevelResult } from '@/lib/useLearnSession';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 const CONFETTI_COLORS = ['#6366f1', '#f59e0b', '#22c55e', '#ec4899', '#38bdf8', '#a78bfa'];
 const PRAISE = ['Nailed it!', 'Brilliant ears!', 'Level up!', 'Superb!', "You're on fire!"];
@@ -106,7 +106,7 @@ export function LevelComplete({
   onRetry: () => void;
   onClose: () => void;
 }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   const { passed } = result;
   const close = result.score >= PASS_SCORE - 0.25;
   const needed = Math.ceil(PASS_SCORE * result.total);
@@ -127,10 +127,12 @@ export function LevelComplete({
   const button = (label: string, onPress: () => void, primary: boolean) => (
     <Pressable
       onPress={onPress}
-      className="flex-1 items-center rounded-full py-3.5"
-      style={{ backgroundColor: primary ? colors.accent : colors.background }}
+      accessibilityRole="button"
+      android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
+      className="h-11 flex-1 items-center justify-center overflow-hidden rounded-lg"
+      style={{ backgroundColor: primary ? colors.accent : derived.fill }}
     >
-      <Text className="font-ui-bold text-base font-bold" style={{ color: primary ? colors['accent-foreground'] : colors.foreground }}>
+      <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: primary ? colors['accent-foreground'] : colors.foreground }}>
         {label}
       </Text>
     </Pressable>
@@ -138,10 +140,10 @@ export function LevelComplete({
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View className="flex-1 items-center justify-center p-5" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+      <View className="flex-1 items-center justify-center p-5" style={{ backgroundColor: withAlpha(colors.overlay, 0.6) }}>
         {passed ? <Confetti /> : null}
         <Animated.View
-          className="w-full items-center gap-4 rounded-3xl p-6"
+          className="w-full items-center gap-4 rounded-xl p-6"
           style={{
             maxWidth: 380,
             backgroundColor: colors.surface,
@@ -149,7 +151,7 @@ export function LevelComplete({
             transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }, { scale: rise.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
           }}
         >
-          <Text className="font-ui-bold text-center text-xs font-bold" style={{ color: colors.muted }}>
+          <Text className="font-ui-semibold text-center text-xs font-semibold" style={{ color: colors.muted }}>
             Level {result.levelNumber} · {result.levelTitle}
           </Text>
 
@@ -160,18 +162,18 @@ export function LevelComplete({
                   <PopStar key={i} lit={i < result.stars} delay={300 + i * 250} />
                 ))}
               </View>
-              <Text className="font-ui-extrabold text-center text-3xl font-extrabold" style={{ color: colors.accent }}>
+              <Text className="font-ui-bold text-center text-2xl font-bold" style={{ color: colors.foreground }}>
                 {result.pathDone && result.firstPass ? 'Path complete!' : PRAISE[Math.floor(result.levelNumber + result.correct) % PRAISE.length]}
               </Text>
               <Text className="font-ui text-base" style={{ color: colors.foreground }}>
-                <Text className="font-ui-bold font-bold">{scoreText}</Text> {result.stars === 3 ? '— a perfect run.' : 'correct.'}
+                <Text className="font-ui-semibold font-semibold">{scoreText}</Text> {result.stars === 3 ? '— a perfect run.' : 'correct.'}
               </Text>
               {result.firstPass && result.unlocked ? (
-                <View className="w-full items-center rounded-2xl px-4 py-3" style={{ backgroundColor: `${colors.accent}1f` }}>
-                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.accent }}>
+                <View className="w-full items-center rounded-lg px-4 py-3" style={{ backgroundColor: derived.fill }}>
+                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
                     Unlocked
                   </Text>
-                  <Text className="font-ui-bold text-center text-lg font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-semibold text-center text-base font-semibold" style={{ color: colors.foreground }}>
                     Level {result.unlocked.number}: {result.unlocked.title}
                   </Text>
                 </View>
@@ -194,7 +196,7 @@ export function LevelComplete({
                 {close ? 'So close!' : 'Keep at it!'}
               </Text>
               <Text className="font-ui text-center text-base" style={{ color: colors.foreground }}>
-                <Text className="font-ui-bold font-bold">{scoreText}</Text> — you need {needed} to pass.
+                <Text className="font-ui-semibold font-semibold">{scoreText}</Text> — you need {needed} to pass.
               </Text>
               <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
                 Every attempt trains your ear. Give it another go.
@@ -211,7 +213,7 @@ export function LevelComplete({
             ) : (
               <View className="flex-row">{button('Try again', onRetry, true)}</View>
             )}
-            <Pressable onPress={onClose} className="items-center py-2">
+            <Pressable onPress={onClose} accessibilityRole="button" className="min-h-11 items-center justify-center">
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
                 Back to the path
               </Text>

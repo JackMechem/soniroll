@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { CheckIcon, LockIcon } from '@/components/icons';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 export const STAR_COLOR = '#fbbf24';
 
@@ -21,7 +21,7 @@ export function Stars({ count, size = 14 }: { count: number; size?: number }) {
   return (
     <View className="flex-row" style={{ gap: 1 }} accessibilityLabel={`${count} of 3 stars`}>
       {[0, 1, 2].map((i) => (
-        <Text key={i} style={{ fontSize: size, lineHeight: size + 2, color: i < count ? STAR_COLOR : `${colors.foreground}26` }}>
+        <Text key={i} style={{ fontSize: size, lineHeight: size + 2, color: i < count ? STAR_COLOR : withAlpha(colors.foreground, 0.15) }}>
           ★
         </Text>
       ))}
@@ -31,6 +31,10 @@ export function Stars({ count, size = 14 }: { count: number; size?: number }) {
 
 /** Horizontal offset per level, so the path winds instead of being a straight column. */
 const WIND = [0, 1, 1.6, 1, 0, -1, -1.6, -1];
+
+/** One level on the trail (its connector and node), and the trail's height: about three levels. */
+const LEVEL_HEIGHT = 84;
+const TRAIL_HEIGHT = LEVEL_HEIGHT * 3 + 12;
 
 /** The pulsing ring behind the level you're on. */
 function Pulse({ color }: { color: string }) {
@@ -61,7 +65,7 @@ function Pulse({ color }: { color: string }) {
  * A tool's learning path (native sibling of web's `components/learning/LearningPath.tsx`): a
  * header with overall progress and stars, then a winding trail of level nodes — done (filled, with
  * stars), the current one (pulsing), or locked. Tapping a reached level selects it; tapping the
- * selected one starts it. Scrolls inside itself so the screen around it doesn't.
+ * selected one starts it. The trail is about three levels tall and scrolls inside itself.
  */
 export function LearningPath({
   track,
@@ -85,20 +89,20 @@ export function LearningPath({
   const scrolled = useRef(false);
 
   return (
-    <View className="w-full flex-1 gap-3">
-      <View className="gap-2 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
+    <View className="w-full gap-3" style={{ maxWidth: 384 }}>
+      <View className="gap-2 rounded-xl p-4" style={{ backgroundColor: colors.surface }}>
         <View className="flex-row items-baseline justify-between">
-          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
             {done ? 'Path complete!' : `Level ${current + 1} of ${levels.length}`}
           </Text>
-          <Text className="font-ui-bold text-sm font-bold tabular-nums" style={{ color: STAR_COLOR }}>
+          <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: STAR_COLOR }}>
             ★ {summary.stars}
             <Text className="font-ui text-sm" style={{ color: colors.muted }}>
               {' '}/ {summary.maxStars}
             </Text>
           </Text>
         </View>
-        <View className="h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: colors.background }}>
+        <View className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: withAlpha(colors.foreground, 0.1) }}>
           <View className="h-full rounded-full" style={{ width: `${(summary.passed / summary.total) * 100}%`, backgroundColor: colors.accent }} />
         </View>
         <Text className="font-ui text-xs" style={{ color: colors.muted }}>
@@ -108,7 +112,15 @@ export function LearningPath({
         </Text>
       </View>
 
-      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ alignItems: 'center', paddingVertical: 12 }} showsVerticalScrollIndicator={false}>
+      {/* The trail scrolls inside itself, about three levels tall (like the website's), so the page
+          around it doesn't have to. */}
+      <ScrollView
+        ref={scrollRef}
+        nestedScrollEnabled
+        style={{ height: TRAIL_HEIGHT }}
+        contentContainerStyle={{ alignItems: 'center', paddingVertical: 12 }}
+        showsVerticalScrollIndicator={false}
+      >
         {levels.map((level, i) => {
           const passed = isPassed(progress, level.id);
           const unlocked = i <= current;
@@ -125,11 +137,11 @@ export function LearningPath({
                 if (!scrolled.current && i === Math.min(current, levels.length - 1)) {
                   scrolled.current = true;
                   const y = e.nativeEvent.layout.y;
-                  requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: false }));
+                  requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - LEVEL_HEIGHT), animated: false }));
                 }
               }}
             >
-              {i > 0 ? <View className="mb-1 h-5 w-1 rounded-full" style={{ backgroundColor: unlocked ? `${colors.accent}80` : `${colors.foreground}1a` }} /> : null}
+              {i > 0 ? <View className="mb-1 h-5 w-0.5 rounded-full" style={{ backgroundColor: unlocked ? withAlpha(colors.accent, 0.5) : withAlpha(colors.foreground, 0.1) }} /> : null}
               <View className="flex-row items-center gap-3">
                 <Pressable
                   disabled={!unlocked}
@@ -142,28 +154,27 @@ export function LearningPath({
                   <View
                     className="items-center justify-center rounded-full"
                     style={{
-                      width: isSelected ? 60 : 54,
-                      height: isSelected ? 60 : 54,
+                      width: 52,
+                      height: 52,
                       backgroundColor: passed ? colors.accent : colors.surface,
-                      borderWidth: isCurrent && !passed ? 4 : 0,
+                      borderWidth: isCurrent && !passed ? 2 : 0,
                       borderColor: colors.accent,
-                      borderBottomWidth: passed ? 4 : isCurrent ? 4 : 0,
-                      borderBottomColor: passed ? `${colors.foreground}40` : colors.accent,
+                      ...(isSelected ? { outlineWidth: 3, outlineOffset: 3, outlineColor: withAlpha(colors.accent, 0.4), outlineStyle: 'solid' as const } : null),
                     }}
                   >
                     {passed ? (
-                      <CheckIcon color={colors['accent-foreground']} size={26} />
+                      <CheckIcon color={colors['accent-foreground']} size={22} />
                     ) : unlocked ? (
-                      <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.accent }}>
+                      <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.accent }}>
                         {i + 1}
                       </Text>
                     ) : (
-                      <LockIcon color={`${colors.muted}99`} size={22} />
+                      <LockIcon color={withAlpha(colors.muted, 0.6)} size={18} />
                     )}
                   </View>
                 </Pressable>
                 <View style={{ width: 150 }}>
-                  <Text numberOfLines={2} className="font-ui-bold text-sm font-bold" style={{ color: unlocked ? colors.foreground : `${colors.muted}99` }}>
+                  <Text numberOfLines={2} className="font-ui-semibold text-sm font-semibold" style={{ color: unlocked ? colors.foreground : withAlpha(colors.muted, 0.6) }}>
                     {level.title}
                   </Text>
                   {passed ? (
@@ -173,7 +184,7 @@ export function LearningPath({
                       {isSelected ? 'Up next' : 'Current level'}
                     </Text>
                   ) : (
-                    <Text className="font-ui text-xs" style={{ color: `${colors.muted}99` }}>
+                    <Text className="font-ui text-xs" style={{ color: withAlpha(colors.muted, 0.6) }}>
                       Level {i + 1}
                     </Text>
                   )}

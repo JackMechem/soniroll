@@ -1,9 +1,10 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSyncExternalStore } from 'react';
 
 import { PlayIcon, StopIcon, StopwatchIcon } from '@/components/icons';
+import { PillButton } from '@/components/tool/rhythm';
 import { getSnapshot, skip, stop, subscribe } from '@/lib/practiceTimerEngine';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
  * A full-screen "time's up" takeover, mounted once in `_layout.tsx` (a sibling of `Stack`,
@@ -30,7 +31,7 @@ export function PracticeTimerAlert() {
       style={{
         position: 'absolute',
         inset: 0,
-        backgroundColor: `${colors.background}f7`,
+        backgroundColor: withAlpha(colors.background, 0.97),
         alignItems: 'center',
         justifyContent: 'center',
         gap: 24,
@@ -39,10 +40,10 @@ export function PracticeTimerAlert() {
     >
       <StopwatchIcon color={colors.danger} size={56} />
       <View className="items-center gap-1.5">
-        <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.danger }}>
+        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.danger }}>
           Time&apos;s up
         </Text>
-        <Text className="text-center text-3xl font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
+        <Text className="font-ui-semibold text-center text-3xl font-semibold tracking-tight" style={{ color: colors.foreground }}>
           {state.current.title}
         </Text>
         {state.next ? (
@@ -56,26 +57,8 @@ export function PracticeTimerAlert() {
         )}
       </View>
       <View className="flex-row flex-wrap items-center justify-center gap-3">
-        <Pressable
-          onPress={skip}
-          className="flex-row items-center gap-2 rounded-full px-8 py-3.5"
-          style={{ backgroundColor: colors.accent }}
-        >
-          <PlayIcon color={colors['accent-foreground']} size={20} />
-          <Text className="text-base font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
-            Continue
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={stop}
-          className="flex-row items-center gap-2 rounded-full px-6 py-3.5"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <StopIcon color={colors.danger} size={18} />
-          <Text className="text-base font-semibold font-ui-semibold" style={{ color: colors.danger }}>
-            Stop
-          </Text>
-        </Pressable>
+        <PillButton primary label="Continue" Icon={PlayIcon} onPress={skip} />
+        <PillButton danger label="Stop" Icon={StopIcon} onPress={stop} />
       </View>
     </View>
   );

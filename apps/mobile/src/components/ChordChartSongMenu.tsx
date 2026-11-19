@@ -18,7 +18,7 @@ export type MenuTarget = { song: LibrarySongMeta; playlistId: string | null };
  * this playlist / Delete), then — for Playlists — every playlist with a check on the ones this
  * chart is in (tap to add or remove; a chart can be in several) plus a "New playlist" field. Deletion goes through
  * `ConfirmDialog` so a stray tap mid-song can't lose a chart. Hand-built `Modal` rather than
- * `@expo/ui`'s native sheet, same "not generic native chrome" call as `ToolOptionsSheet`.
+ * `@expo/ui`'s native sheet, same "not generic native chrome" call as the tool sheets (`components/tool/SettingChip.tsx`).
  */
 export function ChordChartSongMenu({
   target,

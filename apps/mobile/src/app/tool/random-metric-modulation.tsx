@@ -1,5 +1,6 @@
 import { CLICK_SOUNDS, DEFAULT_CLICK_SOUND_ID, type BeatLevel } from '@jam-practice/core/clickSounds';
 import {
+  COMMON_METERS,
   NEXT_LEVEL,
   accentsFromGroups,
   clampBpm,
@@ -11,24 +12,26 @@ import {
 import { MAX_BEATS } from '@jam-practice/core/meters';
 import { MODULATIONS } from '@jam-practice/core/metricModulation';
 import { Stack } from 'expo-router';
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useEffect, useSyncExternalStore } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { SlidersIcon } from '@/components/icons';
-import { InfoButton } from '@/components/InfoButton';
-import {
-  AccentAndSubdivisionControls,
-  Pill,
-  SoundOptions,
-  TempoControls,
-  TimeSignatureControls,
-} from '@/components/MetronomeControls';
-import { NumberStepper } from '@/components/NumberStepper';
+import { HistoryIcon, MeterIcon, MetronomeIcon, ShuffleIcon, SpeakerIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import {
+  BigButton,
+  MeterQuickPicks,
+  SoundPicker,
+  SubdivisionPicker,
+  TempoHero,
+  TimeSignatureControl,
+  soundSummary,
+} from '@/components/tool/meter';
+import { OptionGroup } from '@/components/tool/reward';
+import { AccentGroupingField, ClickSoundCards, CountField, OptionLabel, PlanText, PoolPills } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import {
   clearMetricModLog,
   getMetricModSnapshot,
@@ -53,11 +56,7 @@ function shortRatio(label: string) {
   return label.split(' ')[0];
 }
 
-/** A modulated tempo is usually fractional (100 × 4/3) — show one decimal only when there is one. */
-function formatBpm(bpm: number) {
-  const tenths = Math.round(bpm * 10) / 10;
-  return Number.isInteger(tenths) ? String(tenths) : tenths.toFixed(1);
-}
+const RATIO_OPTIONS = MODULATIONS.map((m) => ({ value: m.id, label: shortRatio(m.label) }));
 
 // Same key and shape as web's `RandomMetricModulation.tsx`, so settings follow the account across both.
 const SETTINGS_KEY = 'jam-practice-metric-modulation';
@@ -81,16 +80,15 @@ const DEFAULT_SETTINGS = {
 };
 
 /**
- * Native port of `apps/web/components/RandomMetricModulation.tsx`, in the app's usual tool shape:
- * the main screen holds tempo, time signature, the beat strip and Start/Stop while idle; once
- * running, the tempo controls (locked for the run, same as web) give way to the live tempo, the
- * bar count, the upcoming modulation and — if on — the previous-tempo click's own strip. Every
- * other setting, plus the modulation log, lives in the options sheet.
+ * Polyrhythm Metric Modulation Metronome, laid out like the website's
+ * (`apps/web/components/RandomMetricModulation.tsx`): a History chip above; the tempo (locked to
+ * the live, modulated tempo while it runs, with the next change and the previous tempo's click
+ * under it), the beat strip and a line saying what Start does (then where you are, or the last
+ * change); Start; and the Meter, Modulation, Previous tempo click and Sound chips.
  */
 function RandomMetricModulationScreen() {
   const { colors } = useAppTheme();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const bpm = clampBpm(settings.bpm);
   const beatsPerBar = Math.min(MAX_BEATS, Math.max(1, Math.round(settings.beatsPerBar)));
@@ -115,7 +113,7 @@ function RandomMetricModulationScreen() {
   const enabledRatios = settings.enabledRatios.filter((id) => MODULATIONS.some((m) => m.id === id));
 
   const engineState = useSyncExternalStore(subscribeMetricMod, getMetricModSnapshot);
-  const { running, currentBeat, currentSub, referenceBeat, log, lastModulation, nextPreview } = engineState;
+  const { running, currentBeat, currentSub, referenceBeat, log, lastModulation, nextPreview, playingReference } = engineState;
 
   useEffect(() => {
     updateMetricModLiveSettings({
@@ -179,160 +177,225 @@ function RandomMetricModulationScreen() {
   const muted = { color: colors.muted };
   const fg = { color: colors.foreground };
 
+  // What Start will do, under the beats ("Tempo changes every 4 bars · 3:2, 2:3, 4:3 and 7 more").
+  const pool = enabledRatios.length ? MODULATIONS.filter((m) => enabledRatios.includes(m.id)) : MODULATIONS;
+  const plan = `${
+    matchToRealignment
+      ? 'Tempo changes once the tempos realign'
+      : `Tempo changes every ${minBarsPerModulation === 1 ? 'bar' : `${minBarsPerModulation} bars`}`
+  } · ${pool
+    .slice(0, pool.length > 4 ? 3 : 4)
+    .map((m) => shortRatio(m.label))
+    .join(', ')}${pool.length > 4 ? ` and ${pool.length - 3} more` : ''}${returnToOriginal ? ' · back to your tempo in between' : ''}`;
+
+  const modulationSummary = `${
+    matchToRealignment ? 'When tempos realign' : `Every ${minBarsPerModulation} bar${minBarsPerModulation === 1 ? '' : 's'}`
+  } · ${
+    enabledRatios.length === 0 || enabledRatios.length === MODULATIONS.length
+      ? 'all ratios'
+      : enabledRatios.length === 1
+        ? shortRatio(MODULATIONS.find((m) => m.id === enabledRatios[0])?.label ?? '')
+        : `${enabledRatios.length} ratios`
+  }`;
+
+  const referenceSummary = playOriginalTempo
+    ? referenceMuted
+      ? 'On · muted'
+      : `On · ${CLICK_SOUNDS.find((c) => c.id === referenceSoundId)?.label ?? 'click'}`
+    : 'Off';
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Polyrhythm Metric Modulation Metronome' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-6 py-4">
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+        >
+          {/* History sits above the display, like the website's side-panel chips. */}
+          <SettingsBar>
+            <SettingChip
+              Icon={HistoryIcon}
+              label="History"
+              value={log.length > 0 ? `${log.length} tempo change${log.length === 1 ? '' : 's'}` : 'None yet'}
             >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-ui-bold" style={fg}>
-                Options
-              </Text>
-            </Pressable>
-          </View>
+              {log.length === 0 ? (
+                <Text className="font-ui text-sm" style={muted}>
+                  Each tempo change shows up here while it plays.
+                </Text>
+              ) : (
+                <>
+                  <View className="gap-1">
+                    {[...log].reverse().map((entry) => (
+                      <View key={entry.id} className="flex-row items-center justify-between rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.background }}>
+                        <Text className="font-ui-semibold text-sm font-semibold" style={muted}>
+                          {shortRatio(entry.label)}
+                        </Text>
+                        <Text className="font-ui-semibold text-sm font-semibold" style={[fg, { fontVariant: ['tabular-nums'] }]}>
+                          {Math.round(entry.from)} → {Math.round(entry.to)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Pressable onPress={clearMetricModLog} hitSlop={8} accessibilityRole="button" className="self-start">
+                    <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.danger }}>
+                      Clear log
+                    </Text>
+                  </Pressable>
+                </>
+              )}
+            </SettingChip>
+          </SettingsBar>
 
-          <View
-            className="flex-1 items-center justify-center gap-7"
-          >
-            {running && engineState.playingReference ? (
-              <View className="items-center gap-2" style={{ opacity: 0.8 }}>
-                <View className="items-center">
-                  <Text className="text-3xl font-extrabold font-ui-extrabold" style={fg}>
-                    {formatBpm(engineState.referenceBpm)}
-                  </Text>
-                  <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
-                    {engineState.returnToOriginal ? 'Original' : 'Previous'} · {beatsPerBar}/{beatUnit}
-                    {referenceMuted ? ' · muted' : ''}
-                  </Text>
-                </View>
-                <BeatIndicator accents={accents} currentBeat={referenceBeat} size="sm" />
-              </View>
-            ) : null}
+          <View className="items-center gap-4">
+            <TempoHero
+              bpm={bpm}
+              setBpm={(next) => updateSettings({ bpm: clampBpm(next) })}
+              beatsPerBar={beatsPerBar}
+              beatUnit={beatUnit}
+              onTap={tap}
+              locked={running}
+              precise={running ? engineState.bpm : undefined}
+            />
 
             {running ? (
-              <View className="items-center">
-                <Text className="text-6xl font-extrabold font-ui-extrabold" style={fg}>
-                  {formatBpm(engineState.bpm)}
-                </Text>
-                <Text className="text-xs font-bold font-ui-bold" style={muted}>
-                  BPM · {beatsPerBar}/{beatUnit}
-                </Text>
+              <View className="w-full flex-row flex-wrap items-center justify-center gap-3">
+                {nextPreview ? (
+                  <View className="flex-row items-baseline gap-3 rounded-xl px-5 py-2" style={{ backgroundColor: colors.surface }}>
+                    <Text className="font-ui text-xs" style={muted}>
+                      Next
+                    </Text>
+                    <Text className="font-ui-semibold text-2xl font-semibold" style={{ color: colors.accent, fontVariant: ['tabular-nums'] }}>
+                      {shortRatio(nextPreview.label)}
+                    </Text>
+                    <Text className="font-ui-semibold text-sm font-semibold" style={[fg, { fontVariant: ['tabular-nums'] }]}>
+                      {Math.round(nextPreview.toBpm)} BPM
+                    </Text>
+                  </View>
+                ) : null}
+                {/* The previous (or original) tempo's click. Its slot is kept for the whole run
+                    (hidden until it plays), so nothing moves when it comes and goes. */}
+                {playOriginalTempo ? (
+                  <View
+                    className="flex-row items-center gap-3 rounded-xl px-4 py-2"
+                    style={{ backgroundColor: colors.surface, opacity: playingReference ? 1 : 0 }}
+                    accessibilityElementsHidden={!playingReference}
+                    importantForAccessibility={playingReference ? 'auto' : 'no-hide-descendants'}
+                  >
+                    <View className="items-center">
+                      <Text className="font-ui-semibold text-2xl font-semibold" style={[muted, { fontVariant: ['tabular-nums'] }]}>
+                        {Math.round(engineState.referenceBpm)}
+                      </Text>
+                      <Text className="font-ui text-xs" style={muted}>
+                        {engineState.returnToOriginal ? 'Original' : 'Previous'}
+                        {referenceMuted ? ' · muted' : ''}
+                      </Text>
+                    </View>
+                    <BeatIndicator accents={accents} currentBeat={playingReference ? referenceBeat : null} size="sm" />
+                  </View>
+                ) : null}
               </View>
-            ) : (
-              <View className="items-center gap-4">
-                <TempoControls bpm={bpm} setBpm={(next) => updateSettings({ bpm: next })} onTap={tap} />
-                <TimeSignatureControls
+            ) : null}
+
+            <BeatIndicator
+              accents={accents}
+              currentBeat={running ? currentBeat : null}
+              onCycle={cycleBeat}
+              subdivision={subdivision}
+              subAccents={subAccents}
+              currentSub={currentSub}
+              onCycleSub={cycleSub}
+              cycleHint
+            />
+
+            {/* Always two lines: the plan, then where you are (running) or the last tempo change
+                (stopped), so nothing moves when either appears. */}
+            <View className="items-center gap-0.5">
+              <PlanText>{plan}</PlanText>
+              {running ? (
+                <PlanText>
+                  Bar {engineState.barsIntoInterval + 1} of {engineState.effectiveBars}
+                </PlanText>
+              ) : lastModulation ? (
+                <Text className="font-ui-semibold text-center text-sm font-semibold" style={fg}>
+                  Modulated {ratioPart(lastModulation.label)}: {Math.round(lastModulation.from)} → {Math.round(lastModulation.to)} BPM
+                </Text>
+              ) : (
+                <PlanText> </PlanText>
+              )}
+            </View>
+          </View>
+
+          <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stopMetricMod : start} />
+
+          <View className="items-center gap-3">
+            <SettingsBar>
+              <SettingChip Icon={MeterIcon} label="Meter" title="Meter & subdivision" value={`${beatsPerBar}/${beatUnit}`}>
+                <TimeSignatureControl
                   beatsPerBar={beatsPerBar}
                   beatUnit={beatUnit}
-                  onChangeBeats={changeBeats}
+                  onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
                   onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
                 />
-              </View>
-            )}
+                <MeterQuickPicks
+                  meters={COMMON_METERS}
+                  beatsPerBar={beatsPerBar}
+                  beatUnit={beatUnit}
+                  onPick={(b, u) => updateSettings({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
+                />
+                <AccentGroupingField
+                  accents={accents}
+                  onApply={(groups) =>
+                    updateSettings({
+                      beatsPerBar: groups.reduce((a, b) => a + b, 0),
+                      accents: accentsFromGroups(groups),
+                    })
+                  }
+                />
+                <OptionGroup title="Subdivision">
+                  <SubdivisionPicker value={subdivision} onChange={(next) => updateSettings({ subdivision: next })} />
+                </OptionGroup>
+              </SettingChip>
 
-            <View className="items-center gap-3">
-              <BeatIndicator
-                accents={accents}
-                currentBeat={running ? currentBeat : null}
-                onCycle={cycleBeat}
-                subdivision={subdivision}
-                subAccents={subAccents}
-                currentSub={currentSub}
-                onCycleSub={cycleSub}
-              />
-              {running ? (
-                <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                  Bar {engineState.barsIntoInterval + 1} of {engineState.effectiveBars}
-                </Text>
-              ) : null}
-            </View>
-
-            {running && nextPreview ? (
-              <View className="items-center gap-0.5 rounded-3xl px-7 py-3" style={{ backgroundColor: colors.surface }}>
-                <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
-                  Next modulation
-                </Text>
-                <Text className="text-3xl font-extrabold font-ui-extrabold" style={{ color: colors.accent }}>
-                  {shortRatio(nextPreview.label)}
-                </Text>
-                <Text className="text-sm font-semibold font-ui-semibold" style={fg}>
-                  {Math.round(nextPreview.toBpm)} BPM
-                </Text>
-              </View>
-            ) : null}
-
-            {lastModulation ? (
-              <Text className="text-center text-sm font-semibold font-ui-semibold" style={fg}>
-                Modulated {ratioPart(lastModulation.label)}: {Math.round(lastModulation.from)} →{' '}
-                {Math.round(lastModulation.to)} BPM
-              </Text>
-            ) : null}
-
-            <Pressable
-              onPress={running ? stopMetricMod : start}
-              className="min-w-[220px] items-center rounded-full py-4"
-              style={{ backgroundColor: running ? colors.surface : colors.accent }}
-            >
-              <Text
-                className="text-base font-bold font-ui-bold"
-                style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
-              >
-                {running ? 'Stop' : 'Start'}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
-
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Options"
-        tabs={[
-          {
-            key: 'modulation',
-            label: 'Modulation',
-            content: () => (
-              <>
+              <SettingChip Icon={ShuffleIcon} label="Modulation" value={modulationSummary}>
                 {running ? (
-                  <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
+                  <Text className="font-ui text-xs" style={muted}>
                     Stop to change these — they&apos;re fixed for the run.
                   </Text>
                 ) : null}
-                <NumberStepper
-                  label={matchToRealignment ? 'Minimum bars between modulations' : 'Bars between modulations'}
-                  value={minBarsPerModulation}
-                  unit=""
-                  min={MIN_BARS_PER_MODULATION}
-                  max={MAX_BARS_PER_MODULATION}
-                  step={1}
-                  disabled={running}
-                  onChange={(next) => updateSettings({ minBarsPerModulation: Math.round(next) })}
+                <CountField
+                  title={matchToRealignment ? 'Minimum bars between modulations' : 'Bars between modulations'}
                   hint={
                     matchToRealignment
                       ? 'The interval is stretched to at least this many bars if realigning takes longer.'
                       : 'How many bars play at a tempo before it jumps to the next.'
                   }
+                  value={minBarsPerModulation}
+                  min={MIN_BARS_PER_MODULATION}
+                  max={MAX_BARS_PER_MODULATION}
+                  unit={['bar', 'bars']}
+                  disabled={running}
+                  onChange={(next) => updateSettings({ minBarsPerModulation: next })}
                 />
-                <SwitchRow
-                  label="Play until tempos realign"
-                  checked={matchToRealignment}
-                  onChange={(value) => updateSettings({ matchToRealignment: value })}
-                  disabled={running || playOriginalTempo}
-                  hint={
-                    playOriginalTempo
-                      ? 'Extends each interval to however many bars it takes the new tempo to land back on a downbeat with the reference tempo. Locked on while the previous tempo click is on, so the two stay in sync.'
-                      : 'Extends each interval to however many bars it takes the new tempo to land back on a downbeat with the reference tempo.'
-                  }
-                />
+                <View className="gap-1">
+                  <SwitchRow
+                    label="Play until tempos realign"
+                    checked={matchToRealignment}
+                    onChange={(value) => updateSettings({ matchToRealignment: value })}
+                    disabled={running || playOriginalTempo}
+                    hint={
+                      playOriginalTempo
+                        ? 'Extends each interval to however many bars it takes the new tempo to land back on a downbeat with the reference tempo. Locked on while the previous tempo click is on, so the two stay in sync.'
+                        : 'Extends each interval to however many bars it takes the new tempo to land back on a downbeat with the reference tempo.'
+                    }
+                  />
+                  {playOriginalTempo ? (
+                    <Text className="font-ui text-xs" style={muted}>
+                      On while Previous tempo click is on.
+                    </Text>
+                  ) : null}
+                </View>
                 <SwitchRow
                   label="Return to original tempo"
                   checked={returnToOriginal}
@@ -347,86 +410,36 @@ function RandomMetricModulationScreen() {
                   disabled={running}
                   hint="Won't pick the same ratio twice in a row."
                 />
-                <View className="gap-2">
-                  <View className="flex-row items-center gap-1.5">
-                    <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                      Polyrhythms in the mix
-                    </Text>
-                    <InfoButton
-                      title="Polyrhythms in the mix"
-                      text={`Which ratios can be picked for a modulation.\n\n${MODULATIONS.map((m) => m.label).join('\n')}`}
-                      size={16}
-                    />
-                  </View>
-                  <View className="flex-row flex-wrap gap-2" style={{ opacity: running ? 0.5 : 1 }}>
-                    {MODULATIONS.map((m) => (
-                      <Pill
-                        key={m.id}
-                        label={shortRatio(m.label)}
-                        selected={enabledRatios.includes(m.id)}
-                        onPress={() => {
-                          if (!running) toggleRatio(m.id);
-                        }}
-                      />
-                    ))}
-                  </View>
+                <View className="gap-2.5">
+                  <OptionLabel
+                    title="Polyrhythms in the mix"
+                    hint={`Which ratios can be picked for a modulation.\n\n${MODULATIONS.map((m) => m.label).join('\n')}`}
+                  />
+                  <PoolPills label="Polyrhythms in the mix" options={RATIO_OPTIONS} selected={enabledRatios} onToggle={toggleRatio} disabled={running} />
                   {enabledRatios.length === 0 ? (
-                    <Text className="text-xs font-ui" style={muted}>
+                    <Text className="font-ui text-xs" style={muted}>
                       None selected — picking from all of them instead.
                     </Text>
                   ) : null}
                 </View>
-                <Text className="text-xs font-ui" style={muted}>
-                  Idea by Rob Moreno
-                </Text>
-              </>
-            ),
-          },
-          {
-            key: 'meter',
-            label: 'Meter',
-            content: () => (
-              <AccentAndSubdivisionControls
-                accents={accents}
-                subdivision={subdivision}
-                onSetSubdivision={(next) => updateSettings({ subdivision: next })}
-                onApplyGroups={(groups) =>
-                  updateSettings({
-                    beatsPerBar: groups.reduce((a, b) => a + b, 0),
-                    accents: accentsFromGroups(groups),
-                  })
-                }
-              />
-            ),
-          },
-          {
-            key: 'reference',
-            label: 'Previous tempo',
-            content: () => (
-              <>
+              </SettingChip>
+
+              <SettingChip Icon={MetronomeIcon} label="Previous tempo click" value={referenceSummary}>
                 <SwitchRow
-                  label="Play previous tempo click"
+                  label="Play the previous tempo too"
                   checked={playOriginalTempo}
                   onChange={setPlayOriginalTempo}
                   disabled={running}
-                  hint="A second click that keeps playing the tempo the main click just left (or the original tempo, with “Return to original tempo” on), so you can hear the new tempo against it."
+                  hint="After a tempo change, a second click keeps playing the tempo you came from (or the original tempo, with Return to original tempo on), so you can hear the two against each other. Turns on Play until tempos realign, so they stay in sync."
                 />
-                <View className="gap-1.5" style={{ opacity: playOriginalTempo ? 1 : 0.5 }}>
-                  <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
-                    Tone
-                  </Text>
-                  <View className="flex-row flex-wrap gap-2">
-                    {CLICK_SOUNDS.map((sound) => (
-                      <Pill
-                        key={sound.id}
-                        label={sound.label}
-                        selected={referenceSoundId === sound.id}
-                        onPress={() => {
-                          if (playOriginalTempo) updateSettings({ referenceSoundId: sound.id });
-                        }}
-                      />
-                    ))}
-                  </View>
+                <View className="gap-2.5">
+                  <OptionLabel title="Click" hint="A different click sound than the main one, so the two are easy to tell apart." />
+                  <ClickSoundCards
+                    label="Previous tempo click sound"
+                    soundId={referenceSoundId}
+                    onChange={(id) => updateSettings({ referenceSoundId: id })}
+                    volume={volume}
+                  />
                 </View>
                 <SwitchRow
                   label="Mute"
@@ -435,57 +448,23 @@ function RandomMetricModulationScreen() {
                   disabled={!playOriginalTempo}
                   hint="Keeps this second click running silently, still shown and counted, just not heard."
                 />
-              </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound',
-            content: () => (
-              <SoundOptions
-                soundId={soundId}
-                setSoundId={(id) => updateSettings({ soundId: id })}
-                volume={volume}
-                setVolume={(next) => updateSettings({ volume: next })}
-              />
-            ),
-          },
-          {
-            key: 'log',
-            label: 'Log',
-            content: () =>
-              log.length === 0 ? (
-                <Text className="text-sm font-ui" style={muted}>
-                  Modulations from the current run show up here.
-                </Text>
-              ) : (
-                <>
-                  <View className="rounded-3xl px-4" style={{ backgroundColor: colors.surface }}>
-                    {[...log].reverse().map((entry, i) => (
-                      <View
-                        key={entry.id}
-                        className="flex-row items-center justify-between py-3"
-                        style={i > 0 ? { borderTopWidth: 1, borderTopColor: colors['surface-hover'] } : null}
-                      >
-                        <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
-                          {shortRatio(entry.label)}
-                        </Text>
-                        <Text className="text-sm font-bold font-ui-bold" style={fg}>
-                          {Math.round(entry.from)} → {Math.round(entry.to)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Pressable onPress={clearMetricModLog} hitSlop={8} className="self-start">
-                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.danger }}>
-                      Clear log
-                    </Text>
-                  </Pressable>
-                </>
-              ),
-          },
-        ]}
-      />
+              </SettingChip>
+
+              <SettingChip Icon={SpeakerIcon} label="Sound" value={soundSummary(soundId, volume)}>
+                <SoundPicker
+                  soundId={soundId}
+                  setSoundId={(id) => updateSettings({ soundId: id })}
+                  volume={volume}
+                  setVolume={(next) => updateSettings({ volume: next })}
+                />
+              </SettingChip>
+            </SettingsBar>
+            <Text className="font-ui text-xs" style={muted}>
+              Idea by Rob Moreno
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }

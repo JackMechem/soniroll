@@ -2,7 +2,6 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { DEFAULT_CLICK_SOUND_ID, type BeatLevel } from '@jam-practice/core/clickSounds';
 import {
   NEXT_LEVEL,
-  accentsFromGroups,
   clampBpm,
   defaultAccents,
   defaultSubAccents,
@@ -20,24 +19,28 @@ import {
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { InfoButton } from '@/components/InfoButton';
-import { FileMusicIcon, MetronomeIcon, MicrophoneIcon, SlidersIcon, StopIcon } from '@/components/icons';
-import {
-  AccentAndSubdivisionControls,
-  SoundOptions,
-  TempoControls,
-  TempoNoteValueControls,
-  TimeSignatureControls,
-} from '@/components/MetronomeControls';
-import { NumberStepper } from '@/components/NumberStepper';
-import { useTuneIndex } from '@/components/recordings/RecordingParts';
+import { MetronomeIcon, MicrophoneIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon } from '@/components/icons';
+import { RecordingRow, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { StructureEditor } from '@/components/StructureEditor';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import { SwitchRow } from '@/components/SwitchRow';
+import {
+  BigButton,
+  SoundPicker,
+  SubdivisionPicker,
+  TempoHero,
+  TempoNoteConversionHint,
+  TempoNoteValuePicker,
+  TimeSignatureControl,
+  soundSummary,
+} from '@/components/tool/meter';
+import { GradientFill, OptionGroup, Segmented } from '@/components/tool/reward';
+import { CountField, EmptyPanel } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { getMetronomeSnapshot, subscribeMetronome } from '@/lib/metronomeEngine';
 import {
   clearRecorderError,
@@ -48,9 +51,9 @@ import {
   updateRecorderMetronome,
   type RecorderMetronome,
 } from '@/lib/recorderEngine';
-import { formatDuration, recordingsApi } from '@/lib/recordings';
+import { formatDuration, recordingsApi, type Recording } from '@/lib/recordings';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 // A new key — the web Recorder's own settings ("jam-practice-recorder") are its multitrack ones.
 // Everything from `bpm` through `tempoNoteValue` is the Metronome tool's own settings shape.
@@ -73,12 +76,13 @@ const DEFAULT_SETTINGS = {
 };
 
 /**
- * The Recorder: one take at a time, with the metronome optionally clicking along (and counting
- * you in). The metronome is the full Metronome tool — same controls on the page (tempo, time
- * signature, the tappable beat strip) and the same options behind its own Options button (accent
- * grouping, subdivision, tempo note value, structures, sound), plus a count-in. Stopping goes
- * straight to the save page; saved takes live on the account (`convex/recordings.ts`). Opened from
- * a tune's page (`?tuneId=`), the take is for that tune and the metronome starts at its tempo.
+ * The Recorder, laid out like the website's (`apps/web/components/Recorder.tsx`): what's
+ * happening and the take's length, the input level, the beat strip while the metronome is on, the
+ * big round record button, then the chips — Microphone, Metronome (its on/off switch is the first
+ * thing in its sheet, then the Metronome tool's own tempo and meter controls), Count-in and Click
+ * sound while it's on, and Recent takes once there are some. Stopping goes straight to the save
+ * page; saved takes live on the account (`convex/recordings.ts`). Opened from a tune's page
+ * (`?tuneId=`), the take is for that tune and the metronome starts at its tempo.
  */
 function RecorderScreen() {
   const { colors } = useAppTheme();
@@ -86,10 +90,10 @@ function RecorderScreen() {
   const { tuneId } = useLocalSearchParams<{ tuneId?: string }>();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const { byId } = useTuneIndex();
   const tune = tuneId ? byId.get(tuneId)?.tune : undefined;
   const recordings = useQuery(recordingsApi.list, isAuthenticated ? {} : 'skip');
+  const [takesOpen, setTakesOpen] = useState(false);
 
   // From a tune's page, the metronome starts at the tune's own tempo (not saved as the default).
   const tuneTempo = tune?.tempos.find((t) => t.enabled)?.value ?? tune?.tempos[0]?.value;
@@ -183,30 +187,28 @@ function RecorderScreen() {
 
   if (isLoading || !settingsReady) return <ScreenSpinner />;
 
-  const fg = { color: colors.foreground };
   const muted = { color: colors.muted };
 
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 items-center justify-center gap-4 px-10" style={{ backgroundColor: colors.background }}>
+      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ title: 'Recorder' }} />
-        <MicrophoneIcon color={colors.muted} size={40} />
-        <Text className="font-ui text-center text-base" style={muted}>
-          Recordings are saved to your account, so you can play them back on any device. Sign in to start recording.
-        </Text>
-        <Pressable onPress={() => router.push('/profile')} className="rounded-full px-6 py-3" style={{ backgroundColor: colors.accent }}>
-          <Text className="font-ui-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
-            Sign in
+        <EmptyPanel>
+          <MicrophoneIcon color={colors.muted} size={32} />
+          <Text className="font-ui text-center text-sm leading-5" style={muted}>
+            Sign in to record: your takes are saved to your account, so you can play them back on any device and link them to your tunes.
           </Text>
-        </Pressable>
+          <BigButton label="Sign in" onPress={() => router.push('/profile')} />
+        </EmptyPanel>
       </View>
     );
   }
 
+  const recordingNow = rec.phase === 'recording';
   const statusLabel =
     rec.phase === 'countin'
       ? 'Count-in…'
-      : rec.phase === 'recording'
+      : recordingNow
         ? 'Recording'
         : rec.phase === 'finishing'
           ? 'Saving the take…'
@@ -214,70 +216,56 @@ function RecorderScreen() {
             ? `For “${tune.name}”`
             : 'Ready';
 
+  const meterValue = useStructure ? (structure.sections.length ? 'Changing meters' : 'No sections yet') : `${beatsPerBar}/${beatUnit}`;
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Recorder' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 gap-4 px-5 py-4" style={{ paddingBottom: 16 }}>
-          <View className="flex-row">
-            <Pressable
-              onPress={() => router.push('/recordings')}
-              disabled={busy}
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface, opacity: busy ? 0.5 : 1 }}
-            >
-              <FileMusicIcon color={colors.foreground} size={18} />
-              <Text className="font-ui-bold text-sm font-bold" style={fg}>
-                My recordings{recordings ? ` (${recordings.length})` : ''}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="flex-1 items-center justify-center gap-5">
-            <View className="items-center gap-2">
-              <Text
-                numberOfLines={1}
-                className="font-ui-semibold text-base font-semibold"
-                style={{ color: rec.phase === 'recording' ? colors.danger : colors.muted }}
-              >
-                {statusLabel}
-              </Text>
-              <Text className="font-ui-extrabold text-5xl font-extrabold tabular-nums" style={fg}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+        >
+          <View className="items-center gap-5">
+            <View className="items-center gap-1">
+              <View className="flex-row items-center gap-1.5">
+                {recordingNow ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.danger }} /> : null}
+                <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: recordingNow ? colors.danger : colors.muted }}>
+                  {statusLabel}
+                </Text>
+              </View>
+              <Text className="font-ui-semibold text-6xl font-semibold tracking-tight" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
                 {formatDuration(elapsed)}
               </Text>
-              <LevelMeter level={rec.phase === 'recording' ? rec.level : 0} />
             </View>
 
-            <Pressable
-              onPress={() => void onRecordPress()}
-              accessibilityLabel={busy ? 'Stop recording' : 'Start recording'}
-              className="items-center justify-center rounded-full"
-              style={{ width: 96, height: 96, borderWidth: 4, borderColor: colors['surface-hover'] }}
-            >
-              {busy ? (
-                <View className="items-center justify-center rounded-2xl" style={{ width: 42, height: 42, backgroundColor: colors.danger }}>
-                  <StopIcon color="#fff" size={24} />
-                </View>
-              ) : (
-                <View className="rounded-full" style={{ width: 74, height: 74, backgroundColor: colors.danger }} />
-              )}
-            </Pressable>
+            <LevelMeter level={recordingNow ? rec.level : 0} />
 
-            <View className="flex-row items-center gap-2" style={{ opacity: busy ? 0.5 : 1 }}>
-              <Text className="font-ui-semibold text-sm font-semibold" style={muted}>
-                Auto gain
+            {settings.metronome ? (
+              useStructure && !activeSection ? (
+                <Text className="font-ui text-center text-sm" style={muted}>
+                  Add sections under Metronome to arrange the form.
+                </Text>
+              ) : (
+                <BeatIndicator
+                  accents={displayAccents}
+                  currentBeat={clicking ? click.currentBeat : null}
+                  onCycle={handleCycleBeat}
+                  subdivision={displaySubdivision}
+                  subAccents={displaySubAccents}
+                  currentSub={clicking ? click.currentSub : 0}
+                  onCycleSub={handleCycleSub}
+                  cycleHint
+                />
+              )
+            ) : null}
+
+            <View className="items-center gap-2">
+              <RecordButton busy={busy} onPress={() => void onRecordPress()} />
+              <Text className="font-ui text-xs" style={[muted, { height: 16 }]}>
+                {settings.metronome && !busy && settings.countInBars > 0 ? `${settings.countInBars}-bar count-in` : ''}
               </Text>
-              <InfoButton
-                title="Auto gain"
-                size={16}
-                text="On: the phone sets the recording level automatically, so quiet playing still comes out at a good volume. Off: the raw microphone with no processing — truer dynamics, but much quieter."
-              />
-              <Switch
-                value={settings.autoGain}
-                onValueChange={(value) => updateSettings({ autoGain: value })}
-                disabled={busy}
-                trackColor={{ false: colors['surface-hover'], true: colors.accent }}
-              />
             </View>
 
             {rec.error ? (
@@ -287,171 +275,202 @@ function RecorderScreen() {
             ) : null}
           </View>
 
-          {/* The metronome — the Metronome tool's own main controls, with its options one tap away. */}
-          <View className="gap-4 rounded-3xl p-4" style={{ borderWidth: 1, borderColor: colors['surface-hover'] }}>
-            <View className="flex-row items-center gap-2">
-              <MetronomeIcon color={colors.foreground} size={20} />
-              <Text className="font-ui-bold flex-1 text-base font-bold" style={fg}>
-                Metronome
-              </Text>
-              {settings.metronome ? (
-                <Pressable
-                  onPress={() => setOptionsOpen(true)}
-                  hitSlop={8}
-                  accessibilityLabel="Metronome options"
-                  className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <SlidersIcon color={colors.foreground} size={16} />
-                  <Text className="font-ui-bold text-sm font-bold" style={fg}>
-                    Options
-                  </Text>
-                </Pressable>
-              ) : null}
-              <Switch
-                value={settings.metronome}
-                onValueChange={(value) => updateSettings({ metronome: value })}
+          <SettingsBar>
+            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={settings.autoGain ? 'Auto gain' : 'No processing'}>
+              <SwitchRow
+                label="Auto gain"
+                checked={settings.autoGain}
+                onChange={(value) => updateSettings({ autoGain: value })}
                 disabled={busy}
-                trackColor={{ false: colors['surface-hover'], true: colors.accent }}
+                hint="On: the phone sets the recording level automatically, so quiet playing still comes out at a good volume. Off: the raw microphone with no processing — truer dynamics, but much quieter."
               />
-            </View>
-            {settings.metronome ? (
-              <View className="items-center gap-3">
-                <TempoControls bpm={bpm} setBpm={setBpm} onTap={tap} />
-                <TimeSignatureControls
-                  beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-                  beatUnit={activeSection?.beatUnit ?? beatUnit}
-                  onChangeBeats={changeBeats}
-                  onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
-                />
-                {useStructure && !activeSection ? (
-                  <Text className="font-ui text-center text-sm" style={muted}>
-                    Open Options to add sections and build a form.
-                  </Text>
-                ) : (
-                  <BeatIndicator
-                    accents={displayAccents}
-                    currentBeat={clicking ? click.currentBeat : null}
-                    onCycle={handleCycleBeat}
-                    subdivision={displaySubdivision}
-                    subAccents={displaySubAccents}
-                    currentSub={clicking ? click.currentSub : 0}
-                    onCycleSub={handleCycleSub}
-                    size="sm"
-                  />
-                )}
-              </View>
-            ) : null}
-          </View>
-        </View>
-      </SafeAreaView>
+            </SettingChip>
 
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Metronome options"
-        tabs={[
-          {
-            key: 'meter',
-            label: 'Meter',
-            content: () => (
-              <>
-                <View className="items-start gap-1.5">
-                  <Text className="font-ui-semibold text-xs font-semibold" style={muted}>
-                    Tempo note value
-                  </Text>
-                  <TempoNoteValueControls
-                    tempoNoteValue={tempoNoteValue}
-                    setTempoNoteValue={(next) => updateSettings({ tempoNoteValue: next })}
-                    effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit}
-                  />
-                </View>
-                <AccentAndSubdivisionControls
-                  accents={accents}
-                  subdivision={subdivision}
-                  onSetSubdivision={(next) => updateSettings({ subdivision: next })}
-                  onApplyGroups={(groups) =>
-                    updateSettings({
-                      beatsPerBar: groups.reduce((a, b) => a + b, 0),
-                      accents: accentsFromGroups(groups),
-                    })
-                  }
-                />
-                <View className="gap-3 rounded-3xl p-4" style={{ backgroundColor: colors.surface }}>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="font-ui-bold text-sm font-bold" style={fg}>
-                      Use a structure
-                    </Text>
-                    <Switch
-                      value={useStructure}
-                      onValueChange={(value) => updateSettings({ useStructure: value })}
-                      disabled={busy}
-                      trackColor={{ false: colors['surface-hover'], true: colors.accent }}
+            <SettingChip Icon={MetronomeIcon} label="Metronome" value={settings.metronome ? `${bpm} BPM · ${meterValue}` : 'Off'}>
+              {/* Like every other chip, this one opens its settings; the on/off switch is the first. */}
+              <SwitchRow
+                label="Click while recording"
+                checked={settings.metronome}
+                onChange={(value) => updateSettings({ metronome: value })}
+                disabled={busy}
+                hint="Plays a metronome click (with a count-in) while you record. It isn't recorded unless your microphone picks it up."
+              />
+              {settings.metronome ? (
+                <>
+                  <View className="items-center gap-3">
+                    <TempoHero
+                      bpm={bpm}
+                      setBpm={setBpm}
+                      beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
+                      beatUnit={activeSection?.beatUnit ?? beatUnit}
+                      onTap={tap}
+                      tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
                     />
+                    <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
                   </View>
-                  <Text className="font-ui text-xs leading-4" style={muted}>
-                    Chain bars of different time signatures in a fixed, looping sequence — e.g. 2 bars of 11/8, then a
-                    bar of 12/8 — instead of one meter for the whole take.
-                  </Text>
+                  <Segmented
+                    label="Meter"
+                    value={useStructure ? 'structure' : 'single'}
+                    onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+                    disabled={busy}
+                    options={[
+                      { value: 'single', label: 'One meter' },
+                      { value: 'structure', label: 'Changing meters' },
+                    ]}
+                  />
                   {useStructure ? (
                     <StructureEditor
                       structure={structure}
                       onChange={(next) => updateSettings({ structure: next })}
                       activeFormIndex={clicking ? click.formIndex : null}
                     />
-                  ) : null}
-                </View>
-              </>
-            ),
-          },
-          {
-            key: 'countin',
-            label: 'Count-in',
-            content: () => (
+                  ) : (
+                    <>
+                      <TimeSignatureControl
+                        beatsPerBar={beatsPerBar}
+                        beatUnit={beatUnit}
+                        onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
+                        onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
+                      />
+                      <OptionGroup title="Subdivision">
+                        <SubdivisionPicker value={subdivision} onChange={(next) => updateSettings({ subdivision: next })} />
+                      </OptionGroup>
+                    </>
+                  )}
+                  <Text className="font-ui text-xs leading-4" style={muted}>
+                    The click plays through the speaker, so the microphone picks it up unless you wear headphones.
+                  </Text>
+                </>
+              ) : null}
+            </SettingChip>
+
+            {settings.metronome ? (
               <>
-                <NumberStepper
-                  label="Count-in bars"
-                  value={settings.countInBars}
-                  unit=""
-                  min={0}
-                  max={4}
-                  step={1}
-                  disabled={busy}
-                  onChange={(n) => updateSettings({ countInBars: Math.round(n) })}
-                  hint="This many bars click before the recording starts, so you come in on the downbeat."
-                />
-                <Text className="font-ui text-xs leading-4" style={muted}>
-                  The click plays through the speaker, so the microphone picks it up unless you wear headphones.
-                </Text>
+                <SettingChip
+                  Icon={NoteIcon}
+                  label="Count-in"
+                  value={settings.countInBars ? `${settings.countInBars} bar${settings.countInBars === 1 ? '' : 's'}` : 'Off'}
+                >
+                  <CountField
+                    title="Count-in bars"
+                    hint="This many bars click before the recording starts, so you come in on the downbeat."
+                    value={settings.countInBars}
+                    min={0}
+                    max={4}
+                    unit={['bar', 'bars']}
+                    disabled={busy}
+                    onChange={(n) => updateSettings({ countInBars: n })}
+                  />
+                </SettingChip>
+                <SettingChip Icon={SpeakerIcon} label="Click sound" value={soundSummary(soundId, volume)}>
+                  <SoundPicker
+                    soundId={soundId}
+                    setSoundId={(id) => updateSettings({ soundId: id })}
+                    volume={volume}
+                    setVolume={(next) => updateSettings({ volume: next })}
+                  />
+                </SettingChip>
               </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound',
-            content: () => (
-              <SoundOptions
-                soundId={soundId}
-                setSoundId={(id) => updateSettings({ soundId: id })}
-                volume={volume}
-                setVolume={(next) => updateSettings({ volume: next })}
-              />
-            ),
-          },
-        ]}
-      />
+            ) : null}
+
+            {/* Recent takes: hidden until there's a take, so a fresh page doesn't lead with "0". */}
+            {recordings && recordings.length > 0 ? (
+              <SettingChip Icon={RecordIcon} label="Recent takes" value={String(recordings.length)} open={takesOpen} onOpenChange={setTakesOpen}>
+                {/* The sheet is a Modal, which would stay on top of the next screen: close it first. */}
+                <RecentTakes
+                  recordings={recordings}
+                  tuneName={(id) => (id ? byId.get(id)?.tune.name : undefined)}
+                  onOpen={(id) => {
+                    setTakesOpen(false);
+                    router.push({ pathname: '/recordings/[id]', params: { id } });
+                  }}
+                  onAll={() => {
+                    setTakesOpen(false);
+                    router.push('/recordings');
+                  }}
+                  disabled={busy}
+                />
+              </SettingChip>
+            ) : null}
+          </SettingsBar>
+        </ScrollView>
+      </SafeAreaView>
     </View>
+  );
+}
+
+/** The last few takes, playable, in the Recent takes sheet (its player only exists while the
+    sheet is open). */
+function RecentTakes({
+  recordings,
+  tuneName,
+  onOpen,
+  onAll,
+  disabled,
+}: {
+  recordings: Recording[];
+  tuneName: (tuneId: string | null) => string | undefined;
+  onOpen: (id: string) => void;
+  onAll: () => void;
+  disabled?: boolean;
+}) {
+  const { colors } = useAppTheme();
+  const player = useRecordingPlayer();
+  return (
+    <View className="gap-2" style={{ opacity: disabled ? 0.5 : 1 }} pointerEvents={disabled ? 'none' : 'auto'}>
+      {recordings.slice(0, 5).map((r) => (
+        <RecordingRow
+          key={r._id}
+          recording={r}
+          tuneName={tuneName(r.tuneId)}
+          player={player}
+          onOpen={() => onOpen(r._id)}
+          background={colors.background}
+        />
+      ))}
+      <Pressable onPress={onAll} accessibilityRole="link" hitSlop={8} className="self-end py-1">
+        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.accent }}>
+          All recordings
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** The round record button (a red dot; a red square to stop) with its caption under it. */
+function RecordButton({ busy, onPress }: { busy: boolean; onPress: () => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={busy ? 'Stop recording' : 'Start recording'}
+      className="items-center gap-2"
+    >
+      <View className="items-center justify-center rounded-full" style={{ width: 96, height: 96, borderWidth: 3, borderColor: withAlpha(colors.foreground, 0.15) }}>
+        {busy ? (
+          <View className="items-center justify-center rounded-md" style={{ width: 40, height: 40, backgroundColor: colors.danger }}>
+            <StopIcon color="#ffffff" size={24} />
+          </View>
+        ) : (
+          <View className="rounded-full" style={{ width: 74, height: 74, backgroundColor: colors.danger }} />
+        )}
+      </View>
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+        {busy ? 'Stop' : 'Record'}
+      </Text>
+    </Pressable>
   );
 }
 
 function LevelMeter({ level }: { level: number }) {
   const { colors } = useAppTheme();
+  const hot = level > 0.85;
   return (
-    <View className="h-2 w-48 overflow-hidden rounded-full" style={{ backgroundColor: colors['surface-hover'] }}>
-      <View
-        className="h-full rounded-full"
-        style={{ width: `${Math.round(level * 100)}%`, backgroundColor: level > 0.85 ? colors.danger : colors.accent }}
-      />
+    <View className="h-2 w-full max-w-xs overflow-hidden rounded-full" style={{ backgroundColor: withAlpha(colors.foreground, 0.1) }}>
+      <View className="h-full overflow-hidden rounded-full" style={{ width: `${Math.round(level * 100)}%` }}>
+        {hot ? <View className="flex-1" style={{ backgroundColor: colors.danger }} /> : <GradientFill />}
+      </View>
     </View>
   );
 }
