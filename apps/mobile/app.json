@@ -52,7 +52,9 @@
           "color": "#72A3DC"
         }
       ],
-      "react-native-audio-api"
+      "react-native-audio-api",
+      "expo-video",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

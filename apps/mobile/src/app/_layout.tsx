@@ -98,6 +98,7 @@ function RootNavigator() {
         />
         <Stack.Screen name="tool/recorder" options={{ title: 'Recorder' }} />
         <Stack.Screen name="recordings/index" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="files/index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="recordings/save" options={{ title: 'Save recording' }} />
         <Stack.Screen name="recordings/[id]" options={{ title: '' }} />
         <Stack.Screen name="tool/random-sticking-warmup" options={{ title: 'Random Sticking Warmup' }} />

@@ -12,6 +12,7 @@ import { LibraryHeader } from '@/components/TabHeader';
 import { MicrophoneIcon } from '@/components/icons';
 import { RecordingRow, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi } from '@/lib/recordings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -22,7 +23,7 @@ function RecordingsScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
-  const recordings = useQuery(recordingsApi.list, isAuthenticated ? {} : 'skip');
+  const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : 'skip'));
   const { byId } = useTuneIndex();
   const player = useRecordingPlayer();
   const [query, setQuery] = useState('');

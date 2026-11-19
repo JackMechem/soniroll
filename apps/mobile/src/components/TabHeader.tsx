@@ -55,6 +55,7 @@ export const LIBRARY_TABS = [
   { href: '/library', label: 'Tunes' },
   { href: '/library/setlists', label: 'Setlists' },
   { href: '/charts', label: 'Charts' },
+  { href: '/files', label: 'Files' },
   { href: '/recordings', label: 'Recordings' },
 ] as const satisfies readonly { href: Href; label: string }[];
 

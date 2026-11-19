@@ -1,4 +1,6 @@
+import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { useMutation, useQuery } from 'convex/react';
+import { getInfoAsync } from 'expo-file-system/legacy';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -8,15 +10,17 @@ import { LinkIcon, UnlinkIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PlayButton, SeekBar, TuneSelectModal, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { withScreenLoader } from '@/components/ScreenLoader';
-import { RECORDING_MIME, deleteLocalTake, formatRecordedAt, recordingsApi, uploadRecordingFile } from '@/lib/recordings';
+import { errorText, placeFile, unplace, useSaveTarget } from '@/lib/files';
+import { RECORDING_MIME, deleteLocalTake, formatRecordedAt, recordingsApi } from '@/lib/recordings';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 
 /**
  * Where a finished take lands: listen back, name it, add notes, link it to a tune (pre-filled when
- * recorded from a tune's page), then Save uploads it to the account. Leaving any other way asks
- * first — the take only exists on this phone until it's saved.
+ * recorded from a tune's page), then Save keeps it with the account: online with a storage plan, on
+ * this phone without one (`placeFile`). Leaving any other way asks first — until it's saved, the
+ * take is only a temporary file.
  */
 function SaveRecordingScreen() {
   const bottomSpace = useTabBarSpace();
@@ -27,6 +31,7 @@ function SaveRecordingScreen() {
   const { byId } = useTuneIndex();
   const generateUploadUrl = useMutation(recordingsApi.generateUploadUrl);
   const create = useMutation(recordingsApi.create);
+  const target = useSaveTarget();
   const forTune = useQuery(recordingsApi.listForTune, params.tuneId ? { tuneId: params.tuneId } : 'skip');
   const player = useRecordingPlayer();
   const keyboard = useKeyboardHeight();
@@ -59,21 +64,30 @@ function SaveRecordingScreen() {
     setSaving(true);
     setError(null);
     try {
-      const storageId = await uploadRecordingFile(params.uri, generateUploadUrl);
-      const id = await create({
-        storageId,
-        name: shownName,
-        notes,
-        durationSec,
-        mimeType: RECORDING_MIME,
-        ...(tuneId ? { tuneId } : {}),
-      });
+      // Online with a storage plan; kept on this phone without one (the website does the same).
+      const info = await getInfoAsync(params.uri);
+      if (!info.exists || !info.size) throw new Error('The recording file is empty.');
+      const placed = await placeFile({ uri: params.uri, name: `${shownName}.m4a`, type: RECORDING_MIME, size: info.size }, target.storage, () => generateUploadUrl(), target.online);
+      let id: Id<'recordings'>;
+      try {
+        id = await create({
+          ...placed,
+          name: shownName,
+          notes,
+          durationSec,
+          mimeType: RECORDING_MIME,
+          ...(tuneId ? { tuneId } : {}),
+        });
+      } catch (e) {
+        unplace(placed);
+        throw e;
+      }
       deleteLocalTake(params.uri);
       if (params.tuneId) router.dismiss(2); // back to the tune's page, past the recorder
       else router.replace({ pathname: '/recordings/[id]', params: { id } });
     } catch (e) {
       setSaving(false);
-      setError(e instanceof Error ? e.message : "Couldn't save the recording.");
+      setError(errorText(e, "Couldn't save the recording."));
     }
   }
 

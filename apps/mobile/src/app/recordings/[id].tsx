@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ChevronRightIcon, LinkIcon, TrashIcon, UnlinkIcon } from '@/components/icons';
 import { PlayButton, SeekBar, TuneSelectModal, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { deleteOnDevice, useDeviceUrl } from '@/lib/deviceFiles';
 import { formatDuration, formatRecordedAt, recordingsApi } from '@/lib/recordings';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -21,7 +22,7 @@ function RecordingScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const recording = useQuery(recordingsApi.get, id ? { id: id as Id<'recordings'> } : 'skip');
+  const recording = useDeviceUrl(useQuery(recordingsApi.get, id ? { id: id as Id<'recordings'> } : 'skip'));
   const update = useMutation(recordingsApi.update);
   const remove = useMutation(recordingsApi.remove);
   const { byId } = useTuneIndex();
@@ -123,6 +124,15 @@ function RecordingScreen() {
               <Text className="font-ui text-sm" style={{ color: colors.muted }}>
                 {formatRecordedAt(rec.createdAt)} · {formatDuration(rec.durationSec)}
               </Text>
+              {!rec.url && rec.device ? (
+                <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+                  Kept on {rec.device.label}, so it plays there. A storage plan keeps recordings on all your devices.
+                </Text>
+              ) : rec.device ? (
+                <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+                  Kept on this phone.
+                </Text>
+              ) : null}
             </View>
           </View>
           <SeekBar
@@ -219,7 +229,9 @@ function RecordingScreen() {
         confirmLabel="Delete"
         onConfirm={() => {
           setConfirmDelete(false);
-          void remove({ id: rec._id });
+          void remove({ id: rec._id }).then(() => {
+            if (rec.device) deleteOnDevice(rec.device.key);
+          });
           router.back();
         }}
         onCancel={() => setConfirmDelete(false)}

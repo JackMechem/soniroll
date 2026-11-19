@@ -5,6 +5,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { siteOrigin } from "@/lib/siteOrigin";
 import type { DeviceRef } from "@/lib/deviceFiles";
 import { type AccountStorage, type Placed, placeBlob, savesOnline, unplace } from "@/lib/storagePlan";
+import { MAX_FILE_BYTES, type StoredKind } from "@jam-practice/core/files";
 
 /**
  * Files people upload to their account (`packages/convex/files.ts`): on their own, or attached to
@@ -29,7 +30,7 @@ export type UserFile = {
 };
 
 /** Where a stored item came from (`packages/convex/lib/storage.ts`'s `StoredKind`). */
-export type StoredKind = "file" | "recording" | "song" | "lesson" | "handin" | "profile";
+export type { StoredKind } from "@jam-practice/core/files";
 
 /** Anything on the Files page, as `files.storage` lists it — the shape the ⋮ menu, rename, delete
     and share work on. A plain upload is `kind: "file"` with its `_id` as `id`. */
@@ -79,60 +80,9 @@ export async function downloadFile(url: string, name: string) {
   }
 }
 
-/** Largest single file — same as the backend (`packages/convex/lib/storage.ts`), which checks
-    again, along with the account's online storage. */
-export const MAX_FILE_BYTES = 100 * 1024 * 1024;
-
-export type FileKind = "pdf" | "image" | "audio" | "video" | "notation" | "document" | "other";
-
-export const FILE_KIND_LABEL: Record<FileKind, string> = {
-  pdf: "PDF",
-  image: "Image",
-  audio: "Audio",
-  video: "Video",
-  notation: "Notation",
-  document: "Document",
-  other: "File",
-};
-
-/** What sort of file it is, from its type and name. */
-export function fileKind(mimeType: string, name: string): FileKind {
-  const ext = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "";
-  if (mimeType === "application/pdf" || ext === "pdf") return "pdf";
-  if (mimeType.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "heic", "svg"].includes(ext)) return "image";
-  if (mimeType.startsWith("audio/") || ["mp3", "m4a", "wav", "aif", "aiff", "flac", "ogg", "opus", "aac"].includes(ext)) return "audio";
-  if (mimeType.startsWith("video/") || ["mp4", "mov", "webm", "mkv", "m4v"].includes(ext)) return "video";
-  if (["mxl", "musicxml", "xml", "mid", "midi", "gp", "gpx", "gp5", "sib", "mscz", "dorico"].includes(ext)) return "notation";
-  if (["doc", "docx", "txt", "rtf", "odt", "pages", "md", "csv", "xls", "xlsx", "key", "ppt", "pptx"].includes(ext)) return "document";
-  return "other";
-}
-
-/** Whether the browser can show it in place (otherwise it's a download). */
-export function canPreview(kind: FileKind) {
-  return kind === "pdf" || kind === "image" || kind === "audio" || kind === "video";
-}
-
-/** "820 KB", "3.4 MB", "1.2 GB". */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB"];
-  let value = bytes / 1024;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "Oct 8" this year, "Oct 8, 2025" before. */
-export function formatFileDate(ms: number): string {
-  const d = new Date(ms);
-  const sameYear = d.getFullYear() === new Date().getFullYear();
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}${sameYear ? "" : `, ${d.getFullYear()}`}`;
-}
+// What sort of file it is and how its size and date read live in `packages/core/files.ts` (the app
+// uses them too).
+export { type FileKind, FILE_KIND_LABEL, MAX_FILE_BYTES, canPreview, fileKind, formatBytes, formatFileDate } from "@jam-practice/core/files";
 
 /** Uploads one file to the account (optionally attached to a tune): `generateUploadUrl` → POST →
     `create`, and returns what `create` did (the new file's id). Throws a readable message if it's

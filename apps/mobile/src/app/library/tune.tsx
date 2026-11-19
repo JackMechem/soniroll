@@ -19,6 +19,7 @@ import { RecordingRow, RecordingSelectModal, useRecordingPlayer } from '@/compon
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { TuneShedNotes } from '@/components/shedNotes/AttachedNotes';
 import { recordRecentTune } from '@/lib/chordChartRecents';
+import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi } from '@/lib/recordings';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
@@ -344,7 +345,7 @@ function TuneRecordings({ tuneId }: { tuneId: string }) {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
-  const recordings = useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : 'skip');
+  const recordings = useDeviceUrls(useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : 'skip'));
   const [linking, setLinking] = useState(false);
   const all = useQuery(recordingsApi.list, isAuthenticated && linking ? {} : 'skip');
   const update = useMutation(recordingsApi.update);

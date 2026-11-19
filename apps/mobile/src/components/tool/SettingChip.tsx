@@ -40,6 +40,7 @@ export function ToolSheet({
   // gesture bar under it.
   const keyboard = useKeyboardHeight();
   const lift = Platform.OS === 'android' ? keyboard : 0;
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
       {/* A Modal is outside the app's own gesture root; sliders in here need one of their own. */}
@@ -79,14 +80,18 @@ export function ToolSheet({
             <ScrollView
               nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
+              // Sized to its content as that changes: on Android a sheet whose content grew after it
+              // opened (a spinner becoming a button) kept its first height and cut the rest off. The
+              // sheet's maxHeight still caps it, and then it scrolls.
+              style={contentHeight ? { height: contentHeight } : undefined}
+              onContentSizeChange={(_w, h) => setContentHeight(h)}
               contentContainerStyle={{
                 paddingHorizontal: 20,
                 paddingTop: 8,
                 paddingBottom: 20,
-                gap: 16,
               }}
             >
-              {visible ? children : null}
+              <View style={{ gap: 16 }}>{visible ? children : null}</View>
             </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>

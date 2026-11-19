@@ -51,6 +51,7 @@ import {
   updateRecorderMetronome,
   type RecorderMetronome,
 } from '@/lib/recorderEngine';
+import { useDeviceUrls } from '@/lib/deviceFiles';
 import { formatDuration, recordingsApi, type Recording } from '@/lib/recordings';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
@@ -93,7 +94,7 @@ function RecorderScreen() {
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const { byId } = useTuneIndex();
   const tune = tuneId ? byId.get(tuneId)?.tune : undefined;
-  const recordings = useQuery(recordingsApi.list, isAuthenticated ? {} : 'skip');
+  const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : 'skip'));
   const [takesOpen, setTakesOpen] = useState(false);
 
   // From a tune's page, the metronome starts at the tune's own tempo (not saved as the default).
@@ -198,7 +199,7 @@ function RecorderScreen() {
         <EmptyPanel>
           <MicrophoneIcon color={colors.muted} size={32} />
           <Text className="font-ui text-center text-sm leading-5" style={muted}>
-            Sign in to record: your takes are saved to your account, so you can play them back on any device and link them to your tunes.
+            Sign in to record: your takes are saved with your account, so you can name them, keep notes and link them to your tunes.
           </Text>
           <BigButton label="Sign in" onPress={() => router.push('/profile')} />
         </EmptyPanel>

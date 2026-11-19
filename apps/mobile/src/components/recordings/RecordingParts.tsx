@@ -113,7 +113,7 @@ export function SeekBar({
 
 /** What a row needs — your own `Recording`, or one shared with you in a setlist (`PublicRecording`
     mapped to `_id`). */
-type PlayableRecording = Pick<Recording, 'name' | 'durationSec' | 'createdAt' | 'url'> & { _id: string };
+type PlayableRecording = Pick<Recording, 'name' | 'durationSec' | 'createdAt' | 'url' | 'device'> & { _id: string };
 
 /** A recording in a list: play/pause, name, date · length (· tune), and a seek bar while it's
     the one playing. Tapping the row itself opens it (when `onOpen` is given — your own only). */
@@ -132,11 +132,16 @@ export function RecordingRow({
 }) {
   const { colors } = useAppTheme();
   const active = player.activeKey === recording._id;
-  const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec), tuneName].filter(Boolean).join(' · ');
+  // Kept on another device (a free account's take saved on the website or another phone): it
+  // plays only there.
+  const elsewhere = !recording.url && recording.device ? recording.device.label : null;
+  const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec), tuneName, elsewhere ? `On ${elsewhere}` : null].filter(Boolean).join(' · ');
   return (
     <View className="gap-2 rounded-xl p-3" style={{ backgroundColor: background ?? colors.surface }}>
       <View className="flex-row items-center gap-3">
-        <PlayButton playing={active && player.playing} onPress={() => player.toggle(recording._id, recording.url)} />
+        <View style={{ opacity: elsewhere ? 0.4 : 1 }}>
+          <PlayButton playing={active && player.playing} onPress={() => player.toggle(recording._id, recording.url)} />
+        </View>
         <Pressable onPress={onOpen} disabled={!onOpen} className="min-w-0 flex-1" accessibilityLabel={recording.name}>
           <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
             {recording.name}

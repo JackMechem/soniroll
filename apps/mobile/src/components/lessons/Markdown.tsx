@@ -1,13 +1,13 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import { cleanScore } from '@jam-practice/core/bassTranscription';
 import { useQuery } from 'convex/react';
-import { Image } from 'expo-image';
 import { useMemo, useRef, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from 'react-native';
 
 import { CheckIcon, NoteIcon } from '@/components/icons';
 import { openUrl } from '@/components/lessons/files';
 import { FileIcon } from '@/components/lessons/parts';
+import { FileBlock } from '@/components/shedNotes/NoteEmbeds';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import Score from '@/components/notation/Score';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
@@ -17,7 +17,8 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
  * Notes editor), so this is a small Markdown reader — headings, paragraphs, bold / italic / strike /
  * code / links, lists and checklists, quotes, code blocks, rules, pictures — plus the teacher's
  * Score Writer scores (```score blocks, read through the lesson so the student can see them). ABC
- * notation and attached files show as a line saying they're on the website.
+ * notation shows as a line saying it's on the website; pictures and attached files open in the
+ * file viewer (`FileBlock`, read through the lesson).
  *
  * And `NoteTextEditor`: a plain, touch-friendly editor for the teacher — the Markdown text with a
  * row of buttons that add the formatting (heading, bold, italic, lists, checklist, quote, link).
@@ -38,7 +39,7 @@ type Block =
   | { kind: 'abc' }
   | { kind: 'hr' }
   | { kind: 'image'; url: string; alt: string }
-  | { kind: 'file'; name: string };
+  | { kind: 'file'; name: string; ref: string };
 
 const FENCE = /^\s*(```|~~~)\s*(\S*)/;
 const HEADING = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/;
@@ -77,7 +78,7 @@ function parse(body: string): Block[] {
     if (embed) {
       flush();
       const name = embed[1].split('|')[0].trim();
-      out.push(embed[2].startsWith('https://') ? { kind: 'image', url: embed[2], alt: name } : { kind: 'file', name: name || 'A file' });
+      out.push(embed[2].startsWith('https://') ? { kind: 'image', url: embed[2], alt: name } : { kind: 'file', name: name || 'A file', ref: embed[2].slice('file:'.length) });
       continue;
     }
     const h = HEADING.exec(line);
@@ -262,13 +263,10 @@ export function MarkdownView({ body, lessonId }: { body: string; lessonId: strin
           case 'abc':
             return <Placeholder key={i} Icon={NoteIcon} text="Music notation — open these notes on the website to see it." />;
           case 'file':
-            return <Placeholder key={i} Icon={FileIcon} text={`${b.name} — attached on the website.`} />;
+            // Read through the lesson, so the student can open the teacher's files (and the other way).
+            return <FileBlock key={i} fileRef={b.ref} name={b.name} context={{ lessonId }} />;
           case 'image':
-            return (
-              <Pressable key={i} onPress={() => openUrl(b.url)} accessibilityLabel={b.alt || 'Picture'}>
-                <Image source={{ uri: b.url }} style={{ width: '100%', height: 220, borderRadius: 10 }} contentFit="contain" />
-              </Pressable>
-            );
+            return <FileBlock key={i} fileRef={b.url} name={b.alt} />;
         }
         return null;
       })}
