@@ -105,11 +105,14 @@ export default function TunesPanel({
     <>
       <CollapsiblePanel
         id="jam-tunes"
-        title="Tunes I Know"
-        // Says what random picks actually come from: the standards (when that's on) or the list.
+        // In Jam Practice the chip says what random picks come from: the standards (when that's
+        // on) or your list; the list itself is headed "Tunes I Know" inside.
+        title={onPickFromStandardsChange ? "Picking from" : "Tunes I Know"}
         summary={
-          pickFromStandards
-            ? `${STANDARDS.length} standards`
+          onPickFromStandardsChange
+            ? pickFromStandards
+              ? `All ${STANDARDS.length} standards`
+              : "Tunes I Know"
             : `${tunes.length} tune${tunes.length === 1 ? "" : "s"}`
         }
         wide
@@ -146,6 +149,7 @@ export default function TunesPanel({
             hint="Draws from the ~630 built-in jazz standards instead of your own tune list below."
           />
         )}
+        {onPickFromStandardsChange && <p className="-mb-1 text-xs font-semibold text-muted">Tunes I Know</p>}
 
         {tunes.length === 0 ? (
           <p className="text-sm text-muted">
@@ -244,7 +248,7 @@ export default function TunesPanel({
             type="button"
             onClick={() => setConfirmingClear(true)}
             disabled={tunes.length === 0}
-            className="ml-auto rounded-md bg-foreground/[0.05] px-3 py-1.5 text-danger hover:bg-surface-hover disabled:opacity-50"
+            className={`ml-auto rounded-md bg-foreground/[0.05] px-3 py-1.5 hover:bg-surface-hover disabled:opacity-50 ${tunes.length === 0 ? "text-foreground" : "text-danger"}`}
           >
             Clear all
           </button>

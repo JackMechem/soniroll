@@ -59,9 +59,10 @@ export default function SupportPage() {
 
       <section className="flex flex-col gap-3 rounded-3xl bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-bold">What it pays for</h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
+        {/* A plain checklist (no filled cards), so it doesn't look tappable like the links below. */}
+        <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {COSTS.map((c) => (
-            <li key={c.title} className="flex gap-3 rounded-2xl bg-background p-3.5">
+            <li key={c.title} className="flex gap-3">
               <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <span>
                 <span className="block font-semibold">{c.title}</span>

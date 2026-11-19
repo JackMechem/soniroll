@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { formatPracticed } from "@/components/practicelog/minutes";
 import { CheckIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
 import RoutineIcon, { routineIconElement } from "@/components/practicelog/RoutineIcon";
 import { hasFixedTimes } from "@/components/practicelog/RoutineTime";
@@ -13,7 +14,6 @@ import {
   ROUTINE_COLORS,
   WEEKDAY_SHORT,
   addDays,
-  formatMinutesShort,
   formatTime,
   fromDateKey,
   dayProgress,
@@ -96,7 +96,7 @@ export function MonthView({
             d.toDateString(),
             items.length ? `${items.length} routine${items.length === 1 ? "" : "s"}` : "",
             status ? STATUS_LABEL[status] : "",
-            minutes > 0 ? `${formatMinutesShort(Math.round(minutes))} practiced` : "",
+            minutes > 0 ? `${formatPracticed(minutes)} practiced` : "",
           ]
             .filter(Boolean)
             .join(", ");
@@ -170,7 +170,7 @@ export function MonthView({
                 {key <= today && (minutes > 0 || done > 0 || key === today) && (
                   <div className="mt-auto flex min-w-0 flex-wrap items-baseline justify-between gap-x-1.5 leading-tight">
                     {minutes > 0 && (
-                      <span className={`whitespace-nowrap text-xs font-semibold tabular-nums ${goalMet ? "text-success" : ""}`}>{formatMinutesShort(Math.round(minutes))}</span>
+                      <span className={`whitespace-nowrap text-xs font-semibold tabular-nums ${goalMet ? "text-success" : ""}`}>{formatPracticed(minutes)}</span>
                     )}
                     {total > 0 && done < total && (done > 0 || key === today) && (
                       <span className="whitespace-nowrap text-[10px] font-medium tabular-nums text-muted" title={`${done} of ${total} tasks done`}>
@@ -800,9 +800,16 @@ function TimeGrid({
                           ? handle({ kind: "task", date: key, taskId: untimedTasks[0].id, minutes: Math.max(10, untimedTasks[0].minutes), title: untimedTasks[0].title || "Task", color: TASK_COLOR })
                           : {})}
                         aria-label={`${untimedTasks.length === 1 ? untimedTasks[0].title || "Task" : `${untimedTasks.length} tasks`}, ${untimedTasks.filter((t) => t.done).length} of ${untimedTasks.length} done`}
-                        className={`rounded-full transition-shadow hover:ring-2 hover:ring-foreground/20 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${untimedTasks.length === 1 ? DRAGGABLE : ""}`}
+                        className={`min-w-0 max-w-full rounded-full transition-shadow hover:ring-2 hover:ring-foreground/20 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent sm:w-full sm:rounded-sm ${untimedTasks.length === 1 ? DRAGGABLE : ""}`}
                       >
-                        <TasksMark tasks={untimedTasks} past={key < today} big />
+                        {/* Narrow columns (phones): one mark. Wider: the task's name (or "N tasks"),
+                            like the timed ones — a bare check said nothing about what it was. */}
+                        <span className="flex sm:hidden">
+                          <TasksMark tasks={untimedTasks} past={key < today} big />
+                        </span>
+                        <span className="flex min-w-0 max-sm:hidden">
+                          <TasksChip tasks={untimedTasks.map((t) => ({ title: t.title || "Task", done: t.done }))} />
+                        </span>
                       </button>
                     )}
                 {single && untimed.length === 0 && untimedTasks.length === 0 && (
@@ -1116,7 +1123,7 @@ function DayGoal({
 }) {
   if (dayKey > today) return <span className="h-[1.375rem]" />;
   const met = pct >= 1;
-  const mins = formatMinutesShort(Math.round(minutes));
+  const mins = formatPracticed(minutes);
   return (
     <span className="flex flex-col items-center gap-1">
       {progress ? (
@@ -1136,7 +1143,7 @@ function DayGoal({
       ) : (
       <span className={`flex h-3 items-center gap-0.5 whitespace-nowrap text-[10px] tabular-nums ${status === "missed" && minutes === 0 ? "text-muted" : met ? "font-medium text-success" : "text-muted"}`}>
         {minutes > 0 ? (
-          formatMinutesShort(Math.round(minutes))
+          formatPracticed(minutes)
         ) : status === "missed" ? (
           "Missed"
         ) : (

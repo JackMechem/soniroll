@@ -3,9 +3,10 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import Momentum from "@/components/practicelog/Momentum";
+import { formatPracticed } from "@/components/practicelog/minutes";
 import { HeatGrid } from "@/components/practicelog/TodayPractice";
 import { CloseIcon } from "@/components/tools";
-import { type PracticeLogData, type PracticeLogPrefs, type ProgressCardKind, addDays, bestStreak, formatMinutesShort, lifetimeMinutes, minutesOn } from "@/lib/practiceLog";
+import { type PracticeLogData, type PracticeLogPrefs, type ProgressCardKind, addDays, bestStreak, lifetimeMinutes, minutesOn } from "@/lib/practiceLog";
 
 /** All the stats in one place: the goal / streak / week / hours panels, the last months as a
     grid of days, and a few more numbers in a list. */
@@ -34,10 +35,10 @@ export default function StatsDialog({
   const practicedDays = Object.keys(data.days).filter((k) => minutesOn(data, k) > 0);
   const total = lifetimeMinutes(data);
   const numbers: [string, string][] = [
-    ["This month", formatMinutesShort(Math.round(month))],
+    ["This month", formatPracticed(month)],
     ["Best streak", `${bestStreak(data)} day${bestStreak(data) === 1 ? "" : "s"}`],
     ["Days practiced", String(practicedDays.length)],
-    ["Average practice day", practicedDays.length ? formatMinutesShort(Math.round(total / practicedDays.length)) : "—"],
+    ["Average practice day", practicedDays.length ? formatPracticed(total / practicedDays.length) : "—"],
   ];
 
   return createPortal(

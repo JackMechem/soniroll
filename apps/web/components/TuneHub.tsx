@@ -400,8 +400,8 @@ function Hub({
 
         <div className="grid gap-4 sm:grid-cols-2 xl:sticky xl:top-6 xl:grid-cols-1">
           {/* Keys you know it in: toggles that save to the tune (unlike the chart's "Show in",
-              which only changes how the chart is shown). Check marks and an outline style keep
-              them from reading like the chart page's key picker. */}
+              which only changes how the chart is shown). Several can be on, so they're filled
+              toggle pills with a check, not radio-style circles. */}
           <section className="flex flex-col gap-3 rounded-lg bg-surface p-4">
             <div className="flex items-baseline justify-between gap-2">
               <div>
@@ -421,14 +421,10 @@ function Hub({
                     aria-pressed={known}
                     title={known ? "You know it in this key — tap to unmark" : "Tap to mark as a key you know"}
                     className={`flex items-center justify-center gap-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
-                      known ? "bg-accent/15 text-foreground ring-1 ring-inset ring-accent/50" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+                      known ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
                     }`}
                   >
-                    {known ? (
-                      <CheckIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
-                    ) : (
-                      <span aria-hidden className="h-3 w-3 shrink-0 rounded-full border border-current opacity-40" />
-                    )}
+                    {known && <CheckIcon className="h-3.5 w-3.5 shrink-0" />}
                     {gridKeyName(name, minor)}
                   </button>
                 );
@@ -440,7 +436,10 @@ function Hub({
           {/* A quick note kept on the tune itself (stored as the tune's `notes`); Shed Notes below
               are full notes, with links and search, in the Shed Notes tool. */}
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
-            <h2 className="text-sm font-medium">Quick note</h2>
+            <div>
+              <h2 className="text-sm font-medium">Quick note</h2>
+              <p className="text-xs text-muted">A few lines kept on this tune&apos;s page, saved as you type.</p>
+            </div>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -454,16 +453,13 @@ function Hub({
               rows={7}
               className="w-full resize-y rounded-md bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
-            <p className="text-xs text-muted">
-              {isAuthenticated ? "A few lines kept with the tune, saved as you type. For longer notes, use Shed Notes." : "A few lines kept with the tune, saved as you type."}
-            </p>
           </section>
 
           {isAuthenticated && (
             <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
               <div>
                 <h2 className="text-sm font-medium">Shed Notes</h2>
-                <p className="text-xs text-muted">Full notes on this tune, in your Shed Notes.</p>
+                <p className="text-xs text-muted">Longer notes on this tune (links, notation, search), kept in Shed Notes.</p>
               </div>
               <AttachedNotes target={{ kind: "tune", tuneId: tune.id }} label={tune.name || "Untitled tune"} newTitle={tune.name || "Untitled tune"} />
             </section>

@@ -85,6 +85,8 @@ export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, t
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
+  // The note fades out rather than unmounting, so whatever sits under it doesn't jump up.
+  const [noteFaded, setNoteFaded] = useState(false);
   const saveTarget = useSaveTarget();
   const uploader = useFileUploader(undefined, saveTarget);
   // The account's own files, to see whether one is already there.
@@ -109,8 +111,9 @@ export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, t
       return false;
     }
     setSavedNote(online ? "Saved to your Files" : "Saved to your Files, on this device");
+    setNoteFaded(false);
     if (noteTimer.current) clearTimeout(noteTimer.current);
-    noteTimer.current = setTimeout(() => setSavedNote(null), 4000);
+    noteTimer.current = setTimeout(() => setNoteFaded(true), 4000);
     return true;
   }
 
@@ -185,7 +188,7 @@ export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, t
   ) : error || uploader.error ? (
     <p className="text-xs text-danger">{error ?? `Not saved to your Files: ${uploader.error}`}</p>
   ) : savedNote ? (
-    <p role="status" className="text-xs text-muted">
+    <p role="status" aria-hidden={noteFaded} className={`text-xs text-muted transition-opacity duration-500 ${noteFaded ? "opacity-0" : ""}`}>
       {savedNote}
     </p>
   ) : null;
@@ -265,6 +268,10 @@ function FilePickerDialog({
   }
 
   const hasAny = rows.length > 0 || localRows.length > 0;
+  // Search only helps once there's something to search.
+  const anyToSearch =
+    (items ?? []).some((i) => (i.kind === "file" || i.kind === "recording" || i.kind === "song") && filter.matches(i)) ||
+    (local?.files ?? []).some((f) => !inFiles.has(keyOf(f)));
 
   return createPortal(
     <div data-file-drop={dropId} className="fixed inset-0 z-[70] flex items-end justify-center bg-overlay p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:items-start sm:p-4 sm:pt-[10vh]" onClick={onClose}>
@@ -286,7 +293,7 @@ function FilePickerDialog({
           <button
             type="button"
             onClick={onUpload}
-            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover sm:h-9"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
           >
             <UploadIcon className="h-4 w-4" />
             {uploadLabel}
@@ -295,7 +302,7 @@ function FilePickerDialog({
           {canDrop && <span className="text-xs text-muted [@media(pointer:coarse)]:hidden">or drop {filter.noun} anywhere</span>}
         </div>
 
-        {(signedIn || (local?.files.length ?? 0) > 0) && (
+        {anyToSearch && (
           <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
             <SearchIcon className="h-4 w-4 text-muted" />
             <input

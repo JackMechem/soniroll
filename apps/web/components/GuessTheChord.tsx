@@ -69,6 +69,7 @@ import { parseNote } from "@/lib/noteRange";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 import { GRADE_COLOR, ANSWER_INPUT, FEEDBACK_LINE, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 const MIN_ROUND_SECONDS = 5;
 const MAX_ROUND_SECONDS = 45;
@@ -151,6 +152,15 @@ function readChord(raw: string) {
   const m = /^(\s*[A-Ga-g](?:#|b|♯|♭)?)(.*)$/.exec(raw);
   const text = m ? m[1] + m[2].replace(/M(?![Aa])/g, "maj") : raw;
   return parseChordInput(text);
+}
+
+/** With "Give the root" on, the answer field holds only the quality (the root sits in a badge
+    beside it); this puts the given root back in front. If what's typed already starts with a root
+    letter (someone typing the whole chord out of habit), it's taken as it is, never doubled. */
+function withGivenRoot(text: string, root: string | null): string {
+  const t = text.trim();
+  if (!root || /^[A-G]/.test(t)) return t;
+  return root + t;
 }
 
 type PlaybackStyle = "block" | "arpeggio";
@@ -342,6 +352,8 @@ export default function GuessTheChord() {
   // every keystroke) always sees the latest value instead of whatever was typed when that
   // closure was created.
   const typedRef = useRef("");
+  /** The root shown beside the answer field this round ("Give the root"), or null. */
+  const givenRootRef = useRef<string | null>(null);
   const skipRef = useRef<(() => void) | null>(null);
   const skipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playbackTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -373,8 +385,7 @@ export default function GuessTheChord() {
   }, []);
 
   // Autofocus the answer field for each fresh, ungraded round, cursor at the end — so typing can
-  // start immediately without clicking into it first, and (with "Give the root" on, prefilling
-  // the field with the root) lands right after the prefilled text instead of before it. Not on a
+  // start immediately without clicking into it first. Not on a
   // touch screen: the phone's keyboard would pop up over the symbol keypad.
   useEffect(() => {
     if (!running || !round || status || isTouchFirst()) return;
@@ -528,21 +539,24 @@ export default function GuessTheChord() {
   function gradeAndReveal() {
     const session = sessionRef.current;
     if (!session || !session.round || session.best !== null) return;
-    const parsed = readChord(typedRef.current);
+    const answer = withGivenRoot(typedRef.current, givenRootRef.current);
+    const parsed = readChord(answer);
     const grade: Grade =
       parsed && chordInputMatchesRound(parsed, session.round) ? "correct" : "incorrect";
-    session.answers.push(typedRef.current.trim());
+    session.answers.push(answer);
     lockInRound(grade);
   }
 
   function submitAnswer(e?: React.FormEvent) {
     e?.preventDefault();
-    const text = typedRef.current.trim();
+    const text = withGivenRoot(typedRef.current, givenRootRef.current);
     if (!text) {
       setTypeHint("Type a chord first, or press I don't know.");
       return;
     }
-    if (!readChord(text)) {
+    // Something that doesn't read as a chord yet ("Exyz") is never graded: Submit is disabled
+    // and Enter does nothing (the line under the field already says "Not a chord name yet").
+    if (!readChord(text)?.qualityId) {
       setTypeHint("Couldn't read that chord. Try Cmaj7, D-7 or G7/B.");
       return;
     }
@@ -753,10 +767,11 @@ export default function GuessTheChord() {
         durationMs: seconds * 1000,
       };
       setRound(next);
-      // "Give the root" pre-fills the answer with the root's letter, so typing (and struggling)
-      // is about the quality/slash bass, not also having to name the root by ear — cleared for a
-      // fresh, un-prefilled answer when the setting's off.
-      setTypedValue(giveRoot ? pcLabel(next.rootPc, accidentalStyle, roundSeedRef.current) : "");
+      // "Give the root" shows the root in a badge beside the field, so typing (and struggling)
+      // is about the quality/slash bass, not also having to name the root by ear. The field
+      // itself starts empty either way.
+      givenRootRef.current = giveRoot ? pcLabel(next.rootPc, accidentalStyle, roundSeedRef.current) : null;
+      setTypedValue("");
       playChordSound(next.notes);
     };
 
@@ -810,17 +825,17 @@ export default function GuessTheChord() {
   }
 
   const revealedText = round && status ? revealedLabel(round, roundSeed) : null;
-  const typedParsed = round && !status ? readChord(typed) : null;
-  const typedParts = typedParsed ? formatChordParts(typedParsed) : null;
-  const typedPreview = typedParts
-    ? `${typedParts.root}${typedParts.quality}${typedParts.bass ? `/${typedParts.bass}` : ""}`
-    : null;
-  const mainLabel = !running || !round ? "?" : (revealedText ?? typedPreview ?? "?");
+  // The same root the round started with (`pcLabel` is deterministic for a given seed).
+  const givenRoot = giveRoot && round ? pcLabel(round.rootPc, accidentalStyle, roundSeed) : null;
+  const fullTyped = withGivenRoot(typed, givenRoot);
+  const typedParsed = round && !status ? readChord(fullTyped) : null;
+  // "?" until the round is answered, so the circle never looks like it's giving the answer away.
+  const mainLabel = !running || !round ? "?" : (revealedText ?? "?");
   const mainLabelLong = mainLabel.length > 10;
   // The big label shows the right chord once answered: green when the answer was right, the
   // normal text colour when it wasn't (what was typed is shown in a small line underneath).
   const glow = running && status === "correct" ? GRADE_COLOR.correct : null;
-  const typedAnswer = typed.trim();
+  const typedAnswer = fullTyped;
   const typedAnswerParsed = status === "incorrect" && typedAnswer ? readChord(typedAnswer) : null;
   const typedAnswerParts = typedAnswerParsed ? formatChordParts(typedAnswerParsed) : null;
   const missLine =
@@ -842,6 +857,7 @@ export default function GuessTheChord() {
           typedParsed.bassLetter ? `/${noteGlyphs(`${typedParsed.bassLetter}${typedParsed.bassAccidental ?? ""}`)}` : ""
         } · ${typedQuality.name}`
       : "Not a chord name yet";
+  const canSubmit = !!typedQuality;
   const showCountdown = running;
   const revealedNoteNames =
     revealNotes && status && round
@@ -889,33 +905,10 @@ export default function GuessTheChord() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {formatFileDate(entry.at)}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -1054,7 +1047,7 @@ export default function GuessTheChord() {
               checked={giveRoot}
               onChange={setGiveRoot}
               disabled={running}
-              hint="Pre-fills the answer with the chord's root, so typing (and being graded on) is about the quality and slash bass, not also naming the root by ear. Off makes the whole chord — root included — something you have to work out."
+              hint="Shows the chord's root beside the answer box, so you only type the quality and slash bass, not also name the root by ear. Off makes the whole chord, root included, something you have to work out."
             />
 
             <SwitchRow
@@ -1198,7 +1191,8 @@ export default function GuessTheChord() {
             {cumulativeItems("chord", activeLevel).length} chords in play
           </p>
         )}
-        {!(learnMode && !running) && (
+        {/* Steps aside while a finished run's results show. */}
+        {!(learnMode && !running) && !(summary && !running) && (
         <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
           {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
@@ -1219,13 +1213,17 @@ export default function GuessTheChord() {
         </div>
         )}
         {/* Before the first round, say what's about to happen. */}
-        {!running && !learnMode && <p className={IDLE_HINT}>Press Start, listen to the chord, then type its symbol.</p>}
+        {!running && !learnMode && !summary && <p className={IDLE_HINT}>Press Start, listen to the chord, then type its symbol.</p>}
 
         {/* Two lines that are always there while a round runs (what you typed, the notes), so
             answering doesn't move the keypad or buttons. */}
         {running && round && (
           <div className="flex w-full flex-col items-center">
-            <p className={`${FEEDBACK_LINE} text-danger`}>{missLine}</p>
+            {givenRoot && !status ? (
+              <p className={`${FEEDBACK_LINE} text-muted`}>Root given: {noteGlyphs(givenRoot)} · type the quality</p>
+            ) : (
+              <p className={`${FEEDBACK_LINE} text-danger`}>{missLine}</p>
+            )}
             <p className={`${FEEDBACK_LINE} tabular-nums text-muted`}>{revealedNoteNames}</p>
           </div>
         )}
@@ -1255,6 +1253,15 @@ export default function GuessTheChord() {
             <div className="w-full max-w-[18rem]">
               <ChordSymbolKeypad onInsert={insertSymbol} disabled={!!status} />
             </div>
+            <div className="flex w-full max-w-[16rem] items-center gap-2">
+            {givenRoot && (
+              <span
+                className="flex h-11 shrink-0 items-center rounded-md bg-foreground/[0.08] px-3 text-lg font-semibold text-foreground"
+                title="The root is given; type the rest"
+              >
+                {noteGlyphs(givenRoot)}
+              </span>
+            )}
             <input
               ref={inputElRef}
               type="text"
@@ -1266,11 +1273,12 @@ export default function GuessTheChord() {
               value={typed}
               readOnly={!!status}
               onChange={(e) => setTypedValue(e.target.value)}
-              placeholder="e.g. F#^7 or Ab-7/D"
-              aria-label="Your answer"
+              placeholder={givenRoot ? "e.g. ^7, -7 or 7/B" : "e.g. F#^7 or Ab-7/D"}
+              aria-label={givenRoot ? `Your answer: the chord quality (the root, ${givenRoot}, is given)` : "Your answer"}
               aria-describedby="chord-type-hint"
-              className={`${ANSWER_INPUT} max-w-[16rem]`}
+              className={`${ANSWER_INPUT} min-w-0`}
             />
+            </div>
             <p id="chord-type-hint" role="status" className="h-5 max-w-full truncate text-sm leading-5 text-muted">
               {status ? (
                 <>
@@ -1286,6 +1294,7 @@ export default function GuessTheChord() {
               <span aria-hidden />
               <button
                 type="submit"
+                disabled={!status && !canSubmit}
                 className={PRIMARY_BUTTON}
               >
                 {status ? "Next" : "Submit"}

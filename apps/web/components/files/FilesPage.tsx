@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader } from "@/components/files/FileParts";
 import { MenuButton } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Toolbar } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
@@ -307,11 +307,11 @@ export default function FilesPage() {
                   ))}
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" small />
+                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" />
                 {(Object.keys(FILE_KIND_LABEL) as FileKind[])
                   .filter((k) => counts.byKind.get(k))
                   .map((k) => (
-                    <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={kindLabel(k)} small />
+                    <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={kindLabel(k)} />
                   ))}
               </div>
             </div>
@@ -319,7 +319,7 @@ export default function FilesPage() {
             )}
 
             {/* No files at all: the same dashed empty state as the other Library tabs, not an empty
-                "Everything 0" card. */}
+                "Everything 0" card. (No second Upload button: the one at the top does it.) */}
             {items.length === 0 ? (
               <>
                 <EmptyState
@@ -331,7 +331,6 @@ export default function FilesPage() {
                       <span className="pointer-coarse:hidden"> You can drop files anywhere on this page.</span>
                     </>
                   }
-                  action={<Pill primary icon={UploadIcon} label="Upload files" onClick={uploader.pick} />}
                 />
                 {actions.status && <p className="text-sm text-muted">{actions.status}</p>}
                 {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
@@ -375,8 +374,8 @@ export default function FilesPage() {
                   </>
                 ) : (
                   <>
+                    {/* No count here: the filter above already shows it. */}
                     <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
-                    <span className="text-xs tabular-nums text-muted">{shown.length}</span>
                     {/* Recordings have their own tab (playback, takes per tune). */}
                     {source === "recording" && (
                       <Link href="/tunes?tab=recordings" replace scroll={false} className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
@@ -528,13 +527,13 @@ function Checkbox({ checked, mixed = false, label, onChange, faint = false }: { 
   );
 }
 
-function FilterChip({ active, onClick, label, count, small = false }: { active: boolean; onClick: () => void; label: string; count?: number; small?: boolean }) {
+function FilterChip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-md font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
+      className={`inline-flex items-center gap-1.5 rounded-md h-8 px-3 text-sm font-medium transition-colors ${
         active ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >

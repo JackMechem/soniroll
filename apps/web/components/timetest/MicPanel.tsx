@@ -139,7 +139,7 @@ export default function MicPanel({
         title="Latency"
         aside={
           <span className={`text-sm font-medium tabular-nums ${calibrated ? "" : "text-muted"}`}>
-            {latencyMs.toFixed(1)} ms{calibrated ? "" : " · a guess"}
+            {calibrated ? `${latencyMs.toFixed(1)} ms` : "Not calibrated yet"}
           </span>
         }
       >
@@ -170,6 +170,7 @@ export default function MicPanel({
             style={{ "--progress": `${((latencyMs + 50) / 350) * 100}%` } as React.CSSProperties}
             className="slider h-6 w-full"
           />
+          <span className="w-16 shrink-0 text-right text-xs font-medium tabular-nums">{latencyMs.toFixed(1)} ms</span>
         </div>
       </OptionGroup>
 

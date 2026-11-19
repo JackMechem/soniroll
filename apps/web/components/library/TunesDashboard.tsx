@@ -78,7 +78,7 @@ export default function TunesDashboard() {
       ...menuPosition(e),
       items: [
         { label: "Add a jazz standard", onSelect: () => setAddingStandard(list) },
-        { label: list === "learn" ? "New tune to learn" : "New tune", onSelect: () => setCreating({ list, tune: blankTune() }) },
+        { label: "Add your own tune", onSelect: () => setCreating({ list, tune: blankTune() }) },
       ],
     });
   }
@@ -117,8 +117,8 @@ export default function TunesDashboard() {
                 ...menuPosition(e),
                 items: [
                   { label: "Add a jazz standard", onSelect: () => setAddingStandard("tunes") },
-                  { label: "New tune", onSelect: () => setCreating({ list: "tunes", tune: blankTune() }) },
-                  ...(isAuthenticated ? [{ label: "New tune to learn", onSelect: () => setCreating({ list: "learn" as TuneListId, tune: blankTune() }) }] : []),
+                  { label: "Add your own tune", onSelect: () => setCreating({ list: "tunes", tune: blankTune() }) },
+                  ...(isAuthenticated ? [{ label: "Add a tune to learn", onSelect: () => setCreating({ list: "learn" as TuneListId, tune: blankTune() }) }] : []),
                   { label: "New setlist", onSelect: () => setNamingSetlist(true) },
                 ],
               })
@@ -145,6 +145,14 @@ export default function TunesDashboard() {
             </div>
           )}
         </div>
+      ) : tunes.length === 0 && (!isAuthenticated || learn.length === 0) ? (
+        // Nothing yet: the same dashed empty state as the other Library tabs (Add is at the top too).
+        <EmptyState
+          boxed
+          title="No tunes yet"
+          body="Add a jazz standard or your own tune. Each one gets a page for its chart, keys and notes."
+          action={<Pill primary icon={PlusIcon} label="Add a tune" onClick={(e) => openListAdd(e, "tunes")} />}
+        />
       ) : (
         <>
           <div className={`grid items-start gap-4 ${isAuthenticated ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]" : ""}`}>

@@ -178,7 +178,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     purpose: "Chain named timers — scales, a break, a tune — and run them without watching the clock.",
     steps: [
       { title: "Make a session", text: "Press New session (under your saved sessions), add steps with names and minutes, or pick Pomodoro." },
-      { title: "Start it", text: "Each step counts down and the next one starts with a chime." },
+      { title: "Start it", text: "Each step counts down and the next one starts with a chime. Skip (shown when there's a next step) moves on early." },
       { title: "Keep an eye on it anywhere", text: "The sidebar shows what's running, with pause and skip." },
     ],
     features: ["Saved sessions", "Pomodoro with named work cycles", "Alarm mode that waits for you", "Keeps running across pages and reloads"],
@@ -399,7 +399,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     ],
     features: ["Your tunes or 600+ standards", "Random key and tempo", "Count-off", "Keep going one after another"],
     options: [
-      { name: "Tunes", text: "Your list of tunes to draw from — your own or the jazz standards. Search to add a standard, or type any name and add it as your own tune in one tap (More details adds tempos, keys and notes). Each tune can have several tempos and keys; only the ones switched on can be picked." },
+      { name: "Picking from", text: "Where random picks come from: your Tunes I Know, or all the jazz standards. Search to add a standard, or type any name and add it as your own tune in one tap (More details adds tempos, keys and notes). Each tune can have several tempos and keys; only the ones switched on can be picked." },
       { name: "Click", text: "The count-off: how many bars of clicks before you start, and whether beat one is accented." },
       { name: "Keep metronome going", text: "Keeps clicking after the count-off so you play along with the time." },
       { name: "Keep going", text: "Picks the next tune automatically when you're done with one." },
@@ -453,7 +453,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     features: ["Timed and Listen modes", "Per-string drills for string players", "Struggles and history", "Count-down rings"],
     options: [
       { name: "Range", text: "Your instrument (the chip shows it, e.g. Bass · E1–G4), which sets the range of notes that can come up, and how sharps and flats are spelled." },
-      { name: "Time per note / Time to play", text: "Timed: how long each note stays on screen. Listen: how long you have to play it, and the pause before the next one." },
+      { name: "Time per note", text: "Timed: how long each note stays on screen. Listen: how long you have to play it, and the pause before the next one." },
       { name: "Timed / Listen", text: "Timed shows a note and moves on after a set time. Listen uses your microphone and grades what you play as correct, close or wrong." },
       { name: "Microphone", text: "Which mic (Listen mode), tuning tolerance (how many cents off still counts), how long the note must be held, and half credit after a wrong note." },
       { name: "Drill every note", text: "Goes through every note in the range once; anything you miss comes back." },
@@ -480,12 +480,12 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Scales", text: "Which scales and modes can come up — major modes, harmonic and melodic minor, pentatonics, blues and symmetric scales." },
       { name: "Range", text: "Your instrument (the chip shows it, e.g. Bass · E1–G4), which sets the register the scales are played in." },
-      { name: "Time per scale / Time to play", text: "Timed: how long each scale stays on screen. Listen: how long you have to play it, and the pause before the next one." },
+      { name: "Time per scale", text: "Timed: how long each scale stays on screen. Listen: how long you have to play it, and the pause before the next one." },
       { name: "Timed / Listen", text: "Timed shows a scale for a set time. Listen follows you note by note through the mic, root to root." },
       { name: "Partial credit", text: "Gives each note one retry: a fixed mistake counts as partial instead of failing the scale." },
       { name: "Ignore repeated notes", text: "Playing the same note twice in a row isn't counted as a mistake." },
       { name: "Drill every scale", text: "Every chosen scale in all 12 keys." },
-      { name: "Show scale notes", text: "Shows the notes of the scale while you play it." },
+      { name: "Show scale notes (Listen only)", text: "Shows the notes of the scale while you play it." },
       { name: "Struggles", text: "Which key-and-scale combinations give you trouble; Shed weak scales drills just those." },
     ],
     shot: "scale-trainer",
@@ -506,7 +506,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Intervals", text: "Which intervals can come up, from a minor 2nd to an octave (none selected means all of them), and whether they can go down as well as up." },
       { name: "Range", text: "Your instrument (the chip shows it, e.g. Bass · E1–G4), which sets the register the starting notes come from, and how sharps and flats are spelled." },
-      { name: "Time per interval / Time to play", text: "Timed: how long each interval stays on screen. Listen: how long you have to play it, and the pause before the next one." },
+      { name: "Time per interval", text: "Timed: how long each interval stays on screen. Listen: how long you have to play it, and the pause before the next one." },
       { name: "Timed / Listen", text: "Timed shows each interval for a set time. Listen grades the two notes you play into the mic." },
       { name: "Continue from previous note", text: "Each interval starts on the note the last one ended on, so you keep moving around the instrument." },
       { name: "Drill every interval", text: "Every chosen interval, in each direction, from all 12 notes." },
@@ -547,7 +547,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     purpose: "From triads to altered dominants and slash chords — type what you hear, chart style.",
     steps: [
       { title: "Listen", text: "A chord plays, block or arpeggiated." },
-      { title: "Type it", text: "Use the keypad for symbols: -7, ^7, ø, °, alt…" },
+      { title: "Type it", text: "Use the keypad for symbols: -7, ^7, ø, °, alt… With Give the root on, the root is shown and you type only the quality." },
       { title: "See the answer", text: "Then work through Learn mode's levels." },
     ],
     features: ["33 chord qualities", "Slash chords", "Symbol keypad", "Learn mode levels"],
@@ -555,7 +555,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Practice / Learn", text: "Practice uses the chords you choose. Learn adds qualities level by level, from major and minor to extended chords." },
       { name: "Chords", text: "Which chord qualities can come up, grouped as triads, sixths, sevenths, altered dominants, extensions and sus/add." },
       { name: "Register", text: "How low or high the chords are played." },
-      { name: "Give the root", text: "Fills in the root for you, so you only name the quality. Off means you name the whole chord." },
+      { name: "Give the root", text: "Shows the root in a badge beside the answer, so you type only the quality. Off means you type the whole chord." },
       { name: "Slash chords", text: "How often a different bass note is played under the chord, which you then type after a slash." },
       { name: "Sound & display", text: "Block or arpeggiated, piano or Rhodes, and whether to show the notes after you answer." },
       { name: "Timing", text: "Max time to answer, time between rounds, number of rounds or drill every chord." },
@@ -818,7 +818,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Time, Subdivision, Sound", text: "The same click as the Metronome." },
       { name: "Count-in", text: "Bars of click before grading starts. Keep at least one, so it can learn how loud the click is in the mic." },
-      { name: "You're playing", text: "Work it out beat by beat (move between quarters, 8ths, triplets and 16ths as you like), or choose one so notes you leave out count as missed." },
+      { name: "You're playing", text: "Work it out decides beat by beat (move between quarters, 8ths, triplets and 16ths as you like). Or choose one, so notes you leave out count as missed." },
       { name: "On time within", text: "How close to the click a stroke has to be to count as on time." },
       { name: "Microphone", text: "Which mic to listen to, how sensitive it is, the measured delay (with a fine-tune), and whether to ignore the click leaking into the mic." },
     ],

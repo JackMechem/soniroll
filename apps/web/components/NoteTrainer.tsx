@@ -67,6 +67,7 @@ import { useToolActivity } from "@/lib/toolTime";
 import { formatFileDate } from "@/lib/files";
 import { micErrorMessage } from "@/lib/micError";
 import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 
 const MIN_INTERVAL_SECONDS = 0.5;
@@ -253,6 +254,8 @@ export default function NoteTrainer() {
   // Counts as practice in the Shed Log while it runs.
   useToolActivity("/note-trainer", running);
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Use Timed instead". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -592,6 +595,7 @@ export default function NoteTrainer() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.stop();
@@ -621,6 +625,7 @@ export default function NoteTrainer() {
         void listAudioInputs().then(setInputs);
       } catch (e) {
         setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
+        setMicFailed(true);
         return;
       }
       const queue = weak
@@ -870,33 +875,10 @@ export default function NoteTrainer() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {formatFileDate(entry.at)}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -1063,16 +1045,16 @@ export default function NoteTrainer() {
           </CollapsiblePanel>
 
           {/* Timing in its own chip: how long each note shows (Timed), or how long you have to play
-              it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
+              it and the pause after (Listen). Same setting (`intervalSeconds`) either way, so one name. */}
           <CollapsiblePanel
             id="note-timing"
-            title={listenMode ? "Time to play" : "Time per note"}
+            title="Time per note"
             icon={StopwatchIcon}
             summary={`${intervalSeconds} s`}
           >
             {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
-              label={listenMode ? "Time to play" : "Time per note"}
+              label="Time per note"
               value={intervalSeconds}
               unit=" s"
               min={MIN_INTERVAL_SECONDS}
@@ -1452,7 +1434,24 @@ export default function NoteTrainer() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && listenMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setListenMode(false);
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Use Timed instead
+            </button>
+          )}
+        </div>
+      )}
 
       {/* While the results show, their own "Try again" is the one start button. */}
       {!(summary && !running) && (

@@ -28,7 +28,8 @@ export function RoutineDemo({ celebrations = true }: { celebrations?: boolean })
   const minutes = TASKS.reduce((s, t, i) => s + (done[i] ? t.minutes : 0), 0);
   const count = done.filter(Boolean).length;
   const frac = Math.min(1, minutes / GOAL);
-  const streak = 41 + (count === TASKS.length ? 1 : 0);
+  // The same made-up user as the rest of the landing page (17 days once today's done).
+  const streak = 16 + (count === TASKS.length ? 1 : 0);
 
   function toggle(i: number, el: Element) {
     const next = done.map((d, j) => (j === i ? !d : d));
@@ -36,7 +37,7 @@ export function RoutineDemo({ celebrations = true }: { celebrations?: boolean })
     if (next[i]) {
       burstAt(el, "#10b981");
       playTaskNote(next.filter(Boolean).length);
-      if (next.every(Boolean)) setTimeout(() => celebrateNow("Morning warm-up complete!", "All 3 tasks done — and that's 42 days in a row."), 250);
+      if (next.every(Boolean)) setTimeout(() => celebrateNow("Morning warm-up complete!", "All 3 tasks done — and that's 17 days in a row."), 250);
     }
   }
 
@@ -111,7 +112,8 @@ function demoLevels(n: number): string {
   let levels = "";
   for (let i = 0; i < n; i++) {
     const r = rnd();
-    levels += i > n - 42 ? String(2 + Math.floor(r * 3)) : r < 0.22 ? "0" : String(1 + (Math.floor(r * 4) % 4));
+    // The last 17 days all practised, after a day off: the 17-day streak shown across the page.
+    levels += i >= n - 17 ? String(2 + Math.floor(r * 3)) : i === n - 18 || r < 0.22 ? "0" : String(1 + (Math.floor(r * 4) % 4));
   }
   return levels;
 }
@@ -123,7 +125,9 @@ export function DemoProgressCard() {
     const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const n = (CARD_WEEKS - 1) * 7 + now.getDay() + 1;
     const levels = demoLevels(n);
-    return { kind: "streak", range: "year", streak: 42, best: 42, hours: 186, days: 281, rangeHours: 186, rangeDays: 281, start: cardStart("year", end), end, levels };
+    // Best: the longest run of practised days in the made-up year (at least today's 17).
+    const best = Math.max(17, ...levels.split("0").map((run) => run.length));
+    return { kind: "streak", range: "year", streak: 17, best, hours: 186, days: 281, rangeHours: 186, rangeDays: 281, start: cardStart("year", end), end, levels };
   }, []);
   return <ProgressCardView card={card} username="you" className="shadow-[0_24px_60px_-28px_rgba(0,0,0,0.6)]" />;
 }

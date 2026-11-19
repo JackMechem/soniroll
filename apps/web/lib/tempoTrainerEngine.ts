@@ -64,6 +64,8 @@ export interface TempoTrainerSnapshot {
       no click scheduled and nothing timing-related shown). Starts (and idles) on `"on"`, same as
       a plain metronome always has been. */
   phase: TempoTrainerPhase;
+  /** How many bars into the current phase (0-based) — shown as "Bar n of 4" while the click plays. */
+  barInPhase: number;
   currentBeat: number | null;
   currentSub: number;
   /** What `BeatIndicator`/the structure editor should show right now — the plain meter's own
@@ -147,6 +149,7 @@ function buildSnapshot(): TempoTrainerSnapshot {
   return {
     running,
     phase,
+    barInPhase: barsIntoPhase,
     currentBeat,
     currentSub,
     formIndex: structFormIndex,

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CloseIcon, GearIcon, HelpIcon, HomeIcon, findToolLink } from "@/components/tools";
-import { PaneContext } from "@/lib/paneContext";
+import { PaneContext, PaneTitleSlotContext } from "@/lib/paneContext";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import {
   type PaneSplit,
@@ -69,11 +69,15 @@ function Pane({
   const TitleIcon = title?.icon;
   // The pane's box, for phone-style sheets to portal into (`lib/paneContext.ts`).
   const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
+  // Beside the page's name in the bar: where the page puts its intro "?" (`ToolLayout`).
+  const [titleSlot, setTitleSlot] = useState<HTMLSpanElement | null>(null);
 
   return (
     <div
       ref={setPaneEl}
       data-pane
+      // The pane that gets keyboard shortcuts when nothing has focus (`keyIsForPane`).
+      data-pane-active={active ? "" : undefined}
       onPointerDownCapture={onFocus}
       className="@container/pane relative flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden"
     >
@@ -85,6 +89,7 @@ function Pane({
           <p className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
             {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
             <span className="truncate">{title?.label ?? ""}</span>
+            <span ref={setTitleSlot} className="flex shrink-0 items-center empty:hidden" />
           </p>
           {canClose && (
             <button
@@ -100,7 +105,9 @@ function Pane({
         </div>
         {Component ? (
           <PaneContext.Provider value={paneEl}>
-            <Component />
+            <PaneTitleSlotContext.Provider value={titleSlot}>
+              <Component />
+            </PaneTitleSlotContext.Provider>
           </PaneContext.Provider>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 p-4 pt-20 text-center text-sm text-muted">

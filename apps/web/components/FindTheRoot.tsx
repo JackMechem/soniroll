@@ -74,10 +74,12 @@ import {
 import { useToolActivity } from "@/lib/toolTime";
 import { formatFileDate } from "@/lib/files";
 import { micErrorMessage } from "@/lib/micError";
-import { formatDuration, shuffled } from "@/lib/trainerUtils";
+import { shuffled } from "@/lib/trainerUtils";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
+import { usePaneKeyGuard } from "@/lib/paneContext";
 import { GRADE_COLOR, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 /** How long the voicing rings. */
 const CHORD_SECONDS = 2.2;
@@ -218,6 +220,8 @@ export default function FindTheRoot() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [lastMode, setLastMode] = useState<"normal" | "weak">("normal");
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Switch to Pick". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
 
   const sessionRef = useRef<Session | null>(null);
@@ -452,6 +456,7 @@ export default function FindTheRoot() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     endSession();
 
@@ -474,6 +479,7 @@ export default function FindTheRoot() {
         void listAudioInputs().then(setInputs).catch(() => {});
       } catch (e) {
         setError(micErrorMessage(e, "Couldn't open the mic. Try again, pick another input, or switch to Pick."));
+        setMicFailed(true);
         return;
       }
     }
@@ -569,16 +575,17 @@ export default function FindTheRoot() {
       return true;
     };
   });
+  const forThisPane = usePaneKeyGuard();
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Enter" || e.repeat) return;
+      if (e.key !== "Enter" || e.repeat || !forThisPane(e)) return;
       const target = e.target as HTMLElement;
       if (target.closest("input, textarea, select, [role='dialog'], [role='listbox']")) return;
       if (enterRef.current()) e.preventDefault();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [forThisPane]);
 
   // ------------------------------------------------------------------ what's shown
 
@@ -637,23 +644,10 @@ export default function FindTheRoot() {
                 {[...history]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatScore(entry.score)}/{entry.total}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.mode === "pick" ? "Picked" : "Sung or played"} ·{" "}
-                          {formatFileDate(entry.at)}
-                        </span>
-                      </div>
-                      <span className="text-xs tabular-nums text-muted">
-                        {formatDuration(entry.elapsedMs)}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.mode === "pick" ? "Picked" : "Sung or played"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -1126,7 +1120,9 @@ export default function FindTheRoot() {
 
         {running && progress && (
           <p className="text-sm tabular-nums text-muted">
-            Round {progress.index} of {progress.total} · Score {formatScore(progress.score)} of {progress.done} ·{" "}
+            Round {progress.index} of {progress.total} ·{" "}
+            {/* No score until a round has finished ("Score 0 of 0" read as broken). */}
+            {progress.done > 0 && <>Score {formatScore(progress.score)} of {progress.done} · </>}
             <ElapsedTimer active={running} startRef={sessionStartRef} />
           </p>
         )}
@@ -1197,7 +1193,24 @@ export default function FindTheRoot() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && answerMode === "sing" && (
+            <button
+              type="button"
+              onClick={() => {
+                updateSettings({ answerMode: "pick" });
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Switch to Pick
+            </button>
+          )}
+        </div>
+      )}
 
       {/* While the results show, their own "Try again" is the one start button. */}
       {!(summary && !running) && (
@@ -1254,8 +1267,10 @@ function RootKey({
       }}
       className={`rounded-md font-medium transition-colors disabled:cursor-default ${
         black
-          ? "h-11 bg-foreground text-[0.8125rem] text-background hover:opacity-85 sm:h-12"
-          : "h-14 bg-surface text-sm text-foreground hover:bg-surface-hover sm:h-16"
+          ? // The darker key in both themes: the foreground in light mode, the surface in dark.
+            "h-11 bg-foreground text-[0.8125rem] text-background hover:opacity-85 sm:h-12 dark:bg-surface dark:text-foreground dark:hover:bg-surface-hover dark:hover:opacity-100"
+          : // The lighter key in both themes, like a real piano.
+            "h-14 bg-surface text-sm text-foreground hover:bg-surface-hover sm:h-16 dark:bg-foreground/90 dark:text-background dark:hover:bg-foreground/80"
       } ${disabled && !color ? "opacity-60" : ""}`}
     >
       {label ?? prettyNote(ROOT_NAMES[pc])}

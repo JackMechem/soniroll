@@ -60,6 +60,7 @@ import {
   spellNote,
 } from "@/lib/noteSpelling";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
+import { spellScale } from "@/lib/scaleSpelling";
 import {
   GradeCounts,
   bumpGradeCounts,
@@ -75,6 +76,7 @@ import { micErrorMessage } from "@/lib/micError";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK, IDLE_RING, IDLE_HINT, bestPassingMs, passedRound, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 /** Mode names that are proper nouns, kept capitalised by `scaleName`. */
 const PROPER_SCALE_WORDS = new Set(["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian", "Hindu"]);
@@ -285,6 +287,8 @@ export default function ScaleTrainer() {
   // Counts as practice in the Shed Log while it runs.
   useToolActivity("/scale-trainer", running);
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Use Timed instead". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -699,6 +703,7 @@ export default function ScaleTrainer() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.stop();
@@ -729,6 +734,7 @@ export default function ScaleTrainer() {
         void listAudioInputs().then(setInputs);
       } catch (e) {
         setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
+        setMicFailed(true);
         return;
       }
       const queue = weak
@@ -917,8 +923,16 @@ export default function ScaleTrainer() {
 
   useSpaceToggle(running ? stop : () => void start());
 
-  const rootLabel = (r: ScaleRound, seq = 0) =>
-    noteGlyphs(spellNote(midiToNote(r.rootMidi), accidentalStyle, seq, ignoreOctave));
+  /** The scale's notes spelled from its key (F melodic minor: F G A♭ B♭ …), or null where there's
+      no key spelling (the chromatic scale, or "Both" sharps and flats): then each note is spelled
+      on its own by the sharps/flats setting. */
+  const keyNames = (r: ScaleRound, seq: number) =>
+    spellScale(spellNote(midiToNote(r.rootMidi), accidentalStyle, seq, true), r.mode.intervals);
+  const rootLabel = (r: ScaleRound, seq = 0) => {
+    const key = keyNames(r, seq);
+    const octave = ignoreOctave ? "" : /\d+$/.exec(midiToNote(r.rootMidi))?.[0] ?? "";
+    return noteGlyphs(key ? key[0] + octave : spellNote(midiToNote(r.rootMidi), accidentalStyle, seq, ignoreOctave));
+  };
   const roundLabel = (r: ScaleRound, seq = 0) =>
     `${rootLabel(r, seq)} ${scaleName(r.mode.label)}`;
   const mainLabel = running && round ? roundLabel(round, roundSeed) : "?";
@@ -977,33 +991,10 @@ export default function ScaleTrainer() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {formatFileDate(entry.at)}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -1198,13 +1189,13 @@ export default function ScaleTrainer() {
               it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
           <CollapsiblePanel
             id="scale-timing"
-            title={listenMode ? "Time to play" : "Time per scale"}
+            title="Time per scale"
             icon={StopwatchIcon}
             summary={`${intervalSeconds} s`}
           >
             {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
-              label={listenMode ? "Time to play" : "Time per scale"}
+              label="Time per scale"
               value={intervalSeconds}
               unit=" s"
               min={MIN_INTERVAL_SECONDS}
@@ -1402,12 +1393,15 @@ export default function ScaleTrainer() {
               hint="Shows a preview of the upcoming scale next to the current one."
             />
 
-            <SwitchRow
-              label="Show scale notes"
-              checked={showScaleNotes}
-              onChange={setShowScaleNotes}
-              hint="The row of note pills below the circle in listen mode, showing progress through the scale."
-            />
+            {/* Only Listen shows the note pills, so the switch is hidden in Timed. */}
+            {listenMode && (
+              <SwitchRow
+                label="Show scale notes"
+                checked={showScaleNotes}
+                onChange={setShowScaleNotes}
+                hint="The scale's notes in a row under the circle, ticked off as you play them."
+              />
+            )}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Tone</span>
@@ -1488,7 +1482,9 @@ export default function ScaleTrainer() {
         {listenMode && running && round && showScaleNotes && (
           <div className="flex flex-wrap justify-center gap-2 px-2">
             {round.notes.map((n, i) => {
-              const label = noteGlyphs(spellNote(n, accidentalStyle, roundSeed, true));
+              const key = keyNames(round, roundSeed);
+              // The last note is the root an octave up.
+              const label = noteGlyphs(key ? key[i % key.length] : spellNote(n, accidentalStyle, roundSeed, true));
               const matched = i < scaleProgress;
               const failed = i === scaleProgress && status === "incorrect";
               // Missed once and waiting for a retry (partial-credit mode only).
@@ -1632,7 +1628,24 @@ export default function ScaleTrainer() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && listenMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setListenMode(false);
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Use Timed instead
+            </button>
+          )}
+        </div>
+      )}
 
       {/* While the results show, their own "Try again" is the one start button. */}
       {!(summary && !running) && (

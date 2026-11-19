@@ -235,7 +235,9 @@ export default function Syncopation() {
     ? "Couldn't download the drums — check your connection and try again."
     : downloading
       ? `Downloading the drums… ${Math.round((download ?? 0) * 100)}%`
-      : "";
+      : live
+        ? `Playing exercise ${Math.min(shown, played.length - 1) + 1}`
+        : "";
 
   const familyNames = RHYTHM_FAMILIES.filter((f) => families.includes(f.id)).map((f) => f.short);
 
@@ -260,10 +262,13 @@ export default function Syncopation() {
                   type="button"
                   onClick={() => toggleFamily(f.id)}
                   aria-pressed={on}
+                  aria-label={f.label}
+                  title={f.label}
                   className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${on ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.06] text-foreground hover:bg-surface-hover"}`}
                 >
                   <RhythmGlyph family={f.id} />
-                  {f.label}
+                  {/* Short names keep the four pills one line each (the glyph shows the rhythm). */}
+                  {f.short}
                 </button>
               );
             })}
@@ -352,22 +357,23 @@ export default function Syncopation() {
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2 px-1">
             <div className="min-w-0">
               <h2 className="text-base font-semibold">
-                {live ? `Exercise ${Math.min(shown, played.length - 1) + 1}` : "Exercise"}
+                Exercise
                 <span className="ml-2 text-sm font-normal text-muted">{familyNames.join(" · ")}</span>
               </h2>
               <p className="text-sm text-muted">
                 {EXERCISE_BARS} bars · {OSTINATOS.find((o) => o.id === ostinato)?.label.toLowerCase()} underneath
               </p>
             </div>
-            {!running && (
-              <button
-                type="button"
-                onClick={() => setSeed(newSeed())}
-                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
-              >
-                <ShuffleIcon className="h-4 w-4 text-muted" /> New exercise
-              </button>
-            )}
+            {/* Stays in place while playing (disabled) so the notation doesn't jump. */}
+            <button
+              type="button"
+              onClick={() => setSeed(newSeed())}
+              disabled={running}
+              title={running ? "Stop to get a new exercise" : undefined}
+              className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors enabled:hover:bg-surface-hover disabled:opacity-40"
+            >
+              <ShuffleIcon className="h-4 w-4 text-muted" /> New exercise
+            </button>
           </div>
           <div ref={scoreRef}>
             <style>{`.syncopation-score g.syn-now{fill:var(--accent);stroke:var(--accent);color:var(--accent)}`}</style>

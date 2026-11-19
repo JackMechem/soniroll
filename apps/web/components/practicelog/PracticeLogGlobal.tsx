@@ -67,7 +67,8 @@ export default function PracticeLogGlobal() {
   }, []);
   return (
     <>
-      <Celebrations />
+      {/* No toast over "Share your progress" (one sat on its "Post to Community"). */}
+      <Celebrations hideToasts={sharing !== null} />
       {sharing && <ProgressShareDialog data={data} initialKind={sharing.kind} initialDate={sharing.date} celebrate={sharing.celebrate} onClose={() => setSharing(null)} />}
     </>
   );

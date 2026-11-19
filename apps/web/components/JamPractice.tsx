@@ -12,7 +12,7 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import TunesPanel from "@/components/TunesPanel";
-import { PlusIcon, StopwatchIcon } from "@/components/tools";
+import { MetronomeIcon, PlusIcon } from "@/components/tools";
 import { STANDARDS, standardToTune } from "@/lib/standards";
 import { CountOff, parseBeatsPerBar, playCountOff } from "@/lib/metronome";
 import type { BeatLevel } from "@/lib/clickEngine";
@@ -42,7 +42,7 @@ export default function JamPractice() {
   const [tunes, setTunes] = useSyncedTunes();
   const [pick, setPick] = useState<PickResult | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
-  // The tune search, opened from the Tunes I Know chip or the empty state below.
+  // The tune search, opened from the Picking from chip or the empty state below.
   const [adding, setAdding] = useState(false);
   const [isCounting, setIsCounting] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
@@ -185,7 +185,7 @@ export default function JamPractice() {
           <CollapsiblePanel
             id="jam-countoff"
             title="Click"
-            icon={StopwatchIcon}
+            icon={MetronomeIcon}
             summary={`${countOffBars}-bar count-off${keepGoingIndefinitely ? ", keeps going" : ""}`}
           >
             <label className="flex items-center justify-between gap-3 text-sm">

@@ -134,7 +134,8 @@ export function useSearchExtras(query: string, { charts: withCharts = true }: { 
       category: g as string,
       items: pageItems
         .filter((p) => p.group === g)
-        .map((p): Item => ({ href: p.href, label: p.label, detail: p.detail === p.group ? undefined : p.detail, icon: p.icon })),
+        // Every setting lives on the Account page, so each one says so (not just a few of them).
+        .map((p): Item => ({ href: p.href, label: p.label, detail: p.group === "Settings" ? "Account" : p.detail === p.group ? undefined : p.detail, icon: p.icon })),
     }))
     .filter((g) => g.items.length);
   // "help <tool>": that tool's (or page's) help topic.
@@ -265,7 +266,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         </div>
 
         <ul ref={listRef} role="listbox" className="max-h-96 overflow-y-auto p-1.5">
-          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches that. Try another word, like “chords”, “theme”, “help tuner” or a tune’s name.</li>}
+          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches that. Try another word, like “chords”, “theme”, “help tuner” or one of your tunes.</li>}
           {(() => {
             let index = -1;
             return groups.map(({ category, items }) => (

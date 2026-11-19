@@ -50,7 +50,7 @@ export default function RecordingsPage() {
       <Hero title="Library" icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="recordings" tabs={<LibraryTabs active="recordings" />}>
         {isAuthenticated && (
           <Toolbar>
-            <HeroSearch value={query} onChange={setQuery} placeholder="Search recordings" />
+            <HeroSearch value={query} onChange={setQuery} placeholder="Search recordings…" />
             <Link
               href="/recorder"
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:h-9"

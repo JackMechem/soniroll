@@ -89,8 +89,8 @@ export default function ChartsDashboard() {
       >
         <Toolbar>
           <HeroSearch value={query} onChange={setQuery} placeholder={totalSongs > 1 ? `Search ${totalSongs} charts…` : "Search charts…"} />
-          {/* Phones: Import shrinks to its icon, so the search keeps most of the row. */}
-          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
+          {/* Labelled on phones too (an icon alone didn't say what it does); search still has room. */}
+          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
           <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} />
         </Toolbar>
       </Hero>

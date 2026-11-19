@@ -17,6 +17,9 @@ import { SIGN_IN_PATH } from "@/lib/landing";
 import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 import { useSiteSettings } from "@/lib/siteSettings";
 
+/** The landing page with the sign-up form open. */
+const SIGN_UP_PATH = "/?auth=signup";
+
 /**
  * Storage plans. Every tool and feature is free; a plan only keeps files, recordings and songs
  * online, on all your devices (free accounts keep them on the device that saved them).
@@ -271,13 +274,21 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
         {/* Signed out: one sign-in button for all the plans, rather than one on every card. */}
         {!isAuthenticated && !isLoading && plans && plans.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent/10 p-4">
-            <p className="text-sm">Sign in, or make a free account, to get a plan.</p>
-            <Link
-              href={SIGN_IN_PATH}
-              className="inline-flex h-9 shrink-0 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
-            >
-              Sign in
-            </Link>
+            <p className="text-sm">Make a free account, or sign in, to get a plan.</p>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                href={SIGN_IN_PATH}
+                className="inline-flex h-9 items-center rounded-md bg-foreground/[0.06] px-4 text-sm font-medium hover:bg-surface-hover"
+              >
+                Sign in
+              </Link>
+              <Link
+                href={SIGN_UP_PATH}
+                className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+              >
+                Sign up free
+              </Link>
+            </div>
           </div>
         )}
         {plans === undefined ? (

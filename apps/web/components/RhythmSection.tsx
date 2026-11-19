@@ -1204,7 +1204,7 @@ export default function RhythmSection({
           {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           {running || downloading ? "Stop" : "Play"}
         </button>
-        <OptionsButton summary={`${bpm} BPM · ${style.name}`} onOpen={() => setOptionsOpen(true)} />
+        <OptionsButton summary={`${style.name} · ${bpm} BPM`} onOpen={() => setOptionsOpen(true)} />
       </div>
       <p className="min-h-5 text-center text-sm text-muted tabular-nums" aria-live="polite">
         {status}

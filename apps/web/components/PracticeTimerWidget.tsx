@@ -198,9 +198,11 @@ export default function PracticeTimerWidget({
                 <PauseIcon className="h-3.5 w-3.5" />
               )}
             </ControlButton>
-            <ControlButton onClick={skip} label="Skip to next segment">
-              <SkipForwardIcon className="h-3.5 w-3.5" />
-            </ControlButton>
+            {state.next && (
+              <ControlButton onClick={skip} label="Skip to next segment">
+                <SkipForwardIcon className="h-3.5 w-3.5" />
+              </ControlButton>
+            )}
           </>
         )}
         <ControlButton onClick={stop} label="Stop" danger>

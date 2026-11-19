@@ -404,7 +404,8 @@ export default function ChordChartEditor({
   const activeBar = bars[activeIndex];
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+    // Left-aligned like the other library pages (not centred in the wide shell).
+    <div className="flex w-full max-w-5xl flex-col gap-4">
       <PageHeader title={editing ? `Edit "${initial?.title}"` : "Create a chord chart"} back={() => guard.requestLeave(onClose)} />
 
       <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
@@ -416,7 +417,7 @@ export default function ChordChartEditor({
                 value={playlist}
                 onChange={setPlaylist}
                 options={[
-                  { value: NO_PLAYLIST, label: "No folder (All charts only)" },
+                  { value: NO_PLAYLIST, label: "No folder" },
                   ...playlists.map((name) => ({ value: name, label: name })),
                   { value: "", label: "New folder…" },
                 ]}
@@ -511,13 +512,18 @@ export default function ChordChartEditor({
         </div>
       </div>
 
-      <p className="text-xs text-muted">
-        <span className="pointer-coarse:hidden">Click</span>
-        <span className="hidden pointer-coarse:inline">Tap</span> a bar to type its chords — <code>C^7</code>, <code>F-7</code>, <code>Bb7#5/D</code>,{" "}
-        <code>NC</code> for no chord, or two chords separated by a space. Press Enter to move to
-        the next bar. Use the row below to give the active bar a section, a repeat barline, or a
-        coda.
-      </p>
+      <ul className="flex flex-col gap-0.5 text-xs text-muted">
+        <li>
+          <span className="pointer-coarse:hidden">Click</span>
+          <span className="hidden pointer-coarse:inline">Tap</span> a bar and type its chords: <code>C^7</code>, <code>F-7</code>,{" "}
+          <code>Bb7#5/D</code>, or <code>NC</code> for no chord. Two chords in a bar: put a space between them.
+        </li>
+        <li>
+          <span className="pointer-coarse:hidden">Enter</span>
+          <span className="hidden pointer-coarse:inline">The keyboard&apos;s Next key</span> moves to the next bar.
+        </li>
+        <li>The row under the chart adds a section, repeat signs or a coda to the selected bar.</li>
+      </ul>
 
       <PageFit fitHeight={false}>
         {rowsWithOffsets.map(({ placed, start }, rowIdx) => {
@@ -540,9 +546,11 @@ export default function ChordChartEditor({
                       value={bars[globalIndex].text}
                       onChange={(e) => updateBar(globalIndex, { text: e.target.value })}
                       onKeyDown={(e) => handleBarKeyDown(globalIndex, e)}
-                      placeholder={bars[globalIndex].isRepeatBar ? "% (ignored while on)" : "Type a chord"}
+                      enterKeyHint="next"
+                      // Short, so it fits the first bar (beside the time signature) at a readable size on phones.
+                      placeholder={bars[globalIndex].isRepeatBar ? "% (ignored while on)" : "Chord"}
                       // A plain, faint hint, so an empty bar never reads as one with a chord in it.
-                      className={`w-full min-w-0 bg-transparent text-center outline-none placeholder:font-sans placeholder:text-sm placeholder:text-muted/60 ${
+                      className={`w-full min-w-0 bg-transparent text-center outline-none placeholder:font-sans placeholder:text-sm placeholder:text-muted/60 max-sm:placeholder:text-lg ${
                         bars[globalIndex].isRepeatBar ? "opacity-40" : ""
                       } ${chordFont.className}`}
                       style={{ fontSize: QUALITY_SIZE }}
@@ -699,19 +707,29 @@ export default function ChordChartEditor({
         </div>
       )}
 
-      <div className="flex flex-wrap justify-end gap-2 border-t border-foreground/10 pt-4">
+      <button
+        type="button"
+        onClick={handleExport}
+        className="inline-flex h-9 items-center self-end rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+      >
+        Export as chart link
+      </button>
+
+      {/* Save and Cancel stay at the bottom of the screen (the chart and keypad are long on a
+          phone), like the routine editor's. */}
+      <div className="sticky bottom-0 z-20 -mx-4 -mb-16 flex gap-2 border-t border-foreground/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:-mx-6 sm:justify-end sm:px-6 lg:-mx-8 lg:px-8">
         <button
           type="button"
-          onClick={handleExport}
-          className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+          onClick={() => guard.requestLeave(onClose)}
+          className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover sm:h-9 sm:flex-none"
         >
-          Export as chart link
+          Cancel
         </button>
         <button
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40"
+          className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40 sm:h-9 sm:flex-none"
         >
           {saving ? "Saving…" : editing ? "Save changes" : "Save to library"}
         </button>

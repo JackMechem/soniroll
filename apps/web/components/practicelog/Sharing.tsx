@@ -10,7 +10,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { ProgressCardView, cardHeadline, progressCardFile } from "@/components/practicelog/ProgressCard";
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, DownloadIcon, LinkIcon, ShareIcon, UsersIcon } from "@/components/tools";
-import { type PracticeLogData, type ProgressCardKind, type ProgressCardRange, type Routine, MONTH_NAMES, WEEKDAY_NAMES, addDays, dayReportCard, fromDateKey, progressCard, toPublicRoutine, todayKey } from "@/lib/practiceLog";
+import { type PracticeLogData, type ProgressCardKind, type ProgressCardRange, type Routine, MONTH_NAMES, WEEKDAY_NAMES, addDays, dayReportCard, fromDateKey, goalOn, minutesOn, progressCard, toPublicRoutine, todayKey } from "@/lib/practiceLog";
 import { shareLink } from "@/lib/shareLink";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { siteOrigin } from "@/lib/siteOrigin";
@@ -103,7 +103,8 @@ export function ProgressShareDialog({
   initialKind?: ProgressCardKind;
   /** The day a "Day report" card is for (default today). */
   initialDate?: string;
-  /** Opened by finishing everything today: say so at the top. */
+  /** Opened from the "everything done" toast: say so at the top ("Day complete!" only once the
+      daily goal is met too). */
   celebrate?: boolean;
   onClose: () => void;
 }) {
@@ -164,7 +165,7 @@ export function ProgressShareDialog({
   }
 
   return (
-    <Dialog label={celebrate ? "Day complete!" : "Share your progress"} onClose={onClose} wide>
+    <Dialog label={celebrate ? (minutesOn(data, today) >= goalOn(data, today) ? "Day complete!" : "All tasks done!") : "Share your progress"} onClose={onClose} wide>
       {celebrate && <p className="-mt-2 text-sm text-muted">Every task done today. Here&apos;s your report to save or share.</p>}
       <div className="grid gap-2 sm:grid-cols-2">
         <Segmented label="Card" value={kind} onChange={(k) => { setKind(k); setPosted(null); }} options={KIND_OPTIONS} />

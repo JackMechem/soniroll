@@ -4,6 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
+import { formatPracticed } from "@/components/practicelog/minutes";
 import Momentum from "@/components/practicelog/Momentum";
 import DayTimer from "@/components/practicelog/DayTimer";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
@@ -220,7 +221,7 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
             <Link
               key={key}
               href={`/shed-log?date=${key}`}
-              title={m < 0 ? undefined : `${fromDateKey(key).toDateString()} · ${m > 0 ? formatMinutesShort(Math.round(m)) : "no practice"}`}
+              title={m < 0 ? undefined : `${fromDateKey(key).toDateString()} · ${m > 0 ? formatPracticed(m) : "no practice"}`}
               className={`aspect-square rounded-[3px] transition-transform hover:scale-125 ${key === today ? "ring-2 ring-accent" : ""}`}
               style={{ gridColumn: w + 1, gridRow: d + 2, background: m < 0 ? "transparent" : LEVEL_BG[dayLevel(m, goalOn(data, key))], pointerEvents: m < 0 ? "none" : undefined }}
             />

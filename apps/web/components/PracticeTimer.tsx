@@ -90,6 +90,12 @@ function blankDraft(): Draft {
   };
 }
 
+// The running controls: pills the height of the page's Start button.
+const RUN_PILL =
+  "inline-flex h-12 items-center justify-center gap-1.5 rounded-full px-6 text-sm font-semibold transition-colors";
+const RUN_PRIMARY = `${RUN_PILL} bg-accent text-accent-foreground hover:bg-accent-hover`;
+const RUN_SECONDARY = `${RUN_PILL} bg-foreground/[0.05] hover:bg-surface-hover`;
+
 export default function PracticeTimer() {
   const { sessions, loading, createSession, updateSession, deleteSession } = usePracticeSessions();
   const engineState = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -310,15 +316,18 @@ export default function PracticeTimer() {
               </Hint>
 
               {draft.type === "custom" ? (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3 sm:gap-2">
+                  {/* On a phone the name takes its own line, so the minutes, the 40px move buttons
+                      and Remove (set apart, so it isn't hit by mistake) fit on the next. */}
                   {draft.segments.map((segment, i) => (
-                    <div key={segment.id} className="flex items-center gap-1.5">
+                    <div key={segment.id} className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap">
                       <input
                         type="text"
                         value={segment.title}
                         onChange={(e) => updateSegment(i, { title: e.target.value })}
                         placeholder="e.g. Scales"
-                        className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/40"
+                        aria-label="Segment name"
+                        className="h-10 w-full min-w-0 sm:w-auto sm:flex-1 rounded-md bg-foreground/[0.05] px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/40"
                       />
                       <NumberField
                         value={Math.round(segment.minutes)}
@@ -326,16 +335,17 @@ export default function PracticeTimer() {
                         max={180}
                         onChange={(minutes) => updateSegment(i, { minutes })}
                         label={`${segment.title || "Segment"} minutes`}
-                        className="h-9 w-16 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
+                        className="h-10 w-16 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-accent/40"
                       />
                       <span className="shrink-0 text-xs text-muted">min</span>
+                      <span className="flex-1 sm:hidden" aria-hidden />
                       <button
                         type="button"
                         onClick={() => moveSegment(i, -1)}
                         disabled={i === 0}
                         aria-label="Move up"
                         title="Move up"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
                       >
                         ↑
                       </button>
@@ -345,7 +355,7 @@ export default function PracticeTimer() {
                         disabled={i === draft.segments.length - 1}
                         aria-label="Move down"
                         title="Move down"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-30"
                       >
                         ↓
                       </button>
@@ -354,9 +364,9 @@ export default function PracticeTimer() {
                         onClick={() => removeSegment(i)}
                         aria-label="Remove segment"
                         title="Remove"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                        className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
                       >
-                        <TrashIcon className="h-3.5 w-3.5" />
+                        <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
@@ -475,46 +485,28 @@ export default function PracticeTimer() {
             <p className="text-sm text-muted">Last step of this session.</p>
           ) : null}
           <div className="flex flex-col items-center gap-7">
+          {/* Pill buttons like the Start that began the run: the one that answers Space (Pause,
+              Resume or Continue) is the filled one. Skip only shows when there's a next step. */}
           <div className="flex flex-wrap items-center justify-center gap-3">
             {engineState.alarming ? (
-              <button
-                type="button"
-                onClick={skip}
-                className="flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
-              >
+              <button type="button" onClick={skip} className={RUN_PRIMARY}>
                 <PlayIcon className="h-4 w-4" /> Continue
               </button>
             ) : engineState.paused ? (
-              <button
-                type="button"
-                onClick={resume}
-                className="flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
-              >
+              <button type="button" onClick={resume} className={RUN_PRIMARY}>
                 <PlayIcon className="h-4 w-4" /> Resume
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={pause}
-                className="flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
-              >
+              <button type="button" onClick={pause} className={RUN_PRIMARY}>
                 <PauseIcon className="h-4 w-4" /> Pause
               </button>
             )}
-            {!engineState.alarming && (
-              <button
-                type="button"
-                onClick={skip}
-                className="h-10 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
-              >
+            {!engineState.alarming && engineState.next && (
+              <button type="button" onClick={skip} className={`${RUN_SECONDARY} text-foreground`}>
                 Skip
               </button>
             )}
-            <button
-              type="button"
-              onClick={stop}
-              className="flex h-10 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium text-danger transition-colors hover:bg-surface-hover"
-            >
+            <button type="button" onClick={stop} className={`${RUN_SECONDARY} text-danger`}>
               <StopIcon className="h-4 w-4" /> Stop
             </button>
           </div>

@@ -23,6 +23,7 @@ import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
 import { GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
 import { formatChordParts, parseChordInput, pcLabel } from "@/lib/chords";
+import { prettyQuality } from "@/lib/iRealPro";
 import {
   AnswerMode,
   DEFAULT_ENABLED_PROGRESSION_IDS,
@@ -33,6 +34,8 @@ import {
   chordNameText,
   firstChordRoot,
   gradeAnswer,
+  isMinorFamily,
+  parseNumeral,
   prettyNumeral,
   progressionById,
   progressionRound,
@@ -64,6 +67,7 @@ import { formatFileDate } from "@/lib/files";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 import { GRADE_COLOR, ANSWER_INPUT, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK, IDLE_RING, bestPassingMs, passedRound, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -186,6 +190,47 @@ function prettyToken(token: string, mode: AnswerMode): string {
   if (!parsed) return token;
   const parts = formatChordParts(parsed);
   return `${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ""}`;
+}
+
+/** A progression numeral split into accidental, numeral and suffix ("iih7" → "", "ii", "h7"). */
+const NUMERAL_PARTS = /^([b#♭♯]?)(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)(.*)$/;
+
+/** Why a chord that names the right numeral (or root) was still marked wrong, shown under its
+    slot ("missing ø7", "should be minor"), so "ii V I" for "iiø7 V7 i" doesn't read as 0 / 3 for
+    no reason. Null when the numeral/root itself is wrong (the slot already shows the right one). */
+function slotReason(
+  token: string | undefined,
+  round: ProgressionRound,
+  index: number,
+  mode: AnswerMode,
+  qualities: boolean,
+): string | null {
+  if (!token) return null;
+  const chord = round.progression.chords[index];
+  const minor = isMinorFamily(chord.quality.id);
+  let typedRaw: string;
+  let targetSuffix: string;
+  if (mode === "numerals") {
+    const parsed = parseNumeral(token);
+    if (!parsed || parsed.degree !== chord.degree) return null;
+    if (parsed.lower !== minor) return minor ? "should be lowercase" : "should be upper case";
+    typedRaw = parsed.qualityRaw;
+    targetSuffix = NUMERAL_PARTS.exec(chord.numeral)?.[3] ?? "";
+  } else {
+    const parsed = parseChordInput(token);
+    if (!parsed || parsed.rootPc !== (round.tonicPc + chord.degree) % 12) return null;
+    if (parsed.bassPc !== null) return "no slash bass";
+    const typedMinor = parsed.qualityId
+      ? isMinorFamily(parsed.qualityId)
+      : /^(-|m(?!aj)|min|h|ø|o|°|dim)/i.test(parsed.qualityRaw.trim());
+    if (typedMinor !== minor) return minor ? "should be minor" : "should be major";
+    typedRaw = parsed.qualityRaw;
+    targetSuffix = chord.quality.suffix;
+  }
+  if (!qualities) return null;
+  const target = prettyQuality(targetSuffix);
+  if (!target) return "just the triad";
+  return typedRaw.trim() ? `should be ${target}` : `missing ${target}`;
 }
 
 const UPPER_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"];
@@ -756,23 +801,9 @@ export default function GuessTheProgression() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">{formatDuration(entry.elapsedMs)}</span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} · {formatFileDate(entry.at)}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={entry.score === entry.total ? { color: GRADE_COLOR.correct } : undefined}
-                      >
-                        {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} · {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -1087,7 +1118,8 @@ export default function GuessTheProgression() {
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
-        {!(learnMode && !running) && (
+        {/* Steps aside while a finished run's results show. */}
+        {!(learnMode && !running) && !(summary && !running) && (
         // Smaller while a round runs, so the keypads, Submit and Stop all fit on a laptop screen.
         <div className={`relative flex items-center justify-center p-4 text-center ${running ? "h-28 w-28" : "h-36 w-36 sm:h-44 sm:w-44"}`}>
           {!running && <span aria-hidden className={IDLE_RING} />}
@@ -1105,7 +1137,7 @@ export default function GuessTheProgression() {
         </div>
         )}
         {/* Before the first round, say what's about to happen (like the other ear trainers). */}
-        {!learnMode && !running && (
+        {!learnMode && !running && !summary && (
           <p className="max-w-sm text-center text-sm text-muted">Press Start, listen to the chords, then write them down.</p>
         )}
 
@@ -1116,6 +1148,7 @@ export default function GuessTheProgression() {
                 const mark = marks?.[i];
                 const shown = status ? answerFor(round, i) : typedTokens[i] ? prettyToken(typedTokens[i], answerMode) : "?";
                 const color = status ? (mark ? GRADE_COLOR.correct : GRADE_COLOR.incorrect) : undefined;
+                const reason = status && !mark ? slotReason(typedTokens[i], round, i, answerMode, typeQualities) : null;
                 return (
                   // A fixed height with room for the "You: …" line, so answering doesn't grow it.
                   <div
@@ -1128,16 +1161,17 @@ export default function GuessTheProgression() {
                     style={color ? { borderColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` } : undefined}
                   >
                     <span
-                      className={`text-lg font-semibold leading-7 ${!status && !typedTokens[i] ? "text-muted" : ""}`}
+                      className={`text-lg font-semibold ${reason ? "leading-6" : "leading-7"} ${!status && !typedTokens[i] ? "text-muted" : ""}`}
                       style={color ? { color } : undefined}
                     >
                       {shown}
                     </span>
                     {status && !mark && typedTokens[i] && (
-                      <span className="text-xs text-muted">
+                      <span className="text-xs leading-4 text-muted">
                         You: {prettyToken(typedTokens[i], answerMode)}
                       </span>
                     )}
+                    {reason && <span className="text-xs leading-4 text-muted">{reason}</span>}
                   </div>
                 );
               })}

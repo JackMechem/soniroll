@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
@@ -49,9 +49,16 @@ export function AuthForm({
   // covers both a fresh sign-up and any pre-existing account that's never verified its email.
   const [step, setStep] = useState<"credentials" | "code">("credentials");
   const [email, setEmail] = useState("");
-  // Shown once you leave the email field with something that isn't an address yet.
+  // Shown once you leave the email field with something that isn't an address yet, or try to
+  // go on without one.
   const [emailBad, setEmailBad] = useState(false);
   const [password, setPassword] = useState("");
+  // Shown when you try to go on with no password (or, signing up, one that's too short).
+  const [passwordBad, setPasswordBad] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const passwordOk = flow === "signUp" ? password.length >= 8 : password.length > 0;
+  const ready = looksLikeEmail(email) && passwordOk;
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -59,6 +66,18 @@ export function AuthForm({
 
   async function onSubmitCredentials(e: FormEvent) {
     e.preventDefault();
+    // Not filled in yet: say what's missing under the field (and put the cursor there) instead
+    // of a button that just doesn't do anything.
+    if (!looksLikeEmail(email)) {
+      setEmailBad(true);
+      emailRef.current?.focus();
+      return;
+    }
+    if (!passwordOk) {
+      setPasswordBad(true);
+      passwordRef.current?.focus();
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -181,10 +200,11 @@ export function AuthForm({
         </p>
       </div>
 
-      <form onSubmit={onSubmitCredentials} className="flex flex-col gap-3">
+      <form onSubmit={onSubmitCredentials} noValidate className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-muted">Email</span>
           <input
+            ref={emailRef}
             type="email"
             required
             autoFocus
@@ -198,23 +218,34 @@ export function AuthForm({
             aria-invalid={emailBad}
             className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
-          {emailBad && <span className="text-xs text-danger">Enter a full email address, like name@example.com.</span>}
+          {emailBad && (
+            <span className="text-xs text-danger">
+              {email.trim() ? "Enter a full email address, like name@example.com." : "Enter your email address."}
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-muted">Password</span>
           <input
+            ref={passwordRef}
             type="password"
             required
-            minLength={8}
+            minLength={flow === "signUp" ? 8 : undefined}
             autoComplete={flow === "signIn" ? "current-password" : "new-password"}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setPasswordBad(false);
+            }}
+            aria-invalid={passwordBad}
             className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
           />
-          {flow === "signUp" && (
-            <span className={`text-xs ${password && password.length < 8 ? "text-danger" : "text-muted"}`}>
+          {flow === "signUp" ? (
+            <span className={`text-xs ${(password && password.length < 8) || passwordBad ? "text-danger" : "text-muted"}`}>
               At least 8 characters
             </span>
+          ) : (
+            passwordBad && <span className="text-xs text-danger">Enter your password.</span>
           )}
         </label>
 
@@ -237,11 +268,15 @@ export function AuthForm({
         {/* The main button runs the whole width, like Google's below; the dialog's × (or Escape,
             or a click outside) cancels. */}
         {/* Until the form is filled in it's a plain grey button with readable text: the faded
-            accent (dark text on muted blue in dark themes) looked broken rather than not-ready. */}
+            accent (dark text on muted blue in dark themes) looked broken rather than not-ready.
+            It still works then (and so does Enter), to say what's missing under the field. */}
         <button
           type="submit"
-          disabled={submitting || !email || password.length < 8}
-          className="h-10 w-full rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-foreground/10 disabled:text-muted disabled:hover:bg-foreground/10"
+          disabled={submitting}
+          aria-disabled={!ready || undefined}
+          className={`h-10 w-full rounded-md px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+            ready ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/10 text-muted"
+          }`}
         >
           {flow === "signIn" ? "Sign in" : "Sign up"}
         </button>
@@ -252,6 +287,9 @@ export function AuthForm({
             onClick={() => {
               setFlow(flow === "signIn" ? "signUp" : "signIn");
               setError(null);
+              setPasswordBad(false);
+              // The form stays mounted, so its autoFocus doesn't run again: back to the email.
+              emailRef.current?.focus();
             }}
             className="py-1 text-left text-sm text-muted"
           >

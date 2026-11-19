@@ -76,6 +76,7 @@ import { micErrorMessage } from "@/lib/micError";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -281,6 +282,8 @@ export default function IntervalTrainer() {
   // Counts as practice in the Shed Log while it runs.
   useToolActivity("/interval-trainer", running);
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Use Timed instead". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -685,6 +688,7 @@ export default function IntervalTrainer() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.stop();
@@ -717,6 +721,7 @@ export default function IntervalTrainer() {
         void listAudioInputs().then(setInputs);
       } catch (e) {
         setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
+        setMicFailed(true);
         return;
       }
       const queue = weak
@@ -986,37 +991,14 @@ export default function IntervalTrainer() {
                   {[...matchingHistory]
                     .sort((a, b) => b.at - a.at)
                     .map((entry, i) => (
-                      <div
-                        key={i}
-                        className={PANEL_ROW}
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium tabular-nums">
-                            {formatDuration(entry.elapsedMs)}
-                          </span>
-                          <span className="text-xs text-muted">
-                            {entry.config.drillMode
-                              ? "Drill"
-                              : entry.config.chainIntervals
-                                ? "Chained"
-                                : "Quiz"}{" "}
-                            · {formatFileDate(entry.at)}
-                          </span>
-                        </div>
-                        <span
-                          className="tabular-nums text-muted"
-                          style={
-                            entry.score === entry.total
-                              ? { color: GRADE_COLOR.correct }
-                              : undefined
-                          }
-                        >
-                          {entry.score % 1 === 0
-                            ? entry.score
-                            : entry.score.toFixed(1)}
-                          /{entry.total}
-                        </span>
-                      </div>
+                      <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                        {entry.config.drillMode
+                          ? "Drill"
+                          : entry.config.chainIntervals
+                            ? "Chained"
+                            : "Quiz"}{" "}
+                        · {formatFileDate(entry.at)}
+                      </HistoryRow>
                     ))}
                 </div>
               )}
@@ -1212,13 +1194,13 @@ export default function IntervalTrainer() {
               it and the pause after (Listen). Same setting (`roundSeconds`) either way. */}
           <CollapsiblePanel
             id="interval-timing"
-            title={listenMode ? "Time to play" : "Time per interval"}
+            title="Time per interval"
             icon={StopwatchIcon}
             summary={`${roundSeconds} s`}
           >
             {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
-              label={listenMode ? "Time to play" : "Time per interval"}
+              label="Time per interval"
               value={roundSeconds}
               unit=" s"
               min={MIN_ROUND_SECONDS}
@@ -1655,7 +1637,24 @@ export default function IntervalTrainer() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && listenMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setListenMode(false);
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Use Timed instead
+            </button>
+          )}
+        </div>
+      )}
 
       {/* While the results show, their own "Try again" is the one start button. */}
       {!(summary && !running) && (

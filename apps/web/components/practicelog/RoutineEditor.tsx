@@ -5,6 +5,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
+import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import { RoutineIconButton } from "@/components/practicelog/RoutineIcon";
@@ -45,6 +46,10 @@ const TEXTAREA = "resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm out
 export default function RoutineEditorPage({ id, date }: { id?: string; date?: string }) {
   const log = usePracticeLog();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  // A new routine keeps one id while the page is open: a fresh one on every render remounted the
+  // editor (its `key`) whenever the log changed — a sync wiped what you'd typed, and saving lost
+  // the leave guard's way out.
+  const [draftId] = useState(() => newRoutine(todayKey(), 0).id);
   if (!log.ready || !mounted) {
     return (
       <PageShell>
@@ -61,7 +66,7 @@ export default function RoutineEditorPage({ id, date }: { id?: string; date?: st
       </PageShell>
     );
   }
-  const initial = existing ?? newRoutine(isDateKey(date) ? date : todayKey(), log.data.routines.length % ROUTINE_COLORS.length);
+  const initial = existing ?? { ...newRoutine(isDateKey(date) ? date : todayKey(), log.data.routines.length % ROUTINE_COLORS.length), id: draftId };
   return <Editor key={initial.id} initial={initial} isNew={!existing} log={log} returnDate={isDateKey(date) ? date : undefined} />;
 }
 
@@ -78,6 +83,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
   const [r, setR] = useState<Routine>(initial);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The task just added with "Add a task": its name box gets the focus, so you can type straight away.
+  const [added, setAdded] = useState<string | null>(null);
   // Tasks whose notes box was opened with "+ Notes" (one that has notes always shows it).
   const [notesOpen, setNotesOpen] = useState<ReadonlySet<string>>(() => new Set());
   const set = (patch: Partial<Routine>) => setR((prev) => ({ ...prev, ...patch }));
@@ -91,6 +98,12 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       [tasks[i], tasks[j]] = [tasks[j], tasks[i]];
       return { ...prev, tasks };
     });
+
+  // Leaving with unsaved changes (Back, Cancel, the browser's Back, a link) asks first.
+  const [start] = useState(initial); // as it was when the page opened (a sync can change `initial`)
+  const dirty = JSON.stringify(r) !== JSON.stringify(start);
+  const { requestLeave, leave, dialog: leaveDialog } = useLeaveGuard(dirty, "Your changes to this routine haven't been saved.", () => router.push("/shed-log"));
+  const cancel = () => requestLeave(() => router.back());
 
   const done = () => router.push(isNew ? `/shed-log${returnDate ? `?date=${returnDate}` : ""}` : `/shed-log/routine?id=${encodeURIComponent(r.id)}`);
 
@@ -109,11 +122,13 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       requestAnimationFrame(() => errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
       return;
     }
+    // A task row left empty (no name, notes, subtasks or attachments) is dropped, not saved as
+    // "Untitled task".
     const tasks = r.tasks
-      .filter((t) => t.title.trim() || t.minutes > 0)
+      .filter((t) => t.title.trim() || t.notes.trim() || (t.subtasks ?? []).some((x) => x.title.trim()) || t.attachments.length > 0)
       .map((t) => ({ ...t, title: t.title.trim(), subtasks: (t.subtasks ?? []).filter((x) => x.title.trim()).map((x) => ({ ...x, title: x.title.trim() })) }));
     log.saveRoutine({ ...r, name: r.name.trim(), tasks });
-    done();
+    leave(done);
   }
 
   const color = ROUTINE_COLORS[r.color % ROUTINE_COLORS.length];
@@ -123,19 +138,10 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
   return (
     <PageShell>
       <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
-        <BackButton onClick={() => router.back()} />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
-          {/* Phones get these in a bar stuck to the bottom instead (below). */}
-          <div className="flex gap-2 max-sm:hidden">
-            <button type="button" onClick={() => router.back()} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
-              Cancel
-            </button>
-            <button type="button" onClick={save} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-              Save
-            </button>
-          </div>
-        </div>
+        <BackButton onClick={cancel} />
+        {/* Cancel and Save are in the bar stuck to the bottom (below), in reach however far down
+            the form you are. */}
+        <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
       </div>
       {error && <p ref={errorRef} className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
@@ -285,6 +291,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
                 <input
                   value={task.title}
+                  autoFocus={task.id === added}
                   onChange={(e) => setTask(i, { title: e.target.value })}
                   placeholder="Task — e.g. Scales in all 12 keys"
                   aria-label={`Task ${i + 1}`}
@@ -356,7 +363,11 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         </ol>
         <button
           type="button"
-          onClick={() => set({ tasks: [...r.tasks, newTask()] })}
+          onClick={() => {
+            const task = newTask();
+            setAdded(task.id);
+            set({ tasks: [...r.tasks, task] });
+          }}
           className="flex h-9 items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/20 text-sm font-medium text-muted hover:border-foreground/40 hover:text-foreground"
         >
           <PlusIcon className="h-4 w-4" /> Add a task
@@ -375,15 +386,17 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           <TrashIcon className="h-4 w-4" /> Delete routine
         </button>
       )}
-      {/* Phones: Cancel and Save stay in reach at the bottom while you scroll the form. */}
-      <div className="sticky bottom-0 z-20 -mx-4 -mb-16 flex gap-2 border-t border-foreground/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:hidden">
-        <button type="button" onClick={() => router.back()} className="h-11 flex-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
+      {/* Cancel and Save stay in reach at the bottom while you scroll the form (on a phone, two
+          big buttons; wider, a pair on the right). */}
+      <div className="sticky bottom-0 z-20 -mx-4 -mb-16 flex gap-2 border-t border-foreground/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:-mx-6 sm:justify-end sm:px-6 lg:-mx-8 lg:px-8">
+        <button type="button" onClick={cancel} className="h-11 flex-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover sm:h-9 sm:flex-none">
           Cancel
         </button>
-        <button type="button" onClick={save} className="h-11 flex-1 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+        <button type="button" onClick={save} className="h-11 flex-1 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:h-9 sm:flex-none">
           Save
         </button>
       </div>
+      {leaveDialog}
       {confirmDelete && (
         <ConfirmDialog
           title="Delete this routine?"
@@ -392,7 +405,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => {
             log.deleteRoutine(r.id);
-            router.push("/shed-log/routines");
+            leave(() => router.push("/shed-log/routines"));
           }}
         />
       )}

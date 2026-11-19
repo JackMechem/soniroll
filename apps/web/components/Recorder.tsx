@@ -4,7 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { SoundOptions, SteppedField, TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
@@ -18,7 +18,7 @@ import { Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components
 import { SettingChip } from "@/components/SettingsBar";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
-import { MetronomeIcon, MicIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon } from "@/components/tools";
+import { MetronomeIcon, MicIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon, UploadIcon } from "@/components/tools";
 import { type InputDevice, listAudioInputs } from "@/lib/audioInput";
 import { type BeatLevel, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
 import { NEXT_LEVEL, clampBpm, defaultAccents, defaultSubAccents, nearestNoteValue, useTapTempo } from "@/lib/meterControls";
@@ -197,6 +197,11 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
     draftTake = next;
     setTakeState(next);
   };
+  // When the mic can't be used, a recording made elsewhere can still be saved like a take.
+  const uploadInput = useRef<HTMLInputElement>(null);
+  async function uploadInstead(file: File) {
+    setTake({ blob: file, durationSec: await audioDuration(file) });
+  }
 
   // Leaving mid-take or with the save dialog open: ask first (links, the menu, Back; closing or
   // reloading the tab gets the browser's own prompt). If you leave anyway, a take in progress is
@@ -437,48 +442,53 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               hint="Plays a metronome click (with a count-in) while you record. It isn't recorded unless your microphone picks it up."
             />
           </div>
-          <TempoHero
-            bpm={bpm}
-            setBpm={setBpm}
-            beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-            beatUnit={activeSection?.beatUnit ?? beatUnit}
-            onTap={tap}
-            tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
-          />
-          <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
-          <Segmented
-            label="Meter"
-            value={useStructure ? "structure" : "single"}
-            onChange={(v) => updateSettings({ useStructure: v === "structure" })}
-            disabled={busy}
-            options={[
-              { value: "single", label: "One meter" },
-              { value: "structure", label: "Changing meters" },
-            ]}
-          />
-          {useStructure ? (
-            <div className="w-full text-left">
-              <StructureEditor
-                structure={structure}
-                onChange={(s) => updateSettings({ structure: s })}
-                running={clicking}
-                activeFormIndex={clicking ? click.formIndex : null}
-                playingBeat={click.currentBeat}
-                playingSub={click.currentSub}
+          {/* Everything below is about the click, so it only shows while the click is on. */}
+          {settings.metronome && (
+            <>
+              <TempoHero
+                bpm={bpm}
+                setBpm={setBpm}
+                beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
+                beatUnit={activeSection?.beatUnit ?? beatUnit}
+                onTap={tap}
+                tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
               />
-            </div>
-          ) : (
-            <div className="flex w-full flex-col gap-4">
-              <TimeSignatureControl
-                beatsPerBar={beatsPerBar}
-                beatUnit={beatUnit}
-                onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
-                onSetBeatUnit={(u) => updateSettings({ beatUnit: u })}
+              <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
+              <Segmented
+                label="Meter"
+                value={useStructure ? "structure" : "single"}
+                onChange={(v) => updateSettings({ useStructure: v === "structure" })}
+                disabled={busy}
+                options={[
+                  { value: "single", label: "One meter" },
+                  { value: "structure", label: "Changing meters" },
+                ]}
               />
-              <SubdivisionPicker value={subdivision} onChange={(n) => updateSettings({ subdivision: n })} />
-            </div>
+              {useStructure ? (
+                <div className="w-full text-left">
+                  <StructureEditor
+                    structure={structure}
+                    onChange={(s) => updateSettings({ structure: s })}
+                    running={clicking}
+                    activeFormIndex={clicking ? click.formIndex : null}
+                    playingBeat={click.currentBeat}
+                    playingSub={click.currentSub}
+                  />
+                </div>
+              ) : (
+                <div className="flex w-full flex-col gap-4">
+                  <TimeSignatureControl
+                    beatsPerBar={beatsPerBar}
+                    beatUnit={beatUnit}
+                    onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
+                    onSetBeatUnit={(u) => updateSettings({ beatUnit: u })}
+                  />
+                  <SubdivisionPicker value={subdivision} onChange={(n) => updateSettings({ subdivision: n })} />
+                </div>
+              )}
+              <p className="text-xs text-muted">The click plays through your speakers, so the microphone picks it up unless you wear headphones.</p>
+            </>
           )}
-          <p className="text-xs text-muted">The click plays through your speakers, so the microphone picks it up unless you wear headphones.</p>
         </div>
       </SettingChip>
 
@@ -656,7 +666,33 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
             {settings.metronome && !busy && settings.countInBars > 0 && `${settings.countInBars}-bar count-in`}
           </span>
         </div>
-        {rec.error && <p className="text-sm text-danger">{rec.error}</p>}
+        {rec.error && (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-danger">{rec.error}</p>
+            {!busy && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => uploadInput.current?.click()}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+                >
+                  <UploadIcon className="h-4 w-4" /> Upload a recording instead
+                </button>
+                <input
+                  ref={uploadInput}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void uploadInstead(file);
+                  }}
+                />
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {take && (
@@ -675,4 +711,20 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
       {guard.dialog}
     </ToolLayout>
   );
+}
+
+/** An audio file's length in seconds, read from its metadata (0 when the browser can't tell). */
+function audioDuration(file: Blob): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    const finish = (sec: number) => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(sec) && sec > 0 ? sec : 0);
+    };
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => finish(audio.duration);
+    audio.onerror = () => finish(0);
+    audio.src = url;
+  });
 }

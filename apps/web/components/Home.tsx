@@ -565,13 +565,22 @@ export default function Home() {
           </header>
         )}
 
+        {/* Search results: only the groups with something in them (like the menu's search), and
+            one line when nothing matches at all. */}
         {q ? (
           <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            <Card title="Tools">
-              {toolMatches.length ? <ToolRows items={toolMatches} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} /> : <Empty>No tools match “{q}”.</Empty>}
-            </Card>
-            <Card title="Your tunes">
-              {tuneMatches.length ? (
+            {!toolMatches.length && !tuneMatches.length && !chartMatches.length && (
+              <Card title="Search">
+                <Empty>Nothing matches “{q}”.</Empty>
+              </Card>
+            )}
+            {toolMatches.length > 0 && (
+              <Card title="Tools">
+                <ToolRows items={toolMatches} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
+              </Card>
+            )}
+            {tuneMatches.length > 0 && (
+              <Card title="Your tunes">
                 <div className="-mx-2 flex flex-col">
                   {tuneMatches.map(({ tune, list }) => (
                     <Link key={tune.id} href={tuneHref(list, tune.id)} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
@@ -583,12 +592,10 @@ export default function Home() {
                     </Link>
                   ))}
                 </div>
-              ) : (
-                <Empty>No tunes match.</Empty>
-              )}
-            </Card>
-            <Card title="Your chord charts">
-              {chartMatches.length ? (
+              </Card>
+            )}
+            {chartMatches.length > 0 && (
+              <Card title="Your chord charts">
                 <div className="-mx-2 flex flex-col">
                   {chartMatches.map((c) => (
                     <Link key={c.id} href={chartHref(c.id)} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
@@ -600,10 +607,8 @@ export default function Home() {
                     </Link>
                   ))}
                 </div>
-              ) : (
-                <Empty>No charts match.</Empty>
-              )}
-            </Card>
+              </Card>
+            )}
           </div>
         ) : (
           <DashboardGrid

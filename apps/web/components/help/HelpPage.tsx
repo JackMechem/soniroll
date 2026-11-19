@@ -42,7 +42,9 @@ function TopicList({ query, selected, onPick }: { query: string; selected: strin
                     onClick={() => onPick(t.id)}
                     aria-current={on ? "page" : undefined}
                     className={`flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm transition-colors lg:py-1.5 ${
-                      on ? "bg-surface-hover font-medium text-foreground" : "text-foreground/80 hover:bg-surface-hover hover:text-foreground"
+                      // Marked only where the list and the open topic show side by side (narrower,
+                      // the list shows alone, so nothing looks picked before you pick).
+                      on ? "text-foreground/80 hover:bg-surface-hover hover:text-foreground lg:bg-surface-hover lg:font-medium lg:text-foreground" : "text-foreground/80 hover:bg-surface-hover hover:text-foreground"
                     }`}
                   >
                     <TopicIcon topic={t} size="sm" />

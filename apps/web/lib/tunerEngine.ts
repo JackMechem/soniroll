@@ -144,6 +144,14 @@ export async function startTunerListening(inputDeviceId: string): Promise<boolea
   }
 }
 
+/** Drops a mic error once it no longer applies (the Tuner calls it when you use the tone
+    generator instead, which doesn't need the mic). */
+export function clearTunerError() {
+  if (error === null) return;
+  error = null;
+  notify();
+}
+
 export function stopTunerListening() {
   input?.stop();
   input = null;

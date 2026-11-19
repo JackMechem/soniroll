@@ -73,8 +73,9 @@ function Bar({
   if (number === undefined) return bar;
   // The number sits above the bar, in its own row: drawn inside, over the top segment, it looked
   // muddled on phones (FB-25). Subdivision ticks have none and line up by their bottoms.
+  // The gap clears the playing beat's ring (2px offset + 2px ring, scaled 105%) by about 4px.
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2.5">
       <span
         aria-hidden
         className={`text-xs font-semibold leading-none tabular-nums ${active ? "text-foreground" : "text-muted"} ${level === 0 ? "line-through" : ""}`}
@@ -174,7 +175,7 @@ export default function BeatIndicator({
   );
   if (!cycleHint || !onCycle) return row;
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3">
       {row}
       <p className="text-xs text-muted">
         <span className="pointer-coarse:hidden">Click</span>

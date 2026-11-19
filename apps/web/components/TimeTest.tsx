@@ -48,6 +48,7 @@ import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
 import { toolPresets } from "@/lib/toolPresets";
+import { usePaneKeyGuard } from "@/lib/paneContext";
 
 const COMMON_METERS: [number, number][] = [
   [4, 4],
@@ -298,11 +299,12 @@ export default function TimeTest() {
   };
   useSpaceToggle(toggleRecording);
   const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  const forThisPane = usePaneKeyGuard();
   useEffect(() => {
     keyRef.current = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (e.key !== "r" && e.key !== "R") return;
-      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || calibrating) return;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || calibrating || !forThisPane(e)) return;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest("[role='dialog']"))) return;
       e.preventDefault();
       toggleRecording();
@@ -319,7 +321,7 @@ export default function TimeTest() {
   const countInLeft =
     recording && (tick === null || tick.bar < countInBars) ? (tick ? countInBars * beatsPerBar - (tick.bar * beatsPerBar + tick.beat) : countInBars * beatsPerBar) : null;
   const elapsed = recording ? Math.max(0, (now - recStart) / 1000) : 0;
-  const notesValue = settings.notesPerBeat === 0 ? "Auto" : (SUB_LABELS[settings.notesPerBeat] ?? `${settings.notesPerBeat} per beat`);
+  const notesValue = settings.notesPerBeat === 0 ? "Work it out" : (SUB_LABELS[settings.notesPerBeat] ?? `${settings.notesPerBeat} per beat`);
 
   const changeBeats = (n: number) => update({ beatsPerBar: n, accents: defaultAccents(n, accents) });
   const cycleBeat = (i: number) => update({ accents: accents.map((l, j) => (j === i ? NEXT_LEVEL[l] : l)) });
@@ -413,14 +415,14 @@ export default function TimeTest() {
             </KeyHint>
           </div>
           {!calibrated && phase === "idle" && (
-            <div className="flex max-w-sm flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center text-xs text-muted">
-              <span>Calibrate first so your setup&apos;s delay doesn&apos;t skew the results.</span>
+            <div className="flex max-w-sm flex-col items-center gap-2 text-center">
+              <span className="text-xs text-muted">Calibrate first so your setup&apos;s delay doesn&apos;t skew the results.</span>
               <button
                 type="button"
                 onClick={() => setMicOpen(true)}
-                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
               >
-                <MicIcon className="h-3.5 w-3.5 text-muted" />
+                <MicIcon className="h-4 w-4 text-muted" />
                 Calibrate…
               </button>
             </div>

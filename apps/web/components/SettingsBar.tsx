@@ -26,7 +26,10 @@ export function SettingsBar({ children, fit = false }: { children: ReactNode; /*
   return (
     <div
       className={`flex w-full flex-wrap items-stretch justify-center gap-2 ${
-        fit ? "" : "sm:w-max sm:max-w-[min(46rem,calc(100cqw-2rem))] sm:shrink-0"
+        // Wider on a big desktop window (up to 960px, leaving room for the sidebar) so a tool's
+        // chips fit one row at 1440 instead of leaving one alone on a second row; never narrower
+        // than before. `lg:` never applies in a split-screen pane.
+        fit ? "" : "sm:w-max sm:max-w-[min(46rem,calc(100cqw-2rem))] sm:shrink-0 lg:max-w-[min(60rem,max(46rem,calc(100cqw-28rem)))]"
       }`}
     >
       {children}
@@ -45,19 +48,22 @@ export const TOUCH_HIT_ROUND =
 const GAP = 8; // between the chip and its popover
 const MARGIN = 16; // kept clear at the screen's edges
 const SM = 640; // Tailwind's `sm` breakpoint: below it the popover is a bottom sheet
+const TOP_CLEAR = 56 + 8; // the page's header bar (56px; a pane's top bar is the same) and a gap
 
 type Placement = { style: CSSProperties; below: boolean };
 
 /** Where the popover goes on a wider screen: just above its chip (or below it, for a chip near
     the top of the screen with more room underneath), centred on it but kept on screen, and never
-    taller than the space it opens into. It's `position: fixed`, so a long
-    popover scrolls inside itself instead of making the page scroll. */
+    taller than the space it opens into. Opening upward it stops under the page's header bar (or
+    the split-screen pane's top bar), so it never covers the tool's title. It's `position: fixed`,
+    so a long popover scrolls inside itself instead of making the page scroll. */
 function place(chip: HTMLElement, width: number): Placement | null {
   if (window.innerWidth < SM) return null;
   const r = chip.getBoundingClientRect();
   const w = Math.min(width, window.innerWidth - 2 * MARGIN);
   const left = Math.min(Math.max(r.left + r.width / 2 - w / 2, MARGIN), window.innerWidth - w - MARGIN);
-  const spaceAbove = r.top - GAP - MARGIN;
+  const paneTop = chip.closest("[data-pane]")?.getBoundingClientRect().top ?? 0;
+  const spaceAbove = r.top - GAP - Math.max(MARGIN, paneTop + TOP_CLEAR);
   const spaceBelow = window.innerHeight - r.bottom - GAP - MARGIN;
   if (spaceBelow > spaceAbove) {
     return {
@@ -298,14 +304,16 @@ export function SettingChip({
                 sheet ? "fixed inset-x-3 bottom-3 max-h-[80dvh]" : placement.below ? "origin-top" : "origin-bottom"
               }`}
             >
-              <div className="flex shrink-0 items-center gap-1 px-5 pb-2 pt-4">
+              {/* On touch screens the header's buttons (the ? and ×) are 40px with a gap between. */}
+              <div className="flex shrink-0 items-center gap-1 px-5 pb-2 pt-4 pointer-coarse:gap-2 pointer-coarse:pr-3 max-sm:gap-2 max-sm:pr-3">
                 <h2 className="min-w-0 flex-1 truncate text-base font-semibold">{title ?? label}</h2>
                 {headerExtra}
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Close"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground"
+                  title="Close"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground pointer-coarse:h-10 pointer-coarse:w-10 max-sm:h-10 max-sm:w-10"
                 >
                   <CloseIcon className="h-4 w-4" />
                 </button>

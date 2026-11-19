@@ -25,7 +25,7 @@ import { playNote } from "@/lib/tones";
  */
 
 type ToastKind = "routine" | "goal" | "day" | "streak" | "hours";
-type Toast = { id: number; kind: ToastKind; title: string; detail?: string; color?: string; share?: "streak" | "hours" | "day" };
+type Toast = { id: number; kind: ToastKind; title: string; detail?: string; color?: string; share?: "streak" | "hours" | "day"; celebrate?: boolean };
 
 /** Asks the Shed Log to open "Share your progress" on a card (`detail` = the card kind). */
 export const SHARE_PROGRESS_EVENT = "practice-log-share-progress";
@@ -60,7 +60,35 @@ export function burstAt(el: Element, color: string) {
 function toast(t: Omit<Toast, "id">) {
   const id = nextId++;
   set({ toasts: [...state.toasts.slice(-2), { ...t, id }] });
-  setTimeout(() => set({ toasts: state.toasts.filter((x) => x.id !== id) }), 4200);
+  // A toast with a Share button stays a little longer, to give you time to press it.
+  setTimeout(() => set({ toasts: state.toasts.filter((x) => x.id !== id) }), t.share ? 8000 : 4200);
+}
+
+/* Each big moment is celebrated once a day: unticking a task and ticking it again (or a reload in
+   between) doesn't set the confetti and toasts off again. Remembered on this device. */
+const CELEBRATED_KEY = "jam-practice-celebrated";
+let celebrated: { date: string; keys: string[] } | null = null;
+
+/** True the first time `key` happens on `date` (and remembers it); false after that. */
+function firstTime(date: string, key: string): boolean {
+  if (!celebrated) {
+    try {
+      const raw = window.localStorage.getItem(CELEBRATED_KEY);
+      const saved = raw ? (JSON.parse(raw) as { date?: unknown; keys?: unknown }) : null;
+      if (saved && typeof saved.date === "string" && Array.isArray(saved.keys)) celebrated = { date: saved.date, keys: saved.keys.filter((k): k is string => typeof k === "string") };
+    } catch {
+      // storage unavailable: remember for this visit only
+    }
+  }
+  if (!celebrated || celebrated.date !== date) celebrated = { date, keys: [] };
+  if (celebrated.keys.includes(key)) return false;
+  celebrated = { date, keys: [...celebrated.keys, key] };
+  try {
+    window.localStorage.setItem(CELEBRATED_KEY, JSON.stringify(celebrated));
+  } catch {
+    // storage unavailable
+  }
+  return true;
 }
 
 function dismiss(id: number) {
@@ -151,26 +179,31 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
       if (was.complete.has(key)) continue;
       const [, rid] = key.split(":");
       const routine = data.routines.find((r) => r.id === rid);
-      if (!routine) continue;
+      if (!routine || !firstTime(now.today, `routine:${key}`)) continue;
       toast({ kind: "routine", title: `${routine.name || "Routine"} complete!`, detail: `All ${routine.tasks.length} task${routine.tasks.length === 1 ? "" : "s"} done.` });
       big = true;
     }
 
     const goal = goalOn(data, now.today);
-    if (goal > 0 && was.todayMinutes < goal && now.todayMinutes >= goal) {
+    const goalMet = goal <= 0 || now.todayMinutes >= goal;
+    if (goal > 0 && was.todayMinutes < goal && now.todayMinutes >= goal && firstTime(now.today, "goal")) {
       toast({ kind: "goal", title: "Daily goal reached!", detail: `${goal} minutes today. Anything more is a bonus.`, share: "day" });
       big = true;
     }
 
-    if (now.todayTotal > 0 && now.todayDone === now.todayTotal && was.todayDone < was.todayTotal) {
-      toast({ kind: "day", title: "Everything done today", detail: `${now.todayTotal} of ${now.todayTotal} tasks. That's a full day.`, share: "day" });
-      // A moment after the confetti, open today's report to download or share.
-      const date = todayKey();
-      setTimeout(() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: { kind: "day", date, celebrate: true } })), 2600);
+    // Every task ticked off: a toast with Share (today's report), never a dialog that opens by
+    // itself. "A full day" only once the daily goal is met too.
+    if (now.todayTotal > 0 && now.todayDone === now.todayTotal && was.todayDone < was.todayTotal && firstTime(now.today, "day")) {
+      const tasks = `${now.todayTotal} of ${now.todayTotal} task${now.todayTotal === 1 ? "" : "s"}`;
+      toast(
+        goalMet
+          ? { kind: "day", title: "Everything done today", detail: `${tasks}. That's a full day.`, share: "day", celebrate: true }
+          : { kind: "day", title: "All tasks done", detail: `${tasks} ticked off. Nice work.`, share: "day", celebrate: true },
+      );
       big = true;
     }
 
-    if (was.todayMinutes === 0 && now.todayMinutes > 0) {
+    if (was.todayMinutes === 0 && now.todayMinutes > 0 && firstTime(now.today, "streak")) {
       const s = streak(data, now.today);
       if (STREAK_MILESTONES.includes(s)) {
         toast({ kind: "streak", title: `${s}-day streak!`, detail: "You've practiced every day. Keep the chain going.", share: "streak" });
@@ -183,7 +216,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
     }
 
     const hit = HOUR_MILESTONES.find((h) => was.hours < h && now.hours >= h);
-    if (hit) {
+    if (hit && firstTime(now.today, `hours:${hit}`)) {
       toast({ kind: "hours", title: `${hit} hour${hit === 1 ? "" : "s"} of practice!`, detail: "All logged here, one session at a time.", share: "hours" });
       big = true;
     }
@@ -231,7 +264,8 @@ const subscribe = (l: () => void) => {
 
 const noop = () => () => {};
 
-export default function Celebrations() {
+/** `hideToasts`: while "Share your progress" is open, so a toast never covers it. */
+export default function Celebrations({ hideToasts = false }: { hideToasts?: boolean }) {
   const s = useSyncExternalStore(subscribe, () => state, () => SERVER);
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   if (!mounted) return null;
@@ -272,7 +306,7 @@ export default function Celebrations() {
       {/* Phones: at the bottom, so they don't cover the top bar and the tool's own row (menu,
           Presets, Log). Desktop: at the top. A tap on one puts it away. */}
       <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[96] flex flex-col items-center gap-2 px-4 lg:bottom-auto lg:top-4" aria-live="polite">
-        {s.toasts.map((t) => (
+        {!hideToasts && s.toasts.map((t) => (
           <div
             key={t.id}
             onClick={(e) => {
@@ -290,7 +324,10 @@ export default function Celebrations() {
             {t.share && (
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: t.share === "day" ? { kind: "day", date: todayKey() } : t.share }))}
+                onClick={() => {
+                  dismiss(t.id);
+                  window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: t.share === "day" ? { kind: "day", date: todayKey(), celebrate: t.celebrate } : t.share }));
+                }}
                 className="h-8 shrink-0 rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover"
               >
                 Share

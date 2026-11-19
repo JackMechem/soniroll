@@ -643,6 +643,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
     ],
   },
 ];
+/** Delete account: listed after Sign out, apart from the other sections. */
+const DANGER_ITEMS = NAV.flatMap((g) => g.items).filter((i) => i.danger);
 const ALL_VIEWS = NAV.flatMap((g) => g.items.map((i) => i.id));
 const isView = (v: string | null | undefined): v is AccountView => !!v && (ALL_VIEWS as string[]).includes(v);
 
@@ -738,6 +740,12 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
       {/* Who you are, like the dashboard's header: name and email on the left, View profile on the
           right. Phones show it over the list of sections only, not again on each section. Sign out
           is at the end of the sections, out of the way. */}
+      {phoneList && (
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:hidden">
+          <GearIcon className="h-5 w-5 shrink-0 text-accent" />
+          Account
+        </h1>
+      )}
       <header className={`flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between ${phoneList ? "" : "max-md:hidden"}`}>
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar url={profile?.avatarUrl ?? null} />
@@ -774,7 +782,7 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
               <div key={g.group}>
                 <h2 className="mb-1.5 px-1 text-xs font-medium text-muted">{g.group}</h2>
                 <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
-                  {g.items.map((item) => (
+                  {g.items.filter((item) => !item.danger).map((item) => (
                     <button
                       key={item.id}
                       type="button"
@@ -797,6 +805,21 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
               <LogOutIcon className="h-4 w-4 shrink-0 text-muted" />
               Sign out
             </button>
+            {/* Delete account last, set apart from Sign out. */}
+            <div className="border-t border-foreground/10 pt-5">
+              {DANGER_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => pick(item.id)}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-lg bg-surface px-4 text-left text-sm text-danger transition-colors hover:bg-surface-hover"
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+                </button>
+              ))}
+            </div>
           </nav>
         )}
         <nav aria-label="Account sections" className="hidden w-52 shrink-0 flex-col gap-5 md:sticky md:top-6 md:flex">
@@ -804,7 +827,7 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
             <div key={g.group}>
               <h2 className="mb-1 px-3 text-xs font-medium text-muted">{g.group}</h2>
               <div className="flex flex-col gap-0.5">
-                {g.items.map((item) => {
+                {g.items.filter((item) => !item.danger).map((item) => {
                   const on = view === item.id;
                   return (
                     <button
@@ -830,6 +853,23 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           >
             <LogOutIcon className="h-4 w-4" /> Sign out
           </button>
+          {/* Delete account last, set apart from Sign out. */}
+          <div className="flex flex-col gap-0.5 border-t border-foreground/10 pt-4">
+            {DANGER_ITEMS.map((item) => {
+              const on = view === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => pick(item.id)}
+                  aria-current={on ? "page" : undefined}
+                  className={`flex h-9 items-center rounded-md px-3 text-left text-sm text-danger transition-colors hover:bg-surface-hover ${on ? "bg-surface-hover font-medium" : ""}`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         <div className={`min-w-0 flex-1 flex-col gap-6 ${phoneList ? "hidden md:flex" : "flex"}`}>

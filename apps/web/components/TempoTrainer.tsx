@@ -368,7 +368,14 @@ export default function TempoTrainer() {
                 cycleHint
               />
             )}
-            <p className="text-sm text-muted tabular-nums">{plan}</p>
+            {/* The plan, then (while the click plays) which of its bars this is, like Metric
+                Modulation's "Bar 2 of 4". Kept in place while stopped so Start doesn't move things. */}
+            <p className="text-balance text-center text-sm text-muted tabular-nums">
+              {plan}
+              <span className={`block ${running ? "" : "invisible"}`} aria-hidden={!running}>
+                {useStructure ? "Click bar" : "Bar"} {running ? engineState.barInPhase + 1 : 1} of {onBars}
+              </span>
+            </p>
           </div>
           {silentNow && (
             <div className="flex w-full max-w-xs flex-col items-center justify-center gap-1.5 self-center rounded-lg bg-surface px-4 py-3 text-center [grid-area:1/1]">

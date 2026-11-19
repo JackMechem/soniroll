@@ -117,12 +117,13 @@ export default function ChartViewPage({ id }: { id: string }) {
         back={back}
         leading={<KeyBadge label={shown.key} size="lg" />}
         actions={
-          // One row on phones too: the key select takes what's left, so ⋮ never wraps on its own.
-          <div className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
+          // On phones the key select gets its own full-width row under the buttons, so
+          // "Gm (original)" is never cut; wider, everything sits in one row.
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap">
             <Pill icon={PencilIcon} label="Edit" iconOnlyOnPhone href={`/chord-charts/edit?id=${encodeURIComponent(id)}`} />
             {/* The band (Rhythm Section) plays this chart, in the key shown. */}
             <Pill primary icon={BassIcon} label="Play along" onClick={() => router.push(playAlongHref(id, transposeKey))} />
-            <span className="min-w-0 flex-1 sm:flex-none xl:hidden">
+            <span className="order-last min-w-0 basis-full sm:order-none sm:basis-auto xl:hidden">
               <Select value={transposeKey} onChange={setTransposeKey} options={keyOptions} className="w-full sm:min-w-32" />
             </span>
             <RoundButton label="Full screen" onClick={() => setFullscreen(true)}>

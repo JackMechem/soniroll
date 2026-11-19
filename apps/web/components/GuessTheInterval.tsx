@@ -67,6 +67,7 @@ import { formatFileDate } from "@/lib/files";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 import { GRADE_COLOR, FEEDBACK_LINE, GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -85,6 +86,9 @@ const DEFAULT_ROUND_COUNT = 15;
 const MIN_ADVANCE_DELAY_MS = 0;
 const MAX_ADVANCE_DELAY_MS = 8000;
 const DEFAULT_ADVANCE_DELAY_MS = 1500;
+/** After a miss, the right interval stays up at least this long (whatever "Time between rounds"
+    says), so its name can be read before the next one plays. */
+const MIN_MISS_PAUSE_MS = 2000;
 
 type PlaybackStyle = "melodic" | "harmonic";
 const PLAYBACK_STYLES: { value: PlaybackStyle; label: string }[] = [
@@ -397,12 +401,12 @@ export default function GuessTheInterval() {
   }
 
   /** Lets the round's pass/fail be seen briefly before moving on. */
-  function scheduleAdvance(index: number) {
+  function scheduleAdvance(index: number, delayMs: number) {
     if (skipTimeoutRef.current) return;
     skipTimeoutRef.current = setTimeout(() => {
       skipTimeoutRef.current = null;
       if (sessionRef.current?.index === index) skipRef.current?.();
-    }, cfgRef.current.advanceDelayMs);
+    }, delayMs);
   }
 
   /** Locks in a round's grade and starts the pause-before-next-interval countdown: retargets the
@@ -414,7 +418,10 @@ export default function GuessTheInterval() {
     if (!session) return;
     session.best = grade;
     setStatus(grade);
-    const pauseMs = cfgRef.current.advanceDelayMs;
+    const pauseMs =
+      grade === "incorrect"
+        ? Math.max(cfgRef.current.advanceDelayMs, MIN_MISS_PAUSE_MS)
+        : cfgRef.current.advanceDelayMs;
     // Only ever reached from a button's onClick (submitGuess), never during render — same
     // ref-mutation timing pattern CountdownRing/CountdownLabel rely on throughout the other
     // trainers, which the compiler's purity check doesn't flag there (it bails out of analyzing
@@ -426,7 +433,7 @@ export default function GuessTheInterval() {
       playClick();
       scheduleCountdownClicks(pauseMs);
     }
-    scheduleAdvance(session.index);
+    scheduleAdvance(session.index, pauseMs);
   }
 
   /** Called when the player picks an answer (or gives up with "I don't know", `id === null`). */
@@ -648,8 +655,11 @@ export default function GuessTheInterval() {
 
   const arrow = (r: IntervalRound) => (r.direction === 1 ? "↑" : "↓");
   const revealedLabel = (r: IntervalRound) => `${arrow(r)} ${r.interval.label}`;
+  const showingResults = !!summary && !running && !learnMode;
   const mainLabel = running && round ? (status ? revealedLabel(round) : "?") : "?";
-  const mainLabelLong = mainLabel.length > 16;
+  // The revealed name ("↑ Minor 6th") is two words: smaller than the "?" so it fits inside the
+  // ring (on two lines in the phone's smaller ring) without touching it.
+  const mainLabelLong = mainLabel !== "?";
   // Once answered, the big label shows the right answer: green when the guess was right, the
   // normal text colour when it wasn't (the wrong pick is named in a small line underneath).
   const glow = running && status === "correct" ? GRADE_COLOR.correct : null;
@@ -727,33 +737,10 @@ export default function GuessTheInterval() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {formatFileDate(entry.at)}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -945,7 +932,7 @@ export default function GuessTheInterval() {
               max={MAX_ADVANCE_DELAY_MS / 1000}
               step={0.25}
               disabled={running}
-              hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays."
+              hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays. After a miss it stays at least 2 seconds."
               onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
             />
 
@@ -1040,7 +1027,9 @@ export default function GuessTheInterval() {
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
-        {!(learnMode && !running) && (
+        {/* The idle ring and prompt step aside while a finished run's results show, so the
+            results and the chips below them stay in view. */}
+        {!(learnMode && !running) && !showingResults && (
         // A smaller ring on phones during a quiz, so the answers, "I don't know" and Stop all fit.
         <div
           className={`relative flex items-center justify-center p-4 text-center sm:h-56 sm:w-56 ${
@@ -1051,7 +1040,7 @@ export default function GuessTheInterval() {
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
             className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-              mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-5xl"
+              mainLabelLong ? "text-xl leading-tight text-balance sm:text-2xl" : "text-3xl sm:text-5xl"
             }`}
             style={
               glow
@@ -1066,7 +1055,7 @@ export default function GuessTheInterval() {
         </div>
         )}
         {/* Before the first round, say what's about to happen. */}
-        {!running && !learnMode && <p className={IDLE_HINT}>Press Start, listen to two notes, then pick the interval.</p>}
+        {!running && !learnMode && !showingResults && <p className={IDLE_HINT}>Press Start, listen to two notes, then pick the interval.</p>}
 
         {/* Always there while a round runs, so answering doesn't push the answers down. */}
         {running && round && (
@@ -1212,7 +1201,10 @@ export default function GuessTheInterval() {
               >
                 {revealedLabel(r)}
                 {summary.results[i] === "incorrect" && (
-                  <span className="opacity-80"> · you: {summary.guesses[i] ?? "no answer"}</span>
+                  <span className="opacity-80">
+                    {" "}
+                    · you: {INTERVALS.find((iv) => iv.id === summary.guesses[i])?.label ?? "no answer"}
+                  </span>
                 )}
               </span>
             ))}

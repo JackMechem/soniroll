@@ -363,6 +363,22 @@ function NavItems({
     const r = row.getBoundingClientRect();
     if (r.top < 96 || r.bottom > window.innerHeight - 140) row.scrollIntoView({ block: "center" });
   }, [effectivePathname, collapsed]);
+  // The icon strip (collapsed) can hold more icons than fit: while there are more below, a fade
+  // and a ⌄ button at its bottom say so (the scrollbar is hidden there).
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!collapsed || !nav) return;
+    const check = () => setMoreBelow(nav.scrollTop + nav.clientHeight < nav.scrollHeight - 4);
+    const ro = new ResizeObserver(check);
+    ro.observe(nav);
+    if (nav.firstElementChild) ro.observe(nav.firstElementChild); // the icons (grows as favorites load)
+    nav.addEventListener("scroll", check, { passive: true });
+    return () => {
+      ro.disconnect();
+      nav.removeEventListener("scroll", check);
+    };
+  }, [collapsed]);
   const [site] = useSiteSettings();
   const searching = query.trim().length > 0;
   // Settings: tools you've hidden stay out of the lists (a search still finds them), and so do
@@ -526,7 +542,8 @@ function NavItems({
       </div>
     );
     return (
-      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-8 [mask-image:linear-gradient(to_bottom,black_calc(100%-2rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-full shrink-0 flex-col items-center gap-2">
         {group("start", "Dashboard", <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />)}
         {group(
           "shed",
@@ -540,6 +557,20 @@ function NavItems({
         {peopleItems.length > 0 && group("people", "People", peopleItems.map(iconLink))}
         {favoriteItems.length > 0 && group("favorites", "Favorites", favoriteItems.map(iconLink))}
         {groups.map(({ category, items }) => group(category, category, items.map(iconLink)))}
+        </div>
+        {moreBelow && (
+          <div className="pointer-events-none sticky bottom-0 -mt-10 flex h-12 w-full shrink-0 items-end justify-center bg-gradient-to-t from-surface from-40% to-transparent">
+            <button
+              type="button"
+              onClick={() => navRef.current?.scrollBy({ top: 240, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}
+              aria-label="Show more tools"
+              title="More tools"
+              className="pointer-events-auto mb-2 flex h-6 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            >
+              <ChevronDownIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         {contextMenu}
       </nav>
     );
@@ -755,19 +786,8 @@ export default function Sidebar() {
               </Link>
               <VersionTag onNavigate={() => setMobileOpen(false)} />
             </div>
+            {/* Send feedback is in the ⋮ menu (the top bar has the bug-report button). */}
             <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileOpen(false);
-                  openFeedback();
-                }}
-                aria-label="Send feedback"
-                title="Send feedback"
-                className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
-              >
-                <FeedbackIcon className="h-5 w-5" />
-              </button>
               <Link
               href="/help"
               onClick={() => setMobileOpen(false)}
@@ -777,9 +797,23 @@ export default function Sidebar() {
             >
               <HelpIcon className="h-5 w-5" />
             </Link>
-              <Flyout icon={DotsIcon} label="Menu options" align="end">
+              <Flyout
+                icon={DotsIcon}
+                label="Menu options"
+                align="end"
+                buttonClassName="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              >
                 {(close) => (
                   <>
+                    <FlyoutItem
+                      icon={FeedbackIcon}
+                      label="Send feedback"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        openFeedback();
+                        close();
+                      }}
+                    />
                     {fabHidden && (
                       <FlyoutItem
                         icon={BugIcon}
@@ -846,6 +880,7 @@ export default function Sidebar() {
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
+                title="Close menu"
                 className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-hover"
               >
                 <CloseIcon className="h-5 w-5" />

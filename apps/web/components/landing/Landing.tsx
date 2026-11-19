@@ -277,7 +277,8 @@ function Hero({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
             <FlameIcon className="log-flame h-7 w-7" />
           </span>
           <div>
-            <div className="text-3xl font-bold tabular-nums tracking-tight">42</div>
+            {/* One made-up user across the page: the phone screenshot shows a 17-day streak. */}
+            <div className="text-3xl font-bold tabular-nums tracking-tight">17</div>
             <div className="text-xs font-semibold text-muted">day streak</div>
           </div>
         </div>
@@ -686,12 +687,14 @@ function Bento() {
           </Reveal>
 
           <Reveal className="md:col-span-3" delay={80}>
-            <div className="flex h-full items-end gap-6 overflow-hidden rounded-[28px] bg-surface p-6 pb-0 ring-1 ring-foreground/[0.06] sm:p-8 sm:pb-0">
-              <div className="pb-6 sm:pb-8">
+            {/* Title at the top like the card beside it; on phones the text gets the full width and
+                the phone shot (the same one as the hero's) is left out, like the split-screen shot. */}
+            <div className="flex h-full items-end gap-6 overflow-hidden rounded-[28px] bg-surface p-6 ring-1 ring-foreground/[0.06] sm:p-8 sm:pb-0">
+              <div className="self-start sm:pb-8">
                 <h3 className="text-xl font-semibold tracking-tight">No account needed</h3>
                 <p className="mt-1.5 max-w-xs text-sm text-muted">Every tool works the moment you open it. Sign up only if you want your stuff to follow you.</p>
               </div>
-              <div className="ml-auto w-36 shrink-0 translate-y-4 overflow-hidden rounded-t-[22px] border-x-4 border-t-4 border-foreground/10 sm:w-44">
+              <div className="ml-auto hidden w-44 shrink-0 translate-y-4 overflow-hidden rounded-t-[22px] border-x-4 border-t-4 border-foreground/10 sm:block">
                 <Shot name="phone" alt="soniroll on a phone" width={780} height={1400} />
               </div>
             </div>

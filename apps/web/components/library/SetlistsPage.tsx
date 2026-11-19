@@ -47,9 +47,10 @@ export default function SetlistsPage() {
         tabs={<LibraryTabs active="setlists" />}
       >
         {/* Phones: the sort toggle gets its own row under search + New, so the search box keeps
-            most of the width. */}
+            most of the width. Hidden until there are setlists to sort. */}
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <HeroSearch value={query} onChange={setQuery} placeholder="Search setlists…" />
+          {setlists.length > 0 && (
           <div className="flex h-10 shrink-0 rounded-md bg-foreground/[0.05] p-0.5 max-sm:order-last max-sm:w-full sm:h-9" role="group" aria-label="Sort">
             {(["recent", "name"] as Sort[]).map((key) => (
               <button
@@ -63,6 +64,7 @@ export default function SetlistsPage() {
               </button>
             ))}
           </div>
+          )}
           <Pill primary icon={PlusIcon} label="New" onClick={() => setNaming(true)} />
         </div>
       </Hero>

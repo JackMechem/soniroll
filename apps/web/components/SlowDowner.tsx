@@ -32,6 +32,7 @@ import { makeId } from "@/lib/types";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
+import { usePaneKeyGuard } from "@/lib/paneContext";
 
 const SETTINGS_KEY = "jam-practice-slow-downer";
 const DEFAULT_SETTINGS = { speed: 100, preservePitch: true, volume: 1, maximized: false };
@@ -320,13 +321,14 @@ export default function SlowDowner() {
   }
 
   const toLoopStartRef = useRef(toLoopStart);
+  const forThisPane = usePaneKeyGuard();
   useEffect(() => {
     toLoopStartRef.current = toLoopStart;
   });
   useEffect(() => {
     if (!file) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key.toLowerCase() !== "b" || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.toLowerCase() !== "b" || e.repeat || e.metaKey || e.ctrlKey || e.altKey || !forThisPane(e)) return;
       const target = e.target as HTMLElement;
       if (target.closest("input, textarea, select, [contenteditable='true'], [role='dialog'], [role='alertdialog']")) return;
       e.preventDefault();
@@ -334,7 +336,7 @@ export default function SlowDowner() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [file]);
+  }, [file, forThisPane]);
 
   function updateLoop(region: LoopRegion) {
     setLoop(region);
@@ -531,6 +533,8 @@ export default function SlowDowner() {
         <Hint>Playback volume for this file.</Hint>
       </OptionSection>
 
+      {/* Markers belong to a file, so the chip waits until one is open. */}
+      {file && (
       <OptionSection title="Markers" icon={FlagIcon} summary={markers.length ? `${markers.length}` : "None"}>
         {markers.length === 0 ? (
           <p className="text-sm text-muted">
@@ -589,6 +593,7 @@ export default function SlowDowner() {
           Add marker at playhead
         </button>
       </OptionSection>
+      )}
     </OptionsCard>
   );
   const optionChips = (

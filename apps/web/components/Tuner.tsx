@@ -21,6 +21,7 @@ import { centsColor, readingAt } from "@/lib/pitchTrack";
 import { formatDuration } from "@/lib/recordings";
 import { startTone, ToneHandle } from "@/lib/toneGenerator";
 import {
+  clearTunerError,
   getTunerServerSnapshot,
   getTunerSnapshot,
   setTunerToneActive,
@@ -30,6 +31,7 @@ import {
   updateTunerConfig,
 } from "@/lib/tunerEngine";
 import {
+  clearTunerRecorderError,
   getTunerRecorderServerSnapshot,
   getTunerRecorderSnapshot,
   startTunerRecording,
@@ -263,6 +265,12 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
     const wasSame = playing?.midi === midi;
     stopTone();
     if (wasSame) return;
+    // The tone works without the mic, so an old "couldn't open the mic" error no longer applies.
+    if (!listening) {
+      clearTunerError();
+      if (rec.phase === "idle") clearTunerRecorderError();
+    }
+    setTakeError(null);
     setTunerToneActive(true);
     const freq = freqOfMidi(midi, refA);
     toneRef.current = startTone(

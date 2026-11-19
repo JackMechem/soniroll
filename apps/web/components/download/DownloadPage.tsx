@@ -61,7 +61,7 @@ export default function DownloadPage() {
               <DownloadIcon className="h-5 w-5" /> Download for {PLATFORM_NAME[platform]}
             </a>
             <p className="text-xs text-muted">
-              Version {release?.version} · {formatBytes(primary.size)} · {primary.label}
+              Desktop app {release?.version} · {formatBytes(primary.size)} · {primary.label}
               {platform === "mac" ? " · Apple silicon and Intel" : ""}
             </p>
           </div>
@@ -102,7 +102,7 @@ export default function DownloadPage() {
           <h2 className="text-lg font-bold">Every download</h2>
           {release && (
             <a href={release.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-accent hover:underline">
-              What&apos;s new in {release.version}
+              What&apos;s new in desktop app {release.version}
             </a>
           )}
         </div>

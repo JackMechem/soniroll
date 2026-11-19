@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { formatPracticed } from "@/components/practicelog/minutes";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import RecordClip from "@/components/practicelog/RecordClip";
@@ -149,7 +150,7 @@ export default function DayPanel({
           <h2 className={`truncate font-semibold ${wide ? "text-xl" : "text-base"}`}>{formatLongDate(date)}</h2>
           <p className="text-xs text-muted">
             {isToday ? "Today · " : ""}
-            {minutes > 0 ? `${formatMinutesShort(Math.round(minutes))} practiced` : "Nothing logged yet"}
+            {minutes > 0 ? `${formatPracticed(minutes)} practiced` : "Nothing logged yet"}
             {date <= todayKey() && (
               <>
                 {" · "}
@@ -222,7 +223,7 @@ export default function DayPanel({
                   {s.session !== s.title && <span className="text-muted"> · {s.session}</span>}
                 </span>
                 <span className="shrink-0 text-xs tabular-nums text-muted">
-                  {formatTime(new Date(s.at).getHours() * 60 + new Date(s.at).getMinutes())} · {formatMinutesShort(Math.max(1, Math.round(s.ms / 60000)))}
+                  {formatTime(new Date(s.at).getHours() * 60 + new Date(s.at).getMinutes())} · {formatPracticed(s.ms / 60000)}
                 </span>
               </li>
               );
@@ -505,7 +506,7 @@ function LogTimeCard({ date, log, minutes, onMore }: { date: string; log: Log; m
     <div className="flex flex-col gap-3 rounded-lg bg-surface px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm text-muted">{date < todayKey() ? `Practiced on ${formatShortDate(date)}? Add the time to that day.` : "Practiced without the timer? Add it to the day."}</p>
-        <span className="shrink-0 text-sm font-medium tabular-nums">{minutes > 0 ? formatMinutesShort(Math.round(minutes)) : "0 min"}</span>
+        <span className="shrink-0 text-sm font-medium tabular-nums">{formatPracticed(minutes)}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {QUICK_LOG.map((m) => (
