@@ -63,6 +63,7 @@ import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/NoteTrainer.tsx`. Same "quiz" (notes shown, optionally
@@ -270,6 +271,7 @@ function NoteTrainerScreen() {
   const [note, setNote] = useState<string | null>(null);
   const [nextNote, setNextNote] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/note-trainer', running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);

@@ -44,6 +44,7 @@ import {
 } from '@/lib/tempoTrainerEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 // A silent stretch this long would make the tool pointless at one end, impractical to configure
 // at the other — matches web's own `MAX_CYCLE_BARS`.
@@ -92,6 +93,7 @@ function TempoTrainerScreen() {
 
   const engineState = useSyncExternalStore(subscribeTempoTrainer, getTempoTrainerSnapshot);
   const { running, phase, currentBeat, currentSub } = engineState;
+  useToolActivity('/tempo-trainer', running);
 
   useEffect(() => {
     updateTempoTrainerSettings({

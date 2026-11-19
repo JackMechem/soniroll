@@ -20,6 +20,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HeaderTitle } from '@/components/HeaderTitle';
 import { PracticeTimerAlert } from '@/components/PracticeTimerAlert';
 import { PracticeTimerWidget } from '@/components/PracticeTimerWidget';
+import { ShedLogGlobal } from '@/components/shedLog/ShedLogGlobal';
 import { ConvexClientProvider } from '@/convex/ConvexClientProvider';
 import { useAppTheme, ThemeProvider } from '@/theme/ThemeProvider';
 
@@ -104,7 +105,12 @@ function RootNavigator() {
         <Stack.Screen name="tool/tempo-trainer" options={{ title: 'Tempo Trainer' }} />
         <Stack.Screen name="tool/syncopation" options={{ title: 'Syncopation' }} />
         <Stack.Screen name="tool/rhythm-section" options={{ title: 'Rhythm Section' }} />
+        <Stack.Screen name="tool/score-writer" options={{ title: 'Score Writer' }} />
         <Stack.Screen name="tool/time-test" options={{ title: 'Time Test' }} />
+        <Stack.Screen name="tool/shed-log" options={{ title: 'Shed Log' }} />
+        <Stack.Screen name="tool/shed-log-routines" options={{ title: 'Routines' }} />
+        <Stack.Screen name="tool/shed-log-routine" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-log-routine-edit" options={{ title: '' }} />
         <Stack.Screen name="tool/tuner" options={{ title: 'Tuner' }} />
         <Stack.Screen name="account/public-profile" options={{ title: 'Public profile' }} />
         <Stack.Screen name="library/index" options={{ headerShown: false, animation: 'fade' }} />
@@ -123,6 +129,8 @@ function RootNavigator() {
           visible on every page and the full-screen alert can interrupt you anywhere. */}
       <PracticeTimerWidget />
       <PracticeTimerAlert />
+      {/* The Shed Log's app-wide part: takes in timed practice, counts time in tools, celebrates. */}
+      <ShedLogGlobal />
     </View>
   );
 }

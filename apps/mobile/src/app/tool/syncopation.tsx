@@ -31,6 +31,7 @@ import { drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from '@/lib/drumS
 import { startSyncopation, VOICES, type SyncopationPlayback, type SyncopationRun } from '@/lib/syncopationEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 type AfterExercise = 'new' | 'repeat' | 'stop';
 
@@ -102,6 +103,7 @@ function SyncopationScreen() {
   const preview = useMemo(() => generateExercise(seed, genOpts), [seed, genOpts]);
 
   const [running, setRunning] = useState(false);
+  useToolActivity('/syncopation', running);
   const [starting, setStarting] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // While playing: every exercise played so far (the engine asks for the next one at the end).

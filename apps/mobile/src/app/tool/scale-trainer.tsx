@@ -65,6 +65,7 @@ import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/ScaleTrainer.tsx`. Same shape as Note Trainer (a random
@@ -253,6 +254,7 @@ function ScaleTrainerScreen() {
   const [round, setRound] = useState<ScaleRound | null>(null);
   const [nextRound, setNextRound] = useState<ScaleRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/scale-trainer', running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);

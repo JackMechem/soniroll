@@ -33,6 +33,7 @@ import { SlowDownerPlayer, formatTime, type LoopRegion, type Peaks } from '@/lib
 import { deleteFile, formatSize, listFiles, loadMarkers, pickAndSaveFile, saveMarkers, type LibraryEntry, type Marker } from '@/lib/slowDownerFiles';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/SlowDowner.tsx` — same features: open an audio or video file
@@ -73,6 +74,7 @@ function SlowDownerScreen() {
   const [duration, setDuration] = useState(0);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  useToolActivity('/slow-downer', playing);
   const [error, setError] = useState<string | null>(null);
   const [loop, setLoop] = useState<LoopRegion | null>(null);
   const [loopOn, setLoopOn] = useState(false);

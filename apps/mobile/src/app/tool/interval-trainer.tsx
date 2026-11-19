@@ -60,6 +60,7 @@ import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/IntervalTrainer.tsx`. Same two-note-round grading loop as
@@ -259,6 +260,7 @@ function IntervalTrainerScreen() {
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [nextRound, setNextRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/interval-trainer', running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);

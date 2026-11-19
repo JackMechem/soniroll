@@ -104,7 +104,7 @@ export default function PrivacyPage() {
           To see what&apos;s useful, soniroll counts, per day: visits, page views, which tools are started and how long they run, and whether a visit
           was signed in. Only daily totals are kept (for example, &quot;the Metronome was started 40 times on Tuesday&quot;). They aren&apos;t tied to
           you, your account or your device, and no IP address or advertising ID is stored. Nothing is counted if your browser sends Do Not Track or
-          Global Privacy Control. Account activity soniroll already has (like when an account was created) is also summed into charts for the
+          Global Privacy Control. The phone app counts only which tools are started and how long they run, the same way. Account activity soniroll already has (like when an account was created) is also summed into charts for the
           administrator.
         </p>
       </LegalSection>

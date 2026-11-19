@@ -58,6 +58,7 @@ import { SENSITIVITY, startAudioInput, type AudioInput } from '@/lib/audioInput'
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNotesTogether } from '@/lib/sampledTones';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/FindTheRoot.tsx`: a rootless voicing plays (E♭ G B♭ D) and you
@@ -182,6 +183,7 @@ function FindTheRootScreen() {
   const advanceDelayMs = [0, 2000, 4000, 6000].includes(settings.advanceDelayMs) ? settings.advanceDelayMs : 0;
 
   const [running, setRunning] = useState(false);
+  useToolActivity('/find-the-root', running);
   const [round, setRound] = useState<RootlessRound | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);

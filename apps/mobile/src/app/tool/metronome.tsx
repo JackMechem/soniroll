@@ -43,6 +43,7 @@ import {
 } from '@/lib/metronomeEngine';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
 
 const SETTINGS_KEY = 'jam-practice-metronome';
 const DEFAULT_SETTINGS = {
@@ -81,6 +82,7 @@ function MetronomeScreen() {
 
   const engineState = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot);
   const { running, currentBeat, currentSub } = engineState;
+  useToolActivity('/metronome', running);
 
   useEffect(() => {
     updateMetronomeSettings({ bpm, beatsPerBar, beatUnit, accents, subdivision, subAccents, volume, soundId, tempoNoteValue });

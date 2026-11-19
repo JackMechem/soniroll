@@ -19,6 +19,7 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useSyncedTunes } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Jam Practice — a random tune/tempo/key picker with a count-off metronome — laid out like the
@@ -50,6 +51,7 @@ function JamPracticeScreen() {
   const [pick, setPick] = useState<PickResult | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
   const [isCounting, setIsCounting] = useState(false);
+  useToolActivity('/jam-practice', isCounting);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
   const [tunesOpen, setTunesOpen] = useState(false);
 

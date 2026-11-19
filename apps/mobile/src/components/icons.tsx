@@ -150,5 +150,6 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/recorder': RecordIcon,
   '/random-sticking-warmup': DrumIcon,
   '/syncopation': DrumIcon,
+  '/score-writer': mci('music-clef-treble'),
   '/community': UsersIcon,
 };

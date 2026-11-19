@@ -59,6 +59,7 @@ import { startTone } from '@/lib/toneGenerator';
 import { useLearnSession } from '@/lib/useLearnSession';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/GuessTheProgression.tsx` — same features, same synced
@@ -217,6 +218,7 @@ function GuessTheProgressionScreen() {
 
   const [round, setRound] = useState<ProgressionRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/guess-the-progression', running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [marks, setMarks] = useState<boolean[] | null>(null);

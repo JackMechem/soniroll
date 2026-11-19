@@ -58,6 +58,7 @@ import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNote, p
 import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/GuessTheInterval.tsx` — same features, same synced settings
@@ -184,6 +185,7 @@ function GuessTheIntervalScreen() {
 
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/guess-the-interval', running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [guessedId, setGuessedId] = useState<string | null>(null);

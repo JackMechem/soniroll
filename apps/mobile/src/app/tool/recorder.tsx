@@ -54,6 +54,7 @@ import {
 import { formatDuration, recordingsApi, type Recording } from '@/lib/recordings';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 // A new key — the web Recorder's own settings ("jam-practice-recorder") are its multitrack ones.
 // Everything from `bpm` through `tempoNoteValue` is the Metronome tool's own settings shape.
@@ -120,6 +121,7 @@ function RecorderScreen() {
 
   const rec = useSyncExternalStore(subscribeRecorder, getRecorderSnapshot);
   const busy = rec.phase !== 'idle';
+  useToolActivity('/recorder', busy);
   const click = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot);
   const clicking = busy && settings.metronome && click.running;
 

@@ -37,6 +37,7 @@ import {
 } from '@/lib/stickControlEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 // Same key and shape as web's `StickControl.tsx`, so settings follow the account across both.
 const SETTINGS_KEY = 'jam-practice-stick-control';
@@ -113,6 +114,7 @@ function RandomStickingWarmupScreen() {
 
   const snapshot = useSyncExternalStore(subscribeStickControl, getStickControlSnapshot);
   const { running, pattern, nextPattern, phase, currentBarIndex, currentRepeat, currentBeat } = snapshot;
+  useToolActivity('/random-sticking-warmup', running);
 
   useEffect(() => {
     if (!settingsReady) return;

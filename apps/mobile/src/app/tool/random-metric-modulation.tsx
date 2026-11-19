@@ -42,6 +42,7 @@ import {
 } from '@/lib/metricModulationEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 const MIN_BARS_PER_MODULATION = 1;
 const MAX_BARS_PER_MODULATION = 32;
@@ -114,6 +115,7 @@ function RandomMetricModulationScreen() {
 
   const engineState = useSyncExternalStore(subscribeMetricMod, getMetricModSnapshot);
   const { running, currentBeat, currentSub, referenceBeat, log, lastModulation, nextPreview, playingReference } = engineState;
+  useToolActivity('/random-metric-modulation', running);
 
   useEffect(() => {
     updateMetricModLiveSettings({

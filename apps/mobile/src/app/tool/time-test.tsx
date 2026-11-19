@@ -68,6 +68,7 @@ import {
   subscribeTimeTest,
 } from '@/lib/timeTestSession';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
 
 /** The web's Time Test icon is a target. */
 function TargetIcon({ color, size = 18 }: IconProps) {
@@ -186,6 +187,7 @@ function TimeTestScreen() {
   const [history, updateHistory] = useSyncedSettings(HISTORY_KEY, DEFAULT_HISTORY);
   const engine = useSyncExternalStore(subscribeTimeTest, getTimeTestSnapshot);
   const { phase, tick, liveHits, playing } = engine;
+  useToolActivity('/time-test', phase !== 'idle');
 
   const bpm = clampBpm(settings.bpm);
   const beatsPerBar = Math.min(MAX_BEATS, Math.max(1, Math.round(settings.beatsPerBar)));

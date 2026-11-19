@@ -18,6 +18,7 @@ import { TAB_HREFS, ToolRow, ToolTile, chunk } from '@/components/ToolGrid';
 import { AccountButton } from '@/components/TabHeader';
 import { Button, Card, Chip, EmptyText, IconTile, ListRow, PageTitle, SearchField, ToolIcon } from '@/components/ui';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TodayPracticeCard } from '@/components/shedLog/TodayPracticeCard';
 import { Logo } from '@/components/Logo';
 import { useRecentItems } from '@/lib/chordChartRecents';
 import { useRecentTools } from '@/lib/toolRecents';
@@ -47,7 +48,7 @@ type Recent = { key: string; icon: React.ReactNode; title: string; detail: strin
 
 /**
  * Home — the website's dashboard, made for a phone: the page title and date, a search for tools and
- * tunes, then cards: Pick up where you left off, Tune of the day, Favorites (a starter set until you
+ * tunes, then cards: Today's practice (the Shed Log, signed in), Pick up where you left off, Tune of the day, Favorites (a starter set until you
  * star some), Your library and the ear training path. Every tool is on the Tools tab.
  */
 function Home() {
@@ -186,6 +187,7 @@ function Home() {
             </>
           ) : (
             <>
+              <TodayPracticeCard />
               <Card title="Pick up where you left off">
                 {recents.length ? (
                   recents.map((r) => <ListRow key={r.key} icon={r.icon} title={r.title} detail={r.detail} onPress={r.onPress} />)

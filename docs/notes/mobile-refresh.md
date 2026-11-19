@@ -201,3 +201,44 @@ Lessons.
 - `packages/core/drumKit.ts`: the kit parts, fader gain/dB, `styleVoices`, the key's legend
   (moved from the website's `rhythmsection/kit.tsx` and `DrumScore.tsx`, which now import it).
 - Not checked: anything on a device or the emulator, audio, signed in (your own bass players).
+
+### The Shed Log (2026-11-19)
+
+- **Screens** (`app/tool/shed-log.tsx`, `shed-log-routines.tsx`, `shed-log-routine.tsx` (`?id=`),
+  `shed-log-routine-edit.tsx` (`?id=` / `?date=`); pieces in `components/shedLog/`): the website's
+  phone layout — the title line (today against the goal, the streak), labelled buttons (Stats,
+  Routines, Settings: daily goal / sounds, New: a task or a routine), then **Today | Calendar**
+  underline tabs. The day: arrows, Progress (bar + the day timer card), Routines (`RoutineCard`:
+  checklist with times, subtasks, Start / Continue on the Practice Timer, time one task, a task just
+  for that day, ⋮ open / edit / set a time / check all / skip / remove; Log time on past days),
+  Extra tasks, **Time in tools** (today's unlogged tool time with a Log button each — the phone's
+  stand-in for the website's per-tool Log button), Timed practice, Log time (quick amounts, Undo,
+  Other…), and the day's notes and attachments read-only. The calendar: Month (heat tint, status
+  badge, dots, gold star on goal days) or Week (the website's phone list); a day opens it. Dialogs
+  are bottom sheets (`sheets.tsx`: goal, log time, task, a routine's time; `inputs.tsx`: minutes,
+  time and date inputs instead of the browser's fields). Signed out: `ShedLogGate` → Sign in opens
+  `/profile`. Home has a "Today's practice" card (signed in).
+- **Data**: the same synced key (`jam-practice-practice-log`) and `packages/core/practiceLog.ts`.
+  `lib/liveSynced.ts` is a synced document that **keeps following the account** (the generic
+  `useSyncedSettings` takes the account's copy once per session — a phone left open for days would
+  have written a stale log back over the website's). Local edits win while pending; a copy is kept
+  on the phone for offline starts, and edits made on it before the account's copy arrives are
+  replayed onto that copy (so a stale phone copy never overwrites the website). Checked with a
+  Node script against the real module (stubbed AsyncStorage/Convex).
+- **Timing**: `lib/practiceTimerEngine.ts` now records each step like the website's
+  (`recordStep` → `lib/practiceLogQueue.ts`, `jam-practice-log-pending`): routine steps check
+  their tasks off, plain Practice Timer runs become day sessions. `lib/dayStopwatch.ts` is the day
+  timer (AsyncStorage, flushed every 30 s and when the app goes to the background).
+  `ShedLogGlobal` (mounted in `_layout.tsx`) drains the queue signed in, syncs teachers' routines,
+  restarts the day timer when a linked run resumes, celebrates (`lib/shedLogCelebrations.ts`:
+  toasts, a synthesized pluck ladder and fanfare, confetti left out under reduced motion and when
+  the website's "Confetti and sparkles" is off; once a day per device) and runs the tool-time
+  tracker.
+- **Tool time**: `lib/toolTime.ts` `useToolActivity(href, running)` (one line in each tool screen
+  that runs, the same conditions as the website; not the Practice Timer, which logs itself) →
+  the tool's usage log (`lib/toolUsage.ts`, `jam-practice-tool-usage`, also a live document; pure
+  helpers moved to `packages/core/toolUsage.ts`) and the anonymous usage counts (`usage.track`:
+  play/time only; the server skips admins; privacy page says so). As on the website nothing goes
+  into the Shed Log until it's logged. `formatPracticed` moved to `packages/core/practiceMinutes.ts`.
+- **Left out**: the time-grid week/day views and dragging, recordings/clips, Shed Notes and adding
+  attachments, progress cards and the day report, the tour, the per-tool stats pills.

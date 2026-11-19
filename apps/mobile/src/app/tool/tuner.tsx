@@ -23,6 +23,7 @@ import {
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
 
 /**
  * Native port of `apps/web/components/Tuner.tsx`. Same mic-listening engine shape
@@ -92,6 +93,7 @@ function TunerScreen() {
   const tunerState = useSyncExternalStore(subscribeTuner, getTunerSnapshot);
   const { listening, error, reading } = tunerState;
   const [playing, setPlaying] = useState<Playing | null>(null);
+  useToolActivity('/tuner', listening || playing !== null);
 
   const toneRef = useRef<ToneHandle | null>(null);
   const mountedRef = useRef(true);
