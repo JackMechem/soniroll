@@ -4,6 +4,18 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.11] - 2026-11-18
+
+- Split screen: each pane lays out for its own width, with its own bar and close button, and the
+  right pane no longer runs off the window's edge (FB-22). Keyboard shortcuts only act in the pane
+  you clicked.
+- Open a file: a list of your files, with Upload and drag and drop, in the Slow Downer, the Tuner
+  and Rhythm Section; Slow Downer files save to Files (FB-24).
+- Recordings move into the Library (FB-28); page intros no longer pop up on their own (FB-23);
+  beat numbers sit above the beat bars (FB-25).
+- Everything else in the website's 0.10.11: a long list of layout and wording fixes from a
+  page-by-page review.
+
 ## [0.1.10] - 2026-11-18
 
 - The Metronome's beat bars show on Macs (0.1.9's fix didn't do it; FB-20, FB-21).

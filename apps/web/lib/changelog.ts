@@ -33,6 +33,25 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.11",
+    date: "2026-11-18",
+    title: "Polish everywhere, recordings in the Library",
+    summary: "Hundreds of small fixes from a page-by-page review on desktop and phones, plus a few things you asked for.",
+    changes: [
+      { kind: "improved", text: "**Recordings** now live in the **Library**, in their own tab next to Files. Old links still work." },
+      { kind: "new", text: "**Open a file** shows a list of your files, with Upload, in the Slow Downer, the Tuner's takes and Rhythm Section's bass players. You can also **drop a file** anywhere on the tool." },
+      { kind: "improved", text: "Files you open in the **Slow Downer** are saved to **Files** (online with a storage plan, on this device without)." },
+      { kind: "improved", text: "**Split screen:** each side lays out like a screen of its own width, has its own bar with the page's name and close button, and Space only starts the tool in the side you clicked." },
+      { kind: "improved", text: "Page intros no longer pop up on their own — the **?** by a page's title still opens one." },
+      { kind: "improved", text: "**Beat bars** show the beat number above each bar instead of on top of it (Metronome, Metric Modulation, Jam Practice)." },
+      { kind: "improved", text: "**Guess the Progression** no longer brings up the phone keyboard — the buttons type every answer. **Guess the Chord** shows the root for you, so you only type the quality, and spells the chord's notes." },
+      { kind: "improved", text: "**Shed Log:** no more \"Day complete\" dialog popping up by itself, one celebration a day, practice minutes that agree everywhere, and the routine editor asks before throwing away changes." },
+      { kind: "improved", text: "**The Recorder** asks before you leave mid-take and keeps it for when you come back." },
+      { kind: "improved", text: "Lots of smaller fixes on phones: bigger buttons, nothing jumping around as you answer, clearer microphone errors, and every page has its own title in the browser tab." },
+      { kind: "new", text: "**Find the Root** credits Rob Moreno for the idea." },
+    ],
+  },
+  {
     version: "0.10.10",
     date: "2026-11-18",
     title: "Metronome beat bars on Macs",
