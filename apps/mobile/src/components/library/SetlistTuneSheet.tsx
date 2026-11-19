@@ -70,33 +70,33 @@ export function SetlistTuneSheet({
       <View style={{ ...sheetEdge(colors), backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: insets.bottom + 12, maxHeight: height * 0.85 }}>
         <View className="flex-row items-center gap-3 px-5 pb-2 pt-4">
           <View className="flex-1">
-            <Text numberOfLines={1} className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+            <Text numberOfLines={1} className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
               {tuneName}
             </Text>
-            <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+            <Text className="font-ui text-xs" style={{ color: colors.muted }}>
               Key and tempo in this setlist only — the tune itself doesn&apos;t change.
             </Text>
           </View>
           <Pressable onPress={save} className="rounded-full px-5 py-2" style={{ backgroundColor: colors.accent }}>
-            <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
               Done
             </Text>
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12, gap: 18 }}>
           <View className="gap-2">
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
               Key
             </Text>
             <Pressable onPress={() => setKey(undefined)} className="items-center rounded-xl py-2.5" style={pill(!key)}>
-              <Text className="font-inter-semibold text-sm font-semibold" style={pillText(!key)}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={pillText(!key)}>
                 Default{defaultKey ? ` (${defaultKey})` : ''}
               </Text>
             </Pressable>
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {KEY_NAMES.map((k) => (
                 <Pressable key={k} onPress={() => setKey(k)} className="items-center rounded-xl py-2.5" style={{ ...pill(key === k), width: '22.5%' }}>
-                  <Text className="font-inter-bold text-base font-bold" style={pillText(key === k)}>
+                  <Text className="font-ui-bold text-base font-bold" style={pillText(key === k)}>
                     {k}
                     {minor ? 'm' : ''}
                   </Text>
@@ -106,35 +106,35 @@ export function SetlistTuneSheet({
           </View>
 
           <View className="gap-2">
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
               Tempo
             </Text>
             <View className="flex-row items-center gap-2">
               {[-5, -1].map((d) => (
                 <Pressable key={d} onPress={() => bump(d)} className="h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: colors.background }}>
-                  <Text className="font-inter-bold text-base font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-base font-bold" style={{ color: colors.foreground }}>
                     {d}
                   </Text>
                 </Pressable>
               ))}
               <View className="flex-1 items-center">
-                <Text className="font-inter-extrabold text-3xl font-extrabold tabular-nums" style={{ color: tempo != null ? colors.accent : colors.foreground }}>
+                <Text className="font-ui-extrabold text-3xl font-extrabold tabular-nums" style={{ color: tempo != null ? colors.accent : colors.foreground }}>
                   {shownTempo}
                 </Text>
-                <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+                <Text className="font-ui text-xs" style={{ color: colors.muted }}>
                   BPM
                 </Text>
               </View>
               {[1, 5].map((d) => (
                 <Pressable key={d} onPress={() => bump(d)} className="h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: colors.background }}>
-                  <Text className="font-inter-bold text-base font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-base font-bold" style={{ color: colors.foreground }}>
                     +{d}
                   </Text>
                 </Pressable>
               ))}
             </View>
             <Pressable onPress={() => setTempo(undefined)} className="items-center rounded-xl py-2.5" style={pill(tempo == null)}>
-              <Text className="font-inter-semibold text-sm font-semibold" style={pillText(tempo == null)}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={pillText(tempo == null)}>
                 Default{defaultTempo ? ` (${defaultTempo} BPM)` : ''}
               </Text>
             </Pressable>

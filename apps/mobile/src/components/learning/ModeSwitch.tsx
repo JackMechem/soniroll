@@ -18,7 +18,7 @@ export function ModeSwitch<T extends string>({ value, options, onChange }: { val
             className="rounded-full px-3.5 py-1.5"
             style={{ backgroundColor: on ? colors.background : 'transparent' }}
           >
-            <Text className="font-inter-bold text-[13px] font-bold" style={{ color: on ? colors.foreground : colors.muted }}>
+            <Text className="font-ui-bold text-[13px] font-bold" style={{ color: on ? colors.foreground : colors.muted }}>
               {o.label}
             </Text>
           </Pressable>

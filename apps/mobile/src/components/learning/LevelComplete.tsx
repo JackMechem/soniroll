@@ -130,7 +130,7 @@ export function LevelComplete({
       className="flex-1 items-center rounded-full py-3.5"
       style={{ backgroundColor: primary ? colors.accent : colors.background }}
     >
-      <Text className="font-inter-bold text-base font-bold" style={{ color: primary ? colors['accent-foreground'] : colors.foreground }}>
+      <Text className="font-ui-bold text-base font-bold" style={{ color: primary ? colors['accent-foreground'] : colors.foreground }}>
         {label}
       </Text>
     </Pressable>
@@ -149,7 +149,7 @@ export function LevelComplete({
             transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }, { scale: rise.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
           }}
         >
-          <Text className="font-inter-bold text-center text-xs font-bold" style={{ color: colors.muted }}>
+          <Text className="font-ui-bold text-center text-xs font-bold" style={{ color: colors.muted }}>
             Level {result.levelNumber} · {result.levelTitle}
           </Text>
 
@@ -160,29 +160,29 @@ export function LevelComplete({
                   <PopStar key={i} lit={i < result.stars} delay={300 + i * 250} />
                 ))}
               </View>
-              <Text className="font-inter-extrabold text-center text-3xl font-extrabold" style={{ color: colors.accent }}>
+              <Text className="font-ui-extrabold text-center text-3xl font-extrabold" style={{ color: colors.accent }}>
                 {result.pathDone && result.firstPass ? 'Path complete!' : PRAISE[Math.floor(result.levelNumber + result.correct) % PRAISE.length]}
               </Text>
-              <Text className="font-inter text-base" style={{ color: colors.foreground }}>
-                <Text className="font-inter-bold font-bold">{scoreText}</Text> {result.stars === 3 ? '— a perfect run.' : 'correct.'}
+              <Text className="font-ui text-base" style={{ color: colors.foreground }}>
+                <Text className="font-ui-bold font-bold">{scoreText}</Text> {result.stars === 3 ? '— a perfect run.' : 'correct.'}
               </Text>
               {result.firstPass && result.unlocked ? (
                 <View className="w-full items-center rounded-2xl px-4 py-3" style={{ backgroundColor: `${colors.accent}1f` }}>
-                  <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.accent }}>
-                    UNLOCKED
+                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.accent }}>
+                    Unlocked
                   </Text>
-                  <Text className="font-inter-bold text-center text-lg font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-center text-lg font-bold" style={{ color: colors.foreground }}>
                     Level {result.unlocked.number}: {result.unlocked.title}
                   </Text>
                 </View>
               ) : null}
               {result.pathDone && result.firstPass ? (
-                <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
                   You&apos;ve passed every level. Seriously impressive ears.
                 </Text>
               ) : null}
               {!result.firstPass && result.stars < 3 ? (
-                <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
                   Already passed — go for {result.stars + 1} stars next time.
                 </Text>
               ) : null}
@@ -190,13 +190,13 @@ export function LevelComplete({
           ) : (
             <>
               <Text style={{ fontSize: 48 }}>{close ? '🔥' : '💪'}</Text>
-              <Text className="font-inter-bold text-2xl font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-2xl font-bold" style={{ color: colors.foreground }}>
                 {close ? 'So close!' : 'Keep at it!'}
               </Text>
-              <Text className="font-inter text-center text-base" style={{ color: colors.foreground }}>
-                <Text className="font-inter-bold font-bold">{scoreText}</Text> — you need {needed} to pass.
+              <Text className="font-ui text-center text-base" style={{ color: colors.foreground }}>
+                <Text className="font-ui-bold font-bold">{scoreText}</Text> — you need {needed} to pass.
               </Text>
-              <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
                 Every attempt trains your ear. Give it another go.
               </Text>
             </>
@@ -212,7 +212,7 @@ export function LevelComplete({
               <View className="flex-row">{button('Try again', onRetry, true)}</View>
             )}
             <Pressable onPress={onClose} className="items-center py-2">
-              <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
                 Back to the path
               </Text>
             </Pressable>

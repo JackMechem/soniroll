@@ -8,6 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionSheet } from '@/components/ActionSheet';
 import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { LibraryHeader } from '@/components/TabHeader';
+import { IconButton } from '@/components/ui';
 import {
   BookIcon,
   ChevronRightIcon,
@@ -101,20 +103,8 @@ function LibraryScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center justify-between px-5 pb-3 pt-4">
-          <Text className="font-inter-extrabold text-3xl font-extrabold" style={{ color: colors.foreground }}>
-            Tunes
-          </Text>
-          <Pressable
-            onPress={() => setCreateOpen(true)}
-            accessibilityLabel="Add a tune"
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.accent }}
-          >
-            <PlusIcon color={colors['accent-foreground']} size={24} />
-          </Pressable>
-        </View>
-        <View className="px-4 pb-2">
+        <LibraryHeader right={<IconButton primary Icon={PlusIcon} label="Add a tune" onPress={() => setCreateOpen(true)} />} />
+        <View className="px-4 pb-2 pt-3">
           <SearchField value={query} onChange={setQuery} placeholder="Search your tunes…" />
         </View>
 
@@ -128,7 +118,7 @@ function LibraryScreen() {
                 {results.learn.slice(0, SEARCH_LIMIT).map(tuneRow('learn'))}
               </ResultSection>
               {results.tunes.length + results.learn.length === 0 ? (
-                <Text className="font-inter py-6 text-center text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui py-6 text-center text-sm" style={{ color: colors.muted }}>
                   Nothing matches &ldquo;{query}&rdquo;.
                 </Text>
               ) : null}
@@ -154,10 +144,10 @@ function LibraryScreen() {
                       >
                         <MusicNoteIcon color={colors.accent} size={20} />
                         <View>
-                          <Text numberOfLines={1} className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                          <Text numberOfLines={1} className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                             {card.title}
                           </Text>
-                          <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                          <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                             {card.detail}
                           </Text>
                         </View>
@@ -175,7 +165,7 @@ function LibraryScreen() {
                 {setlists.length === 0 ? (
                   <Pressable onPress={() => setNamingSetlist(true)} className="flex-row items-center gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
                     <SetlistIcon color={colors.accent} size={22} />
-                    <Text className="font-inter flex-1 text-sm" style={{ color: colors.muted }}>
+                    <Text className="font-ui flex-1 text-sm" style={{ color: colors.muted }}>
                       Make a setlist for a gig or a session — share it by link or post it to Community.
                     </Text>
                   </Pressable>
@@ -277,10 +267,10 @@ function StatCard({ Icon, count, label, onPress }: { Icon: ComponentType<IconPro
     <Pressable onPress={onPress} android_ripple={{ color: colors['surface-hover'] }} className="flex-1 gap-2 rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
       <Icon color={colors.accent} size={22} />
       <View>
-        <Text className="font-inter-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
+        <Text className="font-ui-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
           {count}
         </Text>
-        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+        <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
           {label}
         </Text>
       </View>
@@ -294,7 +284,7 @@ function SectionHeader({ title, detail, href, onAdd, addLabel }: { title: string
   return (
     <View className="flex-row items-end justify-between px-1 pb-1">
       <View className="flex-row items-center gap-2">
-        <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+        <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
           {title}
         </Text>
         {onAdd ? (
@@ -309,14 +299,14 @@ function SectionHeader({ title, detail, href, onAdd, addLabel }: { title: string
           </Pressable>
         ) : null}
         {detail ? (
-          <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+          <Text className="font-ui text-xs" style={{ color: colors.muted }}>
             {detail}
           </Text>
         ) : null}
       </View>
       {href ? (
         <Pressable onPress={() => router.push(href)} hitSlop={8} className="flex-row items-center">
-          <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.accent }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.accent }}>
             See all
           </Text>
           <ChevronRightIcon color={colors.accent} size={18} />
@@ -334,7 +324,7 @@ function ResultSection({ title, count, children }: { title: string; count: numbe
       <SectionHeader title={title} detail={count > SEARCH_LIMIT ? `showing ${SEARCH_LIMIT} of ${count}` : String(count)} />
       {children}
       {count > SEARCH_LIMIT ? (
-        <Text className="font-inter px-3 text-xs" style={{ color: colors.muted }}>
+        <Text className="font-ui px-3 text-xs" style={{ color: colors.muted }}>
           Keep typing to narrow it down.
         </Text>
       ) : null}
@@ -346,7 +336,7 @@ function EmptyCard({ text }: { text: string }) {
   const { colors } = useAppTheme();
   return (
     <View className="rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-      <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+      <Text className="font-ui text-sm" style={{ color: colors.muted }}>
         {text}
       </Text>
     </View>

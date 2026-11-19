@@ -40,7 +40,7 @@
     "@babel/plugin-transform-unicode-regex": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
     "@convex-dev/auth": "^0.0.95",
-    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/geist": "0.4.2",
     "@expo/ui": "~57.0.21",
     "@expo/vector-icons": "^15.1.1",
     "@jam-practice/convex": "workspace:*",

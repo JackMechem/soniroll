@@ -72,7 +72,7 @@ export function PostListItem({
 
   async function handleShare() {
     if (!post) return;
-    const url = `https://sheddex.com/post/${post.id}`;
+    const url = `https://www.soniroll.com/post/${post.id}`;
     try {
       await Share.share({ message: `${post.title} — ${url}`, url, title: post.title });
     } catch {
@@ -98,12 +98,12 @@ export function PostListItem({
               hitSlop={6}
             >
               <UserAvatar url={post.authorAvatarUrl ?? null} size="sm" />
-              <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 {post.authorUsername}
               </Text>
             </Pressable>
           ) : null}
-          <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-sm" style={{ color: colors.muted }}>
             {post.authorUsername ? '· ' : ''}
             {timeAgo(post.createdAt)}
           </Text>
@@ -112,7 +112,7 @@ export function PostListItem({
           {isSetlist ? (
             <View className="flex-row items-center gap-1 rounded-full px-2.5 py-1" style={{ backgroundColor: `${colors.accent}22` }}>
               <SetlistIcon color={colors.accent} size={14} />
-              <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
+              <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                 Setlist
               </Text>
             </View>
@@ -120,11 +120,11 @@ export function PostListItem({
         </View>
 
         <View className="gap-1">
-          <Text numberOfLines={2} className="font-inter-bold text-lg font-bold leading-snug" style={{ color: colors.foreground }}>
+          <Text numberOfLines={2} className="font-ui-bold text-lg font-bold leading-snug" style={{ color: colors.foreground }}>
             {post.title}
           </Text>
           {post.description ? (
-            <Text numberOfLines={2} className="font-inter text-sm" style={{ color: colors.muted }}>
+            <Text numberOfLines={2} className="font-ui text-sm" style={{ color: colors.muted }}>
               {post.description}
             </Text>
           ) : null}
@@ -135,19 +135,19 @@ export function PostListItem({
             {preview.map((name, i) => (
               <View key={`${name}-${i}`} className="flex-row items-center gap-2.5">
                 {isSetlist ? (
-                  <Text className="font-inter-bold w-4 text-right text-sm font-bold tabular-nums" style={{ color: colors.accent }}>
+                  <Text className="font-ui-bold w-4 text-right text-sm font-bold tabular-nums" style={{ color: colors.accent }}>
                     {i + 1}
                   </Text>
                 ) : (
                   <MusicNoteIcon color={colors.accent} size={14} />
                 )}
-                <Text numberOfLines={1} className="font-inter flex-1 text-sm" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui flex-1 text-sm" style={{ color: colors.foreground }}>
                   {name}
                 </Text>
               </View>
             ))}
             {more > 0 ? (
-              <Text className="font-inter pl-6 text-xs" style={{ color: colors.muted }}>
+              <Text className="font-ui pl-6 text-xs" style={{ color: colors.muted }}>
                 +{more} more
               </Text>
             ) : null}
@@ -158,14 +158,14 @@ export function PostListItem({
       <View className="flex-row items-center gap-4 px-4 pb-1.5">
         <View className="flex-row items-center gap-1">
           <MusicNoteIcon color={colors.muted} size={15} />
-          <Text className="font-inter-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
+          <Text className="font-ui-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
             {post.tuneCount}
           </Text>
         </View>
         {post.chartCount > 0 ? (
           <View className="flex-row items-center gap-1">
             <ChordChartIcon color={colors.muted} size={15} />
-            <Text className="font-inter-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
+            <Text className="font-ui-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
               {post.chartCount}
             </Text>
           </View>
@@ -180,7 +180,7 @@ export function PostListItem({
           className="h-10 flex-row items-center gap-1.5 pl-1"
         >
           <HeartIcon color={liked ? colors.danger : colors.muted} size={21} filled={liked} />
-          <Text className="font-inter-bold text-sm font-bold tabular-nums" style={{ color: liked ? colors.danger : colors.muted }}>
+          <Text className="font-ui-bold text-sm font-bold tabular-nums" style={{ color: liked ? colors.danger : colors.muted }}>
             {post.likeCount}
           </Text>
         </Pressable>

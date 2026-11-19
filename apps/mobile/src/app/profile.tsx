@@ -17,10 +17,10 @@ import {
   MusicNoteIcon,
   PostIcon,
   StarOutlineIcon,
+  ThemeIcon,
   type IconProps,
 } from '@/components/icons';
 import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
@@ -48,16 +48,12 @@ import { useLearningProgress } from '@/lib/useLearnSession';
  */
 function ProfileScreen() {
   const { colors } = useAppTheme();
+  const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <View className="items-center px-5 pb-4 pt-6">
-          <Text className="text-2xl font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
-            Profile
-          </Text>
-        </View>
+      <SafeAreaView className="flex-1" edges={['bottom']}>
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <LoadingSpinner />
@@ -65,7 +61,14 @@ function ProfileScreen() {
         ) : isAuthenticated ? (
           <SignedIn />
         ) : (
-          <AuthForm />
+          <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+            <AuthForm />
+            <View className="px-6">
+              <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
+                <ListRow row={{ href: '/theme', label: 'Theme', Icon: ThemeIcon }} onPress={() => router.push('/theme')} />
+              </View>
+            </View>
+          </ScrollView>
         )}
       </SafeAreaView>
     </View>
@@ -114,11 +117,14 @@ function SignedIn() {
       { href: { pathname: '/library/tunes', params: { list: 'learn' } }, label: 'Tunes to Learn', Icon: StarOutlineIcon, value: String(tunesToLearn.length) },
       { href: '/account/posts', label: 'My posts', Icon: PostIcon, value: posts ? String(posts.length) : undefined },
     ],
-    [{ href: '/account/security', label: 'Security', Icon: LockIcon }],
+    [
+      { href: '/theme', label: 'Theme', Icon: ThemeIcon },
+      { href: '/account/security', label: 'Security', Icon: LockIcon },
+    ],
   ];
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: TAB_BAR_CONTENT_HEIGHT + 32, gap: 18 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 18 }}>
       <Pressable
         onPress={() => router.push('/account/public-profile')}
         android_ripple={{ color: colors['surface-hover'] }}
@@ -127,11 +133,11 @@ function SignedIn() {
       >
         <UserAvatar url={profile?.avatarUrl} size="lg" />
         <View className="flex-1">
-          <Text numberOfLines={1} className="font-inter-bold text-xl font-bold" style={{ color: colors.foreground }}>
+          <Text numberOfLines={1} className="font-ui-bold text-xl font-bold" style={{ color: colors.foreground }}>
             {name}
           </Text>
           {user?.email ? (
-            <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+            <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
               {user.email}
             </Text>
           ) : null}
@@ -140,7 +146,7 @@ function SignedIn() {
       </Pressable>
 
       <View className="gap-2.5">
-        <Text className="font-inter-bold px-1 text-sm font-bold" style={{ color: colors.muted }}>
+        <Text className="font-ui-bold px-1 text-sm font-bold" style={{ color: colors.muted }}>
           Ear training
         </Text>
         <EarTrainingProgress summaries={summarizeLearning(learningProgress)} links />
@@ -203,11 +209,11 @@ function ListRow({
       style={{ minHeight: 56, borderBottomWidth: divider ? 1 : 0, borderBottomColor: colors.background }}
     >
       <row.Icon color={row.danger ? colors.danger : colors.accent} size={22} />
-      <Text className="font-inter-semibold flex-1 text-base font-semibold" style={{ color }}>
+      <Text className="font-ui-semibold flex-1 text-base font-semibold" style={{ color }}>
         {row.label}
       </Text>
       {row.value ? (
-        <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui text-sm tabular-nums" style={{ color: colors.muted }}>
           {row.value}
         </Text>
       ) : null}
@@ -271,10 +277,10 @@ function AuthForm() {
   if (step === 'code') {
     return (
       <View className="flex-1 px-6 pt-6">
-        <Text className="mb-1 text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
+        <Text className="mb-1 text-base font-bold font-ui-bold" style={{ color: colors.foreground }}>
           Check your email
         </Text>
-        <Text className="mb-5 text-sm font-inter" style={{ color: colors.muted }}>
+        <Text className="mb-5 text-sm font-ui" style={{ color: colors.muted }}>
           We sent a code to {email}. Enter it below to finish{' '}
           {flow === 'signUp' ? 'creating your account' : 'signing in'}.
         </Text>
@@ -285,17 +291,17 @@ function AuthForm() {
           placeholderTextColor={colors.muted}
           keyboardType="number-pad"
           autoFocus
-          className="mb-4 rounded-2xl px-4 py-3 text-base font-inter"
+          className="mb-4 rounded-2xl px-4 py-3 text-base font-ui"
           style={{ backgroundColor: colors.surface, color: colors.foreground }}
         />
         {error ? (
-          <Text className="mb-3 text-sm font-inter" style={{ color: colors.danger }}>
+          <Text className="mb-3 text-sm font-ui" style={{ color: colors.danger }}>
             {error}
           </Text>
         ) : null}
         <SubmitButton label="Confirm" onPress={onSubmitCode} disabled={submitting || !code} />
         <Pressable onPress={() => setStep('credentials')} className="mt-4 items-center p-2">
-          <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+          <Text className="text-sm font-ui" style={{ color: colors.muted }}>
             Back
           </Text>
         </Pressable>
@@ -320,7 +326,7 @@ function AuthForm() {
             style={{ backgroundColor: flow === f ? colors.accent : 'transparent' }}
           >
             <Text
-              className="text-sm font-bold font-inter-bold"
+              className="text-sm font-bold font-ui-bold"
               style={{ color: flow === f ? colors['accent-foreground'] : colors.muted }}
             >
               {f === 'signIn' ? 'Sign in' : 'Sign up'}
@@ -329,8 +335,8 @@ function AuthForm() {
         ))}
       </View>
 
-      <Text className="mb-1.5 text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-        EMAIL
+      <Text className="mb-1.5 text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+        Email
       </Text>
       <TextInput
         value={email}
@@ -340,12 +346,12 @@ function AuthForm() {
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
-        className="mb-4 rounded-2xl px-4 py-3 text-base font-inter"
+        className="mb-4 rounded-2xl px-4 py-3 text-base font-ui"
         style={{ backgroundColor: colors.surface, color: colors.foreground }}
       />
 
-      <Text className="mb-1.5 text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-        PASSWORD
+      <Text className="mb-1.5 text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+        Password
       </Text>
       <TextInput
         value={password}
@@ -354,12 +360,12 @@ function AuthForm() {
         placeholderTextColor={colors.muted}
         secureTextEntry
         autoComplete={flow === 'signUp' ? 'new-password' : 'current-password'}
-        className="mb-4 rounded-2xl px-4 py-3 text-base font-inter"
+        className="mb-4 rounded-2xl px-4 py-3 text-base font-ui"
         style={{ backgroundColor: colors.surface, color: colors.foreground }}
       />
 
       {error ? (
-        <Text className="mb-3 text-sm font-inter" style={{ color: colors.danger }}>
+        <Text className="mb-3 text-sm font-ui" style={{ color: colors.danger }}>
           {error}
         </Text>
       ) : null}
@@ -370,7 +376,7 @@ function AuthForm() {
         disabled={submitting || !email || !password}
       />
 
-      <Text className="mt-6 text-center text-xs leading-5 font-inter" style={{ color: colors.muted }}>
+      <Text className="mt-6 text-center text-xs leading-5 font-ui" style={{ color: colors.muted }}>
         Signing in with Google isn&apos;t available in the app yet — use email and password, or
         sign in on the web.
       </Text>
@@ -395,7 +401,7 @@ function SubmitButton({
       className="items-center rounded-2xl p-4"
       style={{ backgroundColor: colors.accent, opacity: disabled ? 0.5 : 1 }}
     >
-      <Text className="text-[15px] font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+      <Text className="text-[15px] font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
         {label}
       </Text>
     </Pressable>

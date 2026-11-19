@@ -68,7 +68,7 @@ function Bar({
             top: 3,
             fontSize: 11,
             fontWeight: '700',
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'Geist_700Bold',
             color: textColor,
             textDecorationLine: level === 0 ? 'line-through' : 'none',
           }}

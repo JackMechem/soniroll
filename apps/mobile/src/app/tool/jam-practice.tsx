@@ -9,7 +9,6 @@ import type { BeatLevel } from '@jam-practice/core/clickSounds';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { Hint } from '@/components/Hint';
 import { BookIcon, SlidersIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
@@ -138,7 +137,7 @@ function JamPracticeScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
@@ -146,46 +145,45 @@ function JamPracticeScreen() {
 
           <View
             className="flex-1 items-center justify-center gap-5"
-            style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}
           >
             <View className="items-center gap-2">
               {pick ? (
                 <Text
-                  className="text-xs font-bold font-inter-bold tracking-widest"
+                  className="text-xs font-semibold font-ui-semibold"
                   style={{ color: colors.muted }}
                 >
-                  NOW PRACTICING
+                  Now practicing
                 </Text>
               ) : null}
               <Text
-                className="text-center text-3xl font-bold font-inter-bold"
+                className="text-center text-3xl font-bold font-ui-bold"
                 style={{ color: colors.foreground }}
               >
                 {pick ? pick.tune.name : '—'}
               </Text>
               {pick ? (
                 <View className="flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1">
-                  <Text className="text-base font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-base font-ui" style={{ color: colors.muted }}>
                     {pick.tempo ? `${pick.tempo.value} BPM` : 'no enabled tempo'}
                   </Text>
-                  <Text className="text-base font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-base font-ui" style={{ color: colors.muted }}>
                     {pick.key ? pick.key.value : 'no enabled key'}
                   </Text>
-                  <Text className="text-base font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-base font-ui" style={{ color: colors.muted }}>
                     {pick.tune.timeSignature}
                   </Text>
                 </View>
               ) : null}
               {pick?.tune.notes ? (
                 <Text
-                  className="max-w-xs text-center text-sm font-inter"
+                  className="max-w-xs text-center text-sm font-ui"
                   style={{ color: colors.muted }}
                 >
                   {pick.tune.notes}
                 </Text>
               ) : null}
               {!pick && tunes.length === 0 && !pickFromStandards && !pickError ? (
-                <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
+                <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>
                   Add some tunes in Options, then pick one at random.
                 </Text>
               ) : null}
@@ -195,12 +193,12 @@ function JamPracticeScreen() {
               <View className="items-center gap-4">
                 <View className="items-center">
                   <Text
-                    className="text-6xl font-bold font-inter-bold tabular-nums"
+                    className="text-6xl font-bold font-ui-bold tabular-nums"
                     style={{ color: colors.foreground }}
                   >
                     {pick.tempo.value}
                   </Text>
-                  <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                     BPM · {pick.tune.timeSignature}
                   </Text>
                 </View>
@@ -212,7 +210,7 @@ function JamPracticeScreen() {
                   currentBeat={currentBeat}
                 />
                 <View className="flex-row items-center gap-3">
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.accent }}>
+                  <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.accent }}>
                     {keepGoingIndefinitely
                       ? 'Metronome running…'
                       : `Counting off ${countOffBars} bar${countOffBars === 1 ? '' : 's'}…`}
@@ -222,7 +220,7 @@ function JamPracticeScreen() {
                     className="rounded-full px-4 py-2"
                     style={{ backgroundColor: colors.surface }}
                   >
-                    <Text className="text-sm font-inter" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-ui" style={{ color: colors.foreground }}>
                       Stop
                     </Text>
                   </Pressable>
@@ -231,11 +229,11 @@ function JamPracticeScreen() {
             ) : (
               <View className="items-center gap-3">
                 {pickError ? (
-                  <Text className="text-sm font-inter" style={{ color: colors.danger }}>
+                  <Text className="text-sm font-ui" style={{ color: colors.danger }}>
                     {pickError}
                   </Text>
                 ) : null}
-                <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+                <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                   {pickFromStandards
                     ? `Random picks come from all ${STANDARDS.length} built-in standards.`
                     : 'Random picks come from your Tunes I Know.'}
@@ -245,7 +243,7 @@ function JamPracticeScreen() {
                   className="rounded-full px-8 py-3"
                   style={{ backgroundColor: colors.accent }}
                 >
-                  <Text className="text-base font-semibold font-inter-semibold" style={{ color: colors['accent-foreground'] }}>
+                  <Text className="text-base font-semibold font-ui-semibold" style={{ color: colors['accent-foreground'] }}>
                     {pick ? 'Pick another' : 'Pick a tune'}
                   </Text>
                 </Pressable>
@@ -288,7 +286,7 @@ function JamPracticeScreen() {
             content: () => (
               <View className="gap-4">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                  <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                     Count-off bars
                   </Text>
                   <Dropdown

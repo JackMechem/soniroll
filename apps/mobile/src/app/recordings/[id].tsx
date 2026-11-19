@@ -68,7 +68,7 @@ function RecordingScreen() {
   if (recording === null) {
     return (
       <View className="flex-1 items-center justify-center px-10" style={{ backgroundColor: colors.background }}>
-        <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+        <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
           This recording doesn&apos;t exist anymore.
         </Text>
       </View>
@@ -78,7 +78,7 @@ function RecordingScreen() {
   const rec = recording;
   const linked = rec.tuneId ? byId.get(rec.tuneId) : undefined;
   const active = player.activeKey === rec._id;
-  const label = 'font-inter-bold text-sm font-bold';
+  const label = 'font-ui-bold text-sm font-bold';
 
   function saveName() {
     const trimmed = name.trim();
@@ -104,7 +104,7 @@ function RecordingScreen() {
           headerRight: () =>
             dirty ? (
               <Pressable onPress={saveAll} className="rounded-full px-5 py-2" style={{ backgroundColor: colors.accent }}>
-                <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                   Save
                 </Text>
               </Pressable>
@@ -120,7 +120,7 @@ function RecordingScreen() {
           <View className="flex-row items-center gap-3">
             <PlayButton playing={active && player.playing} onPress={() => player.toggle(rec._id, rec.url)} size={52} />
             <View className="flex-1">
-              <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui text-sm" style={{ color: colors.muted }}>
                 {formatRecordedAt(rec.createdAt)} · {formatDuration(rec.durationSec)}
               </Text>
             </View>
@@ -134,21 +134,21 @@ function RecordingScreen() {
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>
-            NAME
+            Name
           </Text>
           <TextInput
             value={name}
             onChangeText={setName}
             onBlur={saveName}
             onSubmitEditing={saveName}
-            className="font-inter rounded-2xl px-4 py-3 text-base"
+            className="font-ui rounded-2xl px-4 py-3 text-base"
             style={{ backgroundColor: colors.surface, color: colors.foreground }}
           />
         </View>
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>
-            TUNE
+            Tune
           </Text>
           {linked ? (
             <View className="flex-row items-center gap-3 rounded-2xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
@@ -157,13 +157,13 @@ function RecordingScreen() {
                 className="flex-1 flex-row items-center gap-1"
                 onPress={() => router.push({ pathname: '/library/tune', params: { id: linked.tune.id, list: linked.list } })}
               >
-                <Text numberOfLines={1} className="font-inter-semibold flex-shrink text-base font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold flex-shrink text-base font-semibold" style={{ color: colors.foreground }}>
                   {linked.tune.name}
                 </Text>
                 <ChevronRightIcon color={colors.muted} size={18} />
               </Pressable>
               <Pressable onPress={() => setPicking(true)} hitSlop={8}>
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.accent }}>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.accent }}>
                   Change
                 </Text>
               </Pressable>
@@ -178,7 +178,7 @@ function RecordingScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <LinkIcon color={colors.muted} size={18} />
-              <Text className="font-inter flex-1 text-base" style={{ color: colors.muted }}>
+              <Text className="font-ui flex-1 text-base" style={{ color: colors.muted }}>
                 {rec.tuneId ? 'Its tune was deleted — tap to link another' : 'Not linked — tap to link a tune'}
               </Text>
             </Pressable>
@@ -187,7 +187,7 @@ function RecordingScreen() {
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>
-            NOTES
+            Notes
           </Text>
           <TextInput
             value={notes}
@@ -197,7 +197,7 @@ function RecordingScreen() {
             placeholder="How did it go? What to work on…"
             placeholderTextColor={colors.muted}
             textAlignVertical="top"
-            className="font-inter rounded-2xl px-4 py-3 text-base"
+            className="font-ui rounded-2xl px-4 py-3 text-base"
             style={{ backgroundColor: colors.surface, color: colors.foreground, minHeight: 160 }}
           />
         </View>

@@ -2,10 +2,13 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { useQuery } from 'convex/react';
 import { Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
 import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconButton } from '@/components/ui';
+import { LibraryHeader } from '@/components/TabHeader';
 import { MicrophoneIcon } from '@/components/icons';
 import { RecordingRow, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
@@ -37,24 +40,11 @@ function RecordingsScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          title: 'My recordings',
-          headerRight: () => (
-            <Pressable
-              onPress={() => router.push('/tool/recorder')}
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.accent }}
-            >
-              <MicrophoneIcon color={colors['accent-foreground']} size={16} />
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
-                Record
-              </Text>
-            </Pressable>
-          ),
-        }}
-      />
-      <View className="px-4 pb-2 pt-2">
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView edges={['top']}>
+        <LibraryHeader right={<IconButton primary Icon={MicrophoneIcon} label="Record" onPress={() => router.push('/tool/recorder')} />} />
+      </SafeAreaView>
+      <View className="px-4 pb-2 pt-3">
         <SearchField value={query} onChange={setQuery} placeholder="Search recordings" />
       </View>
       <FlatList
@@ -63,7 +53,7 @@ function RecordingsScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomSpace, gap: 10 }}
         ListEmptyComponent={
-          <Text className="font-inter py-12 text-center text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui py-12 text-center text-sm" style={{ color: colors.muted }}>
             {!isAuthenticated
               ? 'Sign in to see your recordings.'
               : query

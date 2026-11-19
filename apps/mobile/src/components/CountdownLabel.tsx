@@ -46,7 +46,7 @@ export function CountdownLabel({
   if (!active) return null;
 
   return (
-    <Text className={textClassName ?? 'text-sm font-inter tabular-nums'} style={{ color: color ?? colors.muted }}>
+    <Text className={textClassName ?? 'text-sm font-ui tabular-nums'} style={{ color: color ?? colors.muted }}>
       {Math.ceil(remainingMs / 1000)}s
     </Text>
   );
@@ -82,7 +82,7 @@ export function ElapsedTimer({
   if (!active || startedAt === null) return null;
 
   return (
-    <Text className={textClassName ?? 'text-sm font-inter tabular-nums'} style={{ color: color ?? colors.muted }}>
+    <Text className={textClassName ?? 'text-sm font-ui tabular-nums'} style={{ color: color ?? colors.muted }}>
       {formatDuration(elapsedMs)}
     </Text>
   );

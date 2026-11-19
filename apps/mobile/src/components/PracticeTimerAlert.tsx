@@ -39,18 +39,18 @@ export function PracticeTimerAlert() {
     >
       <StopwatchIcon color={colors.danger} size={56} />
       <View className="items-center gap-1.5">
-        <Text className="text-sm font-bold font-inter-bold tracking-widest" style={{ color: colors.danger }}>
-          TIME&apos;S UP
+        <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.danger }}>
+          Time&apos;s up
         </Text>
-        <Text className="text-center text-3xl font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+        <Text className="text-center text-3xl font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
           {state.current.title}
         </Text>
         {state.next ? (
-          <Text className="text-lg font-inter" style={{ color: colors.muted }}>
+          <Text className="text-lg font-ui" style={{ color: colors.muted }}>
             Next: {state.next.title}
           </Text>
         ) : (
-          <Text className="text-lg font-inter" style={{ color: colors.muted }}>
+          <Text className="text-lg font-ui" style={{ color: colors.muted }}>
             Last step of this session.
           </Text>
         )}
@@ -62,7 +62,7 @@ export function PracticeTimerAlert() {
           style={{ backgroundColor: colors.accent }}
         >
           <PlayIcon color={colors['accent-foreground']} size={20} />
-          <Text className="text-base font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="text-base font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
             Continue
           </Text>
         </Pressable>
@@ -72,7 +72,7 @@ export function PracticeTimerAlert() {
           style={{ backgroundColor: colors.surface }}
         >
           <StopIcon color={colors.danger} size={18} />
-          <Text className="text-base font-semibold font-inter-semibold" style={{ color: colors.danger }}>
+          <Text className="text-base font-semibold font-ui-semibold" style={{ color: colors.danger }}>
             Stop
           </Text>
         </Pressable>

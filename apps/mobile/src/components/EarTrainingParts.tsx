@@ -20,7 +20,7 @@ export function CountdownText({ active, startedAt, durationMs, color }: { active
   }, [active, startedAt, durationMs]);
   if (!active) return null;
   return (
-    <Text className="font-inter-bold text-3xl font-bold tabular-nums" style={{ color }}>
+    <Text className="font-ui-bold text-3xl font-bold tabular-nums" style={{ color }}>
       {Math.ceil(remainingMs / 1000)}s
     </Text>
   );
@@ -53,26 +53,26 @@ export function ResultsCard({
     <View className="max-h-full w-full gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
       <View className="flex-row items-end justify-between gap-3">
         <View>
-          <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
-            RESULTS
+          <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+            Results
           </Text>
-          <Text className="font-inter-extrabold text-3xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
+          <Text className="font-ui-extrabold text-3xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
             {score % 1 === 0 ? score : score.toFixed(1)}
-            <Text className="font-inter-semibold text-lg font-semibold" style={{ color: colors.muted }}>
+            <Text className="font-ui-semibold text-lg font-semibold" style={{ color: colors.muted }}>
               {' '}/ {total}
             </Text>
           </Text>
         </View>
-        <Text className="font-inter-semibold text-xl font-semibold tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui-semibold text-xl font-semibold tabular-nums" style={{ color: colors.muted }}>
           {total ? Math.round((score / total) * 100) : 0}%
         </Text>
       </View>
       {elapsed !== null ? (
-        <Text className="font-inter text-xs tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
           Time {formatDuration(elapsed)}
           {bestMs !== null ? ` · Best ${formatDuration(bestMs)}` : ''}
           {isNewBest ? (
-            <Text className="font-inter-bold font-bold" style={{ color: GRADE_COLOR.correct }}>
+            <Text className="font-ui-bold font-bold" style={{ color: GRADE_COLOR.correct }}>
               {' '}New best!
             </Text>
           ) : null}
@@ -81,10 +81,10 @@ export function ResultsCard({
       <View className="flex-row gap-2">
         {tallies.map(({ grade, count }) => (
           <View key={grade} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
-            <Text className="font-inter-bold text-xl font-bold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
+            <Text className="font-ui-bold text-xl font-bold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
               {count}
             </Text>
-            <Text className="font-inter text-[11px]" style={{ color: colors.muted }}>
+            <Text className="font-ui text-[11px]" style={{ color: colors.muted }}>
               {GRADE_LABEL[grade]}
             </Text>
           </View>
@@ -93,7 +93,7 @@ export function ResultsCard({
       <ScrollView style={{ maxHeight: 150 }} contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {chips.map((c, i) => (
           <View key={i} className="rounded-full px-2.5 py-1" style={{ backgroundColor: `${GRADE_COLOR[c.grade]}26` }}>
-            <Text className="font-inter-semibold text-xs font-semibold" style={{ color: GRADE_COLOR[c.grade] }}>
+            <Text className="font-ui-semibold text-xs font-semibold" style={{ color: GRADE_COLOR[c.grade] }}>
               {c.label}
             </Text>
           </View>
@@ -101,12 +101,12 @@ export function ResultsCard({
       </ScrollView>
       <View className="flex-row gap-2">
         <Pressable onPress={onAgain} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.accent }}>
-          <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
             Try again
           </Text>
         </Pressable>
         <Pressable onPress={onClose} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
-          <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
             Close
           </Text>
         </Pressable>
@@ -139,16 +139,16 @@ export function ProgressTab({
   return (
     <>
       <View className="gap-2">
-        <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+        <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
           History
         </Text>
         {bestMs !== null ? (
-          <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
+          <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
             Best {formatDuration(bestMs)}
           </Text>
         ) : null}
         {history.length === 0 ? (
-          <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-sm" style={{ color: colors.muted }}>
             No attempts yet with these settings.
           </Text>
         ) : (
@@ -158,14 +158,14 @@ export function ProgressTab({
               .map((entry, i) => (
                 <View key={i} className="flex-row items-center justify-between gap-3 border-b py-2" style={{ borderColor: colors['surface-hover'] }}>
                   <View>
-                    <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
+                    <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
                       {formatDuration(entry.elapsedMs)}
                     </Text>
-                    <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+                    <Text className="font-ui text-xs" style={{ color: colors.muted }}>
                       {entry.config.drillMode ? 'Drill' : 'Quiz'} · {new Date(entry.at).toLocaleDateString()}
                     </Text>
                   </View>
-                  <Text className="font-inter text-sm tabular-nums" style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}>
+                  <Text className="font-ui text-sm tabular-nums" style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}>
                     {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
                   </Text>
                 </View>
@@ -174,7 +174,7 @@ export function ProgressTab({
         )}
         {history.length > 0 ? (
           <Pressable onPress={onClearHistory}>
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
               Clear these times
             </Text>
           </Pressable>
@@ -182,27 +182,27 @@ export function ProgressTab({
       </View>
 
       <View className="gap-2">
-        <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+        <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
           Struggles
         </Text>
         {weak.length === 0 ? (
-          <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-sm" style={{ color: colors.muted }}>
             No struggles tracked yet — a wrong answer adds it here.
           </Text>
         ) : (
           <View className="gap-1">
             {weak.map((entry) => (
               <View key={entry.key} className="flex-row items-center justify-between gap-3 border-b py-2" style={{ borderColor: colors['surface-hover'] }}>
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                   {entry.label}
                 </Text>
                 <View className="flex-row items-center gap-2">
                   {entry.counts.incorrect > 0 ? (
-                    <Text className="font-inter text-xs tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
+                    <Text className="font-ui text-xs tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
                       ✕{entry.counts.incorrect}
                     </Text>
                   ) : null}
-                  <Text className="font-inter text-xs tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
                     /{attempts(entry.counts)}
                   </Text>
                 </View>
@@ -216,14 +216,14 @@ export function ProgressTab({
           className="self-start rounded-lg px-3 py-1.5"
           style={{ backgroundColor: colors.accent, opacity: running || weak.length === 0 ? 0.5 : 1 }}
         >
-          <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
             Shed weak {weakNoun}
             {weak.length > 0 ? ` (${weak.length})` : ''}
           </Text>
         </Pressable>
         {weak.length > 0 ? (
           <Pressable disabled={running} onPress={onClearStats}>
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.danger, opacity: running ? 0.6 : 1 }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.danger, opacity: running ? 0.6 : 1 }}>
               Clear stats
             </Text>
           </Pressable>

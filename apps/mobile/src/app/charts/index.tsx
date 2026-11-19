@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ALL_CHARTS_ID, FolderRow, SearchField, SongRow, songSubtitle, useChordChartBrowser } from '@/components/ChordChartList';
 import { ChordChartNewSheet } from '@/components/ChordChartNewSheet';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { LibraryHeader } from '@/components/TabHeader';
+import { IconButton } from '@/components/ui';
 import { ChordChartIcon, DownloadIcon, FolderIcon, LinkIcon, PlusIcon, type IconProps } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useRecentCharts } from '@/lib/chordChartRecents';
@@ -58,20 +60,8 @@ function ChartsScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-2 px-5 pb-3 pt-4">
-          <Text className="font-inter-extrabold flex-1 text-3xl font-extrabold" style={{ color: colors.foreground }}>
-            Chord Charts
-          </Text>
-          <Pressable
-            onPress={() => setNewOpen(true)}
-            accessibilityLabel="New chord chart or playlist"
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.accent }}
-          >
-            <PlusIcon color={colors['accent-foreground']} size={24} />
-          </Pressable>
-        </View>
-        <View className="px-4 pb-2">
+        <LibraryHeader right={<IconButton primary Icon={PlusIcon} label="New chord chart or playlist" onPress={() => setNewOpen(true)} />} />
+        <View className="px-4 pb-2 pt-3">
           <SearchField value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts…`} />
         </View>
 
@@ -93,7 +83,7 @@ function ChartsScreen() {
               />
             )}
             ListEmptyComponent={
-              <Text className="font-inter py-8 text-center text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui py-8 text-center text-sm" style={{ color: colors.muted }}>
                 No charts match &ldquo;{query}&rdquo;.
               </Text>
             }
@@ -108,12 +98,12 @@ function ChartsScreen() {
 
             {totalSongs === 0 ? (
               <View className="gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-                <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui text-sm" style={{ color: colors.muted }}>
                   No chord charts yet. Build one with +, or import a chart link or playlist.
                 </Text>
                 <Pressable onPress={() => router.push('/charts/import')} className="flex-row items-center justify-center gap-2 rounded-xl py-3" style={{ backgroundColor: colors.background }}>
                   <DownloadIcon color={colors.foreground} size={18} />
-                  <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                     Import charts
                   </Text>
                 </Pressable>
@@ -122,7 +112,7 @@ function ChartsScreen() {
 
             {recentCharts.length > 0 ? (
               <View className="gap-2">
-                <Text className="font-inter-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
                   Recently opened
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
@@ -136,10 +126,10 @@ function ChartsScreen() {
                     >
                       <ChordChartIcon color={colors.accent} size={20} />
                       <View>
-                        <Text numberOfLines={1} className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                        <Text numberOfLines={1} className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                           {r.song.title}
                         </Text>
-                        <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                        <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                           {[r.song.key, r.playlistName].filter(Boolean).join(' · ')}
                         </Text>
                       </View>
@@ -151,7 +141,7 @@ function ChartsScreen() {
 
             {totalSongs > 0 || playlists.length > 0 ? (
               <View className="gap-1">
-                <Text className="font-inter-bold px-1 pb-1 text-lg font-bold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-bold px-1 pb-1 text-lg font-bold" style={{ color: colors.foreground }}>
                   Playlists
                 </Text>
                 <FolderRow
@@ -192,10 +182,10 @@ function StatCard({ Icon, count, label }: { Icon: ComponentType<IconProps>; coun
     <View className="flex-1 gap-2 rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
       <Icon color={colors.accent} size={22} />
       <View>
-        <Text className="font-inter-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
+        <Text className="font-ui-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
           {count}
         </Text>
-        <Text numberOfLines={1} className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+        <Text numberOfLines={1} className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
           {label}
         </Text>
       </View>

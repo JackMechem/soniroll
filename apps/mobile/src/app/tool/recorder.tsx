@@ -24,7 +24,6 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { InfoButton } from '@/components/InfoButton';
 import { FileMusicIcon, MetronomeIcon, MicrophoneIcon, SlidersIcon, StopIcon } from '@/components/icons';
 import {
@@ -192,11 +191,11 @@ function RecorderScreen() {
       <View className="flex-1 items-center justify-center gap-4 px-10" style={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ title: 'Recorder' }} />
         <MicrophoneIcon color={colors.muted} size={40} />
-        <Text className="font-inter text-center text-base" style={muted}>
+        <Text className="font-ui text-center text-base" style={muted}>
           Recordings are saved to your account, so you can play them back on any device. Sign in to start recording.
         </Text>
         <Pressable onPress={() => router.push('/profile')} className="rounded-full px-6 py-3" style={{ backgroundColor: colors.accent }}>
-          <Text className="font-inter-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
             Sign in
           </Text>
         </Pressable>
@@ -219,7 +218,7 @@ function RecorderScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Recorder' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 gap-4 px-5 py-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT + 16 }}>
+        <View className="flex-1 gap-4 px-5 py-4" style={{ paddingBottom: 16 }}>
           <View className="flex-row">
             <Pressable
               onPress={() => router.push('/recordings')}
@@ -228,7 +227,7 @@ function RecorderScreen() {
               style={{ backgroundColor: colors.surface, opacity: busy ? 0.5 : 1 }}
             >
               <FileMusicIcon color={colors.foreground} size={18} />
-              <Text className="font-inter-bold text-sm font-bold" style={fg}>
+              <Text className="font-ui-bold text-sm font-bold" style={fg}>
                 My recordings{recordings ? ` (${recordings.length})` : ''}
               </Text>
             </Pressable>
@@ -238,12 +237,12 @@ function RecorderScreen() {
             <View className="items-center gap-2">
               <Text
                 numberOfLines={1}
-                className="font-inter-semibold text-base font-semibold"
+                className="font-ui-semibold text-base font-semibold"
                 style={{ color: rec.phase === 'recording' ? colors.danger : colors.muted }}
               >
                 {statusLabel}
               </Text>
-              <Text className="font-inter-extrabold text-5xl font-extrabold tabular-nums" style={fg}>
+              <Text className="font-ui-extrabold text-5xl font-extrabold tabular-nums" style={fg}>
                 {formatDuration(elapsed)}
               </Text>
               <LevelMeter level={rec.phase === 'recording' ? rec.level : 0} />
@@ -265,7 +264,7 @@ function RecorderScreen() {
             </Pressable>
 
             <View className="flex-row items-center gap-2" style={{ opacity: busy ? 0.5 : 1 }}>
-              <Text className="font-inter-semibold text-sm font-semibold" style={muted}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={muted}>
                 Auto gain
               </Text>
               <InfoButton
@@ -282,7 +281,7 @@ function RecorderScreen() {
             </View>
 
             {rec.error ? (
-              <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
+              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
                 {rec.error}
               </Text>
             ) : null}
@@ -292,7 +291,7 @@ function RecorderScreen() {
           <View className="gap-4 rounded-3xl p-4" style={{ borderWidth: 1, borderColor: colors['surface-hover'] }}>
             <View className="flex-row items-center gap-2">
               <MetronomeIcon color={colors.foreground} size={20} />
-              <Text className="font-inter-bold flex-1 text-base font-bold" style={fg}>
+              <Text className="font-ui-bold flex-1 text-base font-bold" style={fg}>
                 Metronome
               </Text>
               {settings.metronome ? (
@@ -304,7 +303,7 @@ function RecorderScreen() {
                   style={{ backgroundColor: colors.surface }}
                 >
                   <SlidersIcon color={colors.foreground} size={16} />
-                  <Text className="font-inter-bold text-sm font-bold" style={fg}>
+                  <Text className="font-ui-bold text-sm font-bold" style={fg}>
                     Options
                   </Text>
                 </Pressable>
@@ -326,7 +325,7 @@ function RecorderScreen() {
                   onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
                 />
                 {useStructure && !activeSection ? (
-                  <Text className="font-inter text-center text-sm" style={muted}>
+                  <Text className="font-ui text-center text-sm" style={muted}>
                     Open Options to add sections and build a form.
                   </Text>
                 ) : (
@@ -358,8 +357,8 @@ function RecorderScreen() {
             content: () => (
               <>
                 <View className="items-start gap-1.5">
-                  <Text className="font-inter-bold text-xs font-bold tracking-wide" style={muted}>
-                    TEMPO NOTE VALUE
+                  <Text className="font-ui-semibold text-xs font-semibold" style={muted}>
+                    Tempo note value
                   </Text>
                   <TempoNoteValueControls
                     tempoNoteValue={tempoNoteValue}
@@ -380,7 +379,7 @@ function RecorderScreen() {
                 />
                 <View className="gap-3 rounded-3xl p-4" style={{ backgroundColor: colors.surface }}>
                   <View className="flex-row items-center justify-between">
-                    <Text className="font-inter-bold text-sm font-bold" style={fg}>
+                    <Text className="font-ui-bold text-sm font-bold" style={fg}>
                       Use a structure
                     </Text>
                     <Switch
@@ -390,7 +389,7 @@ function RecorderScreen() {
                       trackColor={{ false: colors['surface-hover'], true: colors.accent }}
                     />
                   </View>
-                  <Text className="font-inter text-xs leading-4" style={muted}>
+                  <Text className="font-ui text-xs leading-4" style={muted}>
                     Chain bars of different time signatures in a fixed, looping sequence — e.g. 2 bars of 11/8, then a
                     bar of 12/8 — instead of one meter for the whole take.
                   </Text>
@@ -421,7 +420,7 @@ function RecorderScreen() {
                   onChange={(n) => updateSettings({ countInBars: Math.round(n) })}
                   hint="This many bars click before the recording starts, so you come in on the downbeat."
                 />
-                <Text className="font-inter text-xs leading-4" style={muted}>
+                <Text className="font-ui text-xs leading-4" style={muted}>
                   The click plays through the speaker, so the microphone picks it up unless you wear headphones.
                 </Text>
               </>

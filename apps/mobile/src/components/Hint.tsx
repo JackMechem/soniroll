@@ -11,7 +11,7 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 export function Hint({ children }: { children: React.ReactNode }) {
   const { colors } = useAppTheme();
   return (
-    <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+    <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
       {children}
     </Text>
   );

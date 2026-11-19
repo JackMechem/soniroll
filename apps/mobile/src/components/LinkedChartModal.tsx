@@ -24,7 +24,7 @@ export function LinkedChartModal({ chart, onClose }: { chart: PublicLinkedChart 
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
           <View className="flex-row items-center justify-between px-4 pt-2">
-            <Text numberOfLines={1} className="min-w-0 flex-1 text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               {chart.title}
             </Text>
             <Pressable

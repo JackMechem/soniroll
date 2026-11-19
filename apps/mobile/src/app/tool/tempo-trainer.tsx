@@ -16,7 +16,6 @@ import { Pressable, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { EyeOffIcon, SlidersIcon } from '@/components/icons';
 import {
   AccentAndSubdivisionControls,
@@ -180,7 +179,7 @@ function TempoTrainerScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
@@ -188,7 +187,6 @@ function TempoTrainerScreen() {
 
           <View
             className="flex-1 items-center justify-center gap-10"
-            style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}
           >
             <View className="items-center gap-4">
               <TempoNoteValueControls
@@ -211,14 +209,14 @@ function TempoTrainerScreen() {
                 style={{ backgroundColor: colors.surface, maxWidth: 280 }}
               >
                 <EyeOffIcon color={colors.muted} size={20} />
-                <Text className="text-center text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                <Text className="text-center text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                   Keep the tempo going — the click will come back
                 </Text>
               </View>
             ) : (
               <View className="items-center gap-3">
                 {useStructure && activeSection ? (
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                  <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                     Section <Text style={{ color: colors.foreground }}>{activeSection.name}</Text> ·
                     bar {engineState.barInSection + 1} of {activeSection.bars}
                   </Text>
@@ -226,7 +224,7 @@ function TempoTrainerScreen() {
 
                 {useStructure && !activeSection ? (
                   <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
-                    <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
+                    <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>
                       Open Options to add sections and build a form.
                     </Text>
                   </View>
@@ -254,7 +252,7 @@ function TempoTrainerScreen() {
               }}
             >
               <Text
-                className="text-base font-bold font-inter-bold"
+                className="text-base font-bold font-ui-bold"
                 style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
               >
                 {running ? 'Stop' : 'Start'}
@@ -287,7 +285,7 @@ function TempoTrainerScreen() {
                 />
                 <View className="gap-3 rounded-3xl p-4" style={{ backgroundColor: colors.surface }}>
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                       Use a structure
                     </Text>
                     <Switch
@@ -296,7 +294,7 @@ function TempoTrainerScreen() {
                       trackColor={{ false: colors['surface-hover'], true: colors.accent }}
                     />
                   </View>
-                  <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
                     Chain bars of different time signatures in a fixed, looping sequence instead
                     of one meter for the whole run.
                   </Text>

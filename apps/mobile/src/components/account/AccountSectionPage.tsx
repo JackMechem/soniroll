@@ -28,7 +28,7 @@ export function AccountSectionPage({ title, info, children }: { title: string; i
         <ScreenSpinner />
       ) : !isAuthenticated ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
             You&apos;re signed out.
           </Text>
         </View>

@@ -9,6 +9,7 @@ import {
   filterNavLinks,
   groupByCategory,
 } from "@jam-practice/core/navLinks";
+import { CATEGORY_INDEX } from "@jam-practice/core/accentColors";
 
 // Shared by the sidebar and the command palette.
 export { CATEGORIES, currentToolHref, groupByCategory };
@@ -753,16 +754,11 @@ export const CATEGORY_ICONS: Record<Category, (props: { className?: string }) =>
 
 /** One color per category: the sidebar's icon tiles, so a tool's group reads at a glance. CSS
     variables (`app/globals.css`, `--cat-0`…`--cat-6`) derived from the theme's accent, so they
-    suit whichever theme is on. Text/icons on a solid one use `--accent-foreground`. */
-export const CATEGORY_COLORS: Record<Category, string> = {
-  Community: "var(--cat-0)",
-  "Play along": "var(--cat-1)",
-  "Time & rhythm": "var(--cat-2)",
-  "Ear training": "var(--cat-3)",
-  "On your instrument": "var(--cat-4)",
-  Drums: "var(--cat-5)",
-  "Practice tools": "var(--cat-6)",
-};
+    suit whichever theme is on (the phone app computes the same colours with
+    `@jam-practice/core/accentColors`). Text/icons on a solid one use `--accent-foreground`. */
+export const CATEGORY_COLORS = Object.fromEntries(
+  Object.entries(CATEGORY_INDEX).map(([category, i]) => [category, `var(--cat-${i})`]),
+) as Record<Category, string>;
 
 /** Every tool's own icon component (web-only SVG JSX) — the one thing `@jam-practice/core/navLinks`
     doesn't carry, since that package has no React-DOM dependency. Keyed by `href` so it's a plain

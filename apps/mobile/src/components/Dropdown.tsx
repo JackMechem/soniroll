@@ -40,10 +40,10 @@ export function Dropdown<T>({
         className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
         style={{ backgroundColor: highlighted ? colors.accent : colors.surface }}
       >
-        <Text className="text-sm font-bold font-inter-bold" style={{ color: highlighted ? colors['accent-foreground'] : colors.foreground }}>
+        <Text className="text-sm font-bold font-ui-bold" style={{ color: highlighted ? colors['accent-foreground'] : colors.foreground }}>
           {triggerLabel ?? current?.label ?? String(value)}
         </Text>
-        <Text className="font-inter" style={{ color: highlighted ? colors['accent-foreground'] : colors.muted }}>▾</Text>
+        <Text className="font-ui" style={{ color: highlighted ? colors['accent-foreground'] : colors.muted }}>▾</Text>
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -78,7 +78,7 @@ export function Dropdown<T>({
                     style={{ backgroundColor: selected ? colors.accent : 'transparent' }}
                   >
                     <Text
-                      className="text-base font-semibold font-inter-semibold"
+                      className="text-base font-semibold font-ui-semibold"
                       style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}
                     >
                       {option.label}

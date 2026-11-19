@@ -88,12 +88,12 @@ export function LearningPath({
     <View className="w-full flex-1 gap-3">
       <View className="gap-2 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
         <View className="flex-row items-baseline justify-between">
-          <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
             {done ? 'Path complete!' : `Level ${current + 1} of ${levels.length}`}
           </Text>
-          <Text className="font-inter-bold text-sm font-bold tabular-nums" style={{ color: STAR_COLOR }}>
+          <Text className="font-ui-bold text-sm font-bold tabular-nums" style={{ color: STAR_COLOR }}>
             ★ {summary.stars}
-            <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui text-sm" style={{ color: colors.muted }}>
               {' '}/ {summary.maxStars}
             </Text>
           </Text>
@@ -101,7 +101,7 @@ export function LearningPath({
         <View className="h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: colors.background }}>
           <View className="h-full rounded-full" style={{ width: `${(summary.passed / summary.total) * 100}%`, backgroundColor: colors.accent }} />
         </View>
-        <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+        <Text className="font-ui text-xs" style={{ color: colors.muted }}>
           {done
             ? 'Every level passed. Go back for three stars on each, or keep practicing in Practice mode.'
             : `Score ${Math.round(PASS_SCORE * 100)}% or better on a level to unlock the next one.`}
@@ -154,7 +154,7 @@ export function LearningPath({
                     {passed ? (
                       <CheckIcon color={colors['accent-foreground']} size={26} />
                     ) : unlocked ? (
-                      <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.accent }}>
+                      <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.accent }}>
                         {i + 1}
                       </Text>
                     ) : (
@@ -163,17 +163,17 @@ export function LearningPath({
                   </View>
                 </Pressable>
                 <View style={{ width: 150 }}>
-                  <Text numberOfLines={2} className="font-inter-bold text-sm font-bold" style={{ color: unlocked ? colors.foreground : `${colors.muted}99` }}>
+                  <Text numberOfLines={2} className="font-ui-bold text-sm font-bold" style={{ color: unlocked ? colors.foreground : `${colors.muted}99` }}>
                     {level.title}
                   </Text>
                   {passed ? (
                     <Stars count={stars} />
                   ) : isCurrent ? (
-                    <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.accent }}>
+                    <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.accent }}>
                       {isSelected ? 'Up next' : 'Current level'}
                     </Text>
                   ) : (
-                    <Text className="font-inter text-xs" style={{ color: `${colors.muted}99` }}>
+                    <Text className="font-ui text-xs" style={{ color: `${colors.muted}99` }}>
                       Level {i + 1}
                     </Text>
                   )}

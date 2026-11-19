@@ -3,7 +3,6 @@ import { Pressable, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon } from '@/components/icons';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 
@@ -44,7 +43,7 @@ function ThemeScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ padding: 16, gap: 8 }}
         renderSectionHeader={({ section }) => (
-          <Text className="mb-2 mt-4 text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
+          <Text className="mb-2 mt-4 text-lg font-bold font-ui-bold" style={{ color: colors.foreground }}>
             {section.title}
           </Text>
         )}
@@ -53,17 +52,13 @@ function ThemeScreen() {
         )}
       />
       {/* A card of the *currently active* theme's own colors, pinned to the bottom — confirms at a
-          glance that picking a preset above actually re-themed the app live, not just this list.
-          `marginBottom` clears the bottom nav bar (`FloatingTabBar.tsx`, an absolutely-positioned
-          overlay mounted once in `_layout.tsx`, above every screen including this one) rather than
-          sitting underneath it. */}
+          glance that picking a preset above actually re-themed the app live, not just this list. */}
       {active ? (
         <View
-          className="mx-4 flex-row items-center gap-3 rounded-2xl border p-4"
+          className="mx-4 flex-row items-center gap-3 rounded-xl p-4"
           style={{
             backgroundColor: colors.surface,
-            borderColor: colors['surface-hover'],
-            marginBottom: insets.bottom + TAB_BAR_CONTENT_HEIGHT + 24,
+            marginBottom: insets.bottom + 16,
           }}
         >
           <View className="flex-row -space-x-1.5">
@@ -73,10 +68,10 @@ function ThemeScreen() {
             <Swatch color={active.colors.foreground} />
           </View>
           <View className="flex-1">
-            <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+            <Text className="text-xs font-ui" style={{ color: colors.muted }}>
               Active theme
             </Text>
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               {active.label}
             </Text>
           </View>
@@ -113,7 +108,7 @@ function PresetRow({
           <Swatch color={preset.colors.accent} />
           <Swatch color={preset.colors.foreground} />
         </View>
-        <Text className="text-[15px] font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+        <Text className="text-[15px] font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
           {preset.label}
         </Text>
       </View>

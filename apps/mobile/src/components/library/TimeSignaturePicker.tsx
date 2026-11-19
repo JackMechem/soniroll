@@ -16,11 +16,11 @@ function Fraction({ value, color, size = 17 }: { value: string; color: string; s
   const { top, bottom } = parse(value);
   return (
     <View className="items-center">
-      <Text className="font-inter-extrabold font-extrabold" style={{ color, fontSize: size, lineHeight: size * 1.05 }}>
+      <Text className="font-ui-extrabold font-extrabold" style={{ color, fontSize: size, lineHeight: size * 1.05 }}>
         {top}
       </Text>
       <View style={{ height: 1.5, width: size * 1.1, backgroundColor: color, opacity: 0.5 }} />
-      <Text className="font-inter-extrabold font-extrabold" style={{ color, fontSize: size, lineHeight: size * 1.05 }}>
+      <Text className="font-ui-extrabold font-extrabold" style={{ color, fontSize: size, lineHeight: size * 1.05 }}>
         {bottom}
       </Text>
     </View>
@@ -74,7 +74,7 @@ export function TimeSignaturePicker({ value, onChange }: { value: string; onChan
           className="items-center justify-center rounded-xl px-3"
           style={{ height: 60, backgroundColor: custom ? colors.accent : colors.surface }}
         >
-          <Text className="font-inter-semibold text-sm font-semibold" style={{ color: custom ? colors['accent-foreground'] : colors.foreground }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: custom ? colors['accent-foreground'] : colors.foreground }}>
             Other
           </Text>
         </Pressable>
@@ -97,18 +97,18 @@ function StepRow({ label, value, onMinus, onPlus }: { label: string; value: stri
   const { colors } = useAppTheme();
   const btn = (text: string, onPress: () => void) => (
     <Pressable onPress={onPress} className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: colors.background }}>
-      <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+      <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
         {text}
       </Text>
     </Pressable>
   );
   return (
     <View className="flex-row items-center gap-2">
-      <Text className="font-inter flex-1 text-sm" style={{ color: colors.muted }}>
+      <Text className="font-ui flex-1 text-sm" style={{ color: colors.muted }}>
         {label}
       </Text>
       {btn('−', onMinus)}
-      <Text className="font-inter-bold w-7 text-center text-base font-bold tabular-nums" style={{ color: colors.foreground }}>
+      <Text className="font-ui-bold w-7 text-center text-base font-bold tabular-nums" style={{ color: colors.foreground }}>
         {value}
       </Text>
       {btn('+', onPlus)}

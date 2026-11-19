@@ -113,13 +113,13 @@ export function ProfileTab() {
 
       <View className="gap-1">
         <View className="flex-row items-center gap-1.5">
-          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
             Username
           </Text>
           <InfoButton
             title="Username"
             size={16}
-            text={`This has nothing to do with how you sign in — it's a separate, public identity (sheddex.com/u/${normalizedUsername || '…'}), only shown if your profile is public.`}
+            text={`This has nothing to do with how you sign in — it's a separate, public identity (soniroll.com/u/${normalizedUsername || '…'}), only shown if your profile is public.`}
           />
         </View>
         <TextInput
@@ -129,30 +129,30 @@ export function ProfileTab() {
           placeholderTextColor={colors.muted}
           autoCapitalize="none"
           autoCorrect={false}
-          className="rounded-xl px-3 py-2.5 text-base font-inter"
+          className="rounded-xl px-3 py-2.5 text-base font-ui"
           style={{ backgroundColor: colors.background, color: colors.foreground }}
         />
         {formatError ? (
-          <Text className="text-xs font-inter" style={{ color: colors.danger }}>
+          <Text className="text-xs font-ui" style={{ color: colors.danger }}>
             {formatError}
           </Text>
         ) : usernameChanged && availability === undefined ? (
-          <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+          <Text className="text-xs font-ui" style={{ color: colors.muted }}>
             Checking availability…
           </Text>
         ) : usernameTaken ? (
-          <Text className="text-xs font-inter" style={{ color: colors.danger }}>
+          <Text className="text-xs font-ui" style={{ color: colors.danger }}>
             That username is already taken.
           </Text>
         ) : usernameChanged ? (
-          <Text className="text-xs font-inter" style={{ color: colors.accent }}>
+          <Text className="text-xs font-ui" style={{ color: colors.accent }}>
             Available.
           </Text>
         ) : null}
       </View>
 
       <View className="gap-2">
-        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+        <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
           Instruments played
         </Text>
         {instruments.length > 0 ? (
@@ -163,7 +163,7 @@ export function ProfileTab() {
                 className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
                 style={{ backgroundColor: colors.background }}
               >
-                <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                   {name}
                 </Text>
                 <Pressable onPress={() => removeInstrument(name)} accessibilityLabel={`Remove ${name}`}>
@@ -180,7 +180,7 @@ export function ProfileTab() {
             onSubmitEditing={() => addInstrument(instrumentInput)}
             placeholder="Type an instrument and press Enter"
             placeholderTextColor={colors.muted}
-            className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-sm font-inter"
+            className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-sm font-ui"
             style={{ backgroundColor: colors.background, color: colors.foreground }}
           />
           <Pressable
@@ -201,7 +201,7 @@ export function ProfileTab() {
                 className="rounded-full px-2.5 py-1"
                 style={{ backgroundColor: colors.background }}
               >
-                <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                   + {name}
                 </Text>
               </Pressable>
@@ -211,10 +211,10 @@ export function ProfileTab() {
       </View>
 
       <View className="flex-row items-center gap-2 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
-        <Text className="flex-1 text-sm font-inter" style={{ color: colors.foreground }}>
-          <Text className="font-semibold font-inter-semibold">{tunes.length}</Text> tune
+        <Text className="flex-1 text-sm font-ui" style={{ color: colors.foreground }}>
+          <Text className="font-semibold font-ui-semibold">{tunes.length}</Text> tune
           {tunes.length === 1 ? '' : 's'} and{' '}
-          <Text className="font-semibold font-inter-semibold">{tunesToLearn.length}</Text> tune
+          <Text className="font-semibold font-ui-semibold">{tunesToLearn.length}</Text> tune
           {tunesToLearn.length === 1 ? '' : 's'} to learn show on your public profile.
         </Text>
         <InfoButton
@@ -233,12 +233,12 @@ export function ProfileTab() {
       />
 
       {error ? (
-        <Text className="text-sm font-inter" style={{ color: colors.danger }}>
+        <Text className="text-sm font-ui" style={{ color: colors.danger }}>
           {error}
         </Text>
       ) : null}
       {saved && !error ? (
-        <Text className="text-sm font-inter" style={{ color: colors.accent }}>
+        <Text className="text-sm font-ui" style={{ color: colors.accent }}>
           Profile saved.
         </Text>
       ) : null}
@@ -248,7 +248,7 @@ export function ProfileTab() {
         className="self-start rounded-xl px-4 py-2.5"
         style={{ backgroundColor: colors.accent, opacity: saving || !!formatError || usernameTaken ? 0.5 : 1 }}
       >
-        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors['accent-foreground'] }}>
+        <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors['accent-foreground'] }}>
           {saving ? 'Saving…' : 'Save profile'}
         </Text>
       </Pressable>

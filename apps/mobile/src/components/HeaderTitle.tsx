@@ -1,26 +1,27 @@
-import { Text } from 'react-native';
+import { NAV_LINKS_DATA } from '@jam-practice/core/navLinks';
+import { Text, View } from 'react-native';
 
+import { NAV_LINK_ICONS } from '@/components/icons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
+const TOOL_BY_LABEL = new Map(NAV_LINKS_DATA.map((l) => [l.label, l]));
+
 /**
- * A native stack `headerTitle` render for every screen's header — plain accent-colored bold text,
- * matching the same look a brief detour gave it (bars-behind-text, like the "sheddex" wordmark)
- * before that was reverted per a direct request ("forget about the bars behind the page titles,
- * remove it... keep the exact formatting of the text you have though"). `numberOfLines={1}`
- * truncates (rather than wraps) an unusually long title — this app's longest real title,
- * "Polyrhythm Metric Modulation Metronome", otherwise wraps onto two lines once the header's back
- * button eats into the available width.
+ * Every screen header's title, like the website's phone top bar: the name in the text colour and,
+ * on a tool's screen, the tool's icon in its category colour before it (looked up by the title,
+ * as the web does). One line, cut off with … if it's long.
  */
 export function HeaderTitle({ children }: { children?: string }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   if (!children) return null;
+  const tool = TOOL_BY_LABEL.get(children);
+  const Icon = tool ? NAV_LINK_ICONS[tool.href] : undefined;
   return (
-    <Text
-      numberOfLines={1}
-      className="text-lg font-bold font-inter-bold tracking-tight"
-      style={{ color: colors.accent }}
-    >
-      {children}
-    </Text>
+    <View className="flex-row items-center gap-2" style={{ flexShrink: 1 }}>
+      {tool && Icon ? <Icon color={derived.category[tool.category]} size={20} /> : null}
+      <Text numberOfLines={1} className="font-ui-semibold text-[17px] font-semibold" style={{ color: colors.foreground, flexShrink: 1 }}>
+        {children}
+      </Text>
+    </View>
   );
 }

@@ -14,7 +14,6 @@ import { type LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { SlidersIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
 import { Pill, SoundOptions, TempoControls } from '@/components/MetronomeControls';
@@ -213,16 +212,16 @@ function RandomStickingWarmupScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Random Sticking Warmup' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 gap-3 px-4 pt-3" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT + 12 }}>
+        <View className="flex-1 gap-3 px-4 pt-3" style={{ paddingBottom: 12 }}>
           {running ? (
             // While playing, tempo and the beat strip shrink to one row beside Options so both
             // staves get the room; stop to change the tempo.
             <View className="flex-row items-center gap-3">
               <View className="items-center">
-                <Text className="text-2xl font-extrabold font-inter-extrabold" style={fg}>
+                <Text className="text-2xl font-extrabold font-ui-extrabold" style={fg}>
                   {bpm}
                 </Text>
-                <Text className="text-[10px] font-bold font-inter-bold tracking-wide" style={muted}>
+                <Text className="text-[10px] font-bold font-ui-bold" style={muted}>
                   BPM
                 </Text>
               </View>
@@ -237,7 +236,7 @@ function RandomStickingWarmupScreen() {
                 style={{ backgroundColor: colors.surface }}
               >
                 <SlidersIcon color={colors.foreground} size={18} />
-                <Text className="text-sm font-bold font-inter-bold" style={fg}>
+                <Text className="text-sm font-bold font-ui-bold" style={fg}>
                   Options
                 </Text>
               </Pressable>
@@ -253,7 +252,7 @@ function RandomStickingWarmupScreen() {
                   style={{ backgroundColor: colors.surface }}
                 >
                   <SlidersIcon color={colors.foreground} size={18} />
-                  <Text className="text-sm font-bold font-inter-bold" style={fg}>
+                  <Text className="text-sm font-bold font-ui-bold" style={fg}>
                     Options
                   </Text>
                 </Pressable>
@@ -280,7 +279,7 @@ function RandomStickingWarmupScreen() {
                 {layout.next ? (
                   <>
                     <Text
-                      className="text-center text-sm font-semibold font-inter-semibold"
+                      className="text-center text-sm font-semibold font-ui-semibold"
                       style={[muted, { height: NEXT_LABEL - CARD_GAP, lineHeight: NEXT_LABEL - CARD_GAP }]}
                     >
                       Next
@@ -307,7 +306,7 @@ function RandomStickingWarmupScreen() {
             ) : null}
           </View>
 
-          <Text className="text-center text-sm font-semibold font-inter-semibold" style={{ color: colors.accent, minHeight: 20 }}>
+          <Text className="text-center text-sm font-semibold font-ui-semibold" style={{ color: colors.accent, minHeight: 20 }}>
             {phaseLabel ?? ''}
           </Text>
 
@@ -317,7 +316,7 @@ function RandomStickingWarmupScreen() {
               className="items-center rounded-full px-6 py-4"
               style={{ backgroundColor: colors.surface }}
             >
-              <Text className="text-base font-bold font-inter-bold" style={fg}>
+              <Text className="text-base font-bold font-ui-bold" style={fg}>
                 New pattern
               </Text>
             </Pressable>
@@ -327,7 +326,7 @@ function RandomStickingWarmupScreen() {
               style={{ backgroundColor: running ? colors.surface : colors.accent }}
             >
               <Text
-                className="text-base font-bold font-inter-bold"
+                className="text-base font-bold font-ui-bold"
                 style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
               >
                 {running ? 'Stop' : 'Start'}
@@ -349,7 +348,7 @@ function RandomStickingWarmupScreen() {
               <>
                 <View className="gap-2">
                   <View className="flex-row items-center gap-1.5">
-                    <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                       Roll type
                     </Text>
                     <InfoButton
@@ -375,7 +374,7 @@ function RandomStickingWarmupScreen() {
                 {rollType === 'random' ? (
                   <View className="gap-2">
                     <View className="flex-row items-center gap-1.5">
-                      <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                      <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                         Roll types
                       </Text>
                       <InfoButton
@@ -400,7 +399,7 @@ function RandomStickingWarmupScreen() {
                 {showTripletPicker ? (
                   <View className="gap-2">
                     <View className="flex-row items-center gap-1.5">
-                      <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                      <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                         Triplet stickings
                       </Text>
                       <InfoButton
@@ -457,7 +456,7 @@ function RandomStickingWarmupScreen() {
                 />
                 <View className="gap-2">
                   <View className="flex-row items-center gap-1.5">
-                    <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                       Click
                     </Text>
                     <InfoButton

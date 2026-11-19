@@ -472,7 +472,7 @@ function GuessTheChordScreen() {
   if (!settingsReady) return <ScreenSpinner />;
 
   const label = (text: string) => (
-    <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
+    <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.muted }}>
       {text}
     </Text>
   );
@@ -501,7 +501,7 @@ function GuessTheChordScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
@@ -509,7 +509,7 @@ function GuessTheChordScreen() {
           ) : activeLevel !== null ? (
             <View className="items-center">
               <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.accent}1f` }}>
-                <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
+                <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                   Level {activeLevel + 1} · {learn.levels[activeLevel].title} · {cumulativeItems('chord', activeLevel).length} chords
                 </Text>
               </View>
@@ -541,7 +541,7 @@ function GuessTheChordScreen() {
               <>
                 {status && running ? (
                   <View className="items-center gap-0.5">
-                    {label('NEXT CHORD IN')}
+                    {label('Next chord in')}
                     <CountdownText active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} color={GRADE_COLOR[status]} />
                   </View>
                 ) : null}
@@ -552,7 +552,7 @@ function GuessTheChordScreen() {
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.4}
-                      className="font-inter-bold text-center text-4xl font-bold"
+                      className="font-ui-bold text-center text-4xl font-bold"
                       style={{
                         color: glow ?? (answering && typedPreview ? colors.accent : colors.foreground),
                         textShadowColor: glow ?? 'transparent',
@@ -567,26 +567,26 @@ function GuessTheChordScreen() {
 
                 {running && round ? (
                   <Pressable onPress={() => playChordSound(round.notes)} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
-                    <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                    <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                       ▶ Replay
                     </Text>
                   </Pressable>
                 ) : null}
 
                 {revealNotes && status && round ? (
-                  <Text className="font-inter-semibold text-center text-sm font-semibold tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui-semibold text-center text-sm font-semibold tabular-nums" style={{ color: colors.muted }}>
                     {round.notes.join(' · ')}
                   </Text>
                 ) : null}
 
                 {running && progress ? (
-                  <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui text-sm tabular-nums" style={{ color: colors.muted }}>
                     Chord {progress.index} of {progress.total} · <ElapsedTimer active={running} startedAt={sessionStartedAt} />
                   </Text>
                 ) : null}
 
                 {!running ? (
-                  <Text className="font-inter max-w-[300px] text-center text-xs" style={{ color: colors.muted }}>
+                  <Text className="font-ui max-w-[300px] text-center text-xs" style={{ color: colors.muted }}>
                     Type the root, then the quality, then an optional /bass — e.g. F♯Δ7 or A♭-7/D. m7 means minor 7; use maj7 or Δ for major 7.
                   </Text>
                 ) : null}
@@ -594,7 +594,7 @@ function GuessTheChordScreen() {
             )}
 
             {error ? (
-              <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
+              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -605,14 +605,14 @@ function GuessTheChordScreen() {
                 className="min-w-[200px] items-center rounded-full py-3.5"
                 style={{ backgroundColor: running ? colors.surface : colors.accent }}
               >
-                <Text className="font-inter-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
+                <Text className="font-ui-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
                   {running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
                 </Text>
               </Pressable>
             ) : null}
             {answering ? (
               <Pressable onPress={endSession} hitSlop={8}>
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
                   Stop session
                 </Text>
               </Pressable>
@@ -651,17 +651,17 @@ function GuessTheChordScreen() {
             content: () => (
               <>
                 <View className="flex-row items-center justify-between">
-                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
                     {pool.length} of {CHORD_QUALITIES.length} selected
                   </Text>
                   <View className="flex-row gap-3">
                     <Pressable disabled={running} onPress={() => updateSettings({ chordIds: CHORD_QUALITIES.map((q) => q.id) })}>
-                      <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
+                      <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
                         All
                       </Text>
                     </Pressable>
                     <Pressable disabled={running} onPress={() => updateSettings({ chordIds: [] })}>
-                      <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
+                      <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
                         None
                       </Text>
                     </Pressable>
@@ -685,7 +685,7 @@ function GuessTheChordScreen() {
                             className="rounded-full px-3 py-1.5"
                             style={{ backgroundColor: selected ? colors.accent : colors.surface, opacity: running ? 0.6 : 1 }}
                           >
-                            <Text className="font-inter-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
+                            <Text className="font-ui-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
                               C{prettyQuality(quality.suffix)}
                             </Text>
                           </Pressable>
@@ -720,7 +720,7 @@ function GuessTheChordScreen() {
             label: 'Register',
             content: () => (
               <View className="gap-1.5">
-                {label('REGISTER')}
+                {label('Register')}
                 <Dropdown value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
                 <Hint>Which octave range the chord&apos;s root is drawn from — just where it sits for listening.</Hint>
               </View>
@@ -791,12 +791,12 @@ function GuessTheChordScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  {label('PLAYBACK STYLE')}
+                  {label('Playback style')}
                   <Dropdown value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
                   <Hint>Whether the chord&apos;s notes play all at once or as a quick rolled arpeggio.</Hint>
                 </View>
                 <View className="gap-1.5">
-                  {label('TONE')}
+                  {label('Tone')}
                   <Dropdown value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
                   <Hint>Which sound plays the chord — real recorded piano or Rhodes.</Hint>
                 </View>
@@ -807,7 +807,7 @@ function GuessTheChordScreen() {
                   hint="Shows the actual notes that were played once a round is graded."
                 />
                 <View className="gap-1.5">
-                  {label('ACCIDENTALS')}
+                  {label('Accidentals')}
                   <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
                   <Hint>How sharps and flats are spelled in the revealed answer, e.g. C# vs Db.</Hint>
                 </View>

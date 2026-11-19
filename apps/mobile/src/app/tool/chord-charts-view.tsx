@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ChordChartView from '@/components/ChordChartView';
 import { ChordChartSongMenu, type MenuTarget } from '@/components/ChordChartSongMenu';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { DotsVerticalIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { forgetRecentChart, recordRecentChart } from '@/lib/chordChartRecents';
@@ -66,11 +65,11 @@ function ChordChartsViewScreen() {
           title: selected?.title ?? 'Chart',
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-inter-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
                 {selected?.title || 'Chart'}
               </Text>
               {subtitle ? (
-                <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                   {subtitle}
                 </Text>
               ) : null}
@@ -103,7 +102,7 @@ function ChordChartsViewScreen() {
         }}
       />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 6, paddingTop: 4, paddingBottom: 16 + TAB_BAR_CONTENT_HEIGHT, flexGrow: 1 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 6, paddingTop: 4, paddingBottom: 16, flexGrow: 1 }}>
           {selectedSongLoading ? (
             <View className="flex-1 items-center justify-center py-12">
               <LoadingSpinner showLabel label="Loading chart…" />
@@ -112,7 +111,7 @@ function ChordChartsViewScreen() {
             <ChordChartView song={displayed} barsPerRow={BARS_PER_ROW} hideHeader />
           ) : (
             <View className="flex-1 items-center justify-center py-16">
-              <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
                 Couldn&apos;t find that chart.
               </Text>
             </View>

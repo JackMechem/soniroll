@@ -83,7 +83,7 @@ function SaveRecordingScreen() {
     router.back();
   }
 
-  const label = 'font-inter-bold text-sm font-bold';
+  const label = 'font-ui-bold text-sm font-bold';
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen
@@ -92,7 +92,7 @@ function SaveRecordingScreen() {
           gestureEnabled: false,
           headerLeft: () => (
             <Pressable onPress={() => !saving && setConfirmDiscard(true)} hitSlop={8} className="pr-3">
-              <Text className="font-inter-semibold text-base font-semibold" style={{ color: colors.danger }}>
+              <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.danger }}>
                 Discard
               </Text>
             </Pressable>
@@ -104,7 +104,7 @@ function SaveRecordingScreen() {
               className="rounded-full px-5 py-2"
               style={{ backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
             >
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 Save
               </Text>
             </Pressable>
@@ -115,7 +115,7 @@ function SaveRecordingScreen() {
         <View className="gap-3 rounded-3xl p-4" style={{ backgroundColor: colors.surface }}>
           <View className="flex-row items-center gap-3">
             <PlayButton playing={player.activeKey === 'take' && player.playing} onPress={() => player.toggle('take', params.uri)} size={48} />
-            <Text className="font-inter flex-1 text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui flex-1 text-sm" style={{ color: colors.muted }}>
               Listen back before saving.
             </Text>
           </View>
@@ -128,7 +128,7 @@ function SaveRecordingScreen() {
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>
-            NAME
+            Name
           </Text>
           <TextInput
             value={shownName}
@@ -137,19 +137,19 @@ function SaveRecordingScreen() {
               setName(text);
             }}
             selectTextOnFocus={!nameTouched}
-            className="font-inter rounded-2xl px-4 py-3 text-base"
+            className="font-ui rounded-2xl px-4 py-3 text-base"
             style={{ backgroundColor: colors.surface, color: colors.foreground }}
           />
         </View>
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>
-            TUNE
+            Tune
           </Text>
           <View className="flex-row items-center gap-3 rounded-2xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
             <LinkIcon color={tune ? colors.accent : colors.muted} size={18} />
             <Pressable className="flex-1" onPress={() => setPicking(true)}>
-              <Text numberOfLines={1} className="font-inter text-base" style={{ color: tune ? colors.foreground : colors.muted }}>
+              <Text numberOfLines={1} className="font-ui text-base" style={{ color: tune ? colors.foreground : colors.muted }}>
                 {tune ? tune.name : 'Not linked — tap to link a tune'}
               </Text>
             </Pressable>
@@ -163,7 +163,7 @@ function SaveRecordingScreen() {
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>
-            NOTES
+            Notes
           </Text>
           <TextInput
             value={notes}
@@ -172,7 +172,7 @@ function SaveRecordingScreen() {
             placeholder="How did it go? What to work on…"
             placeholderTextColor={colors.muted}
             textAlignVertical="top"
-            className="font-inter rounded-2xl px-4 py-3 text-base"
+            className="font-ui rounded-2xl px-4 py-3 text-base"
             style={{ backgroundColor: colors.surface, color: colors.foreground, minHeight: 120 }}
           />
         </View>
@@ -180,13 +180,13 @@ function SaveRecordingScreen() {
         {saving ? (
           <View className="flex-row items-center justify-center gap-3">
             <LoadingSpinner size="sm" />
-            <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui text-sm" style={{ color: colors.muted }}>
               Uploading…
             </Text>
           </View>
         ) : null}
         {error ? (
-          <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
+          <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
             {error} Your take is still here — try Save again.
           </Text>
         ) : null}

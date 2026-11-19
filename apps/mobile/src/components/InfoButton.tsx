@@ -30,15 +30,15 @@ export function InfoButton({ title, text, size = 18 }: { title?: string; text: s
         >
           <Pressable onPress={() => {}} className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
             {title ? (
-              <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
                 {title}
               </Text>
             ) : null}
-            <Text className="font-inter text-base leading-6" style={{ color: colors.foreground }}>
+            <Text className="font-ui text-base leading-6" style={{ color: colors.foreground }}>
               {text}
             </Text>
             <Pressable onPress={() => setOpen(false)} className="items-center self-end rounded-xl px-5 py-2.5" style={{ backgroundColor: colors.accent }}>
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 Got it
               </Text>
             </Pressable>

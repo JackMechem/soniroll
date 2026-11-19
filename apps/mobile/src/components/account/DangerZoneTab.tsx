@@ -34,7 +34,7 @@ export function DangerZoneTab() {
   return (
     <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
       <View className="flex-row items-center gap-2">
-        <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.danger }}>
+        <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.danger }}>
           Delete account
         </Text>
         <InfoButton
@@ -47,7 +47,7 @@ export function DangerZoneTab() {
         className="self-start rounded-xl px-4 py-2.5"
         style={{ backgroundColor: colors.danger }}
       >
-        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.background }}>
+        <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.background }}>
           Delete my account
         </Text>
       </Pressable>
@@ -123,10 +123,10 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
       >
         <Pressable onPress={() => {}} className="gap-4 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
           <View className="gap-1.5">
-            <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               Delete your account
             </Text>
-            <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+            <Text className="text-sm font-ui" style={{ color: colors.muted }}>
               {step === 'code'
                 ? `Enter the code we emailed to ${email ?? 'your email'} to finish.`
                 : "This permanently deletes your account and signs you out everywhere. It doesn't touch anything already saved on this device."}
@@ -136,7 +136,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           {step === 'form' ? (
             requiresPassword ? (
               <View className="gap-1.5">
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                   Enter your password to confirm
                 </Text>
                 <TextInput
@@ -144,28 +144,28 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                   onChangeText={setPassword}
                   secureTextEntry
                   autoFocus
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={inputStyle}
                 />
               </View>
             ) : (
               <View className="gap-1.5">
-                <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-                  Type <Text className="font-semibold font-inter-semibold" style={{ color: colors.foreground }}>DELETE</Text> to confirm
+                <Text className="text-sm font-ui" style={{ color: colors.muted }}>
+                  Type <Text className="font-semibold font-ui-semibold" style={{ color: colors.foreground }}>DELETE</Text> to confirm
                 </Text>
                 <TextInput
                   value={confirmText}
                   onChangeText={setConfirmText}
                   autoFocus
                   autoCapitalize="characters"
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={inputStyle}
                 />
               </View>
             )
           ) : (
             <View className="gap-1.5">
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                 Confirmation code
               </Text>
               <TextInput
@@ -173,14 +173,14 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                 onChangeText={setCode}
                 keyboardType="number-pad"
                 autoFocus
-                className="rounded-xl px-3 py-2.5 text-base font-inter"
+                className="rounded-xl px-3 py-2.5 text-base font-ui"
                 style={inputStyle}
               />
             </View>
           )}
 
           {error ? (
-            <Text className="text-sm font-inter" style={{ color: colors.danger }}>
+            <Text className="text-sm font-ui" style={{ color: colors.danger }}>
               {error}
             </Text>
           ) : null}
@@ -191,7 +191,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
               className="rounded-xl px-4 py-2.5"
               style={{ backgroundColor: colors.background }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                 Cancel
               </Text>
             </Pressable>
@@ -202,7 +202,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                 className="rounded-xl px-4 py-2.5"
                 style={{ backgroundColor: colors.danger, opacity: !canSubmitForm || submitting ? 0.5 : 1 }}
               >
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.background }}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.background }}>
                   {requiresPassword ? 'Send confirmation code' : 'Delete my account'}
                 </Text>
               </Pressable>
@@ -213,7 +213,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                 className="rounded-xl px-4 py-2.5"
                 style={{ backgroundColor: colors.danger, opacity: submitting || !code ? 0.5 : 1 }}
               >
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.background }}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.background }}>
                   Confirm delete
                 </Text>
               </Pressable>

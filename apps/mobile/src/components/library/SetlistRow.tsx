@@ -21,10 +21,10 @@ export function SetlistRow({ setlist }: { setlist: Setlist }) {
     >
       <SetlistIcon color={colors.accent} size={22} />
       <View className="flex-1">
-        <Text numberOfLines={1} className="font-inter-bold text-base font-bold" style={{ color: colors.foreground }}>
+        <Text numberOfLines={1} className="font-ui-bold text-base font-bold" style={{ color: colors.foreground }}>
           {setlist.name}
         </Text>
-        <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+        <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
           {`${n} tune${n === 1 ? '' : 's'}${setlist.shareId ? ' · shared' : ''}`}
         </Text>
       </View>

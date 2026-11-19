@@ -49,10 +49,10 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
           <View key={tune.id} className="gap-2.5 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
             <View className="flex-row items-start justify-between gap-2">
               <View className="min-w-0 flex-1">
-                <Text numberOfLines={1} className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                   {tune.name}
                 </Text>
-                <Text className="mt-0.5 text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                <Text className="mt-0.5 text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                   {tune.timeSignature}
                 </Text>
               </View>
@@ -65,7 +65,7 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
                     style={{ opacity: inMyTunes ? 0.5 : 1 }}
                   >
                     {inMyTunes ? <CheckIcon color={colors.muted} size={13} /> : <PlusIcon color={colors.muted} size={13} />}
-                    <Text className="text-xs font-inter-semibold" style={{ color: colors.muted }}>
+                    <Text className="text-xs font-ui-semibold" style={{ color: colors.muted }}>
                       {inMyTunes ? 'Added' : 'Add'}
                     </Text>
                   </Pressable>
@@ -76,7 +76,7 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
                     style={{ opacity: inTunesToLearn ? 0.5 : 1 }}
                   >
                     {inTunesToLearn ? <CheckIcon color={colors.muted} size={13} /> : <BookIcon color={colors.muted} size={13} />}
-                    <Text className="text-xs font-inter-semibold" style={{ color: colors.muted }}>
+                    <Text className="text-xs font-ui-semibold" style={{ color: colors.muted }}>
                       {inTunesToLearn ? 'Learning' : 'Learn'}
                     </Text>
                   </Pressable>
@@ -84,7 +84,7 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
               ) : null}
             </View>
             {tune.tempos.length + tune.keys.length === 0 ? (
-              <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+              <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                 No tempos or keys
               </Text>
             ) : (
@@ -104,7 +104,7 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
                 style={{ backgroundColor: `${colors.accent}1a` }}
               >
                 <LinkIcon color={colors.accent} size={13} />
-                <Text numberOfLines={1} className="text-xs font-inter-semibold" style={{ color: colors.accent }}>
+                <Text numberOfLines={1} className="text-xs font-ui-semibold" style={{ color: colors.accent }}>
                   {tune.linkedChart.title}
                 </Text>
               </Pressable>
@@ -124,7 +124,7 @@ function Chip({ enabled, label }: { enabled: boolean; label: string }) {
       style={{ backgroundColor: enabled ? `${colors.accent}26` : colors.surface }}
     >
       <Text
-        className="text-xs font-inter-semibold tabular-nums"
+        className="text-xs font-ui-semibold tabular-nums"
         style={{
           color: enabled ? colors.accent : colors.muted,
           textDecorationLine: enabled ? 'none' : 'line-through',

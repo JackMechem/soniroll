@@ -79,7 +79,7 @@ function TunesListScreen() {
               />
             )}
             ListEmptyComponent={
-              <Text className="font-inter py-8 text-center text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui py-8 text-center text-sm" style={{ color: colors.muted }}>
                 {query.trim() ? `No tunes match “${query}”.` : 'Nothing here yet — tap + to add a jazz standard or your own tune.'}
               </Text>
             }

@@ -57,8 +57,18 @@ await page.close();
 
 ## The mobile app
 
-Development of the mobile app is paused (2026-10-18). Only build it if Jack asks. If you change
-`packages/core` or a Convex function it uses, still run `tsc --noEmit` in `apps/mobile`.
+If you change `packages/core` or a Convex function it uses, run `tsc --noEmit` in `apps/mobile`.
+
+**See it yourself on the emulator** (your own, not Jack's phone): the repo flake's `nix develop
+.#android` shell has an Android 14 emulator, AVD `sheddex` (2 GB). Jack likes to watch it, so open
+it as a window: `QT_QPA_PLATFORM=xcb emulator -avd sheddex -no-audio -gpu host -no-boot-anim
+-memory 2048` (in the background; boots in ~20 s; `-no-audio` keeps it off his speakers). Always
+address it as `adb -s emulator-5554`. For live changes install a **debug build** (`npx expo prebuild
+--platform android --no-install`, then `./gradlew assembleDebug` in `android/` from `nix develop
+.#androidBuild`) and keep `npx expo start` running; the debug app loads JS from Metro on 8081
+(`adb -s emulator-5554 reverse tcp:8081 tcp:8081`). Expo web on the same server
+(http://localhost:8081) is handy for layout and for Jack to watch in a browser. The machine has
+16 GB: run one heavy thing at a time (gradle, a Next dev server, the emulator, Chromium).
 
 **Rules:** Jack tests the app himself. **Build and `adb install` only. Never launch, tap, navigate
 or screenshot his phone.** Read `adb logcat` only if he reports a crash. Then give him a short list

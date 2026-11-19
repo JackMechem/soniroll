@@ -2,15 +2,16 @@ import { sortByText } from '@jam-practice/core/sortText';
 import { formatComposer } from '@jam-practice/core/iRealPro';
 import { useRouter } from 'expo-router';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
 import { ChordChartSongMenu, type MenuTarget } from '@/components/ChordChartSongMenu';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { ChevronRightIcon, ClearIcon, DotsVerticalIcon, FolderIcon, SearchIcon, TrashIcon } from '@/components/icons';
+import { TAB_BAR_CONTENT_HEIGHT, useTabBarVisible } from '@/components/FloatingTabBar';
+import { ChevronRightIcon, DotsVerticalIcon, FolderIcon, TrashIcon } from '@/components/icons';
 import { forgetRecentChart } from '@/lib/chordChartRecents';
 import { useChordChartsLibrary, type LibrarySongMeta } from '@/lib/useChordChartsLibrary';
+import { SearchField as UiSearchField } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /** Shared building blocks for the Chord Charts library screens — the top level
@@ -162,11 +163,11 @@ export const SongRow = memo(function SongRow({
         className="flex-1 justify-center rounded-xl px-3"
         style={{ height: ROW_H - 4 }}
       >
-        <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+        <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
           {song.title}
         </Text>
         {subtitle ? (
-          <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+          <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
             {subtitle}
           </Text>
         ) : null}
@@ -209,10 +210,10 @@ export const FolderRow = memo(function FolderRow({
         style={{ height: FOLDER_H - 8, backgroundColor: colors.surface }}
       >
         <FolderIcon color={colors.accent} size={24} />
-        <Text numberOfLines={1} className="font-inter-bold flex-1 text-base font-bold" style={{ color: colors.foreground }}>
+        <Text numberOfLines={1} className="font-ui-bold flex-1 text-base font-bold" style={{ color: colors.foreground }}>
           {name}
         </Text>
-        <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui text-sm tabular-nums" style={{ color: colors.muted }}>
           {count}
         </Text>
         {onMenu ? (
@@ -238,7 +239,7 @@ export function SectionLabel({ title }: { title: string }) {
   const { colors } = useAppTheme();
   return (
     <View style={{ height: LABEL_H, justifyContent: 'flex-end', paddingBottom: 6, paddingHorizontal: 4 }}>
-      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
         {title}
       </Text>
     </View>
@@ -253,6 +254,7 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
   const { colors } = useAppTheme();
   const stripRef = useRef<View>(null);
   const geom = useRef({ top: 0, height: 1 });
+  const tabBarVisible = useTabBarVisible();
   const lastRef = useRef<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
 
@@ -281,7 +283,7 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
   return (
     <>
       <View
-        style={{ width: 28, paddingTop: 4, paddingBottom: 8 + TAB_BAR_CONTENT_HEIGHT }}
+        style={{ width: 28, paddingTop: 4, paddingBottom: 8 + (tabBarVisible ? TAB_BAR_CONTENT_HEIGHT : 0) }}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderTerminationRequest={() => false}
@@ -298,7 +300,7 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
           {LETTERS.map((l) => (
             <Text
               key={l}
-              className="font-inter-bold text-[11px] font-bold"
+              className="font-ui-bold text-[11px] font-bold"
               style={{
                 color: l === active ? colors.accent : colors.foreground,
                 opacity: available.has(l) ? 1 : 0.3,
@@ -312,7 +314,7 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
       {active ? (
         <View style={{ pointerEvents: 'none', position: 'absolute', top: '35%', left: 0, right: 0, alignItems: 'center' }}>
           <View className="items-center justify-center rounded-3xl" style={{ width: 96, height: 96, backgroundColor: colors.accent }}>
-            <Text className="font-inter-extrabold text-5xl font-extrabold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="font-ui-extrabold text-5xl font-extrabold" style={{ color: colors['accent-foreground'] }}>
               {active}
             </Text>
           </View>
@@ -322,25 +324,8 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
   );
 }
 
+/** The search box the library screens use — the app's one search field (`ui.tsx`), under its older
+    `onChange` name. */
 export function SearchField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
-  const { colors } = useAppTheme();
-  return (
-    <View className="flex-row items-center gap-2 rounded-xl pl-3" style={{ backgroundColor: colors.surface }}>
-      <SearchIcon color={colors.muted} size={18} />
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={colors.muted}
-        returnKeyType="search"
-        className="font-inter flex-1 text-base"
-        style={{ color: colors.foreground, paddingVertical: 10 }}
-      />
-      {value ? (
-        <Pressable onPress={() => onChange('')} accessibilityLabel="Clear search" className="h-11 w-11 items-center justify-center">
-          <ClearIcon color={colors.muted} size={18} />
-        </Pressable>
-      ) : null}
-    </View>
-  );
+  return <UiSearchField value={value} onChangeText={onChange} placeholder={placeholder} />;
 }

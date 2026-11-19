@@ -11,6 +11,8 @@ import { SearchField } from '@/components/ChordChartList';
 import { PostListItem } from '@/components/community/CommunityTunes';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { TabHeader } from '@/components/TabHeader';
+import { IconButton } from '@/components/ui';
 import { ActionSheet } from '@/components/ActionSheet';
 import { FollowersIcon, HeartIcon, MusicNoteIcon, PlusIcon, PostIcon, SetlistIcon, type IconProps } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -65,19 +67,7 @@ function CommunityScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-2 px-5 pb-3 pt-4">
-          <Text className="font-inter-extrabold flex-1 text-3xl font-extrabold" style={{ color: colors.foreground }}>
-            Community
-          </Text>
-          <Pressable
-            onPress={() => gated(() => setNewOpen(true))}
-            accessibilityLabel="New post"
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.accent }}
-          >
-            <PlusIcon color={colors['accent-foreground']} size={24} />
-          </Pressable>
-        </View>
+        <TabHeader title="Community" right={<IconButton primary Icon={PlusIcon} label="New post" onPress={() => gated(() => setNewOpen(true))} />} />
         <View className="px-4 pb-2">
           <SearchField value={query} onChange={setQuery} placeholder="Search people and posts…" />
         </View>
@@ -108,11 +98,11 @@ function CommunityScreen() {
                       >
                         <UserAvatar url={p.avatarUrl} />
                         <View className="min-w-0 flex-1">
-                          <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                          <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                             @{p.username}
                           </Text>
                           {p.instruments.length > 0 ? (
-                            <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                            <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                               {p.instruments.join(', ')}
                             </Text>
                           ) : null}
@@ -151,11 +141,11 @@ function CommunityScreen() {
               <Section title="Latest posts">
                 {!isAuthenticated ? (
                   <View className="gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-                    <Text className="font-inter text-sm" style={{ color: colors.muted }}>
-                      Sign in to see what sheddex users have posted — tunes, setlists, and the chord charts that come with them.
+                    <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+                      Sign in to see what people on soniroll have posted — tunes, setlists, and the chord charts that come with them.
                     </Text>
                     <Pressable onPress={() => router.push('/profile')} className="items-center rounded-xl py-3" style={{ backgroundColor: colors.accent }}>
-                      <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                      <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                         Sign in
                       </Text>
                     </Pressable>
@@ -223,7 +213,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   const { colors } = useAppTheme();
   return (
     <View className="gap-2">
-      <Text className="font-inter-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
+      <Text className="font-ui-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
         {title}
       </Text>
       {children}
@@ -234,7 +224,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Empty({ text }: { text: string }) {
   const { colors } = useAppTheme();
   return (
-    <Text className="font-inter rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
+    <Text className="font-ui rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
       {text}
     </Text>
   );
@@ -246,10 +236,10 @@ function StatCard({ Icon, count, label, onPress }: { Icon: ComponentType<IconPro
     <Pressable onPress={onPress} android_ripple={{ color: colors['surface-hover'] }} className="flex-1 gap-2 overflow-hidden rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
       <Icon color={colors.accent} size={22} />
       <View>
-        <Text className="font-inter-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
+        <Text className="font-ui-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
           {count ?? '–'}
         </Text>
-        <Text numberOfLines={1} className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+        <Text numberOfLines={1} className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
           {label}
         </Text>
       </View>

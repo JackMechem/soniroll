@@ -5,7 +5,6 @@ import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import {
   PauseIcon,
   PencilIcon,
@@ -124,7 +123,7 @@ function PracticeTimerScreen() {
                 style={{ backgroundColor: colors.surface }}
               >
                 <SlidersIcon color={colors.foreground} size={18} />
-                <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                   Options
                 </Text>
               </Pressable>
@@ -197,15 +196,15 @@ function PracticeTimerScreen() {
 function RunningView({ engineState }: { engineState: EngineState }) {
   const { colors } = useAppTheme();
   return (
-    <View className="flex-1 items-center justify-center gap-6" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+    <View className="flex-1 items-center justify-center gap-6">
       <Text
-        className="text-xs font-bold font-inter-bold tracking-widest"
+        className="text-xs font-bold font-ui-bold"
         style={{ color: engineState.alarming ? colors.danger : colors.muted }}
       >
-        {engineState.alarming ? "TIME'S UP" : engineState.paused ? 'PAUSED' : 'NOW RUNNING'}
+        {engineState.alarming ? "Time's up" : engineState.paused ? 'Paused' : 'Now running'}
       </Text>
       <Text
-        className="max-w-[300px] text-center text-2xl font-extrabold font-inter-extrabold"
+        className="max-w-[300px] text-center text-2xl font-extrabold font-ui-extrabold"
         style={{ color: colors.foreground }}
       >
         {engineState.current.title}
@@ -217,7 +216,7 @@ function RunningView({ engineState }: { engineState: EngineState }) {
         remainingMsAtPause={engineState.remainingMsAtPause}
         alarming={engineState.alarming}
       />
-      <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+      <Text className="text-sm font-ui" style={{ color: colors.muted }}>
         {engineState.next ? `Next: ${engineState.next.title}` : 'Last step of this session.'}
       </Text>
       <View className="flex-row flex-wrap items-center justify-center gap-3">
@@ -269,7 +268,7 @@ function TransportButton({
     >
       {children}
       <Text
-        className="text-sm font-bold font-inter-bold"
+        className="text-sm font-bold font-ui-bold"
         style={{ color: accent ? colors['accent-foreground'] : danger ? colors.danger : colors.foreground }}
       >
         {label}
@@ -295,17 +294,17 @@ function LibraryView({
 }) {
   const { colors } = useAppTheme();
   return (
-    <View className="flex-1 items-center" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+    <View className="flex-1 items-center">
       <View className="items-center gap-3 pt-6">
         <StopwatchIcon color={colors.muted} size={40} />
         {loading ? (
           <LoadingSpinner />
         ) : sessions.length === 0 ? (
-          <Text className="max-w-[260px] text-center font-inter" style={{ color: colors.muted }}>
+          <Text className="max-w-[260px] text-center font-ui" style={{ color: colors.muted }}>
             Create a session to get started — chain timers back to back, or run a Pomodoro.
           </Text>
         ) : (
-          <Text className="font-inter" style={{ color: colors.muted }}>
+          <Text className="font-ui" style={{ color: colors.muted }}>
             Pick a saved session to start it, or create a new one.
           </Text>
         )}
@@ -322,10 +321,10 @@ function LibraryView({
             }}
           >
             <View className="min-w-0 flex-1">
-              <Text numberOfLines={1} className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+              <Text numberOfLines={1} className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                 {session.name || 'Untitled session'}
               </Text>
-              <Text numberOfLines={1} className="text-xs font-inter" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
                 {describeSession(session)}
               </Text>
             </View>
@@ -348,7 +347,7 @@ function LibraryView({
         style={{ backgroundColor: colors.accent }}
       >
         <PlusIcon color={colors['accent-foreground']} size={16} />
-        <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+        <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
           New session
         </Text>
       </Pressable>
@@ -378,15 +377,15 @@ function ReliabilityHints() {
   if (Platform.OS !== 'android') return null;
   return (
     <View className="gap-2 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
-      <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+      <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
         If notifications or the sound feel inconsistent, two phone settings outside this app&apos;s
         own control are the usual cause.
       </Text>
       <View className="gap-1">
-        <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
           Alarms &amp; reminders
         </Text>
-        <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+        <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
           Lets segment-end notifications fire at the exact time instead of being delayed.
         </Text>
         <Pressable
@@ -398,16 +397,16 @@ function ReliabilityHints() {
           className="self-start rounded-lg px-3 py-1.5"
           style={{ backgroundColor: colors.surface }}
         >
-          <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.accent }}>
+          <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.accent }}>
             Allow exact alarms
           </Text>
         </Pressable>
       </View>
       <View className="gap-1">
-        <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
           Battery
         </Text>
-        <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+        <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
           Open this app&apos;s settings, then look for &quot;Battery&quot; →
           &quot;Unrestricted&quot; (wording varies by phone).
         </Text>
@@ -416,7 +415,7 @@ function ReliabilityHints() {
           className="self-start rounded-lg px-3 py-1.5"
           style={{ backgroundColor: colors.surface }}
         >
-          <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.accent }}>
+          <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.accent }}>
             Open app settings
           </Text>
         </Pressable>

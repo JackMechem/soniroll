@@ -46,7 +46,7 @@ export function ChartPickerModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
-          <Text className="font-inter-bold text-xl font-bold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-bold text-xl font-bold" style={{ color: colors.foreground }}>
             Link a chord chart
           </Text>
           <Pressable onPress={onClose} accessibilityLabel="Close" className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
@@ -63,7 +63,7 @@ export function ChartPickerModal({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
           ListEmptyComponent={
-            <Text className="font-inter py-6 text-center text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui py-6 text-center text-sm" style={{ color: colors.muted }}>
               {totalSongs === 0 ? 'No chord charts yet — create or import some first.' : `No charts match “${query}”.`}
             </Text>
           }
@@ -76,10 +76,10 @@ export function ChartPickerModal({
             >
               <ChordChartIcon color={colors.accent} size={20} />
               <View className="flex-1">
-                <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                   {item.song.title}
                 </Text>
-                <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+                <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                   {[item.song.composer, item.playlist].filter(Boolean).join(' · ')}
                 </Text>
               </View>

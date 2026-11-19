@@ -87,7 +87,7 @@ export function ToolOptionsSheet({
           </View>
 
           <View className="flex-row items-center justify-between px-5 pb-3 pt-2">
-            <Text className="text-lg font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+            <Text className="text-lg font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
               {title}
             </Text>
             <Pressable
@@ -118,7 +118,7 @@ export function ToolOptionsSheet({
                   >
                     <Text
                       numberOfLines={1}
-                      className="text-sm font-bold font-inter-bold"
+                      className="text-sm font-bold font-ui-bold"
                       style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}
                     >
                       {tab.label}

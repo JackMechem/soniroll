@@ -32,7 +32,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CountdownRing } from '@/components/CountdownRing';
 import { ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { Hint } from '@/components/Hint';
 import { SlidersIcon } from '@/components/icons';
 import { NumberStepper } from '@/components/NumberStepper';
@@ -808,39 +807,39 @@ function IntervalTrainerScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
           </View>
 
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+          <View className="flex-1 items-center justify-center gap-4">
             {showingSummary && summary ? (
               <View className="w-full gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
                 <View className="flex-row items-end justify-between gap-3">
                   <View>
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      RESULTS
+                    <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                      Results
                     </Text>
-                    <Text className="text-3xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: colors.foreground }}>
+                    <Text className="text-3xl font-extrabold font-ui-extrabold tabular-nums" style={{ color: colors.foreground }}>
                       {score % 1 === 0 ? score : score.toFixed(1)}
-                      <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                      <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                         {' '}
                         / {summary.results.length}
                       </Text>
                     </Text>
                   </View>
-                  <Text className="text-xl font-semibold font-inter-semibold tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="text-xl font-semibold font-ui-semibold tabular-nums" style={{ color: colors.muted }}>
                     {summary.results.length ? Math.round((score / summary.results.length) * 100) : 0}%
                   </Text>
                 </View>
 
                 {lastElapsedMs !== null ? (
-                  <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                     Time {formatDuration(lastElapsedMs)}
                     {bestMs !== null ? ` · Best ${formatDuration(bestMs)}` : ''}
                     {isNewBest ? (
-                      <Text className="font-bold font-inter-bold" style={{ color: GRADE_COLOR.correct }}>
+                      <Text className="font-bold font-ui-bold" style={{ color: GRADE_COLOR.correct }}>
                         {' '}
                         New best!
                       </Text>
@@ -851,10 +850,10 @@ function IntervalTrainerScreen() {
                 <View className="flex-row gap-2">
                   {(['correct', 'partial', 'incorrect'] as const).map((grade) => (
                     <View key={grade} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
-                      <Text className="text-xl font-bold font-inter-bold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
+                      <Text className="text-xl font-bold font-ui-bold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
                         {tally(grade)}
                       </Text>
-                      <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
+                      <Text className="text-[11px] font-ui" style={{ color: colors.muted }}>
                         {GRADE_LABEL[grade]}
                       </Text>
                     </View>
@@ -863,12 +862,12 @@ function IntervalTrainerScreen() {
 
                 <View className="flex-row gap-2">
                   <Pressable onPress={() => void start(lastMode)} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.accent }}>
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+                    <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
                       Try again
                     </Text>
                   </Pressable>
                   <Pressable onPress={() => setSummary(null)} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                       Close
                     </Text>
                   </Pressable>
@@ -878,8 +877,8 @@ function IntervalTrainerScreen() {
               <>
                 {status && running ? (
                   <View className="items-center gap-0.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      NEXT INTERVAL IN
+                    <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                      Next interval in
                     </Text>
                     <CountdownText
                       active={running}
@@ -896,7 +895,7 @@ function IntervalTrainerScreen() {
                       numberOfLines={2}
                       adjustsFontSizeToFit
                       minimumFontScale={0.5}
-                      className="text-center text-lg font-bold font-inter-bold"
+                      className="text-center text-lg font-bold font-ui-bold"
                       style={{
                         color: glow ?? colors.foreground,
                         textShadowColor: glow ?? 'transparent',
@@ -910,7 +909,7 @@ function IntervalTrainerScreen() {
                 </CountdownRing>
 
                 {showNext && nextRound && running ? (
-                  <Text className="max-w-[220px] text-center text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                  <Text className="max-w-[220px] text-center text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                     Next: {roundLabel(nextRound, roundSeed + 1)}
                   </Text>
                 ) : null}
@@ -935,7 +934,7 @@ function IntervalTrainerScreen() {
                           className="rounded-full px-2.5 py-1"
                           style={{ backgroundColor: colors.surface }}
                         >
-                          <Text className="text-xs font-bold font-inter-bold tabular-nums" style={{ color }}>
+                          <Text className="text-xs font-bold font-ui-bold tabular-nums" style={{ color }}>
                             {label}
                           </Text>
                         </View>
@@ -946,11 +945,11 @@ function IntervalTrainerScreen() {
 
                 {running && progress ? (
                   <View className="items-center gap-0.5">
-                    <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
+                    <Text className="text-sm font-ui tabular-nums" style={{ color: colors.muted }}>
                       Interval {progress.index} of {progress.total} ·{' '}
                       <ElapsedTimer active={running} startedAt={sessionStartedAt} />
                     </Text>
-                    <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
+                    <Text className="text-sm font-ui tabular-nums" style={{ color: colors.muted }}>
                       {heard ? `Heard ${heard}` : 'Listening…'}
                     </Text>
                     {waiting ? (
@@ -959,7 +958,7 @@ function IntervalTrainerScreen() {
                         className="mt-2 rounded-full px-4 py-1.5"
                         style={{ backgroundColor: colors.surface }}
                       >
-                        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                        <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                           Skip interval
                         </Text>
                       </Pressable>
@@ -970,7 +969,7 @@ function IntervalTrainerScreen() {
             )}
 
             {error ? (
-              <Text className="text-center text-sm font-inter" style={{ color: colors.danger }}>
+              <Text className="text-center text-sm font-ui" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -981,7 +980,7 @@ function IntervalTrainerScreen() {
                 className="min-w-[200px] items-center rounded-full py-3.5"
                 style={{ backgroundColor: running ? colors.surface : colors.accent }}
               >
-                <Text className="text-base font-bold font-inter-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
+                <Text className="text-base font-bold font-ui-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
                   {running ? 'Stop' : 'Start'}
                 </Text>
               </Pressable>
@@ -1001,17 +1000,17 @@ function IntervalTrainerScreen() {
             content: () => (
               <>
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                     {pool.length} of {INTERVALS.length} selected
                   </Text>
                   <View className="flex-row gap-3">
                     <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}>
-                      <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
+                      <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
                         All
                       </Text>
                     </Pressable>
                     <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: [] })}>
-                      <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
+                      <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
                         None
                       </Text>
                     </Pressable>
@@ -1035,7 +1034,7 @@ function IntervalTrainerScreen() {
                         className="rounded-full px-3 py-1.5"
                         style={{ backgroundColor: selected ? colors.accent : colors.surface, opacity: running ? 0.6 : 1 }}
                       >
-                        <Text className="text-xs font-semibold font-inter-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
+                        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
                           {interval.label}
                         </Text>
                       </Pressable>
@@ -1058,16 +1057,16 @@ function IntervalTrainerScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    ACCIDENTALS
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Accidentals
                   </Text>
                   <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
                   <Hint>How sharps and flats are spelled, e.g. C# vs Db.</Hint>
                 </View>
 
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INSTRUMENT
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Instrument
                   </Text>
                   <Dropdown
                     value={instrumentId}
@@ -1082,15 +1081,15 @@ function IntervalTrainerScreen() {
 
                 {isCustom ? (
                   <View className="gap-1.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      CUSTOM RANGE
+                    <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                      Custom range
                     </Text>
                     <TextInput
                       value={customRange}
                       onChangeText={(v) => updateSettings({ customRange: v })}
                       placeholder="A1-A6"
                       placeholderTextColor={colors.muted}
-                      className="rounded-xl px-3 py-2.5 text-base font-inter"
+                      className="rounded-xl px-3 py-2.5 text-base font-ui"
                       style={{ backgroundColor: colors.surface, color: colors.foreground }}
                     />
                     <Hint>The lowest and highest notes to draw starting notes from, e.g. A1-A6.</Hint>
@@ -1223,8 +1222,8 @@ function IntervalTrainerScreen() {
                 />
 
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INPUT SENSITIVITY
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Input sensitivity
                   </Text>
                   <Dropdown
                     value={sensitivity}
@@ -1265,7 +1264,7 @@ function IntervalTrainerScreen() {
                   className="self-start rounded-lg px-3 py-1.5"
                   style={{ backgroundColor: colors.surface, opacity: running ? 0.5 : 1 }}
                 >
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                  <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                     Reset advanced settings
                   </Text>
                 </Pressable>
@@ -1300,8 +1299,8 @@ function IntervalTrainerScreen() {
                 />
 
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    TONE
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Tone
                   </Text>
                   <Dropdown value={wave} options={WAVEFORMS} onChange={(v) => updateSettings({ wave: v })} />
                   <Hint>Which oscillator sound plays an interval out loud.</Hint>
@@ -1315,16 +1314,16 @@ function IntervalTrainerScreen() {
             content: () => (
               <>
                 <View className="gap-2">
-                  <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                  <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                     History
                   </Text>
                   {bestMs !== null ? (
-                    <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
                       Best {formatDuration(bestMs)}
                     </Text>
                   ) : null}
                   {matchingHistory.length === 0 ? (
-                    <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+                    <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                       No attempts yet with these settings.
                     </Text>
                   ) : (
@@ -1338,16 +1337,16 @@ function IntervalTrainerScreen() {
                             style={{ borderColor: colors['surface-hover'] }}
                           >
                             <View>
-                              <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+                              <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
                                 {formatDuration(entry.elapsedMs)}
                               </Text>
-                              <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                              <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                                 {entry.config.drillMode ? 'Drill' : entry.config.chainIntervals ? 'Chained' : 'Quiz'} ·{' '}
                                 {new Date(entry.at).toLocaleDateString()}
                               </Text>
                             </View>
                             <Text
-                              className="text-sm font-inter tabular-nums"
+                              className="text-sm font-ui tabular-nums"
                               style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}
                             >
                               {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
@@ -1358,7 +1357,7 @@ function IntervalTrainerScreen() {
                   )}
                   {matchingHistory.length > 0 ? (
                     <Pressable onPress={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}>
-                      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                         Clear these times
                       </Text>
                     </Pressable>
@@ -1366,11 +1365,11 @@ function IntervalTrainerScreen() {
                 </View>
 
                 <View className="gap-2">
-                  <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                  <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                     Struggles
                   </Text>
                   {weakEntries.length === 0 ? (
-                    <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+                    <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                       No struggles tracked yet — a wrong or partial interval in listen mode adds it here.
                     </Text>
                   ) : (
@@ -1381,21 +1380,21 @@ function IntervalTrainerScreen() {
                           className="flex-row items-center justify-between gap-3 border-b py-2"
                           style={{ borderColor: colors['surface-hover'] }}
                         >
-                          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                             {entry.interval.label} {entry.direction === 1 ? '↑' : '↓'}
                           </Text>
                           <View className="flex-row items-center gap-2">
                             {entry.counts.incorrect > 0 ? (
-                              <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
+                              <Text className="text-xs font-ui tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
                                 ✕{entry.counts.incorrect}
                               </Text>
                             ) : null}
                             {entry.counts.partial > 0 ? (
-                              <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.partial }}>
+                              <Text className="text-xs font-ui tabular-nums" style={{ color: GRADE_COLOR.partial }}>
                                 ~{entry.counts.partial}
                               </Text>
                             ) : null}
-                            <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                            <Text className="text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                               /{attempts(entry.counts)}
                             </Text>
                           </View>
@@ -1412,13 +1411,13 @@ function IntervalTrainerScreen() {
                     className="self-start rounded-lg px-3 py-1.5"
                     style={{ backgroundColor: colors.accent, opacity: running || weakEntries.length === 0 ? 0.5 : 1 }}
                   >
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+                    <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
                       Shed weak intervals{weakEntries.length > 0 ? ` (${weakEntries.length})` : ''}
                     </Text>
                   </Pressable>
                   {weakEntries.length > 0 ? (
                     <Pressable disabled={running} onPress={clearIntervalStats}>
-                      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.danger, opacity: running ? 0.6 : 1 }}>
+                      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.danger, opacity: running ? 0.6 : 1 }}>
                         Clear stats
                       </Text>
                     </Pressable>
@@ -1464,7 +1463,7 @@ function CountdownText({
   if (!active) return null;
 
   return (
-    <Text className="text-3xl font-bold font-inter-bold tabular-nums" style={{ color }}>
+    <Text className="text-3xl font-bold font-ui-bold tabular-nums" style={{ color }}>
       {Math.ceil(remainingMs / 1000)}s
     </Text>
   );

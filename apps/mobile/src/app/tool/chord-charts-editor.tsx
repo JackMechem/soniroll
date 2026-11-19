@@ -292,7 +292,7 @@ function ChordChartEditorScreen() {
               className="rounded-full px-5 py-2"
               style={{ backgroundColor: colors.accent, opacity: saving || loadingExisting ? 0.5 : 1 }}
             >
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 {saving ? 'Saving…' : 'Save'}
               </Text>
             </Pressable>
@@ -318,17 +318,17 @@ function ChordChartEditorScreen() {
           >
             <Pressable onPress={() => setDetailsOpen(true)} className="flex-row items-center gap-2 px-2 pb-2 pt-1">
               <View className="flex-1">
-                <Text numberOfLines={1} className="font-inter-bold text-base font-bold" style={{ color: title.trim() ? colors.foreground : colors.muted }}>
+                <Text numberOfLines={1} className="font-ui-bold text-base font-bold" style={{ color: title.trim() ? colors.foreground : colors.muted }}>
                   {title.trim() || 'Untitled — tap to add details'}
                 </Text>
-                <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                   {info}
                 </Text>
               </View>
               <PencilIcon color={colors.muted} size={18} />
             </Pressable>
             {error ? (
-              <Text className="font-inter px-2 pb-2 text-sm" style={{ color: colors.danger }}>
+              <Text className="font-ui px-2 pb-2 text-sm" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -381,10 +381,10 @@ function ChordChartEditorScreen() {
                 <ChevronLeftIcon color={colors.foreground} size={22} />
               </StripButton>
               <View className="flex-1 flex-row items-center rounded-lg px-3" style={{ height: 40, backgroundColor: colors.background }}>
-                <Text className="font-inter text-xs" style={{ color: colors.muted, marginRight: 8 }}>
+                <Text className="font-ui text-xs" style={{ color: colors.muted, marginRight: 8 }}>
                   {activeIndex + 1}
                 </Text>
-                <Text numberOfLines={1} className="font-inter-semibold flex-1 text-base font-semibold" style={{ color: active.isRepeatBar ? colors.muted : colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold flex-1 text-base font-semibold" style={{ color: active.isRepeatBar ? colors.muted : colors.foreground }}>
                   {active.isRepeatBar ? '% repeat previous bar' : active.text}
                   {active.isRepeatBar ? null : <Text style={{ color: colors.accent }}>|</Text>}
                 </Text>
@@ -488,23 +488,23 @@ function DetailsDialog({
         <Pressable onPress={() => {}} className="rounded-2xl" style={{ backgroundColor: colors.surface, maxHeight: '92%' }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 10 }}>
             <View className="flex-row items-center justify-between">
-              <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
                 Chart details
               </Text>
               {playlist ? (
                 <View className="flex-row items-center gap-1">
                   <FolderIcon color={colors.muted} size={14} />
-                  <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+                  <Text className="font-ui text-xs" style={{ color: colors.muted }}>
                     {playlist}
                   </Text>
                 </View>
               ) : null}
             </View>
-            <TextInput value={fields.title} onChangeText={setters.title} placeholder="Title" placeholderTextColor={colors.muted} className="font-inter text-base" style={input} />
-            <TextInput value={fields.composer} onChangeText={setters.composer} placeholder="Composer (optional)" placeholderTextColor={colors.muted} className="font-inter text-base" style={input} />
+            <TextInput value={fields.title} onChangeText={setters.title} placeholder="Title" placeholderTextColor={colors.muted} className="font-ui text-base" style={input} />
+            <TextInput value={fields.composer} onChangeText={setters.composer} placeholder="Composer (optional)" placeholderTextColor={colors.muted} className="font-ui text-base" style={input} />
             <View className="flex-row gap-2">
-              <TextInput value={fields.style} onChangeText={setters.style} placeholder="Style, e.g. Medium Swing" placeholderTextColor={colors.muted} className="font-inter flex-1 text-base" style={input} />
-              <TextInput value={fields.key} onChangeText={setters.key} placeholder="Key" placeholderTextColor={colors.muted} autoCorrect={false} className="font-inter text-base" style={{ ...input, width: 80 }} />
+              <TextInput value={fields.style} onChangeText={setters.style} placeholder="Style, e.g. Medium Swing" placeholderTextColor={colors.muted} className="font-ui flex-1 text-base" style={input} />
+              <TextInput value={fields.key} onChangeText={setters.key} placeholder="Key" placeholderTextColor={colors.muted} autoCorrect={false} className="font-ui text-base" style={{ ...input, width: 80 }} />
             </View>
             <View className="flex-row gap-4">
               <View className="flex-1">
@@ -523,7 +523,7 @@ function DetailsDialog({
                   className="items-center rounded-xl py-2.5"
                   style={{ backgroundColor: colors.background }}
                 >
-                  <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                     {copied ? 'Copied!' : 'Copy chart link'}
                   </Text>
                 </Pressable>
@@ -537,14 +537,14 @@ function DetailsDialog({
                 className="items-center rounded-xl py-2.5"
                 style={{ backgroundColor: colors.background }}
               >
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                   Export as chart link
                 </Text>
               </Pressable>
             )}
 
             <Pressable onPress={onClose} className="items-center rounded-xl py-3" style={{ backgroundColor: colors.accent }}>
-              <Text className="font-inter-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
                 Done
               </Text>
             </Pressable>

@@ -46,10 +46,10 @@ export function NumberStepper({
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+        <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
           {label}
         </Text>
-        <Text className="text-sm font-inter tabular-nums" style={{ color: colors.foreground }}>
+        <Text className="text-sm font-ui tabular-nums" style={{ color: colors.foreground }}>
           {value}
           {unit}
         </Text>
@@ -97,7 +97,7 @@ function StepperButton({
       className="h-9 w-9 items-center justify-center rounded-full"
       style={{ backgroundColor: colors.surface, opacity: disabled ? 0.4 : 1 }}
     >
-      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
+      <Text className="text-lg font-bold font-ui-bold" style={{ color: colors.foreground }}>
         {symbol}
       </Text>
     </Pressable>

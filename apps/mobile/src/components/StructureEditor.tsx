@@ -47,10 +47,10 @@ export function StructureEditor({
     <View className="gap-4">
       <View className="gap-2">
         <View className="flex-row items-baseline justify-between">
-          <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-            FORM
+          <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+            Form
           </Text>
-          <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+          <Text className="text-xs font-ui" style={{ color: colors.muted }}>
             {structure.form.length} part{structure.form.length === 1 ? '' : 's'} · {totalBars(structure)} bar
             {totalBars(structure) === 1 ? '' : 's'}
           </Text>
@@ -68,7 +68,7 @@ export function StructureEditor({
                 style={{ backgroundColor: active ? colors.accent : colors.surface }}
               >
                 <Text
-                  className="text-xs font-bold font-inter-bold"
+                  className="text-xs font-bold font-ui-bold"
                   style={{ color: active ? colors['accent-foreground'] : colors.foreground }}
                 >
                   {section.name}
@@ -79,7 +79,7 @@ export function StructureEditor({
                   className="h-6 w-6 items-center justify-center rounded-full"
                   style={{ opacity: index === 0 ? 0.3 : 1 }}
                 >
-                  <Text className="font-inter" style={{ color: active ? colors['accent-foreground'] : colors.muted }}>‹</Text>
+                  <Text className="font-ui" style={{ color: active ? colors['accent-foreground'] : colors.muted }}>‹</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => onChange(reorderForm(structure, index, index + 1))}
@@ -87,13 +87,13 @@ export function StructureEditor({
                   className="h-6 w-6 items-center justify-center rounded-full"
                   style={{ opacity: index === structure.form.length - 1 ? 0.3 : 1 }}
                 >
-                  <Text className="font-inter" style={{ color: active ? colors['accent-foreground'] : colors.muted }}>›</Text>
+                  <Text className="font-ui" style={{ color: active ? colors['accent-foreground'] : colors.muted }}>›</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => onChange(removeFormEntry(structure, index))}
                   className="h-6 w-6 items-center justify-center rounded-full"
                 >
-                  <Text className="font-inter" style={{ color: active ? colors['accent-foreground'] : colors.muted }}>×</Text>
+                  <Text className="font-ui" style={{ color: active ? colors['accent-foreground'] : colors.muted }}>×</Text>
                 </Pressable>
               </View>
             );
@@ -109,7 +109,7 @@ export function StructureEditor({
                 className="rounded-full border px-3 py-1.5"
                 style={{ borderColor: colors['surface-hover'] }}
               >
-                <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.foreground }}>
                   + {section.name}
                 </Text>
               </Pressable>
@@ -119,8 +119,8 @@ export function StructureEditor({
       </View>
 
       <View className="gap-2">
-        <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-          SECTIONS
+        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+          Sections
         </Text>
         {structure.sections.map((section) => (
           <SectionCard
@@ -141,7 +141,7 @@ export function StructureEditor({
           className="items-center rounded-2xl border border-dashed p-3"
           style={{ borderColor: colors['surface-hover'] }}
         >
-          <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.accent }}>
+          <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.accent }}>
             + New section
           </Text>
         </Pressable>
@@ -174,11 +174,11 @@ function SectionCard({
   return (
     <View className="rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
       <Pressable onPress={onToggleExpanded} className="flex-row items-center justify-between">
-        <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+        <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
           {section.name} · {section.bars} bar{section.bars === 1 ? '' : 's'} · {section.beatsPerBar}/
           {section.beatUnit}
         </Text>
-        <Text className="font-inter" style={{ color: colors.muted }}>{expanded ? '▾' : '▸'}</Text>
+        <Text className="font-ui" style={{ color: colors.muted }}>{expanded ? '▾' : '▸'}</Text>
       </Pressable>
 
       {expanded ? (
@@ -186,22 +186,22 @@ function SectionCard({
           <TextInput
             value={section.name}
             onChangeText={(name) => onChange({ name })}
-            className="rounded-xl px-3 py-2 text-sm font-semibold font-inter-semibold"
+            className="rounded-xl px-3 py-2 text-sm font-semibold font-ui-semibold"
             style={{ backgroundColor: colors.background, color: colors.foreground }}
           />
 
           <View className="flex-row items-center justify-center gap-3">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              BARS
+            <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+              Bars
             </Text>
             <Pressable
               onPress={() => onChange({ bars: Math.max(1, section.bars - 1) })}
               className="h-8 w-8 items-center justify-center rounded-full"
               style={{ backgroundColor: colors.background }}
             >
-              <Text className="font-inter" style={{ color: colors.foreground }}>−</Text>
+              <Text className="font-ui" style={{ color: colors.foreground }}>−</Text>
             </Pressable>
-            <Text className="min-w-[24px] text-center font-bold font-inter-bold" style={{ color: colors.foreground }}>
+            <Text className="min-w-[24px] text-center font-bold font-ui-bold" style={{ color: colors.foreground }}>
               {section.bars}
             </Text>
             <Pressable
@@ -209,7 +209,7 @@ function SectionCard({
               className="h-8 w-8 items-center justify-center rounded-full"
               style={{ backgroundColor: colors.background }}
             >
-              <Text className="font-inter" style={{ color: colors.foreground }}>+</Text>
+              <Text className="font-ui" style={{ color: colors.foreground }}>+</Text>
             </Pressable>
           </View>
 
@@ -244,7 +244,7 @@ function SectionCard({
           </View>
 
           <Pressable onPress={onRemove} className="items-center rounded-xl p-2.5">
-            <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.danger }}>
+            <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.danger }}>
               Remove section
             </Text>
           </Pressable>

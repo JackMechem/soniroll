@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { Hint } from '@/components/Hint';
 import {
   ChevronRightIcon,
@@ -295,12 +294,12 @@ function SlowDownerScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Slow Downer' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 gap-3 px-4 py-3" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT + 12 }}>
+        <View className="flex-1 gap-3 px-4 py-3" style={{ paddingBottom: 12 }}>
           <View className="flex-row items-center gap-2">
             {file ? (
               <Pressable onPress={() => setFilesOpen(true)} className="flex-1 flex-row items-center gap-2 rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
                 <FileMusicIcon color={colors.accent} size={18} />
-                <Text numberOfLines={1} className="font-inter-semibold flex-1 text-sm font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold flex-1 text-sm font-semibold" style={{ color: colors.foreground }}>
                   {file.name}
                 </Text>
                 <Text style={{ color: colors.muted }}>▾</Text>
@@ -310,7 +309,7 @@ function SlowDownerScreen() {
             )}
             <Pressable onPress={() => setOptionsOpen(true)} accessibilityLabel="Options" className="flex-row items-center gap-1.5 rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
@@ -320,21 +319,21 @@ function SlowDownerScreen() {
             <ScrollView contentContainerStyle={{ gap: 16, paddingTop: 8 }}>
               <View className="items-center gap-3 rounded-2xl px-6 py-10" style={{ backgroundColor: colors.surface }}>
                 <FileMusicIcon color={colors.accent} size={40} />
-                <Text className="font-inter-bold text-center text-lg font-bold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-bold text-center text-lg font-bold" style={{ color: colors.foreground }}>
                   Open a song to slow down
                 </Text>
-                <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
                   MP3, WAV, M4A, FLAC and more. A copy is kept in the app, so it&apos;s here next time.
                 </Text>
                 <Pressable onPress={() => void addFile()} className="rounded-full px-6 py-3" style={{ backgroundColor: colors.accent }}>
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                     Choose a file
                   </Text>
                 </Pressable>
               </View>
               {library.length > 0 ? (
                 <View className="gap-2">
-                  <Text className="font-inter-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
                     Saved files
                   </Text>
                   <FileList entries={library} onOpen={(e) => void openEntry(e)} onDelete={setPendingDelete} />
@@ -343,9 +342,9 @@ function SlowDownerScreen() {
             </ScrollView>
           ) : (
             <>
-              <Text className="font-inter-extrabold text-center text-4xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
+              <Text className="font-ui-extrabold text-center text-4xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
                 {formatTime(time)}
-                <Text className="font-inter-semibold text-lg font-semibold" style={{ color: colors.muted }}>
+                <Text className="font-ui-semibold text-lg font-semibold" style={{ color: colors.muted }}>
                   {' '}/ {formatTime(duration)}
                 </Text>
               </Text>
@@ -382,7 +381,7 @@ function SlowDownerScreen() {
                 <SmallButton label="◀" disabled={!zoomed} onPress={() => panBy(-view.span * 0.25)} />
                 <SmallButton label="▶" disabled={!zoomed} onPress={() => panBy(view.span * 0.25)} />
                 <SmallButton label="−" onPress={() => zoom(1.5)} />
-                <Text className="font-inter w-12 text-center text-xs tabular-nums" style={{ color: colors.muted }}>
+                <Text className="font-ui w-12 text-center text-xs tabular-nums" style={{ color: colors.muted }}>
                   {duration > 0 ? `${(duration / view.span).toFixed(1)}×` : ''}
                 </Text>
                 <SmallButton label="+" onPress={() => zoom(1 / 1.5)} />
@@ -400,12 +399,12 @@ function SlowDownerScreen() {
               {/* A–B loop. */}
               <View className="flex-row items-center gap-2">
                 <Pressable onPress={() => setEdge('start', time)} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.surface }}>
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                     A {loop ? formatTime(loop.start) : ''}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => setEdge('end', time)} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.surface }}>
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                     B {loop ? formatTime(loop.end) : ''}
                   </Text>
                 </Pressable>
@@ -424,14 +423,14 @@ function SlowDownerScreen() {
               <View className="flex-row flex-wrap justify-center gap-1.5">
                 {SPEED_PRESETS.map((p) => (
                   <Pressable key={p} onPress={() => updateSettings({ speed: p })} className="rounded-lg px-3 py-1.5" style={pill(speed === p)}>
-                    <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={pillText(speed === p)}>
+                    <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={pillText(speed === p)}>
                       {p}%
                     </Text>
                   </Pressable>
                 ))}
                 {!SPEED_PRESETS.includes(speed) ? (
                   <View className="rounded-lg px-3 py-1.5" style={pill(true)}>
-                    <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={pillText(true)}>
+                    <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={pillText(true)}>
                       {speed}%
                     </Text>
                   </View>
@@ -451,7 +450,7 @@ function SlowDownerScreen() {
                 </Pressable>
               </View>
               {!maximized ? (
-                <Text className="font-inter text-center text-xs" style={{ color: colors.muted }}>
+                <Text className="font-ui text-center text-xs" style={{ color: colors.muted }}>
                   Tap to seek · drag to pan · pinch to zoom · long-press for markers & loop
                 </Text>
               ) : null}
@@ -459,7 +458,7 @@ function SlowDownerScreen() {
           )}
 
           {error ? (
-            <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
+            <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
               {error}
             </Text>
           ) : null}
@@ -489,7 +488,7 @@ function SlowDownerScreen() {
                 <View className="flex-row flex-wrap gap-1.5">
                   {SPEED_PRESETS.map((p) => (
                     <Pressable key={p} onPress={() => updateSettings({ speed: p })} className="rounded-lg px-3 py-1.5" style={pill(speed === p)}>
-                      <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={pillText(speed === p)}>
+                      <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={pillText(speed === p)}>
                         {p}%
                       </Text>
                     </Pressable>
@@ -526,7 +525,7 @@ function SlowDownerScreen() {
                     <View key={marker.id} className="gap-1.5 rounded-xl p-2" style={{ backgroundColor: colors.surface }}>
                       <View className="flex-row items-center gap-2">
                         <Pressable onPress={() => seek(marker.time)} className="rounded-lg px-2 py-2" style={{ backgroundColor: colors.background }}>
-                          <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={{ color: colors.accent }}>
+                          <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.accent }}>
                             {formatTime(marker.time)}
                           </Text>
                         </Pressable>
@@ -534,7 +533,7 @@ function SlowDownerScreen() {
                           value={marker.label}
                           onChangeText={(label) => changeMarkers((prev) => prev.map((m) => (m.id === marker.id ? { ...m, label } : m)))}
                           accessibilityLabel="Marker name"
-                          className="font-inter flex-1 rounded-lg px-2 py-2 text-sm"
+                          className="font-ui flex-1 rounded-lg px-2 py-2 text-sm"
                           style={{ backgroundColor: colors.background, color: colors.foreground }}
                         />
                         <Pressable onPress={() => changeMarkers((prev) => prev.filter((m) => m.id !== marker.id))} accessibilityLabel={`Delete ${marker.label}`} hitSlop={6} className="px-1">
@@ -548,7 +547,7 @@ function SlowDownerScreen() {
                         placeholderTextColor={colors.muted}
                         multiline
                         accessibilityLabel={`Notes for ${marker.label}`}
-                        className="font-inter rounded-lg px-2 py-2 text-sm"
+                        className="font-ui rounded-lg px-2 py-2 text-sm"
                         style={{ backgroundColor: colors.background, color: colors.foreground, minHeight: 44, textAlignVertical: 'top' }}
                       />
                     </View>
@@ -556,7 +555,7 @@ function SlowDownerScreen() {
                 )}
                 <Pressable onPress={() => addMarker(time)} disabled={!file} className="flex-row items-center justify-center gap-1.5 rounded-xl py-2.5" style={{ backgroundColor: colors.surface, opacity: file ? 1 : 0.5 }}>
                   <PlusIcon color={colors.foreground} size={18} />
-                  <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                     Add marker at playhead
                   </Text>
                 </Pressable>
@@ -577,7 +576,7 @@ function SlowDownerScreen() {
                   style={{ backgroundColor: colors.accent }}
                 >
                   <PlusIcon color={colors['accent-foreground']} size={18} />
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                     Add new file
                   </Text>
                 </Pressable>
@@ -642,7 +641,7 @@ function SmallButton({ label, onPress, disabled }: { label: string; onPress: () 
   const { colors } = useAppTheme();
   return (
     <Pressable onPress={onPress} disabled={disabled} className="h-9 min-w-[40px] items-center justify-center rounded-lg px-2.5" style={{ backgroundColor: colors.surface, opacity: disabled ? 0.4 : 1 }}>
-      <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+      <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
         {label}
       </Text>
     </Pressable>
@@ -668,10 +667,10 @@ function FileList({
           <Pressable onPress={() => onOpen(entry)} android_ripple={{ color: colors['surface-hover'] }} className="flex-1 flex-row items-center gap-3 px-4 py-3">
             <FileMusicIcon color={entry.id === currentId ? colors.accent : colors.muted} size={20} />
             <View className="flex-1">
-              <Text numberOfLines={1} className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+              <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 {entry.name}
               </Text>
-              <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+              <Text className="font-ui text-xs" style={{ color: colors.muted }}>
                 {formatSize(entry.size)}
               </Text>
             </View>

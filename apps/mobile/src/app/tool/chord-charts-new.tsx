@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { CheckIcon, FolderIcon, FolderPlusIcon } from '@/components/icons';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -68,7 +67,7 @@ function NewChordChartScreen() {
           title: 'New chart',
           headerRight: () => (
             <Pressable onPress={submit} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.accent }}>
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 Start building
               </Text>
             </Pressable>
@@ -78,7 +77,7 @@ function NewChordChartScreen() {
       <SafeAreaView className="flex-1" edges={['bottom']}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 24 + TAB_BAR_CONTENT_HEIGHT }}
+          contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 24 }}
         >
           <Field label="Title">
             <TextInput
@@ -88,22 +87,22 @@ function NewChordChartScreen() {
               placeholderTextColor={colors.muted}
               autoFocus
               returnKeyType="next"
-              className="font-inter text-base"
+              className="font-ui text-base"
               style={inputStyle}
             />
           </Field>
           <Field label="Composer">
-            <TextInput value={composer} onChangeText={setComposer} placeholder="Optional" placeholderTextColor={colors.muted} className="font-inter text-base" style={inputStyle} />
+            <TextInput value={composer} onChangeText={setComposer} placeholder="Optional" placeholderTextColor={colors.muted} className="font-ui text-base" style={inputStyle} />
           </Field>
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Field label="Style">
-                <TextInput value={style} onChangeText={setStyle} placeholder="Medium Swing" placeholderTextColor={colors.muted} className="font-inter text-base" style={inputStyle} />
+                <TextInput value={style} onChangeText={setStyle} placeholder="Medium Swing" placeholderTextColor={colors.muted} className="font-ui text-base" style={inputStyle} />
               </Field>
             </View>
             <View style={{ width: 110 }}>
               <Field label="Key">
-                <TextInput value={key} onChangeText={setKey} placeholder="Bb" placeholderTextColor={colors.muted} autoCorrect={false} className="font-inter text-base" style={inputStyle} />
+                <TextInput value={key} onChangeText={setKey} placeholder="Bb" placeholderTextColor={colors.muted} autoCorrect={false} className="font-ui text-base" style={inputStyle} />
               </Field>
             </View>
           </View>
@@ -117,7 +116,7 @@ function NewChordChartScreen() {
                 style={{ minHeight: 52 }}
               >
                 <FolderIcon color={chosen === '' ? colors.accent : colors.muted} size={20} />
-                <Text numberOfLines={1} className="font-inter-semibold flex-1 text-base font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold flex-1 text-base font-semibold" style={{ color: colors.foreground }}>
                   No playlist (All charts only)
                 </Text>
                 {chosen === '' ? <CheckIcon color={colors.accent} size={20} /> : null}
@@ -131,7 +130,7 @@ function NewChordChartScreen() {
                   style={{ minHeight: 52 }}
                 >
                   <FolderIcon color={chosen === name ? colors.accent : colors.muted} size={20} />
-                  <Text numberOfLines={1} className="font-inter-semibold flex-1 text-base font-semibold" style={{ color: colors.foreground }}>
+                  <Text numberOfLines={1} className="font-ui-semibold flex-1 text-base font-semibold" style={{ color: colors.foreground }}>
                     {name}
                   </Text>
                   {chosen === name ? <CheckIcon color={colors.accent} size={20} /> : null}
@@ -145,7 +144,7 @@ function NewChordChartScreen() {
                   onFocus={() => setPicked(null)}
                   placeholder="New playlist…"
                   placeholderTextColor={colors.muted}
-                  className="font-inter flex-1 text-base"
+                  className="font-ui flex-1 text-base"
                   style={{ color: colors.foreground, paddingVertical: 10 }}
                 />
                 {chosen === null ? <CheckIcon color={colors.accent} size={20} /> : null}
@@ -154,7 +153,7 @@ function NewChordChartScreen() {
           </Field>
 
           {error ? (
-            <Text className="font-inter text-sm" style={{ color: colors.danger }}>
+            <Text className="font-ui text-sm" style={{ color: colors.danger }}>
               {error}
             </Text>
           ) : null}
@@ -168,7 +167,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   const { colors } = useAppTheme();
   return (
     <View className="gap-1.5">
-      <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+      <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
       {children}

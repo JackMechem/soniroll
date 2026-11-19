@@ -93,7 +93,7 @@ export function TunerDial({
                 alignmentBaseline="central"
                 fontSize={26}
                 fontWeight="600"
-                fontFamily="Inter_600SemiBold"
+                fontFamily="Geist_600SemiBold"
                 fill={textColor}
               >
                 {main}
@@ -105,7 +105,7 @@ export function TunerDial({
                   textAnchor="middle"
                   alignmentBaseline="central"
                   fontSize={15}
-                  fontFamily="Inter_400Regular"
+                  fontFamily="Geist_400Regular"
                   fill={altColor}
                 >
                   {alt}

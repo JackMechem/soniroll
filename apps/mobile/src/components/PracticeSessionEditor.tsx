@@ -103,7 +103,7 @@ export function PracticeSessionEditor({
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} keyboardShouldPersistTaps="handled">
-      <Text className="text-lg font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+      <Text className="text-lg font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
         {draft.id === null ? 'New session' : 'Edit session'}
       </Text>
 
@@ -113,7 +113,7 @@ export function PracticeSessionEditor({
           onChangeText={(name) => onChange({ ...draft, name })}
           placeholder="e.g. Morning warmup"
           placeholderTextColor={colors.muted}
-          className="rounded-xl px-3 py-2.5 text-base font-inter"
+          className="rounded-xl px-3 py-2.5 text-base font-ui"
           style={{ backgroundColor: colors.surface, color: colors.foreground }}
         />
       </Field>
@@ -129,7 +129,7 @@ export function PracticeSessionEditor({
               style={{ backgroundColor: selected ? colors.accent : colors.surface }}
             >
               <Text
-                className="text-sm font-bold font-inter-bold"
+                className="text-sm font-bold font-ui-bold"
                 style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}
               >
                 {type === 'custom' ? 'Custom' : 'Pomodoro'}
@@ -138,7 +138,7 @@ export function PracticeSessionEditor({
           );
         })}
       </View>
-      <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+      <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
         Custom chains named timers back to back, in order. Pomodoro alternates work intervals with
         breaks automatically, with a longer break every few cycles.
       </Text>
@@ -152,7 +152,7 @@ export function PracticeSessionEditor({
                 onChangeText={(title) => updateSegment(i, { title })}
                 placeholder="e.g. Scales"
                 placeholderTextColor={colors.muted}
-                className="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm font-inter"
+                className="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm font-ui"
                 style={{ backgroundColor: colors.surface, color: colors.foreground }}
               />
               <MinutesStepper
@@ -179,10 +179,10 @@ export function PracticeSessionEditor({
           <LabeledStepper label="Work minutes" value={draft.pomodoro.workMinutes} min={1} max={180} onChange={(workMinutes) => updatePomodoro({ workMinutes })} />
 
           <View className="gap-1.5 border-t pt-3" style={{ borderColor: colors['surface-hover'] }}>
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+            <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
               Cycle names (optional)
             </Text>
-            <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
+            <Text className="text-xs leading-4 font-ui" style={{ color: colors.muted }}>
               Names each work cycle in order — e.g. &quot;Scales&quot;, &quot;Chords&quot;,
               &quot;Improv&quot; — repeating if there are more cycles than names. Leave empty to
               just show &quot;Work&quot; every cycle. Breaks aren&apos;t individually nameable.
@@ -194,7 +194,7 @@ export function PracticeSessionEditor({
                   onChangeText={(t) => updateWorkTitle(i, t)}
                   placeholder={`Cycle ${i + 1}`}
                   placeholderTextColor={colors.muted}
-                  className="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm font-inter"
+                  className="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm font-ui"
                   style={{ backgroundColor: colors.surface, color: colors.foreground }}
                 />
                 <RowButton onPress={() => moveWorkTitle(i, -1)} disabled={i === 0} label="Move up">
@@ -236,7 +236,7 @@ export function PracticeSessionEditor({
             onChange={(cyclesBeforeLongBreak) => updatePomodoro({ cyclesBeforeLongBreak })}
           />
           <View className="flex-row items-center justify-between gap-2 border-t pt-3" style={{ borderColor: colors['surface-hover'] }}>
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+            <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
               Keep going indefinitely
             </Text>
             <Switch
@@ -264,7 +264,7 @@ export function PracticeSessionEditor({
           className="flex-1 items-center rounded-full py-3"
           style={{ backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
         >
-          <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
             {saving ? 'Saving…' : 'Save'}
           </Text>
         </Pressable>
@@ -274,7 +274,7 @@ export function PracticeSessionEditor({
           className="flex-1 items-center rounded-full py-3"
           style={{ backgroundColor: colors.surface, opacity: saving ? 0.6 : 1 }}
         >
-          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
             Cancel
           </Text>
         </Pressable>
@@ -287,7 +287,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   const { colors } = useAppTheme();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
       {children}
@@ -311,7 +311,7 @@ function LabeledStepper({
   const { colors } = useAppTheme();
   return (
     <View className="flex-row items-center justify-between gap-3">
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
       <MinutesStepper value={value} min={min} max={max} onChange={onChange} />
@@ -336,7 +336,7 @@ function MinutesStepper({
       <RowButton onPress={() => onChange(Math.max(min, value - 1))} disabled={value <= min} label="Decrease">
         −
       </RowButton>
-      <Text className="min-w-[32px] text-center text-sm font-bold font-inter-bold tabular-nums" style={{ color: colors.foreground }}>
+      <Text className="min-w-[32px] text-center text-sm font-bold font-ui-bold tabular-nums" style={{ color: colors.foreground }}>
         {value}
       </Text>
       <RowButton onPress={() => onChange(Math.min(max, value + 1))} disabled={value >= max} label="Increase">
@@ -370,7 +370,7 @@ function RowButton({
       style={{ backgroundColor: colors.surface, opacity: disabled ? 0.4 : 1 }}
     >
       {typeof children === 'string' ? (
-        <Text className="text-sm font-bold font-inter-bold" style={{ color: danger ? colors.danger : colors.foreground }}>
+        <Text className="text-sm font-bold font-ui-bold" style={{ color: danger ? colors.danger : colors.foreground }}>
           {children}
         </Text>
       ) : (
@@ -389,7 +389,7 @@ function AddRowButton({ label, onPress }: { label: string; onPress: () => void }
       style={{ backgroundColor: colors.surface }}
     >
       <PlusIcon color={colors.muted} size={16} />
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
     </Pressable>

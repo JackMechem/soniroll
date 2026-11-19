@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PublicSetlist } from '@/components/community/PublicSetlist';
 import { PublicTuneList } from '@/components/community/PublicTuneList';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { EyeOffIcon, HeartIcon, ShareIcon, TrashIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -26,7 +25,7 @@ function NotAvailable() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Post' }} />
       <SafeAreaView className="flex-1 items-center justify-center gap-2 px-8" edges={['bottom']}>
-        <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
+        <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>
           This post isn&apos;t available anymore — it may have been removed, or its author&apos;s
           profile is no longer public.
         </Text>
@@ -65,7 +64,7 @@ class PostErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
     "open a post" affordance in this app) navigates to, replacing an earlier bottom-sheet
     `PostDetailModal` per a direct request ("improve the post screen, ideally make it a full page
     that it goes to"). Reached as `/post/[id]`, the same path a copied share link points at
-    (`https://sheddex.com/post/<id>` — see `PostListItem.tsx`'s own `SHARE_BASE_URL`), so opening a
+    (`https://www.soniroll.com/post/<id>` — see `PostListItem.tsx`'s own `SHARE_BASE_URL`), so opening a
     shared link and tapping a post from inside the app land on the exact same screen. */
 function PostScreen() {
   return (
@@ -91,7 +90,7 @@ function PostScreenContent() {
 
   async function handleShare() {
     if (!post) return;
-    const url = `https://sheddex.com/post/${post.id}`;
+    const url = `https://www.soniroll.com/post/${post.id}`;
     try {
       await Share.share({ message: `${post.title} — ${url}`, url, title: post.title });
     } catch {
@@ -126,10 +125,10 @@ function PostScreenContent() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: post.title }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 + TAB_BAR_CONTENT_HEIGHT, gap: 16 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}>
             <View className="flex-row items-start justify-between gap-3">
               <View className="min-w-0 flex-1 gap-1.5">
-                <Text className="text-xl font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                <Text className="text-xl font-bold font-ui-bold" style={{ color: colors.foreground }}>
                   {post.title}
                 </Text>
                 <View className="flex-row flex-wrap items-center gap-2">
@@ -140,19 +139,19 @@ function PostScreenContent() {
                       hitSlop={4}
                     >
                       <UserAvatar url={post.authorAvatarUrl} size="sm" />
-                      <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                      <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                         {post.authorUsername}
                       </Text>
                     </Pressable>
                   ) : null}
-                  <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                     {post.authorUsername ? '· ' : ''}
                     {formatDate(post.createdAt)}
                   </Text>
                   {post.unlisted ? (
                     <View className="flex-row items-center gap-1 rounded-full px-2 py-0.5" style={{ backgroundColor: colors.surface }}>
                       <EyeOffIcon color={colors.muted} size={11} />
-                      <Text className="text-xs font-inter-semibold" style={{ color: colors.muted }}>
+                      <Text className="text-xs font-ui-semibold" style={{ color: colors.muted }}>
                         Unlisted
                       </Text>
                     </View>
@@ -167,7 +166,7 @@ function PostScreenContent() {
                 style={{ backgroundColor: liked ? `${colors.danger}1a` : colors.surface }}
               >
                 <HeartIcon color={liked ? colors.danger : colors.muted} size={26} filled={liked} />
-                <Text className="text-sm font-bold font-inter-bold" style={{ color: liked ? colors.danger : colors.muted }}>
+                <Text className="text-sm font-bold font-ui-bold" style={{ color: liked ? colors.danger : colors.muted }}>
                   {post.likeCount}
                 </Text>
               </Pressable>
@@ -180,7 +179,7 @@ function PostScreenContent() {
                 style={{ backgroundColor: colors.surface }}
               >
                 <ShareIcon color={colors.foreground} size={15} />
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                   Share
                 </Text>
               </Pressable>
@@ -192,7 +191,7 @@ function PostScreenContent() {
                   style={{ backgroundColor: colors.surface }}
                 >
                   <TrashIcon color={colors.danger} size={15} />
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.danger }}>
+                  <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.danger }}>
                     Delete
                   </Text>
                 </Pressable>
@@ -200,7 +199,7 @@ function PostScreenContent() {
             </View>
 
             {post.description ? (
-              <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+              <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                 {post.description}
               </Text>
             ) : null}

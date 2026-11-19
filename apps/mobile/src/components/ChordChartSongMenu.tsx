@@ -96,10 +96,10 @@ export function ChordChartSongMenu({
           </View>
           {song ? (
             <View className="gap-0.5 px-5 pb-3 pt-3">
-              <Text numberOfLines={1} className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
                 {song.title}
               </Text>
-              <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                 {[song.composer ? formatComposer(song.composer) : null, currentPlaylist?.name].filter(Boolean).join(' · ')}
               </Text>
             </View>
@@ -142,7 +142,7 @@ export function ChordChartSongMenu({
             </View>
           ) : (
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingVertical: 4 }}>
-              <Text className="font-inter-semibold px-5 pb-1 pt-2 text-xs font-semibold" style={{ color: colors.muted }}>
+              <Text className="font-ui-semibold px-5 pb-1 pt-2 text-xs font-semibold" style={{ color: colors.muted }}>
                 In playlists — tap to add or remove
               </Text>
               {playlists.map((p) => {
@@ -167,7 +167,7 @@ export function ChordChartSongMenu({
                   placeholderTextColor={colors.muted}
                   returnKeyType="done"
                   onSubmitEditing={addToNew}
-                  className="font-inter flex-1 text-base"
+                  className="font-ui flex-1 text-base"
                   style={{ color: colors.foreground, backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}
                 />
                 <Pressable
@@ -176,7 +176,7 @@ export function ChordChartSongMenu({
                   className="rounded-xl px-4 py-2.5"
                   style={{ backgroundColor: colors.accent, opacity: newName.trim() ? 1 : 0.4 }}
                 >
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                     Add
                   </Text>
                 </Pressable>
@@ -229,11 +229,11 @@ function SheetRow({
       style={{ minHeight: 56 }}
     >
       {icon}
-      <Text numberOfLines={1} className="font-inter-semibold flex-1 text-base font-semibold" style={{ color: color ?? colors.foreground }}>
+      <Text numberOfLines={1} className="font-ui-semibold flex-1 text-base font-semibold" style={{ color: color ?? colors.foreground }}>
         {label}
       </Text>
       {detail ? (
-        <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui text-sm tabular-nums" style={{ color: colors.muted }}>
           {detail}
         </Text>
       ) : null}

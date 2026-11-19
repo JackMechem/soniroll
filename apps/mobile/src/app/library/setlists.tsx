@@ -5,6 +5,9 @@ import { FlatList, Pressable, Text, View } from 'react-native';
 
 import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconButton } from '@/components/ui';
+import { LibraryHeader } from '@/components/TabHeader';
 import { PlusIcon } from '@/components/icons';
 import { SETLIST_ROW_H, SetlistRow } from '@/components/library/SetlistRow';
 import { NameDialog } from '@/components/NameDialog';
@@ -43,26 +46,15 @@ function SetlistsScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          title: 'Setlists',
-          headerRight: () => (
-            <Pressable
-              onPress={() => setNaming(true)}
-              accessibilityLabel="New setlist"
-              className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.accent }}
-            >
-              <PlusIcon color={colors['accent-foreground']} size={22} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView edges={['top']}>
+        <LibraryHeader right={<IconButton primary Icon={PlusIcon} label="New setlist" onPress={() => setNaming(true)} />} />
+      </SafeAreaView>
       {!ready || !tunesReady ? (
         <ScreenSpinner />
       ) : (
         <>
-          <View className="gap-2 px-4 pb-2 pt-1">
+          <View className="gap-2 px-4 pb-2 pt-3">
             <SearchField value={query} onChange={setQuery} placeholder={`Search ${setlists.length} setlists…`} />
             <View className="flex-row gap-2">
               {(['recent', 'name'] as Sort[]).map((key) => (
@@ -72,7 +64,7 @@ function SetlistsScreen() {
                   className="rounded-full px-3.5 py-1.5"
                   style={{ backgroundColor: sort === key ? colors.accent : colors.surface }}
                 >
-                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: sort === key ? colors['accent-foreground'] : colors.foreground }}>
+                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: sort === key ? colors['accent-foreground'] : colors.foreground }}>
                     {key === 'recent' ? 'Recent' : 'A–Z'}
                   </Text>
                 </Pressable>
@@ -88,7 +80,7 @@ function SetlistsScreen() {
             contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: bottomSpace }}
             renderItem={({ item }) => <SetlistRow setlist={item} />}
             ListEmptyComponent={
-              <Text className="font-inter py-8 text-center text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui py-8 text-center text-sm" style={{ color: colors.muted }}>
                 {query ? `No setlists match “${query}”.` : 'No setlists yet — tap + to make one.'}
               </Text>
             }

@@ -41,7 +41,6 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { CountdownRing } from '@/components/CountdownRing';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { Hint } from '@/components/Hint';
 import { SlidersIcon } from '@/components/icons';
 import { NumberStepper } from '@/components/NumberStepper';
@@ -719,16 +718,16 @@ function NoteTrainerScreen() {
           />
 
           <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              ACCIDENTALS
+            <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+              Accidentals
             </Text>
             <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
             <Hint>How sharps and flats are spelled, e.g. C# vs Db.</Hint>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              INSTRUMENT
+            <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+              Instrument
             </Text>
             <Dropdown
               value={instrumentId}
@@ -743,8 +742,8 @@ function NoteTrainerScreen() {
 
           {isCustom && !ignoreOctave ? (
             <View className="gap-1.5">
-              <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                CUSTOM RANGE
+              <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                Custom range
               </Text>
               <TextInput
                 value={customRange}
@@ -753,7 +752,7 @@ function NoteTrainerScreen() {
                 placeholder="A1-A6"
                 placeholderTextColor={colors.muted}
                 autoCapitalize="characters"
-                className="rounded-xl px-3 py-2.5 text-base font-inter"
+                className="rounded-xl px-3 py-2.5 text-base font-ui"
                 style={{ backgroundColor: colors.background, color: colors.foreground }}
               />
               <Hint>The lowest and highest notes to draw from, e.g. A1-A6.</Hint>
@@ -762,8 +761,8 @@ function NoteTrainerScreen() {
 
           {instrument?.strings ? (
             <View className="gap-2">
-              <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                SHED A STRING
+              <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                Shed a string
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {instrument.strings.map((openNote, i) => (
@@ -774,7 +773,7 @@ function NoteTrainerScreen() {
                     className="rounded-lg px-3 py-1.5"
                     style={{ backgroundColor: colors.background, opacity: running ? 0.5 : 1 }}
                   >
-                    <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
                       {spellNote(openNote, accidentalStyle, i, false)}
                     </Text>
                   </Pressable>
@@ -880,8 +879,8 @@ function NoteTrainerScreen() {
           )}
 
           <View className="h-px" style={{ backgroundColor: colors['surface-hover'] }} />
-          <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-            ADVANCED
+          <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+            Advanced
           </Text>
 
           <NumberStepper
@@ -918,8 +917,8 @@ function NoteTrainerScreen() {
             hint="The frequency concert A is tuned to. 440 is standard."
           />
           <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              INPUT SENSITIVITY
+            <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+              Input sensitivity
             </Text>
             <Dropdown
               value={sensitivity}
@@ -949,7 +948,7 @@ function NoteTrainerScreen() {
             className="self-start rounded-lg px-3 py-1.5"
             style={{ backgroundColor: colors.background, opacity: running ? 0.5 : 1 }}
           >
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               Reset advanced settings
             </Text>
           </Pressable>
@@ -975,8 +974,8 @@ function NoteTrainerScreen() {
             hint="Shows a preview of the upcoming note next to the current one."
           />
           <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              TONE
+            <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+              Tone
             </Text>
             <Dropdown value={toneId} options={TONES} onChange={(v) => updateSettings({ toneId: v })} />
             <Hint>Which sound plays notes out loud.</Hint>
@@ -992,16 +991,16 @@ function NoteTrainerScreen() {
       label: 'Progress',
       content: () => (
         <>
-          <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+          <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
             History
           </Text>
           {bestMs !== null ? (
-            <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+            <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
               Best {formatDuration(bestMs)}
             </Text>
           ) : null}
           {matchingHistory.length === 0 ? (
-            <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+            <Text className="text-sm font-ui" style={{ color: colors.muted }}>
               No attempts yet with these settings.
             </Text>
           ) : (
@@ -1015,15 +1014,15 @@ function NoteTrainerScreen() {
                     style={{ borderColor: `${colors.background}b3` }}
                   >
                     <View>
-                      <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+                      <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
                         {formatDuration(entry.elapsedMs)}
                       </Text>
-                      <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                      <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                         {entry.config.drillMode ? 'Drill' : 'Quiz'} · {new Date(entry.at).toLocaleDateString()}
                       </Text>
                     </View>
                     <Text
-                      className="text-sm font-inter tabular-nums"
+                      className="text-sm font-ui tabular-nums"
                       style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}
                     >
                       {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
@@ -1039,18 +1038,18 @@ function NoteTrainerScreen() {
               }
               className="self-start"
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                 Clear these times
               </Text>
             </Pressable>
           ) : null}
 
           <View className="mt-2 h-px" style={{ backgroundColor: colors['surface-hover'] }} />
-          <Text className="mt-2 text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+          <Text className="mt-2 text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
             Struggles
           </Text>
           {weakEntries.length === 0 ? (
-            <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+            <Text className="text-sm font-ui" style={{ color: colors.muted }}>
               No struggles tracked yet — a wrong or partial note in listen mode adds it here.
             </Text>
           ) : (
@@ -1061,21 +1060,21 @@ function NoteTrainerScreen() {
                   className="flex-row items-center justify-between gap-3 border-b py-2"
                   style={{ borderColor: `${colors.background}b3` }}
                 >
-                  <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+                  <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
                     {noteLabel(entry.key)}
                   </Text>
                   <View className="flex-row items-center gap-2">
                     {entry.counts.incorrect > 0 ? (
-                      <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
+                      <Text className="text-xs font-ui tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
                         ✕{entry.counts.incorrect}
                       </Text>
                     ) : null}
                     {entry.counts.partial > 0 ? (
-                      <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.partial }}>
+                      <Text className="text-xs font-ui tabular-nums" style={{ color: GRADE_COLOR.partial }}>
                         ~{entry.counts.partial}
                       </Text>
                     ) : null}
-                    <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                    <Text className="text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                       /{attempts(entry.counts)}
                     </Text>
                   </View>
@@ -1089,13 +1088,13 @@ function NoteTrainerScreen() {
             className="self-start rounded-lg px-3 py-1.5"
             style={{ backgroundColor: colors.accent, opacity: running || weakCountInRange === 0 ? 0.5 : 1 }}
           >
-            <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
               Shed weak notes{weakCountInRange > 0 ? ` (${weakCountInRange})` : ''}
             </Text>
           </Pressable>
           {weakEntries.length > 0 ? (
             <Pressable onPress={clearNoteStats} disabled={running} className="self-start">
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
                 Clear stats
               </Text>
             </Pressable>
@@ -1125,23 +1124,23 @@ function NoteTrainerScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
           </View>
 
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+          <View className="flex-1 items-center justify-center gap-4">
             {status && running && listenMode && noteTimer ? (
               <View className="items-center gap-0.5">
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                  NEXT NOTE IN
+                <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                  Next note in
                 </Text>
                 <CountdownLabel
                   active={running}
                   startedAt={noteTimer.startedAt}
                   durationMs={noteTimer.durationMs}
-                  textClassName="text-3xl font-extrabold font-inter-extrabold tabular-nums"
+                  textClassName="text-3xl font-extrabold font-ui-extrabold tabular-nums"
                   color={GRADE_COLOR[status]}
                 />
               </View>
@@ -1150,7 +1149,7 @@ function NoteTrainerScreen() {
             <View style={{ position: 'relative' }}>
               <CountdownRing active={ringActive} startedAt={noteTimer?.startedAt ?? 0} durationMs={noteTimer?.durationMs ?? 0}>
                 <Text
-                  className={`font-extrabold font-inter-extrabold tabular-nums ${isDoubleWide ? 'text-2xl' : 'text-5xl'}`}
+                  className={`font-extrabold font-ui-extrabold tabular-nums ${isDoubleWide ? 'text-2xl' : 'text-5xl'}`}
                   style={{
                     color: glow ?? colors.foreground,
                     ...(glow
@@ -1164,7 +1163,7 @@ function NoteTrainerScreen() {
               {showNext && nextNote && running ? (
                 <Text
                   accessibilityLabel={`Next note ${noteLabel(nextNote, noteSeed + 1)}`}
-                  className="text-lg font-semibold font-inter-semibold tabular-nums"
+                  className="text-lg font-semibold font-ui-semibold tabular-nums"
                   style={{
                     position: 'absolute',
                     bottom: 4,
@@ -1180,12 +1179,12 @@ function NoteTrainerScreen() {
 
             {running && progress ? (
               <View className="items-center gap-0.5">
-                <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
+                <Text className="text-sm font-ui tabular-nums" style={{ color: colors.muted }}>
                   Note {progress.index} of {progress.total}
                   {' · '}
                   <ElapsedTimer active={running} startedAt={sessionStartedAt} />
                 </Text>
-                <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
+                <Text className="text-sm font-ui tabular-nums" style={{ color: colors.muted }}>
                   {heard ? `Heard ${heard}` : 'Listening…'}
                 </Text>
                 {waiting ? (
@@ -1194,7 +1193,7 @@ function NoteTrainerScreen() {
                     className="mt-2 rounded-full px-4 py-1.5"
                     style={{ backgroundColor: colors.surface }}
                   >
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                       Skip note
                     </Text>
                   </Pressable>
@@ -1203,7 +1202,7 @@ function NoteTrainerScreen() {
             ) : null}
 
             {error ? (
-              <Text className="text-center text-sm font-inter" style={{ color: colors.danger }}>
+              <Text className="text-center text-sm font-ui" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -1214,7 +1213,7 @@ function NoteTrainerScreen() {
               style={{ backgroundColor: running ? colors.surface : colors.accent }}
             >
               <Text
-                className="text-base font-bold font-inter-bold"
+                className="text-base font-bold font-ui-bold"
                 style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
               >
                 {running ? 'Stop' : 'Start'}
@@ -1240,28 +1239,28 @@ function NoteTrainerScreen() {
               <ScrollView contentContainerStyle={{ gap: 16 }}>
                 <View className="flex-row items-end justify-between gap-3">
                   <View>
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.muted }}>
+                    <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.muted }}>
                       Results
                     </Text>
-                    <Text className="text-4xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: colors.foreground }}>
+                    <Text className="text-4xl font-extrabold font-ui-extrabold tabular-nums" style={{ color: colors.foreground }}>
                       {score % 1 === 0 ? score : score.toFixed(1)}
-                      <Text className="text-xl font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                      <Text className="text-xl font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                         {' '}
                         / {summary.results.length}
                       </Text>
                     </Text>
                   </View>
-                  <Text className="text-2xl font-semibold font-inter-semibold tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="text-2xl font-semibold font-ui-semibold tabular-nums" style={{ color: colors.muted }}>
                     {summary.results.length ? Math.round((score / summary.results.length) * 100) : 0}%
                   </Text>
                 </View>
 
                 {lastElapsedMs !== null ? (
-                  <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                     Time {formatDuration(lastElapsedMs)}
                     {bestMs !== null ? ` · Best ${formatDuration(bestMs)}` : ''}
                     {isNewBest ? (
-                      <Text className="font-semibold font-inter-semibold" style={{ color: GRADE_COLOR.correct }}>
+                      <Text className="font-semibold font-ui-semibold" style={{ color: GRADE_COLOR.correct }}>
                         {'  New best!'}
                       </Text>
                     ) : null}
@@ -1271,10 +1270,10 @@ function NoteTrainerScreen() {
                 <View className="flex-row gap-2">
                   {(['correct', 'partial', 'incorrect'] as const).map((grade) => (
                     <View key={grade} className="flex-1 items-center rounded-2xl px-2 py-3" style={{ backgroundColor: colors.background }}>
-                      <Text className="text-2xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
+                      <Text className="text-2xl font-extrabold font-ui-extrabold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
                         {tally(grade)}
                       </Text>
-                      <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                      <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                         {GRADE_LABEL[grade]}
                       </Text>
                     </View>
@@ -1288,7 +1287,7 @@ function NoteTrainerScreen() {
                       className="rounded-full px-2.5 py-1"
                       style={{ backgroundColor: `${GRADE_COLOR[summary.results[i]]}26` }}
                     >
-                      <Text className="text-xs font-bold font-inter-bold tabular-nums" style={{ color: GRADE_COLOR[summary.results[i]] }}>
+                      <Text className="text-xs font-bold font-ui-bold tabular-nums" style={{ color: GRADE_COLOR[summary.results[i]] }}>
                         {noteLabel(n, i)}
                       </Text>
                     </View>
@@ -1301,12 +1300,12 @@ function NoteTrainerScreen() {
                     className="rounded-xl px-4 py-2.5"
                     style={{ backgroundColor: colors.accent }}
                   >
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+                    <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
                       Try again
                     </Text>
                   </Pressable>
                   <Pressable onPress={() => setSummary(null)} className="rounded-xl px-4 py-2.5" style={{ backgroundColor: colors.background }}>
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                       Close
                     </Text>
                   </Pressable>

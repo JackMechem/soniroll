@@ -95,7 +95,7 @@ export function SecurityTab() {
     <View className="gap-4 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
       <View className="gap-1">
         <View className="flex-row items-center gap-2">
-          <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+          <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
             {hasPassword ? 'Change password' : 'Set a password'}
           </Text>
           <InfoButton
@@ -108,7 +108,7 @@ export function SecurityTab() {
           />
         </View>
         {step === 'code' ? (
-          <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+          <Text className="text-sm font-ui" style={{ color: colors.muted }}>
             Enter the code we emailed to {email ?? 'your email'} to finish.
           </Text>
         ) : null}
@@ -123,7 +123,7 @@ export function SecurityTab() {
                 onChangeText={setCurrentPassword}
                 secureTextEntry
                 autoComplete="current-password"
-                className="rounded-xl px-3 py-2.5 text-base font-inter"
+                className="rounded-xl px-3 py-2.5 text-base font-ui"
                 style={inputStyle}
               />
             </Field>
@@ -134,7 +134,7 @@ export function SecurityTab() {
               onChangeText={setNewPassword}
               secureTextEntry
               autoComplete="new-password"
-              className="rounded-xl px-3 py-2.5 text-base font-inter"
+              className="rounded-xl px-3 py-2.5 text-base font-ui"
               style={inputStyle}
             />
           </Field>
@@ -144,17 +144,17 @@ export function SecurityTab() {
               onChangeText={setConfirmNewPassword}
               secureTextEntry
               autoComplete="new-password"
-              className="rounded-xl px-3 py-2.5 text-base font-inter"
+              className="rounded-xl px-3 py-2.5 text-base font-ui"
               style={inputStyle}
             />
           </Field>
           {error ? (
-            <Text className="text-sm font-inter" style={{ color: colors.danger }}>
+            <Text className="text-sm font-ui" style={{ color: colors.danger }}>
               {error}
             </Text>
           ) : null}
           {success ? (
-            <Text className="text-sm font-inter" style={{ color: colors.accent }}>
+            <Text className="text-sm font-ui" style={{ color: colors.accent }}>
               {hasPassword ? 'Password changed.' : 'Password set — you can now sign in with it too.'}
             </Text>
           ) : null}
@@ -167,7 +167,7 @@ export function SecurityTab() {
               opacity: submitting || (hasPassword ? !currentPassword : false) || newPassword.length < 8 ? 0.5 : 1,
             }}
           >
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors['accent-foreground'] }}>
               {hasPassword ? 'Send confirmation code' : 'Send code to set password'}
             </Text>
           </Pressable>
@@ -180,12 +180,12 @@ export function SecurityTab() {
               onChangeText={setCode}
               keyboardType="number-pad"
               autoFocus
-              className="rounded-xl px-3 py-2.5 text-base font-inter"
+              className="rounded-xl px-3 py-2.5 text-base font-ui"
               style={inputStyle}
             />
           </Field>
           {error ? (
-            <Text className="text-sm font-inter" style={{ color: colors.danger }}>
+            <Text className="text-sm font-ui" style={{ color: colors.danger }}>
               {error}
             </Text>
           ) : null}
@@ -195,7 +195,7 @@ export function SecurityTab() {
               className="rounded-xl px-4 py-2.5"
               style={{ backgroundColor: colors.background }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                 Cancel
               </Text>
             </Pressable>
@@ -205,7 +205,7 @@ export function SecurityTab() {
               className="rounded-xl px-4 py-2.5"
               style={{ backgroundColor: colors.accent, opacity: submitting || !code ? 0.5 : 1 }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors['accent-foreground'] }}>
                 {hasPassword ? 'Confirm password change' : 'Confirm and set password'}
               </Text>
             </Pressable>
@@ -220,7 +220,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   const { colors } = useAppTheme();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
       {children}

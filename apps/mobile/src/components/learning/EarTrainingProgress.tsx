@@ -32,10 +32,10 @@ export function EarTrainingProgress({ summaries, links = false, card = 'surface'
                   <Icon color={colors.accent} size={19} />
                 </View>
               ) : null}
-              <Text numberOfLines={1} className="font-inter-bold flex-1 text-sm font-bold" style={{ color: colors.foreground }}>
+              <Text numberOfLines={1} className="font-ui-bold flex-1 text-sm font-bold" style={{ color: colors.foreground }}>
                 {track.label}
               </Text>
-              <Text className="font-inter-bold text-xs font-bold tabular-nums" style={{ color: STAR_COLOR }}>
+              <Text className="font-ui-bold text-xs font-bold tabular-nums" style={{ color: STAR_COLOR }}>
                 ★ {s.stars}
               </Text>
             </View>
@@ -43,10 +43,10 @@ export function EarTrainingProgress({ summaries, links = false, card = 'surface'
               <View className="h-full rounded-full" style={{ width: `${Math.max((s.passed / s.total) * 100, s.passed ? 6 : 0)}%`, backgroundColor: colors.accent }} />
             </View>
             <View className="flex-row justify-between gap-2">
-              <Text numberOfLines={1} className="font-inter flex-1 text-xs" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="font-ui flex-1 text-xs" style={{ color: colors.muted }}>
                 {done ? 'Every level passed 🎉' : s.passed ? `Next: ${s.current}` : `Starts with ${s.current}`}
               </Text>
-              <Text className="font-inter text-xs tabular-nums" style={{ color: colors.muted }}>
+              <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
                 {s.passed}/{s.total} levels
               </Text>
             </View>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds and installs "sheddex prod" — the same app as the local preview build, but a separate
-# Android app (com.jackmechem.sheddex.prod, named "sheddex prod") pointed at the *production*
+# Builds and installs "soniroll prod" — the same app as the local preview build, but a separate
+# Android app (com.jackmechem.sheddex.prod, named "soniroll prod") pointed at the *production*
 # Convex deployment, so it can sit on the phone next to the dev-data app.
 #
 # It copies the prebuilt android/ project to android-prod/ (both gitignored), patches the
@@ -19,7 +19,7 @@ mkdir -p android-prod
 tar -C android --exclude='./app/build' --exclude='./build' --exclude='./.gradle' --exclude='./app/.cxx' -cf - . | tar -C android-prod -xf -
 
 sed -i "s/applicationId 'com.jackmechem.sheddex'/applicationId 'com.jackmechem.sheddex.prod'/" android-prod/app/build.gradle
-sed -i 's|<string name="app_name">sheddex</string>|<string name="app_name">sheddex prod</string>|' android-prod/app/src/main/res/values/strings.xml
+sed -i 's|<string name="app_name">soniroll</string>|<string name="app_name">soniroll prod</string>|' android-prod/app/src/main/res/values/strings.xml
 sed -i 's|android:scheme="sheddex"|android:scheme="sheddex-prod"|; s|android:scheme="exp+sheddex"|android:scheme="exp+sheddex-prod"|' android-prod/app/src/main/AndroidManifest.xml
 grep -q "com.jackmechem.sheddex.prod" android-prod/app/build.gradle || { echo "couldn't set the prod application id" >&2; exit 1; }
 

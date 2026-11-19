@@ -85,10 +85,10 @@ function SetlistChartsScreen() {
           title,
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-inter-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
                 {current?.name ?? title}
               </Text>
-              <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                 {pages.length ? `${Math.min(index, pages.length - 1) + 1} of ${pages.length} · ${title}` : title}
               </Text>
             </View>

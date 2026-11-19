@@ -37,7 +37,7 @@ export function ProgressionAnswerKeyboard({
   const { colors } = useAppTheme();
   const numerals = mode === 'numerals';
   const text = (t: string, size = 18) => (
-    <Text className="font-inter-semibold font-semibold" style={{ fontSize: size, color: colors.foreground }}>
+    <Text className="font-ui-semibold font-semibold" style={{ fontSize: size, color: colors.foreground }}>
       {t}
     </Text>
   );
@@ -112,7 +112,7 @@ export function ProgressionAnswerKeyboard({
           {quality('+')}
         </Key>
         <Key flex={3.4} onPress={() => onInsert(' ', false)} accessibilityLabel="Space — next chord">
-          <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+          <Text className="font-ui text-xs" style={{ color: colors.muted }}>
             space
           </Text>
         </Key>
@@ -128,7 +128,7 @@ export function ProgressionAnswerKeyboard({
           className="items-center justify-center rounded-lg"
           style={{ flex: 3, height: 46, backgroundColor: colors.background }}
         >
-          <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
             I don&apos;t know
           </Text>
         </Pressable>
@@ -138,7 +138,7 @@ export function ProgressionAnswerKeyboard({
           className="items-center justify-center rounded-lg"
           style={{ flex: 2, height: 46, backgroundColor: colors.accent }}
         >
-          <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
             Submit
           </Text>
         </Pressable>

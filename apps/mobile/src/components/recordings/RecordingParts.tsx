@@ -95,10 +95,10 @@ export function SeekBar({
         </View>
       </Pressable>
       <View className="flex-row justify-between">
-        <Text className="font-inter text-xs tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
           {formatDuration(currentTime)}
         </Text>
-        <Text className="font-inter text-xs tabular-nums" style={{ color: colors.muted }}>
+        <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
           {formatDuration(duration)}
         </Text>
       </View>
@@ -133,10 +133,10 @@ export function RecordingRow({
       <View className="flex-row items-center gap-3">
         <PlayButton playing={active && player.playing} onPress={() => player.toggle(recording._id, recording.url)} />
         <Pressable onPress={onOpen} disabled={!onOpen} className="flex-1" accessibilityLabel={recording.name}>
-          <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+          <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
             {recording.name}
           </Text>
-          <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+          <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
             {detail}
           </Text>
         </Pressable>
@@ -192,7 +192,7 @@ export function TuneSelectModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
-          <Text className="font-inter-extrabold text-lg font-extrabold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-extrabold text-lg font-extrabold" style={{ color: colors.foreground }}>
             Link to a tune
           </Text>
           <Pressable onPress={onClose} hitSlop={8} className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
@@ -208,7 +208,7 @@ export function TuneSelectModal({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
           ListEmptyComponent={
-            <Text className="font-inter py-10 text-center text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui py-10 text-center text-sm" style={{ color: colors.muted }}>
               {query ? 'No tunes match.' : 'No tunes in your library yet.'}
             </Text>
           }
@@ -220,10 +220,10 @@ export function TuneSelectModal({
             >
               <LinkIcon color={colors.muted} size={18} />
               <View className="flex-1">
-                <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                   {item.tune.name}
                 </Text>
-                <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+                <Text className="font-ui text-xs" style={{ color: colors.muted }}>
                   {TUNE_LIST_LABEL[item.list]}
                 </Text>
               </View>
@@ -263,7 +263,7 @@ export function RecordingSelectModal({
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
-          <Text className="font-inter-extrabold text-lg font-extrabold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-extrabold text-lg font-extrabold" style={{ color: colors.foreground }}>
             Link a recording
           </Text>
           <Pressable onPress={onClose} hitSlop={8} className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
@@ -279,7 +279,7 @@ export function RecordingSelectModal({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
           ListEmptyComponent={
-            <Text className="font-inter py-10 text-center text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui py-10 text-center text-sm" style={{ color: colors.muted }}>
               {query ? 'No recordings match.' : 'No other recordings to link.'}
             </Text>
           }
@@ -291,10 +291,10 @@ export function RecordingSelectModal({
                 className="py-3"
                 style={{ borderBottomWidth: 1, borderBottomColor: colors['surface-hover'] }}
               >
-                <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                   {item.name}
                 </Text>
-                <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                   {[formatRecordedAt(item.createdAt), formatDuration(item.durationSec), other ? `linked to ${other}` : null]
                     .filter(Boolean)
                     .join(' · ')}

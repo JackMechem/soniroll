@@ -65,13 +65,13 @@ function Stepper({
   const { colors } = useAppTheme();
   return (
     <View className="items-center gap-1.5">
-      <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
+      <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.muted }}>
         {label}
       </Text>
       <View className="flex-row items-center gap-3">
         <StepButton symbol="−" onPress={onDecrement} disabled={disabledDecrement} />
         <Text
-          className="min-w-[56px] text-center text-xl font-extrabold font-inter-extrabold"
+          className="min-w-[56px] text-center text-xl font-extrabold font-ui-extrabold"
           style={{ color: colors.foreground }}
         >
           {display ?? value}
@@ -99,7 +99,7 @@ function StepButton({
       className="h-10 w-10 items-center justify-center rounded-full"
       style={{ backgroundColor: colors.surface, opacity: disabled ? 0.4 : 1 }}
     >
-      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
+      <Text className="text-lg font-bold font-ui-bold" style={{ color: colors.foreground }}>
         {symbol}
       </Text>
     </Pressable>
@@ -123,7 +123,7 @@ export function Pill({
       style={{ backgroundColor: selected ? colors.accent : colors.surface }}
     >
       <Text
-        className="text-[13px] font-bold font-inter-bold"
+        className="text-[13px] font-bold font-ui-bold"
         style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}
       >
         {label}
@@ -154,7 +154,7 @@ export function TimeSignatureControls({
         onPress={() => onChangeBeats(Math.max(1, beatsPerBar - 1))}
         disabled={beatsPerBar <= 1}
       />
-      <Text className="min-w-[20px] text-center text-2xl font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+      <Text className="min-w-[20px] text-center text-2xl font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
         {beatsPerBar}
       </Text>
       <StepButton
@@ -162,7 +162,7 @@ export function TimeSignatureControls({
         onPress={() => onChangeBeats(Math.min(MAX_BEATS, beatsPerBar + 1))}
         disabled={beatsPerBar >= MAX_BEATS}
       />
-      <Text className="text-2xl font-extrabold font-inter-extrabold" style={{ color: colors.muted }}>
+      <Text className="text-2xl font-extrabold font-ui-extrabold" style={{ color: colors.muted }}>
         /
       </Text>
       <StepButton
@@ -170,7 +170,7 @@ export function TimeSignatureControls({
         onPress={() => onSetBeatUnit(NOTE_VALUES[Math.max(0, unitIndex - 1)])}
         disabled={unitIndex <= 0}
       />
-      <Text className="min-w-[20px] text-center text-2xl font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+      <Text className="min-w-[20px] text-center text-2xl font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
         {beatUnit}
       </Text>
       <StepButton
@@ -212,12 +212,12 @@ export function TempoControls({
           onBlur={commitDraft}
           onSubmitEditing={commitDraft}
           keyboardType="number-pad"
-          className="min-w-[110px] text-center text-5xl font-extrabold font-inter-extrabold"
+          className="min-w-[110px] text-center text-5xl font-extrabold font-ui-extrabold"
           style={{ color: colors.foreground }}
         />
         <StepButton symbol="+" onPress={() => setBpm(clampBpm(bpm + 1))} disabled={bpm >= MAX_BPM} />
       </View>
-      <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
+      <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.muted }}>
         BPM
       </Text>
       <Pressable
@@ -225,7 +225,7 @@ export function TempoControls({
         className="rounded-full px-6 py-2"
         style={{ backgroundColor: colors.surface }}
       >
-        <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.foreground }}>
+        <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.foreground }}>
           Tap tempo
         </Text>
       </Pressable>
@@ -260,7 +260,7 @@ export function TempoNoteValueControls({
     <View className="items-center gap-1.5">
       <Dropdown value={tempoNoteValue} options={TEMPO_NOTE_OPTIONS} onChange={setTempoNoteValue} />
       {showConversion ? (
-        <Text className="text-xl font-bold font-inter-bold" style={{ color: colors.muted }}>
+        <Text className="text-xl font-bold font-ui-bold" style={{ color: colors.muted }}>
           =
         </Text>
       ) : null}
@@ -287,8 +287,8 @@ export function AccentAndSubdivisionControls({
   return (
     <View className="gap-4">
       <View className="gap-1.5">
-        <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-          ACCENT GROUPING
+        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+          Accent grouping
         </Text>
         <TextInput
           value={groupsText}
@@ -299,14 +299,14 @@ export function AccentAndSubdivisionControls({
           }}
           placeholder="3+2+2"
           placeholderTextColor={colors.muted}
-          className="rounded-2xl px-4 py-3 text-base font-inter"
+          className="rounded-2xl px-4 py-3 text-base font-ui"
           style={{ backgroundColor: colors.surface, color: colors.foreground }}
         />
       </View>
 
       <View className="gap-1.5">
-        <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-          SUBDIVISION
+        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+          Subdivision
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {SUBDIVISIONS.map((option) => (
@@ -348,7 +348,7 @@ export function MeterOptions({
     <View className="gap-4">
       <View className="flex-row justify-center gap-6">
         <Stepper
-          label="BEATS PER BAR"
+          label="Beats per bar"
           value={String(beatsPerBar)}
           onDecrement={() => onChangeBeats(Math.max(1, beatsPerBar - 1))}
           onIncrement={() => onChangeBeats(Math.min(MAX_BEATS, beatsPerBar + 1))}
@@ -356,7 +356,7 @@ export function MeterOptions({
           disabledIncrement={beatsPerBar >= MAX_BEATS}
         />
         <Stepper
-          label="BEAT UNIT"
+          label="Beat unit"
           value={String(beatUnit)}
           onDecrement={() => {
             const i = NOTE_VALUES.indexOf(nearestNoteValue(beatUnit) as (typeof NOTE_VALUES)[number]);
@@ -393,8 +393,8 @@ export function SoundOptions({
   return (
     <View className="gap-4">
       <View className="gap-1.5">
-        <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-          TONE
+        <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+          Tone
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {CLICK_SOUNDS.map((sound) => (
@@ -409,7 +409,7 @@ export function SoundOptions({
       </View>
 
       <Stepper
-        label="VOLUME"
+        label="Volume"
         value={String(Math.round(volume * 100))}
         display={`${Math.round(volume * 100)}%`}
         onDecrement={() => setVolume(Math.max(0, Math.round((volume - 0.1) * 100) / 100))}

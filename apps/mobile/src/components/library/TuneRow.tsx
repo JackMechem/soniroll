@@ -30,12 +30,12 @@ export const TuneRow = memo(function TuneRow({
         style={{ height: TUNE_ROW_H - 4 }}
       >
         <View className="flex-row items-center gap-1.5">
-          <Text numberOfLines={1} className="font-inter-semibold flex-shrink text-base font-semibold" style={{ color: colors.foreground }}>
+          <Text numberOfLines={1} className="font-ui-semibold flex-shrink text-base font-semibold" style={{ color: colors.foreground }}>
             {tune.name}
           </Text>
           {tune.chordChartId ? <ChordChartIcon color={colors.accent} size={15} /> : null}
         </View>
-        <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+        <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
           {tuneSummary(tune)}
         </Text>
       </Pressable>

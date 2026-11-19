@@ -100,7 +100,7 @@ function NewPostScreen() {
             ? undefined
             : () => (
                 <Pressable onPress={() => void post()} disabled={posting} className="rounded-full px-5 py-2" style={{ backgroundColor: colors.accent, opacity: posting ? 0.5 : 1 }}>
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                     {posting ? 'Posting…' : 'Post'}
                   </Text>
                 </Pressable>
@@ -109,7 +109,7 @@ function NewPostScreen() {
       />
       {blocked ? (
         <View className="flex-1 items-center justify-center gap-3 px-10">
-          <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
             {!isAuthenticated ? 'Sign in to post to Community.' : 'Make your profile public before posting to Community.'}
           </Text>
           <Pressable
@@ -117,21 +117,21 @@ function NewPostScreen() {
             className="rounded-xl px-4 py-2.5"
             style={{ backgroundColor: colors.accent }}
           >
-            <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
               {isAuthenticated ? 'Edit public profile' : 'Sign in'}
             </Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: (keyboard || insets.bottom + 56) + 24 }}>
-          <TextInput value={title} onChangeText={setTitle} placeholder="Title — e.g. Friday gig setlist" placeholderTextColor={colors.muted} autoFocus={!setlistId} className="font-inter text-base" style={input} />
+          <TextInput value={title} onChangeText={setTitle} placeholder="Title — e.g. Friday gig setlist" placeholderTextColor={colors.muted} autoFocus={!setlistId} className="font-ui text-base" style={input} />
           <TextInput
             value={description}
             onChangeText={setDescription}
             placeholder="Description (optional)"
             placeholderTextColor={colors.muted}
             multiline
-            className="font-inter text-base"
+            className="font-ui text-base"
             style={{ ...input, minHeight: 70, textAlignVertical: 'top' }}
           />
           <SwitchRow
@@ -142,39 +142,39 @@ function NewPostScreen() {
           />
 
           <View className="flex-row items-center justify-between">
-            <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
               {fromSetlist ? 'Setlist' : 'Tunes'} ({chosen.length})
             </Text>
             {fromSetlist ? null : (
             <Pressable onPress={() => setPicking(true)} className="flex-row items-center gap-1.5 rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
               <PlusIcon color={colors.foreground} size={16} />
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                 Add tunes
               </Text>
             </Pressable>
             )}
           </View>
           {fromSetlist ? (
-            <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui text-sm" style={{ color: colors.muted }}>
               Posted as a setlist — it stays in sync: when you change the setlist, the post changes too.
             </Text>
           ) : null}
           {chosen.length === 0 ? (
-            <Text className="font-inter rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
+            <Text className="font-ui rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
               No tunes yet — add some from your lists. Each one&apos;s chord chart comes along.
             </Text>
           ) : (
             <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
               {chosen.map((t, i) => (
                 <View key={t.id} className="flex-row items-center gap-3 px-3" style={{ minHeight: 56, borderTopWidth: i ? 1 : 0, borderTopColor: colors.background }}>
-                  <Text className="font-inter w-6 text-right text-sm tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui w-6 text-right text-sm tabular-nums" style={{ color: colors.muted }}>
                     {i + 1}
                   </Text>
                   <View className="flex-1 py-2">
-                    <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                    <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                       {t.name}
                     </Text>
-                    <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                    <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                       {[tuneSummary(t), t.chordChartId ? 'chart included' : null].filter(Boolean).join(' · ')}
                     </Text>
                   </View>
@@ -188,7 +188,7 @@ function NewPostScreen() {
             </View>
           )}
           {error ? (
-            <Text className="font-inter text-sm" style={{ color: colors.danger }}>
+            <Text className="font-ui text-sm" style={{ color: colors.danger }}>
               {error}
             </Text>
           ) : null}

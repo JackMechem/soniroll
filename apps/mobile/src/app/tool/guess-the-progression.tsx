@@ -517,7 +517,7 @@ function GuessTheProgressionScreen() {
   if (!settingsReady) return <ScreenSpinner />;
 
   const label = (text: string) => (
-    <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
+    <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.muted }}>
       {text}
     </Text>
   );
@@ -546,7 +546,7 @@ function GuessTheProgressionScreen() {
                 style={{ backgroundColor: colors.surface }}
               >
                 <SlidersIcon color={colors.foreground} size={18} />
-                <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                   Options
                 </Text>
               </Pressable>
@@ -554,7 +554,7 @@ function GuessTheProgressionScreen() {
           ) : activeLevel !== null ? (
             <View className="items-center">
               <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.accent}1f` }}>
-                <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
+                <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                   Level {activeLevel + 1} · {learn.levels[activeLevel].title}
                 </Text>
               </View>
@@ -585,14 +585,14 @@ function GuessTheProgressionScreen() {
               <>
                 {status && running ? (
                   <View className="items-center gap-0.5">
-                    {label('NEXT PROGRESSION IN')}
+                    {label('Next progression in')}
                     <CountdownText active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} color={GRADE_COLOR[status]} />
                   </View>
                 ) : null}
 
                 <CountdownRing active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs}>
                   <Text
-                    className="font-inter-bold text-center text-4xl font-bold tabular-nums"
+                    className="font-ui-bold text-center text-4xl font-bold tabular-nums"
                     style={{
                       color: glow ?? colors.foreground,
                       textShadowColor: glow ?? 'transparent',
@@ -623,13 +623,13 @@ function GuessTheProgressionScreen() {
                             }}
                           >
                             <Text
-                              className="font-inter-bold text-lg font-bold"
+                              className="font-ui-bold text-lg font-bold"
                               style={{ color: status ? (mark ? GRADE_COLOR.correct : GRADE_COLOR.incorrect) : token ? colors.foreground : colors.muted }}
                             >
                               {shown}
                             </Text>
                             {status && !mark && token ? (
-                              <Text className="font-inter text-[11px]" style={{ color: colors.muted, textDecorationLine: 'line-through' }}>
+                              <Text className="font-ui text-[11px]" style={{ color: colors.muted, textDecorationLine: 'line-through' }}>
                                 {prettyToken(token, answerMode)}
                               </Text>
                             ) : null}
@@ -637,7 +637,7 @@ function GuessTheProgressionScreen() {
                         );
                       })}
                     </View>
-                    <Text className="font-inter text-center text-xs" style={{ color: colors.muted }}>
+                    <Text className="font-ui text-center text-xs" style={{ color: colors.muted }}>
                       {status
                         ? `Key of ${pcLabel(round.tonicPc, accidentalStyle, 0)}${round.progression.minor ? ' minor' : ''} · ${round.progression.name}`
                         : answerMode === 'chords'
@@ -645,7 +645,7 @@ function GuessTheProgressionScreen() {
                           : `${round.progression.chords.length} chords`}
                     </Text>
                     <Pressable onPress={() => void playProgression(round)} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
-                      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                         ▶ Replay
                       </Text>
                     </Pressable>
@@ -653,13 +653,13 @@ function GuessTheProgressionScreen() {
                 ) : null}
 
                 {running && progress ? (
-                  <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui text-sm tabular-nums" style={{ color: colors.muted }}>
                     Progression {progress.index} of {progress.total} · <ElapsedTimer active={running} startedAt={sessionStartedAt} />
                   </Text>
                 ) : null}
 
                 {!running ? (
-                  <Text className="font-inter max-w-[300px] text-center text-xs" style={{ color: colors.muted }}>
+                  <Text className="font-ui max-w-[300px] text-center text-xs" style={{ color: colors.muted }}>
                     {answerMode === 'numerals'
                       ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
                       : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`}
@@ -669,7 +669,7 @@ function GuessTheProgressionScreen() {
             )}
 
             {error ? (
-              <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
+              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -680,14 +680,14 @@ function GuessTheProgressionScreen() {
                 className="min-w-[200px] items-center rounded-full py-3.5"
                 style={{ backgroundColor: running ? colors.surface : colors.accent }}
               >
-                <Text className="font-inter-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
+                <Text className="font-ui-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
                   {running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
                 </Text>
               </Pressable>
             ) : null}
             {answering ? (
               <Pressable onPress={endSession} hitSlop={8}>
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
                   Stop session
                 </Text>
               </Pressable>
@@ -730,17 +730,17 @@ function GuessTheProgressionScreen() {
                   content: () => (
                     <>
                       <View className="flex-row items-center justify-between">
-                        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+                        <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
                           {pool.length} of {PROGRESSIONS.length} selected
                         </Text>
                         <View className="flex-row gap-3">
                           <Pressable onPress={() => updateSettings({ progressionIds: PROGRESSIONS.map((p) => p.id) })}>
-                            <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
+                            <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                               All
                             </Text>
                           </Pressable>
                           <Pressable onPress={() => updateSettings({ progressionIds: [] })}>
-                            <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.muted }}>
+                            <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.muted }}>
                               None
                             </Text>
                           </Pressable>
@@ -765,7 +765,7 @@ function GuessTheProgressionScreen() {
                                   className="rounded-full px-3 py-1.5"
                                   style={{ backgroundColor: selected ? colors.accent : colors.surface }}
                                 >
-                                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
+                                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
                                     {p.name}
                                   </Text>
                                 </Pressable>
@@ -784,7 +784,7 @@ function GuessTheProgressionScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  {label('ANSWER WITH')}
+                  {label('Answer with')}
                   <Dropdown value={answerMode} options={ANSWER_MODES} onChange={(v) => updateSettings({ answerMode: v })} />
                   <Hint>Roman numerals (relative to the key) or the actual chord names, starting from the first chord&apos;s root.</Hint>
                 </View>
@@ -800,7 +800,7 @@ function GuessTheProgressionScreen() {
                 />
                 {answerMode === 'chords' ? (
                   <View className="gap-1.5">
-                    {label('ACCIDENTALS')}
+                    {label('Accidentals')}
                     <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
                     <Hint>How sharps and flats are spelled in the given root and revealed chords, e.g. F# vs Gb.</Hint>
                   </View>
@@ -814,12 +814,12 @@ function GuessTheProgressionScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  {label('KEY')}
+                  {label('Key')}
                   <Dropdown value={keyChoice} options={KEY_OPTIONS} onChange={(v) => updateSettings({ keyChoice: v })} />
                   <Hint>A new random key every round, or always the same one.</Hint>
                 </View>
                 <View className="gap-1.5">
-                  {label('REGISTER')}
+                  {label('Register')}
                   <Dropdown value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
                   <Hint>How high or low the chords sit.</Hint>
                 </View>
@@ -902,12 +902,12 @@ function GuessTheProgressionScreen() {
                   hint="How long each chord lasts before the next — shorter is faster and harder."
                 />
                 <View className="gap-1.5">
-                  {label('PLAYBACK STYLE')}
+                  {label('Playback style')}
                   <Dropdown value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
                   <Hint>Whether each chord&apos;s notes play all at once or as a quick rolled arpeggio.</Hint>
                 </View>
                 <View className="gap-1.5">
-                  {label('TONE')}
+                  {label('Tone')}
                   <Dropdown value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
                   <Hint>Which sound plays the chords — real recorded piano or Rhodes.</Hint>
                 </View>

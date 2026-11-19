@@ -16,7 +16,6 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { SlidersIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
 import {
@@ -194,7 +193,7 @@ function RandomMetricModulationScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={fg}>
+              <Text className="text-sm font-bold font-ui-bold" style={fg}>
                 Options
               </Text>
             </Pressable>
@@ -202,15 +201,14 @@ function RandomMetricModulationScreen() {
 
           <View
             className="flex-1 items-center justify-center gap-7"
-            style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}
           >
             {running && engineState.playingReference ? (
               <View className="items-center gap-2" style={{ opacity: 0.8 }}>
                 <View className="items-center">
-                  <Text className="text-3xl font-extrabold font-inter-extrabold" style={fg}>
+                  <Text className="text-3xl font-extrabold font-ui-extrabold" style={fg}>
                     {formatBpm(engineState.referenceBpm)}
                   </Text>
-                  <Text className="text-xs font-semibold font-inter-semibold" style={muted}>
+                  <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
                     {engineState.returnToOriginal ? 'Original' : 'Previous'} · {beatsPerBar}/{beatUnit}
                     {referenceMuted ? ' · muted' : ''}
                   </Text>
@@ -221,10 +219,10 @@ function RandomMetricModulationScreen() {
 
             {running ? (
               <View className="items-center">
-                <Text className="text-6xl font-extrabold font-inter-extrabold" style={fg}>
+                <Text className="text-6xl font-extrabold font-ui-extrabold" style={fg}>
                   {formatBpm(engineState.bpm)}
                 </Text>
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={muted}>
+                <Text className="text-xs font-bold font-ui-bold" style={muted}>
                   BPM · {beatsPerBar}/{beatUnit}
                 </Text>
               </View>
@@ -251,7 +249,7 @@ function RandomMetricModulationScreen() {
                 onCycleSub={cycleSub}
               />
               {running ? (
-                <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                   Bar {engineState.barsIntoInterval + 1} of {engineState.effectiveBars}
                 </Text>
               ) : null}
@@ -259,20 +257,20 @@ function RandomMetricModulationScreen() {
 
             {running && nextPreview ? (
               <View className="items-center gap-0.5 rounded-3xl px-7 py-3" style={{ backgroundColor: colors.surface }}>
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={muted}>
-                  NEXT MODULATION
+                <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
+                  Next modulation
                 </Text>
-                <Text className="text-3xl font-extrabold font-inter-extrabold" style={{ color: colors.accent }}>
+                <Text className="text-3xl font-extrabold font-ui-extrabold" style={{ color: colors.accent }}>
                   {shortRatio(nextPreview.label)}
                 </Text>
-                <Text className="text-sm font-semibold font-inter-semibold" style={fg}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={fg}>
                   {Math.round(nextPreview.toBpm)} BPM
                 </Text>
               </View>
             ) : null}
 
             {lastModulation ? (
-              <Text className="text-center text-sm font-semibold font-inter-semibold" style={fg}>
+              <Text className="text-center text-sm font-semibold font-ui-semibold" style={fg}>
                 Modulated {ratioPart(lastModulation.label)}: {Math.round(lastModulation.from)} →{' '}
                 {Math.round(lastModulation.to)} BPM
               </Text>
@@ -284,7 +282,7 @@ function RandomMetricModulationScreen() {
               style={{ backgroundColor: running ? colors.surface : colors.accent }}
             >
               <Text
-                className="text-base font-bold font-inter-bold"
+                className="text-base font-bold font-ui-bold"
                 style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
               >
                 {running ? 'Stop' : 'Start'}
@@ -305,7 +303,7 @@ function RandomMetricModulationScreen() {
             content: () => (
               <>
                 {running ? (
-                  <Text className="text-xs font-semibold font-inter-semibold" style={muted}>
+                  <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
                     Stop to change these — they&apos;re fixed for the run.
                   </Text>
                 ) : null}
@@ -351,7 +349,7 @@ function RandomMetricModulationScreen() {
                 />
                 <View className="gap-2">
                   <View className="flex-row items-center gap-1.5">
-                    <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                       Polyrhythms in the mix
                     </Text>
                     <InfoButton
@@ -373,12 +371,12 @@ function RandomMetricModulationScreen() {
                     ))}
                   </View>
                   {enabledRatios.length === 0 ? (
-                    <Text className="text-xs font-inter" style={muted}>
+                    <Text className="text-xs font-ui" style={muted}>
                       None selected — picking from all of them instead.
                     </Text>
                   ) : null}
                 </View>
-                <Text className="text-xs font-inter" style={muted}>
+                <Text className="text-xs font-ui" style={muted}>
                   Idea by Rob Moreno
                 </Text>
               </>
@@ -414,8 +412,8 @@ function RandomMetricModulationScreen() {
                   hint="A second click that keeps playing the tempo the main click just left (or the original tempo, with “Return to original tempo” on), so you can hear the new tempo against it."
                 />
                 <View className="gap-1.5" style={{ opacity: playOriginalTempo ? 1 : 0.5 }}>
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={muted}>
-                    TONE
+                  <Text className="text-xs font-semibold font-ui-semibold" style={muted}>
+                    Tone
                   </Text>
                   <View className="flex-row flex-wrap gap-2">
                     {CLICK_SOUNDS.map((sound) => (
@@ -457,7 +455,7 @@ function RandomMetricModulationScreen() {
             label: 'Log',
             content: () =>
               log.length === 0 ? (
-                <Text className="text-sm font-inter" style={muted}>
+                <Text className="text-sm font-ui" style={muted}>
                   Modulations from the current run show up here.
                 </Text>
               ) : (
@@ -469,17 +467,17 @@ function RandomMetricModulationScreen() {
                         className="flex-row items-center justify-between py-3"
                         style={i > 0 ? { borderTopWidth: 1, borderTopColor: colors['surface-hover'] } : null}
                       >
-                        <Text className="text-sm font-semibold font-inter-semibold" style={muted}>
+                        <Text className="text-sm font-semibold font-ui-semibold" style={muted}>
                           {shortRatio(entry.label)}
                         </Text>
-                        <Text className="text-sm font-bold font-inter-bold" style={fg}>
+                        <Text className="text-sm font-bold font-ui-bold" style={fg}>
                           {Math.round(entry.from)} → {Math.round(entry.to)}
                         </Text>
                       </View>
                     ))}
                   </View>
                   <Pressable onPress={clearMetricModLog} hitSlop={8} className="self-start">
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.danger }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.danger }}>
                       Clear log
                     </Text>
                   </Pressable>

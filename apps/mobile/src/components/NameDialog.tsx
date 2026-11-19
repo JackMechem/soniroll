@@ -41,7 +41,7 @@ export function NameDialog({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: `${colors.overlay}99`, paddingTop: insets.top + 72, paddingHorizontal: 20 }} onPress={onClose}>
         <Pressable onPress={() => {}} className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-          <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
             {title}
           </Text>
           <TextInput
@@ -52,17 +52,17 @@ export function NameDialog({
             autoFocus
             returnKeyType="done"
             onSubmitEditing={submit}
-            className="font-inter text-base"
+            className="font-ui text-base"
             style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: colors.foreground }}
           />
           <View className="flex-row justify-end gap-2">
             <Pressable onPress={onClose} className="rounded-xl px-4 py-2.5" style={{ backgroundColor: colors.background }}>
-              <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 Cancel
               </Text>
             </Pressable>
             <Pressable onPress={submit} disabled={!ok} className="rounded-xl px-4 py-2.5" style={{ backgroundColor: colors.accent, opacity: ok ? 1 : 0.4 }}>
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 {confirmLabel}
               </Text>
             </Pressable>

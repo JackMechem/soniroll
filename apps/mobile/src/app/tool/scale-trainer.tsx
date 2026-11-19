@@ -36,7 +36,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { CountdownRing } from '@/components/CountdownRing';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { Hint } from '@/components/Hint';
 import { SlidersIcon } from '@/components/icons';
 import { NumberStepper } from '@/components/NumberStepper';
@@ -805,23 +804,23 @@ function ScaleTrainerScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
           </View>
 
-          <View className="flex-1 items-center justify-center gap-3" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+          <View className="flex-1 items-center justify-center gap-3">
             {status && running && noteTimer ? (
               <View className="items-center gap-0.5">
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                  NEXT SCALE IN
+                <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                  Next scale in
                 </Text>
                 <CountdownLabel
                   active={running}
                   startedAt={noteTimer.startedAt}
                   durationMs={noteTimer.durationMs}
-                  textClassName="text-3xl font-extrabold font-inter-extrabold tabular-nums"
+                  textClassName="text-3xl font-extrabold font-ui-extrabold tabular-nums"
                   color={GRADE_COLOR[status]}
                 />
               </View>
@@ -829,7 +828,7 @@ function ScaleTrainerScreen() {
 
             <CountdownRing active={showCountdown} startedAt={noteTimer?.startedAt ?? 0} durationMs={noteTimer?.durationMs ?? 0}>
               <Text
-                className={mainLabelLong ? 'px-2 text-center text-lg font-extrabold font-inter-extrabold' : 'px-2 text-center text-xl font-extrabold font-inter-extrabold'}
+                className={mainLabelLong ? 'px-2 text-center text-lg font-extrabold font-ui-extrabold' : 'px-2 text-center text-xl font-extrabold font-ui-extrabold'}
                 style={{
                   color: glow ?? colors.foreground,
                   ...(glow
@@ -842,7 +841,7 @@ function ScaleTrainerScreen() {
             </CountdownRing>
 
             {running && showNext && nextRound ? (
-              <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+              <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                 Next: {roundLabel(nextRound, roundSeed + 1)}
               </Text>
             ) : null}
@@ -873,7 +872,7 @@ function ScaleTrainerScreen() {
                       }}
                     >
                       <Text
-                        className="text-xs font-bold font-inter-bold tabular-nums"
+                        className="text-xs font-bold font-ui-bold tabular-nums"
                         style={{ color: color ?? colors.foreground }}
                       >
                         {label}
@@ -886,11 +885,11 @@ function ScaleTrainerScreen() {
 
             {running && progress ? (
               <View className="items-center gap-0.5">
-                <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
+                <Text className="text-sm font-ui tabular-nums" style={{ color: colors.muted }}>
                   Scale {progress.index} of {progress.total} ·{' '}
                   <ElapsedTimer active={running} startedAt={sessionStartedAt} />
                 </Text>
-                <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
+                <Text className="text-sm font-ui tabular-nums" style={{ color: colors.muted }}>
                   {heard ? `Heard ${heard}` : 'Listening…'}
                 </Text>
                 {waiting ? (
@@ -899,7 +898,7 @@ function ScaleTrainerScreen() {
                     className="mt-1 rounded-full px-4 py-1.5"
                     style={{ backgroundColor: colors.surface }}
                   >
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                       Skip scale
                     </Text>
                   </Pressable>
@@ -908,7 +907,7 @@ function ScaleTrainerScreen() {
             ) : null}
 
             {error ? (
-              <Text className="px-4 text-center text-sm font-inter" style={{ color: colors.danger }}>
+              <Text className="px-4 text-center text-sm font-ui" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -919,7 +918,7 @@ function ScaleTrainerScreen() {
               style={{ backgroundColor: running ? colors.surface : colors.accent }}
             >
               <Text
-                className="text-base font-bold font-inter-bold"
+                className="text-base font-bold font-ui-bold"
                 style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
               >
                 {running ? 'Stop' : 'Start'}
@@ -936,28 +935,28 @@ function ScaleTrainerScreen() {
               <>
                 <View className="flex-row items-end justify-between gap-3">
                   <View>
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                       Results
                     </Text>
-                    <Text className="text-3xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: colors.foreground }}>
+                    <Text className="text-3xl font-extrabold font-ui-extrabold tabular-nums" style={{ color: colors.foreground }}>
                       {score % 1 === 0 ? score : score.toFixed(1)}
-                      <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                      <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                         {' '}
                         / {summary.results.length}
                       </Text>
                     </Text>
                   </View>
-                  <Text className="text-xl font-semibold font-inter-semibold tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="text-xl font-semibold font-ui-semibold tabular-nums" style={{ color: colors.muted }}>
                     {summary.results.length ? Math.round((score / summary.results.length) * 100) : 0}%
                   </Text>
                 </View>
 
                 {lastElapsedMs !== null ? (
-                  <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                     Time {formatDuration(lastElapsedMs)}
                     {bestMs !== null ? ` · Best ${formatDuration(bestMs)}` : ''}
                     {isNewBest ? (
-                      <Text className="font-bold font-inter-bold" style={{ color: GRADE_COLOR.correct }}>
+                      <Text className="font-bold font-ui-bold" style={{ color: GRADE_COLOR.correct }}>
                         {'  New best!'}
                       </Text>
                     ) : null}
@@ -967,10 +966,10 @@ function ScaleTrainerScreen() {
                 <View className="flex-row gap-2">
                   {(['correct', 'partial', 'incorrect'] as const).map((grade) => (
                     <View key={grade} className="flex-1 items-center rounded-xl px-2 py-3" style={{ backgroundColor: colors.surface }}>
-                      <Text className="text-xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
+                      <Text className="text-xl font-extrabold font-ui-extrabold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
                         {tally(grade)}
                       </Text>
-                      <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                      <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                         {GRADE_LABEL[grade]}
                       </Text>
                     </View>
@@ -985,7 +984,7 @@ function ScaleTrainerScreen() {
                         className="rounded-full px-2.5 py-1"
                         style={{ backgroundColor: `${GRADE_COLOR[summary.results[i]]}26` }}
                       >
-                        <Text className="text-xs font-bold font-inter-bold" style={{ color: GRADE_COLOR[summary.results[i]] }}>
+                        <Text className="text-xs font-bold font-ui-bold" style={{ color: GRADE_COLOR[summary.results[i]] }}>
                           {roundLabel(r, i)}
                         </Text>
                       </View>
@@ -999,7 +998,7 @@ function ScaleTrainerScreen() {
                     className="flex-1 items-center rounded-xl py-3"
                     style={{ backgroundColor: colors.accent }}
                   >
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+                    <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
                       Try again
                     </Text>
                   </Pressable>
@@ -1008,7 +1007,7 @@ function ScaleTrainerScreen() {
                     className="flex-1 items-center rounded-xl py-3"
                     style={{ backgroundColor: colors.surface }}
                   >
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                    <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                       Close
                     </Text>
                   </Pressable>
@@ -1030,17 +1029,17 @@ function ScaleTrainerScreen() {
             content: () => (
               <>
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                     {pool.length} of {SCALE_MODES.length} selected
                   </Text>
                   <View className="flex-row gap-3">
                     <Pressable disabled={running} onPress={() => updateSettings({ scaleModes: SCALE_MODES.map((m) => m.id) })}>
-                      <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.accent, ...disabledStyle(running) }}>
+                      <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.accent, ...disabledStyle(running) }}>
                         All
                       </Text>
                     </Pressable>
                     <Pressable disabled={running} onPress={() => updateSettings({ scaleModes: [] })}>
-                      <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.muted, ...disabledStyle(running) }}>
+                      <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.muted, ...disabledStyle(running) }}>
                         None
                       </Text>
                     </Pressable>
@@ -1050,7 +1049,7 @@ function ScaleTrainerScreen() {
 
                 {SCALE_CATEGORIES.map((category) => (
                   <View key={category} className="gap-1.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
+                    <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.muted }}>
                       {category}
                     </Text>
                     <View className="flex-row flex-wrap gap-1.5">
@@ -1069,7 +1068,7 @@ function ScaleTrainerScreen() {
                             }}
                           >
                             <Text
-                              className="text-xs font-semibold font-inter-semibold"
+                              className="text-xs font-semibold font-ui-semibold"
                               style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}
                             >
                               {mode.label}
@@ -1097,8 +1096,8 @@ function ScaleTrainerScreen() {
                 />
 
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    ACCIDENTALS
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Accidentals
                   </Text>
                   <View style={disabledStyle(running)} pointerEvents={running ? 'none' : 'auto'}>
                     <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={setAccidentalStyle} />
@@ -1107,8 +1106,8 @@ function ScaleTrainerScreen() {
                 </View>
 
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INSTRUMENT
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Instrument
                   </Text>
                   <View style={disabledStyle(running)} pointerEvents={running ? 'none' : 'auto'}>
                     <Dropdown
@@ -1125,8 +1124,8 @@ function ScaleTrainerScreen() {
 
                 {isCustom ? (
                   <View className="gap-1.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      CUSTOM RANGE
+                    <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                      Custom range
                     </Text>
                     <TextInput
                       value={customRange}
@@ -1134,7 +1133,7 @@ function ScaleTrainerScreen() {
                       editable={!running}
                       placeholder="A1-A6"
                       placeholderTextColor={colors.muted}
-                      className="rounded-xl px-3 py-2.5 font-inter"
+                      className="rounded-xl px-3 py-2.5 font-ui"
                       style={{ backgroundColor: colors.surface, color: colors.foreground, opacity: running ? 0.6 : 1 }}
                     />
                     <Hint>The lowest and highest notes to draw scale roots from, e.g. A1-A6.</Hint>
@@ -1226,8 +1225,8 @@ function ScaleTrainerScreen() {
                   />
                 ) : null}
 
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                  ADVANCED
+                <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                  Advanced
                 </Text>
 
                 <NumberStepper
@@ -1265,8 +1264,8 @@ function ScaleTrainerScreen() {
                 />
 
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INPUT SENSITIVITY
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Input sensitivity
                   </Text>
                   <View style={disabledStyle(running || !listenMode)} pointerEvents={running || !listenMode ? 'none' : 'auto'}>
                     <Dropdown
@@ -1308,7 +1307,7 @@ function ScaleTrainerScreen() {
                   className="items-center self-start rounded-xl px-3 py-2"
                   style={{ backgroundColor: colors.surface, ...disabledStyle(running) }}
                 >
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                  <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                     Reset advanced settings
                   </Text>
                 </Pressable>
@@ -1340,8 +1339,8 @@ function ScaleTrainerScreen() {
                   hint="The row of note pills below the circle in listen mode, showing progress through the scale."
                 />
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    WAVEFORM
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Waveform
                   </Text>
                   <View style={disabledStyle(!playSound)} pointerEvents={!playSound ? 'none' : 'auto'}>
                     <Dropdown value={waveform} options={WAVEFORMS} onChange={setWaveform} />
@@ -1358,16 +1357,16 @@ function ScaleTrainerScreen() {
                   label: 'Stats',
                   content: () => (
                     <>
-                      <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                        HISTORY
+                      <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                        History
                       </Text>
                       {bestMs !== null ? (
-                        <Text className="text-sm font-bold font-inter-bold tabular-nums" style={{ color: colors.foreground }}>
+                        <Text className="text-sm font-bold font-ui-bold tabular-nums" style={{ color: colors.foreground }}>
                           Best {formatDuration(bestMs)}
                         </Text>
                       ) : null}
                       {matchingHistory.length === 0 ? (
-                        <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+                        <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                           No attempts yet with these settings.
                         </Text>
                       ) : (
@@ -1381,15 +1380,15 @@ function ScaleTrainerScreen() {
                                 style={{ borderBottomWidth: 1, borderBottomColor: colors['surface-hover'] }}
                               >
                                 <View>
-                                  <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
+                                  <Text className="text-sm font-semibold font-ui-semibold tabular-nums" style={{ color: colors.foreground }}>
                                     {formatDuration(entry.elapsedMs)}
                                   </Text>
-                                  <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                                  <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                                     {entry.config.drillMode ? 'Drill' : 'Quiz'} · {new Date(entry.at).toLocaleDateString()}
                                   </Text>
                                 </View>
                                 <Text
-                                  className="text-sm font-inter tabular-nums"
+                                  className="text-sm font-ui tabular-nums"
                                   style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}
                                 >
                                   {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
@@ -1402,17 +1401,17 @@ function ScaleTrainerScreen() {
                         <Pressable
                           onPress={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
                         >
-                          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                             Clear these times
                           </Text>
                         </Pressable>
                       ) : null}
 
-                      <Text className="mt-2 text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                        STRUGGLES
+                      <Text className="mt-2 text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                        Struggles
                       </Text>
                       {weakEntries.length === 0 ? (
-                        <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+                        <Text className="text-sm font-ui" style={{ color: colors.muted }}>
                           No struggles tracked yet — a wrong or partial scale in listen mode adds it here.
                         </Text>
                       ) : (
@@ -1423,21 +1422,21 @@ function ScaleTrainerScreen() {
                               className="flex-row items-center justify-between gap-3 py-2"
                               style={{ borderBottomWidth: 1, borderBottomColor: colors['surface-hover'] }}
                             >
-                              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                                 {pitchClassLabel(entry.pitchClass)} {entry.mode.label}
                               </Text>
                               <View className="flex-row items-center gap-2">
                                 {entry.counts.incorrect > 0 ? (
-                                  <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
+                                  <Text className="text-xs font-ui tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
                                     ✕{entry.counts.incorrect}
                                   </Text>
                                 ) : null}
                                 {entry.counts.partial > 0 ? (
-                                  <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.partial }}>
+                                  <Text className="text-xs font-ui tabular-nums" style={{ color: GRADE_COLOR.partial }}>
                                     ~{entry.counts.partial}
                                   </Text>
                                 ) : null}
-                                <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
+                                <Text className="text-xs font-ui tabular-nums" style={{ color: colors.muted }}>
                                   /{attempts(entry.counts)}
                                 </Text>
                               </View>
@@ -1454,13 +1453,13 @@ function ScaleTrainerScreen() {
                         className="items-center self-start rounded-xl px-3 py-2"
                         style={{ backgroundColor: colors.accent, ...disabledStyle(running || weakEntries.length === 0) }}
                       >
-                        <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
+                        <Text className="text-sm font-bold font-ui-bold" style={{ color: colors['accent-foreground'] }}>
                           Shed weak scales{weakEntries.length > 0 ? ` (${weakEntries.length})` : ''}
                         </Text>
                       </Pressable>
                       {weakEntries.length > 0 ? (
                         <Pressable disabled={running} onPress={clearScaleStats}>
-                          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted, ...disabledStyle(running) }}>
+                          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted, ...disabledStyle(running) }}>
                             Clear stats
                           </Text>
                         </Pressable>

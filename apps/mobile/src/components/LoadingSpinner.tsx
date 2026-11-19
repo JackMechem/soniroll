@@ -34,7 +34,7 @@ export function LoadingSpinner({
       accessibilityRole="progressbar"
     >
       {spinner}
-      <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+      <Text className="text-sm font-ui" style={{ color: colors.muted }}>
         {label}
       </Text>
     </View>

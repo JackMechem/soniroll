@@ -57,8 +57,9 @@ Charts pages, Lessons, the Metronome).
 - **Popovers and menus** are portaled to `<body>` and `position: fixed`, kept on screen, capped to
   the available height with only their body scrolling. Escape, ×, and a click outside close them.
 - **Mobile tool screens don't scroll.** Essentials on the main screen; everything else in the
-  tabbed `ToolOptionsSheet`. Scrolling pages leave room for the floating tab bar
-  (`useTabBarSpace()`).
+  tabbed `ToolOptionsSheet`. The tab bar is only on the four main screens; scrolling pages leave
+  room for it with `useTabBarSpace()`. Mobile cards, rows and buttons come from
+  `components/ui.tsx` (the same fills, corners and category colours as the website).
 
 ## Controls
 
@@ -78,8 +79,8 @@ Charts pages, Lessons, the Metronome).
 ## Type, icons, music
 
 - Web uses Geist (UI) and the theme's chosen font; chord charts use Petaluma / PetalumaScript
-  (SMuFL glyphs for Δ, °, repeat signs, coda, segno). Mobile uses Inter — every `<Text>` needs a
-  `font-inter*` class.
+  (SMuFL glyphs for Δ, °, repeat signs, coda, segno). Mobile uses Geist too — every `<Text>` needs a
+  `font-ui*` class.
 - Web icons come from `components/tools.tsx` (and `RoutineIcon`, `InstrumentIcons`); mobile uses
   `@expo/vector-icons` (MaterialCommunityIcons; FontAwesome5 for the drum). Don't hand-draw new
   SVG icons when one exists.

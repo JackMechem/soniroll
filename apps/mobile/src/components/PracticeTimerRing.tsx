@@ -92,7 +92,7 @@ export function PracticeTimerRing({
         />
       </Svg>
       <Text
-        className="text-4xl font-extrabold font-inter-extrabold tabular-nums"
+        className="text-4xl font-extrabold font-ui-extrabold tabular-nums"
         style={{ color: alarming ? colors.danger : colors.foreground }}
       >
         {formatClock(remainingMs)}

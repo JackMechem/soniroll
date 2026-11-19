@@ -29,7 +29,6 @@ import { useLearnSession } from '@/lib/useLearnSession';
 import { CountdownText, ProgressTab, ResultsCard } from '@/components/EarTrainingParts';
 import { ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { Hint } from '@/components/Hint';
 import { SlidersIcon } from '@/components/icons';
 import { NumberStepper } from '@/components/NumberStepper';
@@ -456,7 +455,7 @@ function GuessTheIntervalScreen() {
   if (!settingsReady) return <ScreenSpinner />;
 
   const label = (text: string) => (
-    <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
+    <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.muted }}>
       {text}
     </Text>
   );
@@ -485,7 +484,7 @@ function GuessTheIntervalScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
@@ -493,14 +492,14 @@ function GuessTheIntervalScreen() {
           ) : activeLevel !== null ? (
             <View className="items-center">
               <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.accent}1f` }}>
-                <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
+                <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                   Level {activeLevel + 1} · {learn.levels[activeLevel].title}
                 </Text>
               </View>
             </View>
           ) : null}
 
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+          <View className="flex-1 items-center justify-center gap-4">
             {learnMode && !running ? (
               <LearningPath track="interval" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
             ) : showingSummary && summary ? (
@@ -519,7 +518,7 @@ function GuessTheIntervalScreen() {
               <>
                 {status && running ? (
                   <View className="items-center gap-0.5">
-                    {label('NEXT INTERVAL IN')}
+                    {label('Next interval in')}
                     <CountdownText active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} color={GRADE_COLOR[status]} />
                   </View>
                 ) : null}
@@ -530,7 +529,7 @@ function GuessTheIntervalScreen() {
                       numberOfLines={2}
                       adjustsFontSizeToFit
                       minimumFontScale={0.5}
-                      className="font-inter-bold text-center text-3xl font-bold"
+                      className="font-ui-bold text-center text-3xl font-bold"
                       style={{
                         color: glow ?? colors.foreground,
                         textShadowColor: glow ?? 'transparent',
@@ -546,13 +545,13 @@ function GuessTheIntervalScreen() {
                 {running && round ? (
                   <View className="flex-row items-center gap-3">
                     <Pressable onPress={() => playIntervalSound(round.notes)} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
-                      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                         ▶ Replay
                       </Text>
                     </Pressable>
                     {!status ? (
                       <Pressable onPress={() => submitGuess(null)} hitSlop={8}>
-                        <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+                        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
                           I don&apos;t know
                         </Text>
                       </Pressable>
@@ -561,7 +560,7 @@ function GuessTheIntervalScreen() {
                 ) : null}
 
                 {revealedNotes ? (
-                  <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.muted }}>
                     {revealedNotes}
                   </Text>
                 ) : null}
@@ -590,7 +589,7 @@ function GuessTheIntervalScreen() {
                             opacity: answered && !color ? 0.45 : 1,
                           }}
                         >
-                          <Text numberOfLines={2} className="font-inter-semibold text-center text-sm font-semibold" style={{ color: color ?? colors.foreground }}>
+                          <Text numberOfLines={2} className="font-ui-semibold text-center text-sm font-semibold" style={{ color: color ?? colors.foreground }}>
                             {interval.label}
                           </Text>
                         </Pressable>
@@ -600,7 +599,7 @@ function GuessTheIntervalScreen() {
                 ) : null}
 
                 {running && progress ? (
-                  <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
+                  <Text className="font-ui text-sm tabular-nums" style={{ color: colors.muted }}>
                     Interval {progress.index} of {progress.total} · <ElapsedTimer active={running} startedAt={sessionStartedAt} />
                   </Text>
                 ) : null}
@@ -608,7 +607,7 @@ function GuessTheIntervalScreen() {
             )}
 
             {error ? (
-              <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
+              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -619,7 +618,7 @@ function GuessTheIntervalScreen() {
                 className="min-w-[200px] items-center rounded-full py-3.5"
                 style={{ backgroundColor: running ? colors.surface : colors.accent }}
               >
-                <Text className="font-inter-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
+                <Text className="font-ui-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
                   {running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
                 </Text>
               </Pressable>
@@ -649,17 +648,17 @@ function GuessTheIntervalScreen() {
             content: () => (
               <>
                 <View className="flex-row items-center justify-between">
-                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+                  <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
                     {pool.length} of {INTERVALS.length} selected
                   </Text>
                   <View className="flex-row gap-3">
                     <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}>
-                      <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
+                      <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
                         All
                       </Text>
                     </Pressable>
                     <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: [] })}>
-                      <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
+                      <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
                         None
                       </Text>
                     </Pressable>
@@ -681,7 +680,7 @@ function GuessTheIntervalScreen() {
                         className="rounded-full px-3 py-1.5"
                         style={{ backgroundColor: selected ? colors.accent : colors.surface, opacity: running ? 0.6 : 1 }}
                       >
-                        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
+                        <Text className="font-ui-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
                           {interval.label}
                         </Text>
                       </Pressable>
@@ -704,7 +703,7 @@ function GuessTheIntervalScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  {label('INSTRUMENT')}
+                  {label('Instrument')}
                   <Dropdown
                     value={instrumentId}
                     options={[...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range})` })), { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' }]}
@@ -714,7 +713,7 @@ function GuessTheIntervalScreen() {
                 </View>
                 {isCustom ? (
                   <View className="gap-1.5">
-                    {label('CUSTOM RANGE')}
+                    {label('Custom range')}
                     <TextInput
                       value={customRange}
                       onChangeText={(v) => updateSettings({ customRange: v })}
@@ -722,7 +721,7 @@ function GuessTheIntervalScreen() {
                       placeholder="A1-A6"
                       placeholderTextColor={colors.muted}
                       autoCapitalize="characters"
-                      className="font-inter rounded-xl px-3 py-2.5 text-base"
+                      className="font-ui rounded-xl px-3 py-2.5 text-base"
                       style={{ backgroundColor: colors.surface, color: colors.foreground }}
                     />
                     <Hint>The lowest and highest notes to draw starting notes from, e.g. A1-A6.</Hint>
@@ -796,12 +795,12 @@ function GuessTheIntervalScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  {label('PLAYBACK STYLE')}
+                  {label('Playback style')}
                   <Dropdown value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
                   <Hint>Whether the two notes play one after another or together.</Hint>
                 </View>
                 <View className="gap-1.5">
-                  {label('TONE')}
+                  {label('Tone')}
                   <Dropdown value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
                   <Hint>Which sound plays the interval — real recorded piano or Rhodes.</Hint>
                 </View>
@@ -813,7 +812,7 @@ function GuessTheIntervalScreen() {
                 />
                 {revealNotes ? (
                   <View className="gap-1.5">
-                    {label('ACCIDENTALS')}
+                    {label('Accidentals')}
                     <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
                     <Hint>How sharps and flats are spelled in the revealed notes, e.g. C# vs Db.</Hint>
                   </View>

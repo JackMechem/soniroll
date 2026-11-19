@@ -6,7 +6,6 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { SlidersIcon } from '@/components/icons';
 import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
 import { TunerDial } from '@/components/TunerDial';
@@ -170,13 +169,13 @@ function TunerScreen() {
               style={{ backgroundColor: colors.surface }}
             >
               <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-bold font-ui-bold" style={{ color: colors.foreground }}>
                 Options
               </Text>
             </Pressable>
           </View>
 
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
+          <View className="flex-1 items-center justify-center gap-4">
             <TunerDial detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass}>
               <Pressable
                 onPress={() => updateSettings({ sustain: !sustain })}
@@ -184,7 +183,7 @@ function TunerScreen() {
                 style={{ backgroundColor: sustain ? colors.accent : colors.surface }}
               >
                 <Text
-                  className="text-xs font-bold font-inter-bold"
+                  className="text-xs font-bold font-ui-bold"
                   style={{ color: sustain ? colors['accent-foreground'] : colors.muted }}
                 >
                   Sustain
@@ -195,32 +194,32 @@ function TunerScreen() {
                 {noteLetter ? (
                   <>
                     <View className="flex-row items-start">
-                      <Text className="text-4xl font-bold font-inter-bold" style={{ color }}>
+                      <Text className="text-4xl font-bold font-ui-bold" style={{ color }}>
                         {noteLetter}
                       </Text>
-                      <Text className="mt-1 text-base font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                      <Text className="mt-1 text-base font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                         {noteOctave}
                       </Text>
                     </View>
-                    <Text className="text-xs font-semibold font-inter-semibold" style={{ color }}>
+                    <Text className="text-xs font-semibold font-ui-semibold" style={{ color }}>
                       {reading!.cents > 0 ? '+' : ''}
                       {reading!.cents.toFixed(1)} cents
                     </Text>
-                    <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
+                    <Text className="text-[11px] font-ui" style={{ color: colors.muted }}>
                       {reading!.freq.toFixed(1)} Hz
                     </Text>
                   </>
                 ) : playing ? (
                   <>
-                    <Text className="text-3xl font-bold font-inter-bold" style={{ color: colors.accent }}>
+                    <Text className="text-3xl font-bold font-ui-bold" style={{ color: colors.accent }}>
                       {midiToNote(playing.midi + transpose).replace(/-?\d+$/, '')}
                     </Text>
-                    <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                    <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                       {freqOfMidi(playing.midi, refA).toFixed(1)} Hz
                     </Text>
                   </>
                 ) : (
-                  <Text className="px-2 text-center text-xs font-inter" style={{ color: colors.muted }}>
+                  <Text className="px-2 text-center text-xs font-ui" style={{ color: colors.muted }}>
                     {listening ? 'Play a note…' : 'Tap a note to hear it'}
                   </Text>
                 )}
@@ -228,10 +227,10 @@ function TunerScreen() {
 
               <View className="items-center">
                 <Text
-                  className="text-[10px] font-bold font-inter-bold tracking-wide"
+                  className="text-[10px] font-semibold font-ui-semibold"
                   style={{ color: colors.muted }}
                 >
-                  OCTAVE
+                  Octave
                 </Text>
                 <View className="flex-row items-center gap-3">
                   <Pressable
@@ -241,11 +240,11 @@ function TunerScreen() {
                     className="h-7 w-7 items-center justify-center rounded-full"
                     style={{ backgroundColor: colors.surface, opacity: octave <= MIN_OCTAVE ? 0.4 : 1 }}
                   >
-                    <Text className="text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                    <Text className="text-base font-bold font-ui-bold" style={{ color: colors.foreground }}>
                       −
                     </Text>
                   </Pressable>
-                  <Text className="w-4 text-center text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                  <Text className="w-4 text-center text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                     {octave}
                   </Text>
                   <Pressable
@@ -255,7 +254,7 @@ function TunerScreen() {
                     className="h-7 w-7 items-center justify-center rounded-full"
                     style={{ backgroundColor: colors.surface, opacity: octave >= MAX_OCTAVE ? 0.4 : 1 }}
                   >
-                    <Text className="text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                    <Text className="text-base font-bold font-ui-bold" style={{ color: colors.foreground }}>
                       +
                     </Text>
                   </Pressable>
@@ -292,13 +291,13 @@ function TunerScreen() {
                 ) : null}
               </View>
               <View className="w-full flex-row justify-between">
-                <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
+                <Text className="text-[11px] font-ui" style={{ color: colors.muted }}>
                   ♭ flat
                 </Text>
-                <Text className="text-[11px] font-bold font-inter-bold" style={{ color: reading ? color : colors.muted }}>
+                <Text className="text-[11px] font-bold font-ui-bold" style={{ color: reading ? color : colors.muted }}>
                   {verdict}
                 </Text>
-                <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
+                <Text className="text-[11px] font-ui" style={{ color: colors.muted }}>
                   sharp ♯
                 </Text>
               </View>
@@ -306,7 +305,7 @@ function TunerScreen() {
 
             {tuning.strings.length > 0 ? (
               <View className="w-full items-center gap-2">
-                <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                   Tap a string to hear its pitch
                 </Text>
                 <View className="flex-row flex-wrap justify-center gap-2">
@@ -324,7 +323,7 @@ function TunerScreen() {
                         }}
                       >
                         <Text
-                          className="text-sm font-semibold font-inter-semibold"
+                          className="text-sm font-semibold font-ui-semibold"
                           style={{ color: isPlaying ? colors['accent-foreground'] : isHeard ? colors.background : colors.foreground }}
                         >
                           {s}
@@ -337,7 +336,7 @@ function TunerScreen() {
             ) : null}
 
             {error ? (
-              <Text className="text-center text-sm font-inter" style={{ color: colors.danger }}>
+              <Text className="text-center text-sm font-ui" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}
@@ -349,7 +348,7 @@ function TunerScreen() {
                 style={{ backgroundColor: listening ? colors.surface : colors.accent }}
               >
                 <Text
-                  className="text-base font-bold font-inter-bold"
+                  className="text-base font-bold font-ui-bold"
                   style={{ color: listening ? colors.foreground : colors['accent-foreground'] }}
                 >
                   {listening ? 'Stop' : 'Start listening'}
@@ -361,7 +360,7 @@ function TunerScreen() {
                   className="rounded-full px-5 py-3"
                   style={{ backgroundColor: colors.surface }}
                 >
-                  <Text className="text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                  <Text className="text-base font-bold font-ui-bold" style={{ color: colors.foreground }}>
                     Stop tone
                   </Text>
                 </Pressable>
@@ -382,8 +381,8 @@ function TunerScreen() {
             content: () => (
               <>
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INSTRUMENT
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Instrument
                   </Text>
                   <Dropdown
                     value={instrument.id}
@@ -396,8 +395,8 @@ function TunerScreen() {
                 </View>
                 {instrument.tunings.length > 1 ? (
                   <View className="gap-1.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      TUNING
+                    <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                      Tuning
                     </Text>
                     <Dropdown
                       value={tuning.id}
@@ -407,7 +406,7 @@ function TunerScreen() {
                   </View>
                 ) : null}
                 {transpose !== 0 ? (
-                  <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                     Notes are shown as written for this transposing instrument, not concert pitch.
                   </Text>
                 ) : null}
@@ -419,15 +418,15 @@ function TunerScreen() {
             label: 'Input',
             content: () => (
               <View className="gap-1.5">
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                  SENSITIVITY
+                <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                  Sensitivity
                 </Text>
                 <Dropdown
                   value={sensitivity in SENSITIVITY ? sensitivity : 'normal'}
                   options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
                   onChange={(value) => updateSettings({ sensitivity: value })}
                 />
-                <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                   How quiet a signal can be before it&apos;s ignored as silence — raise it in a noisy room.
                 </Text>
               </View>
@@ -439,8 +438,8 @@ function TunerScreen() {
             content: () => (
               <>
                 <View className="items-center gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    REFERENCE PITCH (A4)
+                  <Text className="text-xs font-bold font-ui-bold" style={{ color: colors.muted }}>
+                    Reference pitch (A4)
                   </Text>
                   <View className="flex-row items-center gap-3">
                     <Pressable
@@ -450,11 +449,11 @@ function TunerScreen() {
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={{ backgroundColor: colors.surface, opacity: refA <= MIN_REF ? 0.4 : 1 }}
                     >
-                      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                      <Text className="text-lg font-bold font-ui-bold" style={{ color: colors.foreground }}>
                         −
                       </Text>
                     </Pressable>
-                    <Text className="min-w-[72px] text-center text-xl font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+                    <Text className="min-w-[72px] text-center text-xl font-extrabold font-ui-extrabold" style={{ color: colors.foreground }}>
                       {refA} Hz
                     </Text>
                     <Pressable
@@ -464,26 +463,26 @@ function TunerScreen() {
                       className="h-10 w-10 items-center justify-center rounded-full"
                       style={{ backgroundColor: colors.surface, opacity: refA >= MAX_REF ? 0.4 : 1 }}
                     >
-                      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
+                      <Text className="text-lg font-bold font-ui-bold" style={{ color: colors.foreground }}>
                         +
                       </Text>
                     </Pressable>
                   </View>
                   {refA !== 440 ? (
                     <Pressable onPress={() => updateSettings({ refA: 440 })}>
-                      <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.accent }}>
+                      <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.accent }}>
                         Reset to 440
                       </Text>
                     </Pressable>
                   ) : null}
-                  <Text className="text-center text-xs font-inter" style={{ color: colors.muted }}>
+                  <Text className="text-center text-xs font-ui" style={{ color: colors.muted }}>
                     The frequency of concert A, in Hz. 440 is standard; some orchestras and older recordings tune a
                     little sharp or flat of it.
                   </Text>
                 </View>
                 <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    TONE GENERATOR SOUND
+                  <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+                    Tone generator sound
                   </Text>
                   <Dropdown value={waveform} options={WAVEFORMS} onChange={(value) => updateSettings({ waveform: value })} />
                 </View>
