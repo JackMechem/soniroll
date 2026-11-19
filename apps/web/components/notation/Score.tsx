@@ -35,6 +35,8 @@ import { useMusicFontVersion } from "@/lib/musicFont";
 
 const ROW_HEIGHT = 150;
 const STAVE_Y = 40;
+/** How far a bar's highlight reaches past the staff's top and bottom lines. */
+const BAR_PAD = 18;
 const MIN_MEASURE = 210;
 
 type Hit =
@@ -405,9 +407,10 @@ export default function TranscriptionScore({
           const { topY, spacing } = geomRef.current;
           const r = document.createElementNS(ns, "rect");
           r.setAttribute("x", String(h.x));
-          r.setAttribute("y", String(topY - 64));
+          // Lined up with the staff (a little past its top and bottom lines), like the bar the cursor is in.
+          r.setAttribute("y", String(topY - BAR_PAD));
           r.setAttribute("width", String(h.w));
-          r.setAttribute("height", String(spacing * 4 + 76));
+          r.setAttribute("height", String(spacing * 4 + BAR_PAD * 2));
           r.setAttribute("rx", "4");
           r.setAttribute("fill", accent);
           r.setAttribute("fill-opacity", "0.16");
@@ -428,11 +431,12 @@ export default function TranscriptionScore({
         const svg = div.querySelector("svg");
         if (svg && measureHit) {
           const ns = "http://www.w3.org/2000/svg";
+          const { topY, spacing } = geomRef.current;
           const bg = document.createElementNS(ns, "rect");
           bg.setAttribute("x", String(measureHit.x));
-          bg.setAttribute("y", String(STAVE_Y - 24));
+          bg.setAttribute("y", String(topY - BAR_PAD));
           bg.setAttribute("width", String(measureHit.w));
-          bg.setAttribute("height", String(80));
+          bg.setAttribute("height", String(spacing * 4 + BAR_PAD * 2));
           bg.setAttribute("rx", "6");
           bg.setAttribute("fill", accent);
           bg.setAttribute("fill-opacity", "0.07");
@@ -441,9 +445,9 @@ export default function TranscriptionScore({
           if (caretX !== null) {
             const line = document.createElementNS(ns, "rect");
             line.setAttribute("x", String(caretX));
-            line.setAttribute("y", String(STAVE_Y + 2));
+            line.setAttribute("y", String(topY - 8));
             line.setAttribute("width", "2");
-            line.setAttribute("height", "46");
+            line.setAttribute("height", String(spacing * 4 + 16));
             line.setAttribute("fill", accent);
             line.setAttribute("stroke", "none");
             line.setAttribute("class", "notation-caret");

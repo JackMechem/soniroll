@@ -292,10 +292,11 @@ export default function NoteList({
       </div>
       {!query && (
         <div className="flex items-center gap-1 border-b border-foreground/10 text-sm">
-          {/* The same underline tabs as the Library's. */}
+          {/* The same underline tabs as the Library's. The A–Z tab is "Notes" until there's a
+              folder (before that it's a flat list). */}
           {(["folders", "recent"] as const).map((s) => (
             <button key={s} type="button" onClick={() => setSort(s)} aria-pressed={sort === s} className={`-mb-px flex h-10 items-center border-b-2 px-2 transition-colors ${sort === s ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
-              {s === "folders" ? "Folders" : "Recent"}
+              {s === "recent" ? "Recent" : tree.folders.length > 0 ? "Folders" : "Notes"}
             </button>
           ))}
         </div>

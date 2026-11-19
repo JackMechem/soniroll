@@ -16,6 +16,7 @@ import { layoutRows, type PlacedBar } from "@jam-practice/core/chartLayout";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import NumberField from "@/components/NumberField";
 import Select from "@/components/Select";
+import { PageHeader } from "@/components/library/shared";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { PlusIcon, TrashIcon } from "@/components/tools";
 import { encodeChartString } from "@/lib/chartString";
@@ -252,6 +253,10 @@ export default function ChordChartEditor({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Saving or exporting without a title: the message sits under the Title field, which gets
+  // focus and a red ring (rather than a line by the Save button, far from the field).
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement | null>(null);
   const [exported, setExported] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -332,9 +337,16 @@ export default function ChordChartEditor({
     });
   }
 
+  function flagMissingTitle(message: string) {
+    setError(null);
+    setTitleError(message);
+    titleRef.current?.focus();
+    titleRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
   async function handleSave() {
     if (!song.title) {
-      setError("Give this chord chart a title.");
+      flagMissingTitle("Give this chord chart a title.");
       return;
     }
     const playlistName = editing || playlist === NO_PLAYLIST ? null : playlist || newPlaylist.trim();
@@ -356,7 +368,7 @@ export default function ChordChartEditor({
 
   function handleExport() {
     if (!song.title) {
-      setError("Give this chord chart a title first.");
+      flagMissingTitle("Give this chord chart a title first.");
       return;
     }
     setError(null);
@@ -393,16 +405,7 @@ export default function ChordChartEditor({
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold tracking-tight">{editing ? `Edit "${initial?.title}"` : "Create a chord chart"}</h2>
-        <button
-          type="button"
-          onClick={() => guard.requestLeave(onClose)}
-          className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
-        >
-          Close
-        </button>
-      </div>
+      <PageHeader title={editing ? `Edit "${initial?.title}"` : "Create a chord chart"} back={() => guard.requestLeave(onClose)} />
 
       <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
         {!editing && (
@@ -433,12 +436,25 @@ export default function ChordChartEditor({
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Title</span>
           <input
+            ref={titleRef}
             autoFocus={!editing}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (e.target.value.trim()) setTitleError(null);
+            }}
             placeholder="Tune name"
-            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
+            aria-invalid={titleError ? true : undefined}
+            aria-describedby={titleError ? "chart-title-error" : undefined}
+            className={`h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 sm:text-sm ${
+              titleError ? "ring-2 ring-danger/60 focus:ring-danger/60" : "focus:ring-accent/40"
+            }`}
           />
+          {titleError && (
+            <span id="chart-title-error" className="text-xs text-danger">
+              {titleError}
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Composer</span>

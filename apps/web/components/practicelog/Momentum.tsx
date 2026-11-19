@@ -291,7 +291,7 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
 function WeekBars({ week, today }: { week: { key: string; minutes: number; goal: number }[]; today: string }) {
   const max = Math.max(...week.map((d) => d.goal), ...week.map((d) => d.minutes), 1);
   const same = week.every((d) => d.goal === week[0].goal);
-  const TRACK = 44;
+  const TRACK = 32;
   return (
     <div className="relative flex items-end gap-1.5">
       {same && week[0].goal > 0 && (
@@ -312,7 +312,7 @@ function WeekBars({ week, today }: { week: { key: string; minutes: number; goal:
                 />
               )}
             </div>
-            <span className={`h-3.5 text-[11px] leading-[14px] ${isToday ? "font-semibold text-foreground" : "font-medium text-muted"}`}>{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
+            <span className={`h-3.5 text-xs leading-[14px] ${isToday ? "font-semibold text-foreground" : "font-medium text-muted"}`}>{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
           </div>
         );
       })}

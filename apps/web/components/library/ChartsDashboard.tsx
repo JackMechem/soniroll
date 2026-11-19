@@ -24,8 +24,8 @@ export const playlistHref = (id: string) => `/chord-charts/playlist?id=${encodeU
 /**
  * Library's Chord Charts tab — search across every chart, a slim row of the charts you opened
  * lately, then the folders as the main view: All charts first, then each folder (a row each,
- * ⋮ to delete) and a quiet "New folder" row. With no folders or only a few charts, the charts
- * themselves are listed below too. (Folders are `playlists` in the data and
+ * ⋮ to delete) and a quiet "New folder" row — shown once a folder exists. With no folders or
+ * only a few charts, the charts themselves are listed below too. (Folders are `playlists` in the data and
  * in Convex — only the name people see changed.) The "+ New" menu makes a chart or a folder,
  * or imports. A chart opens on its own page (`ChartViewPage`); every chart row has the chart ⋮
  * menu (`useChartActions`).
@@ -75,7 +75,6 @@ export default function ChartsDashboard() {
       items: [
         { label: "New chord chart", onSelect: () => router.push("/chord-charts/new") },
         { label: "New folder", onSelect: () => setNaming(true) },
-        { label: "Import charts", onSelect: () => router.push("/chord-charts/import") },
       ],
     });
 
@@ -90,8 +89,8 @@ export default function ChartsDashboard() {
       >
         <Toolbar>
           <HeroSearch value={query} onChange={setQuery} placeholder={totalSongs > 1 ? `Search ${totalSongs} charts…` : "Search charts…"} />
-          {/* Phones: Import is in the New menu, so the toolbar stays search + one labelled button. */}
-          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" className="max-sm:hidden" />
+          {/* Phones: Import shrinks to its icon, so the search keeps most of the row. */}
+          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
           <Pill primary icon={PlusIcon} label="New" onClick={openNewMenu} />
         </Toolbar>
       </Hero>
@@ -134,28 +133,32 @@ export default function ChartsDashboard() {
         <div className="flex flex-col gap-4">
           <RecentStrip items={recentCards.slice(0, 8)} />
 
-          <div className="overflow-hidden rounded-lg bg-surface">
-            <Rows>
-              <PlaylistItem all name="All charts" count={totalSongs} href={playlistHref(ALL_CHARTS_ID)} />
-              {playlists.map((p) => (
-                <PlaylistItem
-                  key={p.id}
-                  name={p.name}
-                  count={p.songs.length}
-                  href={playlistHref(p.id)}
-                  onMenu={(e) => openPlaylistMenu(e, { id: p.id, name: p.name, count: p.songs.length })}
-                />
-              ))}
-              <button
-                type="button"
-                onClick={() => setNaming(true)}
-                className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-              >
-                <PlusIcon className="h-4 w-4 shrink-0" />
-                New folder
-              </button>
-            </Rows>
-          </div>
+          {/* The folder card only once there's a folder: before that, "All charts" would just
+              repeat the Charts list below (New folder is in the New menu). */}
+          {playlists.length > 0 && (
+            <div className="overflow-hidden rounded-lg bg-surface">
+              <Rows>
+                <PlaylistItem all name="All charts" count={totalSongs} href={playlistHref(ALL_CHARTS_ID)} />
+                {playlists.map((p) => (
+                  <PlaylistItem
+                    key={p.id}
+                    name={p.name}
+                    count={p.songs.length}
+                    href={playlistHref(p.id)}
+                    onMenu={(e) => openPlaylistMenu(e, { id: p.id, name: p.name, count: p.songs.length })}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setNaming(true)}
+                  className="flex min-h-12 w-full items-center gap-3 px-3 text-left text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  <PlusIcon className="h-4 w-4 shrink-0" />
+                  New folder
+                </button>
+              </Rows>
+            </div>
+          )}
 
           {listed.length > 0 && (
             <Panel

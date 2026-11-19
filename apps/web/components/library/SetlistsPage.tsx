@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import PromptDialog from "@/components/PromptDialog";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Rows, SetlistItem, Toolbar } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Rows, SetlistItem } from "@/components/library/ui";
 import { setlistHref } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
 import { LibraryIcon, PlusIcon } from "@/components/tools";
@@ -46,23 +46,25 @@ export default function SetlistsPage() {
         titleExtra={<StoragePill />}
         tabs={<LibraryTabs active="setlists" />}
       >
-        <Toolbar>
+        {/* Phones: the sort toggle gets its own row under search + New, so the search box keeps
+            most of the width. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <HeroSearch value={query} onChange={setQuery} placeholder="Search setlists…" />
-          <div className="flex h-10 shrink-0 rounded-md bg-foreground/[0.05] p-0.5 sm:h-9" role="group" aria-label="Sort">
+          <div className="flex h-10 shrink-0 rounded-md bg-foreground/[0.05] p-0.5 max-sm:order-last max-sm:w-full sm:h-9" role="group" aria-label="Sort">
             {(["recent", "name"] as Sort[]).map((key) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setSort(key)}
                 aria-pressed={sort === key}
-                className={`rounded-[3px] px-2.5 text-xs font-medium transition-colors ${sort === key ? "bg-surface-hover text-foreground" : "text-muted hover:text-foreground"}`}
+                className={`rounded-[3px] px-2.5 text-xs font-medium max-sm:flex-1 transition-colors ${sort === key ? "bg-surface-hover text-foreground" : "text-muted hover:text-foreground"}`}
               >
                 {key === "recent" ? "Recent" : "A–Z"}
               </button>
             ))}
           </div>
           <Pill primary icon={PlusIcon} label="New" onClick={() => setNaming(true)} />
-        </Toolbar>
+        </div>
       </Hero>
       {shown.length === 0 ? (
         <EmptyState

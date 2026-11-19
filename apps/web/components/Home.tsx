@@ -157,6 +157,12 @@ export default function Home() {
   const supportHidden = useSupportCardHidden();
   const desktopCardDismissed = useDesktopCardDismissed();
   const desktopCardApplies = useDesktopCardApplies();
+  // At most one ask at a time: when both the desktop app and the support card would show, they take
+  // turns by day (the desktop one on even days).
+  const desktopShows = desktopCardApplies && !desktopCardDismissed;
+  const dayNumber = today ? Math.floor(new Date(today).getTime() / 86400000) : 0;
+  const promo: "support" | "desktopApp" | null =
+    desktopShows && !supportHidden ? (dayNumber % 2 === 0 ? "desktopApp" : "support") : desktopShows ? "desktopApp" : supportHidden ? null : "support";
 
   // Edit mode: from the Edit button, or `?edit` in the address.
   const urlEdit = useSyncExternalStore(noop, urlAsksToEdit, () => false);
@@ -480,9 +486,9 @@ export default function Home() {
           </Card>
         ) : null;
       case "support":
-        return !supportHidden || editing ? <SupportCard always={editing} /> : null;
+        return editing || (!supportHidden && promo !== "desktopApp") ? <SupportCard always={editing} /> : null;
       case "desktopApp":
-        return editing || (desktopCardApplies && !desktopCardDismissed) ? <DesktopAppCard always={editing} /> : null;
+        return editing || promo === "desktopApp" ? <DesktopAppCard always={editing} /> : null;
       default:
         return null;
     }
@@ -534,7 +540,8 @@ export default function Home() {
                       (tuneMatches[0] ? tuneHref(tuneMatches[0].list, tuneMatches[0].tune.id) : chartMatches[0] ? chartHref(chartMatches[0].id) : null);
                     if (first) router.push(first);
                   }}
-                  placeholder="Search tools, tunes and charts…"
+                  placeholder="Search tools, tunes, charts"
+                  aria-label="Search tools, tunes and charts"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (

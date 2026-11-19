@@ -236,10 +236,12 @@ export function AuthForm({
 
         {/* The main button runs the whole width, like Google's below; the dialog's × (or Escape,
             or a click outside) cancels. */}
+        {/* Until the form is filled in it's a plain grey button with readable text: the faded
+            accent (dark text on muted blue in dark themes) looked broken rather than not-ready. */}
         <button
           type="submit"
           disabled={submitting || !email || password.length < 8}
-          className="h-10 w-full rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+          className="h-10 w-full rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-foreground/10 disabled:text-muted disabled:hover:bg-foreground/10"
         >
           {flow === "signIn" ? "Sign in" : "Sign up"}
         </button>

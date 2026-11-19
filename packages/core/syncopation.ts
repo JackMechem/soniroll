@@ -91,7 +91,7 @@ export const OSTINATOS: { id: Ostinato; label: string; feet?: boolean }[] = [
 export type PhraseMode = "new" | "two" | "one";
 
 export const PHRASE_MODES: { id: PhraseMode; label: string }[] = [
-  { id: "new", label: "A new bar every bar" },
+  { id: "new", label: "Every bar different" },
   { id: "two", label: "Each line repeats a 2-bar pattern" },
   { id: "one", label: "Each line repeats one bar" },
 ];

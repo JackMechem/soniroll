@@ -202,6 +202,7 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
   const [initial] = useState(loaded);
   const { save, remove } = useScoreActions();
   const [deleting, setDeleting] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
   const { change, flush, saveState } = useAutosave((t: Transcription) => save(id, t));
 
   // The latest version, for Export (the editor keeps its own copy; this follows its changes).
@@ -219,8 +220,8 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
   );
   return (
     <ScoreShell
-      // Saved, Export and Delete go in the tool's own bar (the header bar on desktop; on phones the
-      // row with the ?, along with Back), so on a phone the staff isn't pushed down by a row of them.
+      // Saved and the ⋮ menu (Export, Delete) go in the tool's own bar (the header bar on desktop; on
+      // phones the row with the ?, along with Back), so on a phone the staff isn't pushed down.
       actions={
         <>
           <div className="flex lg:hidden">{back}</div>
@@ -229,19 +230,32 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
           </span>
           <button
             type="button"
-            onClick={() => {
-              const t = latest.current;
-              downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`);
+            aria-label="Score options"
+            title="Export or delete"
+            aria-haspopup="menu"
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setMenu({
+                x: r.right - 200,
+                y: r.bottom + 4,
+                items: [
+                  {
+                    label: "Export as a file",
+                    icon: <DownloadIcon className="h-4 w-4" />,
+                    onSelect: () => {
+                      const t = latest.current;
+                      downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`);
+                    },
+                  },
+                  { label: "Delete score", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: () => setDeleting(true) },
+                ],
+              });
             }}
-            className={btn}
-            title="Export as a file"
-            aria-label="Export as a file"
+            className={`${btn} px-0`}
           >
-            <DownloadIcon className="h-4 w-4" /> <span className="max-sm:hidden">Export</span>
+            <DotsVerticalIcon className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => setDeleting(true)} className={`${btn} hover:text-danger`} aria-label="Delete score" title="Delete score">
-            <TrashIcon className="h-4 w-4" />
-          </button>
+          {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
         </>
       }
     >

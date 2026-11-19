@@ -297,7 +297,7 @@ export function SaveTakeDialog({
           <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
             <LinkIcon className="h-4 w-4 text-muted" />
             <button type="button" onClick={() => setPicking(true)} className={`min-w-0 flex-1 truncate text-left text-base sm:text-sm ${tune ? "" : "text-muted"}`}>
-              {tune ? tune.name : "Not linked — click to link a tune"}
+              {tune ? tune.name : "Link a tune"}
             </button>
             {tune && (
               <button type="button" onClick={() => setTuneId(null)} className="text-sm font-medium text-muted hover:text-foreground">

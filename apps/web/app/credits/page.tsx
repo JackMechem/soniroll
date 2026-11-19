@@ -8,15 +8,14 @@ export default function CreditsPage() {
   return (
     <LegalPage title="Credits" updated="November 18, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        soniroll&apos;s sounds are almost entirely synthesized in the browser (see the Tone menu in
-        the trainers, the metronome, and Guess the Interval/Guess the Chord for the full list) —
-        with two exceptions: the <strong>Piano</strong> and <strong>Rhodes</strong> tones are real
-        recordings, fetched from their original hosts the first time you pick them. Both are
-        licensed under{" "}
+        Most of soniroll&apos;s sounds are synthesized in the browser. The rest are real recordings:
+        the <strong>Piano</strong> and <strong>Rhodes</strong> tones in the trainers, and Rhythm
+        Section&apos;s piano, bass and drums. Some of them are licensed under{" "}
         <LegalLink href="https://creativecommons.org/licenses/by/3.0/">
           Creative Commons Attribution 3.0
         </LegalLink>
-        , which requires crediting them — this page is that credit.
+        , which requires crediting them, and the others are too good not to name. This page is that
+        credit, along with the people and other work soniroll is built on.
       </p>
 
       <LegalSection title="Piano">
@@ -76,8 +75,8 @@ export default function CreditsPage() {
 
       <LegalSection title="How this works">
         <p>
-          Neither sample set ships with soniroll itself — your browser fetches the specific notes a
-          tool actually plays directly from the hosts above (both GitHub Pages), the first time
+          The piano and Rhodes samples don&apos;t ship with soniroll itself — your browser fetches the
+          specific notes a tool actually plays directly from the hosts above (all GitHub Pages), the first time
           each one comes up, and keeps them for the rest of that browser tab so repeats are
           instant. See the{" "}
           <LegalLink href="/privacy">Privacy policy</LegalLink> for what that means for your

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
-import InputTest from "@/components/InputTest";
+import InputTest, { MicLevel } from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -32,7 +32,6 @@ import {
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
 import {
-  GRADE_COLOR,
   GRADE_LABEL,
   Grade,
   describePitch,
@@ -72,10 +71,11 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { micErrorMessage } from "@/lib/micError";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
-import { LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -315,6 +315,8 @@ export default function IntervalTrainer() {
   const toneIdRef = useRef(toneId);
   const inputRef = useRef<AudioInput | null>(null);
   const mountedRef = useRef(true);
+  /** The mic's latest RMS level, for the little level bar under "Listening…". */
+  const micLevelRef = useRef(0);
   const sessionRef = useRef<Session | null>(null);
   const listenCfg = useRef({
     accidentalStyle,
@@ -700,7 +702,10 @@ export default function IntervalTrainer() {
       try {
         const input = await startAudioInput(
           inputDeviceId,
-          (frame) => handleFrame(frame.freq),
+          (frame) => {
+            micLevelRef.current = frame.level;
+            handleFrame(frame.freq);
+          },
           () => listenCfg.current.silenceRms,
         );
         if (!mountedRef.current) {
@@ -923,7 +928,7 @@ export default function IntervalTrainer() {
   // no way to recover after a wrong note, since there'd be nothing on screen to re-orient from.
   const roundLabel = (r: IntervalRound, seq = 0) =>
     `${rootLabel(r, seq)} ${arrow(r)} ${r.interval.label}`;
-  const mainLabel = running && round ? roundLabel(round, roundSeed) : "—";
+  const mainLabel = running && round ? roundLabel(round, roundSeed) : "?";
   const glow = running && status ? GRADE_COLOR[status] : null;
   const showCountdown = running;
   const score = summary ? scoreOf(summary.results) : 0;
@@ -995,7 +1000,7 @@ export default function IntervalTrainer() {
                               : entry.config.chainIntervals
                                 ? "Chained"
                                 : "Quiz"}{" "}
-                            · {new Date(entry.at).toLocaleDateString()}
+                            · {formatFileDate(entry.at)}
                           </span>
                         </div>
                         <span
@@ -1459,9 +1464,10 @@ export default function IntervalTrainer() {
         )}
         <div className="relative">
           <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
+            {!running && <span aria-hidden className={IDLE_RING} />}
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              className={!running ? IDLE_DASH : "relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200"}
+              className={!running ? IDLE_MARK : "relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200"}
               style={
                 glow
                   ? {
@@ -1483,14 +1489,6 @@ export default function IntervalTrainer() {
                 mainLabel
               )}
             </p>
-            {/* Before the first round, say what's about to happen. */}
-            {!running && (
-              <p className={IDLE_HINT}>
-                {listenMode
-                  ? "Press Start, then play each interval. The mic checks it."
-                  : "Press Start, then play each interval shown."}
-              </p>
-            )}
           </div>
           {showNext && nextRound && running && (
             <span
@@ -1501,9 +1499,17 @@ export default function IntervalTrainer() {
             </span>
           )}
         </div>
+        {/* Before the first round, say what's about to happen. */}
+        {!running && (
+          <p className={IDLE_HINT}>
+            {listenMode
+              ? "Press Start, then play each interval. The mic checks it."
+              : "Press Start, then play each interval shown."}
+          </p>
+        )}
 
         {listenMode && running && round && showIntervalNotes && (
-          <div className="flex flex-wrap justify-center gap-1.5 px-2">
+          <div className="flex flex-wrap justify-center gap-2 px-2">
             {round.notes.map((n, i) => {
               const label = noteGlyphs(spellNote(n, accidentalStyle, roundSeed, true));
               const matched = i < intervalProgress;
@@ -1519,18 +1525,17 @@ export default function IntervalTrainer() {
                     ? GRADE_COLOR.partial
                     : undefined;
               return (
+                // Filled pills: the note to play now in the accent, played ones tinted by grade.
                 <span
                   key={i}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium tabular-nums transition-colors ${
-                    current ? "border-accent" : color ? "" : "border-foreground/15"
+                  className={`inline-flex h-8 min-w-10 items-center justify-center rounded-full px-3 text-sm font-semibold tabular-nums transition-colors ${
+                    current ? "bg-accent text-accent-foreground" : color ? "" : "bg-foreground/[0.06] text-foreground"
                   }`}
-                  style={{
-                    color,
-                    borderColor: color && !current ? color : undefined,
-                    background: color
-                      ? `color-mix(in srgb, ${color} 12%, transparent)`
-                      : undefined,
-                  }}
+                  style={
+                    color
+                      ? { color, background: `color-mix(in srgb, ${color} 15%, transparent)` }
+                      : undefined
+                  }
                 >
                   {label}
                 </span>
@@ -1549,6 +1554,7 @@ export default function IntervalTrainer() {
             <span className="tabular-nums">
               {heard ? `Heard ${heard}` : "Listening…"}
             </span>
+            {listenMode && <MicLevel levelRef={micLevelRef} />}
             {waiting && (
               <button
                 type="button"

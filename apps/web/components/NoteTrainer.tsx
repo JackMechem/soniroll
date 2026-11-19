@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
-import InputTest from "@/components/InputTest";
+import InputTest, { MicLevel } from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -29,7 +29,6 @@ import {
   startAudioInput,
 } from "@/lib/audioInput";
 import {
-  GRADE_COLOR,
   GRADE_LABEL,
   Grade,
   describePitch,
@@ -65,8 +64,9 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { micErrorMessage } from "@/lib/micError";
-import { LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 import StruggleCounts from "@/components/learning/StruggleCounts";
 
 const MIN_INTERVAL_SECONDS = 0.5;
@@ -287,6 +287,8 @@ export default function NoteTrainer() {
   const toneIdRef = useRef(toneId);
   const inputRef = useRef<AudioInput | null>(null);
   const mountedRef = useRef(true);
+  /** The mic's latest RMS level, for the little level bar under "Listening…". */
+  const micLevelRef = useRef(0);
   const sessionRef = useRef<Session | null>(null);
   const listenCfg = useRef({
     ignoreOctave: effectiveIgnoreOctave,
@@ -604,7 +606,10 @@ export default function NoteTrainer() {
       try {
         const input = await startAudioInput(
           inputDeviceId,
-          (frame) => handleFrame(frame.freq),
+          (frame) => {
+            micLevelRef.current = frame.level;
+            handleFrame(frame.freq);
+          },
           () => listenCfg.current.silenceRms,
         );
         if (!mountedRef.current) {
@@ -799,7 +804,7 @@ export default function NoteTrainer() {
   // during (or just after) a "Shed a string" session, which always shows it.
   const noteLabel = (n: string, seq = 0) =>
     noteGlyphs(spellNote(n, accidentalStyle, seq, effectiveIgnoreOctave));
-  const mainLabel = running && note ? noteLabel(note, noteSeed) : "—";
+  const mainLabel = running && note ? noteLabel(note, noteSeed) : "?";
   // "Both" spellings (e.g. "C#/Db") is wider than a single note name, so it needs to shrink
   // to still fit inside the circle.
   const mainLabelIsDouble = mainLabel.includes("/");
@@ -875,7 +880,7 @@ export default function NoteTrainer() {
                         </span>
                         <span className="text-xs text-muted">
                           {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
+                          {formatFileDate(entry.at)}
                         </span>
                       </div>
                       <span
@@ -1300,9 +1305,10 @@ export default function NoteTrainer() {
         )}
         <div className="relative">
           <div className="relative flex h-40 w-40 items-center justify-center sm:h-48 sm:w-48">
+            {!running && <span aria-hidden className={IDLE_RING} />}
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
+              className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
                 mainLabelIsDouble
                   ? "text-3xl sm:text-4xl"
                   : "text-6xl sm:text-7xl"
@@ -1317,14 +1323,6 @@ export default function NoteTrainer() {
             >
               {mainLabel}
             </p>
-            {/* Before the first round, say what's about to happen. */}
-            {!running && (
-              <p className={IDLE_HINT}>
-                {listenMode
-                  ? "Press Start, then play each note. The mic checks it."
-                  : "Press Start, then play each note shown."}
-              </p>
-            )}
           </div>
           {showNext && nextNote && running && (
             <span
@@ -1335,6 +1333,14 @@ export default function NoteTrainer() {
             </span>
           )}
         </div>
+        {/* Before the first round, say what's about to happen. */}
+        {!running && (
+          <p className={IDLE_HINT}>
+            {listenMode
+              ? "Press Start, then play each note. The mic checks it."
+              : "Press Start, then play each note shown."}
+          </p>
+        )}
         {running && progress && (
           <div className="flex flex-col items-center gap-0.5 text-sm text-muted">
             <span className="tabular-nums">
@@ -1345,6 +1351,7 @@ export default function NoteTrainer() {
             <span className="tabular-nums">
               {heard ? `Heard ${heard}` : "Listening…"}
             </span>
+            {listenMode && <MicLevel levelRef={micLevelRef} />}
             {waiting && (
               <button
                 type="button"

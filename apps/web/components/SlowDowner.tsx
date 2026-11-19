@@ -32,7 +32,6 @@ import { makeId } from "@/lib/types";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
-import { PoolPill } from "@/components/reward/Reward";
 
 const SETTINGS_KEY = "jam-practice-slow-downer";
 const DEFAULT_SETTINGS = { speed: 100, preservePitch: true, volume: 1, maximized: false };
@@ -486,11 +485,22 @@ export default function SlowDowner() {
           />
         </label>
         <Hint>How fast the file plays back, as a percentage of its original speed.</Hint>
-        <div className="flex flex-wrap gap-2">
+        {/* One choice, so one row of equal buttons (it fits a phone's sheet). */}
+        <div className="grid grid-cols-6 gap-1.5">
           {SPEED_PRESETS.map((preset) => (
-            <PoolPill key={preset} on={speed === preset} onClick={() => updateSettings({ speed: preset })} plainClassName="rounded-md px-3 py-1.5 text-sm font-medium tabular-nums">
+            <button
+              key={preset}
+              type="button"
+              aria-pressed={speed === preset}
+              onClick={() => updateSettings({ speed: preset })}
+              className={`h-9 whitespace-nowrap rounded-full text-sm font-medium tabular-nums transition-colors ${
+                speed === preset
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
+              }`}
+            >
               {preset}%
-            </PoolPill>
+            </button>
           ))}
         </div>
         <SwitchRow
@@ -703,7 +713,7 @@ export default function SlowDowner() {
               </p>
             )}
             <span>{analyzing ? "Analyzing audio…" : peaks ? "" : "Waveform unavailable for this file"}</span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
               {/* Panning only means anything zoomed in, so the arrows only show then. */}
               {zoomed && (
                 <>
@@ -728,6 +738,7 @@ export default function SlowDowner() {
                   <span className="mx-1 h-5 w-px bg-foreground/10" />
                 </>
               )}
+              <span className="mr-0.5 text-xs font-semibold text-muted">Zoom</span>
               <button
                 type="button"
                 onClick={() => zoom(1.5)}
@@ -762,9 +773,8 @@ export default function SlowDowner() {
                 type="button"
                 onClick={() => updateSettings({ maximized: !maximized })}
                 aria-pressed={maximized}
-                aria-label={maximized ? "Shrink waveform" : "Maximise waveform height"}
-                title={maximized ? "Shrink waveform" : "Maximise waveform height"}
-                className={`flex h-9 w-9 items-center justify-center rounded-md transition-colors pointer-coarse:h-10 pointer-coarse:w-10 ${
+                title={maximized ? "Make the waveform shorter again" : "Make the waveform as tall as the page allows"}
+                className={`flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors pointer-coarse:h-10 ${
                   maximized
                     ? "bg-accent text-accent-foreground hover:bg-accent-hover"
                     : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
@@ -775,6 +785,7 @@ export default function SlowDowner() {
                 ) : (
                   <ExpandHeightIcon className="h-4 w-4" />
                 )}
+                {maximized ? "Shorter" : "Taller"}
               </button>
             </div>
           </div>

@@ -774,19 +774,38 @@ export const STANDARDS: Standard[] = build();
 
 // Built on first search rather than at module load — same slow-`.normalize()` reason as `quickId`.
 let searchIndex: string[] | null = null;
+let nameIndex: string[] | null = null;
 
 /** Identifies a tune by name, ignoring case, punctuation and a leading "The". */
 export function nameId(name: string): string {
   return normalizeKey(tidyName(name)).replace(/^(the|a|an) /, "");
 }
 
-/** Every word you type must appear somewhere in the title, composer or key. */
+/**
+ * Every word you type must appear somewhere in the title, composer or key. Results are ranked:
+ * titles that start with what you typed first ("stella" → Stella by Starlight), then titles with
+ * a word starting with each word you typed, then the rest (Constellation). Ties keep list order.
+ */
 export function searchStandards(query: string): Standard[] {
   const words = normalizeKey(query).split(" ").filter(Boolean);
   if (words.length === 0) return STANDARDS;
   searchIndex ??= STANDARDS.map((s) => normalizeKey(`${s.name} ${s.composer} ${s.key}`));
+  nameIndex ??= STANDARDS.map((s) => normalizeKey(s.name));
   const index = searchIndex;
-  return STANDARDS.filter((_, i) => words.every((w) => index[i].includes(w)));
+  const names = nameIndex;
+  const phrase = words.join(" ");
+  const rank = (i: number): number => {
+    const name = names[i];
+    if (name.startsWith(phrase) || name.replace(/^(the|a|an) /, "").startsWith(phrase)) return 0;
+    const nameWords = name.split(" ");
+    if (words.every((w) => nameWords.some((n) => n.startsWith(w)))) return 1;
+    return 2;
+  };
+  return STANDARDS.map((s, i) => ({ s, i }))
+    .filter(({ i }) => words.every((w) => index[i].includes(w)))
+    .map(({ s, i }) => ({ s, i, r: rank(i) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map(({ s }) => s);
 }
 
 export function standardToTune(standard: Standard): Tune {

@@ -8,7 +8,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SaveWhere from "@/components/files/SaveWhere";
 import { FileRow, FileTypeIcon, fileDetail, useFileUploader } from "@/components/files/FileParts";
-import { CloseIcon, SearchIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { CloseIcon, SearchIcon, TrashIcon, UploadIcon, WaveIcon } from "@/components/tools";
 import { type StoredEntry, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { useSaveTarget } from "@/lib/storagePlan";
@@ -267,16 +267,17 @@ function FilePickerDialog({
   const hasAny = rows.length > 0 || localRows.length > 0;
 
   return createPortal(
-    <div data-file-drop={dropId} className="fixed inset-0 z-[70] flex items-end justify-center bg-overlay sm:items-start sm:p-4 sm:pt-[10vh]" onClick={onClose}>
+    <div data-file-drop={dropId} className="fixed inset-0 z-[70] flex items-end justify-center bg-overlay p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:items-start sm:p-4 sm:pt-[10vh]" onClick={onClose}>
+      {/* On phones, the same floating sheet as the option chips' (inset, rounded, padding). */}
       <div
         role="dialog"
         aria-label={title}
-        className="flex max-h-[85dvh] w-full max-w-lg flex-col gap-3 rounded-t-xl bg-surface p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] text-foreground shadow-xl ring-1 ring-foreground/[0.06] sm:max-h-[75vh] sm:rounded-xl sm:pb-4"
+        className="flex max-h-[80dvh] w-full max-w-lg flex-col gap-3 rounded-3xl bg-surface px-5 pb-5 pt-4 text-foreground shadow-xl ring-1 ring-foreground/[0.06] sm:max-h-[75vh] sm:rounded-xl sm:p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">
           <h2 className="min-w-0 flex-1 text-base font-semibold">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
@@ -323,7 +324,7 @@ function FilePickerDialog({
                   // Kept on another device: listed, but it can't be opened here.
                   return (
                     <div key={id} className="flex min-h-12 items-center gap-3 px-2.5 py-2 opacity-60" title={`Kept on ${entry.device?.label ?? "another device"}`}>
-                      <FileTypeIcon kind={fileKind(entry.mimeType, entry.name)} />
+                      <FileTypeIcon kind={fileKind(entry.mimeType, entry.name)} recording={entry.kind === "recording"} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{entry.name}</span>
                         <span className="block truncate text-xs text-muted">{entry.device ? `On ${entry.device.label}` : "Not available"}</span>
@@ -336,6 +337,7 @@ function FilePickerDialog({
                     key={id}
                     name={entry.name}
                     mimeType={entry.mimeType}
+                    recording={entry.kind === "recording"}
                     detail={fileDetail(entry, where)}
                     onOpen={() => void pick(entry)}
                     trailing={busy === id ? <LoadingSpinner size="sm" inline label="Opening" /> : null}
@@ -426,7 +428,14 @@ export function OpenFileButton({ name, mimeType, onClick, children }: { name: st
       title="Open another file"
       className="inline-flex h-10 w-full max-w-md items-center gap-2 rounded-md bg-foreground/[0.05] pl-1 pr-3 text-left text-sm transition-colors hover:bg-surface-hover"
     >
-      <FileTypeIcon kind={fileKind(mimeType, name)} />
+      {/* An opened audio file shows a wave, not the microphone the file lists use for audio. */}
+      {fileKind(mimeType, name) === "audio" ? (
+        <span className="flex h-8 w-5 shrink-0 items-center justify-center text-muted" aria-hidden>
+          <WaveIcon className="h-4 w-4" />
+        </span>
+      ) : (
+        <FileTypeIcon kind={fileKind(mimeType, name)} />
+      )}
       <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
       {children ?? <span className="shrink-0 text-xs font-medium text-muted">Change</span>}
     </button>

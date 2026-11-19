@@ -699,8 +699,12 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   if (!isAuthenticated) {
     return (
       <PageShell>
+        {/* The title above the card, where every other page has its title. */}
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+          <GearIcon className="h-5 w-5 shrink-0 text-accent" />
+          Account
+        </h1>
         <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-5 text-left">
-          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
           <p className="text-sm text-muted">You&apos;re not signed in. Sign in to manage your profile, library and settings.</p>
           <SignInButtons />
         </div>
@@ -739,8 +743,17 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
           <UserAvatar url={profile?.avatarUrl ?? null} />
           <div className="min-w-0">
             <p className="truncate text-2xl font-semibold tracking-tight">{username ? `@${username}` : user?.name || "Account"}</p>
-            <p className="text-sm text-muted [overflow-wrap:anywhere]">
-              {[user?.email, profile?.isPublic ? "Public profile" : "Private profile", methods ? `Signs in with ${methods}` : null].filter(Boolean).join(" · ")}
+            {/* Email on its own line, then the status, so neither wraps mid-phrase. */}
+            {user?.email && <p className="truncate text-sm text-muted">{user.email}</p>}
+            <p className="text-sm text-muted">
+              {/* Each part stays whole; a narrow screen breaks between them. */}
+              <span className="whitespace-nowrap">{profile?.isPublic ? "Public profile" : "Private profile"}</span>
+              {methods && (
+                <>
+                  {" · "}
+                  <span className="whitespace-nowrap">Signs in with {methods}</span>
+                </>
+              )}
             </p>
           </div>
         </div>

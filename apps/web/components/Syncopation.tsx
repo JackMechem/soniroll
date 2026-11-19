@@ -356,7 +356,7 @@ export default function Syncopation() {
                 <span className="ml-2 text-sm font-normal text-muted">{familyNames.join(" · ")}</span>
               </h2>
               <p className="text-sm text-muted">
-                {EXERCISE_BARS} bars in four 4-bar lines · {OSTINATOS.find((o) => o.id === ostinato)?.label.toLowerCase()} underneath
+                {EXERCISE_BARS} bars · {OSTINATOS.find((o) => o.id === ostinato)?.label.toLowerCase()} underneath
               </p>
             </div>
             {!running && (

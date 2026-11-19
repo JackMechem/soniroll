@@ -200,10 +200,9 @@ export default function Community({ initialTab }: { initialTab?: string }) {
           <button
             type="button"
             onClick={openNewMenu}
-            // A private profile can't post yet, so New post isn't the page's main button then.
-            className={`flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium ${
-              profile && !profile.isPublic ? "bg-foreground/[0.05] text-foreground hover:bg-surface-hover" : "bg-accent text-accent-foreground hover:bg-accent-hover"
-            }`}
+            // Always the accent button (signed in or out, public or private profile) so it looks the
+            // same everywhere; a private profile is told how to go public when it opens.
+            className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
           >
             <PlusIcon className="h-4 w-4" /> New post
           </button>

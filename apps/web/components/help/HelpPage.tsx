@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ShedLogTour from "@/components/practicelog/ShedLogTour";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
 import { BackButton } from "@/components/library/shared";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, PlayIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
 import { HELP_GROUPS, HELP_TOPICS, type HelpTopic, topicById } from "@/lib/helpContent";
 
 /**
@@ -77,7 +77,7 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
           <div className="mt-4 flex flex-wrap gap-2">
             {topic.href && (
               <Link href={topic.href} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-                <PlayIcon className="h-4 w-4" /> Open {topic.title}
+                Open {topic.title} <ChevronRightIcon className="h-4 w-4" />
               </Link>
             )}
             {topic.id === "shed-log" && (

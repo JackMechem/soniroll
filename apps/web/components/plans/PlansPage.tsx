@@ -268,6 +268,18 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
             <BillingSwitch value={interval} onChange={setBilling} />
           )}
         </div>
+        {/* Signed out: one sign-in button for all the plans, rather than one on every card. */}
+        {!isAuthenticated && !isLoading && plans && plans.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent/10 p-4">
+            <p className="text-sm">Sign in, or make a free account, to get a plan.</p>
+            <Link
+              href={SIGN_IN_PATH}
+              className="inline-flex h-9 shrink-0 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
         {plans === undefined ? (
           <div className="flex justify-center py-8">
             <LoadingSpinner />
@@ -315,14 +327,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
                       {busy === p.productId && <LoadingSpinner size="sm" inline label="Opening the checkout" />}
                       Get {p.storageGb} GB
                     </button>
-                  ) : (
-                    <Link
-                      href={SIGN_IN_PATH}
-                      className="mt-auto inline-flex h-10 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
-                    >
-                      {isLoading ? "…" : "Sign in to subscribe"}
-                    </Link>
-                  )}
+                  ) : null /* Signed out: the one Sign in button above the plans. */}
                 </div>
               );
             })}

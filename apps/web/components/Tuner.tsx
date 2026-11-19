@@ -9,6 +9,7 @@ import { InstrumentIcon } from "@/components/InstrumentIcons";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
+import SwitchRow from "@/components/SwitchRow";
 import TunerDial from "@/components/TunerDial";
 import TakePanel from "@/components/tuner/TakePanel";
 import TakesChip from "@/components/tuner/TakesChip";
@@ -391,7 +392,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             <Hint>How quiet a signal can be before it&apos;s ignored as silence — raise it in a noisy room.</Hint>
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="tuner-tone" title="Reference & tone" icon={SlidersIcon} summary={`A = ${refA} Hz`}>
+          <CollapsiblePanel id="tuner-tone" title="Reference & tone" icon={SlidersIcon} summary={`A = ${refA} Hz${sustain ? " · notes held" : ""}`}>
             <label className="flex flex-col gap-2 text-sm">
               <span className="flex items-center justify-between font-medium text-muted">
                 Reference pitch (A4)
@@ -432,6 +433,14 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               />
             </label>
             <Hint>The waveform played when you tap a note on the dial or a string below to hear it.</Hint>
+            {/* Was a "Sustain" pill in the middle of the dial, where it crowded the note and its
+                name didn't say what it held. */}
+            <SwitchRow
+              label="Hold tapped notes"
+              checked={sustain}
+              onChange={(v) => updateSettings({ sustain: v })}
+              hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
+            />
           </CollapsiblePanel>
         </>
       }
@@ -442,19 +451,6 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
         playingPc={playingPc}
         onSelect={playPitchClass}
       >
-        <button
-          type="button"
-          onClick={() => updateSettings({ sustain: !sustain })}
-          aria-pressed={sustain}
-          className={`pointer-events-auto relative rounded-full px-3 py-1 text-xs font-medium transition-colors pointer-coarse:h-8 pointer-coarse:px-4 pointer-coarse:text-sm pointer-coarse:after:absolute pointer-coarse:after:-inset-y-1.5 pointer-coarse:after:inset-x-0 ${
-            sustain
-              ? "bg-accent text-accent-foreground hover:bg-accent-hover"
-              : "bg-foreground/[0.07] text-muted hover:bg-surface-hover hover:text-foreground"
-          }`}
-        >
-          Sustain
-        </button>
-
         <div className="flex flex-col items-center leading-tight">
           {noteLetter ? (
             <>

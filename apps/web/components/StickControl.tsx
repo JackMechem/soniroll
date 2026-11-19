@@ -325,8 +325,8 @@ export default function StickControl() {
         </OptionsCard>
       }
     >
-      {/* Phones (CSS order): the pattern first, then New pattern / Start, then the tempo and beats,
-          then the next pattern — so the music and Start are both on the first screen. Bigger
+      {/* Phones (CSS order): the pattern and the next one together first, then New pattern / Start,
+          then the tempo and beats — so the music and Start are both on the first screen. Bigger
           screens: tempo, beats, the patterns, then the buttons. */}
       {/* As narrow as the other tools' tempo controls (a full-width slider read oddly). */}
       <div className="flex w-full max-w-[24rem] flex-col items-center gap-4 max-sm:order-3">
@@ -345,28 +345,27 @@ export default function StickControl() {
           actually requires — reported directly ("the music lines should be able to be in one line
           if the screen is big enough"). The notation gets the full width ToolLayout's own stacked
           layout already gives this page's content section. */}
-      {pattern && (
-        <div className="flex w-full flex-col items-center max-sm:order-1">
-          <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />
+      {(pattern || nextPattern) && (
+        <div className="flex w-full flex-col items-center gap-3 max-sm:order-1">
+          {pattern && <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />}
+          {nextPattern && (
+            <div className="flex w-full flex-col items-center gap-1">
+              <p className="text-xs font-medium text-muted">Next</p>
+              <StickControlStave
+                pattern={nextPattern}
+                activeBarIndex={null}
+                background="background"
+              />
+            </div>
+          )}
         </div>
       )}
 
-      {nextPattern && (
-        <div className="flex w-full flex-col items-center gap-2 max-sm:order-4">
-          <p className="text-xs font-medium text-muted">Next</p>
-          <StickControlStave
-            pattern={nextPattern}
-            activeBarIndex={null}
-            background="background"
-          />
-        </div>
-      )}
-
-      {/* The phase ("Repeat 1 of 20") has its own reserved line above the buttons, so it has room
-          to breathe and starting doesn't push the page down. Start is centred like every other
+      {/* The phase ("Repeat 1 of 20") sits in the gap just above the buttons, so starting doesn't
+          push the page down and it takes no room of its own. Start is centred like every other
           tool's; New pattern is a smaller button beside it. */}
-      <div className="flex w-full flex-col items-center gap-3 max-sm:order-2">
-        <p aria-live="polite" className="h-5 whitespace-nowrap text-sm font-medium text-accent">
+      <div className="relative flex w-full flex-col items-center max-sm:order-2">
+        <p aria-live="polite" className="absolute bottom-full mb-0.5 h-5 whitespace-nowrap text-sm font-medium text-accent">
           {phaseLabel}
         </p>
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">

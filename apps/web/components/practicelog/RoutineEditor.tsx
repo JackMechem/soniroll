@@ -8,7 +8,6 @@ import { BackButton, PageShell } from "@/components/library/shared";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import { RoutineIconButton } from "@/components/practicelog/RoutineIcon";
-import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import {
   type Repeat,
@@ -38,6 +37,8 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 const noopSubscribe = () => () => {};
 const LABEL = "text-xs font-medium text-muted";
 const INPUT = "h-9 min-w-0 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40";
+/** A task's small "+ Subtask" / "+ Notes" buttons, filled like the Attach button beside them. */
+const SMALL_ADD = "flex h-6 items-center gap-1 rounded-md bg-foreground/[0.05] px-2 text-xs font-medium transition-colors hover:bg-surface-hover pointer-coarse:h-8";
 const TEXTAREA = "resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
 
 /** `/shed-log/routine/edit?id=…` (or `?date=…` for a new one starting that day). */
@@ -77,6 +78,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
   const [r, setR] = useState<Routine>(initial);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Tasks whose notes box was opened with "+ Notes" (one that has notes always shows it).
+  const [notesOpen, setNotesOpen] = useState<ReadonlySet<string>>(() => new Set());
   const set = (patch: Partial<Routine>) => setR((prev) => ({ ...prev, ...patch }));
   const setRepeat = (patch: Partial<Repeat>) => setR((prev) => ({ ...prev, repeat: { ...prev.repeat, ...patch } }));
   const setTask = (i: number, patch: Partial<RoutineTask>) => setR((prev) => ({ ...prev, tasks: prev.tasks.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
@@ -211,7 +214,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                     const next = on ? weekdays.filter((d) => d !== i) : [...weekdays, i as Weekday];
                     if (next.length) setRepeat({ weekdays: next.sort() as Weekday[] });
                   }}
-                  className={`h-9 w-9 rounded-md border text-sm font-medium transition-colors ${on ? "border-transparent text-white" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                  className={`h-9 w-9 rounded-full text-sm font-medium transition-colors ${on ? "text-white" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
                   style={on ? { background: color } : undefined}
                 >
                   {letter}
@@ -303,40 +306,48 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   inline
                 />
               </div>
-              <div className="pl-7">
-                <textarea
-                  value={task.notes}
-                  onChange={(e) => setTask(i, { notes: e.target.value })}
-                  rows={2}
-                  placeholder="Notes: what to focus on"
-                  aria-label="Notes (optional)"
-                  className={`${TEXTAREA} w-full py-1.5`}
-                />
-              </div>
-              <div className="flex flex-col gap-1 pl-7">
-                {(task.subtasks ?? []).map((sub, j) => (
-                  <div key={sub.id} className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 shrink-0 rounded-sm border-[1.5px] border-foreground/25" />
-                    <input
-                      value={sub.title}
-                      onChange={(e) => setTask(i, { subtasks: (task.subtasks ?? []).map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })}
-                      placeholder="Subtask"
-                      className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
-                    />
-                    <IconButton label="Remove subtask" onClick={() => setTask(i, { subtasks: (task.subtasks ?? []).filter((_, k) => k !== j) })}>
-                      <CloseIcon className="h-3.5 w-3.5" />
-                    </IconButton>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })}
-                  className={`flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground ${TOUCH_TEXT}`}
-                >
-                  <PlusIcon className="h-3 w-3" /> Subtask
+              {(task.notes || notesOpen.has(task.id)) && (
+                <div className="pl-7">
+                  <textarea
+                    value={task.notes}
+                    onChange={(e) => setTask(i, { notes: e.target.value })}
+                    autoFocus={!task.notes}
+                    rows={2}
+                    placeholder="Notes: what to focus on"
+                    aria-label="Notes (optional)"
+                    className={`${TEXTAREA} w-full py-1.5`}
+                  />
+                </div>
+              )}
+              {(task.subtasks ?? []).length > 0 && (
+                <div className="flex flex-col gap-1 pl-7">
+                  {(task.subtasks ?? []).map((sub, j) => (
+                    <div key={sub.id} className="flex items-center gap-2">
+                      <span className="h-3.5 w-3.5 shrink-0 rounded-sm border-[1.5px] border-foreground/25" />
+                      <input
+                        value={sub.title}
+                        onChange={(e) => setTask(i, { subtasks: (task.subtasks ?? []).map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })}
+                        placeholder="Subtask"
+                        className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
+                      />
+                      <IconButton label="Remove subtask" onClick={() => setTask(i, { subtasks: (task.subtasks ?? []).filter((_, k) => k !== j) })}>
+                        <CloseIcon className="h-3.5 w-3.5" />
+                      </IconButton>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* The extras, in one row of small filled buttons: a subtask, notes (hidden until
+                  asked for, so an empty box doesn't make every task tall) and attachments. */}
+              <div className="flex flex-wrap items-center gap-1.5 pl-7">
+                <button type="button" onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })} className={SMALL_ADD}>
+                  <PlusIcon className="h-3.5 w-3.5" /> Subtask
                 </button>
-              </div>
-              <div className="pl-7">
+                {!task.notes && !notesOpen.has(task.id) && (
+                  <button type="button" onClick={() => setNotesOpen((open) => new Set(open).add(task.id))} className={SMALL_ADD}>
+                    <PlusIcon className="h-3.5 w-3.5" /> Notes
+                  </button>
+                )}
                 <AttachmentList items={task.attachments} onChange={(attachments) => setTask(i, { attachments })} compact />
               </div>
             </li>

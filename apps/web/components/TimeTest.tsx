@@ -374,6 +374,7 @@ export default function TimeTest() {
             subAccents={subAccents}
             currentSub={tick?.sub ?? 0}
             onCycleSub={cycleSub}
+            cycleHint
           />
         </div>
 
@@ -552,6 +553,8 @@ export default function TimeTest() {
             onStopPlayback={stopPlayback}
             playClick={settings.playClick}
             setPlayClick={(v) => update({ playClick: v })}
+            onTryAgain={record}
+            onOpenMic={() => setMicOpen(true)}
           />
         </div>
       )}

@@ -399,13 +399,23 @@ export default function RandomMetricModulation() {
             id="reference"
             title="Previous tempo click"
             icon={SpeakerIcon}
-            summary={referenceMuted ? "Muted" : CLICK_SOUNDS.find((c) => c.id === referenceSoundId)?.label}
-            toggle={{
-              checked: playOriginalTempo,
-              onChange: setPlayOriginalTempo,
-              disabled: running,
-            }}
+            summary={
+              playOriginalTempo
+                ? referenceMuted
+                  ? "On · muted"
+                  : `On · ${CLICK_SOUNDS.find((c) => c.id === referenceSoundId)?.label ?? "click"}`
+                : "Off"
+            }
           >
+            {/* A plain chip like the others: tapping it opens this, and the switch is the first
+                thing in it (it used to be a split chip whose body flipped the setting). */}
+            <SwitchRow
+              label="Play the previous tempo too"
+              checked={playOriginalTempo}
+              onChange={setPlayOriginalTempo}
+              disabled={running}
+              hint="After a tempo change, a second click keeps playing the tempo you came from, so you can hear the two against each other. Turns on Play until tempos realign, so they stay in sync."
+            />
             <OptionGroup title="Click">
               <ClickSoundCards label="Previous tempo click sound" soundId={referenceSoundId} onChange={setReferenceSoundId} volume={volume} />
             </OptionGroup>
@@ -439,25 +449,6 @@ export default function RandomMetricModulation() {
       }
     >
       <div className="flex w-full flex-col items-center gap-4">
-        {running && playingReference && (
-          <div className="flex flex-col items-center gap-2 opacity-80">
-            <div className="flex flex-col items-center">
-              <span className="text-4xl font-semibold tracking-tight tabular-nums">
-                {Math.round(referenceBpmDisplay)}
-              </span>
-              <span className="text-xs text-muted">
-                {engineState.returnToOriginal ? "Original" : "Previous"} · {beatsPerBar}/
-                {beatUnit}
-              </span>
-            </div>
-            <BeatIndicator
-              accents={accents}
-              currentBeat={referenceBeat}
-              size="sm"
-            />
-          </div>
-        )}
-
         {/* Starting hides the tempo slider and buttons; the next-modulation card takes their
             place, and an invisible copy of the idle controls holds their height, so the page
             doesn't jump when you start or stop. */}
@@ -467,7 +458,9 @@ export default function RandomMetricModulation() {
               <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={beatsPerBar} beatUnit={beatUnit} onTap={tap} />
             </div>
           )}
-          <div className="flex w-full flex-col items-center gap-3 self-start [grid-area:1/1]">
+          {/* Fills the held height while running; the next change (and the previous click) sit
+              centred in the space under the tempo rather than leaving a gap above the beats. */}
+          <div className="flex w-full flex-col items-center gap-3 self-stretch [grid-area:1/1]">
             <TempoHero
               bpm={bpm}
               setBpm={setBpm}
@@ -477,7 +470,10 @@ export default function RandomMetricModulation() {
               locked={running}
               precise={preciseBpmDisplay}
             />
-            {running && nextPreview && (
+            {running && (
+            // Side by side where there's room (no jump on Start), stacked on a phone.
+            <div className="flex flex-1 flex-wrap content-center items-center justify-center gap-3">
+            {nextPreview && (
               <div className="flex items-baseline gap-3 rounded-lg bg-surface px-5 py-2">
                 <span className="text-xs text-muted">Next</span>
                 <span className="text-2xl font-semibold tabular-nums text-accent">
@@ -487,6 +483,27 @@ export default function RandomMetricModulation() {
                   {Math.round(nextPreview.toBpm)} BPM
                 </span>
               </div>
+            )}
+            {/* The previous (or original) tempo's click, small, under the next change. Its slot is
+                kept for the whole run (hidden until it plays), so nothing moves when it comes and
+                goes, and it sits in the space the idle tempo controls leave, not above them. */}
+            {playOriginalTempo && (
+              <div
+                aria-hidden={!playingReference}
+                className={`flex items-center gap-3 rounded-lg bg-surface px-4 py-2 ${playingReference ? "" : "invisible"}`}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-muted">
+                    {Math.round(referenceBpmDisplay)}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {engineState.returnToOriginal ? "Original" : "Previous"}
+                  </span>
+                </div>
+                <BeatIndicator accents={accents} currentBeat={playingReference ? referenceBeat : null} size="sm" />
+              </div>
+            )}
+            </div>
             )}
           </div>
         </div>
@@ -498,6 +515,7 @@ export default function RandomMetricModulation() {
           subAccents={subAccents}
           currentSub={currentSub}
           onCycleSub={cycleSub}
+          cycleHint
         />
 
         {/* Always two lines: the plan, then where you are (running) or the last tempo change

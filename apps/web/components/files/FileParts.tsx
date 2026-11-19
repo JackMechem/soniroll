@@ -14,7 +14,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
 import {
   type FileKind,
   type StoredEntry,
@@ -42,16 +42,17 @@ import SaveWhere from "@/components/files/SaveWhere";
 const KIND_ICON: Record<FileKind, React.ComponentType<{ className?: string }>> = {
   pdf: DocumentIcon,
   image: ImageIcon,
-  audio: MicIcon,
+  audio: WaveIcon,
   video: VideoIcon,
   notation: NoteIcon,
   document: DocumentIcon,
   other: FileIcon,
 };
 
-/** A file's type as a plain muted icon (in a bordered square at `lg`). */
-export function FileTypeIcon({ kind, size = "md" }: { kind: FileKind; size?: "sm" | "md" | "lg" }) {
-  const Icon = KIND_ICON[kind];
+/** A file's type as a plain muted icon (in a bordered square at `lg`). Audio shows the wave (as
+    Slow Downer's opened-file bar does); pass `recording` for a soniroll recording to get the mic. */
+export function FileTypeIcon({ kind, size = "md", recording = false }: { kind: FileKind; size?: "sm" | "md" | "lg"; recording?: boolean }) {
+  const Icon = recording && kind === "audio" ? MicIcon : KIND_ICON[kind];
   const dims = size === "lg" ? "h-12 w-12 rounded-lg bg-foreground/[0.05]" : size === "sm" ? "h-5 w-5" : "h-8 w-5";
   return (
     <span className={`flex shrink-0 items-center justify-center text-muted ${dims}`} aria-hidden>
@@ -72,6 +73,7 @@ export function FileRow({
   onMenu,
   onContextMenu,
   trailing,
+  recording = false,
 }: {
   name: string;
   mimeType: string;
@@ -80,12 +82,13 @@ export function FileRow({
   onMenu?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   trailing?: ReactNode;
+  recording?: boolean;
 }) {
   const kind = fileKind(mimeType, name);
   return (
     <div onContextMenu={onContextMenu} className="group flex items-center gap-1 rounded-md pr-1 transition-colors hover:bg-surface-hover">
       <button type="button" onClick={onOpen} className="flex min-h-12 min-w-0 flex-1 items-center gap-3 px-2.5 py-2 text-left">
-        <FileTypeIcon kind={kind} />
+        <FileTypeIcon kind={kind} recording={recording} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{name}</span>
           <span className="block truncate text-xs text-muted">{detail}</span>

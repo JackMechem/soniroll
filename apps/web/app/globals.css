@@ -99,7 +99,7 @@
   --overlay: rgba(30, 40, 51, 0.55);
   --danger: #c8475a;
   /* Done / goal met, and partly done (the Shed Log's greens and ambers). */
-  --success: #16a34a;
+  --success: #147236; /* green-700ish: ≥4.5:1 as text on every light theme (#16a34a was ~2.8:1) */
   --warning: #ca8a04;
 }
 

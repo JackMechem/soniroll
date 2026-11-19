@@ -244,18 +244,9 @@ export default function PracticeTimer() {
     setDeletingId(null);
   }
 
-  return (
-    <ToolLayout
-      title="Practice Timer"
-      presets={toolPresets("practice-timer", settings, updateSoundSettings)}
-      options={
-        // The same round option chips as the other tools (ToolLayout only gives them to tools on
-        // the Shed Log's Log button, and this one logs itself).
-        <OptionChipLook on={rewardChips}>
-          <PanelsToggle ids={PANEL_IDS} />
-
-          {/* "New session" is an action, not a setting, so it's a plain button rather than a
-              value chip; the session editor is still its popover. */}
+  // "New session" is an action, not a setting: a plain secondary button under the saved sessions
+  // (not in the chip row, where it read as a chip); the session editor is still its popover.
+  const newSession = (
           <SettingChip
               icon={draft?.id ? PencilIcon : PlusIcon}
               label={draft?.id ? "Edit session" : "New session"}
@@ -409,6 +400,19 @@ export default function PracticeTimer() {
               )}
               </HintsContext.Provider>
             </SettingChip>
+  );
+
+  return (
+    <ToolLayout
+      title="Practice Timer"
+      presets={toolPresets("practice-timer", settings, updateSoundSettings)}
+      options={
+        // The same round option chips as the other tools (ToolLayout only gives them to tools on
+        // the Shed Log's Log button, and this one logs itself).
+        <OptionChipLook on={rewardChips}>
+          <PanelsToggle ids={PANEL_IDS} />
+
+
 
           <CollapsiblePanel id="practice-timer-sound" title="Sound" icon={SpeakerIcon} summary={soundEnabled ? (alarmMode ? "Alarm" : "Chime") : "Off"}>
             <SwitchRow
@@ -470,6 +474,7 @@ export default function PracticeTimer() {
             // Only for a session with steps before this one; a single timer has nothing to add.
             <p className="text-sm text-muted">Last step of this session.</p>
           ) : null}
+          <div className="flex flex-col items-center gap-7">
           <div className="flex flex-wrap items-center justify-center gap-3">
             {engineState.alarming ? (
               <button
@@ -516,6 +521,7 @@ export default function PracticeTimer() {
           <KeyHint>
             Press <KeyHint.Key>Space</KeyHint.Key> to {engineState.alarming ? "continue" : engineState.paused ? "resume" : "pause"}
           </KeyHint>
+          </div>
         </div>
       ) : (
         <div className="flex w-full flex-col items-center gap-3 text-center">
@@ -534,12 +540,15 @@ export default function PracticeTimer() {
               />
               <span className="text-sm text-muted">min</span>
             </div>
-            <button type="button" onClick={startQuickTimer} className={BIG_PRIMARY}>
-              <PlayIcon className="h-4 w-4" /> Start
-            </button>
-            <KeyHint>
-              Press <KeyHint.Key>Space</KeyHint.Key> to start
-            </KeyHint>
+            {/* KeyHint pulls itself up 1rem; the gap leaves it the same space under Start as other tools. */}
+            <div className="flex flex-col items-center gap-7">
+              <button type="button" onClick={startQuickTimer} className={BIG_PRIMARY}>
+                <PlayIcon className="h-4 w-4" /> Start
+              </button>
+              <KeyHint>
+                Press <KeyHint.Key>Space</KeyHint.Key> to start
+              </KeyHint>
+            </div>
           </div>
           {loading ? (
             <LoadingSpinner />
@@ -598,6 +607,7 @@ export default function PracticeTimer() {
               </div>
             </>
           )}
+          {newSession}
         </div>
       )}
 

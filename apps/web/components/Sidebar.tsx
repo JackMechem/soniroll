@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import AccountMenu from "@/components/AccountMenu";
 import { OPEN_PALETTE_EVENT, useSearchExtras, type SearchItem } from "@/components/CommandPalette";
@@ -385,8 +385,9 @@ function NavItems({
       y: e.clientY,
       items: [
         { label: "Open", onSelect: () => router.push(href) },
-        { label: "Open in split screen, side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
-        { label: "Open in split screen, top and bottom", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
+        // Short, so they fit the menu's width; the split icons say it's split screen.
+        { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
+        { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
       ],
     });
   }
@@ -570,7 +571,8 @@ function NavItems({
           )}
         </div>
       )}
-      {favoriteItems.length > 0 && (
+      {/* While searching, the matches show once, in their own categories (not again under Favorites). */}
+      {favoriteItems.length > 0 && !searching && (
         <CategoryBlock
           title="Favorites"
           star
@@ -655,13 +657,19 @@ export default function Sidebar() {
   const inDesktop = useInDesktopApp();
   const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
   const [dragging, setDragging] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [themeOpen, setThemeOpen] = useState(false);
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const fabHidden = useFeedbackFabHidden();
   const currentPath = usePathname();
+  // The phone menu remembers the page it was opened on and counts as closed once the page
+  // changes. Its links close it themselves, but a leave guard (unsaved work) stops their click
+  // and navigates after its own "Leave", so the menu must also close on the page change itself.
+  const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null);
+  if (menuOpenOn !== null && menuOpenOn !== currentPath) setMenuOpenOn(null);
+  const mobileOpen = menuOpenOn !== null;
+  const setMobileOpen = (open: boolean) => setMenuOpenOn(open ? currentPath : null);
   const [site] = useSiteSettings();
   // Signed in, the theme lives on the Settings page; signed out, it's the theme dialog.
   const { isAuthenticated } = useConvexAuth();
@@ -675,10 +683,10 @@ export default function Sidebar() {
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileOpen(false);
+      if (e.key === "Escape") setMenuOpenOn(null);
     };
     const onResize = () => {
-      if (window.matchMedia("(min-width: 1024px)").matches) setMobileOpen(false);
+      if (window.matchMedia("(min-width: 1024px)").matches) setMenuOpenOn(null);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
@@ -715,7 +723,8 @@ export default function Sidebar() {
   return (
     <>
       {/* Phones: a top bar with the menu and the logo (pages leave 4.5rem at the top for it). The
-          practice timer's badge, when one runs, sits at its right end. */}
+          practice timer's chip, when one runs, sits at its right end before the bug button; the
+          page name gives way (truncates) to them. */}
       <header className="fixed inset-x-0 top-0 z-20 flex h-[calc(env(safe-area-inset-top)+3.5rem)] items-center gap-2 border-b border-foreground/10 bg-background/90 px-2 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
         <button
           type="button"
@@ -726,7 +735,10 @@ export default function Sidebar() {
           <MenuIcon className="h-5 w-5" />
         </button>
         <MobileBarTitle path={currentPath} />
-        <FeedbackBarButton />
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <PracticeTimerWidget bar />
+          <FeedbackBarButton />
+        </div>
       </header>
 
       {mobileOpen && (
@@ -853,9 +865,9 @@ export default function Sidebar() {
           <div className="min-h-0 flex-1 overflow-y-auto pb-2">
             <NavItems large query={query} onNavigate={() => setMobileOpen(false)} />
           </div>
+          {/* Kept short, so the list above gets the room: Support soniroll is in the ⋮ menu. */}
           <div className="mt-1 flex flex-col gap-1 border-t border-foreground/10 pt-2">
             <PracticeTimerWidget />
-            {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
             <SettingsRow
               large
               signedIn={isAuthenticated}
@@ -1220,6 +1232,9 @@ function MobileBarTitle({ path }: { path: string }) {
   );
 }
 
+/** The account page's tabs in its Settings group (`AccountPage`'s `NAV`). */
+const SETTINGS_TABS = new Set(["general", "appearance", "sidebar", "dashboard", "tools", "practice"]);
+
 /** The sidebar footer's "Settings" row, always in view (the ⋮ menus have it too), with a palette
     button at its end that goes straight to Appearance (theme, text size). Signed out there are no
     account settings, so it's one "Theme and display" row opening the theme dialog. Collapsed: one
@@ -1238,6 +1253,9 @@ function SettingsRow({
   onNavigate?: () => void;
 }) {
   const iconCls = navIconClass(large);
+  // Highlighted on the account page's Settings group (`/settings` redirects there too).
+  const tab = useSearchParams()?.get("tab");
+  const active = usePathname() === "/account" && !!tab && SETTINGS_TABS.has(tab);
   if (!signedIn) {
     return collapsed ? (
       <button type="button" onClick={onOpenTheme} aria-label="Theme and display" title="Theme and display" className={`${navIconButtonClass(false)} text-muted`}>
@@ -1254,14 +1272,14 @@ function SettingsRow({
   }
   if (collapsed) {
     return (
-      <Link href="/account?tab=general" onClick={onNavigate} aria-label="Settings" title="Settings" className={`${navIconButtonClass(false)} text-muted`}>
+      <Link href="/account?tab=general" onClick={onNavigate} aria-label="Settings" title="Settings" aria-current={active ? "page" : undefined} className={`${navIconButtonClass(active)} text-muted`}>
         <GearIcon className="h-4 w-4" />
       </Link>
     );
   }
   return (
     <div className="relative flex items-center">
-      <Link href="/account?tab=general" onClick={onNavigate} className={`${navRowClass(false, large)} ${large ? "pr-14" : "pr-10"}`}>
+      <Link href="/account?tab=general" onClick={onNavigate} aria-current={active ? "page" : undefined} className={`${navRowClass(active, large)} ${large ? "pr-14" : "pr-10"}`}>
         <span data-nav-icon className="flex shrink-0 text-muted">
           <GearIcon className={iconCls} />
         </span>

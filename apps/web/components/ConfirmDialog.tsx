@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 
 export default function ConfirmDialog({
   title,
@@ -18,6 +18,7 @@ export default function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const id = useId();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -36,15 +37,18 @@ export default function ConfirmDialog({
     >
       <div
         role="alertdialog"
-        aria-label={title}
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-message`}
         className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-base font-semibold">{title}</h2>
-          <p className="text-sm text-muted">{message}</p>
+          <h2 id={`${id}-title`} className="text-base font-semibold">{title}</h2>
+          <p id={`${id}-message`} className="text-sm text-muted">{message}</p>
         </div>
         <div className="flex justify-end gap-2">
+          {/* Focus starts on the safe choice, so Enter never deletes by accident. */}
           <button
             type="button"
             autoFocus

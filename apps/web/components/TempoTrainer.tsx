@@ -365,6 +365,7 @@ export default function TempoTrainer() {
                 subAccents={displaySubAccents}
                 currentSub={currentSub}
                 onCycleSub={handleCycleSub}
+                cycleHint
               />
             )}
             <p className="text-sm text-muted tabular-nums">{plan}</p>
@@ -372,7 +373,10 @@ export default function TempoTrainer() {
           {silentNow && (
             <div className="flex w-full max-w-xs flex-col items-center justify-center gap-1.5 self-center rounded-lg bg-surface px-4 py-3 text-center [grid-area:1/1]">
               <EyeOffIcon className="h-5 w-5 text-muted" />
-              <span className="text-sm text-muted">Keep the tempo going — the click will come back</span>
+              {/* How long the silence lasts, but no live countdown: a number changing on every bar
+                  would show where the barlines fall, which is what you're meant to keep yourself. */}
+              <span className="text-sm font-medium text-foreground">Silent for {bars(offBars)}</span>
+              <span className="text-sm text-muted">Count them and keep the tempo going — the click comes back after that</span>
             </div>
           )}
         </div>

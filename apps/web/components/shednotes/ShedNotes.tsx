@@ -521,11 +521,6 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
                   From a template
                 </button>
               )}
-              {notes.length > 0 && (
-                <button type="button" onClick={() => setPalette({ mode: "notes", items: noteItems() })} className="h-9 rounded-md px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
-                  Open a note
-                </button>
-              )}
             </div>
           </div>
         )}

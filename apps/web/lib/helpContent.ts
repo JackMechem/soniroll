@@ -165,7 +165,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Select / Write", text: "Select: clicks only pick a note or bars. Write: clicking the staff adds a note there, or changes the one under the pointer. On a touch screen, hold on the staff to see which note it is and lift to add it; scroll away to cancel." },
       { name: "Key", text: "Letters you type and notes you click follow the key signature (F in G major is F♯). Accidentals show against the key." },
       { name: "Time", text: "Changing it moves the notes into the new bars, as long as no note would cross a bar line." },
-      { name: "Export / Import", text: "Save a score as a file, or bring one in (Rhythm Section bass transcriptions too)." },
+      { name: "Export / Import", text: "A score's ⋮ menu has Export as a file (and Delete score); Import, in the score list, brings one in (Rhythm Section bass transcriptions too)." },
     ],
     tips: ["Signed out, scores stay in this browser; signed in, they're in your account.", "Right-click bars to copy or paste their chords."],
   },
@@ -177,14 +177,14 @@ export const HELP_TOPICS: HelpTopic[] = [
     tagline: "Timers back to back, or a Pomodoro.",
     purpose: "Chain named timers — scales, a break, a tune — and run them without watching the clock.",
     steps: [
-      { title: "Make a session", text: "Open New session, add steps with names and minutes, or pick Pomodoro." },
+      { title: "Make a session", text: "Press New session (under your saved sessions), add steps with names and minutes, or pick Pomodoro." },
       { title: "Start it", text: "Each step counts down and the next one starts with a chime." },
       { title: "Keep an eye on it anywhere", text: "The sidebar shows what's running, with pause and skip." },
     ],
     features: ["Saved sessions", "Pomodoro with named work cycles", "Alarm mode that waits for you", "Keeps running across pages and reloads"],
     options: [
       { name: "Quick timer", text: "Type the minutes and press Start for one plain countdown. Nothing is saved." },
-      { name: "New session", text: "Opens the editor. Start now runs it without saving. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
+      { name: "New session", text: "The button under your saved sessions; it opens the editor. Start now runs it without saving. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
       { name: "Pomodoro cycles", text: "Set number stops after the work cycles you choose; Keep going runs until you stop it. Long break every N cycles sets when the longer break comes. Each work cycle can have its own name." },
       { name: "Sound", text: "Which tone plays when a step ends, and whether it plays at all." },
       { name: "Alarm mode", text: "Instead of moving on by itself, the timer waits and keeps ringing until you press Continue." },
@@ -201,7 +201,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     purpose: "Run a metronome next to a chord chart, or a tuner above an ear trainer, on one screen.",
     steps: [
       { title: "Right-click a page in the sidebar", text: "Any tool, the Dashboard, the Shed Log or your library." },
-      { title: "Pick a direction", text: "Open in split screen side by side, or top and bottom." },
+      { title: "Pick a direction", text: "Open side by side, or Open above and below." },
       { title: "Resize and close", text: "Drag the line between panes; close a pane with its ×." },
     ],
     features: ["As many panes as you like", "Drag to resize", "The address bar follows the pane you're using", "Desktop only"],
@@ -701,7 +701,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       },
       { name: "Instrument", text: "Sets the reference pitches shown for each string or the instrument's usual notes." },
       { name: "Microphone", text: "Which mic to listen to." },
-      { name: "Reference & tone", text: "A4 = 440 Hz or another reference, a tuning offset in cents, and the sound and octave of the reference tone." },
+      { name: "Reference & tone", text: "A4 = 440 Hz or another reference, a tuning offset in cents, the sound and octave of the reference tone, and Hold tapped notes (on: a tapped note keeps sounding until you tap it again or press Stop tone)." },
     ],
     shot: "tuner",
   },
@@ -789,7 +789,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     features: ["Choose the rhythms", "Snare or snare + bass", "Repeat or new lines", "Hear the pattern or just the feet"],
     options: [
       { name: "Rhythms", text: "Which figures can appear — quarters, eighths, sixteenths, triplets — and whether rests are included." },
-      { name: "Lines", text: "A new bar every bar, a two-bar pattern played twice, or one bar played four times." },
+      { name: "Lines", text: "How each four-bar line is built: Every bar different, Each line repeats a 2-bar pattern, or Each line repeats one bar." },
       { name: "Played on", text: "Snare only, or each note split between snare and bass drum." },
       { name: "Underneath", text: "What keeps time while you read: bass drum, hi-hat foot, both, a hand hi-hat, a swing beat, or nothing. Swing plays the jazz ride pattern with the hi-hat foot on 2 and 4, and swings everything — the written eighths included — the way you'd read them in a jazz setting." },
       { name: "Playback", text: "Hear the pattern or just the part underneath, a hi-hat click, a count-in, and what happens after 16 bars (new exercise, again, or stop)." },
@@ -805,7 +805,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     purpose: "Play along to the click on a practice pad. The mic hears every stroke and shows how early or late it was, by how much, and where.",
     steps: [
       { title: "Calibrate once", text: "Press Calibrate… (or open Mic) to measure your setup's delay, so a stroke right on the click scores 0 ms." },
-      { title: "Check the mic", text: "In the Mic options, hit the pad: every stroke should flash, and nothing else should." },
+      { title: "Check the mic", text: "In the Microphone options, hit the pad: every stroke should flash, and nothing else should." },
       { title: "Record", text: "Press Record (or Space or R), play after the count-in, then stop to see how you did." },
     ],
     features: [

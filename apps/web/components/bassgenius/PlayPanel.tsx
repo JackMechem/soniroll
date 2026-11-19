@@ -127,13 +127,14 @@ export function OptionsButton({ summary, onOpen }: { summary: string; onOpen: ()
       type="button"
       onClick={onOpen}
       aria-label={`Options: ${summary}`}
+      title={summary}
       className="flex min-h-11 min-w-0 items-center gap-2 rounded-md bg-foreground/[0.05] py-1 pl-3 pr-4 text-left transition-colors hover:bg-surface-hover lg:hidden"
     >
       <SlidersIcon className="h-4 w-4 shrink-0 text-muted" />
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="text-[11px] font-medium text-muted">Options</span>
-        {/* Two lines if it needs them (a long style name), rather than cutting it off. */}
-        <span className="line-clamp-2 text-sm font-semibold tabular-nums">{summary}</span>
+        {/* One line, cut off with "…" if it's too long (wrapping split phrases like "Bossa / nova"). */}
+        <span className="truncate whitespace-nowrap text-sm font-semibold tabular-nums">{summary}</span>
       </span>
     </button>
   );

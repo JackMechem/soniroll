@@ -23,6 +23,7 @@ import {
   BassIcon,
   ChordChartIcon,
   ChordIcon,
+  ChevronRightIcon,
   DrumIcon,
   EyeIcon,
   EyeOffIcon,
@@ -298,6 +299,8 @@ export default function RhythmSection({
   const [drumSettingsOpen, setDrumSettingsOpen] = useState(false);
   // Phones: the options panel opens as a sheet.
   const [optionsOpen, setOptionsOpen] = useState(false);
+  /** The Style section's pills are showing (otherwise just the picked style). */
+  const [choosingStyle, setChoosingStyle] = useState(false);
   const closeOptions = useCallback(() => setOptionsOpen(false), []);
 
   // Old links: /bass-genius?tab=players opens the Bass players tab; /drum-generator plays the
@@ -857,7 +860,21 @@ export default function RhythmSection({
       </PanelSection>
 
       <PanelSection id="style" title="Style" icon={DrumIcon} summary={`${style.name} · ${countryOf(style.country)}`}>
-        {COUNTRIES.filter((c) => PICKABLE.some((s) => s.country === c.id)).map((f) => (
+        {/* The picked style on one row; its 35 pills only while choosing (they made the panel very long). */}
+        <button
+          type="button"
+          onClick={() => setChoosingStyle((c) => !c)}
+          aria-expanded={choosingStyle}
+          className="flex min-h-11 w-full items-center gap-2 rounded-md bg-foreground/[0.05] px-3 py-1.5 text-left transition-colors hover:bg-surface-hover"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">{style.name}</span>
+            <span className="block truncate text-xs text-muted">{countryOf(style.country)}</span>
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-accent">{choosingStyle ? "Done" : "Change"}</span>
+          <ChevronRightIcon className={`h-4 w-4 shrink-0 text-muted transition-transform ${choosingStyle ? "rotate-90" : ""}`} />
+        </button>
+        {choosingStyle && COUNTRIES.filter((c) => PICKABLE.some((s) => s.country === c.id)).map((f) => (
           <Field key={f.id} label={f.label}>
             <div className="flex flex-wrap gap-1.5">
               {PICKABLE.filter((s) => s.country === f.id).map((s) => (
@@ -1105,7 +1122,8 @@ export default function RhythmSection({
         )}
       </PanelSection>
 
-      <PanelSection id="mix" title="Mix" icon={SpeakerIcon} summary={song ? `Bass ${Math.round(volume * 100)}%` : `Drums ${Math.round(drumsVolume * 100)}%`}>
+      {/* Mix and Kit start closed (ten sliders); opening one is remembered on this device. */}
+      <PanelSection id="mix" title="Mix" icon={SpeakerIcon} defaultOpen={false} summary={song ? `Bass ${Math.round(volume * 100)}%` : `Drums ${Math.round(drumsVolume * 100)}%`}>
         {song && (
           <>
             <LevelRow label="Bass" value={bassOn ? volume : null} onChange={(v) => update({ volume: v })} onTurnOn={() => update({ bass: true })} />
@@ -1123,16 +1141,16 @@ export default function RhythmSection({
           />
         )}
         <LevelRow label="Room" value={room ? roomAmount : 0} onChange={(v) => update({ roomAmount: v, room: v > 0 })} />
-        {drumsOn && (
+      </PanelSection>
+
+      {drumsOn && (
+        <PanelSection id="kit" title="Kit" icon={SlidersIcon} defaultOpen={false} summary={Object.keys(grooveSettings.parts).length > 0 ? "Your levels" : "Default levels"}>
           <>
-            <div className="flex items-baseline justify-between border-t border-foreground/10 pt-3">
-              <span className="text-xs font-semibold text-muted">Kit</span>
-              {Object.keys(grooveSettings.parts).length > 0 && (
-                <button type="button" onClick={() => updateGroove({ parts: {} })} className="text-xs font-semibold text-accent hover:underline">
-                  Reset kit
-                </button>
-              )}
-            </div>
+            {Object.keys(grooveSettings.parts).length > 0 && (
+              <button type="button" onClick={() => updateGroove({ parts: {} })} className="self-end text-xs font-semibold text-accent hover:underline">
+                Reset kit
+              </button>
+            )}
             {KIT_PARTS.filter((p) => p.voices.some((v) => partInUse.has(v))).map((p) => (
               <PartFader
                 key={p.id}
@@ -1146,8 +1164,8 @@ export default function RhythmSection({
               />
             ))}
           </>
-        )}
-      </PanelSection>
+        </PanelSection>
+      )}
     </div>
   );
 
@@ -1222,7 +1240,7 @@ export default function RhythmSection({
   return (
     <ToolLayout
       title="Rhythm Section"
-      titleExtra={<span className="hidden text-xs text-muted sm:inline">Bass idea and built-in transcriptions by Rob Moreno</span>}
+      credit="Bass idea and built-in transcriptions by Rob Moreno"
       layout="stacked"
       topAligned
       options={null}

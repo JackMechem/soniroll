@@ -48,6 +48,8 @@ import { useToolActivity } from "@/lib/toolTime";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useLeaveGuard } from "@/components/library/useLeaveGuard";
+import { usePaneElement } from "@/lib/paneContext";
 
 // The same key as the app's Recorder. Everything from `bpm` on is the Metronome tool's own
 // settings shape. `autoGainOn` replaced `autoGain` (on by default before; now off, and in the Input
@@ -79,6 +81,16 @@ const DEFAULT_SETTINGS = {
   structure: EMPTY_STRUCTURE as Structure,
   tempoNoteValue: 4 as number | null,
 };
+
+// ---------------------------------------------------------------- the unsaved take
+
+/** A finished take that hasn't been saved or discarded yet. Kept outside the component so leaving
+    the Recorder (another tool, the menu) doesn't lose it: coming back opens the save dialog again.
+    A reload or closing the tab still loses it (the leave prompt says so). */
+let draftTake: FinishedTake | null = null;
+/** Whether the take in progress was started here (not by the Shed Log's quick recorder, which
+    shares the engine), so leaving only finishes the Recorder's own takes into the draft. */
+let ownTake = false;
 
 // ---------------------------------------------------------------- the level trace
 
@@ -180,7 +192,44 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   useToolActivity("/recorder", busy);
   const click = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot, getMetronomeServerSnapshot);
   const clicking = busy && settings.metronome && click.running;
-  const [take, setTake] = useState<FinishedTake | null>(null);
+  const [take, setTakeState] = useState<FinishedTake | null>(() => draftTake);
+  const setTake = (next: FinishedTake | null) => {
+    draftTake = next;
+    setTakeState(next);
+  };
+
+  // Leaving mid-take or with the save dialog open: ask first (links, the menu, Back; closing or
+  // reloading the tab gets the browser's own prompt). If you leave anyway, a take in progress is
+  // finished and kept as the draft above. In a split-screen pane the other pane's links aren't
+  // this page's way out, so only the tab-closing prompt applies there.
+  const unsaved = busy || take !== null;
+  const inPane = usePaneElement() !== null;
+  const guard = useLeaveGuard(
+    unsaved && !inPane,
+    busy
+      ? "Recording stops. The take waits here, unsaved, until you come back to save or discard it — but closing or reloading the tab loses it."
+      : "The take waits here until you come back to save or discard it — but closing or reloading the tab loses it.",
+  );
+  useEffect(() => {
+    if (!unsaved || !inPane) return;
+    const onUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [unsaved, inPane]);
+  useEffect(
+    () => () => {
+      const phase = getRecorderSnapshot().phase;
+      if (!ownTake || phase === "idle" || phase === "finishing") return;
+      ownTake = false;
+      void stopRecording().then((finished) => {
+        if (finished) draftTake = finished;
+      });
+    },
+    [],
+  );
 
   // The input, as the engine wants it.
   const gain = Math.min(4, Math.max(0, settings.inputGain));
@@ -244,6 +293,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         structure: { useStructure, structure },
         countInBars: settings.countInBars,
       };
+      ownTake = true;
       await startRecording(metronome, {
         ...input,
         song: songOn && song?.url ? { url: song.url, startSec: songStart, volume: settings.songVolume } : null,
@@ -251,6 +301,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
       return;
     }
     if (rec.phase === "finishing") return;
+    ownTake = false;
     const finished = await stopRecording();
     if (finished) setTake(finished);
   }
@@ -556,12 +607,13 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               subAccents={displaySubAccents}
               currentSub={clicking ? click.currentSub : 0}
               onCycleSub={handleCycleSub}
+              cycleHint
             />
           ))}
 
         {/* The caption is inside the record button (so it's tappable too); the Level button lines
             up with the circle. */}
-        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start gap-4">
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-4">
           <div className="flex h-24 items-center justify-end">
             <button
               type="button"
@@ -569,7 +621,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               disabled={busy}
               aria-pressed={rec.monitoring}
               title="Listen to the input without recording, to set the level"
-              className={`inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-40 ${
+              className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-40 sm:w-40 ${
                 rec.monitoring ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] hover:bg-surface-hover"
               }`}
             >
@@ -616,11 +668,11 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           onDiscard={() => setTake(null)}
           onSaved={(id) => {
             setTake(null);
-            if (tuneId) router.push(`/tunes/tune?id=${tuneId}`);
-            else router.push(`/tunes/recording?id=${id}`);
+            guard.leave(() => router.push(tuneId ? `/tunes/tune?id=${tuneId}` : `/tunes/recording?id=${id}`));
           }}
         />
       )}
+      {guard.dialog}
     </ToolLayout>
   );
 }

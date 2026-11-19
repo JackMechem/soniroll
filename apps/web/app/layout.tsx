@@ -10,7 +10,6 @@ import BackgroundToolDock from "@/components/BackgroundToolDock";
 import CommandPalette from "@/components/CommandPalette";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import PracticeTimerAlert from "@/components/PracticeTimerAlert";
-import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import Sidebar from "@/components/Sidebar";
 import UsernamePrompt from "@/components/UsernamePrompt";
 import "./globals.css";
@@ -70,7 +69,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <>
                   <Sidebar />
                   <CommandPalette />
-                  <PracticeTimerWidget mobile />
                   <BackgroundToolDock />
                 </>
               }

@@ -15,6 +15,7 @@ import {
   DrumIcon,
   EarIcon,
   GraduationCapIcon,
+  HeartIcon,
   MetronomeIcon,
   NAV_LINKS,
   NoteIcon,
@@ -565,7 +566,7 @@ function Features() {
               <FeaturePreview id={active} />
             </div>
             <div className="relative mt-6 flex justify-end">
-              <Link href={feature.href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline">
+              <Link href={feature.href} className="-mr-3 inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-accent hover:bg-accent/10">
                 {feature.cta} <Arrow />
               </Link>
             </div>
@@ -603,16 +604,17 @@ function ThemeDemo() {
           <span className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground">Stop</span>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      {/* Two even rows of four from sm up (a wrapping row left one theme on its own). */}
+      <div className="flex flex-wrap gap-2 sm:grid sm:grid-cols-4">
         {presets.map((p, n) => (
           <button
             key={p.id}
             type="button"
             onClick={() => setI(n)}
             aria-pressed={n === i}
-            className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs font-semibold transition active:scale-[0.97] ${n === i ? "border-foreground/30 bg-background" : "border-foreground/[0.07] hover:bg-background"}`}
+            className={`flex h-9 items-center gap-2 rounded-full border pl-1.5 pr-3 text-xs font-semibold transition active:scale-[0.97] ${n === i ? "border-foreground/30 bg-background" : "border-foreground/[0.07] hover:bg-background"}`}
           >
-            <span className="flex h-5 w-5 overflow-hidden rounded-full ring-1 ring-foreground/10">
+            <span className="flex h-6 w-6 overflow-hidden rounded-full ring-1 ring-foreground/10">
               <span className="w-1/2" style={{ background: p.colors.background }} />
               <span className="w-1/2" style={{ background: p.colors.accent }} />
             </span>
@@ -635,7 +637,7 @@ function Bento() {
           <Reveal className="md:col-span-4 md:row-span-2">
             <div className="flex h-full flex-col rounded-[28px] bg-surface p-6 ring-1 ring-foreground/[0.06] sm:p-8">
               <h3 className="text-xl font-semibold tracking-tight">Make it yours</h3>
-              <p className="mb-6 mt-1.5 max-w-md text-sm text-muted">Thirty themes, from Gruvbox to Rosé Pine, or build your own. Try a few.</p>
+              <p className="mb-6 mt-1.5 max-w-md text-sm text-balance text-muted">Thirty themes, from Gruvbox to Rosé Pine, or build your own. Try a few.</p>
               <div className="flex-1">
                 <ThemeDemo />
               </div>
@@ -666,8 +668,14 @@ function Bento() {
                   <span className="min-w-0 flex-1 truncate font-semibold">Friday gig</span>
                   <span className="text-xs text-muted">12 tunes</span>
                 </span>
-                <span className="flex items-center gap-2 self-end rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background">
-                  Share link copied
+                {/* A second shared item rather than a toast (a fake "copied" notification read as a
+                    real one). */}
+                <span className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2.5 text-sm">
+                  <ChordChartIcon className="h-4 w-4 shrink-0 text-accent" />
+                  <span className="min-w-0 flex-1 truncate font-semibold">Stella by Starlight</span>
+                  <span className="flex items-center gap-1 text-xs text-muted">
+                    <HeartIcon className="h-3.5 w-3.5" /> 8
+                  </span>
                 </span>
               </div>
               <div>

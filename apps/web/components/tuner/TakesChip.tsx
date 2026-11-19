@@ -6,7 +6,6 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import Hint from "@/components/Hint";
 import { AUDIO_ONLY, useFilePicker } from "@/components/files/FilePicker";
 import PromptDialog from "@/components/PromptDialog";
-import { SettingChip } from "@/components/SettingsBar";
 import { DownloadIcon, ListIcon, PencilIcon, PlayIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt } from "@/lib/recordings";
 import { type TunerTake, deleteTake, downloadTake, renameTake } from "@/lib/tunerTakes";
@@ -118,31 +117,18 @@ export default function TakesChip({
 
   return (
     <>
-      {count === 0 ? (
-        // No takes yet: a small, quiet link instead of a chip leading the page (it still opens a
-        // file from here).
-        <SettingChip
-          icon={ListIcon}
-          label="Takes"
-          open={popover}
-          onOpenChange={setPopover}
-          trigger={{
-            className: "flex h-8 items-center gap-1.5 rounded-full px-3 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground",
-            content: (
-              <>
-                <ListIcon className="h-4 w-4" />
-                Takes
-              </>
-            ),
-          }}
-        >
-          {body}
-        </SettingChip>
-      ) : (
-        <CollapsiblePanel id="tuner-takes" title="Takes" icon={ListIcon} summary={`${count} take${count === 1 ? "" : "s"}`} open={popover} onOpenChange={setPopover}>
-          {body}
-        </CollapsiblePanel>
-      )}
+      {/* A chip like other tools' History, even before the first take ("None yet"): it also
+          opens an audio file. */}
+      <CollapsiblePanel
+        id="tuner-takes"
+        title="Takes"
+        icon={ListIcon}
+        summary={count === 0 ? "None yet" : `${count} take${count === 1 ? "" : "s"}`}
+        open={popover}
+        onOpenChange={setPopover}
+      >
+        {body}
+      </CollapsiblePanel>
 
       {picker.elements}
       {renaming && (

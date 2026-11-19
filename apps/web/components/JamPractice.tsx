@@ -46,8 +46,9 @@ export default function JamPractice() {
   const [adding, setAdding] = useState(false);
   const [isCounting, setIsCounting] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
-  // Counts as practice in the Shed Log while a tune's up (and the tab's in view).
-  useToolActivity("/jam-practice", isCounting || pick !== null, { visibleOnly: true });
+  // Counts as practice while the click plays (and the tab's in view). Stop / Esc, or the count-off
+  // ending, stop the count: a tune left on screen with nothing playing isn't practice time.
+  useToolActivity("/jam-practice", isCounting, { visibleOnly: true });
   const [settings, updateSettings] = usePersistedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const { countOffBars, accentFirstBeat, keepGoingIndefinitely, pickFromStandards } = settings;
   const setCountOffBars = (countOffBars: number) => updateSettings({ countOffBars });
@@ -251,10 +252,10 @@ export default function JamPractice() {
             No tune picked yet.
           </div>
         )}
+        {/* Only what the tune has: a tune with no tempo or key just shows its time signature. */}
         {pick && (
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-base text-muted sm:gap-x-6 sm:text-lg">
-            {!pick.tempo && <span>no enabled tempo</span>}
-            <span>{pick.key ? pick.key.value : "no enabled key"}</span>
+            {pick.key && <span>{pick.key.value}</span>}
             <span>{pick.tune.timeSignature}</span>
           </div>
         )}
@@ -270,19 +271,22 @@ export default function JamPractice() {
             <span className="text-sm text-muted">BPM</span>
           </div>
         )}
-        {isCounting && pick?.tempo && (
-          <div className="flex flex-col items-center gap-3">
+        {/* Stays in place (dimmed, still) after Stop, so the buttons below don't jump up. */}
+        {pick?.tempo && (
+          <div className={`flex flex-col items-center gap-3 transition-opacity ${isCounting ? "" : "opacity-50"}`}>
             <BeatIndicator
               accents={Array.from(
                 { length: parseBeatsPerBar(pick.tune.timeSignature) },
                 (_, i): BeatLevel => (accentFirstBeat && i === 0 ? 2 : 1),
               )}
-              currentBeat={currentBeat}
+              currentBeat={isCounting ? currentBeat : null}
             />
             <span className="text-sm text-muted">
-              {keepGoingIndefinitely
-                ? "Metronome running"
-                : `Counting off ${countOffBars} bar${countOffBars === 1 ? "" : "s"}`}
+              {!isCounting
+                ? "Click stopped"
+                : keepGoingIndefinitely
+                  ? "Metronome running"
+                  : `Counting off ${countOffBars} bar${countOffBars === 1 ? "" : "s"}`}
             </span>
           </div>
         )}

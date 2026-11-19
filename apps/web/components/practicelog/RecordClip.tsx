@@ -77,7 +77,7 @@ export default function RecordClip({
           onClick={() => void toggle()}
           disabled={busy}
           title={busy ? "Already recording" : undefined}
-          className={`flex items-center gap-1.5 rounded-md bg-foreground/[0.05] font-medium hover:bg-surface-hover disabled:opacity-50 ${compact ? "h-7 px-2 text-xs" : "h-8 px-3 text-sm"}`}
+          className={`flex items-center gap-1.5 rounded-md bg-foreground/[0.05] font-medium hover:bg-surface-hover disabled:opacity-50 ${compact ? "h-8 px-2.5 text-xs" : "h-8 px-3 text-sm"}`}
         >
           <MicIcon className="h-3.5 w-3.5 text-danger" /> {compact ? "Record" : "Record a clip"}
         </button>

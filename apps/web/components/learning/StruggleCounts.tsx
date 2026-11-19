@@ -1,4 +1,4 @@
-import { GRADE_COLOR } from "@/lib/noteGrade";
+import { GRADE_COLOR } from "@/components/learning/quizUi";
 import { GradeCounts, attempts } from "@/lib/struggleStats";
 
 /** The right-hand side of a Struggles row, in words: "5 wrong out of 6", or "2 wrong, 1 partly

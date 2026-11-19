@@ -1,6 +1,17 @@
 import type { CSSProperties } from "react";
 import { BIG_PRIMARY, BIG_SECONDARY } from "@/components/MeterFields";
 import { PASS_SCORE } from "@/lib/learningPath";
+import type { Grade } from "@/lib/noteGrade";
+
+/** Right / half / wrong colours for the trainers, as theme colours so they read on every theme:
+    `--success` is a darker green in light themes (text on the pale backgrounds stays above 4.5:1)
+    and the bright one in dark themes; wrong is the theme's own `--danger`. Use these on the web
+    instead of `@/lib/noteGrade`'s fixed hex `GRADE_COLOR` (that one stays for the mobile app). */
+export const GRADE_COLOR: Record<Grade, string> = {
+  correct: "var(--success)",
+  partial: "var(--warning)",
+  incorrect: "var(--danger)",
+};
 
 /**
  * Shared class names for the ear-training and pitch tools (Guess the Interval/Chord/Progression,
@@ -16,14 +27,14 @@ export function startButtonClass(running: boolean) {
   return running ? BIG_SECONDARY : BIG_PRIMARY;
 }
 
-/** The "—" in a trainer's round display before the first round (and after Stop): the same size
-    and colour on every trainer. */
-export const IDLE_DASH = "relative z-10 text-4xl font-bold leading-none text-muted";
+/** A trainer's round display before the first round (and after Stop): an empty ring (the same
+    faint circle as Find the Root's) with a muted "?" in it, so the display reads as "waiting"
+    rather than as something missing. `IDLE_RING` is an aria-hidden span inside the display. */
+export const IDLE_RING = "pointer-events-none absolute inset-0 rounded-full border-[3px] border-foreground/10";
+export const IDLE_MARK = "relative z-10 text-4xl font-bold leading-none text-muted";
 
-/** The "Press Start, …" line inside a trainer's round display. It hangs a fixed distance below
-    the display's centre (where the idle dash sits), so however many lines it wraps to on a
-    phone, it grows downwards and never crowds the dash. */
-export const IDLE_HINT = "absolute inset-x-0 top-1/2 z-10 mt-6 text-center text-sm leading-snug text-muted";
+/** The "Press Start, …" line, under the idle ring. */
+export const IDLE_HINT = "max-w-xs text-center text-sm leading-snug text-muted";
 
 /** A primary text button (one per area). */
 export const PRIMARY_BUTTON =

@@ -21,7 +21,7 @@ import {
 import { scheduleClick } from "@/lib/clickEngine";
 import { prettyQuality } from "@/lib/iRealPro";
 import { getAudioContext } from "@/lib/metronome";
-import { GRADE_COLOR, GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
+import { GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
 import {
   CHORD_CATEGORIES,
   CHORD_QUALITIES,
@@ -63,13 +63,68 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { cumulativeItems, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
+import { spellAbove } from "@/lib/rootlessVoicings";
+import { parseNote } from "@/lib/noteRange";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
-import { ANSWER_INPUT, FEEDBACK_LINE, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
+import { GRADE_COLOR, ANSWER_INPUT, FEEDBACK_LINE, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 5;
 const MAX_ROUND_SECONDS = 45;
 const DEFAULT_ROUND_SECONDS = 15;
+
+/** How many letter names above the root each of a chord's intervals sits (a minor 3rd is 2
+    letters up, a ♯9 is 1, a ♯11 is 3), so its notes are spelled from the root: G-7 is G B♭ D F,
+    never G A♯ D F. A diminished 7th's 6th semitone is a double-flat 7th (6 letters up). */
+const TONE_STEPS: Record<number, number> = {
+  0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: 5, 10: 6, 11: 6,
+  13: 1, 14: 1, 15: 1, 17: 3, 18: 3, 21: 5,
+};
+
+/** A spelled note name with the octave of `midi` ("Bb" at MIDI 58 → "Bb3"; "Cb" at 59 → "Cb4"). */
+function withOctave(name: string, midi: number): string {
+  const acc = name[1] === "#" ? 1 : name[1] === "b" ? -1 : 0;
+  return `${name}${Math.floor((midi - acc) / 12) - 1}`;
+}
+
+const ENHARMONIC_ROOT: Record<string, string> = {
+  "C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab", "A#": "Bb",
+  Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#",
+};
+
+function chordTones(r: ChordRound, root: string) {
+  return r.quality.intervals.map((iv) =>
+    spellAbove(root, iv, r.quality.id === "dim7" && iv === 9 ? 6 : (TONE_STEPS[iv] ?? 0)),
+  );
+}
+const spellingCost = (r: ChordRound, root: string) =>
+  chordTones(r, root).reduce((sum, t) => sum + t.cost, 0);
+
+/** A round's revealed answer and the notes it played, spelled from its root and quality. The
+    root follows the accidental style ("C#", or "C#/Db" with Both), except where that spelling
+    would need double sharps or flats in the chord and the other one doesn't (A♯ major is shown
+    as B♭: B♭ D F, not A♯ C𝄪 E♯). */
+function spelledAnswer(r: ChordRound, style: AccidentalStyle, seq: number) {
+  const parts = chordRoundParts(r, style, seq);
+  const labels = parts.root.split("/");
+  let root = labels[0];
+  if (labels.length > 1) {
+    if (spellingCost(r, labels[1]) < spellingCost(r, root)) root = labels[1];
+  } else {
+    const other = ENHARMONIC_ROOT[root];
+    if (other && spellingCost(r, root) >= 2 && spellingCost(r, other) < spellingCost(r, root)) {
+      root = other;
+      parts.root = other;
+    }
+  }
+  const notes = chordTones(r, root).map((t, i) => withOctave(t.name, r.rootMidi + r.quality.intervals[i]));
+  if (r.bassPc !== null && parts.bass) {
+    const bassMidi = parseNote(r.notes[0]) ?? r.rootMidi - 12;
+    notes.unshift(withOctave(parts.bass.split("/")[0], bassMidi));
+  }
+  return { parts, notes };
+}
 
 /** How long a chord rings for playback, and (arpeggio style) the gap between its notes — longer
     than a single note or an interval's two notes, since a full chord (especially an extended
@@ -750,7 +805,7 @@ export default function GuessTheChord() {
   const weakEntries = weakChordEntries(settings.chordStats);
 
   function revealedLabel(r: ChordRound, seq: number) {
-    const parts = chordRoundParts(r, accidentalStyle, seq);
+    const { parts } = spelledAnswer(r, accidentalStyle, seq);
     return noteGlyphs(`${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ""}`);
   }
 
@@ -760,7 +815,7 @@ export default function GuessTheChord() {
   const typedPreview = typedParts
     ? `${typedParts.root}${typedParts.quality}${typedParts.bass ? `/${typedParts.bass}` : ""}`
     : null;
-  const mainLabel = !running || !round ? "—" : (revealedText ?? typedPreview ?? "?");
+  const mainLabel = !running || !round ? "?" : (revealedText ?? typedPreview ?? "?");
   const mainLabelLong = mainLabel.length > 10;
   // The big label shows the right chord once answered: green when the answer was right, the
   // normal text colour when it wasn't (what was typed is shown in a small line underneath).
@@ -790,7 +845,7 @@ export default function GuessTheChord() {
   const showCountdown = running;
   const revealedNoteNames =
     revealNotes && status && round
-      ? round.notes.map(noteGlyphs).join(" · ")
+      ? spelledAnswer(round, accidentalStyle, roundSeed).notes.map(noteGlyphs).join(" · ")
       : null;
 
   return (
@@ -844,7 +899,7 @@ export default function GuessTheChord() {
                         </span>
                         <span className="text-xs text-muted">
                           {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
+                          {formatFileDate(entry.at)}
                         </span>
                       </div>
                       <span
@@ -1136,7 +1191,7 @@ export default function GuessTheChord() {
           onStart={() => void start("learn")}
         />
       )}
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex w-full flex-col items-center gap-3">
         {activeLevel !== null && running && (
           <p className={LEVEL_LABEL}>
             Level {activeLevel + 1} · {learn.levels[activeLevel].title} ·{" "}
@@ -1145,9 +1200,10 @@ export default function GuessTheChord() {
         )}
         {!(learnMode && !running) && (
         <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
+          {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
-            className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
+            className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
               mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
             }`}
             style={
@@ -1160,10 +1216,10 @@ export default function GuessTheChord() {
           >
             {mainLabel}
           </p>
-          {/* Before the first round, say what's about to happen. */}
-          {!running && <p className={IDLE_HINT}>Press Start, listen to the chord, then type its symbol.</p>}
         </div>
         )}
+        {/* Before the first round, say what's about to happen. */}
+        {!running && !learnMode && <p className={IDLE_HINT}>Press Start, listen to the chord, then type its symbol.</p>}
 
         {/* Two lines that are always there while a round runs (what you typed, the notes), so
             answering doesn't move the keypad or buttons. */}
@@ -1224,7 +1280,10 @@ export default function GuessTheChord() {
                 (typeHint ?? readingLine)
               )}
             </p>
-            <div className="flex gap-2">
+            {/* Submit in the middle column, so it's centred and Next lands exactly where it was;
+                "I don't know" beside it (hidden once answered). */}
+            <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <span aria-hidden />
               <button
                 type="submit"
                 className={PRIMARY_BUTTON}
@@ -1235,7 +1294,7 @@ export default function GuessTheChord() {
                 type="button"
                 onClick={gradeAndReveal}
                 disabled={!!status}
-                className={`${SECONDARY_BUTTON} ${status ? "invisible" : ""}`}
+                className={`${SECONDARY_BUTTON} justify-self-start ${status ? "invisible" : ""}`}
               >
                 I don&apos;t know
               </button>
@@ -1244,7 +1303,9 @@ export default function GuessTheChord() {
         )}
 
         {!(learnMode && !running) && (
-        <details className="w-full max-w-xs text-left text-xs text-muted">
+        // Keyed by the round, so it closes again for each new chord rather than staying open
+        // and pushing the progress line off the screen.
+        <details key={running ? roundSeed : "idle"} className="w-full max-w-xs text-left text-xs text-muted">
           <summary className="cursor-pointer select-none text-center font-medium hover:text-foreground">How to type a chord</summary>
           <p className="mt-2">Root, then the quality, then an optional /bass note.</p>
           <ul className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">

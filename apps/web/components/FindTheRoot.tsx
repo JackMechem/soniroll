@@ -6,7 +6,7 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Disclosure from "@/components/Disclosure";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import Hint from "@/components/Hint";
-import InputTest from "@/components/InputTest";
+import InputTest, { MicLevel } from "@/components/InputTest";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
@@ -35,7 +35,6 @@ import {
 } from "@/lib/audioInput";
 import { prettyQuality } from "@/lib/iRealPro";
 import {
-  GRADE_COLOR,
   GRADE_LABEL,
   Grade,
   describePitch,
@@ -73,11 +72,12 @@ import {
   playNotesTogether,
 } from "@/lib/tones";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { micErrorMessage } from "@/lib/micError";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
-import { PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_DASH } from "@/components/learning/quizUi";
+import { GRADE_COLOR, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK } from "@/components/learning/quizUi";
 
 /** How long the voicing rings. */
 const CHORD_SECONDS = 2.2;
@@ -224,6 +224,8 @@ export default function FindTheRoot() {
   const sessionStartRef = useRef<number | null>(null);
   const inputRef = useRef<AudioInput | null>(null);
   const mountedRef = useRef(true);
+  /** The mic's latest RMS level, for the little level bar under "Listening…". */
+  const micLevelRef = useRef(0);
   const nextTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const soundingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The source of truth for the struggle stats while a session runs (several bumps can land
@@ -457,7 +459,10 @@ export default function FindTheRoot() {
       try {
         const input = await startAudioInput(
           inputDeviceId,
-          (frame) => handleFrame(frame.freq),
+          (frame) => {
+            micLevelRef.current = frame.level;
+            handleFrame(frame.freq);
+          },
           () => cfgRef.current.silenceRms,
         );
         if (!mountedRef.current) {
@@ -593,6 +598,9 @@ export default function FindTheRoot() {
   const lastRound = progress ? progress.index >= progress.total : false;
   const keyState = (pc: number): "right" | "wrong" | null =>
     status && rightRoots.includes(pc) ? "right" : wrongPicks.includes(pc) ? "wrong" : null;
+  // Once answered, the root's key is written the way the answer is (G♯ for G♯-7, not A♭).
+  const keyLabel = (pc: number): string | undefined =>
+    status && round && target && pc === round.rootPc ? prettyNote(target.root) : undefined;
 
   return (
     <ToolLayout
@@ -639,7 +647,7 @@ export default function FindTheRoot() {
                         </span>
                         <span className="text-xs text-muted">
                           {entry.mode === "pick" ? "Picked" : "Sung or played"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
+                          {formatFileDate(entry.at)}
                         </span>
                       </div>
                       <span className="text-xs tabular-nums text-muted">
@@ -962,7 +970,7 @@ export default function FindTheRoot() {
             style={{ borderColor: glow ?? "color-mix(in srgb, var(--foreground) 10%, transparent)" }}
           />
           <p
-            className={!round ? IDLE_DASH : `relative z-10 font-bold transition-colors duration-200 ${
+            className={!round ? IDLE_MARK : `relative z-10 font-bold transition-colors duration-200 ${
               status && target && chordLabel(target).length > 6 ? "text-3xl sm:text-4xl" : "text-5xl sm:text-6xl"
             }`}
             style={
@@ -971,7 +979,7 @@ export default function FindTheRoot() {
                 : undefined
             }
           >
-            {!round ? "—" : status && target ? chordLabel(target) : "?"}
+            {!round ? "?" : status && target ? chordLabel(target) : "?"}
           </p>
         </div>
 
@@ -1040,6 +1048,7 @@ export default function FindTheRoot() {
                 : "Sing or play the root…"}
           </p>
         )}
+        {running && round && answerMode === "sing" && !status && <MicLevel levelRef={micLevelRef} />}
 
         {running && round && answerMode === "pick" && !status && (
           <p
@@ -1066,6 +1075,7 @@ export default function FindTheRoot() {
                 black
                 style={{ gridColumn: `${col} / span 2`, gridRow: 1 }}
                 state={keyState(pc)}
+                label={keyLabel(pc)}
                 disabled={!!status}
                 onPick={pick}
               />
@@ -1076,6 +1086,7 @@ export default function FindTheRoot() {
                 pc={pc}
                 style={{ gridColumn: `${i * 2 + 1} / span 2`, gridRow: 2 }}
                 state={keyState(pc)}
+                label={keyLabel(pc)}
                 disabled={!!status}
                 onPick={pick}
               />
@@ -1211,6 +1222,7 @@ function RootKey({
   black = false,
   style,
   state,
+  label,
   disabled,
   onPick,
 }: {
@@ -1218,6 +1230,8 @@ function RootKey({
   black?: boolean;
   style: React.CSSProperties;
   state: "right" | "wrong" | null;
+  /** Overrides the key's usual name (the answer's own spelling once it's revealed). */
+  label?: string;
   disabled: boolean;
   onPick: (pc: number) => void;
 }) {
@@ -1227,7 +1241,7 @@ function RootKey({
       type="button"
       onClick={() => onPick(pc)}
       disabled={disabled}
-      aria-label={prettyNote(ROOT_NAMES[pc])}
+      aria-label={label ?? prettyNote(ROOT_NAMES[pc])}
       style={{
         ...style,
         ...(color
@@ -1244,7 +1258,7 @@ function RootKey({
           : "h-14 bg-surface text-sm text-foreground hover:bg-surface-hover sm:h-16"
       } ${disabled && !color ? "opacity-60" : ""}`}
     >
-      {prettyNote(ROOT_NAMES[pc])}
+      {label ?? prettyNote(ROOT_NAMES[pc])}
     </button>
   );
 }

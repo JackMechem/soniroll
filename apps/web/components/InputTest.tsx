@@ -12,7 +12,7 @@ const HOLD_MS = 700;
 const IN_TUNE_CENTS = 15;
 
 /** Maps an RMS level to 0–1 on a decibel scale (-60 dB to -10 dB). */
-function levelToMeter(rms: number) {
+export function levelToMeter(rms: number) {
   if (rms <= 0) return 0;
   return Math.min(1, Math.max(0, (20 * Math.log10(rms) + 60) / 50));
 }
@@ -165,6 +165,35 @@ export default function InputTest({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** A small live input level bar for a trainer that's listening ("Listening…"), so you can see the
+    mic hears you. `levelRef` holds the latest RMS from `startAudioInput`'s frames; the bar reads
+    it every animation frame (no re-render per audio frame). */
+export function MicLevel({ levelRef }: { levelRef: React.RefObject<number> }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let frame = 0;
+    const tick = () => {
+      barRef.current?.style.setProperty("transform", `scaleX(${levelToMeter(levelRef.current)})`);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [levelRef]);
+  return (
+    <div
+      aria-hidden
+      title="Mic level"
+      className="my-1 h-1.5 w-24 overflow-hidden rounded-full bg-foreground/10"
+    >
+      <div
+        ref={barRef}
+        className="h-full w-full origin-left rounded-full bg-accent transition-transform duration-75"
+        style={{ transform: "scaleX(0)" }}
+      />
     </div>
   );
 }

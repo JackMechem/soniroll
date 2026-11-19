@@ -21,7 +21,7 @@ import {
 } from "@/components/tools";
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
-import { GRADE_COLOR, GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
+import { GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
 import { parseRange } from "@/lib/noteRange";
 import {
   DEFAULT_ENABLED_INTERVAL_IDS,
@@ -63,9 +63,10 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
-import { FEEDBACK_LINE, GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_DASH, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import { GRADE_COLOR, FEEDBACK_LINE, GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -647,7 +648,7 @@ export default function GuessTheInterval() {
 
   const arrow = (r: IntervalRound) => (r.direction === 1 ? "↑" : "↓");
   const revealedLabel = (r: IntervalRound) => `${arrow(r)} ${r.interval.label}`;
-  const mainLabel = running && round ? (status ? revealedLabel(round) : "?") : "—";
+  const mainLabel = running && round ? (status ? revealedLabel(round) : "?") : "?";
   const mainLabelLong = mainLabel.length > 16;
   // Once answered, the big label shows the right answer: green when the guess was right, the
   // normal text colour when it wasn't (the wrong pick is named in a small line underneath).
@@ -736,7 +737,7 @@ export default function GuessTheInterval() {
                         </span>
                         <span className="text-xs text-muted">
                           {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
+                          {formatFileDate(entry.at)}
                         </span>
                       </div>
                       <span
@@ -1033,18 +1034,24 @@ export default function GuessTheInterval() {
           onStart={() => void start("learn")}
         />
       )}
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex w-full flex-col items-center gap-3">
         {activeLevel !== null && running && (
           <p className={LEVEL_LABEL}>
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
         {!(learnMode && !running) && (
-        <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
+        // A smaller ring on phones during a quiz, so the answers, "I don't know" and Stop all fit.
+        <div
+          className={`relative flex items-center justify-center p-4 text-center sm:h-56 sm:w-56 ${
+            running ? "h-36 w-36" : "h-44 w-44"
+          }`}
+        >
+          {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
-            className={!running ? IDLE_DASH : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-              mainLabelLong ? "text-xl sm:text-2xl" : "text-4xl sm:text-5xl"
+            className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
+              mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-5xl"
             }`}
             style={
               glow
@@ -1056,10 +1063,10 @@ export default function GuessTheInterval() {
           >
             {mainLabel}
           </p>
-          {/* Before the first round, say what's about to happen. */}
-          {!running && <p className={IDLE_HINT}>Press Start, listen to two notes, then pick the interval.</p>}
         </div>
         )}
+        {/* Before the first round, say what's about to happen. */}
+        {!running && !learnMode && <p className={IDLE_HINT}>Press Start, listen to two notes, then pick the interval.</p>}
 
         {/* Always there while a round runs, so answering doesn't push the answers down. */}
         {running && round && (
@@ -1082,7 +1089,7 @@ export default function GuessTheInterval() {
         )}
 
         {running && round && answerChoices.length > 0 && (
-          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid w-full grid-cols-3 gap-2">
             {answerChoices.map((interval) => {
               const answered = status !== null;
               const isCorrectAnswer = interval.id === round.interval.id;

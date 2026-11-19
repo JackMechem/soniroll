@@ -58,6 +58,8 @@ export default function ToolStats({ href }: { href: string }) {
   const hours = allMs / 3_600_000;
   const ms = hourMilestone(hours);
   const unlogged = unloggedToday(usage, href, liveMs);
+  // Some of today's time went into the Shed Log already (Log pressed earlier today).
+  const loggedBefore = todayMs - unlogged >= 1000;
   const history = historyOf(usage, href);
   const best = Math.max(bestStreak(usage, href), s);
 
@@ -86,8 +88,9 @@ export default function ToolStats({ href }: { href: string }) {
             <span className="flex items-center gap-1.5" title="Your time on this tool today. Click for your streak and history.">
               <StopwatchIcon className="h-4 w-4 shrink-0 text-muted" />
               <span className="whitespace-nowrap tabular-nums">{formatChip(todayMs, running)}</span>
-              {/* Phones: just the number (a dot while it counts), so the row fits beside Log and ?. */}
-              <span className="hidden whitespace-nowrap text-muted sm:inline">{running ? "counting" : "today"}</span>
+              {/* "today" (the dot shows it's counting), so it reads as the day's total beside Log's
+                  number. Phones: just the number, so the row fits beside Log and ?. */}
+              <span className="hidden whitespace-nowrap text-muted sm:inline">today</span>
               {running && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />}
               {s > 0 && (
                 <span className={`flex items-center gap-0.5 tabular-nums ${usedToday ? "text-orange-500" : "text-muted"}`} title={`${s}-day streak`}>
@@ -159,13 +162,18 @@ export default function ToolStats({ href }: { href: string }) {
           type="button"
           onClick={log}
           className={`${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover`}
-          title={`Add ${formatUse(unlogged)} in this tool to today's Shed Log`}
-          aria-label={`Log ${formatUse(unlogged)} to your Shed Log`}
+          title={
+            loggedBefore
+              ? `${formatUse(todayMs - unlogged)} of today's time is in your Shed Log already. Add the ${formatUse(unlogged)} since then.`
+              : `Add ${formatUse(unlogged)} in this tool to today's Shed Log`
+          }
+          aria-label={`Log ${formatUse(unlogged)}${loggedBefore ? " more" : ""} to your Shed Log`}
         >
           <PlusIcon className="h-4 w-4" />
-          {/* Phones: just "Log" (today's time is in the chip beside it). */}
+          {/* Phones: just "Log" (today's time is in the chip beside it). When part of today is
+              logged already, the chip's total and this number differ, so it says "more". */}
           <span className="whitespace-nowrap tabular-nums">
-            Log<span className="hidden sm:inline"> {formatUse(unlogged)}</span>
+            Log<span className="hidden sm:inline"> {formatUse(unlogged)}{loggedBefore ? " more" : ""}</span>
           </span>
         </button>
       ) : (

@@ -276,12 +276,13 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 items: [
                   { label: "Daily goal…", icon: <TargetIcon />, onSelect: () => setGoalOpen(true) },
                   { label: data.prefs.sounds ? "Sounds: on" : "Sounds: off", icon: <SpeakerIcon className={`h-4 w-4 ${data.prefs.sounds ? "text-foreground" : "text-muted"}`} />, onSelect: () => log.setPrefs({ sounds: !data.prefs.sounds }) },
+                  { label: "All Shed Log settings", icon: <SlidersIcon className="h-4 w-4 text-muted" />, divider: true, onSelect: () => router.push("/account?tab=practice") },
                 ],
               });
             }}
-            className={SETTINGS}
+            className={SECONDARY}
           >
-            <SlidersIcon className="h-4 w-4 text-muted" /> <span className="sm:hidden">Settings</span>
+            <SlidersIcon className="h-4 w-4 text-muted" /> <span>Settings</span>
           </button>
           <button
             type="button"
@@ -489,9 +490,6 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
     icon and label side by side. */
 const SECONDARY =
   "flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1 text-[11px] font-medium hover:bg-surface-hover sm:h-9 sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3 sm:text-sm";
-/** The settings button: the same on phones, an icon-only square from `sm`. */
-const SETTINGS =
-  "flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1 text-[11px] font-medium hover:bg-surface-hover sm:h-9 sm:w-9 sm:flex-none";
 
 /** One quiet line under the title: today's minutes against the goal (a thin bar; press it to
     change the goal) and the streak. */
@@ -503,7 +501,7 @@ function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; today: s
   const s = streak(data, today);
   return (
     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-      <button type="button" onClick={onGoal} title="Today's goal — change it" className="flex items-center gap-2 rounded-sm hover:text-foreground">
+      <button type="button" onClick={onGoal} title="Today's goal — change it" className="flex items-center gap-2 rounded-sm hover:text-foreground pointer-coarse:min-h-8">
         {goal > 0 && (
           <span className="h-1 w-16 overflow-hidden rounded-full bg-foreground/10">
             <span className="block h-full rounded-full transition-[width] duration-700" style={{ width: `${Math.min(100, (minutes / goal) * 100)}%`, background: met ? "var(--success)" : "var(--accent)" }} />

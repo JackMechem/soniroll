@@ -624,6 +624,15 @@ export default function Waveform({
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-muted/40" />
       )}
 
+      {/* The part already played, tinted (single waveforms only; tracks have their own colours). */}
+      {!clips && duration > 0 && playheadLeft > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 bg-accent/15"
+          style={{ width: `${Math.min(100, playheadLeft)}%` }}
+        />
+      )}
+
       {loop && (
         <div
           className={`absolute inset-y-0 border-x-2 ${

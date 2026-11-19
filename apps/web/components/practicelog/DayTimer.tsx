@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { PauseIcon, PlayIcon, StopwatchIcon, TrashIcon } from "@/components/tools";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { DotsVerticalIcon, PauseIcon, PlayIcon, StopwatchIcon } from "@/components/tools";
 import { discardDayTimer, pauseDayTimer, startDayTimer, unflushedMs, useDayTimer } from "@/lib/dayStopwatch";
 import { getSnapshot as engineState, pause as pauseEngine } from "@/lib/practiceTimerEngine";
 import { type PracticeLogData, minutesOn, todayKey } from "@/lib/practiceLog";
@@ -48,6 +49,7 @@ export function useDayTimerMs(data: PracticeLogData, date: string): { ms: number
 export default function DayTimer({ data, date, compact = false, onClear }: { data: PracticeLogData; date: string; compact?: boolean; onClear?: () => void }) {
   const { ms, running } = useDayTimerMs(data, date);
   const [confirming, setConfirming] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
   const isToday = date === todayKey();
   if (!isToday && ms === 0) return null;
   return (
@@ -61,17 +63,6 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
           {running ? "Practiced today · timer running" : isToday ? (ms ? "Practiced today · timer paused" : "Day timer — start it when you sit down to play") : "Practiced this day"}
         </div>
       </div>
-      {onClear && ms > 0 && (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          aria-label="Clear this day's time"
-          title="Clear this day's time"
-          className="shrink-0 rounded-md p-2 text-muted hover:bg-surface-hover hover:text-danger"
-        >
-          <TrashIcon className="h-4 w-4" />
-        </button>
-      )}
       {confirming && onClear && (
         <ConfirmDialog
           title="Clear this day's time?"
@@ -95,6 +86,26 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
             <PlayIcon className="h-4 w-4" /> {ms ? "Resume" : "Start timer"}
           </button>
         ))}
+      {/* Clearing the day's time is in ⋮, away from the main button (it still asks first). */}
+      {onClear && ms > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setMenu({
+              x: rect.right - 208,
+              y: rect.bottom + 4,
+              items: [{ label: "Clear this day's time", danger: true, onSelect: () => setConfirming(true) }],
+            });
+          }}
+          aria-label="Day timer options"
+          title="More"
+          className="-mr-2 shrink-0 rounded-md p-1.5 text-muted pointer-coarse:p-3 hover:bg-surface-hover hover:text-foreground"
+        >
+          <DotsVerticalIcon className="h-4 w-4" />
+        </button>
+      )}
+      {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>
   );
 }

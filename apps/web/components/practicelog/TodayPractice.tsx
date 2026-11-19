@@ -201,6 +201,8 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
     const m = fromDateKey(wk[0].key).getMonth();
     if (i === 0 || m !== fromDateKey(weeks[i - 1][0].key).getMonth()) months.push({ col: i, label: fromDateKey(wk[0].key).toLocaleString(undefined, { month: "short" }) });
   });
+  // The first column's month is dropped when the next month starts too close for both labels.
+  if (months.length > 1 && months[1].col - months[0].col < 3) months.shift();
   return (
     <div className={`flex flex-col gap-3 ${bare ? "" : "rounded-lg bg-surface p-4"} ${className}`}>
       <div className="flex items-baseline justify-between gap-2">
@@ -209,7 +211,7 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
       </div>
       <div className="relative grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${weekCount}, minmax(0, 1fr))` }}>
         {months.map((mo) => (
-          <span key={mo.col} className="text-[10px] font-semibold text-muted" style={{ gridColumn: `${mo.col + 1} / span 3`, gridRow: 1 }}>
+          <span key={mo.col} className="whitespace-nowrap text-xs font-semibold text-muted" style={{ gridColumn: `${mo.col + 1} / span 3`, gridRow: 1 }}>
             {mo.label}
           </span>
         ))}
@@ -225,10 +227,10 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
           )),
         )}
       </div>
-      <div className="flex items-center justify-end gap-1 text-[10px] font-semibold text-muted">
+      <div className="flex items-center justify-end gap-1 text-xs font-semibold text-muted">
         Less
         {LEVEL_BG.map((c) => (
-          <span key={c} className="h-2.5 w-2.5 rounded-[2px]" style={{ background: c }} />
+          <span key={c} className="h-3 w-3 rounded-[2px]" style={{ background: c }} />
         ))}
         More
       </div>

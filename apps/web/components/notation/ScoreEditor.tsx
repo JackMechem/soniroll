@@ -537,7 +537,7 @@ export default function ScoreEditor({
   const cap = measureCapacity(t);
 
   const btn = (active = false) =>
-    `flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+    `flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-sm font-medium transition-colors disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:min-w-10 ${
       active ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-background text-foreground hover:bg-surface-hover"
     }`;
 
@@ -620,7 +620,7 @@ export default function ScoreEditor({
               stays stuck at the top) is two rows plus the note names and doesn't cover half the
               screen. Undo always shows. */}
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-            <div className="flex shrink-0 gap-0.5 rounded-md bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
+            <div className="flex shrink-0 gap-0.5 rounded-full bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
               {(
                 [
                   ["select", "Select", "Clicks only select a note, or a whole bar (Shift+click for a range). Esc"],
@@ -634,7 +634,7 @@ export default function ScoreEditor({
                   aria-checked={mode === m}
                   onClick={() => setMode(m)}
                   title={title}
-                  className={`h-8 rounded-sm px-3 text-sm font-medium transition-colors ${mode === m ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+                  className={`h-8 rounded-full px-3 text-sm font-medium transition-colors pointer-coarse:h-9 ${mode === m ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
                 >
                   {label}
                 </button>
@@ -706,17 +706,18 @@ export default function ScoreEditor({
           </div>
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             {(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map((s) => (
-              <button key={s} type="button" onClick={() => addStep(s)} className={`${btn()} w-9 text-base sm:w-10`} title={`Add ${s} (${s})`}>
+              <button key={s} type="button" onClick={() => addStep(s)} className={`${btn()} w-9 text-base sm:w-10 max-sm:flex-1 max-sm:pointer-coarse:min-w-0`} title={`Add ${s} (${s})`}>
                 {s}
               </button>
             ))}
-            <button type="button" onClick={removeSelected} className={btn()} title="Delete (Backspace)">
+            <button type="button" onClick={removeSelected} className={`${btn()} max-sm:flex-1 max-sm:pointer-coarse:min-w-0`} title="Delete (Backspace)" aria-label="Delete">
               ⌫
             </button>
             {rhythmError && <span className="text-xs text-danger">That won&apos;t fit in the bar.</span>}
             {clipNote && <span className="text-xs text-accent">{clipNote}</span>}
             <span className="ml-auto text-xs text-muted tabular-nums">
-              {selected?.pitch ? pitchName(selected.pitch) : selected ? "Rest" : "—"} · bar {cursor.measure + 1} · {Math.round((filled / cap) * 100) === 100 ? "full" : `${formatBeats(filled / TICKS_PER_QUARTER)} of ${cap / TICKS_PER_QUARTER} beats`}
+              Bar {cursor.measure + 1} {Math.round((filled / cap) * 100) === 100 ? "is full" : `has ${formatBeats(filled / TICKS_PER_QUARTER)} of ${cap / TICKS_PER_QUARTER} beats`}
+              {selected ? ` · ${selected.pitch ? pitchName(selected.pitch) : "a rest"} selected` : ""}
             </span>
           </div>
         </div>

@@ -37,9 +37,16 @@ function Bar({
   // bar (flex-1, then grid rows) they came out zero-height in the macOS desktop app — WebKit doesn't
   // give a <button>'s inside a definite height (FB-20, FB-21). Solid colours with `opacity`, too.
   const lit = level === 2 ? "bg-accent" : "bg-foreground opacity-40";
-  const className = `relative block ${dim} shrink-0 rounded-md bg-surface p-[3px] text-left ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
-    level === 0 ? "opacity-50" : ""
-  } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;
+  // The playing beat gets a solid accent ring (outside the bar, with a gap) and an accent tint, so
+  // it stands out in light mode too. The resting ring is a separate class so the two never fight
+  // over the ring colour.
+  const className = `relative block ${dim} shrink-0 rounded-md p-[3px] text-left transition-transform ${
+    level === 0 && !active ? "opacity-50" : ""
+  } ${
+    active
+      ? "scale-105 bg-accent/15 ring-2 ring-accent ring-offset-2 ring-offset-background"
+      : "bg-surface ring-1 ring-inset ring-foreground/10"
+  }`;
   const content = (
     <>
       {/* Top to bottom; they light from the bottom up. The top two carry the gap below them. */}
@@ -92,6 +99,7 @@ export default function BeatIndicator({
   subAccents = [],
   currentSub = 0,
   onCycleSub,
+  cycleHint = false,
 }: {
   accents: BeatLevel[];
   currentBeat: number | null;
@@ -117,6 +125,8 @@ export default function BeatIndicator({
       interaction `onCycle` gives the beats — called with the beat index and the tick's own
       0-based position within that beat (`0` is the first tick after the beat). */
   onCycleSub?: (beatIndex: number, subIndex: number) => void;
+  /** With `onCycle`: a small caption under the beats saying they can be clicked (tapped on touch). */
+  cycleHint?: boolean;
 }) {
   const small = size === "sm";
   const dim = small ? "h-10 w-7" : "h-16 w-10";
@@ -124,7 +134,7 @@ export default function BeatIndicator({
   const seg = small ? "h-[9px]" : "h-[17px]";
   const dotCount = Math.max(0, Math.round(subdivision) - 1);
 
-  return (
+  const row = (
     <div
       className={`flex flex-wrap items-end justify-center ${small ? "gap-2" : "gap-3"}`}
       role="group"
@@ -153,13 +163,23 @@ export default function BeatIndicator({
                 active={currentBeat === i && currentSub === d + 1}
                 label={`Subdivision after beat ${i + 1}${dotCount > 1 ? ` (${d + 1}/${dotCount})` : ""}: ${LEVEL_LABEL[dotLevel]}`}
                 dim={dim}
-            seg={seg}
+                seg={seg}
                 onClick={onCycleSub && (() => onCycleSub(i, d))}
               />
             );
           })}
         </div>
       ))}
+    </div>
+  );
+  if (!cycleHint || !onCycle) return row;
+  return (
+    <div className="flex flex-col items-center gap-2">
+      {row}
+      <p className="text-xs text-muted">
+        <span className="pointer-coarse:hidden">Click</span>
+        <span className="hidden pointer-coarse:inline">Tap</span> a beat to change its accent
+      </p>
     </div>
   );
 }

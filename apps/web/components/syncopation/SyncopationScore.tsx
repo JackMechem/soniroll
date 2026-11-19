@@ -162,8 +162,10 @@ export default function SyncopationScore({ bars, ostinato }: { bars: Syncopation
         up = buildVoice(hiHatPart(bar, ostinato), 1, "b/4", false, i, tags);
         down = buildVoice(pattern, -1, "d/4", true, i, tags);
       } else {
-        up = buildVoice(pattern, 1, "b/4", true, i, tags);
         const feet = feetPart(bar, ostinato);
+        // With the feet below, the pattern's rests sit higher (around the top space), clear of
+        // the bass drum's noteheads in the bottom space.
+        up = buildVoice(pattern, 1, feet ? "e/5" : "b/4", true, i, tags);
         down = feet ? buildVoice(feet, -1, "e/4", false, i, tags) : null;
       }
       const voices = down ? [up.voice, down.voice] : [up.voice];

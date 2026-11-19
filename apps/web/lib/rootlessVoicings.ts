@@ -260,6 +260,14 @@ const AWKWARD = new Set(["E#", "B#", "Cb", "Fb"]);
 
 function spellScored(root: string, degree: DegreeName): { name: string; cost: number } {
   const { semis, steps } = DEGREES[degree];
+  return spellAbove(root, semis, steps);
+}
+
+/** The note `semis` semitones and `steps` letters above `root` ("Eb"), e.g. (G, 3, 2) is B♭ —
+    the minor 3rd of G, never A♯. `cost` is 0 for a clean name, 1 for E♯/B♯/C♭/F♭, 2 where a
+    double sharp or flat was needed (then `name` is the plain note instead). Guess the Chord
+    spells its revealed notes with this too. */
+export function spellAbove(root: string, semis: number, steps: number): { name: string; cost: number } {
   const letterIdx = (LETTERS.indexOf(root[0]) + steps) % 7;
   const pc = mod12(noteNamePc(root) + semis);
   let acc = mod12(pc - LETTER_PC[letterIdx]);

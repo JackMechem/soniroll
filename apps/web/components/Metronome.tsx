@@ -251,6 +251,7 @@ export default function Metronome() {
             subAccents={displaySubAccents}
             currentSub={currentSub}
             onCycleSub={handleCycleSub}
+            cycleHint
           />
         )}
       </div>

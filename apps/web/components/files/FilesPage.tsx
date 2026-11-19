@@ -203,7 +203,7 @@ export default function FilesPage() {
         >
           {isAuthenticated && (
             <Toolbar>
-              <HeroSearch value={query} onChange={setQuery} placeholder="Search files" />
+              <HeroSearch value={query} onChange={setQuery} placeholder="Search files…" />
               {/* Only when there's something to back up (a greyed-out icon explained nothing). */}
               {items.length > 0 && (
                 <button
@@ -318,6 +318,25 @@ export default function FilesPage() {
             </>
             )}
 
+            {/* No files at all: the same dashed empty state as the other Library tabs, not an empty
+                "Everything 0" card. */}
+            {items.length === 0 ? (
+              <>
+                <EmptyState
+                  boxed
+                  title="No files yet"
+                  body={
+                    <>
+                      Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes.
+                      <span className="pointer-coarse:hidden"> You can drop files anywhere on this page.</span>
+                    </>
+                  }
+                  action={<Pill primary icon={UploadIcon} label="Upload files" onClick={uploader.pick} />}
+                />
+                {actions.status && <p className="text-sm text-muted">{actions.status}</p>}
+                {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
+              </>
+            ) : (
             <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
               {/* Title, or what's ticked and what to do with it. */}
               <div className="flex min-h-11 flex-wrap items-center gap-2 py-1.5 pl-4 pr-2">
@@ -378,22 +397,7 @@ export default function FilesPage() {
               </div>
 
               {shown.length === 0 ? (
-                items.length === 0 ? (
-                  <EmptyState
-                    title="Nothing here yet"
-                    body={
-                      <>
-                        Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes.
-                        <span className="pointer-coarse:hidden"> You can drop files anywhere on this page.</span>
-                      </>
-                    }
-                    action={
-                      <Pill primary icon={UploadIcon} label="Upload files" onClick={uploader.pick} />
-                    }
-                  />
-                ) : (
-                  <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
-                )
+                <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
               ) : (
                 <div role="table" aria-label="Your files" className="flex flex-col divide-y divide-foreground/10">
                   <div role="row" className={`hidden h-9 items-center px-1.5 text-xs font-medium text-muted sm:grid ${COLUMNS}`}>
@@ -438,7 +442,7 @@ export default function FilesPage() {
                           onClick={() => (showChecks && !window.matchMedia("(min-width: 640px)").matches ? toggle(item) : actions.openFile(item))}
                           className="flex min-w-0 items-center gap-3 px-2 py-2 text-left"
                         >
-                          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} />
+                          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} recording={item.kind === "recording"} />
                           <span className="min-w-0 flex-1">
                             <span className="flex min-w-0 items-center gap-1.5">
                               <span className="truncate text-sm font-medium">{item.name}</span>
@@ -484,6 +488,7 @@ export default function FilesPage() {
               {actions.status && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-muted">{actions.status}</p>}
               {actions.error && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error}</p>}
             </section>
+            )}
           </>
         )}
       </div>

@@ -21,7 +21,7 @@ import {
 } from "@/components/tools";
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
-import { GRADE_COLOR, GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
+import { GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
 import { formatChordParts, parseChordInput, pcLabel } from "@/lib/chords";
 import {
   AnswerMode,
@@ -60,9 +60,10 @@ import LevelComplete from "@/components/learning/LevelComplete";
 import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { PoolPill } from "@/components/reward/Reward";
 import StruggleCounts from "@/components/learning/StruggleCounts";
-import { ANSWER_INPUT, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_DASH, bestPassingMs, passedRound, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
+import { GRADE_COLOR, ANSWER_INPUT, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK, IDLE_RING, bestPassingMs, passedRound, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -212,12 +213,12 @@ function KeypadKey({
       aria-label={title ?? label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPress}
-      className={`flex flex-col items-center justify-center gap-0.5 rounded-lg bg-background px-1.5 py-1.5 hover:bg-surface-hover disabled:hover:bg-background pointer-coarse:min-h-10 ${
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1.5 py-1.5 hover:bg-surface-hover pointer-coarse:min-h-10 ${
         wide ? "col-span-2" : ""
       }`}
     >
       <span className="text-base font-semibold leading-none">{label}</span>
-      {caption && <span className="text-[0.6rem] leading-none text-muted">{caption}</span>}
+      {caption && <span className="text-xs leading-none text-muted">{caption}</span>}
     </button>
   );
 }
@@ -727,7 +728,7 @@ export default function GuessTheProgression() {
 
   const typedTokens = splitAnswer(typed, answerMode);
   const right = marks ? marks.filter(Boolean).length : 0;
-  const centerLabel = !running || !round ? "—" : status && marks ? `${right}/${marks.length}` : "?";
+  const centerLabel = !running || !round ? "?" : status && marks ? `${right}/${marks.length}` : "?";
   const glow = running && status ? GRADE_COLOR[status] : null;
   const keyName = round ? noteGlyphs(pcLabel(round.tonicPc, accidentalStyle, 0)) : null;
 
@@ -762,7 +763,7 @@ export default function GuessTheProgression() {
                       <div className="flex flex-col">
                         <span className="font-medium tabular-nums">{formatDuration(entry.elapsedMs)}</span>
                         <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} · {new Date(entry.at).toLocaleDateString()}
+                          {entry.config.drillMode ? "Drill" : "Quiz"} · {formatFileDate(entry.at)}
                         </span>
                       </div>
                       <span
@@ -1089,9 +1090,10 @@ export default function GuessTheProgression() {
         {!(learnMode && !running) && (
         // Smaller while a round runs, so the keypads, Submit and Stop all fit on a laptop screen.
         <div className={`relative flex items-center justify-center p-4 text-center ${running ? "h-28 w-28" : "h-36 w-36 sm:h-44 sm:w-44"}`}>
+          {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={running} timerRef={noteTimerRef} />
           <span
-            className={!running ? IDLE_DASH : "relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200"}
+            className={!running ? IDLE_MARK : "relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200"}
             style={
               glow
                 ? { color: glow }
@@ -1118,9 +1120,12 @@ export default function GuessTheProgression() {
                   // A fixed height with room for the "You: …" line, so answering doesn't grow it.
                   <div
                     key={i}
-                    className={`flex h-[3.75rem] min-w-14 flex-col items-center justify-center rounded-md border px-2.5 transition-colors ${
-                      playingIndex === i ? "border-accent bg-accent/10" : "border-foreground/15 bg-surface"
-                    }`}
+                    // Right / wrong tints the box; the chord that's playing gets an accent outline
+                    // on top, so a replay never hides which ones were wrong.
+                    className={`flex h-[3.75rem] min-w-14 flex-col items-center justify-center rounded-md border px-2.5 outline-offset-2 transition-colors ${
+                      color ? "" : "border-foreground/15 bg-surface"
+                    } ${playingIndex === i ? "outline-2 outline-accent" : ""}`}
+                    style={color ? { borderColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` } : undefined}
                   >
                     <span
                       className={`text-lg font-semibold leading-7 ${!status && !typedTokens[i] ? "text-muted" : ""}`}
@@ -1158,7 +1163,7 @@ export default function GuessTheProgression() {
           </>
         )}
 
-        {/* Stays in place once answered (greyed out), with Next where Submit was. */}
+        {/* The answer box and buttons stay in place once answered, with Next where Submit was. */}
         {running && round && (
           <form
             onSubmit={(e) => {
@@ -1169,47 +1174,7 @@ export default function GuessTheProgression() {
             }}
             className="flex w-full flex-col items-center gap-2"
           >
-            <fieldset
-              disabled={!!status}
-              className="flex w-full max-w-[22rem] min-w-0 flex-col gap-1.5 disabled:pointer-events-none disabled:opacity-50"
-            >
-              {answerMode === "numerals" ? (
-                <div role="group" aria-label="Numeral keypad" className="grid grid-cols-8 gap-1 rounded-xl bg-surface p-1.5">
-                  {UPPER_NUMERALS.map((n) => (
-                    <KeypadKey key={n} label={n} title={`${n} (major)`} onPress={() => insertText(n, true)} />
-                  ))}
-                  <KeypadKey label="♭" title="Flat (before a numeral)" onPress={() => insertText("b", true)} />
-                  {LOWER_NUMERALS.map((n) => (
-                    <KeypadKey key={n} label={n} title={`${n} (minor)`} onPress={() => insertText(n, true)} />
-                  ))}
-                  <KeypadKey label="♯" title="Sharp (before a numeral)" onPress={() => insertText("#", true)} />
-                </div>
-              ) : (
-                <div role="group" aria-label="Root keypad" className="grid grid-cols-7 gap-1 rounded-xl bg-surface p-1.5">
-                  {ROOT_LETTERS.map((l) => (
-                    <KeypadKey key={l} label={l} onPress={() => insertText(l, true)} />
-                  ))}
-                </div>
-              )}
-              {/* With numerals, ♭/♯ go before a numeral (the numeral rows have them), never inside
-                  a chord's quality, so the symbol keypad leaves its own pair out. */}
-              {(typeQualities || answerMode === "chords") && (
-                <ChordSymbolKeypad
-                  onInsert={(t) => insertText(t)}
-                  omit={answerMode === "numerals" ? ["#", "b"] : undefined}
-                />
-              )}
-              <div className="grid grid-cols-7 gap-1 rounded-xl bg-surface p-1.5">
-                {typeQualities ? (
-                  DIGIT_KEYS.map((d) => <KeypadKey key={d} label={d} onPress={() => insertText(d)} />)
-                ) : (
-                  <div className="col-span-5" />
-                )}
-                <KeypadKey label="␣" caption="next" title="Next chord (space)" onPress={() => insertText(" ")} />
-                <KeypadKey label="⌫" caption="delete" title="Delete" onPress={backspace} />
-              </div>
-            </fieldset>
-            {/* The keypads above can type every answer, so a tap on the box shows its caret but not
+            {/* The keypads below can type every answer, so a tap on the box shows its caret but not
                 the phone's keyboard (FB-26). Set before focus, from the tap itself, so a hardware
                 keyboard or a mouse click still types normally. */}
             <input
@@ -1262,6 +1227,50 @@ export default function GuessTheProgression() {
                 I don&apos;t know
               </button>
             </div>
+            {/* The keypads sit under the buttons and go away once the round is graded, so the
+                result isn't followed by a greyed-out keypad, and Next stays where Submit was. On
+                a desktop the page is centred vertically, so there they only turn invisible (still
+                taking their space); removing them would slide everything down under the pointer. */}
+            <fieldset
+              disabled={!!status}
+              className={`flex w-full max-w-[22rem] min-w-0 flex-col gap-2 ${status ? "max-lg:hidden lg:invisible" : ""}`}
+            >
+              {answerMode === "numerals" ? (
+                <div role="group" aria-label="Numeral keypad" className="grid grid-cols-8 gap-1">
+                  {UPPER_NUMERALS.map((n) => (
+                    <KeypadKey key={n} label={n} title={`${n} (major)`} onPress={() => insertText(n, true)} />
+                  ))}
+                  <KeypadKey label="♭" title="Flat (before a numeral)" onPress={() => insertText("b", true)} />
+                  {LOWER_NUMERALS.map((n) => (
+                    <KeypadKey key={n} label={n} title={`${n} (minor)`} onPress={() => insertText(n, true)} />
+                  ))}
+                  <KeypadKey label="♯" title="Sharp (before a numeral)" onPress={() => insertText("#", true)} />
+                </div>
+              ) : (
+                <div role="group" aria-label="Root keypad" className="grid grid-cols-7 gap-1">
+                  {ROOT_LETTERS.map((l) => (
+                    <KeypadKey key={l} label={l} onPress={() => insertText(l, true)} />
+                  ))}
+                </div>
+              )}
+              {/* With numerals, ♭/♯ go before a numeral (the numeral rows have them), never inside
+                  a chord's quality, so the symbol keypad leaves its own pair out. */}
+              {(typeQualities || answerMode === "chords") && (
+                <ChordSymbolKeypad
+                  onInsert={(t) => insertText(t)}
+                  omit={answerMode === "numerals" ? ["#", "b"] : undefined}
+                />
+              )}
+              <div className="grid grid-cols-7 gap-1">
+                {typeQualities ? (
+                  DIGIT_KEYS.map((d) => <KeypadKey key={d} label={d} onPress={() => insertText(d)} />)
+                ) : (
+                  <div className="col-span-5" />
+                )}
+                <KeypadKey label="␣" caption="next" title="Next chord (space)" onPress={() => insertText(" ")} />
+                <KeypadKey label="⌫" caption="delete" title="Delete" onPress={backspace} />
+              </div>
+            </fieldset>
           </form>
         )}
 
