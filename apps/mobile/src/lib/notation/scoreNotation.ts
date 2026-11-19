@@ -42,7 +42,18 @@ const MIN_LAID_OUT = 175;
 const VALUE_DURATION: Record<TNote['value'], string> = { w: 'w', h: 'h', q: 'q', '8': '8', '16': '16' };
 const ACC: Record<number, string> = { [-2]: 'bb', [-1]: 'b', 0: 'n', 1: '#', 2: '##' };
 
-export type ScoreMeasureBox = { measure: number; x: number; w: number; noteStart: number; noteEnd: number };
+export type ScoreMeasureBox = {
+  measure: number;
+  x: number;
+  w: number;
+  noteStart: number;
+  noteEnd: number;
+  /** Each real note's x, and where it starts in the bar (ticks) — for writing on the staff by touch. */
+  noteXs: number[];
+  noteStarts: number[];
+  /** No room left in the bar: touching past its last note re-pitches rather than adds. */
+  full: boolean;
+};
 export type ScoreNoteBox = { measure: number; note: number; x: number; y: number; w: number; h: number };
 export type ScoreChordMark = { measure: number; beat: number; x: number; symbol: string };
 
@@ -85,7 +96,11 @@ function paddingRests(start: number, ticks: number): string[] {
 
 /** The score laid out for a box `width` wide. `firstBar` is the number printed on the first
     measure (a snippet out of a longer score). */
-export function renderScoreRows(transcription: Transcription, width: number, opts: { firstBar?: number } = {}): ScoreRow[] {
+export function renderScoreRows(
+  transcription: Pick<Transcription, 'measures' | 'clef' | 'key' | 'timeSignature'>,
+  width: number,
+  opts: { firstBar?: number } = {},
+): ScoreRow[] {
   if (width < 50 || !transcription.measures.length) return [];
   installVexFlowNative(); // before any notes are made: they measure their glyphs
   const firstBar = opts.firstBar ?? 1;
@@ -213,7 +228,17 @@ export function renderScoreRows(transcription: Transcription, width: number, opt
         return startX + ((endX - startX) * beat) / ts.top;
       };
       for (const c of m.chords) chords.push({ x: beatX(c.beat) - 4, symbol: c.symbol, measure: mi, beat: c.beat });
-      boxes.push({ measure: mi, x, w, noteStart: startX, noteEnd: endX });
+      const noteXs: number[] = [];
+      const noteStarts: number[] = [];
+      let tick = 0;
+      notes.forEach((sn, idx) => {
+        const src = sources[idx];
+        if (!src) return;
+        noteXs.push(sn.getAbsoluteX());
+        noteStarts.push(tick);
+        tick += noteTicks(src);
+      });
+      boxes.push({ measure: mi, x, w, noteStart: startX, noteEnd: endX, noteXs, noteStarts, full: used >= cap });
       x += w;
     });
 

@@ -41,6 +41,7 @@ import {
   type TNote,
   type Transcription,
 } from "@/lib/bassTranscription";
+import { KEY_OPTIONS, TIME_SIGNATURES, clampCursor, formatBeats, noteIndexAtBeat, rebar, startBeat } from "@jam-practice/core/scoreEdit";
 import { getAudioContext } from "@/lib/metronome";
 import { playSampledNote, prepareSampledNote } from "@/lib/sampledTones";
 import { loadUprightBass, playUprightBassNote } from "@/lib/uprightBass";
@@ -57,44 +58,6 @@ type ChordClip = Transcription["measures"][number]["chords"][];
 let chordClipboard: ChordClip | null = null;
 function setChordClipboard(clip: ChordClip) {
   chordClipboard = clip;
-}
-
-const TIME_SIGNATURES = ["4/4", "3/4", "2/4", "2/2", "5/4", "6/4", "6/8", "9/8", "12/8", "7/8", "5/8"];
-
-/** Re-bars a score for a new time signature, keeping every note and chord where it falls in time.
-    Null when a note would cross the new bar lines (it would have to be split). */
-function rebar(t: Transcription, top: number, bottom: number): Transcription | null {
-  const oldCap = measureCapacity(t);
-  const cap = measureCapacity({ timeSignature: { top, bottom } });
-  const notes: { at: number; note: TNote }[] = [];
-  const chords: { at: number; symbol: string }[] = [];
-  let end = 0;
-  t.measures.forEach((m, mi) => {
-    let at = mi * oldCap;
-    for (const n of m.notes) {
-      notes.push({ at, note: n });
-      at += noteTicks(n);
-    }
-    for (const c of m.chords) chords.push({ at: mi * oldCap + c.beat * TICKS_PER_QUARTER, symbol: c.symbol });
-    end = Math.max(end, at);
-  });
-  const count = Math.max(1, Math.ceil(Math.max(end, t.measures.length * oldCap) / cap));
-  const measures = Array.from({ length: count }, () => emptyMeasure());
-  // A gap (from a short old bar) becomes rests only where a note follows; trailing space stays empty.
-  const filled = new Array<number>(count).fill(0);
-  for (const { at, note } of notes) {
-    const mi = Math.floor(at / cap);
-    const len = noteTicks(note);
-    if (at - mi * cap + len > cap + 0.001) return null;
-    if (at - mi * cap > filled[mi] + 0.001) return null;
-    measures[mi].notes.push(note);
-    filled[mi] += len;
-  }
-  for (const c of chords) {
-    const mi = Math.min(count - 1, Math.floor(c.at / cap));
-    measures[mi].chords.push({ beat: (c.at - mi * cap) / TICKS_PER_QUARTER, symbol: c.symbol });
-  }
-  return { ...t, timeSignature: { top, bottom }, measures };
 }
 
 const midiFreq = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
@@ -544,9 +507,7 @@ export default function ScoreEditor({
   /** Phones: the rhythm row's buttons share the row equally. */
   const phoneRow = "max-sm:order-1 max-sm:flex-1 max-sm:px-1 max-sm:pointer-coarse:min-w-0";
 
-  const keyOptions = Object.entries(KEY_NAMES)
-    .map(([k, n]) => ({ value: Number(k), label: `${n.major.replace("b", "♭").replace("#", "♯")} major · ${n.minor.replace("b", "♭").replace("#", "♯")} minor` }))
-    .sort((x, y) => Math.abs(x.value) - Math.abs(y.value) || y.value - x.value);
+  const keyOptions = KEY_OPTIONS;
   const setTime = (value: string) => {
     const [top, bottom] = value.split("/").map(Number);
     if (top === t.timeSignature.top && bottom === t.timeSignature.bottom) return;
@@ -863,32 +824,4 @@ function revealCaret(scoreBox: HTMLElement | null, palette: HTMLElement | null) 
   if (Math.abs(delta) < 1) return;
   const behavior: ScrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   (scroller ?? document.scrollingElement)?.scrollBy({ top: delta, behavior });
-}
-
-/** The beat (in quarters from the bar line) the note at `c` starts on. */
-function startBeat(t: Transcription, c: Cursor): number {
-  const notes = t.measures[c.measure]?.notes ?? [];
-  return notes.slice(0, Math.max(0, c.note)).reduce((s, n) => s + noteTicks(n), 0) / TICKS_PER_QUARTER;
-}
-
-/** The note starting at `beat` in bar `measure` (or -1 if none does). */
-function noteIndexAtBeat(t: Transcription, measure: number, beat: number): number {
-  let at = 0;
-  const notes = t.measures[measure]?.notes ?? [];
-  for (let i = 0; i < notes.length; i++) {
-    if (Math.abs(at / TICKS_PER_QUARTER - beat) < 1e-6) return i;
-    at += noteTicks(notes[i]);
-  }
-  return -1;
-}
-
-/** 2, 2.5, 2.67 — beats as a short number. */
-function formatBeats(beats: number) {
-  return Number.isInteger(beats) ? String(beats) : String(Math.round(beats * 100) / 100);
-}
-
-function clampCursor(t: Transcription, c: Cursor): Cursor {
-  const measure = Math.min(c.measure, t.measures.length - 1);
-  const note = Math.min(c.note, t.measures[measure].notes.length - 1);
-  return { measure, note };
 }
