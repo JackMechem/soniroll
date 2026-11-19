@@ -91,3 +91,72 @@ with a handle at the top. Dragging within 8 px of it scrubs (`Waveform`'s `scrub
 release, `onScrub` keeps the time readout following); clicking or dragging the overview strip also
 moves it. Checked headless with a fake-mic take; not on a touch screen. The count-in bug (FB-19,
 3 clicks for 4) was the shared click scheduler, see `tools-jam-practice-and-metronome.md`.
+
+## 2026-11-19 — on the phone, and the analysis moved to `packages/core`
+
+The mobile app got the Time Test (`apps/mobile/src/app/tool/time-test.tsx`), on the
+`feat/mobile-refresh` branch. Same settings key and defaults (`jam-practice-time-test`), the same
+synced history (`jam-practice-time-test-history`), and the mic settings under the same key but kept
+on the phone (`useDeviceSettings`, AsyncStorage), like the website keeps them per computer.
+
+### What moved to core
+
+The pure parts went to `packages/core` so both apps run the same detector and grading:
+`timeTestOnset.ts`, `timeTestClock.ts`, `timeTestAnalysis.ts`, `timeTestTiming.ts`. The web's
+`lib/timeTest/{onset,clock,analysis,timing}.ts` are now one-line `export *` shims. Also moved:
+`TakeSummary` / `HISTORY_LIMIT` (web `timetest/History.tsx` re-exports them) and `verdict()` (was
+local to web `Analytics.tsx`, now in `timeTestTiming.ts`). New in `timeTestAnalysis.ts`, without
+changing what the website gets: `detectStrokes(take, sensitivity)`, `takeOverview(take)`, and an
+optional third argument to `analyze` to pass those in already worked out. Checked with a scratch
+Node script against the old files (four synthetic takes × three sensitivities × fixed/auto grid ×
+bleed on/off, calibration, `LiveGrader`, `ClockMap`, the wording helpers): every result identical,
+and identical again with the precomputed strokes passed in.
+
+### How the phone hears strokes and dates them
+
+- `lib/timeTestPadInput.ts`: `react-native-audio-api`'s `AudioRecorder` (`onAudioReady`, 1024-sample
+  chunks at the device's preferred rate), raw: none of the Tuner's low-pass or gain. The library is
+  already patched to open the mic `Unprocessed` (no AGC), which suits a stroke detector too.
+- The recorder only numbers its samples (`when` is frames emitted / rate; it's on a different
+  stream from the `AudioContext`), so each chunk is dated by **when it reaches JS**:
+  `ctx.currentTime` read first thing in the callback, minus the chunk's length. That's always late
+  by a varying amount (thread hand-off, busy JS, `currentTime` moving per render burst), never
+  early, so `lib/timeTestClock.ts` (`ArrivalClock`) uses the **smallest** offset over ~3 s of
+  chunks; what's left is a fixed input delay that calibration measures with the speaker→mic round
+  trip, as on the website. Live grading uses the past 3 s; a finished take is re-dated with chunks
+  either side (`settled`), so a busy start doesn't skew the first bars. Sliding, so the mic and
+  speaker clocks drifting apart is followed.
+- A scratch simulation (late arrivals with random JS delay and stalls, 192-frame input bursts,
+  128-frame render bursts, 60 ppm drift): settled times within ±1.5 ms of the truth; the fixed
+  offset moved by about ±0.8 ms from one simulated mic session to the next. With 480-frame bursts
+  the error grows to about ±6 ms. These are the model's numbers, not a phone's.
+- `lib/timeTestSession.ts` is the website's session with: the shared click scheduler
+  (`lib/metronomeClickEngine.ts` got the web's optional `onSchedule`), a 400 ms wait after the mic
+  opens before the first click, a 5-minute longest take (the screen stops and grades it then;
+  ~58 MB of samples at 48 kHz), and the take's strokes and 2 ms peaks found **while it records**
+  (the same `Detector` over the same samples, then the same 20 ms flush as `detectAll`: checked
+  identical), because `detectAll` over a long take takes seconds on Hermes. Changing the
+  sensitivity afterwards re-detects; tolerance, latency and the grid re-grade from the cached
+  strokes.
+- Latency guess before calibrating: a flat 50 ms (the phone's engine reports no latencies). The
+  "Calibrate first" prompt stays until it's measured.
+- iOS: asks for the `playAndRecord` session with `defaultToSpeaker`. Never run on an iPhone.
+
+### The screen
+
+The website's phone layout: History chip on top once there's a take; tempo, beats, Record (Stop and
+analyze while recording, with the live readout and a "Recording 0:42" line), "Calibrate…" until
+calibrated; chips Time, Subdivision, Sound, Count-in, You're playing, On time within, Microphone
+(sensitivity with the live meter and stroke flash, Calibrate, Fine-tune, Ignore click bleed;
+descriptions behind ⓘ). Results open under the chips and the page scrolls to them: the verdict,
+six tiles, the waveform (react-native-svg, drawn as a few paths per colour; drag, pinch, tap to
+seek and see a stroke, drag the playhead, tap/drag the whole-take strip), Timing across the take
+(tap a dot, then Show), Where your strokes land (tap a bar), Worst moments, By beat, By note.
+Left out: presets, keyboard shortcuts, Shed Log tool time, a mic picker (the phone uses its own
+input), split-screen guards.
+
+### Verified, and not
+
+`tsc` in mobile, web, desktop and core (only the two old `lessonFiles.ts` errors), eslint on every
+new/changed mobile and web file, and the scratch scripts above. **Not** run on the emulator or a
+phone by the agent that wrote it; not heard; no real mic, pad or speaker; iOS never.

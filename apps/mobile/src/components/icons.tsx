@@ -56,6 +56,7 @@ export const SubdivisionChipIcon = mci('music-note-eighth');
 export const SpeakerIcon = mci('volume-high');
 export const SectionsIcon = mci('format-list-numbered');
 export const RootlessIcon = mci('piano-off');
+export const TargetIcon = mci('bullseye');
 export const LibraryIcon = mci('bookshelf');
 export const SearchIcon = mci('magnify');
 export const MenuIcon = mci('menu');
@@ -130,6 +131,7 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/note-trainer': NoteIcon,
   '/rhythm-section': BassIcon,
   '/find-the-root': RootlessIcon,
+  '/time-test': TargetIcon,
   '/scale-trainer': ScaleIcon,
   '/interval-trainer': IntervalIcon,
   '/guess-the-interval': EarIcon,

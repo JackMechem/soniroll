@@ -3,25 +3,11 @@
 import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { SUB_LABELS } from "@/components/metronome/MetronomeOptions";
-import { STATUS_COLOR, signedMs } from "@/lib/timeTest/timing";
+import { STATUS_COLOR, signedMs, type TakeSummary } from "@/lib/timeTest/timing";
 
-export type TakeSummary = {
-  at: number;
-  bpm: number;
-  meter: string;
-  /** Notes per beat graded; 0 = it changed from beat to beat. */
-  notes: number;
-  seconds: number;
-  score: number;
-  withinPct: number;
-  meanMs: number;
-  stdMs: number;
-  hits: number;
-  toleranceMs: number;
-};
-
-/** How many takes are kept. */
-export const HISTORY_LIMIT = 100;
+// The history's shape is shared with the app (`@jam-practice/core/timeTestTiming`).
+export type { TakeSummary } from "@/lib/timeTest/timing";
+export { HISTORY_LIMIT } from "@/lib/timeTest/timing";
 
 /** Past takes, newest first, with a strip of recent scores. */
 export default function History({ takes, onClear }: { takes: TakeSummary[]; onClear: () => void }) {
