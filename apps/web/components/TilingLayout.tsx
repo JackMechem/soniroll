@@ -85,7 +85,7 @@ function Pane({
           sticky inside it with a negative margin, so the page starts under it and scrolls beneath
           it, as on a phone, while the scrollbar runs the full height beside it. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
-        <div className="sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 pl-4 pr-2 backdrop-blur">
+        <div className="sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:px-6">
           <p className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
             {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
             <span className="truncate">{title?.label ?? ""}</span>
@@ -97,7 +97,7 @@ function Pane({
               onClick={onClose}
               aria-label="Close this pane"
               title="Close this pane"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+              className="-mr-2.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
             >
               <CloseIcon className="h-4 w-4" />
             </button>
@@ -157,13 +157,15 @@ function SplitContainer({
   }
 
   return (
+    // The panes shrink (by their share) to make room for the divider; held at full basis they
+    // ran 8px past the window, cutting into the right pane's close button.
     <div
       ref={containerRef}
       className={`flex h-full w-full min-h-0 min-w-0 ${row ? "flex-row" : "flex-col"}`}
     >
       <div
         style={{ flexBasis: `${node.sizes[0]}%` }}
-        className="h-full min-h-0 w-full min-w-0 shrink-0 grow-0 overflow-hidden"
+        className="h-full min-h-0 w-full min-w-0 shrink grow-0 overflow-hidden"
       >
         {children[0]}
       </div>
@@ -188,7 +190,7 @@ function SplitContainer({
       </div>
       <div
         style={{ flexBasis: `${node.sizes[1]}%` }}
-        className="h-full min-h-0 w-full min-w-0 shrink-0 grow-0 overflow-hidden"
+        className="h-full min-h-0 w-full min-w-0 shrink grow-0 overflow-hidden"
       >
         {children[1]}
       </div>
