@@ -242,3 +242,53 @@ Lessons.
   into the Shed Log until it's logged. `formatPracticed` moved to `packages/core/practiceMinutes.ts`.
 - **Left out**: the time-grid week/day views and dragging, recordings/clips, Shed Notes and adding
   attachments, progress cards and the day report, the tour, the per-tool stats pills.
+
+### Find the Root, Time Test, Score Writer, Shed Notes, Lessons (2026-11-19)
+
+Each was ported by an agent working on its own files, then checked by the lead on the emulator and
+committed by path (each commit message has the details).
+- **Find the Root** (`app/tool/find-the-root.tsx`, `components/findTheRoot/`): Sing or play / Pick,
+  the 12-key picker, half credit, results, History/Struggles. `rootlessVoicings.ts` moved to core.
+  First mobile screen to play the piano with the mic open — check on a phone.
+- **Time Test** (`app/tool/time-test.tsx`, `components/timeTest/`, `lib/timeTest*.ts`): the mic's
+  chunks don't share a clock with the audio context, so each is dated on arrival and the steadiest
+  offset over a few seconds is used; calibration measures the rest (about ±1.5 ms in simulation).
+  The detector and analysis moved to `packages/core/timeTest*.ts`. Accuracy needs a real phone.
+- **Score Writer** (`app/tool/score-writer.tsx`) and **the phone's one notation editor**
+  (`components/notation/ScoreEditor.tsx`, on Rhythm Section's read-only `Score`): a palette at the
+  bottom, press-and-release Write mode, long-press bar menu; scores shared with the website
+  (`api.scores`), on the phone signed out. Rhythm Section got its Band / Bass players tabs with it.
+- **Shed Notes** (`app/tool/shed-notes*.tsx`, `components/shedNotes/`): a native markdown reader
+  and a TextInput editor with a formatting bar above the keyboard; score blocks with the editor;
+  ABC blocks show their source (no web view). Attached notes on Shed Log routines/days and tunes.
+- **Lessons** (`app/tool/lessons*.tsx`, `components/lessons/`): teacher and student sides on the
+  website's Convex functions. Invite links on soniroll.com don't open the app (no app links);
+  Join takes a pasted link or code.
+
+**Keyboard on Android:** the app draws edge to edge, so nothing lifts content for the keyboard,
+and the keyboard's reported height leaves out the gesture bar under it. Bottom sheets
+(`ToolSheet`) now sit on `useKeyboardHeight()`; screens with a fixed bar above the keyboard pad by
+`keyboard + insets.bottom`. (Found because Add a student and the notes' formatting bar were
+hidden.)
+
+## Signed-in check (2026-11-19)
+
+Jack asked for everything to be checked signed in with throwaway accounts. Two dev accounts
+(`testAccounts:create`, `.test` addresses, the password derived on the fly into an environment
+variable, never written down), signed in on the emulator by typing into the Account screen:
+- Shed Log: log time, add a task (both reached the account's `jam-practice-practice-log` row),
+  the Metronome's minutes in Time in tools and logging them (a Timed practice entry, the day total
+  rose), the calendar, Home's Today's practice card.
+- Favorites (starring the Metronome put it on Home), a new score saved to `api.scores`, a new
+  Shed Note with a checklist and a [[link]], Library / Community / Recorder / Recordings loading.
+- Lessons with both accounts: the teacher added a student, made a lesson and an assignment; the
+  student joined with the invite code, saw the lesson and ticked the assignment off.
+- **Deleting them found a real bug:** `account.performDelete` never removed `syncedSettings`
+  (the Shed Log, tunes, favorites, every setting) — fixed (commit 45b2fdc), pushed to dev only.
+  The app's own Delete account flow emails a code, which `.test` addresses can't receive, so the
+  accounts were deleted with `npx convex run account:performDelete` on dev; nothing of theirs
+  remains. Older test accounts from earlier sessions (reviewer, auditor, demo @soniroll.test) were
+  left alone.
+- Not checked signed in: hand-ins and review, booking, routines between teacher and student,
+  sharing notes/routines, cross-device edits with the website open, the Recorder actually
+  recording, Bass players, the Practice Timer's steps reaching the Shed Log.
