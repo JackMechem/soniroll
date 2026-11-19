@@ -292,3 +292,25 @@ variable, never written down), signed in on the emulator by typing into the Acco
 - Not checked signed in: hand-ins and review, booking, routines between teacher and student,
   sharing notes/routines, cross-device edits with the website open, the Recorder actually
   recording, Bass players, the Practice Timer's steps reaching the Shed Log.
+
+### Files and the media viewer (2026-11-19)
+
+Jack: "the file browser feature should work, and there should be a media viewer so i can view
+pdfs, images, etc". Library → Files (`app/files/index.tsx`, `components/files/`) on the website's
+`files.*` functions; files kept on the phone in the app's storage (`lib/deviceFiles.ts`, the row in
+the account with a device key/label, like the website's browser storage); the Recorder saves on
+the phone on the free plan. `components/files/FileViewer.tsx` shows PDFs
+(`react-native-pdf-renderer`), images, audio, video (`expo-video`) and text, used by Files,
+Lessons and Shed Notes. New native packages: react-native-pdf-renderer, expo-video,
+expo-sharing — the app had to be rebuilt.
+
+Two sheet bugs found while checking: a `ToolSheet` whose content grew after opening (the share
+sheet's spinner → button) kept its first height and cut the rest off — its scroll area is now
+sized to its content as it changes (`onContentSizeChange`); and `useKeyboardHeight` now ignores a
+"shown" event with no keyboard actually showing. (Several wrong theories were tried first — the
+slide-in animation, the menu hand-off, `gap` in the content container; measuring with a debug line
+and a UI dump is what found it.)
+
+Checked on the emulator with a throwaway free-plan account: uploading a PDF, an image, an audio
+file and a video; each in the viewer; a share link (the file went online, the share sheet opened);
+delete (row and phone copy gone). The account was deleted afterwards.
