@@ -8,6 +8,9 @@ import { CLICK_SOUNDS, scheduleClick } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
 import { getAudioContext } from "@/lib/metronome";
 import { NOTE_VALUES, NOTE_VALUE_NAMES, SUBDIVISIONS } from "@/lib/meterControls";
+import { SUB_LABELS } from "@jam-practice/core/meterControls";
+
+export { SUB_LABELS };
 
 /*
  * The Metronome's options, designed to explain themselves by how they look rather than with
@@ -16,7 +19,6 @@ import { NOTE_VALUES, NOTE_VALUE_NAMES, SUBDIVISIONS } from "@/lib/meterControls
  * it. Accents aren't here: tapping a beat in the main beat strip sets them.
  */
 
-export const SUB_LABELS: Record<number, string> = { 1: "Beat", 2: "8ths", 3: "Triplets", 4: "16ths", 5: "Quintuplets", 6: "Sextuplets" };
 
 /** A small titled group inside a panel. */
 export function OptionGroup({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {

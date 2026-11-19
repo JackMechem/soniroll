@@ -50,6 +50,11 @@ export const ChordIcon = mci('piano');
 export const ShuffleIcon = mci('shuffle');
 export const BookIcon = mci('book-music');
 export const ToolsIcon = mci('view-grid-outline');
+// Setting chips (the website's MeterIcon, NoteIcon and SpeakerIcon).
+export const MeterIcon = mci('fraction-one-half');
+export const SubdivisionChipIcon = mci('music-note-eighth');
+export const SpeakerIcon = mci('volume-high');
+export const SectionsIcon = mci('format-list-numbered');
 export const LibraryIcon = mci('bookshelf');
 export const SearchIcon = mci('magnify');
 export const MenuIcon = mci('menu');

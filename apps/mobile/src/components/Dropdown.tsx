@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text } from 'react-native';
 
+import { ChevronDownIcon } from '@/components/icons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -29,7 +30,7 @@ export function Dropdown<T>({
       original key, so a transposed chart is obvious at a glance. */
   highlighted?: boolean;
 }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
 
@@ -37,13 +38,15 @@ export function Dropdown<T>({
     <>
       <Pressable
         onPress={() => setOpen(true)}
-        className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-        style={{ backgroundColor: highlighted ? colors.accent : colors.surface }}
+        accessibilityRole="button"
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="h-9 flex-row items-center gap-1.5 overflow-hidden rounded-lg pl-3 pr-2"
+        style={{ backgroundColor: highlighted ? colors.accent : derived.fill }}
       >
-        <Text className="text-sm font-bold font-ui-bold" style={{ color: highlighted ? colors['accent-foreground'] : colors.foreground }}>
+        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: highlighted ? colors['accent-foreground'] : colors.foreground }}>
           {triggerLabel ?? current?.label ?? String(value)}
         </Text>
-        <Text className="font-ui" style={{ color: highlighted ? colors['accent-foreground'] : colors.muted }}>▾</Text>
+        <ChevronDownIcon color={highlighted ? colors['accent-foreground'] : colors.muted} size={18} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
