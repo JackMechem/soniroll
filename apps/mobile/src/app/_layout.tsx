@@ -84,6 +84,7 @@ function RootNavigator() {
         <Stack.Screen name="tool/guess-the-chord" options={{ title: 'Guess the Chord' }} />
         <Stack.Screen name="tool/guess-the-progression" options={{ title: 'Guess the Progression' }} />
         <Stack.Screen name="tool/guess-the-interval" options={{ title: 'Guess the Interval' }} />
+        <Stack.Screen name="tool/find-the-root" options={{ title: 'Find the Root' }} />
         <Stack.Screen name="tool/interval-trainer" options={{ title: 'Interval Trainer' }} />
         <Stack.Screen name="tool/slow-downer" options={{ title: 'Slow Downer' }} />
         <Stack.Screen name="tool/jam-practice" options={{ title: 'Jam Practice' }} />
