@@ -6,7 +6,7 @@ import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Disclosure from "@/components/Disclosure";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import Hint from "@/components/Hint";
-import InputTest from "@/components/InputTest";
+import InputTest, { MicLevel } from "@/components/InputTest";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
@@ -15,6 +15,7 @@ import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { PoolPill } from "@/components/reward/Reward";
+import StruggleCounts from "@/components/learning/StruggleCounts";
 import {
   ChordIcon,
   FlagIcon,
@@ -23,6 +24,7 @@ import {
   PlayIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -33,7 +35,6 @@ import {
 } from "@/lib/audioInput";
 import { prettyQuality } from "@/lib/iRealPro";
 import {
-  GRADE_COLOR,
   GRADE_LABEL,
   Grade,
   describePitch,
@@ -64,17 +65,21 @@ import {
   voicingNoteNames,
   voicingSymbol,
 } from "@/lib/rootlessVoicings";
-import { GradeCounts, attempts, bumpGradeCounts, rankWeak } from "@/lib/struggleStats";
+import { GradeCounts, bumpGradeCounts, rankWeak } from "@/lib/struggleStats";
 import {
   DEFAULT_EAR_TRAINING_TONE_ID,
   EAR_TRAINING_TONES,
   playNotesTogether,
 } from "@/lib/tones";
 import { useToolActivity } from "@/lib/toolTime";
-import { formatDuration, shuffled } from "@/lib/trainerUtils";
+import { formatFileDate } from "@/lib/files";
+import { micErrorMessage } from "@/lib/micError";
+import { shuffled } from "@/lib/trainerUtils";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
-import { PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import { usePaneKeyGuard } from "@/lib/paneContext";
+import { GRADE_COLOR, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 /** How long the voicing rings. */
 const CHORD_SECONDS = 2.2;
@@ -159,8 +164,12 @@ function chordLabel(symbol: { root: string; suffix: string }) {
   return `${prettyNote(symbol.root)}${prettyQuality(symbol.suffix)}`;
 }
 
+/** A score with half points as a fraction ("1½", "½"), not "1.5" / "0.5": a root found on a
+    retry counts half. */
 function formatScore(score: number) {
-  return score % 1 === 0 ? String(score) : score.toFixed(1);
+  const whole = Math.floor(score);
+  const half = score - whole >= 0.5;
+  return half ? `${whole > 0 ? whole : ""}½` : String(whole);
 }
 
 /** The root keys, laid out like a piano: white keys below, black keys above them. */
@@ -203,18 +212,24 @@ export default function FindTheRoot() {
   const [round, setRound] = useState<RootlessRound | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
+  /** In Pick mode, the key that answered the round (with 7♭9 any of its four roots counts). */
+  const [rightPick, setRightPick] = useState<number | null>(null);
   const [heard, setHeard] = useState<{ text: string; wrong: boolean } | null>(null);
   const [chordSounding, setChordSounding] = useState(false);
   const [progress, setProgress] = useState<{ index: number; total: number; score: number; done: number } | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [lastMode, setLastMode] = useState<"normal" | "weak">("normal");
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Switch to Pick". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
 
   const sessionRef = useRef<Session | null>(null);
   const sessionStartRef = useRef<number | null>(null);
   const inputRef = useRef<AudioInput | null>(null);
   const mountedRef = useRef(true);
+  /** The mic's latest RMS level, for the little level bar under "Listening…". */
+  const micLevelRef = useRef(0);
   const nextTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const soundingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The source of truth for the struggle stats while a session runs (several bumps can land
@@ -340,6 +355,7 @@ export default function FindTheRoot() {
     setStatus(null);
     setHeard(null);
     setWrongPicks([]);
+    setRightPick(null);
     setChordSounding(false);
     setProgress(null);
   }
@@ -426,6 +442,7 @@ export default function FindTheRoot() {
     setRound(r);
     setStatus(null);
     setWrongPicks([]);
+    setRightPick(null);
     setHeard(null);
     updateProgress(session);
     void playRound(r, false);
@@ -439,6 +456,7 @@ export default function FindTheRoot() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     endSession();
 
@@ -446,7 +464,10 @@ export default function FindTheRoot() {
       try {
         const input = await startAudioInput(
           inputDeviceId,
-          (frame) => handleFrame(frame.freq),
+          (frame) => {
+            micLevelRef.current = frame.level;
+            handleFrame(frame.freq);
+          },
           () => cfgRef.current.silenceRms,
         );
         if (!mountedRef.current) {
@@ -456,8 +477,9 @@ export default function FindTheRoot() {
         inputRef.current = input;
         // Device names only show once the mic is allowed.
         void listAudioInputs().then(setInputs).catch(() => {});
-      } catch {
-        setError("Couldn't open the microphone. Check the browser's microphone permission, or switch to Pick.");
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, pick another input, or switch to Pick."));
+        setMicFailed(true);
         return;
       }
     }
@@ -529,6 +551,7 @@ export default function FindTheRoot() {
     const session = sessionRef.current;
     if (!session || !session.round || session.grade) return;
     if (correctRoots(session.round.type, session.round.rootPc).includes(pc)) {
+      setRightPick(pc);
       finishRound(session.wrong && cfgRef.current.partialCredit ? "partial" : "correct");
     } else {
       session.wrong = true;
@@ -552,16 +575,17 @@ export default function FindTheRoot() {
       return true;
     };
   });
+  const forThisPane = usePaneKeyGuard();
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Enter" || e.repeat) return;
+      if (e.key !== "Enter" || e.repeat || !forThisPane(e)) return;
       const target = e.target as HTMLElement;
       if (target.closest("input, textarea, select, [role='dialog'], [role='listbox']")) return;
       if (enterRef.current()) e.preventDefault();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [forThisPane]);
 
   // ------------------------------------------------------------------ what's shown
 
@@ -581,10 +605,14 @@ export default function FindTheRoot() {
   const lastRound = progress ? progress.index >= progress.total : false;
   const keyState = (pc: number): "right" | "wrong" | null =>
     status && rightRoots.includes(pc) ? "right" : wrongPicks.includes(pc) ? "wrong" : null;
+  // Once answered, the root's key is written the way the answer is (G♯ for G♯-7, not A♭).
+  const keyLabel = (pc: number): string | undefined =>
+    status && round && target && pc === round.rootPc ? prettyNote(target.root) : undefined;
 
   return (
     <ToolLayout
       title="Find the Root"
+      credit="Idea by Rob Moreno"
       presets={toolPresets("find-the-root", settings, updateSettings)}
       optionsMode={
         <Segmented
@@ -606,7 +634,7 @@ export default function FindTheRoot() {
           <CollapsiblePanel
             id="history"
             title="History"
-            icon={StopwatchIcon}
+            icon={ListIcon}
             summary={bestPct !== null ? `Best ${bestPct}%` : undefined}
           >
             {history.length === 0 ? (
@@ -616,23 +644,10 @@ export default function FindTheRoot() {
                 {[...history]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatScore(entry.score)}/{entry.total}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.mode === "pick" ? "Picked" : "Sung or played"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <span className="text-xs tabular-nums text-muted">
-                        {formatDuration(entry.elapsedMs)}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.mode === "pick" ? "Picked" : "Sung or played"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -666,15 +681,7 @@ export default function FindTheRoot() {
                     className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.type.name}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                      {entry.counts.incorrect > 0 && (
-                        <span style={{ color: GRADE_COLOR.incorrect }}>✕{entry.counts.incorrect}</span>
-                      )}
-                      {entry.counts.partial > 0 && (
-                        <span style={{ color: GRADE_COLOR.partial }}>½{entry.counts.partial}</span>
-                      )}
-                      <span className="text-muted">/{attempts(entry.counts)}</span>
-                    </span>
+                    <StruggleCounts counts={entry.counts} partialLabel="on a retry" />
                   </div>
                 ))}
               </div>
@@ -846,27 +853,16 @@ export default function FindTheRoot() {
               icon={StopwatchIcon}
               summary={`${roundCount} rounds`}
             >
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of rounds
-                  <span className="tabular-nums text-foreground">{roundCount}</span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_ROUNDS}
-                  max={MAX_ROUNDS}
-                  step={1}
-                  value={roundCount}
-                  onChange={(e) => updateSettings({ roundCount: Number(e.target.value) })}
-                  style={
-                    {
-                      "--progress": `${((roundCount - MIN_ROUNDS) / (MAX_ROUNDS - MIN_ROUNDS)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer"
-                />
-              </label>
-              <Hint>How many voicings make up one run.</Hint>
+              <AdvancedSlider
+                label="Number of rounds"
+                value={roundCount}
+                unit=""
+                min={MIN_ROUNDS}
+                max={MAX_ROUNDS}
+                step={1}
+                onChange={(v) => updateSettings({ roundCount: v })}
+                hint="How many voicings make up one run."
+              />
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium text-muted">Next round</span>
                 <Select
@@ -889,7 +885,7 @@ export default function FindTheRoot() {
                 id="root-listen"
                 title="Microphone"
                 icon={MicIcon}
-                summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen input") : "Default input"}
+                summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen mic") : "Default mic"}
               >
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-muted">Audio input</span>
@@ -897,7 +893,7 @@ export default function FindTheRoot() {
                     value={inputDeviceId}
                     onChange={(value) => updateSettings({ inputDeviceId: value })}
                     options={[
-                      { value: "", label: "Default input" },
+                      { value: "", label: "Default mic" },
                       ...inputs.map((d) => ({ value: d.id, label: d.label })),
                     ]}
                   />
@@ -968,7 +964,7 @@ export default function FindTheRoot() {
             style={{ borderColor: glow ?? "color-mix(in srgb, var(--foreground) 10%, transparent)" }}
           />
           <p
-            className={`relative z-10 font-bold transition-colors duration-200 ${
+            className={!round ? IDLE_MARK : `relative z-10 font-bold transition-colors duration-200 ${
               status && target && chordLabel(target).length > 6 ? "text-3xl sm:text-4xl" : "text-5xl sm:text-6xl"
             }`}
             style={
@@ -977,7 +973,7 @@ export default function FindTheRoot() {
                 : undefined
             }
           >
-            {!round ? "—" : status && target ? chordLabel(target) : "?"}
+            {!round ? "?" : status && target ? chordLabel(target) : "?"}
           </p>
         </div>
 
@@ -993,11 +989,11 @@ export default function FindTheRoot() {
         {round && (
           <div className="flex flex-col items-center gap-1 text-center">
             <p className="text-lg">
-              Make it <span className="font-semibold">{round.type.ask}</span>
+              Which root makes it <span className="font-semibold">{round.type.ask}</span>?
             </p>
             {voicing && (showVoicingName || status) && (
               <p className="text-sm text-muted">
-                You&apos;re hearing{" "}
+                On its own it&apos;s{" "}
                 <span className="font-semibold text-foreground">{chordLabel(voicing)}</span>
                 {/* A starts on the 3rd and B on the 7th, so it's a clue: only after answering. */}
                 {round.ab && status && ` · ${round.ab} voicing`}
@@ -1023,7 +1019,9 @@ export default function FindTheRoot() {
                   </p>
                 )}
                 <p className="text-sm font-medium" style={{ color: GRADE_COLOR[status] }}>
-                  {status === "incorrect" ? "Not this time" : GRADE_LABEL[status]}
+                  {status === "incorrect"
+                    ? "Not this time"
+                    : `Yes, ${prettyNote(rightPick === null || rightPick === round.rootPc ? target!.root : ROOT_NAMES[rightPick])}${status === "partial" ? " · half credit" : ""}`}
                 </p>
               </>
             )}
@@ -1044,12 +1042,24 @@ export default function FindTheRoot() {
                 : "Sing or play the root…"}
           </p>
         )}
+        {running && round && answerMode === "sing" && !status && <MicLevel levelRef={micLevelRef} />}
+
+        {running && round && answerMode === "pick" && !status && (
+          <p
+            className="min-h-5 text-sm"
+            style={wrongPicks.length ? { color: GRADE_COLOR.incorrect } : undefined}
+          >
+            {wrongPicks.length
+              ? `Not ${prettyNote(ROOT_NAMES[wrongPicks[wrongPicks.length - 1]])}. Try again.`
+              : "Pick the root…"}
+          </p>
+        )}
 
         {running && round && answerMode === "pick" && (
           <div
             role="group"
             aria-label="Pick the root"
-            className="grid w-full max-w-sm gap-1"
+            className="grid w-full max-w-sm gap-1 rounded-lg bg-foreground/10 p-1"
             style={{ gridTemplateColumns: "repeat(14, minmax(0, 1fr))" }}
           >
             {BLACK_KEYS.map(({ pc, col }) => (
@@ -1059,6 +1069,7 @@ export default function FindTheRoot() {
                 black
                 style={{ gridColumn: `${col} / span 2`, gridRow: 1 }}
                 state={keyState(pc)}
+                label={keyLabel(pc)}
                 disabled={!!status}
                 onPick={pick}
               />
@@ -1069,6 +1080,7 @@ export default function FindTheRoot() {
                 pc={pc}
                 style={{ gridColumn: `${i * 2 + 1} / span 2`, gridRow: 2 }}
                 state={keyState(pc)}
+                label={keyLabel(pc)}
                 disabled={!!status}
                 onPick={pick}
               />
@@ -1108,7 +1120,9 @@ export default function FindTheRoot() {
 
         {running && progress && (
           <p className="text-sm tabular-nums text-muted">
-            Round {progress.index} of {progress.total} · {formatScore(progress.score)}/{progress.done} ·{" "}
+            Round {progress.index} of {progress.total} ·{" "}
+            {/* No score until a round has finished ("Score 0 of 0" read as broken). */}
+            {progress.done > 0 && <>Score {formatScore(progress.score)} of {progress.done} · </>}
             <ElapsedTimer active={running} startRef={sessionStartRef} />
           </p>
         )}
@@ -1179,8 +1193,27 @@ export default function FindTheRoot() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && answerMode === "sing" && (
+            <button
+              type="button"
+              onClick={() => {
+                updateSettings({ answerMode: "pick" });
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Switch to Pick
+            </button>
+          )}
+        </div>
+      )}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1188,6 +1221,7 @@ export default function FindTheRoot() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop, <KeyHint.Key>Enter</KeyHint.Key> for the next one
       </KeyHint>
@@ -1201,6 +1235,7 @@ function RootKey({
   black = false,
   style,
   state,
+  label,
   disabled,
   onPick,
 }: {
@@ -1208,6 +1243,8 @@ function RootKey({
   black?: boolean;
   style: React.CSSProperties;
   state: "right" | "wrong" | null;
+  /** Overrides the key's usual name (the answer's own spelling once it's revealed). */
+  label?: string;
   disabled: boolean;
   onPick: (pc: number) => void;
 }) {
@@ -1217,7 +1254,7 @@ function RootKey({
       type="button"
       onClick={() => onPick(pc)}
       disabled={disabled}
-      aria-label={prettyNote(ROOT_NAMES[pc])}
+      aria-label={label ?? prettyNote(ROOT_NAMES[pc])}
       style={{
         ...style,
         ...(color
@@ -1230,11 +1267,13 @@ function RootKey({
       }}
       className={`rounded-md font-medium transition-colors disabled:cursor-default ${
         black
-          ? "h-11 bg-foreground text-xs text-background hover:opacity-85 sm:h-12"
-          : "h-14 bg-surface text-sm text-foreground hover:bg-surface-hover sm:h-16"
+          ? // The darker key in both themes: the foreground in light mode, the surface in dark.
+            "h-11 bg-foreground text-[0.8125rem] text-background hover:opacity-85 sm:h-12 dark:bg-surface dark:text-foreground dark:hover:bg-surface-hover dark:hover:opacity-100"
+          : // The lighter key in both themes, like a real piano.
+            "h-14 bg-surface text-sm text-foreground hover:bg-surface-hover sm:h-16 dark:bg-foreground/90 dark:text-background dark:hover:bg-foreground/80"
       } ${disabled && !color ? "opacity-60" : ""}`}
     >
-      {prettyNote(ROOT_NAMES[pc])}
+      {label ?? prettyNote(ROOT_NAMES[pc])}
     </button>
   );
 }

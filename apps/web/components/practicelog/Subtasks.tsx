@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckIcon, CloseIcon, PlusIcon } from "@/components/tools";
 import type { Subtask } from "@/lib/practiceLog";
+import { TOUCH_TEXT } from "@/components/practicelog/touch";
 
 /** A task's checklist: small checkboxes, and — when `onAdd` is given — a "+ subtask" box. */
 export default function Subtasks({
@@ -29,14 +30,14 @@ export default function Subtasks({
       {items.map((x) => {
         const done = isDone(x.id);
         return (
-          <div key={x.id} className="group/sub flex items-center gap-2 text-sm">
+          <div key={x.id} className="group/sub flex items-center gap-2 text-sm pointer-coarse:min-h-9">
             <button
               type="button"
               role="checkbox"
               aria-checked={done}
               aria-label={`${x.title} done`}
               onClick={() => onToggle(x.id)}
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border-[1.5px] ${done ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-foreground/50"}`}
+              className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border-[1.5px] pointer-coarse:h-5 pointer-coarse:w-5 pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5 ${done ? "log-check border-transparent text-white" : "border-foreground/25 hover:border-foreground/50"}`}
               style={done ? { background: color } : undefined}
             >
               {done && <CheckIcon className="h-3 w-3" />}
@@ -67,11 +68,12 @@ export default function Subtasks({
                 setTitle("");
               } else if (e.key === "Escape") setAdding(false);
             }}
-            placeholder="Subtask — press Enter"
-            className="h-8 w-full rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
+            enterKeyHint="done"
+            placeholder="Add a subtask"
+            className="h-8 w-full rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40 pointer-coarse:text-base"
           />
         ) : (
-          <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground">
+          <button type="button" onClick={() => setAdding(true)} className={`flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground ${TOUCH_TEXT}`}>
             <PlusIcon className="h-3 w-3" /> Subtask
           </button>
         ))}

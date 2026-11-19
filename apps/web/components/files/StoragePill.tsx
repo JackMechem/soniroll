@@ -24,7 +24,7 @@ export default function StoragePill() {
       className="flex h-10 shrink-0 flex-col justify-center gap-1 rounded-md px-2 transition-colors hover:bg-surface-hover"
     >
       <span className={`whitespace-nowrap text-xs tabular-nums ${full ? "text-danger" : "text-muted"}`}>
-        {full ? "Online storage full" : <>{formatBytes(used)}<span className="hidden sm:inline"> of {formatBytes(quota)} online</span></>}
+        {full ? "Online storage full" : <>{formatBytes(used)} of {formatBytes(quota)}<span className="hidden sm:inline"> online</span></>}
       </span>
       <span className="block h-1 w-20 overflow-hidden rounded-full bg-foreground/10">
         <span

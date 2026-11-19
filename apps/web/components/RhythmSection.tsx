@@ -15,7 +15,7 @@ import BassPlayersTab from "@/components/bassgenius/BassPlayersTab";
 import TranscriptionScore from "@/components/notation/Score";
 import PhraseDialog from "@/components/bassgenius/PhraseDialog";
 import DrumSettingsDialog from "@/components/bassgenius/DrumSettingsDialog";
-import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { Field, LevelRow, OptionsButton, OptionsSheet, PanelSection, useStickyPanel } from "@/components/bassgenius/PlayPanel";
 import { GrooveScore, KIT_PARTS, PART_DEFAULT, PartFader, partGain, useStyleVoices } from "@/components/rhythmsection/kit";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
@@ -23,6 +23,7 @@ import {
   BassIcon,
   ChordChartIcon,
   ChordIcon,
+  ChevronRightIcon,
   DrumIcon,
   EyeIcon,
   EyeOffIcon,
@@ -298,6 +299,8 @@ export default function RhythmSection({
   const [drumSettingsOpen, setDrumSettingsOpen] = useState(false);
   // Phones: the options panel opens as a sheet.
   const [optionsOpen, setOptionsOpen] = useState(false);
+  /** The Style section's pills are showing (otherwise just the picked style). */
+  const [choosingStyle, setChoosingStyle] = useState(false);
   const closeOptions = useCallback(() => setOptionsOpen(false), []);
 
   // Old links: /bass-genius?tab=players opens the Bass players tab; /drum-generator plays the
@@ -403,24 +406,12 @@ export default function RhythmSection({
   const scoreBoxRef = useRef<HTMLDivElement>(null);
   const drumScoreRef = useRef<HTMLDivElement>(null);
   // Desktop: the settings panel is as tall as the window has room for below where it sits now (it
-  // starts lower down, then sticks near the top as the page scrolls), so its bottom is never off
-  // screen.
+  // starts lower down, then sticks as the page scrolls), with no scrollbar of its own.
   const asideRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const fit = () => {
-      const el = asideRef.current;
-      if (!el) return;
-      const top = Math.max(16, el.getBoundingClientRect().top);
-      el.style.maxHeight = `${Math.max(240, window.innerHeight - top - 24)}px`;
-    };
-    fit();
-    window.addEventListener("resize", fit);
-    document.addEventListener("scroll", fit, true); // the app scrolls an inner element
-    return () => {
-      window.removeEventListener("resize", fit);
-      document.removeEventListener("scroll", fit, true);
-    };
-  }, [tab]);
+  useStickyPanel(asideRef, tab === "play");
+  // ...and so does the music's column with Play at its top, when the options reach further down.
+  const columnRef = useRef<HTMLDivElement>(null);
+  useStickyPanel(columnRef, tab === "play");
   const startingRef = useRef(false);
   const [starting, setStarting] = useState(false);
 
@@ -869,7 +860,21 @@ export default function RhythmSection({
       </PanelSection>
 
       <PanelSection id="style" title="Style" icon={DrumIcon} summary={`${style.name} · ${countryOf(style.country)}`}>
-        {COUNTRIES.filter((c) => PICKABLE.some((s) => s.country === c.id)).map((f) => (
+        {/* The picked style on one row; its 35 pills only while choosing (they made the panel very long). */}
+        <button
+          type="button"
+          onClick={() => setChoosingStyle((c) => !c)}
+          aria-expanded={choosingStyle}
+          className="flex min-h-11 w-full items-center gap-2 rounded-md bg-foreground/[0.05] px-3 py-1.5 text-left transition-colors hover:bg-surface-hover"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">{style.name}</span>
+            <span className="block truncate text-xs text-muted">{countryOf(style.country)}</span>
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-accent">{choosingStyle ? "Done" : "Change"}</span>
+          <ChevronRightIcon className={`h-4 w-4 shrink-0 text-muted transition-transform ${choosingStyle ? "rotate-90" : ""}`} />
+        </button>
+        {choosingStyle && COUNTRIES.filter((c) => PICKABLE.some((s) => s.country === c.id)).map((f) => (
           <Field key={f.id} label={f.label}>
             <div className="flex flex-wrap gap-1.5">
               {PICKABLE.filter((s) => s.country === f.id).map((s) => (
@@ -1117,7 +1122,8 @@ export default function RhythmSection({
         )}
       </PanelSection>
 
-      <PanelSection id="mix" title="Mix" icon={SpeakerIcon} summary={song ? `Bass ${Math.round(volume * 100)}%` : `Drums ${Math.round(drumsVolume * 100)}%`}>
+      {/* Mix and Kit start closed (ten sliders); opening one is remembered on this device. */}
+      <PanelSection id="mix" title="Mix" icon={SpeakerIcon} defaultOpen={false} summary={song ? `Bass ${Math.round(volume * 100)}%` : `Drums ${Math.round(drumsVolume * 100)}%`}>
         {song && (
           <>
             <LevelRow label="Bass" value={bassOn ? volume : null} onChange={(v) => update({ volume: v })} onTurnOn={() => update({ bass: true })} />
@@ -1135,16 +1141,16 @@ export default function RhythmSection({
           />
         )}
         <LevelRow label="Room" value={room ? roomAmount : 0} onChange={(v) => update({ roomAmount: v, room: v > 0 })} />
-        {drumsOn && (
+      </PanelSection>
+
+      {drumsOn && (
+        <PanelSection id="kit" title="Kit" icon={SlidersIcon} defaultOpen={false} summary={Object.keys(grooveSettings.parts).length > 0 ? "Your levels" : "Default levels"}>
           <>
-            <div className="flex items-baseline justify-between border-t border-foreground/10 pt-3">
-              <span className="text-xs font-semibold text-muted">Kit</span>
-              {Object.keys(grooveSettings.parts).length > 0 && (
-                <button type="button" onClick={() => updateGroove({ parts: {} })} className="text-xs font-semibold text-accent hover:underline">
-                  Reset kit
-                </button>
-              )}
-            </div>
+            {Object.keys(grooveSettings.parts).length > 0 && (
+              <button type="button" onClick={() => updateGroove({ parts: {} })} className="self-end text-xs font-semibold text-accent hover:underline">
+                Reset kit
+              </button>
+            )}
             {KIT_PARTS.filter((p) => p.voices.some((v) => partInUse.has(v))).map((p) => (
               <PartFader
                 key={p.id}
@@ -1158,8 +1164,8 @@ export default function RhythmSection({
               />
             ))}
           </>
-        )}
-      </PanelSection>
+        </PanelSection>
+      )}
     </div>
   );
 
@@ -1177,28 +1183,29 @@ export default function RhythmSection({
               }`
             : "";
 
-  const transport = (
-    <div className="-mt-2 flex flex-col items-center gap-1.5">
-      <div className="flex items-center gap-2">
+  // Play/Stop, Options (phones) and the status line. Phones: pinned under the top bar while the
+  // notation scrolls. Desktop: at the top of the music's column, which stays in view (as the
+  // options panel does), with Play pinned to the top of the window while the music is taller.
+  const transport = (desktop: boolean) => (
+    <div
+      className={
+        desktop
+          ? "sticky top-0 z-10 hidden flex-col items-center gap-1.5 bg-background/95 pb-1 pt-3 backdrop-blur lg:flex"
+          : "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 -mt-2 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden"
+      }
+    >
+      <div className="flex max-w-full items-center gap-2">
         <button
           type="button"
           onClick={toggle}
           disabled={styleLoading}
-          className={running || downloading ? BIG_SECONDARY : BIG_PRIMARY}
+          className={`shrink-0 ${running || downloading ? BIG_SECONDARY : BIG_PRIMARY}`}
         >
           {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           {running || downloading ? "Stop" : "Play"}
         </button>
-        <button
-          type="button"
-          onClick={() => setOptionsOpen(true)}
-          aria-label="Options"
-          className="flex h-11 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden"
-        >
-          <SlidersIcon className="h-4 w-4" /> Options
-        </button>
+        <OptionsButton summary={`${style.name} · ${bpm} BPM`} onOpen={() => setOptionsOpen(true)} />
       </div>
-      <OptionsSummaryChip summary={`${bpm} BPM · ${style.name}`} onOpen={() => setOptionsOpen(true)} />
       <p className="min-h-5 text-center text-sm text-muted tabular-nums" aria-live="polite">
         {status}
       </p>
@@ -1233,7 +1240,7 @@ export default function RhythmSection({
   return (
     <ToolLayout
       title="Rhythm Section"
-      titleExtra={<span className="hidden text-xs text-muted sm:inline">Bass idea and built-in transcriptions by Rob Moreno</span>}
+      credit="Bass idea and built-in transcriptions by Rob Moreno"
       layout="stacked"
       topAligned
       options={null}
@@ -1256,15 +1263,16 @@ export default function RhythmSection({
           ]}
         />
       </RewardProvider>
-      {tab === "play" && transport}
+      {tab === "play" && transport(false)}
       {tab === "players" ? (
         <BassPlayersTab />
       ) : (
         <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-          <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:overflow-y-auto lg:rounded-lg">
+          <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:flex lg:flex-col lg:top-4 lg:rounded-lg">
             {panel}
           </aside>
-          <div className="grid min-w-0 gap-6">
+          <div ref={columnRef} className="grid min-w-0 gap-6 lg:sticky lg:top-4">
+            {transport(true)}
             {!noTune && (
               <div className={`grid min-w-0 gap-6 ${scored && song && settings.showChart ? "xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:items-start" : ""}`}>
                 {scored && (
@@ -1335,7 +1343,7 @@ export default function RhythmSection({
                   </div>
                 )}
                 {(!song || !scored || settings.showChart) && (
-                  <div className="min-w-0 xl:sticky xl:top-4">
+                  <div className="min-w-0 xl:sticky xl:top-28">
                     {typed ? (
                       song ? (
                         <div className="w-full rounded-lg bg-surface p-2 text-left sm:p-6">
@@ -1399,7 +1407,7 @@ export default function RhythmSection({
           onClose={() => setOpened(null)}
         />
       )}
-      <OptionsSheet open={optionsOpen} onClose={closeOptions}>
+      <OptionsSheet open={optionsOpen} onClose={closeOptions} firstOpen="tempo">
         {panel}
       </OptionsSheet>
       {drumSettingsOpen && <DrumSettingsDialog config={drumConfig} onChange={(c) => update({ drumConfig: c })} onClose={() => setDrumSettingsOpen(false)} />}

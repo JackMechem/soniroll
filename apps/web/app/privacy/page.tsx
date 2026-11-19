@@ -1,12 +1,12 @@
 import { LegalLink, LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Privacy Policy",
+  title: "Privacy policy",
 };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="November 17, 2026">
+    <LegalPage title="Privacy policy" updated="November 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
@@ -54,7 +54,10 @@ export default function PrivacyPage() {
           </li>
           <li>Emailed confirmation codes are stored hashed and expire after 15 minutes.</li>
         </ul>
-        <p>Slow Downer&apos;s audio files always stay in your browser, signed in or not.</p>
+        <p>
+          Signed out, the Slow Downer keeps the files you open in your browser. Signed in, a file you open from your device is saved to your Files
+          like any other upload (on this device, or online with a storage plan).
+        </p>
         <p>
           The Tuner, the Time Test and the tools that listen for the note you play or sing (Note, Scale and Interval Trainer, Find the Root) use
           your mic only while you use them, and what they hear is never sent anywhere. The Time

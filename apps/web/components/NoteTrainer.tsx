@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
-import InputTest from "@/components/InputTest";
+import InputTest, { MicLevel } from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -19,6 +19,7 @@ import {
   NoteIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -28,7 +29,6 @@ import {
   startAudioInput,
 } from "@/lib/audioInput";
 import {
-  GRADE_COLOR,
   GRADE_LABEL,
   Grade,
   describePitch,
@@ -54,7 +54,6 @@ import {
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -65,7 +64,11 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass } from "@/components/learning/quizUi";
+import { formatFileDate } from "@/lib/files";
+import { micErrorMessage } from "@/lib/micError";
+import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
+import StruggleCounts from "@/components/learning/StruggleCounts";
 
 const MIN_INTERVAL_SECONDS = 0.5;
 const MAX_INTERVAL_SECONDS = 10;
@@ -251,6 +254,8 @@ export default function NoteTrainer() {
   // Counts as practice in the Shed Log while it runs.
   useToolActivity("/note-trainer", running);
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Use Timed instead". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -285,6 +290,8 @@ export default function NoteTrainer() {
   const toneIdRef = useRef(toneId);
   const inputRef = useRef<AudioInput | null>(null);
   const mountedRef = useRef(true);
+  /** The mic's latest RMS level, for the little level bar under "Listening…". */
+  const micLevelRef = useRef(0);
   const sessionRef = useRef<Session | null>(null);
   const listenCfg = useRef({
     ignoreOctave: effectiveIgnoreOctave,
@@ -497,7 +504,7 @@ export default function NoteTrainer() {
       noteSeedRef.current,
       cfg.ignoreOctave,
     );
-    setHeard(`${shownNote} (${cents > 0 ? "+" : ""}${cents}¢)`);
+    setHeard(`${noteGlyphs(shownNote)} (${cents > 0 ? "+" : ""}${cents}¢)`);
 
     const nearest = Math.round(frequencyToMidi(freq, cfg.refA));
     if (nearest === session.last) session.stable++;
@@ -588,6 +595,7 @@ export default function NoteTrainer() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.stop();
@@ -602,7 +610,10 @@ export default function NoteTrainer() {
       try {
         const input = await startAudioInput(
           inputDeviceId,
-          (frame) => handleFrame(frame.freq),
+          (frame) => {
+            micLevelRef.current = frame.level;
+            handleFrame(frame.freq);
+          },
           () => listenCfg.current.silenceRms,
         );
         if (!mountedRef.current) {
@@ -612,10 +623,9 @@ export default function NoteTrainer() {
         inputRef.current = input;
         // Device labels only become available once permission is granted.
         void listAudioInputs().then(setInputs);
-      } catch {
-        setError(
-          "Couldn't open the audio input. Check the browser's microphone permission.",
-        );
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
+        setMicFailed(true);
         return;
       }
       const queue = weak
@@ -704,9 +714,8 @@ export default function NoteTrainer() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const entry: HistoryEntry = {
               at: Date.now(),
               elapsedMs,
@@ -716,7 +725,7 @@ export default function NoteTrainer() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({ results: session.results, notes: session.notes });
           setNote(null);
@@ -799,8 +808,8 @@ export default function NoteTrainer() {
   // With "Ignore octave" on, the octave number is left out everywhere notes are shown — except
   // during (or just after) a "Shed a string" session, which always shows it.
   const noteLabel = (n: string, seq = 0) =>
-    spellNote(n, accidentalStyle, seq, effectiveIgnoreOctave);
-  const mainLabel = note ? noteLabel(note, noteSeed) : "—";
+    noteGlyphs(spellNote(n, accidentalStyle, seq, effectiveIgnoreOctave));
+  const mainLabel = running && note ? noteLabel(note, noteSeed) : "?";
   // "Both" spellings (e.g. "C#/Db") is wider than a single note name, so it needs to shrink
   // to still fit inside the circle.
   const mainLabelIsDouble = mainLabel.includes("/");
@@ -830,9 +839,7 @@ export default function NoteTrainer() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = rankWeak(settings.noteStats);
   const parsedRange = parseRange(rangeInput);
   const weakCountInRange = parsedRange
@@ -851,7 +858,7 @@ export default function NoteTrainer() {
             <CollapsiblePanel
               id="history"
               title="History"
-              icon={StopwatchIcon}
+              icon={ListIcon}
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
             {bestMs !== null && (
@@ -868,33 +875,10 @@ export default function NoteTrainer() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -935,21 +919,7 @@ export default function NoteTrainer() {
                       <span className="font-medium tabular-nums">
                         {noteLabel(entry.key)}
                       </span>
-                      <span className="flex items-center gap-2 text-xs tabular-nums">
-                        {entry.counts.incorrect > 0 && (
-                          <span style={{ color: GRADE_COLOR.incorrect }}>
-                            ✕{entry.counts.incorrect}
-                          </span>
-                        )}
-                        {entry.counts.partial > 0 && (
-                          <span style={{ color: GRADE_COLOR.partial }}>
-                            ~{entry.counts.partial}
-                          </span>
-                        )}
-                        <span className="text-muted">
-                          /{attempts(entry.counts)}
-                        </span>
-                      </span>
+                      <StruggleCounts counts={entry.counts} />
                     </div>
                   ))}
                 </div>
@@ -993,6 +963,7 @@ export default function NoteTrainer() {
         <>
           <PanelsToggle ids={PANEL_IDS} />
           <CollapsiblePanel id="notes" title="Range" icon={NoteIcon} summary={rangeSummary}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1058,7 +1029,7 @@ export default function NoteTrainer() {
                       disabled={running}
                       className={`${SECONDARY_BUTTON_SM} tabular-nums`}
                     >
-                      {spellNote(openNote, accidentalStyle, i, false)}
+                      {noteGlyphs(spellNote(openNote, accidentalStyle, i, false))}
                     </button>
                   ))}
                 </div>
@@ -1074,17 +1045,18 @@ export default function NoteTrainer() {
           </CollapsiblePanel>
 
           {/* Timing in its own chip: how long each note shows (Timed), or how long you have to play
-              it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
+              it and the pause after (Listen). Same setting (`intervalSeconds`) either way, so one name. */}
           <CollapsiblePanel
             id="note-timing"
-            title={listenMode ? "Time to play" : "Time per note"}
+            title="Time per note"
             icon={StopwatchIcon}
             summary={`${intervalSeconds} s`}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
-              label={listenMode ? "Time to play" : "Time per note"}
+              label="Time per note"
               value={intervalSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_INTERVAL_SECONDS}
               max={MAX_INTERVAL_SECONDS}
               step={0.5}
@@ -1100,7 +1072,7 @@ export default function NoteTrainer() {
               <AdvancedSlider
                 label="Time between notes"
                 value={advanceDelayMs / 1000}
-                unit="s"
+                unit=" s"
                 min={MIN_ADVANCE_DELAY_MS / 1000}
                 max={MAX_ADVANCE_DELAY_MS / 1000}
                 step={0.25}
@@ -1113,8 +1085,9 @@ export default function NoteTrainer() {
 
           <CollapsiblePanel
             id="note-listen"
-            title="Listen"
+            title="Microphone"
             icon={MicIcon}
+            summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen mic") : "Default mic"}
             asMode
             toggle={{
               checked: listenMode,
@@ -1122,6 +1095,7 @@ export default function NoteTrainer() {
               disabled: running,
             }}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1147,31 +1121,18 @@ export default function NoteTrainer() {
                 hint="A note you got right after a wrong attempt goes back on the end of the queue too, not just full misses."
               />
             ) : (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of notes
-                  <span className="tabular-nums text-foreground">
-                    {noteCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_NOTE_COUNT}
-                  max={MAX_NOTE_COUNT}
-                  step={1}
-                  value={noteCount}
-                  onChange={(e) => setNoteCount(Number(e.target.value))}
-                  disabled={running || !listenMode}
-                  style={
-                    {
-                      "--progress": `${((noteCount - MIN_NOTE_COUNT) / (MAX_NOTE_COUNT - MIN_NOTE_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of notes"
+                value={noteCount}
+                unit=""
+                min={MIN_NOTE_COUNT}
+                max={MAX_NOTE_COUNT}
+                step={1}
+                disabled={running || !listenMode}
+                onChange={(v) => setNoteCount(v)}
+                hint="How many random notes make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many random notes make up one session.</Hint>}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
@@ -1180,7 +1141,7 @@ export default function NoteTrainer() {
                 onChange={setInputDeviceId}
                 disabled={running}
                 options={[
-                  { value: "", label: "Default input" },
+                  { value: "", label: "Default mic" },
                   ...inputs.map((d) => ({ value: d.id, label: d.label })),
                 ]}
               />
@@ -1326,9 +1287,10 @@ export default function NoteTrainer() {
         )}
         <div className="relative">
           <div className="relative flex h-40 w-40 items-center justify-center sm:h-48 sm:w-48">
+            {!running && <span aria-hidden className={IDLE_RING} />}
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
+              className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold tabular-nums transition-colors duration-200 ${
                 mainLabelIsDouble
                   ? "text-3xl sm:text-4xl"
                   : "text-6xl sm:text-7xl"
@@ -1343,14 +1305,6 @@ export default function NoteTrainer() {
             >
               {mainLabel}
             </p>
-            {/* Before the first round, say what's about to happen. */}
-            {!note && !running && (
-              <p className="absolute inset-x-0 bottom-0 z-10 text-sm text-muted sm:bottom-3">
-                {listenMode
-                  ? "Press Start, then play each note. The mic checks it."
-                  : "Press Start, then play each note shown."}
-              </p>
-            )}
           </div>
           {showNext && nextNote && running && (
             <span
@@ -1361,6 +1315,14 @@ export default function NoteTrainer() {
             </span>
           )}
         </div>
+        {/* Before the first round, say what's about to happen. */}
+        {!running && (
+          <p className={IDLE_HINT}>
+            {listenMode
+              ? "Press Start, then play each note. The mic checks it."
+              : "Press Start, then play each note shown."}
+          </p>
+        )}
         {running && progress && (
           <div className="flex flex-col items-center gap-0.5 text-sm text-muted">
             <span className="tabular-nums">
@@ -1371,6 +1333,7 @@ export default function NoteTrainer() {
             <span className="tabular-nums">
               {heard ? `Heard ${heard}` : "Listening…"}
             </span>
+            {listenMode && <MicLevel levelRef={micLevelRef} />}
             {waiting && (
               <button
                 type="button"
@@ -1471,8 +1434,27 @@ export default function NoteTrainer() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && listenMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setListenMode(false);
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Use Timed instead
+            </button>
+          )}
+        </div>
+      )}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1480,6 +1462,7 @@ export default function NoteTrainer() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop
       </KeyHint>

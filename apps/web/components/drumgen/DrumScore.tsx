@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { Annotation, Beam, Formatter, Parenthesis, Renderer, Stave, StaveNote, Tuplet, Voice } from "vexflow";
+import { useMusicFontVersion } from "@/lib/musicFont";
 import type { DrumVoice } from "@/lib/drums";
 import type { DrumStyle, GrooveBar } from "@/lib/drumStyles";
 
@@ -74,6 +75,7 @@ function beatSlots(hits: Map<number, { voice: DrumVoice; velocity: number }[]>, 
 export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumStyle; bars: GrooveBar[]; firstBar?: number }) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const fontVersion = useMusicFontVersion();
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -86,7 +88,7 @@ export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumSt
 
   useLayoutEffect(() => {
     const el = box.current;
-    if (!el || width < 50) return;
+    if (!el || width < 50 || !fontVersion) return;
     // Hold the height while redrawing so the page doesn't jump.
     el.style.minHeight = `${el.offsetHeight}px`;
     el.innerHTML = "";
@@ -217,7 +219,7 @@ export default function DrumScore({ style, bars, firstBar = 1 }: { style: DrumSt
       svg.setAttribute("stroke", "currentColor");
     }
     el.style.minHeight = "";
-  }, [bars, style, width, firstBar]);
+  }, [bars, style, width, firstBar, fontVersion]);
 
   return <div ref={box} className="drum-score w-full text-foreground" />;
 }

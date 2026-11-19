@@ -1,6 +1,7 @@
 "use client";
 
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
+import { setlistHref } from "@/components/library/setlistParts";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import { transposeSong, type IRealSong } from "@/lib/iRealPro";
 import type { PublicTune } from "@/lib/profileTunes";
 import type { Tune } from "@/lib/types";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
+import { goBackOr } from "@/lib/goBack";
 import { useSetlists } from "@/lib/useSetlists";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
@@ -50,6 +52,8 @@ export default function SetlistChartsPage({ mine, post, shared, start }: { mine?
 
   let title = "";
   let pages: ChartPage[] | null = null;
+  // Where Back goes when the reader was opened from a bookmark or a new tab.
+  const backHref = mine ? setlistHref(mine) : post ? `/post/${encodeURIComponent(post)}` : shared ? `/setlist/${encodeURIComponent(shared)}` : "/tunes?tab=setlists";
   if (mine) {
     const setlist = setlists.find((s) => s.id === mine);
     const all = [...tunes, ...learn];
@@ -82,7 +86,7 @@ export default function SetlistChartsPage({ mine, post, shared, start }: { mine?
           <LoadingSpinner label="Loading setlist…" showLabel />
         </div>
       ) : (
-        <Pager pages={pages} title={title} start={Math.min(start, Math.max(0, pages.length - 1))} onBack={() => router.back()} />
+        <Pager pages={pages} title={title} start={Math.min(start, Math.max(0, pages.length - 1))} onBack={() => goBackOr(router, backHref)} />
       )}
     </main>
   );

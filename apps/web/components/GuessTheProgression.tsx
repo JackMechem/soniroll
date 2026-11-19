@@ -17,11 +17,13 @@ import {
   ProgressionIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
-import { GRADE_COLOR, GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
+import { GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
 import { formatChordParts, parseChordInput, pcLabel } from "@/lib/chords";
+import { prettyQuality } from "@/lib/iRealPro";
 import {
   AnswerMode,
   DEFAULT_ENABLED_PROGRESSION_IDS,
@@ -32,6 +34,8 @@ import {
   chordNameText,
   firstChordRoot,
   gradeAnswer,
+  isMinorFamily,
+  parseNumeral,
   prettyNumeral,
   progressionById,
   progressionRound,
@@ -49,7 +53,7 @@ import {
 } from "@/lib/tones";
 import { ACCIDENTAL_STYLES, AccidentalStyle } from "@/lib/noteSpelling";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
-import { GradeCounts, attempts, bumpGradeCounts, rankWeak } from "@/lib/struggleStats";
+import { GradeCounts, bumpGradeCounts, rankWeak } from "@/lib/struggleStats";
 import AdvancedSlider from "@/components/AdvancedSlider";
 import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
@@ -59,8 +63,11 @@ import LevelComplete from "@/components/learning/LevelComplete";
 import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { PoolPill } from "@/components/reward/Reward";
-import { LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
+import { GRADE_COLOR, ANSWER_INPUT, LEVEL_LABEL, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK, IDLE_RING, bestPassingMs, passedRound, isTouchFirst, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -98,7 +105,7 @@ const KEY_OPTIONS = [
   { value: "random", label: "Random" },
   ...Array.from({ length: 12 }, (_, pc) => ({
     value: String(pc),
-    label: pcLabel(pc, "flat", 0),
+    label: noteGlyphs(pcLabel(pc, "flat", 0)),
   })),
 ];
 
@@ -185,6 +192,47 @@ function prettyToken(token: string, mode: AnswerMode): string {
   return `${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ""}`;
 }
 
+/** A progression numeral split into accidental, numeral and suffix ("iih7" → "", "ii", "h7"). */
+const NUMERAL_PARTS = /^([b#♭♯]?)(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)(.*)$/;
+
+/** Why a chord that names the right numeral (or root) was still marked wrong, shown under its
+    slot ("missing ø7", "should be minor"), so "ii V I" for "iiø7 V7 i" doesn't read as 0 / 3 for
+    no reason. Null when the numeral/root itself is wrong (the slot already shows the right one). */
+function slotReason(
+  token: string | undefined,
+  round: ProgressionRound,
+  index: number,
+  mode: AnswerMode,
+  qualities: boolean,
+): string | null {
+  if (!token) return null;
+  const chord = round.progression.chords[index];
+  const minor = isMinorFamily(chord.quality.id);
+  let typedRaw: string;
+  let targetSuffix: string;
+  if (mode === "numerals") {
+    const parsed = parseNumeral(token);
+    if (!parsed || parsed.degree !== chord.degree) return null;
+    if (parsed.lower !== minor) return minor ? "should be lowercase" : "should be upper case";
+    typedRaw = parsed.qualityRaw;
+    targetSuffix = NUMERAL_PARTS.exec(chord.numeral)?.[3] ?? "";
+  } else {
+    const parsed = parseChordInput(token);
+    if (!parsed || parsed.rootPc !== (round.tonicPc + chord.degree) % 12) return null;
+    if (parsed.bassPc !== null) return "no slash bass";
+    const typedMinor = parsed.qualityId
+      ? isMinorFamily(parsed.qualityId)
+      : /^(-|m(?!aj)|min|h|ø|o|°|dim)/i.test(parsed.qualityRaw.trim());
+    if (typedMinor !== minor) return minor ? "should be minor" : "should be major";
+    typedRaw = parsed.qualityRaw;
+    targetSuffix = chord.quality.suffix;
+  }
+  if (!qualities) return null;
+  const target = prettyQuality(targetSuffix);
+  if (!target) return "just the triad";
+  return typedRaw.trim() ? `should be ${target}` : `missing ${target}`;
+}
+
 const UPPER_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"];
 const LOWER_NUMERALS = ["i", "ii", "iii", "iv", "v", "vi", "vii"];
 const ROOT_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
@@ -210,12 +258,12 @@ function KeypadKey({
       aria-label={title ?? label}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onPress}
-      className={`flex flex-col items-center justify-center gap-0.5 rounded-lg bg-background px-1.5 py-1.5 hover:bg-surface-hover ${
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1.5 py-1.5 hover:bg-surface-hover pointer-coarse:min-h-10 ${
         wide ? "col-span-2" : ""
       }`}
     >
       <span className="text-base font-semibold leading-none">{label}</span>
-      {caption && <span className="text-[0.6rem] leading-none text-muted">{caption}</span>}
+      {caption && <span className="text-xs leading-none text-muted">{caption}</span>}
     </button>
   );
 }
@@ -267,6 +315,8 @@ export default function GuessTheProgression() {
   const [status, setStatus] = useState<Grade | null>(null);
   const [marks, setMarks] = useState<boolean[] | null>(null);
   const [typed, setTyped] = useState("");
+  /** Shown under the chords when Submit is held back (too few or too many chords typed). */
+  const [typeHint, setTypeHint] = useState<string | null>(null);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [progress, setProgress] = useState<{ index: number; total: number } | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -315,9 +365,10 @@ export default function GuessTheProgression() {
     };
   }, []);
 
-  // Focus the answer field for each fresh round, cursor at the end (after a prefilled root).
+  // Focus the answer field for each fresh round, cursor at the end (after a prefilled root). Not
+  // on a touch screen: the phone's keyboard would pop up over the keypad.
   useEffect(() => {
-    if (!running || !round || status) return;
+    if (!running || !round || status || isTouchFirst()) return;
     const el = inputElRef.current;
     if (!el) return;
     el.focus();
@@ -327,6 +378,7 @@ export default function GuessTheProgression() {
 
   function setTypedValue(value: string) {
     setTyped(value);
+    setTypeHint(null);
     typedRef.current = value;
   }
 
@@ -476,8 +528,23 @@ export default function GuessTheProgression() {
     scheduleAdvance(session.index);
   }
 
+  /** Submit only grades a complete answer: with fewer (or more) chords typed than the
+      progression has, the question stays open and says so, rather than scoring the chords against
+      the wrong slots. (Running out of time still grades whatever's there.) */
   function submitAnswer(e?: React.FormEvent) {
     e?.preventDefault();
+    const session = sessionRef.current;
+    if (!session?.round) return;
+    const want = session.round.progression.chords.length;
+    const got = splitAnswer(typedRef.current, cfgRef.current.answerMode).length;
+    if (got === 0) {
+      setTypeHint("Type the chords first, or press I don't know.");
+      return;
+    }
+    if (got !== want) {
+      setTypeHint(`${want} chords — you typed ${got}`);
+      return;
+    }
     gradeAndReveal();
   }
 
@@ -496,7 +563,10 @@ export default function GuessTheProgression() {
     const next = before + insert + typed.slice(end);
     setTypedValue(next);
     const pos = start + insert.length;
+    // On a touch screen, don't focus a field that isn't already: it would open the keyboard.
+    const refocus = !isTouchFirst() || document.activeElement === el;
     requestAnimationFrame(() => {
+      if (!refocus) return;
       el?.focus();
       el?.setSelectionRange(pos, pos);
     });
@@ -508,7 +578,9 @@ export default function GuessTheProgression() {
     const end = el?.selectionEnd ?? typed.length;
     const from = start === end ? Math.max(0, start - 1) : start;
     setTypedValue(typed.slice(0, from) + typed.slice(end));
+    const refocus = !isTouchFirst() || document.activeElement === el;
     requestAnimationFrame(() => {
+      if (!refocus) return;
       el?.focus();
       el?.setSelectionRange(from, from);
     });
@@ -622,9 +694,8 @@ export default function GuessTheProgression() {
             setIsNewBest(false);
           } else {
             const config = currentConfig;
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const entry: HistoryEntry = {
               at: Date.now(),
               elapsedMs,
@@ -634,7 +705,7 @@ export default function GuessTheProgression() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({
             results: session.results,
@@ -690,7 +761,7 @@ export default function GuessTheProgression() {
   const score = summary ? scoreOf(summary.results) : 0;
   const tally = (grade: Grade) => summary?.results.filter((g) => g === grade).length ?? 0;
   const matchingHistory = history.filter((h) => sameConfig(h.config, currentConfig));
-  const bestMs = matchingHistory.length ? Math.min(...matchingHistory.map((h) => h.elapsedMs)) : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakEntriesOf(settings.progressionStats);
 
   /** The correct answer for one chord, in the current answer mode. */
@@ -702,9 +773,9 @@ export default function GuessTheProgression() {
 
   const typedTokens = splitAnswer(typed, answerMode);
   const right = marks ? marks.filter(Boolean).length : 0;
-  const centerLabel = !round ? "—" : status && marks ? `${right}/${marks.length}` : "?";
+  const centerLabel = !running || !round ? "?" : status && marks ? `${right}/${marks.length}` : "?";
   const glow = running && status ? GRADE_COLOR[status] : null;
-  const keyName = round ? pcLabel(round.tonicPc, accidentalStyle, 0) : null;
+  const keyName = round ? noteGlyphs(pcLabel(round.tonicPc, accidentalStyle, 0)) : null;
 
   return (
     <ToolLayout
@@ -717,7 +788,7 @@ export default function GuessTheProgression() {
           <CollapsiblePanel
             id="history"
             title="History"
-            icon={StopwatchIcon}
+            icon={ListIcon}
             summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
           >
             {bestMs !== null && (
@@ -730,23 +801,9 @@ export default function GuessTheProgression() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">{formatDuration(entry.elapsedMs)}</span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} · {new Date(entry.at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={entry.score === entry.total ? { color: GRADE_COLOR.correct } : undefined}
-                      >
-                        {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} · {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -781,15 +838,7 @@ export default function GuessTheProgression() {
                     className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.progression.name}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                      {entry.counts.incorrect > 0 && (
-                        <span style={{ color: GRADE_COLOR.incorrect }}>✕{entry.counts.incorrect}</span>
-                      )}
-                      {entry.counts.partial > 0 && (
-                        <span style={{ color: GRADE_COLOR.partial }}>~{entry.counts.partial}</span>
-                      )}
-                      <span className="text-muted">/{attempts(entry.counts)}</span>
-                    </span>
+                    <StruggleCounts counts={entry.counts} />
                   </div>
                 ))}
               </div>
@@ -880,6 +929,13 @@ export default function GuessTheProgression() {
                 </div>
               </div>
             ))}
+            <SwitchRow
+              label="Drill every progression"
+              checked={drillMode}
+              onChange={(v) => updateSettings({ drillMode: v })}
+              disabled={running}
+              hint="Plays each selected progression once, in shuffled order; any you don't get fully right come back later in a new key."
+            />
           </CollapsiblePanel>
           )}
 
@@ -973,7 +1029,7 @@ export default function GuessTheProgression() {
             <AdvancedSlider
               label="Chord length"
               value={chordSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_CHORD_SECONDS}
               max={MAX_CHORD_SECONDS}
               step={0.1}
@@ -998,13 +1054,19 @@ export default function GuessTheProgression() {
               />
             </label>
             <Hint>Which sound plays the chords.</Hint>
+            <SwitchRow
+              label="Sound feedback"
+              checked={soundFeedback}
+              onChange={(v) => updateSettings({ soundFeedback: v })}
+              hint="A click each second of the countdown, plus a click the instant a round is graded."
+            />
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="progression-timing" title="Timing" icon={StopwatchIcon}>
+          <CollapsiblePanel id="progression-timing" title="Timing" icon={StopwatchIcon} summary={`${roundSeconds} s`}>
             <AdvancedSlider
               label="Max time to answer"
               value={roundSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_ROUND_SECONDS}
               max={MAX_ROUND_SECONDS}
               step={1}
@@ -1015,7 +1077,7 @@ export default function GuessTheProgression() {
             <AdvancedSlider
               label="Time between rounds"
               value={advanceDelayMs / 1000}
-              unit="s"
+              unit=" s"
               min={MIN_ADVANCE_DELAY_MS / 1000}
               max={MAX_ADVANCE_DELAY_MS / 1000}
               step={0.25}
@@ -1023,22 +1085,6 @@ export default function GuessTheProgression() {
               hint="How long the revealed answer stays on screen before the next progression plays."
               onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
             />
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={(v) => updateSettings({ soundFeedback: v })}
-              disabled={running}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-            {!learnMode && (
-            <SwitchRow
-              label="Drill every progression"
-              checked={drillMode}
-              onChange={(v) => updateSettings({ drillMode: v })}
-              disabled={running}
-              hint="Plays each selected progression once, in shuffled order; any you don't get fully right come back later in a new key."
-            />
-            )}
             {!drillMode && !learnMode && (
               <AdvancedSlider
                 label="Number of rounds"
@@ -1067,24 +1113,19 @@ export default function GuessTheProgression() {
         />
       )}
       <div className="flex w-full flex-col items-center gap-3">
-        {status && running && (
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-medium text-muted">Next progression in</span>
-            <span className="text-3xl font-semibold tabular-nums sm:text-4xl" style={{ color: GRADE_COLOR[status] }}>
-              <CountdownLabel active={running} timerRef={noteTimerRef} />
-            </span>
-          </div>
-        )}
         {activeLevel !== null && running && (
           <p className={LEVEL_LABEL}>
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
-        {!(learnMode && !running) && (
-        <div className="relative flex h-36 w-36 items-center justify-center p-4 text-center sm:h-44 sm:w-44">
+        {/* Steps aside while a finished run's results show. */}
+        {!(learnMode && !running) && !(summary && !running) && (
+        // Smaller while a round runs, so the keypads, Submit and Stop all fit on a laptop screen.
+        <div className={`relative flex items-center justify-center p-4 text-center ${running ? "h-28 w-28" : "h-36 w-36 sm:h-44 sm:w-44"}`}>
+          {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={running} timerRef={noteTimerRef} />
           <span
-            className="relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200 sm:text-4xl"
+            className={!running ? IDLE_MARK : "relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200"}
             style={
               glow
                 ? { color: glow }
@@ -1096,7 +1137,7 @@ export default function GuessTheProgression() {
         </div>
         )}
         {/* Before the first round, say what's about to happen (like the other ear trainers). */}
-        {!learnMode && !round && !running && (
+        {!learnMode && !running && !summary && (
           <p className="max-w-sm text-center text-sm text-muted">Press Start, listen to the chords, then write them down.</p>
         )}
 
@@ -1107,51 +1148,129 @@ export default function GuessTheProgression() {
                 const mark = marks?.[i];
                 const shown = status ? answerFor(round, i) : typedTokens[i] ? prettyToken(typedTokens[i], answerMode) : "?";
                 const color = status ? (mark ? GRADE_COLOR.correct : GRADE_COLOR.incorrect) : undefined;
+                const reason = status && !mark ? slotReason(typedTokens[i], round, i, answerMode, typeQualities) : null;
                 return (
+                  // A fixed height with room for the "You: …" line, so answering doesn't grow it.
                   <div
                     key={i}
-                    className={`flex min-w-14 flex-col items-center rounded-md border px-2.5 py-2 transition-colors ${
-                      playingIndex === i ? "border-accent bg-accent/10" : "border-foreground/15 bg-surface"
-                    }`}
+                    // Right / wrong tints the box; the chord that's playing gets an accent outline
+                    // on top, so a replay never hides which ones were wrong.
+                    className={`flex h-[3.75rem] min-w-14 flex-col items-center justify-center rounded-md border px-2.5 outline-offset-2 transition-colors ${
+                      color ? "" : "border-foreground/15 bg-surface"
+                    } ${playingIndex === i ? "outline-2 outline-accent" : ""}`}
+                    style={color ? { borderColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` } : undefined}
                   >
                     <span
-                      className={`text-lg font-semibold ${!status && !typedTokens[i] ? "text-muted" : ""}`}
+                      className={`text-lg font-semibold ${reason ? "leading-6" : "leading-7"} ${!status && !typedTokens[i] ? "text-muted" : ""}`}
                       style={color ? { color } : undefined}
                     >
                       {shown}
                     </span>
                     {status && !mark && typedTokens[i] && (
-                      <span className="text-[0.65rem] text-muted line-through">
-                        {prettyToken(typedTokens[i], answerMode)}
+                      <span className="text-xs leading-4 text-muted">
+                        You: {prettyToken(typedTokens[i], answerMode)}
                       </span>
                     )}
+                    {reason && <span className="text-xs leading-4 text-muted">{reason}</span>}
                   </div>
                 );
               })}
             </div>
-            <p className="text-xs text-muted">
-              {status
-                ? `Key of ${keyName}${round.progression.minor ? " minor" : ""} · ${round.progression.name}`
-                : answerMode === "chords"
-                  ? `Starts on ${firstChordRoot(round, accidentalStyle)}`
-                  : `${round.progression.chords.length} chords`}
-            </p>
-            <button
-              type="button"
-              onClick={() => void playProgression(round)}
-              className={SECONDARY_BUTTON}
+            <p
+              role="status"
+              className={`h-5 max-w-full truncate text-xs leading-5 ${typeHint && !status ? "font-medium text-danger" : "text-muted"}`}
             >
-              <PlayIcon className="h-3.5 w-3.5" />
-              Replay
-            </button>
+              {status ? (
+                <>
+                  Key of {keyName}
+                  {round.progression.minor ? " minor" : ""} · {round.progression.name} · next in{" "}
+                  <CountdownLabel active={running} timerRef={noteTimerRef} />
+                </>
+              ) : typeHint ? (
+                typeHint
+              ) : answerMode === "chords" ? (
+                `${round.progression.chords.length} chords · starts on ${noteGlyphs(firstChordRoot(round, accidentalStyle))}`
+              ) : (
+                `${round.progression.chords.length} chords`
+              )}
+            </p>
           </>
         )}
 
-        {running && round && !status && (
-          <form onSubmit={submitAnswer} className="flex w-full flex-col items-center gap-2">
-            <div className="flex w-full max-w-[20rem] flex-col gap-1.5">
+        {/* The answer box and buttons stay in place once answered, with Next where Submit was. */}
+        {running && round && (
+          <form
+            onSubmit={(e) => {
+              if (status) {
+                e.preventDefault();
+                skipRef.current?.();
+              } else submitAnswer(e);
+            }}
+            className="flex w-full flex-col items-center gap-2"
+          >
+            {/* The keypads below can type every answer, so a tap on the box shows its caret but not
+                the phone's keyboard (FB-26). Set before focus, from the tap itself, so a hardware
+                keyboard or a mouse click still types normally. */}
+            <input
+              ref={inputElRef}
+              type="text"
+              onPointerDown={(e) => {
+                e.currentTarget.inputMode = e.pointerType === "touch" ? "none" : "text";
+              }}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={typed}
+              readOnly={!!status}
+              onChange={(e) => setTypedValue(e.target.value)}
+              aria-label="Your answer"
+              placeholder={
+                answerMode === "numerals"
+                  ? typeQualities
+                    ? "e.g. ii7 V7 I^7"
+                    : "e.g. ii V I"
+                  : typeQualities
+                    ? "e.g. D-7 G7 C^7"
+                    : "e.g. D- G C"
+              }
+              className={`${ANSWER_INPUT} max-w-[20rem]`}
+            />
+            {/* Replay, Submit and I don't know on one row (Next takes Submit's place). */}
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => void playProgression(round)}
+                className={SECONDARY_BUTTON}
+              >
+                <PlayIcon className="h-3.5 w-3.5" />
+                Replay
+              </button>
+              <button
+                type="submit"
+                className={PRIMARY_BUTTON}
+              >
+                {status ? "Next" : "Submit"}
+              </button>
+              <button
+                type="button"
+                onClick={gradeAndReveal}
+                disabled={!!status}
+                className={`${SECONDARY_BUTTON} ${status ? "invisible" : ""}`}
+              >
+                I don&apos;t know
+              </button>
+            </div>
+            {/* The keypads sit under the buttons and go away once the round is graded, so the
+                result isn't followed by a greyed-out keypad, and Next stays where Submit was. On
+                a desktop the page is centred vertically, so there they only turn invisible (still
+                taking their space); removing them would slide everything down under the pointer. */}
+            <fieldset
+              disabled={!!status}
+              className={`flex w-full max-w-[22rem] min-w-0 flex-col gap-2 ${status ? "max-lg:hidden lg:invisible" : ""}`}
+            >
               {answerMode === "numerals" ? (
-                <div role="group" aria-label="Numeral keypad" className="grid grid-cols-8 gap-1 rounded-xl bg-surface p-1.5">
+                <div role="group" aria-label="Numeral keypad" className="grid grid-cols-8 gap-1">
                   {UPPER_NUMERALS.map((n) => (
                     <KeypadKey key={n} label={n} title={`${n} (major)`} onPress={() => insertText(n, true)} />
                   ))}
@@ -1162,14 +1281,21 @@ export default function GuessTheProgression() {
                   <KeypadKey label="♯" title="Sharp (before a numeral)" onPress={() => insertText("#", true)} />
                 </div>
               ) : (
-                <div role="group" aria-label="Root keypad" className="grid grid-cols-7 gap-1 rounded-xl bg-surface p-1.5">
+                <div role="group" aria-label="Root keypad" className="grid grid-cols-7 gap-1">
                   {ROOT_LETTERS.map((l) => (
                     <KeypadKey key={l} label={l} onPress={() => insertText(l, true)} />
                   ))}
                 </div>
               )}
-              {(typeQualities || answerMode === "chords") && <ChordSymbolKeypad onInsert={(t) => insertText(t)} />}
-              <div className="grid grid-cols-7 gap-1 rounded-xl bg-surface p-1.5">
+              {/* With numerals, ♭/♯ go before a numeral (the numeral rows have them), never inside
+                  a chord's quality, so the symbol keypad leaves its own pair out. */}
+              {(typeQualities || answerMode === "chords") && (
+                <ChordSymbolKeypad
+                  onInsert={(t) => insertText(t)}
+                  omit={answerMode === "numerals" ? ["#", "b"] : undefined}
+                />
+              )}
+              <div className="grid grid-cols-7 gap-1">
                 {typeQualities ? (
                   DIGIT_KEYS.map((d) => <KeypadKey key={d} label={d} onPress={() => insertText(d)} />)
                 ) : (
@@ -1178,43 +1304,7 @@ export default function GuessTheProgression() {
                 <KeypadKey label="␣" caption="next" title="Next chord (space)" onPress={() => insertText(" ")} />
                 <KeypadKey label="⌫" caption="delete" title="Delete" onPress={backspace} />
               </div>
-            </div>
-            <input
-              ref={inputElRef}
-              type="text"
-              inputMode="text"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              value={typed}
-              onChange={(e) => setTypedValue(e.target.value)}
-              placeholder={
-                answerMode === "numerals"
-                  ? typeQualities
-                    ? "e.g. ii7 V7 I^7"
-                    : "e.g. ii V I"
-                  : typeQualities
-                    ? "e.g. D-7 G7 C^7"
-                    : "e.g. D- G C"
-              }
-              className="h-11 w-full max-w-[20rem] rounded-md bg-foreground/[0.05] px-3 text-center text-lg text-foreground outline-none focus:ring-2 focus:ring-accent/40"
-            />
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className={PRIMARY_BUTTON}
-              >
-                Submit
-              </button>
-              <button
-                type="button"
-                onClick={gradeAndReveal}
-                className={SECONDARY_BUTTON}
-              >
-                I don&apos;t know
-              </button>
-            </div>
+            </fieldset>
           </form>
         )}
 
@@ -1314,7 +1404,7 @@ export default function GuessTheProgression() {
                     </span>
                   ))}
                   <span className="text-xs text-muted">
-                    · {pcLabel(r.tonicPc, accidentalStyle, 0)}
+                    · {noteGlyphs(pcLabel(r.tonicPc, accidentalStyle, 0))}
                     {r.progression.minor ? " minor" : ""}
                   </span>
                 </div>
@@ -1345,6 +1435,8 @@ export default function GuessTheProgression() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running && !learnMode) && (
       <button
         type="button"
         onClick={running ? stop : () => start(learnMode ? "learn" : "normal")}
@@ -1352,6 +1444,7 @@ export default function GuessTheProgression() {
       >
         {running ? "Stop" : learnMode ? `Start level ${learn.selected + 1}` : "Start"}
       </button>
+      )}
       {learn.result && (
         <LevelComplete
           result={learn.result}

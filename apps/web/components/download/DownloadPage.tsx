@@ -61,16 +61,28 @@ export default function DownloadPage() {
               <DownloadIcon className="h-5 w-5" /> Download for {PLATFORM_NAME[platform]}
             </a>
             <p className="text-xs text-muted">
-              Version {release?.version} · {formatBytes(primary.size)} · {primary.label}
+              Desktop app {release?.version} · {formatBytes(primary.size)} · {primary.label}
               {platform === "mac" ? " · Apple silicon and Intel" : ""}
             </p>
           </div>
+        ) : platform === null ? (
+          // No computer detected (a phone or tablet): say so first; the list below is the quieter
+          // second step (a link down the page rather than off to GitHub).
+          <div className="flex flex-col items-start gap-3 sm:items-center">
+            <p className="max-w-xl text-sm">On a phone or tablet? The desktop app is for computers; soniroll.com works everywhere.</p>
+            <a
+              href={release ? "#downloads" : RELEASES_URL}
+              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground hover:bg-surface-hover"
+            >
+              <DownloadIcon className="h-4 w-4" /> See downloads
+            </a>
+          </div>
         ) : (
-          <a href={release?.url ?? RELEASES_URL} className="inline-flex h-12 items-center gap-2 rounded-full bg-accent px-6 text-base font-bold text-accent-foreground hover:bg-accent-hover">
-            <DownloadIcon className="h-5 w-5" /> {platform === null && release ? "Choose your computer below" : "See the downloads"}
+          // A computer, but its download couldn't be picked (the release didn't load).
+          <a href={release ? "#downloads" : RELEASES_URL} className="inline-flex h-12 items-center gap-2 whitespace-nowrap rounded-full bg-accent px-6 text-base font-bold text-accent-foreground hover:bg-accent-hover">
+            <DownloadIcon className="h-5 w-5" /> See downloads
           </a>
         )}
-        {platform === null && !desktop && <p className="text-xs text-muted">On a phone or tablet? The desktop app is for computers; soniroll.com works everywhere.</p>}
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2">
@@ -85,12 +97,12 @@ export default function DownloadPage() {
         ))}
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="downloads" className="flex scroll-mt-20 flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-bold">Every download</h2>
           {release && (
             <a href={release.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-accent hover:underline">
-              What&apos;s new in {release.version}
+              What&apos;s new in desktop app {release.version}
             </a>
           )}
         </div>
@@ -110,7 +122,7 @@ export default function DownloadPage() {
           </div>
         )}
         <p className="text-xs text-muted">
-          The desktop app is new, so tell us if something&apos;s off (the bug button, bottom right). Builds aren&apos;t signed with a developer
+          The desktop app is new, so tell us if something&apos;s off (the bug button, top right). Builds aren&apos;t signed with a developer
           certificate yet, which is why your computer may warn you the first time.
         </p>
       </section>

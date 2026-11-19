@@ -6,13 +6,13 @@ import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
-import { BIG_PRIMARY } from "@/components/MeterFields";
+import { BIG_PRIMARY, BIG_SECONDARY } from "@/components/MeterFields";
 import PanelsToggle from "@/components/PanelsToggle";
 import CollapsiblePanel from "@/components/CollapsiblePanel";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import TunesPanel from "@/components/TunesPanel";
-import { PlusIcon, StopwatchIcon } from "@/components/tools";
+import { MetronomeIcon, PlusIcon } from "@/components/tools";
 import { STANDARDS, standardToTune } from "@/lib/standards";
 import { CountOff, parseBeatsPerBar, playCountOff } from "@/lib/metronome";
 import type { BeatLevel } from "@/lib/clickEngine";
@@ -42,12 +42,13 @@ export default function JamPractice() {
   const [tunes, setTunes] = useSyncedTunes();
   const [pick, setPick] = useState<PickResult | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
-  // The tune search, opened from the Tunes I Know chip or the empty state below.
+  // The tune search, opened from the Picking from chip or the empty state below.
   const [adding, setAdding] = useState(false);
   const [isCounting, setIsCounting] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
-  // Counts as practice in the Shed Log while a tune's up (and the tab's in view).
-  useToolActivity("/jam-practice", isCounting || pick !== null, { visibleOnly: true });
+  // Counts as practice while the click plays (and the tab's in view). Stop / Esc, or the count-off
+  // ending, stop the count: a tune left on screen with nothing playing isn't practice time.
+  useToolActivity("/jam-practice", isCounting, { visibleOnly: true });
   const [settings, updateSettings] = usePersistedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const { countOffBars, accentFirstBeat, keepGoingIndefinitely, pickFromStandards } = settings;
   const setCountOffBars = (countOffBars: number) => updateSettings({ countOffBars });
@@ -179,7 +180,14 @@ export default function JamPractice() {
             onAddOpenChange={setAdding}
           />
 
-          <CollapsiblePanel id="jam-countoff" title="Count-off" icon={StopwatchIcon} summary={`${countOffBars} bars`}>
+          {/* The click: how long it counts you in, and whether it keeps going. Its value says what the
+              number means ("8-bar count-off", not a bare "8 bars" that could be the tune's length). */}
+          <CollapsiblePanel
+            id="jam-countoff"
+            title="Click"
+            icon={MetronomeIcon}
+            summary={`${countOffBars}-bar count-off${keepGoingIndefinitely ? ", keeps going" : ""}`}
+          >
             <label className="flex items-center justify-between gap-3 text-sm">
               <span className="text-muted">Count-off bars</span>
               <Select
@@ -217,7 +225,7 @@ export default function JamPractice() {
           </>
         ) : tunes.length === 0 && !pickFromStandards ? (
           // Nothing to pick from yet: offer both ways in, right here.
-          <div className="flex w-[min(24rem,calc(100vw-2rem))] flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
+          <div className="flex w-[min(24rem,calc(100cqw-2rem))] flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
             <p>Your tune list is empty. Add the tunes you know, or pick from {STANDARDS.length} jazz standards.</p>
             <div className="flex flex-wrap justify-center gap-2">
               <button
@@ -240,51 +248,46 @@ export default function JamPractice() {
             </div>
           </div>
         ) : (
-          <div className="w-[min(24rem,calc(100vw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
+          <div className="w-[min(24rem,calc(100cqw-2rem))] rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">
             No tune picked yet.
           </div>
         )}
+        {/* Only what the tune has: a tune with no tempo or key just shows its time signature. */}
         {pick && (
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-base text-muted sm:gap-x-6 sm:text-lg">
-            <span>{pick.tempo ? `${pick.tempo.value} BPM` : "no enabled tempo"}</span>
-            <span>{pick.key ? pick.key.value : "no enabled key"}</span>
+            {pick.key && <span>{pick.key.value}</span>}
             <span>{pick.tune.timeSignature}</span>
           </div>
         )}
         {pick?.tune.notes && (
           <p className="max-w-md whitespace-pre-wrap text-sm text-muted">{pick.tune.notes}</p>
         )}
-        {isCounting && pick?.tempo && (
-          <div className="mt-4 flex flex-col items-center gap-4">
-            <div className="flex flex-col items-center">
-              <span className="text-6xl font-bold tracking-tight tabular-nums sm:text-7xl">
-                {pick.tempo.value}
-              </span>
-              <span className="text-sm text-muted">
-                BPM · {pick.tune.timeSignature}
-              </span>
-            </div>
+        {/* The tempo shows once, big (the line above has the key and time signature). */}
+        {pick?.tempo && (
+          <div className="mt-4 flex flex-col items-center">
+            <span className="text-6xl font-bold tracking-tight tabular-nums sm:text-7xl">
+              {pick.tempo.value}
+            </span>
+            <span className="text-sm text-muted">BPM</span>
+          </div>
+        )}
+        {/* Stays in place (dimmed, still) after Stop, so the buttons below don't jump up. */}
+        {pick?.tempo && (
+          <div className={`flex flex-col items-center gap-3 transition-opacity ${isCounting ? "" : "opacity-50"}`}>
             <BeatIndicator
               accents={Array.from(
                 { length: parseBeatsPerBar(pick.tune.timeSignature) },
                 (_, i): BeatLevel => (accentFirstBeat && i === 0 ? 2 : 1),
               )}
-              currentBeat={currentBeat}
+              currentBeat={isCounting ? currentBeat : null}
             />
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <span className="text-sm font-medium text-accent">
-                {keepGoingIndefinitely
-                  ? "Metronome running…"
-                  : `Counting off ${countOffBars} bar${countOffBars === 1 ? "" : "s"}…`}
-              </span>
-              <button
-                type="button"
-                onClick={stopCountOff}
-                className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
-              >
-                Stop
-              </button>
-            </div>
+            <span className="text-sm text-muted">
+              {!isCounting
+                ? "Click stopped"
+                : keepGoingIndefinitely
+                  ? "Metronome running"
+                  : `Counting off ${countOffBars} bar${countOffBars === 1 ? "" : "s"}`}
+            </span>
           </div>
         )}
       </div>
@@ -301,15 +304,22 @@ export default function JamPractice() {
 
       {/* Nothing to pick from (no tunes, standards off): disabled; the empty state above has the
           two ways in. */}
-      <button
-        type="button"
-        onClick={pickRandom}
-        disabled={!pickFromStandards && tunes.length === 0}
-        title={!pickFromStandards && tunes.length === 0 ? "Add a tune or use the jazz standards first" : undefined}
-        className={BIG_PRIMARY}
-      >
-        {pick ? "Pick another" : "Pick a tune"}
-      </button>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {isCounting && (
+          <button type="button" onClick={stopCountOff} className={BIG_SECONDARY}>
+            Stop
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={pickRandom}
+          disabled={!pickFromStandards && tunes.length === 0}
+          title={!pickFromStandards && tunes.length === 0 ? "Add a tune or use the jazz standards first" : undefined}
+          className={BIG_PRIMARY}
+        >
+          {pick ? "Pick another" : "Pick a tune"}
+        </button>
+      </div>
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to pick a tune · <KeyHint.Key>Esc</KeyHint.Key> to
         stop

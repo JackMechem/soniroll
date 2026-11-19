@@ -20,7 +20,7 @@ type Props<T extends string | number> = {
   className?: string;
 };
 
-type MenuPos = { left: number; width: number; top?: number; bottom?: number; maxHeight: number };
+type MenuPos = { left: number; width: number; maxWidth: number; top?: number; bottom?: number; maxHeight: number };
 
 const MENU_GAP = 4;
 const MENU_MAX_HEIGHT = 288;
@@ -68,15 +68,18 @@ export default function Select<T extends string | number>({
       const above = rect.top - MENU_GAP - 8;
       const flip = below < 160 && above > below;
       const maxHeight = Math.min(MENU_MAX_HEIGHT, flip ? above : below);
+      // At least as wide as the button, wider if an option needs it, but never off the screen.
+      const maxWidth = Math.max(rect.width, window.innerWidth - rect.left - 8);
       setPos(
         flip
           ? {
               left: rect.left,
               width: rect.width,
+              maxWidth,
               bottom: window.innerHeight - rect.top + MENU_GAP,
               maxHeight,
             }
-          : { left: rect.left, width: rect.width, top: rect.bottom + MENU_GAP, maxHeight },
+          : { left: rect.left, width: rect.width, maxWidth, top: rect.bottom + MENU_GAP, maxHeight },
       );
     }
 
@@ -188,7 +191,9 @@ export default function Select<T extends string | number>({
             style={{
               position: "fixed",
               left: pos.left,
-              width: pos.width,
+              minWidth: pos.width,
+              width: "max-content",
+              maxWidth: pos.maxWidth,
               top: pos.top,
               bottom: pos.bottom,
               maxHeight: pos.maxHeight,

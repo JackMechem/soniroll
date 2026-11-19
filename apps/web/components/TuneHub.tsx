@@ -1,8 +1,7 @@
 "use client";
 
 import { ChartPaper } from "@/components/library/chartView";
-import { Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
-import { displayKey } from "@jam-practice/core/setlistKeys";
+import { gridKeyName, Hero, KeyBadge, keyColor, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
@@ -23,6 +22,7 @@ import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
 import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
+import { goBackOr } from "@/lib/goBack";
 import { makeId, type Tune } from "@/lib/types";
 import { STANDARDS, nameId } from "@/lib/standards";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
@@ -102,7 +102,7 @@ export default function TuneHub({ id, list: listParam }: { id: string; list?: st
         lists[target].setTunes((prev) => [...prev, t]);
       }}
       canUseLearn={isAuthenticated}
-      onDeleted={() => router.back()}
+      onDeleted={() => goBackOr(router, "/tunes")}
     />
   );
 }
@@ -229,13 +229,13 @@ function Hub({
       <Hero
         title={tune.name}
         color={keyColor(firstKey)}
-        back={() => router.back()}
+        back={() => goBackOr(router, "/tunes")}
         leading={<KeyBadge label={firstKey} size="lg" />}
         subtitle={[
           LIST_LABEL[list],
           tune.timeSignature || null,
           ...tempos.map((t) => `${t} BPM`),
-          chart ? `Chart in ${chart.key ? displayKey(chart.key) : "—"}` : null,
+          chart ? `Chart in ${chart.key ? prettyKey(chart.key) : "—"}` : null,
         ]
           .filter(Boolean)
           .join(" · ")}
@@ -290,7 +290,7 @@ function Hub({
                       <Select
                         value={previewKey}
                         onChange={setPreviewKey}
-                        options={[{ value: "", label: `${chart.key || "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                        options={[{ value: "", label: `${chart.key ? prettyKey(chart.key) : "—"} (original)` }, ...KEY_NAMES.map((k) => ({ value: k, label: prettyKey(k) }))]}
                         className="min-w-32"
                       />
                       {/* Phones: the chart fits the screen, or is zoomed in and scrolls sideways.
@@ -347,7 +347,7 @@ function Hub({
                       ? "No chord chart linked yet."
                       : // Tunes added from the jazz standards list are a name, key and tempo — no
                         // chords come with them (none are bundled), so say how to get a chart.
-                        `No chord chart yet${isStandard ? " — the standards list adds a tune's name, key and tempo, not its chords" : ""}. Write the chart, or import yours: one called “${tune.name}” shows up here to link.`}
+                        `No chord chart yet.${isStandard ? " Standards come with a name, key and tempo, not chords." : ""} Write one, or import a chart called “${tune.name}” and you can link it here.`}
                   {matches.length > 0 && ` ${matches.length === 1 ? "This one has" : "These have"} the same name:`}
                 </p>
                 {matches.map((m) => (
@@ -400,8 +400,8 @@ function Hub({
 
         <div className="grid gap-4 sm:grid-cols-2 xl:sticky xl:top-6 xl:grid-cols-1">
           {/* Keys you know it in: toggles that save to the tune (unlike the chart's "Show in",
-              which only changes how the chart is shown). Check marks and an outline style keep
-              them from reading like the chart page's key picker. */}
+              which only changes how the chart is shown). Several can be on, so they're filled
+              toggle pills with a check, not radio-style circles. */}
           <section className="flex flex-col gap-3 rounded-lg bg-surface p-4">
             <div className="flex items-baseline justify-between gap-2">
               <div>
@@ -421,16 +421,11 @@ function Hub({
                     aria-pressed={known}
                     title={known ? "You know it in this key — tap to unmark" : "Tap to mark as a key you know"}
                     className={`flex items-center justify-center gap-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
-                      known ? "bg-accent/15 text-foreground ring-1 ring-inset ring-accent/50" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
+                      known ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
                     }`}
                   >
-                    {known ? (
-                      <CheckIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
-                    ) : (
-                      <span aria-hidden className="h-3 w-3 shrink-0 rounded-full border border-current opacity-40" />
-                    )}
-                    {name}
-                    {suffix}
+                    {known && <CheckIcon className="h-3.5 w-3.5 shrink-0" />}
+                    {gridKeyName(name, minor)}
                   </button>
                 );
               })}
@@ -441,7 +436,10 @@ function Hub({
           {/* A quick note kept on the tune itself (stored as the tune's `notes`); Shed Notes below
               are full notes, with links and search, in the Shed Notes tool. */}
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
-            <h2 className="text-sm font-medium">Quick note</h2>
+            <div>
+              <h2 className="text-sm font-medium">Quick note</h2>
+              <p className="text-xs text-muted">A few lines kept on this tune&apos;s page, saved as you type.</p>
+            </div>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -455,16 +453,13 @@ function Hub({
               rows={7}
               className="w-full resize-y rounded-md bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
-            <p className="text-xs text-muted">
-              {isAuthenticated ? "A few lines kept with the tune, saved as you type. For longer notes, use Shed Notes." : "A few lines kept with the tune, saved as you type."}
-            </p>
           </section>
 
           {isAuthenticated && (
             <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
               <div>
                 <h2 className="text-sm font-medium">Shed Notes</h2>
-                <p className="text-xs text-muted">Full notes on this tune, in your Shed Notes.</p>
+                <p className="text-xs text-muted">Longer notes on this tune (links, notation, search), kept in Shed Notes.</p>
               </div>
               <AttachedNotes target={{ kind: "tune", tuneId: tune.id }} label={tune.name || "Untitled tune"} newTitle={tune.name || "Untitled tune"} />
             </section>

@@ -12,12 +12,15 @@ export default function WaveScrollbar({
   duration,
   onChange,
   thin = false,
+  hidden = false,
 }: {
   view: View;
   duration: number;
   onChange: (start: number) => void;
   /** A slim 3px bar (with a taller invisible grab area), for overlaying on other content. */
   thin?: boolean;
+  /** Keeps its space but isn't shown or usable (the waveform isn't zoomed in). */
+  hidden?: boolean;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ offset: number } | null>(null);
@@ -65,13 +68,15 @@ export default function WaveScrollbar({
       aria-valuemax={Math.round(maxStart)}
       aria-valuenow={Math.round(view.start)}
       aria-label="Scroll waveform"
+      aria-hidden={hidden || undefined}
+      inert={hidden}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={end}
       onPointerCancel={end}
       className={`relative w-full cursor-pointer touch-none ${
         thin ? "h-3" : "-mt-3 h-3 rounded-full bg-foreground/10"
-      }`}
+      } ${hidden ? "invisible" : ""}`}
     >
       <div
         className={`absolute inset-x-0 ${

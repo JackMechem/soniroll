@@ -212,7 +212,8 @@ export function HintsButton({ on, onToggle }: { on: boolean; onToggle: () => voi
       aria-label={on ? "Hide option descriptions" : "Show option descriptions"}
       title={on ? "Hide option descriptions" : "Show option descriptions"}
       onClick={onToggle}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
+      // 40px on touch screens (a finger's target), the icon the same size.
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent pointer-coarse:h-10 pointer-coarse:w-10 max-sm:h-10 max-sm:w-10 ${
         on ? "bg-accent text-accent-foreground" : "text-muted hover:bg-background hover:text-foreground"
       }`}
     >

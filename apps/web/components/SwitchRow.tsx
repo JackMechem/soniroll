@@ -31,7 +31,7 @@ export default function SwitchRow({
           aria-labelledby={id}
           onClick={() => onChange(!checked)}
           disabled={disabled}
-          className="relative flex items-center justify-between gap-3 rounded-md bg-foreground/[0.05] py-2 pl-3 pr-2.5 text-left text-sm transition-colors hover:bg-surface-hover disabled:opacity-50"
+          className="relative flex items-center justify-between gap-3 rounded-md bg-foreground/[0.05] py-2 pl-3 max-sm:min-h-11 pointer-coarse:min-h-11 pr-2.5 text-left text-sm transition-colors hover:bg-surface-hover disabled:opacity-50"
         >
           <span id={id} className={`font-medium ${checked ? "text-foreground" : "text-muted"}`}>
             {label}
@@ -55,18 +55,21 @@ export default function SwitchRow({
   }
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2 text-sm">
+      {/* The whole row is the switch, so a tap on the label flips it too (touch: at least 44px tall). */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-labelledby={id}
+        onClick={() => onChange(!checked)}
+        disabled={disabled}
+        className="group flex w-full items-center justify-between gap-2 text-left text-sm max-sm:min-h-11 pointer-coarse:min-h-11 disabled:cursor-not-allowed"
+      >
         <span id={id} className="font-medium text-muted">
           {label}
         </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-labelledby={id}
-          onClick={() => onChange(!checked)}
-          disabled={disabled}
-          className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+        <span
+          className={`relative h-5 w-9 shrink-0 rounded-full transition-colors group-disabled:opacity-50 ${
             checked ? "bg-accent" : "bg-foreground/15"
           }`}
         >
@@ -75,8 +78,8 @@ export default function SwitchRow({
               checked ? "translate-x-4" : ""
             }`}
           />
-        </button>
-      </div>
+        </span>
+      </button>
       {hint && <Hint>{hint}</Hint>}
     </div>
   );

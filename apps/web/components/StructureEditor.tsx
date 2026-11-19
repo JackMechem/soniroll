@@ -237,6 +237,19 @@ function SectionCard({
  * count and time signature, then arrange them into a `Form` (reusing the same section as many
  * times as needed, e.g. A, A, B, C) that plays through in order and loops back to the start.
  */
+/** Stands in for the beat display in "Changing meters" while there's nothing to play yet: the one
+    place that says what to do next (Start stays off until then). "Add sections" is the label of
+    the Sections chip's value while there are none. */
+export function StructureEmptyHint({ structure }: { structure: Structure }) {
+  return (
+    <p className="rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
+      {structure.sections.length === 0
+        ? "Add sections below, then put them in order to start."
+        : "Put your sections in the form below to start."}
+    </p>
+  );
+}
+
 export default function StructureEditor({
   structure,
   onChange,
@@ -351,11 +364,13 @@ export default function StructureEditor({
       <div className="flex min-h-12 flex-wrap items-center gap-1.5 rounded-md bg-background p-2">
         {structure.form.length === 0 ? (
           <p className="px-2 py-1.5 text-sm text-muted">
-            {structure.sections.length === 0
-              ? show === "form"
-                ? "Create sections with the Sections button, then add them here."
-                : "Add a section below, then add it to the form."
-              : "Add sections to the form to set the order they play in."}
+            {/* With show="form" the page's own hint (`StructureEmptyHint`) says what to do, so
+                this stays short instead of saying it a second way. */}
+            {show === "form"
+              ? "Nothing in the form yet."
+              : structure.sections.length === 0
+                ? "Add a section below, then add it to the form."
+                : "Add sections to the form to set the order they play in."}
           </p>
         ) : (
           structure.form.map((sectionId, i) => {

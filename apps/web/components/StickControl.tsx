@@ -8,7 +8,7 @@ import StickControlStave from "@/components/StickControlStave";
 import SwitchRow from "@/components/SwitchRow";
 import AdvancedSlider from "@/components/AdvancedSlider";
 import { BIG_PRIMARY, BIG_SECONDARY, SteppedField, SoundOptions, TempoHero } from "@/components/MeterFields";
-import { ListIcon, RepeatIcon, SpeakerIcon } from "@/components/tools";
+import { ListIcon, RepeatIcon, ShuffleIcon, SpeakerIcon } from "@/components/tools";
 import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -325,10 +325,11 @@ export default function StickControl() {
         </OptionsCard>
       }
     >
-      {/* Phones (CSS order): the pattern first, then New pattern / Start, then the tempo and beats,
-          then the next pattern — so the music and Start are both on the first screen. Bigger
+      {/* Phones (CSS order): the pattern and the next one together first, then New pattern / Start,
+          then the tempo and beats — so the music and Start are both on the first screen. Bigger
           screens: tempo, beats, the patterns, then the buttons. */}
-      <div className="flex w-full max-w-5xl flex-col items-center gap-4 max-sm:order-3">
+      {/* As narrow as the other tools' tempo controls (a full-width slider read oddly). */}
+      <div className="flex w-full max-w-[24rem] flex-col items-center gap-4 max-sm:order-3">
         <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
 
         <BeatIndicator
@@ -344,42 +345,51 @@ export default function StickControl() {
           actually requires — reported directly ("the music lines should be able to be in one line
           if the screen is big enough"). The notation gets the full width ToolLayout's own stacked
           layout already gives this page's content section. */}
-      {pattern && (
-        <div className="flex w-full flex-col items-center max-sm:order-1">
-          <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />
+      {(pattern || nextPattern) && (
+        <div className="flex w-full flex-col items-center gap-3 max-sm:order-1">
+          {pattern && <StickControlStave pattern={pattern} activeBarIndex={currentBarIndex} />}
+          {nextPattern && (
+            <div className="flex w-full flex-col items-center gap-1">
+              <p className="text-xs font-medium text-muted">Next</p>
+              <StickControlStave
+                pattern={nextPattern}
+                activeBarIndex={null}
+                background="background"
+              />
+            </div>
+          )}
         </div>
       )}
 
-      {nextPattern && (
-        <div className="flex w-full flex-col items-center gap-2 max-sm:order-4">
-          <p className="text-xs font-medium text-muted">Next</p>
-          <StickControlStave
-            pattern={nextPattern}
-            activeBarIndex={null}
-            background="background"
-          />
+      {/* The phase ("Repeat 1 of 20") sits in the gap just above the buttons, so starting doesn't
+          push the page down and it takes no room of its own. Start is centred like every other
+          tool's; New pattern is a smaller button beside it. */}
+      <div className="relative flex w-full flex-col items-center max-sm:order-2">
+        <p aria-live="polite" className="absolute bottom-full mb-0.5 h-5 whitespace-nowrap text-sm font-medium text-accent">
+          {phaseLabel}
+        </p>
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => advanceStickControlPattern()}
+              title="Shuffle a new pattern"
+              className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+            >
+              <ShuffleIcon className="h-4 w-4 text-muted" />
+              <span className="hidden sm:inline">New pattern</span>
+              <span className="sm:hidden">New</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={running ? stop : start}
+            className={running ? BIG_SECONDARY : BIG_PRIMARY}
+          >
+            {running ? "Stop" : "Start"}
+          </button>
+          <div aria-hidden />
         </div>
-      )}
-
-      {phaseLabel && (
-        <p className="-my-2 text-sm font-medium text-accent max-sm:order-2">{phaseLabel}</p>
-      )}
-
-      <div className="flex items-center gap-3 max-sm:order-2">
-        <button
-          type="button"
-          onClick={() => advanceStickControlPattern()}
-          className={BIG_SECONDARY}
-        >
-          New pattern
-        </button>
-        <button
-          type="button"
-          onClick={running ? stop : start}
-          className={running ? BIG_SECONDARY : BIG_PRIMARY}
-        >
-          {running ? "Stop" : "Start"}
-        </button>
       </div>
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop

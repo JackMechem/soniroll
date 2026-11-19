@@ -247,3 +247,14 @@ play **silently** rather than late.
 Checked in headless Chromium by holding main-thread intervals to 1/s (old: 11 of 12 clicks in the
 past; new: none) and by stalling the main thread 200 ms at Start. Not checked in a real hidden tab
 in Firefox/Safari, nor on desktop.
+
+## 2026-11-18: beat numbers above the bars (FB-25)
+
+Jack: "Beats look weird on mobile, metronome same" (phone screenshot of Metric Modulation). Two
+causes: the gaps between the three segments were uneven (fixed in the UI/UX pass 2 commit: the gap
+sits under the top two segments) and the beat number was drawn inside the bar over the top segment.
+`BeatIndicator`'s `Bar` now puts the number in its own row above the bar (muted, foreground on the
+playing beat, struck through when muted); subdivision ticks have no number and line up by their
+bottoms. The segments' fixed heights for macOS WebKit (FB-20/21) are untouched. Verified: headless
+Chromium at 390 dark on /metronome and /random-metric-modulation, light on the landing demo (with
+eighth-note ticks). Not verified: the macOS desktop app.

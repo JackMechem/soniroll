@@ -9,6 +9,7 @@ import { InstrumentIcon } from "@/components/InstrumentIcons";
 import KeyHint from "@/components/KeyHint";
 import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
+import SwitchRow from "@/components/SwitchRow";
 import TunerDial from "@/components/TunerDial";
 import TakePanel from "@/components/tuner/TakePanel";
 import TakesChip from "@/components/tuner/TakesChip";
@@ -20,6 +21,7 @@ import { centsColor, readingAt } from "@/lib/pitchTrack";
 import { formatDuration } from "@/lib/recordings";
 import { startTone, ToneHandle } from "@/lib/toneGenerator";
 import {
+  clearTunerError,
   getTunerServerSnapshot,
   getTunerSnapshot,
   setTunerToneActive,
@@ -29,6 +31,7 @@ import {
   updateTunerConfig,
 } from "@/lib/tunerEngine";
 import {
+  clearTunerRecorderError,
   getTunerRecorderServerSnapshot,
   getTunerRecorderSnapshot,
   startTunerRecording,
@@ -62,6 +65,9 @@ const MAX_REF = 466;
 const MIN_OCTAVE = 0;
 const MAX_OCTAVE = 7;
 const TONE_SECONDS = 2.5;
+/** The octave −/+ in the dial: round like the tempo ± buttons, and 40px on touch screens. */
+const OCTAVE_BUTTON =
+  "flex h-8 w-8 items-center justify-center rounded-full bg-foreground/[0.05] text-lg leading-none text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:w-10";
 
 const WAVEFORMS: { value: OscillatorType; label: string }[] = [
   { value: "sine", label: "Sine" },
@@ -236,7 +242,15 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
   }, [openTakeId]);
 
   useSpaceToggle(
-    openTake ? playback.toggle : recording ? () => void stopRecording() : listening ? stopListening : () => void startListening(),
+    openTake
+      ? playback.toggle
+      : recording
+        ? () => void stopRecording()
+        : playing
+          ? stopTone
+          : listening
+            ? stopListening
+            : () => void startListening(),
   );
 
   function stopTone() {
@@ -251,6 +265,12 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
     const wasSame = playing?.midi === midi;
     stopTone();
     if (wasSame) return;
+    // The tone works without the mic, so an old "couldn't open the mic" error no longer applies.
+    if (!listening) {
+      clearTunerError();
+      if (rec.phase === "idle") clearTunerRecorderError();
+    }
+    setTakeError(null);
     setTunerToneActive(true);
     const freq = freqOfMidi(midi, refA);
     toneRef.current = startTone(
@@ -282,6 +302,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
   const noteName = written === null ? null : midiToNote(written);
   const noteLetter = noteName ? noteName.replace(/\d+$/, "") : null;
   const noteOctave = noteName ? noteName.match(/\d+$/)?.[0] : null;
+  const shownError = error ?? takeError ?? rec.error;
   const verdict = !reading
     ? ""
     : Math.abs(reading.cents) <= 8
@@ -346,7 +367,12 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             )}
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="tuner-input" title="Input" icon={MicIcon}>
+          <CollapsiblePanel
+            id="tuner-input"
+            title="Microphone"
+            icon={MicIcon}
+            summary={inputs.find((d) => d.id === inputDeviceId)?.label ?? "Default mic"}
+          >
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
               <Select
@@ -354,7 +380,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
                 onChange={(id) => updateSettings({ inputDeviceId: id })}
                 disabled={listening}
                 options={[
-                  { value: "", label: "Default input" },
+                  { value: "", label: "Default mic" },
                   ...inputs.map((d) => ({ value: d.id, label: d.label })),
                 ]}
               />
@@ -374,7 +400,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             <Hint>How quiet a signal can be before it&apos;s ignored as silence — raise it in a noisy room.</Hint>
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="tuner-tone" title="Reference & tone" icon={SlidersIcon} summary={`A = ${refA} Hz`}>
+          <CollapsiblePanel id="tuner-tone" title="Reference & tone" icon={SlidersIcon} summary={`A = ${refA} Hz${sustain ? " · notes held" : ""}`}>
             <label className="flex flex-col gap-2 text-sm">
               <span className="flex items-center justify-between font-medium text-muted">
                 Reference pitch (A4)
@@ -415,6 +441,14 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               />
             </label>
             <Hint>The waveform played when you tap a note on the dial or a string below to hear it.</Hint>
+            {/* Was a "Sustain" pill in the middle of the dial, where it crowded the note and its
+                name didn't say what it held. */}
+            <SwitchRow
+              label="Hold tapped notes"
+              checked={sustain}
+              onChange={(v) => updateSettings({ sustain: v })}
+              hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
+            />
           </CollapsiblePanel>
         </>
       }
@@ -425,19 +459,6 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
         playingPc={playingPc}
         onSelect={playPitchClass}
       >
-        <button
-          type="button"
-          onClick={() => updateSettings({ sustain: !sustain })}
-          aria-pressed={sustain}
-          className={`pointer-events-auto rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            sustain
-              ? "bg-accent text-accent-foreground hover:bg-accent-hover"
-              : "bg-foreground/[0.07] text-muted hover:bg-surface-hover hover:text-foreground"
-          }`}
-        >
-          Sustain
-        </button>
-
         <div className="flex flex-col items-center leading-tight">
           {noteLetter ? (
             <>
@@ -485,7 +506,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               onClick={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}
               disabled={octave <= MIN_OCTAVE}
               aria-label="Octave down"
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
+              className={OCTAVE_BUTTON}
             >
               −
             </button>
@@ -495,7 +516,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               onClick={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}
               disabled={octave >= MAX_OCTAVE}
               aria-label="Octave up"
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-lg leading-none transition-colors hover:bg-surface-hover disabled:opacity-40"
+              className={OCTAVE_BUTTON}
             >
               +
             </button>
@@ -520,7 +541,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             />
           )}
         </div>
-        <div className="flex w-full justify-between text-[0.7rem] text-muted">
+        <div className="flex w-full justify-between text-[0.8rem] text-muted">
           <span>♭ flat</span>
           <span className="font-medium" style={{ color: reading ? color : undefined }}>
             {verdict}
@@ -579,18 +600,17 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
         </div>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {(rec.error || takeError) && <p className="text-sm text-danger">{takeError ?? rec.error}</p>}
-
       <div className="flex flex-wrap items-center justify-center gap-3">
-        {/* While a take records the tuner listens too, so there's only the one Stop. */}
+        {/* While a take records the tuner listens too, so there's only the one Stop. While a tone
+            plays (the tuner doesn't listen then anyway), the first button stops it, so the row
+            never grows a third button and pushes the page down. */}
         {!recording && (
           <button
             type="button"
-            onClick={listening ? stopListening : () => void startListening()}
-            className={startButtonClass(listening)}
+            onClick={playing ? stopTone : listening ? stopListening : () => void startListening()}
+            className={startButtonClass(listening || playing !== null)}
           >
-            {listening ? "Stop" : "Start listening"}
+            {playing ? "Stop tone" : listening ? "Stop" : "Start listening"}
           </button>
         )}
         <button
@@ -613,7 +633,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             </>
           )}
         </button>
-        {playing && (
+        {playing && recording && (
           <button
             type="button"
             onClick={stopTone}
@@ -623,9 +643,14 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
           </button>
         )}
       </div>
-      <KeyHint>
-        Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : "start or stop listening"}
-      </KeyHint>
+      {/* An error takes the key hint's place, so the page doesn't grow (and scroll) when one shows. */}
+      {shownError ? (
+        <p role="alert" className="-mt-3 text-center text-sm text-danger sm:w-max sm:max-w-[min(40rem,calc(100cqw-2rem))]">{shownError}</p>
+      ) : (
+        <KeyHint>
+          Press <KeyHint.Key>Space</KeyHint.Key> to {openTake ? "play or pause the take" : recording ? "stop recording" : playing ? "stop the tone" : "start or stop listening"}
+        </KeyHint>
+      )}
     </ToolLayout>
   );
 }

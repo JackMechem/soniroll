@@ -20,7 +20,7 @@ import {
   sliderFromBpm,
   splitTenths,
 } from "@/lib/meterControls";
-import { Sparkle, useReward } from "@/components/reward/Reward";
+import { useReward } from "@/components/reward/Reward";
 
 // Shared UI atoms for the Metronome, Polyrhythm Metric Modulation Metronome, and Tempo Trainer
 // tools' meter/tempo controls.
@@ -426,7 +426,8 @@ export function TempoNoteValuePicker({
       value={value ?? TEMPO_NOTE_MATCH}
       onChange={(v) => onChange(v === TEMPO_NOTE_MATCH ? null : v)}
       options={TEMPO_NOTE_OPTIONS}
-      className="text-sm"
+      // The menu is as wide as this button, so make it wide enough for "♩ Quarter ✓".
+      className="min-w-[8.75rem] text-sm"
     />
   );
 }
@@ -535,12 +536,8 @@ export function TempoHero({
       {/* Its own row under the −/number/+ one (not inside the number's column), so a note-value
           picker can be wider than the number without crowding the steppers. */}
       <span className={`flex items-center gap-1.5 text-sm text-muted ${tempoNote ? "mt-1" : ""}`}>
-        {/* The ✦ marks a round tempo (a multiple of 10), with a tooltip saying so. */}
-        {reward && !locked && bpm % 10 === 0 && (
-          <span role="img" aria-label="Round tempo" title="Round tempo: a multiple of 10" className="flex cursor-help">
-            <Sparkle show at={bpm} color={reward.color} />
-          </span>
-        )}
+        {/* No ✦ on round tempos here any more: beside the note-value menu it read as a
+            "magic" button. */}
         {tempoNote}
         <span>
           BPM · {beatsPerBar}/{beatUnit}

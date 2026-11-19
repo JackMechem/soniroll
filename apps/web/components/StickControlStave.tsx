@@ -13,6 +13,7 @@ import {
 	Tuplet,
 	Voice,
 } from "vexflow";
+import { useMusicFontVersion } from "@/lib/musicFont";
 import {
 	CELL_BEAT_FRACTION,
 	type CellSpeed,
@@ -44,6 +45,11 @@ import {
 
 const BAR_HEIGHT = 130;
 const STAVE_Y = 10;
+// The part of that height the SVG shows: the ink runs from a triplet's "3" (about y 14) down to
+// the R/L letters (about y 114); the blank bands above and below cost a whole card's height of
+// room, which kept the page from fitting a 900px-tall screen.
+const VIEW_TOP = 10;
+const VIEW_HEIGHT = 108;
 // Extra room *before* the first note of a bar that doesn't already get it from a clef: a bare
 // stave needs only a little, immediately after the previous bar's own closing barline.
 const LEFT_PAD_PLAIN = 16;
@@ -79,13 +85,19 @@ const DURATION_BY_SPEED: Record<CellSpeed, string> = {
 
 type BarRect = { x: number; width: number };
 
-function buildNote(hand: string, dur: string) {
+/** VexFlow's own size for the R/L letters, in points (VexFlow's font unit; 1pt = 4/3 px). */
+const LETTER_SIZE = 10;
+/** The smallest the R/L letters should look on screen once a row is scaled down to fit (phones). */
+const MIN_LETTER_PX = 15;
+
+function buildNote(hand: string, dur: string, letterSize: number) {
 	const note = new StaveNote({
 		keys: ["b/4"],
 		duration: dur,
 		clef: "percussion",
 	});
 	const annotation = new Annotation(hand);
+	if (letterSize !== LETTER_SIZE) annotation.setFont(undefined, letterSize);
 	annotation.setVerticalJustification(AnnotationVerticalJustify.BOTTOM);
 	note.addModifier(annotation, 0);
 	return note;
@@ -101,13 +113,13 @@ type BeamGroup = { notes: StaveNote[]; isTriplet: boolean };
     of them, a beat of fast (16th-note) cells is 4, and a beat of triplet (8th-note-triplet) cells
     is 3, so a fixed-count grouping would split a roll or triplet segment's beats in the wrong
     place. */
-function buildBeamGroups(cells: NoteCell[]): BeamGroup[] {
+function buildBeamGroups(cells: NoteCell[], letterSize = LETTER_SIZE): BeamGroup[] {
 	const groups: BeamGroup[] = [];
 	let current: StaveNote[] = [];
 	let currentIsTriplet = false;
 	let timeInBeat = 0;
 	cells.forEach((cell) => {
-		current.push(buildNote(cell.hand, DURATION_BY_SPEED[cell.speed]));
+		current.push(buildNote(cell.hand, DURATION_BY_SPEED[cell.speed], letterSize));
 		if (cell.speed === "triplet") currentIsTriplet = true;
 		timeInBeat += CELL_BEAT_FRACTION[cell.speed];
 		if (timeInBeat >= 1 - 1e-6) {
@@ -130,6 +142,7 @@ function StickControlRow({
 	activeIndexInRow,
 	isFirstRow,
 	isLastRow,
+	letterSize,
 }: {
 	rowBars: NoteCell[][];
 	beatsPerBar: number;
@@ -141,19 +154,22 @@ function StickControlRow({
 	    and a repeat-end at the end of every row instead of just the final one). */
 	isFirstRow: boolean;
 	isLastRow: boolean;
+	/** The R/L letters' size in the SVG's units: bigger when the row is scaled down to fit. */
+	letterSize: number;
 }) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [barRects, setBarRects] = useState<BarRect[]>([]);
 	const [totalWidth, setTotalWidth] = useState(0);
+	const fontVersion = useMusicFontVersion();
 
 	useEffect(() => {
 		const el = containerRef.current;
-		if (!el) return;
+		if (!el || !fontVersion) return;
 		el.innerHTML = "";
 
 		// Pass 1: build each bar's own notes/voice and measure its own natural minimum width.
 		const barData = rowBars.map((cells, i) => {
-			const beamGroups = buildBeamGroups(cells);
+			const beamGroups = buildBeamGroups(cells, letterSize);
 			const staveNotes = beamGroups.flatMap((g) => g.notes);
 			const voice = new Voice({ numBeats: beatsPerBar, beatValue: 4 });
 			voice.setStrict(false);
@@ -229,7 +245,16 @@ function StickControlRow({
 			? Math.max(fullWidth, Math.ceil(contentBBox.x + contentBBox.width) + RIGHT_SAFETY_PX)
 			: fullWidth;
 		if (svg) {
-			svg.setAttribute("viewBox", `0 0 ${finalWidth} ${BAR_HEIGHT}`);
+			// Bigger letters (a scaled-down row) reach further down: show down to their bottom. (Only
+			// the letters: the music font's glyph boxes run far below what's drawn.)
+			let viewHeight = VIEW_HEIGHT;
+			if (letterSize > LETTER_SIZE) {
+				for (const text of svg.querySelectorAll<SVGGraphicsElement>(".vf-annotation")) {
+					const box = text.getBBox();
+					viewHeight = Math.max(viewHeight, Math.ceil(box.y + box.height) - VIEW_TOP);
+				}
+			}
+			svg.setAttribute("viewBox", `0 ${VIEW_TOP} ${finalWidth} ${viewHeight}`);
 			svg.removeAttribute("width");
 			svg.removeAttribute("height");
 			svg.style.width = "100%";
@@ -254,14 +279,19 @@ function StickControlRow({
 		// `rowBars` only ever changes reference when the pattern itself is regenerated or the row
 		// layout changes — a tick-driven re-render for `activeIndexInRow` alone leaves it
 		// referentially stable, so this effect correctly skips redrawing the SVG for those.
-	}, [rowBars, beatsPerBar, isFirstRow, isLastRow]);
+	}, [rowBars, beatsPerBar, isFirstRow, isLastRow, letterSize, fontVersion]);
 
 	return (
 		<div
 			className="relative mx-auto w-full"
 			style={totalWidth ? { maxWidth: totalWidth } : undefined}
 		>
-			<div ref={containerRef} style={{ color: NOTATION_COLOR }} />
+			{/* The R/L stickings in the UI font, semibold (VexFlow's default text font is a serif). */}
+			<div
+				ref={containerRef}
+				style={{ color: NOTATION_COLOR }}
+				className="[&_.vf-annotation_text]:font-semibold [&_.vf-annotation_text]:[font-family:var(--app-font,var(--font-sans)),sans-serif]"
+			/>
 			{totalWidth > 0 &&
 				barRects.map((rect, i) => (
 					<div
@@ -298,6 +328,8 @@ export default function StickControlStave({
 }) {
 	const wrapperRef = useRef<HTMLDivElement>(null);
 	const [containerWidth, setContainerWidth] = useState(DEFAULT_CONTAINER_WIDTH);
+	// Bar widths are measured with the music font, so re-measure once it has loaded.
+	const fontVersion = useMusicFontVersion();
 
 	useLayoutEffect(() => {
 		const el = wrapperRef.current;
@@ -318,7 +350,8 @@ export default function StickControlStave({
 	// since `bars`/`beatsPerBar` only change when the pattern is actually regenerated — without
 	// this, a tick-driven re-render for `activeBarIndex` alone (every playback tick) would rebuild
 	// every bar's `Voice`/`Formatter` just to re-derive the same answer.
-	const { rows, barsPerRow } = useMemo(() => {
+	const { rows, barsPerRow, letterSize } = useMemo(() => {
+		if (!fontVersion) return { rows: [bars], barsPerRow: bars.length, letterSize: LETTER_SIZE };
 		function naturalBarWidth(cells: NoteCell[]): number {
 			const beamGroups = buildBeamGroups(cells);
 			const voice = new Voice({ numBeats: beatsPerBar, beatValue: 4 });
@@ -347,13 +380,23 @@ export default function StickControlStave({
 		for (let i = 0; i < bars.length; i += perRow) {
 			grouped.push(bars.slice(i, i + perRow));
 		}
-		return { rows: grouped, barsPerRow: perRow };
-	}, [bars, beatsPerBar, containerWidth]);
+		// A row wider than the screen is scaled down to fit, and its R/L letters with it (to about
+		// 9px on a phone). Draw them bigger by as much as the widest row shrinks, so they still read.
+		const widest = Math.max(
+			...grouped.map(
+				(row, r) =>
+					row.reduce((sum, cells, i) => sum + Math.ceil(naturalBarWidth(cells)) + (r === 0 && i === 0 ? LEFT_PAD_CLEF : LEFT_PAD_PLAIN), 0) + RIGHT_PAD,
+			),
+		);
+		const scale = Math.min(1, containerWidth / widest);
+		const letterSize = scale < 1 ? Math.max(LETTER_SIZE, Math.ceil((MIN_LETTER_PX * 0.75) / scale)) : LETTER_SIZE;
+		return { rows: grouped, barsPerRow: perRow, letterSize };
+	}, [bars, beatsPerBar, containerWidth, fontVersion]);
 
 	return (
 		<div
 			ref={wrapperRef}
-			className={`flex w-full flex-col gap-3 rounded-lg border p-2 ${
+			className={`flex w-full flex-col gap-3 rounded-lg border px-2 py-1 ${
 				background === "background" ? "border-dashed border-foreground/15" : "border-foreground/10 bg-surface"
 			}`}
 		>
@@ -373,6 +416,7 @@ export default function StickControlStave({
 						activeIndexInRow={activeIndexInRow}
 						isFirstRow={rowIndex === 0}
 						isLastRow={rowIndex === rows.length - 1}
+						letterSize={letterSize}
 					/>
 				);
 			})}

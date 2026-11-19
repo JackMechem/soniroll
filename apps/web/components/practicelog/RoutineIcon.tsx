@@ -1,6 +1,7 @@
 "use client";
 
-import { createElement } from "react";
+import { createElement, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import {
   BassIcon,
@@ -187,5 +188,92 @@ export function RoutineIconPicker({ value, color, onChange }: { value: string | 
         );
       })}
     </div>
+  );
+}
+
+/** The routine's icon as a button that opens the picker in a popover below it (above when there's
+    no room). Portaled and fixed, kept on screen; Escape, a click outside or a pick closes it. */
+export function RoutineIconButton({ value, color, onChange }: { value: string | undefined; color: number; onChange: (id: string) => void }) {
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const close = () => setAnchor(null);
+
+  // Fit it on screen once it's drawn (style set directly: no state change in an effect).
+  useLayoutEffect(() => {
+    const el = popRef.current;
+    if (!anchor || !el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const left = Math.max(8, Math.min(anchor.left, window.innerWidth - w - 8));
+    const below = anchor.bottom + 6;
+    const top = below + h > window.innerHeight - 8 ? Math.max(8, anchor.top - h - 6) : below;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.visibility = "visible";
+  }, [anchor]);
+
+  useEffect(() => {
+    if (!anchor) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!popRef.current?.contains(t) && !buttonRef.current?.contains(t)) setAnchor(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAnchor(null);
+        buttonRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", close);
+    };
+  }, [anchor]);
+
+  const label = ROUTINE_ICONS.find((i) => i.id === (value ?? "note"))?.label ?? "Note";
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => (anchor ? close() : setAnchor(buttonRef.current?.getBoundingClientRect() ?? null))}
+        aria-label={`Icon: ${label}. Change it`}
+        title="Change the icon"
+        aria-haspopup="dialog"
+        aria-expanded={!!anchor}
+        className="relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+      >
+        <RoutineIcon icon={value} color={color} size="md" />
+        <span aria-hidden className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-muted ring-1 ring-foreground/10">
+          <PencilIcon className="h-2.5 w-2.5" />
+        </span>
+      </button>
+      {anchor &&
+        createPortal(
+          <div
+            ref={popRef}
+            role="dialog"
+            aria-label="Pick an icon"
+            style={{ position: "fixed", top: anchor.bottom + 6, left: anchor.left, visibility: "hidden", width: "min(332px, calc(100vw - 16px))" }}
+            className="z-[70] max-h-[calc(100dvh-16px)] overflow-y-auto rounded-lg bg-surface p-2 shadow-lg ring-1 ring-foreground/10"
+          >
+            <RoutineIconPicker
+              value={value}
+              color={color}
+              onChange={(id) => {
+                onChange(id);
+                close();
+                buttonRef.current?.focus();
+              }}
+            />
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

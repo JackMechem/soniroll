@@ -15,6 +15,7 @@ import {
   DrumIcon,
   EarIcon,
   GraduationCapIcon,
+  HeartIcon,
   MetronomeIcon,
   NAV_LINKS,
   NoteIcon,
@@ -45,6 +46,15 @@ export default function Landing({ initialSignedIn, initialAuth = null }: { initi
   const openApp = goDashboard;
   const signUp = () => setAuth("signUp");
   const logIn = () => setAuth("signIn");
+  // Closing the dialog takes `?auth=` off the address, so a reload doesn't open it again. A plain
+  // history.replaceState (not the router, which would re-render the page) keeps Next's own state.
+  const closeAuth = () => {
+    setAuth(null);
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("auth")) return;
+    url.searchParams.delete("auth");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  };
 
   return (
     <div className="landing relative min-h-[100dvh] bg-background text-foreground" style={{ fontFamily: "var(--font-geist-sans), sans-serif" }}>
@@ -59,7 +69,7 @@ export default function Landing({ initialSignedIn, initialAuth = null }: { initi
       <Note />
       <FinalCta signedIn={signedIn} onSignUp={signUp} onOpenApp={openApp} onDashboard={goDashboard} />
       <Footer />
-      {auth && <AuthModal mode={auth} onClose={() => setAuth(null)} onSuccess={goDashboard} />}
+      {auth && <AuthModal mode={auth} onClose={closeAuth} onSuccess={goDashboard} />}
     </div>
   );
 }
@@ -145,7 +155,7 @@ function Shot({ name, alt, width, height, priority, className = "" }: { name: st
 function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () => void; onSignUp: () => void }) {
   return (
     <div className="sticky top-0 z-30 px-4 pt-4">
-      <nav className="mx-auto flex h-14 max-w-5xl items-center gap-2 rounded-full border border-foreground/[0.07] bg-surface/75 pl-5 pr-2 shadow-[0_8px_30px_-12px_color-mix(in_srgb,var(--foreground)_25%,transparent)] backdrop-blur-xl">
+      <nav className="mx-auto flex h-14 max-w-5xl items-center gap-2 rounded-full border border-foreground/[0.07] bg-surface/95 pl-5 pr-2 shadow-[0_8px_30px_-12px_color-mix(in_srgb,var(--foreground)_25%,transparent)] backdrop-blur-xl">
         <Link href="/" aria-label="soniroll home" className="shrink-0">
           <Logo height={34} />
         </Link>
@@ -170,7 +180,7 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
           ) : (
             <>
               <button type="button" onClick={onLogIn} className="rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-background">
-                Log in
+                Sign in
               </button>
               <button type="button" onClick={onSignUp} className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90 active:scale-[0.98]">
                 Sign up
@@ -207,7 +217,8 @@ function Ctas({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
 /** Under the calls to action: the desktop app. */
 function DesktopLink() {
   return (
-    <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground" style={{ animationDelay: "240ms" }}>
+    // Not on phones and tablets (like the dashboard's desktop card): there's nothing for them to install.
+    <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground pointer-coarse:hidden" style={{ animationDelay: "240ms" }}>
       <DownloadIcon className="h-4 w-4 text-accent" /> Get the desktop app for macOS, Windows and Linux <Arrow />
     </Link>
   );
@@ -266,7 +277,8 @@ function Hero({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
             <FlameIcon className="log-flame h-7 w-7" />
           </span>
           <div>
-            <div className="text-3xl font-bold tabular-nums tracking-tight">42</div>
+            {/* One made-up user across the page: the phone screenshot shows a 17-day streak. */}
+            <div className="text-3xl font-bold tabular-nums tracking-tight">17</div>
             <div className="text-xs font-semibold text-muted">day streak</div>
           </div>
         </div>
@@ -356,7 +368,8 @@ function TeachingSection() {
             Invite a student with a link. Each lesson gets its own page, the week&apos;s work goes in their Shed Log, and nothing gets lost in a text thread.
           </p>
         </Reveal>
-        <div className="relative mt-12 grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
+        {/* Not on phones: desktop screenshots that small can't be read. */}
+        <div className="relative mt-12 hidden items-start gap-6 sm:grid lg:grid-cols-[1.25fr_1fr]">
           <Reveal className="overflow-hidden rounded-[24px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)]">
             <div className="overflow-hidden rounded-[18px]">
               <Shot name="lessons" alt="A student's page in soniroll: their lessons, practice stats and booking" width={2560} height={1600} />
@@ -409,7 +422,11 @@ function Showcase() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-[28px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)]">
+        {/* Phones get the phone screenshot: the desktop one shrunk to this width is unreadable. */}
+        <div className="mx-auto w-60 overflow-hidden rounded-[30px] border-4 border-foreground/10 bg-surface shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)] sm:hidden">
+          <Shot name="phone" alt="soniroll on a phone: the Home dashboard with today's practice and streak" width={780} height={1400} />
+        </div>
+        <div className="hidden overflow-hidden rounded-[28px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)] sm:block">
           <div className="flex items-center gap-1.5 px-3 pb-2 pt-1">
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
@@ -493,7 +510,10 @@ function FeaturePreview({ id }: { id: string }) {
     default:
       return (
         <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-foreground/[0.06] shadow-[0_24px_60px_-24px_color-mix(in_srgb,var(--foreground)_40%,transparent)]">
-          <Shot name="setlist" alt="A setlist in soniroll, with each tune's key and tempo" width={2048} height={1280} />
+          {/* On phones, the left half at twice the size (the setlist's name and tunes), so it reads. */}
+          <div className="w-[200%] sm:w-full">
+            <Shot name="setlist" alt="A setlist in soniroll, with each tune's key and tempo" width={2048} height={1280} />
+          </div>
         </div>
       );
   }
@@ -506,9 +526,9 @@ function Features() {
   return (
     <section id="features" className="scroll-mt-24 px-4 pb-28">
       <div className="mx-auto max-w-6xl">
-        <Reveal>
-          <h2 className="max-w-2xl text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Try the real tools, right here</h2>
-          <p className="mt-4 max-w-xl text-muted">Pick one and play with it.</p>
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 className="text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Try the real tools, right here</h2>
+          <p className="mt-4 text-muted">Pick one and play with it.</p>
         </Reveal>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
@@ -547,7 +567,7 @@ function Features() {
               <FeaturePreview id={active} />
             </div>
             <div className="relative mt-6 flex justify-end">
-              <Link href={feature.href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline">
+              <Link href={feature.href} className="-mr-3 inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-accent hover:bg-accent/10">
                 {feature.cta} <Arrow />
               </Link>
             </div>
@@ -585,16 +605,17 @@ function ThemeDemo() {
           <span className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground">Stop</span>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      {/* Two even rows of four from sm up (a wrapping row left one theme on its own). */}
+      <div className="flex flex-wrap gap-2 sm:grid sm:grid-cols-4">
         {presets.map((p, n) => (
           <button
             key={p.id}
             type="button"
             onClick={() => setI(n)}
             aria-pressed={n === i}
-            className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs font-semibold transition active:scale-[0.97] ${n === i ? "border-foreground/30 bg-background" : "border-foreground/[0.07] hover:bg-background"}`}
+            className={`flex h-9 items-center gap-2 rounded-full border pl-1.5 pr-3 text-xs font-semibold transition active:scale-[0.97] ${n === i ? "border-foreground/30 bg-background" : "border-foreground/[0.07] hover:bg-background"}`}
           >
-            <span className="flex h-5 w-5 overflow-hidden rounded-full ring-1 ring-foreground/10">
+            <span className="flex h-6 w-6 overflow-hidden rounded-full ring-1 ring-foreground/10">
               <span className="w-1/2" style={{ background: p.colors.background }} />
               <span className="w-1/2" style={{ background: p.colors.accent }} />
             </span>
@@ -610,14 +631,14 @@ function Bento() {
   return (
     <section id="free" className="scroll-mt-24 px-4 pb-28">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-12 max-w-2xl">
+        <Reveal className="mx-auto mb-12 max-w-2xl text-center">
           <h2 className="text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Built for the practice room, not the pitch deck</h2>
         </Reveal>
         <div className="grid gap-4 md:grid-cols-6 md:grid-rows-[auto_auto]">
           <Reveal className="md:col-span-4 md:row-span-2">
             <div className="flex h-full flex-col rounded-[28px] bg-surface p-6 ring-1 ring-foreground/[0.06] sm:p-8">
               <h3 className="text-xl font-semibold tracking-tight">Make it yours</h3>
-              <p className="mb-6 mt-1.5 max-w-md text-sm text-muted">Thirty themes, from Gruvbox to Rosé Pine, or build your own. Try a few.</p>
+              <p className="mb-6 mt-1.5 max-w-md text-sm text-balance text-muted">Thirty themes, from Gruvbox to Rosé Pine, or build your own. Try a few.</p>
               <div className="flex-1">
                 <ThemeDemo />
               </div>
@@ -648,8 +669,14 @@ function Bento() {
                   <span className="min-w-0 flex-1 truncate font-semibold">Friday gig</span>
                   <span className="text-xs text-muted">12 tunes</span>
                 </span>
-                <span className="flex items-center gap-2 self-end rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background">
-                  Share link copied
+                {/* A second shared item rather than a toast (a fake "copied" notification read as a
+                    real one). */}
+                <span className="flex items-center gap-2 rounded-2xl bg-background px-3 py-2.5 text-sm">
+                  <ChordChartIcon className="h-4 w-4 shrink-0 text-accent" />
+                  <span className="min-w-0 flex-1 truncate font-semibold">Stella by Starlight</span>
+                  <span className="flex items-center gap-1 text-xs text-muted">
+                    <HeartIcon className="h-3.5 w-3.5" /> 8
+                  </span>
                 </span>
               </div>
               <div>
@@ -660,12 +687,14 @@ function Bento() {
           </Reveal>
 
           <Reveal className="md:col-span-3" delay={80}>
-            <div className="flex h-full items-end gap-6 overflow-hidden rounded-[28px] bg-surface p-6 pb-0 ring-1 ring-foreground/[0.06] sm:p-8 sm:pb-0">
-              <div className="pb-6 sm:pb-8">
+            {/* Title at the top like the card beside it; on phones the text gets the full width and
+                the phone shot (the same one as the hero's) is left out, like the split-screen shot. */}
+            <div className="flex h-full items-end gap-6 overflow-hidden rounded-[28px] bg-surface p-6 ring-1 ring-foreground/[0.06] sm:p-8 sm:pb-0">
+              <div className="self-start sm:pb-8">
                 <h3 className="text-xl font-semibold tracking-tight">No account needed</h3>
                 <p className="mt-1.5 max-w-xs text-sm text-muted">Every tool works the moment you open it. Sign up only if you want your stuff to follow you.</p>
               </div>
-              <div className="ml-auto w-36 shrink-0 translate-y-4 overflow-hidden rounded-t-[22px] border-x-4 border-t-4 border-foreground/10 sm:w-44">
+              <div className="ml-auto hidden w-44 shrink-0 translate-y-4 overflow-hidden rounded-t-[22px] border-x-4 border-t-4 border-foreground/10 sm:block">
                 <Shot name="phone" alt="soniroll on a phone" width={780} height={1400} />
               </div>
             </div>
@@ -677,7 +706,7 @@ function Bento() {
                 <h3 className="text-xl font-semibold tracking-tight">Split your screen</h3>
                 <p className="mt-1.5 text-sm text-muted">Tile the metronome next to a warmup or a chord chart. Each pane keeps playing while you work in another.</p>
               </div>
-              <div className="-mr-6 mt-auto overflow-hidden rounded-tl-2xl border-l border-t border-foreground/10 sm:-mr-8">
+              <div className="-mr-6 mt-auto hidden overflow-hidden rounded-tl-2xl border-l border-t border-foreground/10 sm:-mr-8 sm:block">
                 <Shot name="split" alt="Two tools side by side in soniroll's split view" width={2100} height={1100} />
               </div>
             </div>
@@ -737,18 +766,21 @@ function FinalCta({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
   );
 }
 
+const FOOTER_LINK = "hover:text-foreground pointer-coarse:inline-flex pointer-coarse:h-9 pointer-coarse:items-center pointer-coarse:px-2";
+
 function Footer() {
   return (
     <footer className="px-4 pb-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-foreground/10 pt-8 text-sm text-muted sm:flex-row">
         <Logo height={28} />
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
-          <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
-          <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
-          <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-          <Link href="/terms" className="hover:text-foreground">Terms</Link>
-          <Link href="/credits" className="hover:text-foreground">Credits</Link>
+        {/* Touch screens: each link is a 36px-tall target, not just its line of text. */}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pointer-coarse:gap-x-1 pointer-coarse:gap-y-0">
+          <a href="https://github.com/JackMechem/soniroll" target="_blank" rel="noopener noreferrer" className={FOOTER_LINK}>GitHub</a>
+          <Link href="/feedback" className={FOOTER_LINK}>Feedback</Link>
+          <Link href="/changelog" className={FOOTER_LINK}>What&apos;s new</Link>
+          <Link href="/privacy" className={FOOTER_LINK}>Privacy</Link>
+          <Link href="/terms" className={FOOTER_LINK}>Terms</Link>
+          <Link href="/credits" className={FOOTER_LINK}>Credits</Link>
         </div>
         <span>Made by musicians, for musicians.</span>
       </div>
@@ -767,7 +799,7 @@ function AuthModal({ mode, onClose, onSuccess }: { mode: "signIn" | "signUp"; on
       <div
         role="dialog"
         aria-modal
-        aria-label={mode === "signUp" ? "Sign up" : "Log in"}
+        aria-label={mode === "signUp" ? "Sign up" : "Sign in"}
         onClick={(e) => e.stopPropagation()}
         className="landing-rise relative flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-surface p-6 text-left shadow-2xl"
       >

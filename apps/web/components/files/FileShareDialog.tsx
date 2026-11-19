@@ -81,7 +81,7 @@ export default function FileShareDialog({ item, onClose }: { item: StoredEntry; 
         </div>
 
         <div className="flex items-center gap-3 rounded-lg bg-foreground/[0.05] p-3">
-          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} size="sm" />
+          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} recording={item.kind === "recording"} size="sm" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{item.name}</p>
             <p className="text-xs text-muted">{formatBytes(item.size)}</p>

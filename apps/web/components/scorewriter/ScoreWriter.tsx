@@ -75,9 +75,12 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           <button type="button" onClick={() => fileInput.current?.click()} className="flex h-8 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
             <UploadIcon className="h-4 w-4" /> Import
           </button>
-          <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
-            <PlusIcon className="h-4 w-4" /> New score
-          </button>
+          {/* With no scores yet, New score is the empty list's button instead (one is enough). */}
+          {scores && scores.length > 0 && (
+            <button type="button" onClick={() => void make()} className="flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+              <PlusIcon className="h-4 w-4" /> New score
+            </button>
+          )}
         </>
       }
     >
@@ -103,11 +106,11 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
           <p className="max-w-sm text-sm text-muted">
             {/* Touch screens have no keyboard to type notes with. */}
-            <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one and write with the keyboard (letters for notes, 3–7 for lengths) or click notes onto the staff.</span>
-            <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap a length and a note name (C to B) to add notes, or switch to Write, hold a finger on the staff and lift to add one.</span>
+            <span className="[@media(pointer:coarse)]:hidden">No scores yet. Start one, then type note letters (A to G) or click notes onto the staff.</span>
+            <span className="hidden [@media(pointer:coarse)]:inline">No scores yet. Start one, then tap a length and a note name to add notes.</span>
           </p>
-          <button type="button" onClick={() => void make()} className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
-            New score
+          <button type="button" onClick={() => void make()} className="flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+            <PlusIcon className="h-4 w-4" /> New score
           </button>
         </div>
       ) : (
@@ -199,41 +202,75 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
   const [initial] = useState(loaded);
   const { save, remove } = useScoreActions();
   const [deleting, setDeleting] = useState(false);
+  const [menu, setMenu] = useState<MenuState | null>(null);
   const { change, flush, saveState } = useAutosave((t: Transcription) => save(id, t));
 
+  // The latest version, for Export (the editor keeps its own copy; this follows its changes).
+  const latest = useRef(initial);
+
   const btn = "flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover";
+  const back = (
+    <BackButton
+      onClick={() => {
+        flush();
+        onBack();
+      }}
+      label="Scores"
+    />
+  );
   return (
-    <ScoreShell>
+    <ScoreShell
+      // Saved and the ⋮ menu (Export, Delete) go in the tool's own bar (the header bar on desktop; on
+      // phones the row with the ?, along with Back), so on a phone the staff isn't pushed down.
+      actions={
+        <>
+          <div className="flex lg:hidden">{back}</div>
+          <span className="text-xs text-muted max-lg:ml-auto" aria-live="polite">
+            {SAVE_LABEL[saveState]}
+          </span>
+          <button
+            type="button"
+            aria-label="Score options"
+            title="Export or delete"
+            aria-haspopup="menu"
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setMenu({
+                x: r.right - 200,
+                y: r.bottom + 4,
+                items: [
+                  {
+                    label: "Export as a file",
+                    icon: <DownloadIcon className="h-4 w-4" />,
+                    onSelect: () => {
+                      const t = latest.current;
+                      downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`);
+                    },
+                  },
+                  { label: "Delete score", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: () => setDeleting(true) },
+                ],
+              });
+            }}
+            className={`${btn} px-0`}
+          >
+            <DotsVerticalIcon className="h-4 w-4" />
+          </button>
+          {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+        </>
+      }
+    >
       <ScoreEditor
         initial={initial}
-        onChange={change}
+        onChange={(t) => {
+          latest.current = t;
+          change(t);
+        }}
         staffControls
         underAppBar
         autoFocus
         header={(t, setMeta) => (
-          // Back and the score's actions share one row, the title under them: on a phone the
-          // header stays short, so the staff is in view while you write.
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                <BackButton
-                  onClick={() => {
-                    flush();
-                    onBack();
-                  }}
-                  label="Scores"
-                />
-              </div>
-              <span className="ml-auto text-xs text-muted" aria-live="polite">
-                {SAVE_LABEL[saveState]}
-              </span>
-              <button type="button" onClick={() => downloadJson({ format: FILE_FORMAT, version: 1, exportedAt: new Date().toISOString(), score: t }, `${safeFilename(t.title)}.json`)} className={btn} title="Export as a file" aria-label="Export as a file">
-                <DownloadIcon className="h-4 w-4" /> <span className="max-sm:hidden">Export</span>
-              </button>
-              <button type="button" onClick={() => setDeleting(true)} className={`${btn} hover:text-danger`} aria-label="Delete score" title="Delete score">
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            </div>
+            <div className="flex max-lg:hidden">{back}</div>
             <input
               value={t.title}
               onChange={(e) => setMeta({ title: e.target.value })}

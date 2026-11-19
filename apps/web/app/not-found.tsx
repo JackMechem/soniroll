@@ -9,7 +9,10 @@ export default function NotFound() {
   return (
     <PageShell>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 py-16 text-center">
-        <Logo height={40} />
+        {/* Phones already show the logo in the top bar. */}
+        <span className="flex max-lg:hidden">
+          <Logo height={40} />
+        </span>
         <div className="flex max-w-md flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">There&apos;s no page here</h1>
           <p className="text-sm text-muted">The link may be old or mistyped.</p>

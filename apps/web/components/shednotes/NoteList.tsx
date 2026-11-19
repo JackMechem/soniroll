@@ -189,7 +189,9 @@ export default function NoteList({
     });
   }
 
-  const rowBtn = "shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-background hover:text-foreground lg:opacity-60 lg:group-hover:opacity-100";
+  // On touch screens the row buttons and rows grow to finger size (40px buttons, 44px rows).
+  const rowBtn =
+    "shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-background hover:text-foreground lg:opacity-60 lg:group-hover:opacity-100 pointer-coarse:flex pointer-coarse:h-10 pointer-coarse:w-10 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:opacity-100";
 
   const noteRow = (n: NoteMeta, detail?: string, draggable = true) => (
     <li key={n.id}>
@@ -198,7 +200,7 @@ export default function NoteList({
         onContextMenu={(e) => noteMenu(e, n)}
         {...(draggable ? dragProps({ kind: "note", id: n.id, folder: n.folder }) : {})}
       >
-        <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left">
+        <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left pointer-coarse:min-h-11">
           <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-foreground" : "text-muted"}`} />
           <span className="min-w-0 flex-1">
             <span className={`block truncate text-sm ${n.id === currentId ? "font-medium" : "text-foreground/80"}`}>{n.title}</span>
@@ -236,7 +238,7 @@ export default function NoteList({
                   return next;
                 })
               }
-              className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-0.5 text-left"
+              className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-0.5 text-left pointer-coarse:min-h-11"
             >
               <ChevronRightIcon className={`h-3 w-3 shrink-0 text-muted transition-transform ${isClosed ? "" : "rotate-90"}`} />
               <Icon className="h-4 w-4 shrink-0 text-muted" />
@@ -290,10 +292,11 @@ export default function NoteList({
       </div>
       {!query && (
         <div className="flex items-center gap-1 border-b border-foreground/10 text-sm">
-          {/* The same underline tabs as the Library's. */}
+          {/* The same underline tabs as the Library's. The A–Z tab is "Notes" until there's a
+              folder (before that it's a flat list). */}
           {(["folders", "recent"] as const).map((s) => (
             <button key={s} type="button" onClick={() => setSort(s)} aria-pressed={sort === s} className={`-mb-px flex h-10 items-center border-b-2 px-2 transition-colors ${sort === s ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
-              {s === "folders" ? "Folders" : "Recent"}
+              {s === "recent" ? "Recent" : tree.folders.length > 0 ? "Folders" : "Notes"}
             </button>
           ))}
         </div>
@@ -335,7 +338,7 @@ export default function NoteList({
                 {shared.map((n) => (
                   <li key={`shared:${n.id}`}>
                     <div className={`group flex items-center rounded-md pl-1.5 transition-colors ${n.id === currentId ? "bg-surface-hover" : "hover:bg-surface-hover/60"}`}>
-                      <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left">
+                      <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left pointer-coarse:min-h-11">
                         <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-foreground" : "text-muted"}`} />
                         <span className="min-w-0 flex-1">
                           <span className={`block truncate text-sm ${n.id === currentId ? "font-medium" : "text-foreground/80"}`}>{n.title}</span>

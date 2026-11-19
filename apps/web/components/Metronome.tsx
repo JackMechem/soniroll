@@ -9,7 +9,7 @@ import {
   TempoNoteConversionHint,
   TempoNoteValuePicker,
 } from "@/components/MeterFields";
-import StructureEditor from "@/components/StructureEditor";
+import StructureEditor, { StructureEmptyHint } from "@/components/StructureEditor";
 import { RewardCard } from "@/components/reward/Reward";
 import {
   OptionGroup,
@@ -241,9 +241,7 @@ export default function Metronome() {
           </p>
         )}
         {useStructure && !activeSection ? (
-          <p className="rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
-            Open Sections to add sections and arrange a form.
-          </p>
+          <StructureEmptyHint structure={structure} />
         ) : (
           <BeatIndicator
             accents={displayAccents}
@@ -253,6 +251,7 @@ export default function Metronome() {
             subAccents={displaySubAccents}
             currentSub={currentSub}
             onCycleSub={handleCycleSub}
+            cycleHint
           />
         )}
       </div>
@@ -286,8 +285,8 @@ export default function Metronome() {
             ]}
           />
         </div>
-        {useStructure && (
-          <div className="w-[min(30rem,calc(100vw-2rem))] rounded-lg bg-surface p-4 text-left">
+        {useStructure && structure.sections.length > 0 && (
+          <div className="w-[min(30rem,calc(100cqw-2rem))] rounded-lg bg-surface p-4 text-left">
             <StructureEditor
               show="form"
               structure={structure}

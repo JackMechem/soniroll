@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS, instrumentShortName } from "@/lib/instruments";
 import SwitchRow from "@/components/SwitchRow";
 import Hint from "@/components/Hint";
-import InputTest from "@/components/InputTest";
+import InputTest, { MicLevel } from "@/components/InputTest";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -20,6 +20,7 @@ import {
   ScaleIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import {
   AudioInput,
@@ -31,7 +32,6 @@ import {
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
 import {
-  GRADE_COLOR,
   GRADE_LABEL,
   Grade,
   describePitch,
@@ -60,9 +60,9 @@ import {
   spellNote,
 } from "@/lib/noteSpelling";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
+import { spellScale } from "@/lib/scaleSpelling";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -71,9 +71,28 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
+import { micErrorMessage } from "@/lib/micError";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
+import { GRADE_COLOR, LOCKED_NOTE, GRADE_TAG, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, SECONDARY_BUTTON_SM, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, IDLE_MARK, IDLE_RING, IDLE_HINT, bestPassingMs, passedRound, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
+/** Mode names that are proper nouns, kept capitalised by `scaleName`. */
+const PROPER_SCALE_WORDS = new Set(["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian", "Hindu"]);
+
+/** The shared scale list is in Title Case ("Natural Minor (Aeolian)"); show it in sentence case
+    ("Natural minor (Aeolian)"), keeping the mode names capitalised. Display only. */
+function scaleName(label: string): string {
+  let first = true;
+  return label.replace(/[A-Za-z]+/g, (word) => {
+    if (first) {
+      first = false;
+      return word;
+    }
+    return PROPER_SCALE_WORDS.has(word) ? word : word.toLowerCase();
+  });
+}
 const MIN_INTERVAL_SECONDS = 1;
 const MAX_INTERVAL_SECONDS = 20;
 const DEFAULT_INTERVAL_SECONDS = 6;
@@ -268,6 +287,8 @@ export default function ScaleTrainer() {
   // Counts as practice in the Shed Log while it runs.
   useToolActivity("/scale-trainer", running);
   const [error, setError] = useState<string | null>(null);
+  /** The last Start failed because the mic couldn't open: the error gets a "Use Timed instead". */
+  const [micFailed, setMicFailed] = useState(false);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -302,6 +323,8 @@ export default function ScaleTrainer() {
   const toneIdRef = useRef(toneId);
   const inputRef = useRef<AudioInput | null>(null);
   const mountedRef = useRef(true);
+  /** The mic's latest RMS level, for the little level bar under "Listening…". */
+  const micLevelRef = useRef(0);
   const sessionRef = useRef<Session | null>(null);
   const listenCfg = useRef({
     accidentalStyle,
@@ -440,7 +463,7 @@ export default function ScaleTrainer() {
   /** A note name for a bare pitch class (no octave), spelled per the current accidental style —
       e.g. 6 -> "F#" or "Gb". */
   function pitchClassLabel(pitchClass: number, seq = 0): string {
-    return spellNote(midiToNote(60 + pitchClass), accidentalStyle, seq, true);
+    return noteGlyphs(spellNote(midiToNote(60 + pitchClass), accidentalStyle, seq, true));
   }
 
   /** Every struggling key+mode in `stats`, worst first. A plain function of its arguments (not
@@ -570,7 +593,7 @@ export default function ScaleTrainer() {
       roundSeedRef.current,
       cfg.ignoreOctave,
     );
-    setHeard(`${shownNote} (${cents > 0 ? "+" : ""}${cents}¢)`);
+    setHeard(`${noteGlyphs(shownNote)} (${cents > 0 ? "+" : ""}${cents}¢)`);
 
     const nearest = Math.round(frequencyToMidi(freq, cfg.refA));
     if (nearest === session.last) session.stable++;
@@ -680,6 +703,7 @@ export default function ScaleTrainer() {
       return;
     }
     setError(null);
+    setMicFailed(false);
     setSummary(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
     inputRef.current?.stop();
@@ -695,7 +719,10 @@ export default function ScaleTrainer() {
       try {
         const input = await startAudioInput(
           inputDeviceId,
-          (frame) => handleFrame(frame.freq),
+          (frame) => {
+            micLevelRef.current = frame.level;
+            handleFrame(frame.freq);
+          },
           () => listenCfg.current.silenceRms,
         );
         if (!mountedRef.current) {
@@ -705,10 +732,9 @@ export default function ScaleTrainer() {
         inputRef.current = input;
         // Device labels only become available once permission is granted.
         void listAudioInputs().then(setInputs);
-      } catch {
-        setError(
-          "Couldn't open the audio input. Check the browser's microphone permission.",
-        );
+      } catch (e) {
+        setError(micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input."));
+        setMicFailed(true);
         return;
       }
       const queue = weak
@@ -800,9 +826,8 @@ export default function ScaleTrainer() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const score = scoreOf(session.results);
             const entry: HistoryEntry = {
               at: Date.now(),
@@ -813,7 +838,7 @@ export default function ScaleTrainer() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
           setSummary({ results: session.results, rounds: session.rounds });
           setRound(null);
@@ -898,12 +923,19 @@ export default function ScaleTrainer() {
 
   useSpaceToggle(running ? stop : () => void start());
 
-  const rootLabel = (r: ScaleRound, seq = 0) =>
-    spellNote(midiToNote(r.rootMidi), accidentalStyle, seq, ignoreOctave);
+  /** The scale's notes spelled from its key (F melodic minor: F G A♭ B♭ …), or null where there's
+      no key spelling (the chromatic scale, or "Both" sharps and flats): then each note is spelled
+      on its own by the sharps/flats setting. */
+  const keyNames = (r: ScaleRound, seq: number) =>
+    spellScale(spellNote(midiToNote(r.rootMidi), accidentalStyle, seq, true), r.mode.intervals);
+  const rootLabel = (r: ScaleRound, seq = 0) => {
+    const key = keyNames(r, seq);
+    const octave = ignoreOctave ? "" : /\d+$/.exec(midiToNote(r.rootMidi))?.[0] ?? "";
+    return noteGlyphs(key ? key[0] + octave : spellNote(midiToNote(r.rootMidi), accidentalStyle, seq, ignoreOctave));
+  };
   const roundLabel = (r: ScaleRound, seq = 0) =>
-    `${rootLabel(r, seq)} ${r.mode.label}`;
-  const mainLabel = round ? roundLabel(round, roundSeed) : "—";
-  const mainLabelLong = mainLabel.length > 16;
+    `${rootLabel(r, seq)} ${scaleName(r.mode.label)}`;
+  const mainLabel = running && round ? roundLabel(round, roundSeed) : "?";
   const glow = running && status ? GRADE_COLOR[status] : null;
   const showCountdown = running;
   const score = summary ? scoreOf(summary.results) : 0;
@@ -928,9 +960,7 @@ export default function ScaleTrainer() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakScaleEntries(settings.scaleStats);
 
   return (
@@ -944,7 +974,7 @@ export default function ScaleTrainer() {
             <CollapsiblePanel
               id="history"
               title="History"
-              icon={StopwatchIcon}
+              icon={ListIcon}
               summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
             >
             {bestMs !== null && (
@@ -961,33 +991,10 @@ export default function ScaleTrainer() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -1026,23 +1033,9 @@ export default function ScaleTrainer() {
                       className={PANEL_ROW}
                     >
                       <span className="font-medium">
-                        {pitchClassLabel(entry.pitchClass)} {entry.mode.label}
+                        {pitchClassLabel(entry.pitchClass)} {scaleName(entry.mode.label)}
                       </span>
-                      <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                        {entry.counts.incorrect > 0 && (
-                          <span style={{ color: GRADE_COLOR.incorrect }}>
-                            ✕{entry.counts.incorrect}
-                          </span>
-                        )}
-                        {entry.counts.partial > 0 && (
-                          <span style={{ color: GRADE_COLOR.partial }}>
-                            ~{entry.counts.partial}
-                          </span>
-                        )}
-                        <span className="text-muted">
-                          /{attempts(entry.counts)}
-                        </span>
-                      </span>
+                      <StruggleCounts counts={entry.counts} />
                     </div>
                   ))}
                 </div>
@@ -1086,6 +1079,7 @@ export default function ScaleTrainer() {
         <>
           <PanelsToggle ids={PANEL_IDS} />
           <CollapsiblePanel id="scale-modes" title="Scales" icon={ScaleIcon} summary={`${pool.length} of ${SCALE_MODES.length}`}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-muted">
                 {pool.length} of {SCALE_MODES.length} selected
@@ -1123,8 +1117,8 @@ export default function ScaleTrainer() {
                     (mode) => {
                       const selected = settings.scaleModes.includes(mode.id);
                       return (
-                        <PoolPill key={mode.id} on={selected} onClick={() => toggleScaleMode(mode.id)} disabled={running} title={mode.aka} plainClassName="rounded-md px-3 py-1.5 text-xs font-medium">
-                          {mode.label}
+                        <PoolPill key={mode.id} on={selected} onClick={() => toggleScaleMode(mode.id)} disabled={running} title={mode.aka && scaleName(mode.aka)} plainClassName="rounded-md px-3 py-1.5 text-xs font-medium">
+                          {scaleName(mode.label)}
                         </PoolPill>
                       );
                     },
@@ -1135,6 +1129,7 @@ export default function ScaleTrainer() {
           </CollapsiblePanel>
 
           <CollapsiblePanel id="scale-range" title="Range" icon={NoteIcon} summary={rangeSummary}>
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Ignore octave"
               checked={ignoreOctave}
@@ -1194,14 +1189,15 @@ export default function ScaleTrainer() {
               it and the pause after (Listen). Same setting (`intervalSeconds`) either way. */}
           <CollapsiblePanel
             id="scale-timing"
-            title={listenMode ? "Time to play" : "Time per scale"}
+            title="Time per scale"
             icon={StopwatchIcon}
             summary={`${intervalSeconds} s`}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <AdvancedSlider
-              label={listenMode ? "Time to play" : "Time per scale"}
+              label="Time per scale"
               value={intervalSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_INTERVAL_SECONDS}
               max={MAX_INTERVAL_SECONDS}
               step={0.5}
@@ -1217,7 +1213,7 @@ export default function ScaleTrainer() {
               <AdvancedSlider
                 label="Time between scales"
                 value={advanceDelayMs / 1000}
-                unit="s"
+                unit=" s"
                 min={MIN_ADVANCE_DELAY_MS / 1000}
                 max={MAX_ADVANCE_DELAY_MS / 1000}
                 step={0.25}
@@ -1230,8 +1226,9 @@ export default function ScaleTrainer() {
 
           <CollapsiblePanel
             id="scale-listen"
-            title="Listen"
+            title="Microphone"
             icon={MicIcon}
+            summary={inputDeviceId ? (inputs.find((d) => d.id === inputDeviceId)?.label ?? "Chosen mic") : "Default mic"}
             asMode
             toggle={{
               checked: listenMode,
@@ -1239,6 +1236,7 @@ export default function ScaleTrainer() {
               disabled: running,
             }}
           >
+            {running && <p className={LOCKED_NOTE}>Stop to change these.</p>}
             <SwitchRow
               label="Sound feedback"
               checked={soundFeedback}
@@ -1256,31 +1254,18 @@ export default function ScaleTrainer() {
             />
 
             {!drillMode && (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of scales
-                  <span className="tabular-nums text-foreground">
-                    {scaleCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_SCALE_COUNT}
-                  max={MAX_SCALE_COUNT}
-                  step={1}
-                  value={scaleCount}
-                  onChange={(e) => setScaleCount(Number(e.target.value))}
-                  disabled={running || !listenMode}
-                  style={
-                    {
-                      "--progress": `${((scaleCount - MIN_SCALE_COUNT) / (MAX_SCALE_COUNT - MIN_SCALE_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of scales"
+                value={scaleCount}
+                unit=""
+                min={MIN_SCALE_COUNT}
+                max={MAX_SCALE_COUNT}
+                step={1}
+                disabled={running || !listenMode}
+                onChange={(v) => setScaleCount(v)}
+                hint="How many random scales make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many random scales make up one session.</Hint>}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Audio input</span>
@@ -1289,7 +1274,7 @@ export default function ScaleTrainer() {
                 onChange={setInputDeviceId}
                 disabled={running}
                 options={[
-                  { value: "", label: "Default input" },
+                  { value: "", label: "Default mic" },
                   ...inputs.map((d) => ({ value: d.id, label: d.label })),
                 ]}
               />
@@ -1408,12 +1393,15 @@ export default function ScaleTrainer() {
               hint="Shows a preview of the upcoming scale next to the current one."
             />
 
-            <SwitchRow
-              label="Show scale notes"
-              checked={showScaleNotes}
-              onChange={setShowScaleNotes}
-              hint="The row of note pills below the circle in listen mode, showing progress through the scale."
-            />
+            {/* Only Listen shows the note pills, so the switch is hidden in Timed. */}
+            {listenMode && (
+              <SwitchRow
+                label="Show scale notes"
+                checked={showScaleNotes}
+                onChange={setShowScaleNotes}
+                hint="The scale's notes in a row under the circle, ticked off as you play them."
+              />
+            )}
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-muted">Tone</span>
@@ -1448,12 +1436,11 @@ export default function ScaleTrainer() {
         )}
         <div className="relative">
           <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
+            {!running && <span aria-hidden className={IDLE_RING} />}
             <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
             <p
-              title={round?.mode.aka}
-              className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-                mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
-              }`}
+              title={round?.mode.aka && scaleName(round.mode.aka)}
+              className={!running ? IDLE_MARK : "relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200"}
               style={
                 glow
                   ? {
@@ -1462,16 +1449,17 @@ export default function ScaleTrainer() {
                   : undefined
               }
             >
-              {mainLabel}
+              {running && round ? (
+                // The note on its own line, the scale under it, smaller, so a long scale name
+                // never fills the ring edge to edge.
+                <span className="flex flex-col items-center gap-1">
+                  <span className="whitespace-nowrap text-4xl leading-none sm:text-5xl">{rootLabel(round, roundSeed)}</span>
+                  <span className="text-balance text-lg leading-tight sm:text-2xl">{scaleName(round.mode.label)}</span>
+                </span>
+              ) : (
+                mainLabel
+              )}
             </p>
-            {/* Before the first round, say what's about to happen. */}
-            {!round && !running && (
-              <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">
-                {listenMode
-                  ? "Press Start, then play each scale. The mic follows along."
-                  : "Press Start, then play each scale shown."}
-              </p>
-            )}
           </div>
           {showNext && nextRound && running && (
             <span
@@ -1482,11 +1470,21 @@ export default function ScaleTrainer() {
             </span>
           )}
         </div>
+        {/* Before the first round, say what's about to happen. */}
+        {!running && (
+          <p className={IDLE_HINT}>
+            {listenMode
+              ? "Press Start, then play each scale. The mic follows along."
+              : "Press Start, then play each scale shown."}
+          </p>
+        )}
 
         {listenMode && running && round && showScaleNotes && (
-          <div className="flex flex-wrap justify-center gap-1.5 px-2">
+          <div className="flex flex-wrap justify-center gap-2 px-2">
             {round.notes.map((n, i) => {
-              const label = spellNote(n, accidentalStyle, roundSeed, true);
+              const key = keyNames(round, roundSeed);
+              // The last note is the root an octave up.
+              const label = noteGlyphs(key ? key[i % key.length] : spellNote(n, accidentalStyle, roundSeed, true));
               const matched = i < scaleProgress;
               const failed = i === scaleProgress && status === "incorrect";
               // Missed once and waiting for a retry (partial-credit mode only).
@@ -1500,18 +1498,17 @@ export default function ScaleTrainer() {
                     ? GRADE_COLOR.partial
                     : undefined;
               return (
+                // Filled pills: the note to play now in the accent, played ones tinted by grade.
                 <span
                   key={i}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium tabular-nums transition-colors ${
-                    current ? "border-accent" : color ? "" : "border-foreground/15"
+                  className={`inline-flex h-8 min-w-10 items-center justify-center rounded-full px-3 text-sm font-semibold tabular-nums transition-colors ${
+                    current ? "bg-accent text-accent-foreground" : color ? "" : "bg-foreground/[0.06] text-foreground"
                   }`}
-                  style={{
-                    color,
-                    borderColor: color && !current ? color : undefined,
-                    background: color
-                      ? `color-mix(in srgb, ${color} 12%, transparent)`
-                      : undefined,
-                  }}
+                  style={
+                    color
+                      ? { color, background: `color-mix(in srgb, ${color} 15%, transparent)` }
+                      : undefined
+                  }
                 >
                   {label}
                 </span>
@@ -1530,6 +1527,7 @@ export default function ScaleTrainer() {
             <span className="tabular-nums">
               {heard ? `Heard ${heard}` : "Listening…"}
             </span>
+            {listenMode && <MicLevel levelRef={micLevelRef} />}
             {waiting && (
               <button
                 type="button"
@@ -1630,8 +1628,27 @@ export default function ScaleTrainer() {
         </section>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <p className="text-sm text-danger">{error}</p>
+          {micFailed && listenMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setListenMode(false);
+                setError(null);
+                setMicFailed(false);
+              }}
+              className={SECONDARY_BUTTON}
+            >
+              Use Timed instead
+            </button>
+          )}
+        </div>
+      )}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running) && (
       <button
         type="button"
         onClick={running ? stop : () => void start()}
@@ -1639,6 +1656,7 @@ export default function ScaleTrainer() {
       >
         {running ? "Stop" : "Start"}
       </button>
+      )}
       <KeyHint>
         Press <KeyHint.Key>Space</KeyHint.Key> to start or stop
       </KeyHint>

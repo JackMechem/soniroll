@@ -6,7 +6,7 @@ import { PanelSection } from "@/components/bassgenius/PlayPanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import PromptDialog from "@/components/PromptDialog";
-import { SettingChip } from "@/components/SettingsBar";
+import { SettingChip, TOUCH_HIT } from "@/components/SettingsBar";
 import { BookmarkIcon, CheckIcon, DotsVerticalIcon, PencilIcon, PlusIcon, RepeatIcon, TrashIcon } from "@/components/tools";
 import { usePresets, type Preset, type ToolPresets } from "@/lib/toolPresets";
 
@@ -48,12 +48,14 @@ export function PresetsButton({ tool }: { tool: ToolPresets }) {
       trigger={{
         // min-w-0 (no shrink-0): on a phone's crowded top row the name truncates rather than
         // pushing the row off screen (`ToolLayout`'s PhoneBar lets it shrink).
-        className: "flex h-8 min-w-0 max-w-[14rem] items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover",
+        className: `${TOUCH_HIT} flex h-8 min-w-0 max-w-[14rem] items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover`,
         content: (
           <>
             <BookmarkIcon className="h-4 w-4 shrink-0 text-accent" />
-            {/* Phones: just the preset in use, or "Presets" while none is (no "Custom"/"None"). */}
-            <span className={state.active ? "hidden text-muted sm:inline" : "truncate text-muted"}>Presets</span>
+            {/* Phones: just the preset in use, or "Presets" while none is (no "Custom"/"None"); on
+                phones narrower than 380px just the icon then, so the row beside it fits (at 390
+                the word fits beside the time, a streak, Log and ?). */}
+            <span className={state.active ? "hidden text-muted sm:inline" : "hidden truncate text-muted min-[380px]:inline"}>Presets</span>
             <span className={`truncate font-medium ${state.active ? "" : "hidden sm:inline"}`}>{currentLabel(state)}</span>
           </>
         ),

@@ -52,7 +52,7 @@ export function RecordingCard({
     <div className="flex flex-col gap-2 rounded-lg bg-surface p-3" onContextMenu={onContextMenu}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <Link href={`/recordings/view?id=${recording._id}`} className="block truncate text-sm font-medium hover:underline">
+          <Link href={`/tunes/recording?id=${recording._id}`} className="block truncate text-sm font-medium hover:underline">
             {recording.name}
           </Link>
           <div className="truncate text-xs text-muted">
@@ -151,7 +151,7 @@ export function RecordingSelectDialog({
       <div role="dialog" aria-label="Link a recording" className="flex max-h-[75vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
           <SearchIcon className="h-4 w-4 text-muted" />
-          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search recordings" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
+          <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search recordings…" className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted sm:text-sm" />
         </div>
         <ul className="flex flex-col gap-0.5 overflow-y-auto">
           {recordings === undefined ? (
@@ -297,7 +297,7 @@ export function SaveTakeDialog({
           <div className="flex h-10 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40 sm:h-9">
             <LinkIcon className="h-4 w-4 text-muted" />
             <button type="button" onClick={() => setPicking(true)} className={`min-w-0 flex-1 truncate text-left text-base sm:text-sm ${tune ? "" : "text-muted"}`}>
-              {tune ? tune.name : "Not linked — click to link a tune"}
+              {tune ? tune.name : "Link a tune"}
             </button>
             {tune && (
               <button type="button" onClick={() => setTuneId(null)} className="text-sm font-medium text-muted hover:text-foreground">
@@ -368,7 +368,7 @@ export function SaveTakeDialog({
 }
 
 /** A tune page's Recordings: its takes (playable in place), "Record a take" (the Recorder, already
-    linked to this tune, metronome at its tempo) and "Link existing". */
+    linked to this tune, metronome at its tempo) and "From my recordings" (link one you already have). */
 export function TuneRecordings({ tuneId }: { tuneId: string }) {
   const { isAuthenticated } = useConvexAuth();
   const recordings = useDeviceUrls(useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : "skip"));
@@ -402,7 +402,7 @@ export function TuneRecordings({ tuneId }: { tuneId: string }) {
               <MicIcon className="h-4 w-4" /> Record a take
             </Link>
             <button type="button" onClick={() => setLinking(true)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-              <LinkIcon className="h-4 w-4" /> Link existing
+              <LinkIcon className="h-4 w-4" /> From my recordings
             </button>
           </div>
         </>
@@ -505,7 +505,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
           <>
             <SaveWhere target={saveTarget} />
             <button type="button" onClick={() => input.current?.click()} className="inline-flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-              {song ? "Replace" : "Upload"}
+              {song ? "Replace" : "Upload song"}
             </button>
             {song && (
               <button

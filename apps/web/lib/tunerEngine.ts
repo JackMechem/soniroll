@@ -10,6 +10,7 @@
  */
 
 import { SENSITIVITY, type AudioInput, startAudioInput } from "@/lib/audioInput";
+import { micErrorMessage } from "@/lib/micError";
 
 export interface TunerReading {
   target: number;
@@ -135,12 +136,20 @@ export async function startTunerListening(inputDeviceId: string): Promise<boolea
     listening = true;
     notify();
     return true;
-  } catch {
-    error = "Couldn't open the audio input. Check the browser's microphone permission.";
+  } catch (e) {
+    error = micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input.");
     listening = false;
     notify();
     return false;
   }
+}
+
+/** Drops a mic error once it no longer applies (the Tuner calls it when you use the tone
+    generator instead, which doesn't need the mic). */
+export function clearTunerError() {
+  if (error === null) return;
+  error = null;
+  notify();
 }
 
 export function stopTunerListening() {

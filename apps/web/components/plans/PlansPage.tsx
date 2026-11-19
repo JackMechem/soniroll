@@ -17,6 +17,9 @@ import { SIGN_IN_PATH } from "@/lib/landing";
 import { PLAN_HREF, useStoragePlan } from "@/lib/storagePlan";
 import { useSiteSettings } from "@/lib/siteSettings";
 
+/** The landing page with the sign-up form open. */
+const SIGN_UP_PATH = "/?auth=signup";
+
 /**
  * Storage plans. Every tool and feature is free; a plan only keeps files, recordings and songs
  * online, on all your devices (free accounts keep them on the device that saved them).
@@ -265,18 +268,29 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-bold">{current ? "Switch plan" : "Plans"}</h3>
           {hasMonthly && hasYearly && (
-            <Segmented
-              label="Billing"
-              value={interval}
-              onChange={setBilling}
-              options={[
-                { value: "month", label: "Monthly" },
-                { value: "year", label: "Yearly" },
-              ]}
-              onPage
-            />
+            <BillingSwitch value={interval} onChange={setBilling} />
           )}
         </div>
+        {/* Signed out: one sign-in button for all the plans, rather than one on every card. */}
+        {!isAuthenticated && !isLoading && plans && plans.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-accent/10 p-4">
+            <p className="text-sm">Make a free account, or sign in, to get a plan.</p>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                href={SIGN_IN_PATH}
+                className="inline-flex h-9 items-center rounded-md bg-foreground/[0.06] px-4 text-sm font-medium hover:bg-surface-hover"
+              >
+                Sign in
+              </Link>
+              <Link
+                href={SIGN_UP_PATH}
+                className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+              >
+                Sign up free
+              </Link>
+            </div>
+          </div>
+        )}
         {plans === undefined ? (
           <div className="flex justify-center py-8">
             <LoadingSpinner />
@@ -297,7 +311,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
                     <p className="text-sm text-muted">
                       <span className="text-base font-semibold text-foreground">{price(p.priceCents, p.currency)}</span> a {p.interval}
                     </p>
-                    {saved > 0 && <p className="text-xs text-accent">Saves {price(saved, p.currency)} on paying monthly</p>}
+                    {saved > 0 && <p className="text-xs text-accent">Save {price(saved, p.currency)} vs monthly</p>}
                   </div>
                   {mine ? (
                     <span className="mt-auto inline-flex h-10 items-center justify-center gap-1.5 rounded-full text-sm font-semibold text-accent">
@@ -324,14 +338,7 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
                       {busy === p.productId && <LoadingSpinner size="sm" inline label="Opening the checkout" />}
                       Get {p.storageGb} GB
                     </button>
-                  ) : (
-                    <Link
-                      href={SIGN_IN_PATH}
-                      className="mt-auto inline-flex h-10 items-center justify-center rounded-full bg-foreground/[0.05] px-4 text-sm font-semibold hover:bg-surface-hover"
-                    >
-                      {isLoading ? "…" : "Sign in to subscribe"}
-                    </Link>
-                  )}
+                  ) : null /* Signed out: the one Sign in button above the plans. */}
                 </div>
               );
             })}
@@ -349,7 +356,8 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
 
       <Comparison desktop={desktop} freeOnline={storage?.freeQuota} />
 
-      {!desktop && <KeepFiles />}
+      {/* Only for people with files to keep: someone shopping signed out doesn't need it. */}
+      {!desktop && isAuthenticated && <KeepFiles />}
 
       {confirm?.kind === "cancel" && current && (
         <ConfirmDialog
@@ -377,6 +385,34 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
           onCancel={() => setConfirm(null)}
         />
       )}
+    </div>
+  );
+}
+
+/** Monthly / Yearly: the picked side filled with the accent, so it reads in every theme. */
+function BillingSwitch({ value, onChange }: { value: "month" | "year"; onChange: (v: "month" | "year") => void }) {
+  return (
+    <div role="radiogroup" aria-label="Billing" className="grid auto-cols-fr grid-flow-col gap-1 rounded-full bg-surface p-1">
+      {(
+        [
+          ["month", "Monthly"],
+          ["year", "Yearly"],
+        ] as const
+      ).map(([v, label]) => {
+        const on = v === value;
+        return (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(v)}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${on ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SUPPORT_PATH, SupportCard, useSupportCardHidden } from "@/components/support/SupportParts";
 import { DesktopAppCard, useDesktopCardApplies, useDesktopCardDismissed } from "@/components/download/DesktopAppCard";
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
@@ -50,7 +50,7 @@ import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
 import TodayPractice, { HeatGrid, TodayMomentum } from "@/components/practicelog/TodayPractice";
 import LessonsDashboard, { useLessonsData } from "@/components/lessons/LessonsDashboard";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import DashboardGrid from "@/components/dashboard/DashboardGrid";
+import DashboardGrid, { DashboardEditingContext } from "@/components/dashboard/DashboardGrid";
 import { DEFAULT_LEARNING_PROGRESS, LEARNING_KEY, summarizeLearning } from "@/lib/learningPath";
 
 type ToolLink = (typeof NAV_LINKS)[number];
@@ -157,6 +157,12 @@ export default function Home() {
   const supportHidden = useSupportCardHidden();
   const desktopCardDismissed = useDesktopCardDismissed();
   const desktopCardApplies = useDesktopCardApplies();
+  // At most one ask at a time: when both the desktop app and the support card would show, they take
+  // turns by day (the desktop one on even days).
+  const desktopShows = desktopCardApplies && !desktopCardDismissed;
+  const dayNumber = today ? Math.floor(new Date(today).getTime() / 86400000) : 0;
+  const promo: "support" | "desktopApp" | null =
+    desktopShows && !supportHidden ? (dayNumber % 2 === 0 ? "desktopApp" : "support") : desktopShows ? "desktopApp" : supportHidden ? null : "support";
 
   // Edit mode: from the Edit button, or `?edit` in the address.
   const urlEdit = useSyncExternalStore(noop, urlAsksToEdit, () => false);
@@ -343,7 +349,13 @@ export default function Home() {
       case "favorites":
         return (
           <Card title={favoriteTools.length ? "Favorites" : "Get started"} detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}>
-            <div className="grid auto-rows-fr content-start gap-2 max-sm:gap-1.5 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+            {/* Columns that the tiles fill evenly: four tiles (the starters) go 2 × 2, or 4 in a row
+                once that's wide enough, never 3 + 1 with one left alone. */}
+            <div
+              className={`grid auto-rows-fr content-start gap-2 max-sm:gap-1.5 ${
+                pinned.length <= 2 ? "@lg:grid-cols-2" : pinned.length === 4 ? "@lg:grid-cols-2 @7xl:grid-cols-4" : "@lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4"
+              }`}
+            >
               {pinned.map((item) => (
                 <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} canStar={canStar} onToggle={() => toggleFavorite(item.href)} />
               ))}
@@ -474,9 +486,9 @@ export default function Home() {
           </Card>
         ) : null;
       case "support":
-        return !supportHidden || editing ? <SupportCard always={editing} /> : null;
+        return editing || (!supportHidden && promo !== "desktopApp") ? <SupportCard always={editing} /> : null;
       case "desktopApp":
-        return editing || (desktopCardApplies && !desktopCardDismissed) ? <DesktopAppCard always={editing} /> : null;
+        return editing || promo === "desktopApp" ? <DesktopAppCard always={editing} /> : null;
       default:
         return null;
     }
@@ -528,7 +540,8 @@ export default function Home() {
                       (tuneMatches[0] ? tuneHref(tuneMatches[0].list, tuneMatches[0].tune.id) : chartMatches[0] ? chartHref(chartMatches[0].id) : null);
                     if (first) router.push(first);
                   }}
-                  placeholder="Search tools, tunes and charts…"
+                  placeholder="Search tools, tunes, charts"
+                  aria-label="Search tools, tunes and charts"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
@@ -552,13 +565,22 @@ export default function Home() {
           </header>
         )}
 
+        {/* Search results: only the groups with something in them (like the menu's search), and
+            one line when nothing matches at all. */}
         {q ? (
           <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            <Card title="Tools">
-              {toolMatches.length ? <ToolRows items={toolMatches} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} /> : <Empty>No tools match “{q}”.</Empty>}
-            </Card>
-            <Card title="Your tunes">
-              {tuneMatches.length ? (
+            {!toolMatches.length && !tuneMatches.length && !chartMatches.length && (
+              <Card title="Search">
+                <Empty>Nothing matches “{q}”.</Empty>
+              </Card>
+            )}
+            {toolMatches.length > 0 && (
+              <Card title="Tools">
+                <ToolRows items={toolMatches} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
+              </Card>
+            )}
+            {tuneMatches.length > 0 && (
+              <Card title="Your tunes">
                 <div className="-mx-2 flex flex-col">
                   {tuneMatches.map(({ tune, list }) => (
                     <Link key={tune.id} href={tuneHref(list, tune.id)} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
@@ -570,12 +592,10 @@ export default function Home() {
                     </Link>
                   ))}
                 </div>
-              ) : (
-                <Empty>No tunes match.</Empty>
-              )}
-            </Card>
-            <Card title="Your chord charts">
-              {chartMatches.length ? (
+              </Card>
+            )}
+            {chartMatches.length > 0 && (
+              <Card title="Your chord charts">
                 <div className="-mx-2 flex flex-col">
                   {chartMatches.map((c) => (
                     <Link key={c.id} href={chartHref(c.id)} className="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-hover">
@@ -587,10 +607,8 @@ export default function Home() {
                     </Link>
                   ))}
                 </div>
-              ) : (
-                <Empty>No charts match.</Empty>
-              )}
-            </Card>
+              </Card>
+            )}
           </div>
         ) : (
           <DashboardGrid
@@ -602,6 +620,7 @@ export default function Home() {
             renderCard={renderCard}
             available={available}
             emptyText={emptyText}
+            labelOf={(id) => (id === "favorites" && !favoriteTools.length ? "Get started" : id === "sessions" && timer ? "Practicing now" : undefined)}
           />
         )}
         {!editing && layout.every((i) => !available(i.id)) && !q && (
@@ -618,14 +637,14 @@ export default function Home() {
             Jack Mechem
           </a>
         </span>
-        <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
-        <Link href="/" className="hover:text-foreground">About</Link>
-        <Link href={SUPPORT_PATH} className="hover:text-foreground">Support soniroll</Link>
-        <Link href="/feedback" className="hover:text-foreground">Send feedback</Link>
-        <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
-        <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
-        <Link href="/terms" className="hover:text-foreground">Terms</Link>
-        <Link href="/credits" className="hover:text-foreground">Credits</Link>
+        <a href="https://github.com/JackMechem/soniroll" target="_blank" rel="noopener noreferrer" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">GitHub</a>
+        <Link href="/" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">About</Link>
+        <Link href={SUPPORT_PATH} className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Support soniroll</Link>
+        <Link href="/feedback" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Send feedback</Link>
+        <Link href="/changelog" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">What&apos;s new</Link>
+        <Link href="/privacy" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Privacy</Link>
+        <Link href="/terms" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Terms</Link>
+        <Link href="/credits" className="inline-flex items-center hover:text-foreground pointer-coarse:min-h-9">Credits</Link>
       </footer>
 
       {confirmReset && (
@@ -660,9 +679,11 @@ function Card({
   children: ReactNode;
 }) {
   const plain = tone === "plain";
+  // In Edit, the card's frame shows its name: leave the title row out so it isn't there twice.
+  const inEditFrame = useContext(DashboardEditingContext);
   return (
     <section className={`flex h-full min-w-0 flex-col ${plain ? "gap-3" : "overflow-hidden rounded-lg bg-surface"}`}>
-      <div className={`flex min-w-0 items-center gap-2 ${plain ? "px-1" : "h-11 shrink-0 px-4"}`}>
+      <div className={`flex min-w-0 items-center gap-2 ${plain ? "px-1" : "h-11 shrink-0 px-4"} ${inEditFrame ? "hidden" : ""}`}>
         <h2 className="shrink-0 text-sm font-medium">{title}</h2>
         {detail && <span className="truncate text-xs text-muted">{detail}</span>}
         {action && (

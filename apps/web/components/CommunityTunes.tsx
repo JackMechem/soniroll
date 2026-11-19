@@ -136,7 +136,7 @@ export function PostListItem({
             className="flex min-w-0 items-center gap-2 font-medium hover:underline"
           >
             <UserAvatar url={post.authorAvatarUrl ?? null} />
-            <span className="truncate">{post.authorUsername}</span>
+            <span className="truncate">@{post.authorUsername}</span>
           </Link>
         )}
         <span className="shrink-0 whitespace-nowrap text-muted">

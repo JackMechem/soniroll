@@ -203,17 +203,20 @@ export default function FilesPage() {
         >
           {isAuthenticated && (
             <Toolbar>
-              <HeroSearch value={query} onChange={setQuery} placeholder="Search files and tunes" />
-              <button
-                type="button"
-                onClick={() => void backup.backUp(items)}
-                disabled={backup.busy || !items.length}
-                title="Download every file you can open here — online or on this device — as one .zip"
-                aria-label="Back up as a .zip"
-                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
-              >
-                <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
-              </button>
+              <HeroSearch value={query} onChange={setQuery} placeholder="Search files…" />
+              {/* Only when there's something to back up (a greyed-out icon explained nothing). */}
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void backup.backUp(items)}
+                  disabled={backup.busy}
+                  title="Download every file you can open here — online or on this device — as one .zip"
+                  aria-label="Back up as a .zip"
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
+                >
+                  <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
+                </button>
+              )}
               <SaveWhere target={saveTarget} className="h-10 sm:h-9" />
               <button
                 type="button"
@@ -264,7 +267,10 @@ export default function FilesPage() {
               </div>
             )}
 
-            {/* Phones: one row — what to show (where it came from, or what kind) and the order. */}
+            {/* Phones: one row — what to show (where it came from, or what kind) and the order. Hidden
+                until there's something to filter. */}
+            {items.length > 0 && (
+            <>
             <div className="flex items-center gap-2 sm:hidden">
               <Select
                 value={phoneFilter}
@@ -301,15 +307,35 @@ export default function FilesPage() {
                   ))}
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" small />
+                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" />
                 {(Object.keys(FILE_KIND_LABEL) as FileKind[])
                   .filter((k) => counts.byKind.get(k))
                   .map((k) => (
-                    <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={kindLabel(k)} small />
+                    <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={kindLabel(k)} />
                   ))}
               </div>
             </div>
+            </>
+            )}
 
+            {/* No files at all: the same dashed empty state as the other Library tabs, not an empty
+                "Everything 0" card. (No second Upload button: the one at the top does it.) */}
+            {items.length === 0 ? (
+              <>
+                <EmptyState
+                  boxed
+                  title="No files yet"
+                  body={
+                    <>
+                      Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes.
+                      <span className="pointer-coarse:hidden"> You can drop files anywhere on this page.</span>
+                    </>
+                  }
+                />
+                {actions.status && <p className="text-sm text-muted">{actions.status}</p>}
+                {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
+              </>
+            ) : (
             <section className="flex flex-col overflow-hidden rounded-lg bg-surface">
               {/* Title, or what's ticked and what to do with it. */}
               <div className="flex min-h-11 flex-wrap items-center gap-2 py-1.5 pl-4 pr-2">
@@ -348,11 +374,11 @@ export default function FilesPage() {
                   </>
                 ) : (
                   <>
+                    {/* No count here: the filter above already shows it. */}
                     <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
-                    <span className="text-xs tabular-nums text-muted">{shown.length}</span>
-                    {/* Recordings have their own page (playback, takes per tune). */}
+                    {/* Recordings have their own tab (playback, takes per tune). */}
                     {source === "recording" && (
-                      <Link href="/recordings" className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
+                      <Link href="/tunes?tab=recordings" replace scroll={false} className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
                         All recordings <ChevronRightIcon className="h-4 w-4" />
                       </Link>
                     )}
@@ -370,19 +396,7 @@ export default function FilesPage() {
               </div>
 
               {shown.length === 0 ? (
-                items.length === 0 ? (
-                  <EmptyState
-                    title="Nothing here yet"
-                    body="Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes. You can drop files anywhere on this page."
-                    action={
-                      <button type="button" onClick={uploader.pick} className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-                        Upload files
-                      </button>
-                    }
-                  />
-                ) : (
-                  <p className="px-4 py-4 text-sm text-muted">Nothing matches.</p>
-                )
+                <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
               ) : (
                 <div role="table" aria-label="Your files" className="flex flex-col divide-y divide-foreground/10">
                   <div role="row" className={`hidden h-9 items-center px-1.5 text-xs font-medium text-muted sm:grid ${COLUMNS}`}>
@@ -427,7 +441,7 @@ export default function FilesPage() {
                           onClick={() => (showChecks && !window.matchMedia("(min-width: 640px)").matches ? toggle(item) : actions.openFile(item))}
                           className="flex min-w-0 items-center gap-3 px-2 py-2 text-left"
                         >
-                          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} />
+                          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} recording={item.kind === "recording"} />
                           <span className="min-w-0 flex-1">
                             <span className="flex min-w-0 items-center gap-1.5">
                               <span className="truncate text-sm font-medium">{item.name}</span>
@@ -473,6 +487,7 @@ export default function FilesPage() {
               {actions.status && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-muted">{actions.status}</p>}
               {actions.error && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error}</p>}
             </section>
+            )}
           </>
         )}
       </div>
@@ -512,13 +527,13 @@ function Checkbox({ checked, mixed = false, label, onChange, faint = false }: { 
   );
 }
 
-function FilterChip({ active, onClick, label, count, small = false }: { active: boolean; onClick: () => void; label: string; count?: number; small?: boolean }) {
+function FilterChip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-md font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
+      className={`inline-flex items-center gap-1.5 rounded-md h-8 px-3 text-sm font-medium transition-colors ${
         active ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >

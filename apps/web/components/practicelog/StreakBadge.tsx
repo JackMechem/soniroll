@@ -4,14 +4,14 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
+import { GoalRing } from "@/components/practicelog/PracticeLogNavCard";
+import { practicedMinutes } from "@/components/practicelog/minutes";
 import { formatStopwatch, useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { minutesOn, streak, todayKey, goalOn } from "@/lib/practiceLog";
 import { useSiteSettings } from "@/lib/siteSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noop = () => () => {};
-const R = 7;
-const C = 2 * Math.PI * R;
 
 /**
  * Your streak, by your name in the sidebar: a flame and the number of days, lit once you've
@@ -32,7 +32,7 @@ export default function StreakBadge({ compact = false, onNavigate }: { compact?:
   const goal = goalOn(data, today);
   const frac = goal > 0 ? Math.min(1, minutes / goal) : 0;
   const title = lit
-    ? `${s}-day streak · ${Math.round(minutes)} of ${goal} min today`
+    ? `${s}-day streak · ${practicedMinutes(minutes)} of ${goal} min today`
     : s > 0
       ? `${s}-day streak — practice today to keep it`
       : "Practice today to start a streak";
@@ -62,12 +62,7 @@ export default function StreakBadge({ compact = false, onNavigate }: { compact?:
         {s}
       </span>
       {watch.running && <span className="text-[11px] font-medium tabular-nums text-accent">{formatStopwatch(watch.ms)}</span>}
-      {goal > 0 && (
-        <svg viewBox="0 0 18 18" className="h-4 w-4 -rotate-90" aria-hidden>
-          <circle cx="9" cy="9" r={R} fill="none" strokeWidth="2.5" className="stroke-foreground/15" />
-          <circle cx="9" cy="9" r={R} fill="none" strokeWidth="2.5" strokeLinecap="round" stroke={frac >= 1 ? "var(--success)" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
-        </svg>
-      )}
+      {goal > 0 && <GoalRing frac={frac} met={frac >= 1} />}
     </Link>
   );
 }

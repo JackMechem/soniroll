@@ -4,7 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { SoundOptions, SteppedField, TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
@@ -18,7 +18,7 @@ import { Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components
 import { SettingChip } from "@/components/SettingsBar";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
-import { MetronomeIcon, MicIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon } from "@/components/tools";
+import { MetronomeIcon, MicIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon, UploadIcon } from "@/components/tools";
 import { type InputDevice, listAudioInputs } from "@/lib/audioInput";
 import { type BeatLevel, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
 import { NEXT_LEVEL, clampBpm, defaultAccents, defaultSubAccents, nearestNoteValue, useTapTempo } from "@/lib/meterControls";
@@ -48,6 +48,8 @@ import { useToolActivity } from "@/lib/toolTime";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useLeaveGuard } from "@/components/library/useLeaveGuard";
+import { usePaneElement } from "@/lib/paneContext";
 
 // The same key as the app's Recorder. Everything from `bpm` on is the Metronome tool's own
 // settings shape. `autoGainOn` replaced `autoGain` (on by default before; now off, and in the Input
@@ -79,6 +81,16 @@ const DEFAULT_SETTINGS = {
   structure: EMPTY_STRUCTURE as Structure,
   tempoNoteValue: 4 as number | null,
 };
+
+// ---------------------------------------------------------------- the unsaved take
+
+/** A finished take that hasn't been saved or discarded yet. Kept outside the component so leaving
+    the Recorder (another tool, the menu) doesn't lose it: coming back opens the save dialog again.
+    A reload or closing the tab still loses it (the leave prompt says so). */
+let draftTake: FinishedTake | null = null;
+/** Whether the take in progress was started here (not by the Shed Log's quick recorder, which
+    shares the engine), so leaving only finishes the Recorder's own takes into the draft. */
+let ownTake = false;
 
 // ---------------------------------------------------------------- the level trace
 
@@ -180,7 +192,49 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   useToolActivity("/recorder", busy);
   const click = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot, getMetronomeServerSnapshot);
   const clicking = busy && settings.metronome && click.running;
-  const [take, setTake] = useState<FinishedTake | null>(null);
+  const [take, setTakeState] = useState<FinishedTake | null>(() => draftTake);
+  const setTake = (next: FinishedTake | null) => {
+    draftTake = next;
+    setTakeState(next);
+  };
+  // When the mic can't be used, a recording made elsewhere can still be saved like a take.
+  const uploadInput = useRef<HTMLInputElement>(null);
+  async function uploadInstead(file: File) {
+    setTake({ blob: file, durationSec: await audioDuration(file) });
+  }
+
+  // Leaving mid-take or with the save dialog open: ask first (links, the menu, Back; closing or
+  // reloading the tab gets the browser's own prompt). If you leave anyway, a take in progress is
+  // finished and kept as the draft above. In a split-screen pane the other pane's links aren't
+  // this page's way out, so only the tab-closing prompt applies there.
+  const unsaved = busy || take !== null;
+  const inPane = usePaneElement() !== null;
+  const guard = useLeaveGuard(
+    unsaved && !inPane,
+    busy
+      ? "Recording stops. The take waits here, unsaved, until you come back to save or discard it — but closing or reloading the tab loses it."
+      : "The take waits here until you come back to save or discard it — but closing or reloading the tab loses it.",
+  );
+  useEffect(() => {
+    if (!unsaved || !inPane) return;
+    const onUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [unsaved, inPane]);
+  useEffect(
+    () => () => {
+      const phase = getRecorderSnapshot().phase;
+      if (!ownTake || phase === "idle" || phase === "finishing") return;
+      ownTake = false;
+      void stopRecording().then((finished) => {
+        if (finished) draftTake = finished;
+      });
+    },
+    [],
+  );
 
   // The input, as the engine wants it.
   const gain = Math.min(4, Math.max(0, settings.inputGain));
@@ -244,6 +298,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         structure: { useStructure, structure },
         countInBars: settings.countInBars,
       };
+      ownTake = true;
       await startRecording(metronome, {
         ...input,
         song: songOn && song?.url ? { url: song.url, startSec: songStart, volume: settings.songVolume } : null,
@@ -251,6 +306,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
       return;
     }
     if (rec.phase === "finishing") return;
+    ownTake = false;
     const finished = await stopRecording();
     if (finished) setTake(finished);
   }
@@ -295,9 +351,24 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   const channels = settings.mono ? settings.monoSource : "stereo";
   const meterValue = useStructure ? `${structure.sections.length ? "Changing meters" : "No sections yet"}` : `${beatsPerBar}/${beatUnit}`;
 
+  // Recent takes: a chip with the other options, under the record button (the full list is on the
+  // Recordings page). Hidden until there's a take, so a fresh page doesn't lead with "0".
+  const takesPanel = recordings && recordings.length > 0 && (
+    <SettingChip icon={RecordIcon} label="Recent takes" wide value={String(recordings.length)}>
+      <div className="flex flex-col gap-2 text-left">
+        {recordings.slice(0, 5).map((r) => (
+          <RecordingCard key={r._id} recording={r} tuneName={r.tuneId ? byId.get(r.tuneId)?.tune.name : null} />
+        ))}
+        <Link href="/tunes?tab=recordings" className="self-end text-sm font-medium text-accent hover:underline">
+          All recordings
+        </Link>
+      </div>
+    </SettingChip>
+  );
+
   const options = (
     <>
-      <SettingChip icon={MicIcon} label="Input" wide value={`${deviceLabel ?? "Default mic"} · ${Math.round(gain * 100)}%`}>
+      <SettingChip icon={MicIcon} label="Microphone" wide value={`${deviceLabel ?? "Default mic"} · ${Math.round(gain * 100)}%`}>
         <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-xs font-semibold text-muted">Microphone</span>
@@ -305,7 +376,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               value={inputs.some((d) => d.id === settings.inputDeviceId) ? settings.inputDeviceId : ""}
               onChange={(v) => updateSettings({ inputDeviceId: v })}
               disabled={busy}
-              options={[{ value: "", label: "Default" }, ...inputs.map((d) => ({ value: d.id, label: d.label || "Microphone" }))]}
+              options={[{ value: "", label: "Default mic" }, ...inputs.map((d) => ({ value: d.id, label: d.label || "Microphone" }))]}
             />
           </label>
           <div className="flex flex-col gap-1.5">
@@ -359,51 +430,65 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         label="Metronome"
         wide
         value={settings.metronome ? `${bpm} BPM · ${meterValue}` : "Off"}
-        toggle={{ checked: settings.metronome, onChange: (v) => updateSettings({ metronome: v }), disabled: busy }}
       >
+        {/* Like every other chip, this one opens its settings; the on/off switch is the first of them. */}
         <div className="flex flex-col items-center gap-4">
-          <TempoHero
-            bpm={bpm}
-            setBpm={setBpm}
-            beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-            beatUnit={activeSection?.beatUnit ?? beatUnit}
-            onTap={tap}
-            tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
-          />
-          <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
-          <Segmented
-            label="Meter"
-            value={useStructure ? "structure" : "single"}
-            onChange={(v) => updateSettings({ useStructure: v === "structure" })}
-            disabled={busy}
-            options={[
-              { value: "single", label: "One meter" },
-              { value: "structure", label: "Changing meters" },
-            ]}
-          />
-          {useStructure ? (
-            <div className="w-full text-left">
-              <StructureEditor
-                structure={structure}
-                onChange={(s) => updateSettings({ structure: s })}
-                running={clicking}
-                activeFormIndex={clicking ? click.formIndex : null}
-                playingBeat={click.currentBeat}
-                playingSub={click.currentSub}
+          <div className="w-full">
+            <SwitchRow
+              label="Click while recording"
+              checked={settings.metronome}
+              onChange={(v) => updateSettings({ metronome: v })}
+              disabled={busy}
+              hint="Plays a metronome click (with a count-in) while you record. It isn't recorded unless your microphone picks it up."
+            />
+          </div>
+          {/* Everything below is about the click, so it only shows while the click is on. */}
+          {settings.metronome && (
+            <>
+              <TempoHero
+                bpm={bpm}
+                setBpm={setBpm}
+                beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
+                beatUnit={activeSection?.beatUnit ?? beatUnit}
+                onTap={tap}
+                tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => updateSettings({ tempoNoteValue: v })} />}
               />
-            </div>
-          ) : (
-            <div className="flex w-full flex-col gap-4">
-              <TimeSignatureControl
-                beatsPerBar={beatsPerBar}
-                beatUnit={beatUnit}
-                onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
-                onSetBeatUnit={(u) => updateSettings({ beatUnit: u })}
+              <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
+              <Segmented
+                label="Meter"
+                value={useStructure ? "structure" : "single"}
+                onChange={(v) => updateSettings({ useStructure: v === "structure" })}
+                disabled={busy}
+                options={[
+                  { value: "single", label: "One meter" },
+                  { value: "structure", label: "Changing meters" },
+                ]}
               />
-              <SubdivisionPicker value={subdivision} onChange={(n) => updateSettings({ subdivision: n })} />
-            </div>
+              {useStructure ? (
+                <div className="w-full text-left">
+                  <StructureEditor
+                    structure={structure}
+                    onChange={(s) => updateSettings({ structure: s })}
+                    running={clicking}
+                    activeFormIndex={clicking ? click.formIndex : null}
+                    playingBeat={click.currentBeat}
+                    playingSub={click.currentSub}
+                  />
+                </div>
+              ) : (
+                <div className="flex w-full flex-col gap-4">
+                  <TimeSignatureControl
+                    beatsPerBar={beatsPerBar}
+                    beatUnit={beatUnit}
+                    onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
+                    onSetBeatUnit={(u) => updateSettings({ beatUnit: u })}
+                  />
+                  <SubdivisionPicker value={subdivision} onChange={(n) => updateSettings({ subdivision: n })} />
+                </div>
+              )}
+              <p className="text-xs text-muted">The click plays through your speakers, so the microphone picks it up unless you wear headphones.</p>
+            </>
           )}
-          <p className="text-xs text-muted">The click plays through your speakers, so the microphone picks it up unless you wear headphones.</p>
         </div>
       </SettingChip>
 
@@ -472,25 +557,8 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           </div>
         </SettingChip>
       )}
+      {takesPanel}
     </>
-  );
-
-  // Recent takes: a chip above the display (the full list is on the Recordings page).
-  const takesPanel = (
-    <SettingChip icon={RecordIcon} label="Recent takes" wide value={recordings === undefined ? "…" : String(recordings.length)}>
-      <div className="flex flex-col gap-2 text-left">
-        {recordings === undefined ? (
-          <LoadingSpinner />
-        ) : recordings.length === 0 ? (
-          <p className="text-sm text-muted">No recordings yet.</p>
-        ) : (
-          recordings.slice(0, 5).map((r) => <RecordingCard key={r._id} recording={r} tuneName={r.tuneId ? byId.get(r.tuneId)?.tune.name : null} />)
-        )}
-        <Link href="/recordings" className="self-end text-sm font-medium text-accent hover:underline">
-          All recordings
-        </Link>
-      </div>
-    </SettingChip>
   );
 
   if (isLoading) {
@@ -519,7 +587,6 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
     <ToolLayout
       title="Recorder"
       options={options}
-      sidePanel={takesPanel}
       presets={toolPresets("recorder", settings, updateSettings, ["inputDeviceId", "inputGain", "autoGainOn", "mono", "monoSource", "playSong", "songVolume", "metronome"])}
     >
       <div className="flex w-full max-w-xl flex-col items-center gap-5">
@@ -534,7 +601,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
         <div className="flex w-full flex-col gap-1.5">
           <LevelTrace trace={levelTrace} live={live} />
           <p className={`h-4 text-center text-xs ${tooLoud ? "font-medium text-danger" : "text-muted"}`}>
-            {tooLoud ? "Too loud — turn the input level down (Input)" : tooQuiet ? "Very quiet — turn the input level up, or move closer" : live ? "" : "Check the level before you record"}
+            {tooLoud ? "Too loud — turn the input level down (Microphone)" : tooQuiet ? "Very quiet — turn the input level up, or move closer" : live ? "" : "Check the level before you record"}
           </p>
         </div>
 
@@ -550,23 +617,27 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
               subAccents={displaySubAccents}
               currentSub={clicking ? click.currentSub : 0}
               onCycleSub={handleCycleSub}
+              cycleHint
             />
           ))}
 
-        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <div className="flex justify-end">
+        {/* The caption is inside the record button (so it's tappable too); the Level button lines
+            up with the circle. */}
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-4">
+          <div className="flex h-24 items-center justify-end">
             <button
               type="button"
               onClick={() => (rec.monitoring ? stopMonitor() : void startMonitor(input))}
               disabled={busy}
               aria-pressed={rec.monitoring}
               title="Listen to the input without recording, to set the level"
-              className={`inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-40 ${
+              className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors disabled:opacity-40 sm:w-40 ${
                 rec.monitoring ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] hover:bg-surface-hover"
               }`}
             >
               <MicIcon className="h-4 w-4" />
               <span className="hidden sm:inline">{rec.monitoring ? "Stop checking" : "Check level"}</span>
+              <span className="sm:hidden">Level</span>
             </button>
           </div>
           <button
@@ -574,21 +645,54 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
             onClick={() => void onRecord()}
             aria-label={busy ? "Stop recording" : "Start recording"}
             title={busy ? "Stop (Space)" : "Record (Space)"}
-            className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-foreground/15 transition-colors hover:border-foreground/30"
+            className="group flex flex-col items-center gap-2 rounded-2xl"
           >
-            {busy ? (
-              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-danger text-white">
-                <StopIcon className="h-6 w-6" />
-              </span>
-            ) : (
-              <span className="h-[74px] w-[74px] rounded-full bg-danger" />
-            )}
+            <span className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-foreground/15 transition-colors group-hover:border-foreground/30">
+              {busy ? (
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-danger text-white">
+                  <StopIcon className="h-6 w-6" />
+                </span>
+              ) : (
+                <span className="h-[74px] w-[74px] rounded-full bg-danger" />
+              )}
+            </span>
+            <span className="text-sm font-semibold">{busy ? "Stop" : "Record"}</span>
           </button>
-          <div className="text-left text-xs text-muted">
-            {settings.metronome && !busy && settings.countInBars > 0 && `${settings.countInBars}-bar count-in`}
-          </div>
+          <div aria-hidden />
         </div>
-        {rec.error && <p className="text-sm text-danger">{rec.error}</p>}
+        {/* The count-in note under the button, so nothing beside it moves it. */}
+        <div className="-mt-4 flex flex-col items-center text-center">
+          <span className="h-4 text-xs text-muted">
+            {settings.metronome && !busy && settings.countInBars > 0 && `${settings.countInBars}-bar count-in`}
+          </span>
+        </div>
+        {rec.error && (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-danger">{rec.error}</p>
+            {!busy && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => uploadInput.current?.click()}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+                >
+                  <UploadIcon className="h-4 w-4" /> Upload a recording instead
+                </button>
+                <input
+                  ref={uploadInput}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void uploadInstead(file);
+                  }}
+                />
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {take && (
@@ -600,11 +704,27 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
           onDiscard={() => setTake(null)}
           onSaved={(id) => {
             setTake(null);
-            if (tuneId) router.push(`/tunes/tune?id=${tuneId}`);
-            else router.push(`/recordings/view?id=${id}`);
+            guard.leave(() => router.push(tuneId ? `/tunes/tune?id=${tuneId}` : `/tunes/recording?id=${id}`));
           }}
         />
       )}
+      {guard.dialog}
     </ToolLayout>
   );
+}
+
+/** An audio file's length in seconds, read from its metadata (0 when the browser can't tell). */
+function audioDuration(file: Blob): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    const finish = (sec: number) => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(sec) && sec > 0 ? sec : 0);
+    };
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => finish(audio.duration);
+    audio.onerror = () => finish(0);
+    audio.src = url;
+  });
 }

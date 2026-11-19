@@ -101,3 +101,8 @@ overflow.
 the "listen while it plays" path with real speakers, the desktop app's window and native mic
 (only its bundle was built), signed-in sync of the settings/history, Safari/Firefox, iOS. No help
 screenshot yet. Mobile (paused) doesn't have it.
+
+## 2026-11-18: credit (FB-27)
+
+The tool was Rob Moreno's idea (FB-12), so it now shows `credit="Idea by Rob Moreno"` like Jam
+Practice, Note Trainer and Metric Modulation, and `/credits` has a Find the Root section.

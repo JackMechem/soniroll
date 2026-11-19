@@ -135,24 +135,26 @@ export default function TuneEditorModal({
               Posting this tune to Community brings its linked chart along automatically.
             </span>
           </label>
+        </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={save}
-              disabled={!draft.name.trim()}
-              className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isNew ? "Add tune" : "Save changes"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
-            >
-              Cancel
-            </button>
-          </div>
+        {/* Outside the scrolling body, so Add tune is always in reach (on a phone the form is
+            several screens tall). */}
+        <div className="flex gap-2 border-t border-foreground/10 px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            onClick={save}
+            disabled={!draft.name.trim()}
+            className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isNew ? "Add tune" : "Save changes"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>

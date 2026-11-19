@@ -10,7 +10,7 @@ import { titleKey } from "@jam-practice/core/shedNotes";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
-import { DocumentIcon, DownloadIcon, GearIcon, PlusIcon } from "@/components/tools";
+import { DocumentIcon, DotsVerticalIcon, DownloadIcon, GearIcon, PlusIcon, UploadIcon } from "@/components/tools";
 import { notesZip, saveBlob } from "@/lib/exportNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
@@ -445,6 +445,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-semibold tracking-tight">
             <DocumentIcon className="h-5 w-5 shrink-0 text-accent" /> <span className="truncate">Shed Notes</span>
           </h1>
+          {/* One ⋮ menu for the page: export, import and the JSON settings file. */}
           <button
             type="button"
             onClick={(e) => {
@@ -453,19 +454,17 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
                 x: Math.max(8, r.right - 240),
                 y: r.bottom + 4,
                 items: [
-                  { label: "Export all as Markdown (.zip)", onSelect: () => void exportAll() },
-                  { label: "Import notes…", onSelect: () => setImporting(true) },
+                  { label: "Export all as Markdown (.zip)", icon: <DownloadIcon className="h-4 w-4" />, onSelect: () => void exportAll() },
+                  { label: "Import notes…", icon: <UploadIcon className="h-4 w-4" />, onSelect: () => setImporting(true) },
+                  { label: "Settings file (JSON)", icon: <GearIcon className="h-4 w-4" />, onSelect: () => open(SETTINGS_ID) },
                 ],
               });
             }}
-            aria-label="Export or import notes"
-            title="Export or import notes"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            aria-label="More: export, import, settings"
+            title="Export, import and settings"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors pointer-coarse:h-10 pointer-coarse:w-10 ${current === SETTINGS_ID ? "bg-surface-hover text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
           >
-            <DownloadIcon className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => open(SETTINGS_ID)} aria-label="Settings file" title="Settings file" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${current === SETTINGS_ID ? "bg-surface-hover text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}>
-            <GearIcon className="h-4 w-4" />
+            <DotsVerticalIcon className="h-4 w-4" />
           </button>
         </div>
         <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} shared={sharedWithMe ?? []} templateCount={templates?.length ?? 0} templatesOpen={current === TEMPLATES_ID} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
@@ -520,11 +519,6 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
               {(templates?.length ?? 0) > 0 && (
                 <button type="button" onClick={() => actions.newFromTemplate?.(null)} className="h-9 rounded-md px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
                   From a template
-                </button>
-              )}
-              {notes.length > 0 && (
-                <button type="button" onClick={() => setPalette({ mode: "notes", items: noteItems() })} className="h-9 rounded-md px-3 text-sm font-medium transition-colors hover:bg-surface-hover">
-                  Open a note
                 </button>
               )}
             </div>

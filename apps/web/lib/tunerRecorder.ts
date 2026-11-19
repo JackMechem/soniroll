@@ -12,6 +12,7 @@
 
 import { openStream } from "@/lib/audioInput";
 import { beginMicUse, endMicUse } from "@/lib/iosAudio";
+import { micErrorMessage } from "@/lib/micError";
 
 export type TunerRecorderPhase = "idle" | "starting" | "recording" | "finishing";
 
@@ -68,9 +69,9 @@ export async function startTunerRecording(deviceId: string): Promise<void> {
   let opened: MediaStream;
   try {
     opened = await openStream(deviceId);
-  } catch {
+  } catch (e) {
     endMicUse();
-    if (id === session) setSnapshot({ phase: "idle", error: "Couldn't open the audio input. Check the browser's microphone permission." });
+    if (id === session) setSnapshot({ phase: "idle", error: micErrorMessage(e, "Couldn't open the mic. Try again, or pick another input.") });
     return;
   }
   if (id !== session) {

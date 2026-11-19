@@ -148,7 +148,8 @@ export function TempoPicker({
           inputMode="numeric"
           onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
-          placeholder={`Other BPM (${MIN_TEMPO}–${MAX_TEMPO})`}
+          placeholder="Other BPM"
+          title={`Any tempo from ${MIN_TEMPO} to ${MAX_TEMPO} BPM`}
           aria-label="Custom tempo"
           className="h-9 w-44 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
         />
@@ -292,7 +293,8 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
-          placeholder="Other key (e.g. F# dorian)"
+          placeholder="Other key"
+          title="Any key, e.g. F# dorian"
           aria-label="Custom key"
           className="h-9 w-44 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
         />

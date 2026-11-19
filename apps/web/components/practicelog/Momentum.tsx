@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import GoalDialog from "@/components/practicelog/GoalDialog";
+import { formatPracticed, practicedMinutes } from "@/components/practicelog/minutes";
+import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import { ChevronLeftIcon, ChevronRightIcon, ShareIcon } from "@/components/tools";
 import {
   type PracticeLogData,
@@ -88,7 +90,8 @@ export default function Momentum({
   const weekChange = lastWeek > 0 ? Math.round(((weekTotal - lastWeek) / lastWeek) * 100) : null;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    // Phones: a compact 2 × 2 (four full-width cards pushed everything else off the screen).
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       <GoalCard minutes={minutes} goal={goal} progress={progress} onEdit={() => setEditingGoal(true)} />
       {editingGoal && <GoalDialog data={data} onSave={onPrefs} onClose={() => setEditingGoal(false)} />}
 
@@ -137,16 +140,19 @@ export default function Momentum({
             )}
           </span>
         }
-        value={<Value value={formatMinutesShort(Math.round(weekTotal))} />}
+        value={<Value value={formatPracticed(weekTotal)} />}
       >
         <WeekBars week={week} today={today} />
         <Note>{goalDays > 0 ? `Goal hit ${daysHit} of ${goalDays} days` : "Set a daily goal to track your week"}</Note>
       </Card>
 
-      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />} value={<Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />}>
+      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />} value={
+          // Under an hour in minutes ("1 min", not "0.0 h"), like the week beside it.
+          hours < 1 ? <Value value={formatPracticed(hours * 60)} /> : <Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />
+        }>
         <Bar frac={Math.max(0.03, Math.min(1, (hours - ms.from) / (ms.to - ms.from)))} />
         <Note>
-          {hours === 0 ? "Your first hour starts with one session" : `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to ${ms.to} hour${ms.to === 1 ? "" : "s"}`}
+          {hoursNote(hours, ms.to)}
         </Note>
       </Card>
     </div>
@@ -201,7 +207,7 @@ function Card({
   wide?: boolean;
 }) {
   return (
-    <section className={`flex min-w-0 flex-col gap-3 rounded-lg bg-surface p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
+    <section className={`flex min-w-0 flex-col gap-2 rounded-lg bg-surface p-3 sm:gap-3 sm:p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
       <div className="flex h-5 items-center justify-between gap-2">
         <h3 className="truncate text-xs font-medium text-muted">{label}</h3>
         {action}
@@ -210,7 +216,7 @@ function Card({
         {value}
         {aside}
       </div>
-      <div className="mt-auto flex flex-col gap-3">{children}</div>
+      <div className="mt-auto flex flex-col gap-2 sm:gap-3">{children}</div>
     </section>
   );
 }
@@ -218,10 +224,11 @@ function Card({
 /** The big number. Words inside it ("1 h 24 min") and the `unit` are small and muted, so every
     card's number reads at the same size. */
 function Value({ value, unit }: { value: string | number; unit?: React.ReactNode }) {
-  const parts = String(value).split(/([\d.:]+)/).filter(Boolean);
+  // Numbers big, words small; "<1" (under a minute) counts as a number.
+  const parts = String(value).split(/(<?[\d.:]+)/).filter(Boolean);
   return (
     <div className="whitespace-nowrap text-2xl font-semibold leading-8 tracking-tight tabular-nums">
-      {parts.map((p, i) => (/^[\d.:]+$/.test(p) ? <span key={i}>{p}</span> : <span key={i} className="text-sm font-normal text-muted">{p}</span>))}
+      {parts.map((p, i) => (/^<?[\d.:]+$/.test(p) ? <span key={i}>{p}</span> : <span key={i} className="text-sm font-normal text-muted">{p}</span>))}
       {unit && <span className="text-sm font-normal text-muted"> {unit}</span>}
     </div>
   );
@@ -232,6 +239,15 @@ function Note({ children, warn = false, good = false }: { children: React.ReactN
 }
 
 /** A thin progress bar; green once it's full (`done`). */
+/** The "In total" card's line: how far to the next hour milestone, in words that read right at
+    every value ("45 min to your first hour", "2 h 10 min to 5 hours"). */
+function hoursNote(hours: number, to: number): string {
+  if (hours <= 0) return "Your first hour starts with one session";
+  const left = Math.max(1, Math.round((to - hours) * 60));
+  if (to === 1) return left >= 60 ? "Your first hour is under way" : `${formatMinutesShort(left)} to your first hour`;
+  return `${formatMinutesShort(left)} to ${to} hours`;
+}
+
 function Bar({ frac, done = false }: { frac: number; done?: boolean }) {
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
@@ -261,11 +277,11 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
       wide
       label={goal > 0 ? "Today's goal" : "Today · rest day"}
       action={
-        <button type="button" onClick={onEdit} className="-my-1 rounded-md px-1.5 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={onEdit} className={`-my-1 rounded-md px-1.5 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground ${TOUCH_TEXT}`}>
           {goal > 0 ? "Change" : "Set a goal"}
         </button>
       }
-      value={<Value value={Math.round(minutes)} unit={goal > 0 ? `/ ${goal} min` : "min"} />}
+      value={<Value value={practicedMinutes(minutes)} unit={goal > 0 ? `/ ${goal} min` : "min"} />}
       aside={goal > 0 && <span className="text-xs font-medium tabular-nums text-muted">{Math.round(frac * 100)}%</span>}
     >
       {goal > 0 && <Bar frac={frac} done={met} />}
@@ -286,7 +302,7 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
 function WeekBars({ week, today }: { week: { key: string; minutes: number; goal: number }[]; today: string }) {
   const max = Math.max(...week.map((d) => d.goal), ...week.map((d) => d.minutes), 1);
   const same = week.every((d) => d.goal === week[0].goal);
-  const TRACK = 44;
+  const TRACK = 32;
   return (
     <div className="relative flex items-end gap-1.5">
       {same && week[0].goal > 0 && (
@@ -297,7 +313,7 @@ function WeekBars({ week, today }: { week: { key: string; minutes: number; goal:
         const future = d.key > today;
         const isToday = d.key === today;
         return (
-          <div key={d.key} className="flex flex-1 flex-col items-center gap-1" title={`${WEEKDAY_LETTER[weekdayOf(d.key)]} · ${formatMinutesShort(Math.round(d.minutes))}`}>
+          <div key={d.key} className="flex flex-1 flex-col items-center gap-1" title={`${WEEKDAY_LETTER[weekdayOf(d.key)]} · ${formatPracticed(d.minutes)}`}>
             <div className={`relative w-full overflow-hidden rounded-sm ${future ? "bg-foreground/[0.04]" : "bg-foreground/[0.08]"}`} style={{ height: TRACK }}>
               {!same && d.goal > 0 && <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground/40" style={{ bottom: `${(d.goal / max) * 100}%` }} />}
               {d.minutes > 0 && (
@@ -307,7 +323,7 @@ function WeekBars({ week, today }: { week: { key: string; minutes: number; goal:
                 />
               )}
             </div>
-            <span className={`h-3.5 text-[11px] leading-[14px] ${isToday ? "font-semibold text-foreground" : "font-medium text-muted"}`}>{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
+            <span className={`h-3.5 text-xs leading-[14px] ${isToday ? "font-semibold text-foreground" : "font-medium text-muted"}`}>{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
           </div>
         );
       })}

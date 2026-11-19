@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
+import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
-import RoutineIcon, { RoutineIconPicker } from "@/components/practicelog/RoutineIcon";
+import { RoutineIconButton } from "@/components/practicelog/RoutineIcon";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import {
   type Repeat,
@@ -37,12 +38,18 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 const noopSubscribe = () => () => {};
 const LABEL = "text-xs font-medium text-muted";
 const INPUT = "h-9 min-w-0 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40";
+/** A task's small "+ Subtask" / "+ Notes" buttons, filled like the Attach button beside them. */
+const SMALL_ADD = "flex h-6 items-center gap-1 rounded-md bg-foreground/[0.05] px-2 text-xs font-medium transition-colors hover:bg-surface-hover pointer-coarse:h-8";
 const TEXTAREA = "resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
 
 /** `/shed-log/routine/edit?id=…` (or `?date=…` for a new one starting that day). */
 export default function RoutineEditorPage({ id, date }: { id?: string; date?: string }) {
   const log = usePracticeLog();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  // A new routine keeps one id while the page is open: a fresh one on every render remounted the
+  // editor (its `key`) whenever the log changed — a sync wiped what you'd typed, and saving lost
+  // the leave guard's way out.
+  const [draftId] = useState(() => newRoutine(todayKey(), 0).id);
   if (!log.ready || !mounted) {
     return (
       <PageShell>
@@ -59,7 +66,7 @@ export default function RoutineEditorPage({ id, date }: { id?: string; date?: st
       </PageShell>
     );
   }
-  const initial = existing ?? newRoutine(isDateKey(date) ? date : todayKey(), log.data.routines.length % ROUTINE_COLORS.length);
+  const initial = existing ?? { ...newRoutine(isDateKey(date) ? date : todayKey(), log.data.routines.length % ROUTINE_COLORS.length), id: draftId };
   return <Editor key={initial.id} initial={initial} isNew={!existing} log={log} returnDate={isDateKey(date) ? date : undefined} />;
 }
 
@@ -76,6 +83,10 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
   const [r, setR] = useState<Routine>(initial);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The task just added with "Add a task": its name box gets the focus, so you can type straight away.
+  const [added, setAdded] = useState<string | null>(null);
+  // Tasks whose notes box was opened with "+ Notes" (one that has notes always shows it).
+  const [notesOpen, setNotesOpen] = useState<ReadonlySet<string>>(() => new Set());
   const set = (patch: Partial<Routine>) => setR((prev) => ({ ...prev, ...patch }));
   const setRepeat = (patch: Partial<Repeat>) => setR((prev) => ({ ...prev, repeat: { ...prev.repeat, ...patch } }));
   const setTask = (i: number, patch: Partial<RoutineTask>) => setR((prev) => ({ ...prev, tasks: prev.tasks.map((t, j) => (j === i ? { ...t, ...patch } : t)) }));
@@ -88,22 +99,36 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       return { ...prev, tasks };
     });
 
+  // Leaving with unsaved changes (Back, Cancel, the browser's Back, a link) asks first.
+  const [start] = useState(initial); // as it was when the page opened (a sync can change `initial`)
+  const dirty = JSON.stringify(r) !== JSON.stringify(start);
+  const { requestLeave, leave, dialog: leaveDialog } = useLeaveGuard(dirty, "Your changes to this routine haven't been saved.", () => router.push("/shed-log"));
+  const cancel = () => requestLeave(() => router.back());
+
   const done = () => router.push(isNew ? `/shed-log${returnDate ? `?date=${returnDate}` : ""}` : `/shed-log/routine?id=${encodeURIComponent(r.id)}`);
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
 
   function save() {
     if (!r.name.trim()) {
       setError("Give the routine a name.");
+      nameRef.current?.focus();
       return;
     }
     if (r.repeat.end && r.repeat.end < r.repeat.start) {
       setError("It ends before it starts.");
+      // Saved from the bottom bar on a phone, the message at the top is out of sight.
+      requestAnimationFrame(() => errorRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
       return;
     }
+    // A task row left empty (no name, notes, subtasks or attachments) is dropped, not saved as
+    // "Untitled task".
     const tasks = r.tasks
-      .filter((t) => t.title.trim() || t.minutes > 0)
+      .filter((t) => t.title.trim() || t.notes.trim() || (t.subtasks ?? []).some((x) => x.title.trim()) || t.attachments.length > 0)
       .map((t) => ({ ...t, title: t.title.trim(), subtasks: (t.subtasks ?? []).filter((x) => x.title.trim()).map((x) => ({ ...x, title: x.title.trim() })) }));
     log.saveRoutine({ ...r, name: r.name.trim(), tasks });
-    done();
+    leave(done);
   }
 
   const color = ROUTINE_COLORS[r.color % ROUTINE_COLORS.length];
@@ -113,38 +138,34 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
   return (
     <PageShell>
       <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
-        <BackButton onClick={() => router.back()} />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => router.back()} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
-              Cancel
-            </button>
-            <button type="button" onClick={save} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-              Save
-            </button>
-          </div>
-        </div>
+        <BackButton onClick={cancel} />
+        {/* Cancel and Save are in the bar stuck to the bottom (below), in reach however far down
+            the form you are. */}
+        <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
       </div>
-      {error && <p className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p ref={errorRef} className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <Card title="Routine">
-        <label className="flex flex-col gap-1.5">
-          <span className={LABEL}>Name</span>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="routine-name" className={LABEL}>Name</label>
           <div className="flex items-center gap-2">
-            <RoutineIcon icon={r.icon} color={r.color} size="md" />
+            {/* The icon: tap it to pick another (a popover). */}
+            <RoutineIconButton value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
             <input
+              id="routine-name"
+              ref={nameRef}
               autoFocus={isNew}
+              aria-invalid={error === "Give the routine a name." || undefined}
               value={r.name}
               onChange={(e) => {
                 set({ name: e.target.value });
                 setError(null);
               }}
               placeholder="e.g. Morning warm-up"
-              className={`${INPUT} flex-1`}
+              className={`${INPUT} flex-1 aria-[invalid]:ring-2 aria-[invalid]:ring-danger/60`}
             />
           </div>
-        </label>
+        </div>
         <label className="flex flex-col gap-1.5">
           <span className={LABEL}>What it&apos;s for (optional)</span>
           <textarea
@@ -170,10 +191,6 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
             ))}
           </div>
         </div>
-      </Card>
-
-      <Card title="Icon">
-        <RoutineIconPicker value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
       </Card>
 
       <Card title="When">
@@ -203,7 +220,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                     const next = on ? weekdays.filter((d) => d !== i) : [...weekdays, i as Weekday];
                     if (next.length) setRepeat({ weekdays: next.sort() as Weekday[] });
                   }}
-                  className={`h-9 w-9 rounded-md border text-sm font-medium transition-colors ${on ? "border-transparent text-white" : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                  className={`h-9 w-9 rounded-full text-sm font-medium transition-colors ${on ? "text-white" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"}`}
                   style={on ? { background: color } : undefined}
                 >
                   {letter}
@@ -252,34 +269,42 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
       <Card title="Tasks" detail={r.tasks.length ? formatMinutesShort(totalMinutes(r)) : undefined}>
         <ol className="flex flex-col gap-3">
-          {r.tasks.map((task, i) => (
+          {r.tasks.map((task, i) => {
+            // Move up / down and remove: beside the name from sm; on phones on the minutes row, so
+            // the name gets the whole width.
+            const controls = (
+              <>
+                <IconButton label="Move up" disabled={i === 0} onClick={() => moveTask(i, -1)}>
+                  <ChevronLeftIcon className="h-4 w-4 rotate-90" />
+                </IconButton>
+                <IconButton label="Move down" disabled={i === r.tasks.length - 1} onClick={() => moveTask(i, 1)}>
+                  <ChevronRightIcon className="h-4 w-4 rotate-90" />
+                </IconButton>
+                <IconButton label="Remove task" onClick={() => set({ tasks: r.tasks.filter((_, j) => j !== i) })}>
+                  <TrashIcon className="h-4 w-4" />
+                </IconButton>
+              </>
+            );
+            return (
             <li key={task.id} className="flex flex-col gap-2 rounded-md bg-foreground/[0.05] p-3">
               <div className="flex items-center gap-2">
                 <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
                 <input
                   value={task.title}
+                  autoFocus={task.id === added}
                   onChange={(e) => setTask(i, { title: e.target.value })}
                   placeholder="Task — e.g. Scales in all 12 keys"
                   aria-label={`Task ${i + 1}`}
                   className={`${INPUT} flex-1`}
                 />
-                <div className="flex shrink-0">
-                  <IconButton label="Move up" disabled={i === 0} onClick={() => moveTask(i, -1)}>
-                    <ChevronLeftIcon className="h-4 w-4 rotate-90" />
-                  </IconButton>
-                  <IconButton label="Move down" disabled={i === r.tasks.length - 1} onClick={() => moveTask(i, 1)}>
-                    <ChevronRightIcon className="h-4 w-4 rotate-90" />
-                  </IconButton>
-                  <IconButton label="Remove task" onClick={() => set({ tasks: r.tasks.filter((_, j) => j !== i) })}>
-                    <TrashIcon className="h-4 w-4" />
-                  </IconButton>
-                </div>
+                <div className="flex shrink-0 max-sm:hidden">{controls}</div>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-7 text-sm">
                 <div className="flex items-center gap-2">
                   <Stepper value={task.minutes} min={0} max={600} step={task.minutes < 5 ? 1 : 5} onChange={(minutes) => setTask(i, { minutes })} />
                   <span className="text-muted">min</span>
                 </div>
+                <div className="-mr-1 ml-auto flex shrink-0 sm:hidden">{controls}</div>
                 <TimeField
                   label="At"
                   value={task.time}
@@ -288,48 +313,61 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   inline
                 />
               </div>
-              <div className="pl-7">
-                <textarea
-                  value={task.notes}
-                  onChange={(e) => setTask(i, { notes: e.target.value })}
-                  rows={1}
-                  placeholder="Notes (optional) — what to focus on"
-                  aria-label="Notes"
-                  className={`${TEXTAREA} w-full py-1.5`}
-                />
-              </div>
-              <div className="flex flex-col gap-1 pl-7">
-                {(task.subtasks ?? []).map((sub, j) => (
-                  <div key={sub.id} className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 shrink-0 rounded-sm border-[1.5px] border-foreground/25" />
-                    <input
-                      value={sub.title}
-                      onChange={(e) => setTask(i, { subtasks: (task.subtasks ?? []).map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })}
-                      placeholder="Subtask"
-                      className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
-                    />
-                    <IconButton label="Remove subtask" onClick={() => setTask(i, { subtasks: (task.subtasks ?? []).filter((_, k) => k !== j) })}>
-                      <CloseIcon className="h-3.5 w-3.5" />
-                    </IconButton>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })}
-                  className="flex items-center gap-1 self-start text-xs font-medium text-muted hover:text-foreground"
-                >
-                  <PlusIcon className="h-3 w-3" /> Subtask
+              {(task.notes || notesOpen.has(task.id)) && (
+                <div className="pl-7">
+                  <textarea
+                    value={task.notes}
+                    onChange={(e) => setTask(i, { notes: e.target.value })}
+                    autoFocus={!task.notes}
+                    rows={2}
+                    placeholder="Notes: what to focus on"
+                    aria-label="Notes (optional)"
+                    className={`${TEXTAREA} w-full py-1.5`}
+                  />
+                </div>
+              )}
+              {(task.subtasks ?? []).length > 0 && (
+                <div className="flex flex-col gap-1 pl-7">
+                  {(task.subtasks ?? []).map((sub, j) => (
+                    <div key={sub.id} className="flex items-center gap-2">
+                      <span className="h-3.5 w-3.5 shrink-0 rounded-sm border-[1.5px] border-foreground/25" />
+                      <input
+                        value={sub.title}
+                        onChange={(e) => setTask(i, { subtasks: (task.subtasks ?? []).map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })}
+                        placeholder="Subtask"
+                        className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 text-sm outline-none focus:ring-2 focus:ring-accent/40"
+                      />
+                      <IconButton label="Remove subtask" onClick={() => setTask(i, { subtasks: (task.subtasks ?? []).filter((_, k) => k !== j) })}>
+                        <CloseIcon className="h-3.5 w-3.5" />
+                      </IconButton>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* The extras, in one row of small filled buttons: a subtask, notes (hidden until
+                  asked for, so an empty box doesn't make every task tall) and attachments. */}
+              <div className="flex flex-wrap items-center gap-1.5 pl-7">
+                <button type="button" onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })} className={SMALL_ADD}>
+                  <PlusIcon className="h-3.5 w-3.5" /> Subtask
                 </button>
-              </div>
-              <div className="pl-7">
+                {!task.notes && !notesOpen.has(task.id) && (
+                  <button type="button" onClick={() => setNotesOpen((open) => new Set(open).add(task.id))} className={SMALL_ADD}>
+                    <PlusIcon className="h-3.5 w-3.5" /> Notes
+                  </button>
+                )}
                 <AttachmentList items={task.attachments} onChange={(attachments) => setTask(i, { attachments })} compact />
               </div>
             </li>
-          ))}
+            );
+          })}
         </ol>
         <button
           type="button"
-          onClick={() => set({ tasks: [...r.tasks, newTask()] })}
+          onClick={() => {
+            const task = newTask();
+            setAdded(task.id);
+            set({ tasks: [...r.tasks, task] });
+          }}
           className="flex h-9 items-center justify-center gap-1.5 rounded-md border border-dashed border-foreground/20 text-sm font-medium text-muted hover:border-foreground/40 hover:text-foreground"
         >
           <PlusIcon className="h-4 w-4" /> Add a task
@@ -348,6 +386,17 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           <TrashIcon className="h-4 w-4" /> Delete routine
         </button>
       )}
+      {/* Cancel and Save stay in reach at the bottom while you scroll the form (on a phone, two
+          big buttons; wider, a pair on the right). */}
+      <div className="sticky bottom-0 z-20 -mx-4 -mb-16 flex gap-2 border-t border-foreground/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:-mx-6 sm:justify-end sm:px-6 lg:-mx-8 lg:px-8">
+        <button type="button" onClick={cancel} className="h-11 flex-1 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover sm:h-9 sm:flex-none">
+          Cancel
+        </button>
+        <button type="button" onClick={save} className="h-11 flex-1 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:h-9 sm:flex-none">
+          Save
+        </button>
+      </div>
+      {leaveDialog}
       {confirmDelete && (
         <ConfirmDialog
           title="Delete this routine?"
@@ -356,7 +405,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => {
             log.deleteRoutine(r.id);
-            router.push("/shed-log/routines");
+            leave(() => router.push("/shed-log/routines"));
           }}
         />
       )}
@@ -421,7 +470,7 @@ function TimeField({ label, value, onChange, emptyLabel, inline = false }: { lab
         </>
       ) : (
         <button type="button" onClick={() => onChange("08:00")} className="h-8 rounded-md bg-foreground/[0.05] px-2.5 text-sm text-muted hover:bg-surface-hover hover:text-foreground">
-          {emptyLabel} · set a time
+          {emptyLabel} · Set a time
         </button>
       )}
     </div>

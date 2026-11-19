@@ -153,6 +153,21 @@ function endHand(p: GeneratedPattern): Hand {
   return lastBar[lastBar.length - 1].hand;
 }
 
+/** The pattern to follow `p`: starts on the other hand (see `promoteNextPattern`), and isn't the
+    very same sticking again — the random pick could land on an identical pattern back to back,
+    which read as "Next" being stuck. A few retries; a repeat is still allowed if nothing else
+    comes up (a tiny pool can't avoid it). */
+function patternAfter(p: GeneratedPattern): GeneratedPattern {
+  const key = (q: GeneratedPattern) =>
+    q.bars.map((bar) => bar.map((c) => `${c.hand}${c.speed[0]}`).join("")).join("|");
+  const current = key(p);
+  let next = generatePattern(options, endHand(p));
+  for (let i = 0; i < 8 && key(next) === current; i++) {
+    next = generatePattern(options, endHand(p));
+  }
+  return next;
+}
+
 /** Generates a completely fresh pattern (and a fresh upcoming preview to match), with no
     continuity constraint against whatever was playing before — used when the roll type changes (a
     structural option, since it can change a bar's own cell count/rhythm) and for the very first
@@ -162,7 +177,7 @@ function endHand(p: GeneratedPattern): Hand {
     comment. Safe to call whether or not anything is currently running. */
 export function regenerateStickControlPattern() {
   pattern = generatePattern(options);
-  nextPattern = generatePattern(options, endHand(pattern));
+  nextPattern = patternAfter(pattern);
   if (running) beginScheduling();
   notify();
 }
@@ -181,7 +196,7 @@ function stopInterval() {
     be reassigned before the closure runs — can get a non-null value back by type. */
 function currentPattern(): GeneratedPattern {
   if (!pattern) pattern = generatePattern(options);
-  if (!nextPattern) nextPattern = generatePattern(options, endHand(pattern));
+  if (!nextPattern) nextPattern = patternAfter(pattern);
   return pattern;
 }
 
@@ -194,8 +209,8 @@ function currentPattern(): GeneratedPattern {
     chain keeps extending one step ahead no matter how many times this runs. */
 function promoteNextPattern() {
   const base = currentPattern();
-  pattern = nextPattern ?? generatePattern(options, endHand(base));
-  nextPattern = generatePattern(options, endHand(pattern));
+  pattern = nextPattern ?? patternAfter(base);
+  nextPattern = patternAfter(pattern);
 }
 
 /** Advances to the next pattern in the continuity chain — see `promoteNextPattern`'s own comment.

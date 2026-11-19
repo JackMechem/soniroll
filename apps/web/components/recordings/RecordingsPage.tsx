@@ -5,8 +5,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { EmptyCard } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import StoragePill from "@/components/files/StoragePill";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
@@ -20,12 +19,12 @@ import { useDeviceUrls } from "@/lib/deviceFiles";
     link) when it's loaded, else one made from the recording. */
 function entryOf(r: Recording, stored: Map<string, StoredEntry>): StoredEntry {
   return (
-    stored.get(r._id) ?? { kind: "recording", id: r._id, name: r.name, mimeType: r.mimeType, size: 0, createdAt: r.createdAt, url: r.url, tuneId: r.tuneId, href: `/recordings/view?id=${r._id}` }
+    stored.get(r._id) ?? { kind: "recording", id: r._id, name: r.name, mimeType: r.mimeType, size: 0, createdAt: r.createdAt, url: r.url, tuneId: r.tuneId, href: `/tunes/recording?id=${r._id}` }
   );
 }
 
-/** `/recordings` — every saved recording, newest first: search by name, notes or tune; play in
-    place; click a name to open it. Shown as the Library's last tab (its header and tabs). */
+/** Library's Recordings tab (`/tunes?tab=recordings`, see LibraryHub) — every saved recording,
+    newest first: search by name, notes or tune; play in place; click a name to open it. */
 export default function RecordingsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : "skip"));
@@ -51,7 +50,7 @@ export default function RecordingsPage() {
       <Hero title="Library" icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="recordings" tabs={<LibraryTabs active="recordings" />}>
         {isAuthenticated && (
           <Toolbar>
-            <HeroSearch value={query} onChange={setQuery} placeholder="Search recordings" />
+            <HeroSearch value={query} onChange={setQuery} placeholder="Search recordings…" />
             <Link
               href="/recorder"
               className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:h-9"
@@ -71,7 +70,16 @@ export default function RecordingsPage() {
           action={<SignInButtons />}
         />
       ) : shown.length === 0 ? (
-        <EmptyCard>{query ? "No recordings match." : "No recordings yet — open the Recorder to make one."}</EmptyCard>
+        query ? (
+          <EmptyState boxed title={`No recordings match “${query}”`} body="Try part of a name or a tune." />
+        ) : (
+          <EmptyState
+            boxed
+            title="No recordings yet"
+            body="Record a take in the Recorder or on a tune's page and it shows up here."
+            action={<Pill primary icon={MicIcon} label="Open the Recorder" href="/recorder" />}
+          />
+        )
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {shown.map((r) => (

@@ -24,6 +24,7 @@ import LiveFeedback from "@/components/timetest/LiveFeedback";
 import MicPanel from "@/components/timetest/MicPanel";
 import ToolLayout from "@/components/ToolLayout";
 import { DrumIcon, ListIcon, MeterIcon, MicIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon, StopwatchIcon, TimeTestIcon } from "@/components/tools";
+import { listAudioInputs, type InputDevice } from "@/lib/audioInput";
 import { DEFAULT_CLICK_SOUND_ID, type BeatLevel, type ClickSettings } from "@/lib/clickEngine";
 import { HintsContext } from "@/lib/hints";
 import { MAX_BEATS } from "@/lib/meters";
@@ -32,6 +33,7 @@ import { analyze, type Analysis, type AnalysisParams, type Calibration, type Tak
 import {
   getTimeTestServerSnapshot,
   getTimeTestSnapshot,
+  micErrorMessage,
   playTake,
   runCalibration,
   setLiveParams,
@@ -46,6 +48,7 @@ import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
 import { toolPresets } from "@/lib/toolPresets";
+import { usePaneKeyGuard } from "@/lib/paneContext";
 
 const COMMON_METERS: [number, number][] = [
   [4, 4],
@@ -113,9 +116,8 @@ function sameParams(a: AnalysisParams, b: AnalysisParams) {
   );
 }
 
-function errorText(e: unknown) {
-  return e instanceof Error ? e.message : String(e);
-}
+// Mic errors ("Permission denied") get the same friendly sentence as the Microphone popover.
+const errorText = micErrorMessage;
 
 export default function TimeTest() {
   const [settings, update] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
@@ -134,11 +136,31 @@ export default function TimeTest() {
   const calibrated = micSettings.calibrated;
   const latencyMs = calibrated ? micSettings.latencyMs : Math.round((engine.latencyGuessMs ?? 0) * 10) / 10;
 
+  // The chosen mic's name, for the Microphone chip. Names only show once the browser has been
+  // allowed to use the mic, so they're listed again whenever the mic opens.
+  const [inputs, setInputs] = useState<InputDevice[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => {
+      void listAudioInputs()
+        .then((list) => alive && setInputs(list))
+        .catch(() => {});
+    };
+    refresh();
+    navigator.mediaDevices?.addEventListener?.("devicechange", refresh);
+    return () => {
+      alive = false;
+      navigator.mediaDevices?.removeEventListener?.("devicechange", refresh);
+    };
+  }, [engine.micOpen]);
+  const micName = inputs.find((d) => d.id === micSettings.inputDeviceId)?.label ?? "Default mic";
+
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The Mic chip's popover (where Calibrate is), also opened from the "Calibrate first" note.
   const [micOpen, setMicOpen] = useState(false);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
+  const [calibrateError, setCalibrateError] = useState<string | null>(null);
   const [recStart, setRecStart] = useState(0);
   const [now, setNow] = useState(0);
   const [micHints, setMicHints] = useState(false);
@@ -249,13 +271,16 @@ export default function TimeTest() {
 
   const calibrate = () => {
     setError(null);
+    setCalibrateError(null);
     setCalibration(null);
     void runCalibration(micSettings.inputDeviceId, soundId, volume)
       .then((c) => {
         setCalibration(c);
         if (c.ok) updateMic({ latencyMs: Math.round(c.latencyMs * 10) / 10, calibrated: true });
       })
-      .catch((e) => setError(errorText(e)));
+      // Shown under the Calibrate button in the Microphone popover (the page's own error line is
+      // behind the popover).
+      .catch((e) => setCalibrateError(errorText(e)));
   };
 
   const play = (from: number) => {
@@ -274,11 +299,12 @@ export default function TimeTest() {
   };
   useSpaceToggle(toggleRecording);
   const keyRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  const forThisPane = usePaneKeyGuard();
   useEffect(() => {
     keyRef.current = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (e.key !== "r" && e.key !== "R") return;
-      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || calibrating) return;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || calibrating || !forThisPane(e)) return;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable || t.closest("[role='dialog']"))) return;
       e.preventDefault();
       toggleRecording();
@@ -295,7 +321,7 @@ export default function TimeTest() {
   const countInLeft =
     recording && (tick === null || tick.bar < countInBars) ? (tick ? countInBars * beatsPerBar - (tick.bar * beatsPerBar + tick.beat) : countInBars * beatsPerBar) : null;
   const elapsed = recording ? Math.max(0, (now - recStart) / 1000) : 0;
-  const notesValue = settings.notesPerBeat === 0 ? "Auto" : (SUB_LABELS[settings.notesPerBeat] ?? `${settings.notesPerBeat} per beat`);
+  const notesValue = settings.notesPerBeat === 0 ? "Work it out" : (SUB_LABELS[settings.notesPerBeat] ?? `${settings.notesPerBeat} per beat`);
 
   const changeBeats = (n: number) => update({ beatsPerBar: n, accents: defaultAccents(n, accents) });
   const cycleBeat = (i: number) => update({ accents: accents.map((l, j) => (j === i ? NEXT_LEVEL[l] : l)) });
@@ -330,7 +356,8 @@ export default function TimeTest() {
       }
     >
       <div className="flex w-full max-w-[30rem] flex-col items-center gap-6">
-        <div className="flex w-full flex-col items-center gap-4">
+        {/* The tempo column is the Metronome's width, so the slider matches the other tools. */}
+        <div className="flex w-full max-w-sm flex-col items-center gap-4">
           <TempoHero
             bpm={bpm}
             setBpm={(v) => update({ bpm: clampBpm(v) })}
@@ -349,6 +376,7 @@ export default function TimeTest() {
             subAccents={subAccents}
             currentSub={tick?.sub ?? 0}
             onCycleSub={cycleSub}
+            cycleHint
           />
         </div>
 
@@ -387,14 +415,14 @@ export default function TimeTest() {
             </KeyHint>
           </div>
           {!calibrated && phase === "idle" && (
-            <div className="flex max-w-sm flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center text-xs text-muted">
-              <span>Calibrate first so your setup&apos;s delay doesn&apos;t skew the results.</span>
+            <div className="flex max-w-sm flex-col items-center gap-2 text-center">
+              <span className="text-xs text-muted">Calibrate first so your setup&apos;s delay doesn&apos;t skew the results.</span>
               <button
                 type="button"
                 onClick={() => setMicOpen(true)}
-                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
               >
-                <MicIcon className="h-3.5 w-3.5 text-muted" />
+                <MicIcon className="h-4 w-4 text-muted" />
                 Calibrate…
               </button>
             </div>
@@ -482,12 +510,12 @@ export default function TimeTest() {
             </SettingChip>
             <SettingChip
               icon={MicIcon}
-              label="Mic"
-              title="Mic and latency"
+              label="Microphone"
+              title="Microphone and latency"
               wide
               open={micOpen}
               onOpenChange={setMicOpen}
-              value={calibrated ? `${latencyMs.toFixed(1)} ms` : micSettings.inputDeviceId ? "Chosen input" : "Default input"}
+              value={calibrated ? `${micName} · ${latencyMs.toFixed(1)} ms` : micName}
               headerExtra={<HintsButton on={micHints} onToggle={() => setMicHints((on) => !on)} />}
             >
               <HintsContext.Provider value={micHints}>
@@ -504,6 +532,7 @@ export default function TimeTest() {
                   calibrating={calibrating}
                   onCalibrate={calibrate}
                   lastCalibration={calibration}
+                  calibrateError={calibrateError}
                   micError={engine.micError}
                   busy={recording}
                 />
@@ -526,6 +555,8 @@ export default function TimeTest() {
             onStopPlayback={stopPlayback}
             playClick={settings.playClick}
             setPlayClick={(v) => update({ playClick: v })}
+            onTryAgain={record}
+            onOpenMic={() => setMicOpen(true)}
           />
         </div>
       )}

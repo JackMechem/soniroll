@@ -6,7 +6,7 @@ import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero } from "@/components/MeterFields";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
-import { Field, LevelRow, OptionsSheet, OptionsSummaryChip, PanelSection } from "@/components/bassgenius/PlayPanel";
+import { Field, LevelRow, OptionsButton, OptionsSheet, PanelSection, useStickyPanel } from "@/components/bassgenius/PlayPanel";
 import { toolPresets } from "@/lib/toolPresets";
 import SyncopationScore from "@/components/syncopation/SyncopationScore";
 import { DrumIcon, MetronomeIcon, NoteIcon, PlayIcon, ShuffleIcon, SlidersIcon, SpeakerIcon, StopIcon } from "@/components/tools";
@@ -119,40 +119,12 @@ export default function Syncopation() {
     genRef.current = genOpts;
   }, [settings.after, genOpts]);
 
-  // Desktop: the settings panel fits the window below where it sits.
+  // Desktop: the settings panel stays in view as the page scrolls, with no scrollbar of its own.
   const asideRef = useRef<HTMLElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const fit = () => {
-      const el = asideRef.current;
-      if (!el) return;
-      let max = Math.max(240, window.innerHeight - Math.max(16, el.getBoundingClientRect().top) - 24);
-      el.style.maxHeight = `${max}px`;
-      // The page's padding below the panel isn't counted above: if the panel is what makes the
-      // page scroll (it reaches lower than the exercise), take off the overflow too.
-      const scroller = el.parentElement?.closest<HTMLElement>(".overflow-y-auto");
-      const card = cardRef.current;
-      if (!scroller || !card) return;
-      const over = scroller.scrollHeight - scroller.clientHeight;
-      if (over > 0 && el.getBoundingClientRect().bottom > card.getBoundingClientRect().bottom) {
-        max = Math.max(240, max - over);
-        el.style.maxHeight = `${max}px`;
-      }
-    };
-    fit();
-    window.addEventListener("resize", fit);
-    document.addEventListener("scroll", fit, true);
-    // Also when the exercise redraws (it can change height) or the page around it changes size.
-    const ro = new ResizeObserver(() => fit());
-    if (cardRef.current) ro.observe(cardRef.current);
-    const scroller = asideRef.current?.parentElement?.closest<HTMLElement>(".overflow-y-auto");
-    if (scroller) ro.observe(scroller);
-    return () => {
-      window.removeEventListener("resize", fit);
-      document.removeEventListener("scroll", fit, true);
-      ro.disconnect();
-    };
-  }, []);
+  useStickyPanel(asideRef);
+  // ...and so does the exercise with Play above it, when the options reach further down.
+  const columnRef = useRef<HTMLDivElement>(null);
+  useStickyPanel(columnRef);
 
   const setBpm = (v: number) => update({ bpm: Math.max(MIN_BPM, Math.min(MAX_BPM, Math.round(v))) });
   const tap = useTapTempo(setBpm);
@@ -263,7 +235,9 @@ export default function Syncopation() {
     ? "Couldn't download the drums — check your connection and try again."
     : downloading
       ? `Downloading the drums… ${Math.round((download ?? 0) * 100)}%`
-      : "";
+      : live
+        ? `Playing exercise ${Math.min(shown, played.length - 1) + 1}`
+        : "";
 
   const familyNames = RHYTHM_FAMILIES.filter((f) => families.includes(f.id)).map((f) => f.short);
 
@@ -288,10 +262,13 @@ export default function Syncopation() {
                   type="button"
                   onClick={() => toggleFamily(f.id)}
                   aria-pressed={on}
-                  className={`flex items-center gap-2 rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors ${on ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background text-muted hover:bg-surface-hover hover:text-foreground"}`}
+                  aria-label={f.label}
+                  title={f.label}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${on ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.06] text-foreground hover:bg-surface-hover"}`}
                 >
                   <RhythmGlyph family={f.id} />
-                  {f.label}
+                  {/* Short names keep the four pills one line each (the glyph shows the rhythm). */}
+                  {f.short}
                 </button>
               );
             })}
@@ -338,66 +315,75 @@ export default function Syncopation() {
     </div>
   );
 
+  // Play/Stop, Options (phones) and the status line. Phones: pinned under the top bar, above the
+  // notation. Desktop: at the top of the exercise's column, which stays in view (as the options
+  // panel does), so Play is still there after scrolling down the options.
+  const transport = (desktop: boolean) => (
+    <div
+      className={
+        desktop
+          ? "sticky top-0 z-10 hidden flex-col items-center gap-1.5 bg-background/95 pb-1 pt-3 backdrop-blur lg:flex"
+          : "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 -mx-4 flex flex-col items-center gap-1.5 self-stretch bg-background/95 px-4 pt-2 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden"
+      }
+    >
+      <div className="flex max-w-full items-center gap-2">
+        <button
+          type="button"
+          onClick={toggle}
+          className={`shrink-0 ${running || downloading ? BIG_SECONDARY : BIG_PRIMARY}`}
+        >
+          {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+          {running || downloading ? "Stop" : "Play"}
+        </button>
+        <OptionsButton summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
+      </div>
+      <p className="min-h-5 text-center text-sm text-muted" aria-live="polite">
+        {status}
+      </p>
+    </div>
+  );
+
   return (
     <ToolLayout title="Syncopation" layout="stacked" topAligned options={null} presets={toolPresets("syncopation", settings, update)}>
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggle}
-            className={running || downloading ? BIG_SECONDARY : BIG_PRIMARY}
-          >
-            {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
-            {running || downloading ? "Stop" : "Play"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setOptionsOpen(true)}
-            aria-label="Options"
-            className="flex h-11 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover lg:hidden"
-          >
-            <SlidersIcon className="h-4 w-4" /> Options
-          </button>
-        </div>
-        <OptionsSummaryChip summary={`${settings.bpm} BPM · ${familyNames.join(", ")}`} onOpen={() => setOptionsOpen(true)} />
-        <p className="min-h-5 text-center text-sm text-muted" aria-live="polite">
-          {status}
-        </p>
-      </div>
+      {transport(false)}
 
       <div className="grid w-full max-w-[100rem] gap-6 text-left lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
-        <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-lg">
+        <aside ref={asideRef} aria-label="Settings" className="hidden min-w-0 lg:sticky lg:top-4 lg:flex lg:flex-col lg:rounded-lg">
           {panel}
         </aside>
-        <div ref={cardRef} className="min-w-0 rounded-lg bg-surface p-3 sm:p-5">
+        <div ref={columnRef} className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-4">
+        {transport(true)}
+        <div className="min-w-0 rounded-lg bg-surface p-3 sm:p-5">
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2 px-1">
             <div className="min-w-0">
               <h2 className="text-base font-semibold">
-                {live ? `Exercise ${Math.min(shown, played.length - 1) + 1}` : "Exercise"}
+                Exercise
                 <span className="ml-2 text-sm font-normal text-muted">{familyNames.join(" · ")}</span>
               </h2>
               <p className="text-sm text-muted">
-                {EXERCISE_BARS} bars in four 4-bar lines · {OSTINATOS.find((o) => o.id === ostinato)?.label.toLowerCase()} underneath
+                {EXERCISE_BARS} bars · {OSTINATOS.find((o) => o.id === ostinato)?.label.toLowerCase()} underneath
               </p>
             </div>
-            {!running && (
-              <button
-                type="button"
-                onClick={() => setSeed(newSeed())}
-                className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover"
-              >
-                <ShuffleIcon className="h-4 w-4 text-muted" /> New exercise
-              </button>
-            )}
+            {/* Stays in place while playing (disabled) so the notation doesn't jump. */}
+            <button
+              type="button"
+              onClick={() => setSeed(newSeed())}
+              disabled={running}
+              title={running ? "Stop to get a new exercise" : undefined}
+              className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors enabled:hover:bg-surface-hover disabled:opacity-40"
+            >
+              <ShuffleIcon className="h-4 w-4 text-muted" /> New exercise
+            </button>
           </div>
           <div ref={scoreRef}>
             <style>{`.syncopation-score g.syn-now{fill:var(--accent);stroke:var(--accent);color:var(--accent)}`}</style>
             <SyncopationScore bars={bars} ostinato={ostinato} />
           </div>
         </div>
+        </div>
       </div>
 
-      <OptionsSheet open={optionsOpen} onClose={closeOptions}>
+      <OptionsSheet open={optionsOpen} onClose={closeOptions} firstOpen="syn-tempo">
         {panel}
       </OptionsSheet>
     </ToolLayout>

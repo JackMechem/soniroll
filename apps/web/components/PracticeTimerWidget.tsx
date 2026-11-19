@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { TOUCH_HIT } from "@/components/SettingsBar";
 import { PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, StopwatchIcon } from "@/components/tools";
 import { formatClock } from "@/lib/practiceTimer";
 import {
@@ -94,22 +96,27 @@ function ControlButton({
 
 /** The "what's running right now" glimpse shown outside the Practice Timer tool itself while a
     session is running — a compact card in the desktop sidebar footer (full width; the collapsed
-    width and the mobile top-right badge both stay a plain link, with no room for controls) or the
+    width and the phone top bar's chip both stay a plain link, with no room for controls) or the
     mobile menu's own footer (the same full-width card, since it shares this same code path).
     Renders nothing at all while no session is running. The title/time area is still a link back
     to the tool page for the full view; the control row below it — pause/resume, skip (also what
     dismisses an active alarm), stop — are real `<button>`s and siblings of that `<Link>`, not
     nested inside it (invalid HTML, breaks click handling), so clicking a control never also
-    navigates. */
+    navigates.
+
+    `bar`: the phone top bar's chip (`Sidebar`), in the bar's row just before the bug button. */
 export default function PracticeTimerWidget({
   collapsed,
-  mobile,
+  bar,
 }: {
   collapsed?: boolean;
-  mobile?: boolean;
+  bar?: boolean;
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const pathname = usePathname();
   if (!state) return null;
+  // The phone's top-bar chip would only repeat the big timer on the tool's own page.
+  if (bar && pathname === "/practice-timer") return null;
 
   const remaining = (
     <RemainingLabel
@@ -121,18 +128,20 @@ export default function PracticeTimerWidget({
     />
   );
 
-  if (mobile) {
+  if (bar) {
+    // Just the stopwatch and the time left (the step's name is in the label and on the tool
+    // page), so the page name beside it keeps its room.
     return (
       <Link
         href="/practice-timer"
-        aria-label={`Practice Timer running: ${state.current.title}`}
-        className={`fixed right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 flex h-8 max-w-[55vw] items-center gap-1.5 rounded-md bg-surface px-2.5 text-xs font-medium lg:hidden ${
+        aria-label={`Practice Timer ${state.alarming ? "time's up" : "running"}: ${state.current.title}`}
+        title={state.current.title}
+        className={`${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-2.5 text-xs font-medium lg:hidden ${
           state.alarming ? "animate-pulse text-danger" : "text-foreground"
         }`}
       >
         <StopwatchIcon className={`h-4 w-4 shrink-0 ${state.alarming ? "" : "text-accent"}`} />
-        <span className="truncate">{state.alarming ? "Time's up!" : state.current.title}</span>
-        {remaining}
+        {state.alarming ? <span className="whitespace-nowrap">Time&apos;s up</span> : remaining}
       </Link>
     );
   }
@@ -189,9 +198,11 @@ export default function PracticeTimerWidget({
                 <PauseIcon className="h-3.5 w-3.5" />
               )}
             </ControlButton>
-            <ControlButton onClick={skip} label="Skip to next segment">
-              <SkipForwardIcon className="h-3.5 w-3.5" />
-            </ControlButton>
+            {state.next && (
+              <ControlButton onClick={skip} label="Skip to next segment">
+                <SkipForwardIcon className="h-3.5 w-3.5" />
+              </ControlButton>
+            )}
           </>
         )}
         <ControlButton onClick={stop} label="Stop" danger>

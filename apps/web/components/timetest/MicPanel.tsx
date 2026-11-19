@@ -63,6 +63,7 @@ export default function MicPanel({
   calibrating,
   onCalibrate,
   lastCalibration,
+  calibrateError,
   micError,
   busy,
 }: {
@@ -78,6 +79,8 @@ export default function MicPanel({
   calibrating: boolean;
   onCalibrate: () => void;
   lastCalibration: Calibration | null;
+  /** Why the last Calibrate press failed (e.g. the mic is blocked), shown under the button. */
+  calibrateError: string | null;
   micError: string | null;
   /** A take is recording: calibration waits. */
   busy: boolean;
@@ -110,7 +113,7 @@ export default function MicPanel({
           value={deviceValue}
           onChange={setInputDeviceId}
           disabled={busy}
-          options={[{ value: "", label: "Default input" }, ...inputs.map((d) => ({ value: d.id, label: d.label }))]}
+          options={[{ value: "", label: "Default mic" }, ...inputs.map((d) => ({ value: d.id, label: d.label }))]}
         />
         {micError && <p className="text-xs text-danger">{micError}</p>}
         <Hint>Use one audio interface for both the mic and the click if you can. Two separate devices drift apart a little over a long take.</Hint>
@@ -136,7 +139,7 @@ export default function MicPanel({
         title="Latency"
         aside={
           <span className={`text-sm font-medium tabular-nums ${calibrated ? "" : "text-muted"}`}>
-            {latencyMs.toFixed(1)} ms{calibrated ? "" : " · a guess"}
+            {calibrated ? `${latencyMs.toFixed(1)} ms` : "Not calibrated yet"}
           </span>
         }
       >
@@ -149,6 +152,7 @@ export default function MicPanel({
           {calibrating ? "Listening… stay quiet" : calibrated ? "Calibrate again" : "Calibrate"}
         </button>
         {lastCalibration && <p className={`text-xs ${lastCalibration.ok ? "text-foreground" : "text-danger"}`}>{lastCalibration.message}</p>}
+        {calibrateError && <p className="text-xs text-danger">{calibrateError}</p>}
         <Hint>
           Sound takes time to get out of the speakers and back into the mic. Calibrating measures that, so a stroke right on the click scores 0 ms. Play the
           click through speakers (or hold your headphones to the mic) and stay quiet for 12 clicks.
@@ -166,6 +170,7 @@ export default function MicPanel({
             style={{ "--progress": `${((latencyMs + 50) / 350) * 100}%` } as React.CSSProperties}
             className="slider h-6 w-full"
           />
+          <span className="w-16 shrink-0 text-right text-xs font-medium tabular-nums">{latencyMs.toFixed(1)} ms</span>
         </div>
       </OptionGroup>
 

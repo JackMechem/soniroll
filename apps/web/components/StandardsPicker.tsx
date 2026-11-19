@@ -110,14 +110,14 @@ export default function StandardsPicker({
               setQuery(e.target.value);
               setActive(0);
             }}
-            placeholder={`Search ${STANDARDS.length} jazz standards…`}
-            aria-label="Search jazz standards"
-            className="min-w-0 flex-1 bg-transparent text-lg outline-none placeholder:text-muted"
+            placeholder="Search standards"
+            aria-label={`Search ${STANDARDS.length} jazz standards`}
+            className="h-10 min-w-0 flex-1 bg-transparent text-lg outline-none placeholder:text-muted"
           />
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+            className="h-10 shrink-0 rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
           >
             Done
           </button>

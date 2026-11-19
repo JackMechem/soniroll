@@ -55,7 +55,7 @@ export default function PlaylistPage({ id }: { id: string }) {
         {/* Search, then a labelled New chart and the folder's ⋮ on the same row (phones too). */}
         {playlist && !loading && (
           <Toolbar>
-            <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${playlist.songs.length} in ${playlist.name}…`} />
+            <HeroSearch value={query} onChange={setQuery} placeholder={playlist.songs.length > 1 ? `Search ${playlist.songs.length} in ${playlist.name}…` : `Search ${playlist.name}…`} />
             <Pill primary icon={PlusIcon} label="New chart" href={isAll ? "/chord-charts/new" : `/chord-charts/new?playlist=${encodeURIComponent(playlist.name)}`} />
             {!isAll && (
               <button

@@ -4,19 +4,24 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useRef, useState } from "react";
 import { SignInModal } from "@/components/AccountMenu";
 import { FlameIcon, burstAt, toastNow } from "@/components/practicelog/Celebrations";
-import { SettingChip } from "@/components/SettingsBar";
+import { SettingChip, TOUCH_HIT } from "@/components/SettingsBar";
 import { CheckIcon, findToolLink, PlusIcon, StopwatchIcon } from "@/components/tools";
 import { formatMinutesShort, formatShortDate, hourMilestone, weekdayOf } from "@jam-practice/core/practiceLog";
 import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
 import { bestStreak, historyOf, todayKey, toolStreak, totalMs, useToolUsage, usedMs, weekOf } from "@/lib/toolUsage";
 
-const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
-const CHIP = "flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover";
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const CHIP = `${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover`;
 
-/** "38 s" under a minute, then "12 min", "1 h 5 min". */
+/** "38 s" under a minute, then "12 min", "1 h 5 min". Every time in the popover uses it. */
 function formatUse(ms: number) {
   if (ms < 60_000) return `${Math.floor(ms / 1000)} s`;
   return formatMinutesShort(Math.floor(ms / 60_000));
+}
+
+/** The "in total" tile: like `formatUse`, but whole hours from 10 h ("12 h"), so it fits. */
+function formatTotal(ms: number) {
+  return ms >= 36_000_000 ? `${Math.floor(ms / 3_600_000)} h` : formatUse(ms);
 }
 
 /** The header chip's reading: whole minutes ("0 min", "12 min"), so a newcomer reads it as time
@@ -49,9 +54,12 @@ export default function ToolStats({ href }: { href: string }) {
   const week = weekOf(usage, href, today, liveMs);
   const weekMs = week.reduce((a, d) => a + d.ms, 0);
   const maxDay = Math.max(...week.map((d) => d.ms), 60_000);
-  const hours = (totalMs(usage, href) + liveMs) / 3_600_000;
+  const allMs = totalMs(usage, href) + liveMs;
+  const hours = allMs / 3_600_000;
   const ms = hourMilestone(hours);
   const unlogged = unloggedToday(usage, href, liveMs);
+  // Some of today's time went into the Shed Log already (Log pressed earlier today).
+  const loggedBefore = todayMs - unlogged >= 1000;
   const history = historyOf(usage, href);
   const best = Math.max(bestStreak(usage, href), s);
 
@@ -80,8 +88,9 @@ export default function ToolStats({ href }: { href: string }) {
             <span className="flex items-center gap-1.5" title="Your time on this tool today. Click for your streak and history.">
               <StopwatchIcon className="h-4 w-4 shrink-0 text-muted" />
               <span className="whitespace-nowrap tabular-nums">{formatChip(todayMs, running)}</span>
-              {/* Phones: just the number (a dot while it counts), so the row fits beside Log and ?. */}
-              <span className="hidden whitespace-nowrap text-muted sm:inline">{running ? "counting" : "today"}</span>
+              {/* "today" (the dot shows it's counting), so it reads as the day's total beside Log's
+                  number. Phones: just the number, so the row fits beside Log and ?. */}
+              <span className="hidden whitespace-nowrap text-muted sm:inline">today</span>
               {running && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />}
               {s > 0 && (
                 <span className={`flex items-center gap-0.5 tabular-nums ${usedToday ? "text-orange-500" : "text-muted"}`} title={`${s}-day streak`}>
@@ -97,7 +106,7 @@ export default function ToolStats({ href }: { href: string }) {
           <MiniStat value={String(s)} label="streak" />
           <MiniStat value={String(best)} label="best" />
           <MiniStat value={formatUse(weekMs)} label="this week" />
-          <MiniStat value={`${hours < 10 ? (Math.round(hours * 10) / 10).toFixed(1) : Math.floor(hours)} h`} label="in total" />
+          <MiniStat value={formatTotal(allMs)} label="in total" />
         </div>
         <div className="flex h-10 items-end gap-1" title="This week">
           {week.map((d) => (
@@ -109,7 +118,7 @@ export default function ToolStats({ href }: { href: string }) {
           ))}
         </div>
         <p className="text-xs text-muted">
-          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.round((ms.to - hours) * 60)))} to go until ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
+          {hours < ms.to ? `${formatMinutesShort(Math.max(1, Math.floor((ms.to * 3_600_000 - allMs) / 60_000)))} to go until ${ms.to} hour${ms.to === 1 ? "" : "s"} in total.` : ""} A day counts toward the streak after a
           minute of real use.
         </p>
         {history.length === 0 ? (
@@ -121,9 +130,15 @@ export default function ToolStats({ href }: { href: string }) {
               const all = d.logged >= d.ms - 999;
               return (
                 <li key={d.key} className="flex items-center gap-3 px-3 py-2">
-                  <span className="w-20 shrink-0 text-sm font-medium">
-                    {d.key === today ? "Today" : formatShortDate(d.key)}
-                    <span className="ml-1 text-xs font-normal text-muted">{WEEKDAY_LETTER[weekdayOf(d.key)]}</span>
+                  <span className="w-24 shrink-0 whitespace-nowrap text-sm font-medium">
+                    {d.key === today ? (
+                      "Today"
+                    ) : (
+                      <>
+                        {formatShortDate(d.key)}
+                        <span className="ml-1 text-xs font-normal text-muted">{WEEKDAY_SHORT[weekdayOf(d.key)]}</span>
+                      </>
+                    )}
                   </span>
                   <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
                     <span className="block h-full rounded-full" style={{ width: `${Math.max(4, (d.ms / max) * 100)}%`, background: color }} />
@@ -146,14 +161,19 @@ export default function ToolStats({ href }: { href: string }) {
           ref={logRef}
           type="button"
           onClick={log}
-          className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
-          title={`Add ${formatUse(unlogged)} in this tool to today's Shed Log`}
-          aria-label={`Log ${formatUse(unlogged)} to your Shed Log`}
+          className={`${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover`}
+          title={
+            loggedBefore
+              ? `${formatUse(todayMs - unlogged)} of today's time is in your Shed Log already. Add the ${formatUse(unlogged)} since then.`
+              : `Add ${formatUse(unlogged)} in this tool to today's Shed Log`
+          }
+          aria-label={`Log ${formatUse(unlogged)}${loggedBefore ? " more" : ""} to your Shed Log`}
         >
           <PlusIcon className="h-4 w-4" />
-          {/* Phones: just "Log" (today's time is in the chip beside it). */}
+          {/* Phones: just "Log" (today's time is in the chip beside it). When part of today is
+              logged already, the chip's total and this number differ, so it says "more". */}
           <span className="whitespace-nowrap tabular-nums">
-            Log<span className="hidden sm:inline"> {formatUse(unlogged)}</span>
+            Log<span className="hidden sm:inline"> {formatUse(unlogged)}{loggedBefore ? " more" : ""}</span>
           </span>
         </button>
       ) : (

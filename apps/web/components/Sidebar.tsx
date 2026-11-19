@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import AccountMenu from "@/components/AccountMenu";
 import { OPEN_PALETTE_EVENT, useSearchExtras, type SearchItem } from "@/components/CommandPalette";
@@ -259,8 +259,8 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-/** The library's other pages (chord charts, the setlist chart reader, files, recordings), which
-    the sidebar files under Library (`/tunes`). */
+/** The library's other pages (chord charts, the setlist chart reader, files; old recordings
+    links), which the sidebar files under Library (`/tunes`). */
 function isLibraryPath(path: string) {
   return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files" || path === "/recordings" || path.startsWith("/recordings/");
 }
@@ -363,6 +363,22 @@ function NavItems({
     const r = row.getBoundingClientRect();
     if (r.top < 96 || r.bottom > window.innerHeight - 140) row.scrollIntoView({ block: "center" });
   }, [effectivePathname, collapsed]);
+  // The icon strip (collapsed) can hold more icons than fit: while there are more below, a fade
+  // and a ⌄ button at its bottom say so (the scrollbar is hidden there).
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!collapsed || !nav) return;
+    const check = () => setMoreBelow(nav.scrollTop + nav.clientHeight < nav.scrollHeight - 4);
+    const ro = new ResizeObserver(check);
+    ro.observe(nav);
+    if (nav.firstElementChild) ro.observe(nav.firstElementChild); // the icons (grows as favorites load)
+    nav.addEventListener("scroll", check, { passive: true });
+    return () => {
+      ro.disconnect();
+      nav.removeEventListener("scroll", check);
+    };
+  }, [collapsed]);
   const [site] = useSiteSettings();
   const searching = query.trim().length > 0;
   // Settings: tools you've hidden stay out of the lists (a search still finds them), and so do
@@ -385,8 +401,9 @@ function NavItems({
       y: e.clientY,
       items: [
         { label: "Open", onSelect: () => router.push(href) },
-        { label: "Open in split screen, side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
-        { label: "Open in split screen, top and bottom", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
+        // Short, so they fit the menu's width; the split icons say it's split screen.
+        { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
+        { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
       ],
     });
   }
@@ -525,7 +542,8 @@ function NavItems({
       </div>
     );
     return (
-      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav ref={navRef} onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-full shrink-0 flex-col items-center gap-2">
         {group("start", "Dashboard", <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />)}
         {group(
           "shed",
@@ -539,6 +557,20 @@ function NavItems({
         {peopleItems.length > 0 && group("people", "People", peopleItems.map(iconLink))}
         {favoriteItems.length > 0 && group("favorites", "Favorites", favoriteItems.map(iconLink))}
         {groups.map(({ category, items }) => group(category, category, items.map(iconLink)))}
+        </div>
+        {moreBelow && (
+          <div className="pointer-events-none sticky bottom-0 -mt-10 flex h-12 w-full shrink-0 items-end justify-center bg-gradient-to-t from-surface from-40% to-transparent">
+            <button
+              type="button"
+              onClick={() => navRef.current?.scrollBy({ top: 240, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}
+              aria-label="Show more tools"
+              title="More tools"
+              className="pointer-events-auto mb-2 flex h-6 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            >
+              <ChevronDownIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         {contextMenu}
       </nav>
     );
@@ -570,7 +602,8 @@ function NavItems({
           )}
         </div>
       )}
-      {favoriteItems.length > 0 && (
+      {/* While searching, the matches show once, in their own categories (not again under Favorites). */}
+      {favoriteItems.length > 0 && !searching && (
         <CategoryBlock
           title="Favorites"
           star
@@ -655,13 +688,19 @@ export default function Sidebar() {
   const inDesktop = useInDesktopApp();
   const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
   const [dragging, setDragging] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [themeOpen, setThemeOpen] = useState(false);
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const fabHidden = useFeedbackFabHidden();
   const currentPath = usePathname();
+  // The phone menu remembers the page it was opened on and counts as closed once the page
+  // changes. Its links close it themselves, but a leave guard (unsaved work) stops their click
+  // and navigates after its own "Leave", so the menu must also close on the page change itself.
+  const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null);
+  if (menuOpenOn !== null && menuOpenOn !== currentPath) setMenuOpenOn(null);
+  const mobileOpen = menuOpenOn !== null;
+  const setMobileOpen = (open: boolean) => setMenuOpenOn(open ? currentPath : null);
   const [site] = useSiteSettings();
   // Signed in, the theme lives on the Settings page; signed out, it's the theme dialog.
   const { isAuthenticated } = useConvexAuth();
@@ -675,10 +714,10 @@ export default function Sidebar() {
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileOpen(false);
+      if (e.key === "Escape") setMenuOpenOn(null);
     };
     const onResize = () => {
-      if (window.matchMedia("(min-width: 1024px)").matches) setMobileOpen(false);
+      if (window.matchMedia("(min-width: 1024px)").matches) setMenuOpenOn(null);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
@@ -715,7 +754,8 @@ export default function Sidebar() {
   return (
     <>
       {/* Phones: a top bar with the menu and the logo (pages leave 4.5rem at the top for it). The
-          practice timer's badge, when one runs, sits at its right end. */}
+          practice timer's chip, when one runs, sits at its right end before the bug button; the
+          page name gives way (truncates) to them. */}
       <header className="fixed inset-x-0 top-0 z-20 flex h-[calc(env(safe-area-inset-top)+3.5rem)] items-center gap-2 border-b border-foreground/10 bg-background/90 px-2 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
         <button
           type="button"
@@ -726,7 +766,10 @@ export default function Sidebar() {
           <MenuIcon className="h-5 w-5" />
         </button>
         <MobileBarTitle path={currentPath} />
-        <FeedbackBarButton />
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <PracticeTimerWidget bar />
+          <FeedbackBarButton />
+        </div>
       </header>
 
       {mobileOpen && (
@@ -743,19 +786,8 @@ export default function Sidebar() {
               </Link>
               <VersionTag onNavigate={() => setMobileOpen(false)} />
             </div>
+            {/* Send feedback is in the ⋮ menu (the top bar has the bug-report button). */}
             <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileOpen(false);
-                  openFeedback();
-                }}
-                aria-label="Send feedback"
-                title="Send feedback"
-                className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
-              >
-                <FeedbackIcon className="h-5 w-5" />
-              </button>
               <Link
               href="/help"
               onClick={() => setMobileOpen(false)}
@@ -765,9 +797,23 @@ export default function Sidebar() {
             >
               <HelpIcon className="h-5 w-5" />
             </Link>
-              <Flyout icon={DotsIcon} label="Menu options" align="end">
+              <Flyout
+                icon={DotsIcon}
+                label="Menu options"
+                align="end"
+                buttonClassName="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              >
                 {(close) => (
                   <>
+                    <FlyoutItem
+                      icon={FeedbackIcon}
+                      label="Send feedback"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        openFeedback();
+                        close();
+                      }}
+                    />
                     {fabHidden && (
                       <FlyoutItem
                         icon={BugIcon}
@@ -834,6 +880,7 @@ export default function Sidebar() {
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
+                title="Close menu"
                 className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-hover"
               >
                 <CloseIcon className="h-5 w-5" />
@@ -853,9 +900,9 @@ export default function Sidebar() {
           <div className="min-h-0 flex-1 overflow-y-auto pb-2">
             <NavItems large query={query} onNavigate={() => setMobileOpen(false)} />
           </div>
+          {/* Kept short, so the list above gets the room: Support soniroll is in the ⋮ menu. */}
           <div className="mt-1 flex flex-col gap-1 border-t border-foreground/10 pt-2">
             <PracticeTimerWidget />
-            {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
             <SettingsRow
               large
               signedIn={isAuthenticated}
@@ -1176,7 +1223,7 @@ function MobileBarTitle({ path }: { path: string }) {
       : null;
   if (path === DASHBOARD_PATH || !item) {
     return (
-      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex items-center rounded-md px-1 py-1">
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex h-10 items-center rounded-md px-1">
         <Logo height={24} />
       </Link>
     );
@@ -1191,7 +1238,8 @@ function MobileBarTitle({ path }: { path: string }) {
   );
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex shrink-0 items-center rounded-md p-1">
+      {/* A 40px target, a little more than the mark itself. */}
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="-mx-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-md">
         <LogoMark size={22} />
       </Link>
       <span className="text-foreground/30">/</span>
@@ -1202,6 +1250,12 @@ function MobileBarTitle({ path }: { path: string }) {
         <Link
           href={item.href}
           aria-current={path === item.href ? "page" : undefined}
+          onClick={(e) => {
+            // Already there: back to the top instead of reloading the page.
+            if (path !== item.href) return;
+            e.preventDefault();
+            document.querySelector("[data-page-scroll]")?.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           className="-mx-1 flex h-10 min-w-0 items-center gap-1.5 rounded-md px-1 text-sm font-medium hover:bg-surface-hover"
         >
           {inner}
@@ -1212,6 +1266,9 @@ function MobileBarTitle({ path }: { path: string }) {
     </div>
   );
 }
+
+/** The account page's tabs in its Settings group (`AccountPage`'s `NAV`). */
+const SETTINGS_TABS = new Set(["general", "appearance", "sidebar", "dashboard", "tools", "practice"]);
 
 /** The sidebar footer's "Settings" row, always in view (the ⋮ menus have it too), with a palette
     button at its end that goes straight to Appearance (theme, text size). Signed out there are no
@@ -1231,6 +1288,9 @@ function SettingsRow({
   onNavigate?: () => void;
 }) {
   const iconCls = navIconClass(large);
+  // Highlighted on the account page's Settings group (`/settings` redirects there too).
+  const tab = useSearchParams()?.get("tab");
+  const active = usePathname() === "/account" && !!tab && SETTINGS_TABS.has(tab);
   if (!signedIn) {
     return collapsed ? (
       <button type="button" onClick={onOpenTheme} aria-label="Theme and display" title="Theme and display" className={`${navIconButtonClass(false)} text-muted`}>
@@ -1247,14 +1307,14 @@ function SettingsRow({
   }
   if (collapsed) {
     return (
-      <Link href="/account?tab=general" onClick={onNavigate} aria-label="Settings" title="Settings" className={`${navIconButtonClass(false)} text-muted`}>
+      <Link href="/account?tab=general" onClick={onNavigate} aria-label="Settings" title="Settings" aria-current={active ? "page" : undefined} className={`${navIconButtonClass(active)} text-muted`}>
         <GearIcon className="h-4 w-4" />
       </Link>
     );
   }
   return (
     <div className="relative flex items-center">
-      <Link href="/account?tab=general" onClick={onNavigate} className={`${navRowClass(false, large)} ${large ? "pr-14" : "pr-10"}`}>
+      <Link href="/account?tab=general" onClick={onNavigate} aria-current={active ? "page" : undefined} className={`${navRowClass(active, large)} ${large ? "pr-14" : "pr-10"}`}>
         <span data-nav-icon className="flex shrink-0 text-muted">
           <GearIcon className={iconCls} />
         </span>

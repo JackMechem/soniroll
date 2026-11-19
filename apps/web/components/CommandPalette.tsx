@@ -59,7 +59,7 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Pages", href: "/tunes/list?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
   { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library", words: "library gig set list", icon: SetlistIcon },
   { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents", icon: FileIcon, account: true },
-  { group: "Pages", href: "/recordings", label: "Recordings", detail: "Library", words: "library takes audio recorded clips", icon: MicIcon, account: true },
+  { group: "Pages", href: "/tunes?tab=recordings", label: "Recordings", detail: "Library", words: "library takes audio recorded clips", icon: MicIcon, account: true },
   { group: "Pages", href: "/community/new", label: "New post", detail: "Community", words: "community post share", icon: PlusIcon, account: true },
   { group: "Pages", href: "/community/liked", label: "Liked posts", detail: "Community", words: "community likes hearts saved favorites", icon: HeartIcon, account: true },
   { group: "Pages", href: "/community/following", label: "Following and followers", detail: "Community", words: "community people friends follow", icon: UsersIcon, account: true },
@@ -74,9 +74,9 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Settings", href: "/account?tab=general", label: "General", detail: "Settings", words: "settings preferences features turn off hide clock confetti celebrations bug report button reset", icon: GearIcon, account: true },
   { group: "Settings", href: "/account?tab=appearance", label: "Appearance", detail: "Settings", words: "settings theme dark mode light colors colours font text size bigger smaller classic look motion display", icon: EyeIcon, account: true },
   { group: "Settings", href: "/account?tab=sidebar", label: "Sidebar", detail: "Settings", words: "settings menu hide tools folded streak", icon: ListIcon, account: true },
-  { group: "Settings", href: "/account?tab=dashboard", label: "Dashboard", detail: "Settings", words: "settings home cards layout edit", icon: HomeIcon, account: true },
-  { group: "Settings", href: "/account?tab=tools", label: "Tools", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
-  { group: "Settings", href: "/account?tab=practice", label: "Shed Log", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
+  { group: "Settings", href: "/account?tab=dashboard", label: "Dashboard settings", detail: "Settings", words: "settings home cards layout edit", icon: HomeIcon, account: true },
+  { group: "Settings", href: "/account?tab=tools", label: "Tool settings", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
+  { group: "Settings", href: "/account?tab=practice", label: "Shed Log settings", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
   { group: "Settings", href: "/account?tab=storage", label: "Storage plan", detail: "Account", words: "storage plan subscription subscribe cancel billing payment receipts card upgrade gb cloud", icon: CloudIcon, account: true },
   { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password email google login sign in", icon: ShieldIcon, account: true },
 ];
@@ -134,7 +134,8 @@ export function useSearchExtras(query: string, { charts: withCharts = true }: { 
       category: g as string,
       items: pageItems
         .filter((p) => p.group === g)
-        .map((p): Item => ({ href: p.href, label: p.label, detail: p.detail === p.group ? undefined : p.detail, icon: p.icon })),
+        // Every setting lives on the Account page, so each one says so (not just a few of them).
+        .map((p): Item => ({ href: p.href, label: p.label, detail: p.group === "Settings" ? "Account" : p.detail === p.group ? undefined : p.detail, icon: p.icon })),
     }))
     .filter((g) => g.items.length);
   // "help <tool>": that tool's (or page's) help topic.
@@ -265,7 +266,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         </div>
 
         <ul ref={listRef} role="listbox" className="max-h-96 overflow-y-auto p-1.5">
-          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches that. Try another word, like “chords”, “theme”, “help tuner” or a tune’s name.</li>}
+          {ordered.length === 0 && <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches that. Try another word, like “chords”, “theme”, “help tuner” or one of your tunes.</li>}
           {(() => {
             let index = -1;
             return groups.map(({ category, items }) => (

@@ -1,10 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRef } from "react";
 import ChordChartEditor from "@/components/ChordChartEditor";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PageShell } from "@/components/library/shared";
-import { useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
+import { chartHref } from "@/components/library/ChartsDashboard";
+import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
+import { goBackOr } from "@/lib/goBack";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { useRecentCharts } from "@/lib/recents";
 
@@ -32,6 +35,9 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
   const names = playlists.map((p) => p.name);
   // A chart you just wrote or edited goes into "Recently opened", like one you opened.
   const { record: recordRecent } = useRecentCharts();
+  // The chart just saved, for when there's no page to go back to (opened from a bookmark or a
+  // new tab): then Save opens the chart itself.
+  const savedId = useRef<string | null>(null);
 
   const forTune = editId ? null : parseTune(params?.get("tune") ?? null);
   const tune = forTune ? lists[forTune.list].tunes.find((t) => t.id === forTune.id) : undefined;
@@ -63,7 +69,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
         <ChordChartEditor key={editId} initial={selectedSong} onSave={async (song) => {
             await updateSong(editId, song);
             recordRecent(editId);
-          }} onClose={() => router.back()} />
+          }} onClose={() => goBackOr(router, chartHref(editId))} />
       ) : (
         <ChordChartEditor
           playlists={names}
@@ -72,13 +78,18 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
           onSave={async (song, playlistName) => {
             const { added, ids } = await importSongs([song], playlistName);
             if (added === 0) throw new Error("A chart with this title, composer and key is already in your library.");
-            if (ids[0]) recordRecent(ids[0]);
+            if (ids[0]) {
+              recordRecent(ids[0]);
+              savedId.current = ids[0];
+            }
             // Written for a tune: link it, so the tune's page shows it straight away.
             if (forTune && ids[0]) {
               lists[forTune.list].setTunes((prev) => prev.map((t) => (t.id === forTune.id ? { ...t, chordChartId: ids[0] } : t)));
             }
           }}
-          onClose={() => router.back()}
+          onClose={() =>
+            goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : savedId.current ? chartHref(savedId.current) : "/tunes?tab=charts")
+          }
         />
       )}
     </PageShell>

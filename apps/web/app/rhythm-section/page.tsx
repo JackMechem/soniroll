@@ -1,5 +1,7 @@
 import RhythmSection from "@/components/RhythmSection";
 
+export const metadata = { title: "Rhythm Section" };
+
 /** `/rhythm-section[?tab=players][?play=drums][?chart=<id>&key=<key>]` — bass, drums and chords to
     play along with; `chart` opens one of your charts (Play along on a tune or chart page).
     `/bass-genius` and `/drum-generator` redirect here (`next.config.ts`). */

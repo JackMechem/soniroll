@@ -68,7 +68,7 @@ function StatusLegend({ tol }: { tol: number }) {
 function verdict(a: Analysis, bpm: number): string {
   const s = a.stats;
   if (s.hits === 0) {
-    return "No strokes were picked up after the count-in. Check the mic's sensitivity (hit the pad and watch the level in the Mic options), then try again.";
+    return "No strokes were picked up after the count-in. Check the mic's sensitivity (hit the pad and watch the level under Microphone), then try again.";
   }
   const tol = a.toleranceMs;
   const parts: string[] = [];
@@ -348,6 +348,8 @@ export default function Analytics({
   onStopPlayback,
   playClick,
   setPlayClick,
+  onTryAgain,
+  onOpenMic,
 }: {
   take: Take;
   analysis: Analysis;
@@ -359,6 +361,9 @@ export default function Analytics({
   onStopPlayback: () => void;
   playClick: boolean;
   setPlayClick: (v: boolean) => void;
+  /** With no strokes heard, the page offers just these two instead of a dashboard of zeros. */
+  onTryAgain: () => void;
+  onOpenMic: () => void;
 }) {
   const s = a.stats;
   const tol = a.toleranceMs;
@@ -433,6 +438,33 @@ export default function Analytics({
 
   const worst = useMemo(() => [...on].sort((x, y) => Math.abs(y.errorMs) - Math.abs(x.errorMs)).slice(0, 6), [on]);
   const measured = s.tempoRatio ? bpm * s.tempoRatio : null;
+
+  // Nothing heard: a dashboard of zeros ("Score 0/100", "Centred on the click") says nothing true.
+  // Just the warning and the two ways forward.
+  if (s.hits === 0) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 rounded-lg bg-surface p-5 text-center">
+        <h2 className="text-lg font-semibold tracking-tight">No strokes heard</h2>
+        <p className="text-sm text-muted">{verdict(a, bpm)}</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={onOpenMic}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+          >
+            Microphone settings
+          </button>
+          <button
+            type="button"
+            onClick={onTryAgain}
+            className="flex h-10 items-center rounded-full bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full flex-col gap-4">

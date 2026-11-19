@@ -1,6 +1,92 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Split screen (`components/TilingLayout.tsx`): each pane is a size container named `pane` and
+   marked `data-pane`, and acts like a phone or tablet screen of its own width. Outside a pane the
+   breakpoint variants are Tailwind's usual window-width media queries (the `:where()` adds no
+   specificity, so nothing changes there). Inside a pane:
+   - `sm:` / `md:` (and `max-sm:` / `max-md:`) follow the pane's width instead of the window's;
+   - `lg:` and up never apply, and `max-lg:` always does. In this app `lg` is where the phone top
+     bar gives way to the sidebar, so `lg:` classes set desktop-chrome things (top paddings for no
+     top bar, header bars, sticky phone bars) that only make sense for the whole window. A pane
+     has its own phone-style top bar instead (title and close button), so pages keep their
+     phone/tablet layout, which is built for exactly that bar.
+   The overridden variants keep Tailwind's own sort order; `max-*` ones are new names, so they
+   sort last (after `dark:`) — fine while no element sets the same property with both.
+   `pane:` targets anything inside a pane. */
+@custom-variant sm {
+  @media (width >= 40rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width >= 40rem) {
+    @slot;
+  }
+}
+@custom-variant md {
+  @media (width >= 48rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width >= 48rem) {
+    @slot;
+  }
+}
+@custom-variant lg {
+  @media (width >= 64rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+}
+@custom-variant xl {
+  @media (width >= 80rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+}
+@custom-variant 2xl {
+  @media (width >= 96rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+}
+@custom-variant max-sm {
+  @media (width < 40rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width < 40rem) {
+    @slot;
+  }
+}
+@custom-variant max-md {
+  @media (width < 48rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  @container pane (width < 48rem) {
+    @slot;
+  }
+}
+@custom-variant max-lg {
+  @media (width < 64rem) {
+    &:where(:not([data-pane] *)) {
+      @slot;
+    }
+  }
+  &:where([data-pane] *) {
+    @slot;
+  }
+}
+@custom-variant pane (&:where([data-pane] *));
+
 :root {
   --background: #e8ecf1;
   --surface: #f4f6f9;
@@ -13,7 +99,7 @@
   --overlay: rgba(30, 40, 51, 0.55);
   --danger: #c8475a;
   /* Done / goal met, and partly done (the Shed Log's greens and ambers). */
-  --success: #16a34a;
+  --success: #147236; /* green-700ish: ≥4.5:1 as text on every light theme (#16a34a was ~2.8:1) */
   --warning: #ca8a04;
 }
 
@@ -223,6 +309,8 @@ input[type="range"].slider::-moz-range-progress {
   background: var(--accent);
 }
 
+/* One look for every slider: an accent thumb with a ring in the card colour (the reward look
+   below only swaps in the tool's colour). */
 input[type="range"].slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   height: 16px;
@@ -230,7 +318,7 @@ input[type="range"].slider::-webkit-slider-thumb {
   margin-top: -5px;
   border-radius: 9999px;
   border: 0;
-  background: var(--foreground);
+  background: var(--accent);
   box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
@@ -240,7 +328,7 @@ input[type="range"].slider::-moz-range-thumb {
   width: 16px;
   border-radius: 9999px;
   border: 0;
-  background: var(--foreground);
+  background: var(--accent);
   box-shadow: 0 0 0 3px var(--surface), 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.1s;
 }
@@ -621,4 +709,20 @@ html.less-motion .confetti-piece,
 /* Settings → General → "Confetti and sparkles" off. */
 html.no-confetti .confetti-piece {
   display: none;
+}
+
+/* Phones: text boxes are at least 16px, so iOS doesn't zoom the page in when one is focused
+   (that's why pinch-zoom no longer has to be switched off in the viewport). Unlayered, so it
+   beats the text-xs/text-sm utilities; boxes set bigger on purpose (titles, the Metronome's
+   tempo) are left alone.
+   Also landscape phones, which are wider than `sm` but zoom the same way. */
+@media (max-width: 639.98px), (pointer: coarse) and (max-height: 520px) {
+  :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]),
+      textarea,
+      select
+    ):not([class*="text-lg"], [class*="text-xl"], [class*="text-2xl"], [class*="text-3xl"], [class*="text-4xl"], [class*="text-5xl"], [class*="text-6xl"], [class*="text-7xl"], [class*="text-8xl"], [class*="text-9xl"]) {
+    /* 1em is what the box would inherit, so one inside big text stays big. */
+    font-size: max(16px, 1em);
+  }
 }

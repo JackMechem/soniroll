@@ -17,10 +17,11 @@ import {
   PlayIcon,
   SlidersIcon,
   StopwatchIcon,
+  ListIcon,
 } from "@/components/tools";
 import { scheduleClick } from "@/lib/clickEngine";
 import { getAudioContext } from "@/lib/metronome";
-import { GRADE_COLOR, GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
+import { GRADE_LABEL, Grade, scoreOf } from "@/lib/noteGrade";
 import { parseRange } from "@/lib/noteRange";
 import {
   DEFAULT_ENABLED_INTERVAL_IDS,
@@ -49,7 +50,6 @@ import {
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
   GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from "@/lib/struggleStats";
@@ -63,8 +63,11 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { formatFileDate } from "@/lib/files";
 import { PoolPill } from "@/components/reward/Reward";
-import { GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON } from "@/components/learning/quizUi";
+import StruggleCounts from "@/components/learning/StruggleCounts";
+import { GRADE_COLOR, FEEDBACK_LINE, GRADE_TAG, LEVEL_LABEL, answerButtonClass, answerButtonStyle, PANEL_LIST, PANEL_ROW, PRIMARY_BUTTON, PRIMARY_BUTTON_SM, RESULTS_PANEL, SECONDARY_BUTTON, TEXT_BUTTON, TEXT_BUTTON_DANGER, startButtonClass, POOL_BUTTON, bestPassingMs, passedRound, IDLE_MARK, IDLE_RING, IDLE_HINT, noteGlyphs } from "@/components/learning/quizUi";
+import HistoryRow from "@/components/learning/HistoryRow";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -83,6 +86,9 @@ const DEFAULT_ROUND_COUNT = 15;
 const MIN_ADVANCE_DELAY_MS = 0;
 const MAX_ADVANCE_DELAY_MS = 8000;
 const DEFAULT_ADVANCE_DELAY_MS = 1500;
+/** After a miss, the right interval stays up at least this long (whatever "Time between rounds"
+    says), so its name can be read before the next one plays. */
+const MIN_MISS_PAUSE_MS = 2000;
 
 type PlaybackStyle = "melodic" | "harmonic";
 const PLAYBACK_STYLES: { value: PlaybackStyle; label: string }[] = [
@@ -99,9 +105,11 @@ type Session = {
   rounds: IntervalRound[];
   queue: IntervalRound[];
   guessedId: string | null;
+  /** What was picked for each graded round (null: no answer), parallel to `results`. */
+  guesses: (string | null)[];
 };
 
-type Summary = { results: Grade[]; rounds: IntervalRound[] };
+type Summary = { results: Grade[]; rounds: IntervalRound[]; guesses: (string | null)[] };
 
 /** Everything that affects what's played, how it's timed, and how it's graded — two attempts
     only get compared against each other if all of this matches. */
@@ -393,12 +401,12 @@ export default function GuessTheInterval() {
   }
 
   /** Lets the round's pass/fail be seen briefly before moving on. */
-  function scheduleAdvance(index: number) {
+  function scheduleAdvance(index: number, delayMs: number) {
     if (skipTimeoutRef.current) return;
     skipTimeoutRef.current = setTimeout(() => {
       skipTimeoutRef.current = null;
       if (sessionRef.current?.index === index) skipRef.current?.();
-    }, cfgRef.current.advanceDelayMs);
+    }, delayMs);
   }
 
   /** Locks in a round's grade and starts the pause-before-next-interval countdown: retargets the
@@ -410,7 +418,10 @@ export default function GuessTheInterval() {
     if (!session) return;
     session.best = grade;
     setStatus(grade);
-    const pauseMs = cfgRef.current.advanceDelayMs;
+    const pauseMs =
+      grade === "incorrect"
+        ? Math.max(cfgRef.current.advanceDelayMs, MIN_MISS_PAUSE_MS)
+        : cfgRef.current.advanceDelayMs;
     // Only ever reached from a button's onClick (submitGuess), never during render — same
     // ref-mutation timing pattern CountdownRing/CountdownLabel rely on throughout the other
     // trainers, which the compiler's purity check doesn't flag there (it bails out of analyzing
@@ -422,7 +433,7 @@ export default function GuessTheInterval() {
       playClick();
       scheduleCountdownClicks(pauseMs);
     }
-    scheduleAdvance(session.index);
+    scheduleAdvance(session.index, pauseMs);
   }
 
   /** Called when the player picks an answer (or gives up with "I don't know", `id === null`). */
@@ -502,6 +513,7 @@ export default function GuessTheInterval() {
       rounds: [],
       queue,
       guessedId: null,
+      guesses: [],
     };
     // Only ever reached from start() itself (a button's onClick, or a space-bar toggle) — see the
     // identical, longer note on lockInRound above; not called during render.
@@ -523,6 +535,7 @@ export default function GuessTheInterval() {
         if (session.round) {
           session.results.push(finishedGrade);
           session.rounds.push(session.round);
+          session.guesses.push(session.guessedId);
           bumpIntervalStat(session.round.interval.id, finishedGrade);
           // Drill mode: a miss goes back on the end of the queue — with a freshly randomized
           // octave for the retry, so a repeated miss doesn't look like the exact same round.
@@ -573,9 +586,8 @@ export default function GuessTheInterval() {
             };
             // Compare against times recorded before this one, so tying/beating an empty
             // history (a first attempt) still counts as a new best.
-            const previousBest = history
-              .filter((h) => sameConfig(h.config, config))
-              .reduce((min, h) => Math.min(min, h.elapsedMs), Infinity);
+            const previousBest =
+              bestPassingMs(history.filter((h) => sameConfig(h.config, config))) ?? Infinity;
             const score = scoreOf(session.results);
             const entry: HistoryEntry = {
               at: Date.now(),
@@ -586,9 +598,9 @@ export default function GuessTheInterval() {
             };
             updateSettings({ history: [...history, entry].slice(-50) });
             setLastElapsedMs(elapsedMs);
-            setIsNewBest(elapsedMs < previousBest);
+            setIsNewBest(passedRound(entry) && elapsedMs < previousBest);
           }
-          setSummary({ results: session.results, rounds: session.rounds });
+          setSummary({ results: session.results, rounds: session.rounds, guesses: session.guesses });
           setRound(null);
           endSession();
           return;
@@ -643,9 +655,20 @@ export default function GuessTheInterval() {
 
   const arrow = (r: IntervalRound) => (r.direction === 1 ? "↑" : "↓");
   const revealedLabel = (r: IntervalRound) => `${arrow(r)} ${r.interval.label}`;
-  const mainLabel = round ? (status ? revealedLabel(round) : "?") : "—";
-  const mainLabelLong = mainLabel.length > 16;
-  const glow = running && status ? GRADE_COLOR[status] : null;
+  const showingResults = !!summary && !running && !learnMode;
+  const mainLabel = running && round ? (status ? revealedLabel(round) : "?") : "?";
+  // The revealed name ("↑ Minor 6th") is two words: smaller than the "?" so it fits inside the
+  // ring (on two lines in the phone's smaller ring) without touching it.
+  const mainLabelLong = mainLabel !== "?";
+  // Once answered, the big label shows the right answer: green when the guess was right, the
+  // normal text colour when it wasn't (the wrong pick is named in a small line underneath).
+  const glow = running && status === "correct" ? GRADE_COLOR.correct : null;
+  const pickedLabel =
+    status === "incorrect"
+      ? guessedId
+        ? `You picked ${answerChoices.find((i) => i.id === guessedId)?.label ?? "another interval"}`
+        : "No answer"
+      : null;
   const showCountdown = running;
   const score = summary ? scoreOf(summary.results) : 0;
   const tally = (grade: Grade) =>
@@ -666,13 +689,11 @@ export default function GuessTheInterval() {
   const matchingHistory = history.filter((h) =>
     sameConfig(h.config, currentConfig),
   );
-  const bestMs = matchingHistory.length
-    ? Math.min(...matchingHistory.map((h) => h.elapsedMs))
-    : null;
+  const bestMs = bestPassingMs(matchingHistory);
   const weakEntries = weakIntervalEntries(settings.intervalStats);
   const revealedNotes =
     revealNotes && status && round
-      ? `${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`
+      ? noteGlyphs(`${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`)
       : null;
 
   return (
@@ -699,7 +720,7 @@ export default function GuessTheInterval() {
           <CollapsiblePanel
             id="history"
             title="History"
-            icon={StopwatchIcon}
+            icon={ListIcon}
             summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
           >
             {bestMs !== null && (
@@ -716,33 +737,10 @@ export default function GuessTheInterval() {
                 {[...matchingHistory]
                   .sort((a, b) => b.at - a.at)
                   .map((entry, i) => (
-                    <div
-                      key={i}
-                      className={PANEL_ROW}
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium tabular-nums">
-                          {formatDuration(entry.elapsedMs)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                          {new Date(entry.at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <span
-                        className="tabular-nums text-muted"
-                        style={
-                          entry.score === entry.total
-                            ? { color: GRADE_COLOR.correct }
-                            : undefined
-                        }
-                      >
-                        {entry.score % 1 === 0
-                          ? entry.score
-                          : entry.score.toFixed(1)}
-                        /{entry.total}
-                      </span>
-                    </div>
+                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                      {formatFileDate(entry.at)}
+                    </HistoryRow>
                   ))}
               </div>
             )}
@@ -781,16 +779,7 @@ export default function GuessTheInterval() {
                     className={PANEL_ROW}
                   >
                     <span className="font-medium">{entry.interval.label}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-                      {entry.counts.incorrect > 0 && (
-                        <span style={{ color: GRADE_COLOR.incorrect }}>
-                          ✕{entry.counts.incorrect}
-                        </span>
-                      )}
-                      <span className="text-muted">
-                        /{attempts(entry.counts)}
-                      </span>
-                    </span>
+                    <StruggleCounts counts={entry.counts} />
                   </div>
                 ))}
               </div>
@@ -872,6 +861,14 @@ export default function GuessTheInterval() {
               disabled={running}
               hint="Lets a round play the interval below the starting note, not just above it — the choices are still just the interval's name, not its direction."
             />
+
+            <SwitchRow
+              label="Drill every interval"
+              checked={drillMode}
+              onChange={setDrillMode}
+              disabled={running}
+              hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
+            />
           </CollapsiblePanel>
           )}
 
@@ -914,11 +911,11 @@ export default function GuessTheInterval() {
             )}
           </CollapsiblePanel>
 
-          <CollapsiblePanel id="guess-timing" title="Timing" icon={StopwatchIcon}>
+          <CollapsiblePanel id="guess-timing" title="Timing" icon={StopwatchIcon} summary={`${roundSeconds} s`}>
             <AdvancedSlider
               label="Max time to answer"
               value={roundSeconds}
-              unit="s"
+              unit=" s"
               min={MIN_ROUND_SECONDS}
               max={MAX_ROUND_SECONDS}
               step={0.5}
@@ -930,59 +927,28 @@ export default function GuessTheInterval() {
             <AdvancedSlider
               label="Time between rounds"
               value={advanceDelayMs / 1000}
-              unit="s"
+              unit=" s"
               min={MIN_ADVANCE_DELAY_MS / 1000}
               max={MAX_ADVANCE_DELAY_MS / 1000}
               step={0.25}
               disabled={running}
-              hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays."
+              hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays. After a miss it stays at least 2 seconds."
               onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
             />
 
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={setSoundFeedback}
-              disabled={running}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-
-            {!learnMode && (
-            <SwitchRow
-              label="Drill every interval"
-              checked={drillMode}
-              onChange={setDrillMode}
-              disabled={running}
-              hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
-            />
-            )}
-
             {!drillMode && !learnMode && (
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="flex items-center justify-between font-medium text-muted">
-                  Number of rounds
-                  <span className="tabular-nums text-foreground">
-                    {roundCount}
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={MIN_ROUND_COUNT}
-                  max={MAX_ROUND_COUNT}
-                  step={1}
-                  value={roundCount}
-                  onChange={(e) => setRoundCount(Number(e.target.value))}
-                  disabled={running}
-                  style={
-                    {
-                      "--progress": `${((roundCount - MIN_ROUND_COUNT) / (MAX_ROUND_COUNT - MIN_ROUND_COUNT)) * 100}%`,
-                    } as React.CSSProperties
-                  }
-                  className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-60"
-                />
-              </label>
+              <AdvancedSlider
+                label="Number of rounds"
+                value={roundCount}
+                unit=""
+                min={MIN_ROUND_COUNT}
+                max={MAX_ROUND_COUNT}
+                step={1}
+                disabled={running}
+                onChange={setRoundCount}
+                hint="How many intervals make up one session."
+              />
             )}
-            {!drillMode && <Hint>How many intervals make up one session.</Hint>}
           </CollapsiblePanel>
 
           <CollapsiblePanel
@@ -1013,6 +979,13 @@ export default function GuessTheInterval() {
               />
             </label>
             <Hint>Which sound plays the interval.</Hint>
+
+            <SwitchRow
+              label="Sound feedback"
+              checked={soundFeedback}
+              onChange={setSoundFeedback}
+              hint="A click each second of the countdown, plus a click the instant a round is graded."
+            />
 
             <SwitchRow
               label="Reveal notes after answering"
@@ -1048,31 +1021,26 @@ export default function GuessTheInterval() {
           onStart={() => void start("learn")}
         />
       )}
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex w-full flex-col items-center gap-3">
         {activeLevel !== null && running && (
           <p className={LEVEL_LABEL}>
             Level {activeLevel + 1} · {learn.levels[activeLevel].title}
           </p>
         )}
-        {status && running && (
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-medium text-muted">
-              Next interval in
-            </span>
-            <span
-              className="text-3xl font-semibold tabular-nums sm:text-4xl"
-              style={{ color: GRADE_COLOR[status] }}
-            >
-              <CountdownLabel active={running} timerRef={noteTimerRef} />
-            </span>
-          </div>
-        )}
-        {!(learnMode && !running) && (
-        <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
+        {/* The idle ring and prompt step aside while a finished run's results show, so the
+            results and the chips below them stay in view. */}
+        {!(learnMode && !running) && !showingResults && (
+        // A smaller ring on phones during a quiz, so the answers, "I don't know" and Stop all fit.
+        <div
+          className={`relative flex items-center justify-center p-4 text-center sm:h-56 sm:w-56 ${
+            running ? "h-36 w-36" : "h-44 w-44"
+          }`}
+        >
+          {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
-            className={`relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-              mainLabelLong ? "text-xl sm:text-2xl" : "text-4xl sm:text-5xl"
+            className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
+              mainLabelLong ? "text-xl leading-tight text-balance sm:text-2xl" : "text-3xl sm:text-5xl"
             }`}
             style={
               glow
@@ -1084,9 +1052,18 @@ export default function GuessTheInterval() {
           >
             {mainLabel}
           </p>
-          {/* Before the first round, say what's about to happen. */}
-          {!round && !running && <p className="absolute inset-x-0 bottom-6 z-10 text-sm text-muted">Press Start, listen to two notes, then pick the interval.</p>}
         </div>
+        )}
+        {/* Before the first round, say what's about to happen. */}
+        {!running && !learnMode && !showingResults && <p className={IDLE_HINT}>Press Start, listen to two notes, then pick the interval.</p>}
+
+        {/* Always there while a round runs, so answering doesn't push the answers down. */}
+        {running && round && (
+          <p className={FEEDBACK_LINE}>
+            {pickedLabel && <span className="text-danger">{pickedLabel}</span>}
+            {pickedLabel && revealedNotes && <span className="text-muted"> · </span>}
+            {revealedNotes && <span className="tabular-nums text-muted">{revealedNotes}</span>}
+          </p>
         )}
 
         {running && round && (
@@ -1100,14 +1077,8 @@ export default function GuessTheInterval() {
           </button>
         )}
 
-        {revealedNotes && (
-          <p className="text-sm font-medium tabular-nums text-muted">
-            {revealedNotes}
-          </p>
-        )}
-
         {running && round && answerChoices.length > 0 && (
-          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid w-full grid-cols-3 gap-2">
             {answerChoices.map((interval) => {
               const answered = status !== null;
               const isCorrectAnswer = interval.id === round.interval.id;
@@ -1135,14 +1106,24 @@ export default function GuessTheInterval() {
           </div>
         )}
 
-        {running && round && !status && (
-          <button
-            type="button"
-            onClick={() => submitGuess(null)}
-            className={TEXT_BUTTON}
-          >
-            I don&apos;t know
-          </button>
+        {/* "I don't know" until answered, then the countdown to the next one, in the same
+            44px-tall slot so nothing moves. */}
+        {running && round && (
+          <div className="flex min-h-11 items-center justify-center">
+            {!status ? (
+              <button
+                type="button"
+                onClick={() => submitGuess(null)}
+                className={TEXT_BUTTON}
+              >
+                I don&apos;t know
+              </button>
+            ) : (
+              <p className="text-sm font-medium text-muted">
+                Next interval in <CountdownLabel active={running} timerRef={noteTimerRef} />
+              </p>
+            )}
+          </div>
         )}
 
         {running && progress && (
@@ -1219,6 +1200,12 @@ export default function GuessTheInterval() {
                 }}
               >
                 {revealedLabel(r)}
+                {summary.results[i] === "incorrect" && (
+                  <span className="opacity-80">
+                    {" "}
+                    · you: {INTERVALS.find((iv) => iv.id === summary.guesses[i])?.label ?? "no answer"}
+                  </span>
+                )}
               </span>
             ))}
           </div>
@@ -1243,6 +1230,8 @@ export default function GuessTheInterval() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      {/* While the results show, their own "Try again" is the one start button. */}
+      {!(summary && !running && !learnMode) && (
       <button
         type="button"
         onClick={running ? stop : () => void start(learnMode ? "learn" : "normal")}
@@ -1250,6 +1239,7 @@ export default function GuessTheInterval() {
       >
         {running ? "Stop" : learnMode ? `Start level ${learn.selected + 1}` : "Start"}
       </button>
+      )}
       {learn.result && (
         <LevelComplete
           result={learn.result}

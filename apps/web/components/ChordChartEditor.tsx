@@ -15,6 +15,8 @@ import {
 import { layoutRows, type PlacedBar } from "@jam-practice/core/chartLayout";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import NumberField from "@/components/NumberField";
+import Select from "@/components/Select";
+import { PageHeader } from "@/components/library/shared";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { PlusIcon, TrashIcon } from "@/components/tools";
 import { encodeChartString } from "@/lib/chartString";
@@ -251,13 +253,17 @@ export default function ChordChartEditor({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Saving or exporting without a title: the message sits under the Title field, which gets
+  // focus and a red ring (rather than a line by the Save button, far from the field).
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement | null>(null);
   const [exported, setExported] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const song: IRealSong = songOf({ title, composer, style, key, top, bottom, bars });
   const dirty = JSON.stringify(song) !== baseline;
   // Close, Escape, browser Back and links elsewhere ask first when something changed.
-  const guard = useLeaveGuard(dirty, editing ? "Your changes to this chart haven't been saved." : "This chart hasn't been saved yet.");
+  const guard = useLeaveGuard(dirty, editing ? "Your changes to this chart haven't been saved." : "This chart hasn't been saved yet.", onClose);
   const closeRef = useRef(() => {});
   useEffect(() => {
     closeRef.current = () => guard.requestLeave(onClose);
@@ -331,9 +337,16 @@ export default function ChordChartEditor({
     });
   }
 
+  function flagMissingTitle(message: string) {
+    setError(null);
+    setTitleError(message);
+    titleRef.current?.focus();
+    titleRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
   async function handleSave() {
     if (!song.title) {
-      setError("Give this chord chart a title.");
+      flagMissingTitle("Give this chord chart a title.");
       return;
     }
     const playlistName = editing || playlist === NO_PLAYLIST ? null : playlist || newPlaylist.trim();
@@ -355,7 +368,7 @@ export default function ChordChartEditor({
 
   function handleExport() {
     if (!song.title) {
-      setError("Give this chord chart a title first.");
+      flagMissingTitle("Give this chord chart a title first.");
       return;
     }
     setError(null);
@@ -391,36 +404,25 @@ export default function ChordChartEditor({
   const activeBar = bars[activeIndex];
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold tracking-tight">{editing ? `Edit "${initial?.title}"` : "Create a chord chart"}</h2>
-        <button
-          type="button"
-          onClick={() => guard.requestLeave(onClose)}
-          className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
-        >
-          Close
-        </button>
-      </div>
+    // Left-aligned like the other library pages (not centred in the wide shell).
+    <div className="flex w-full max-w-5xl flex-col gap-4">
+      <PageHeader title={editing ? `Edit "${initial?.title}"` : "Create a chord chart"} back={() => guard.requestLeave(onClose)} />
 
       <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
         {!editing && (
           <div className="flex flex-col gap-1 text-sm sm:col-span-2">
             <span className="text-xs font-medium text-muted">Folder</span>
             <div className="flex flex-wrap items-center gap-2">
-              <select
+              <Select
                 value={playlist}
-                onChange={(e) => setPlaylist(e.target.value)}
-                className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
-              >
-                <option value={NO_PLAYLIST}>No folder (All charts only)</option>
-                {playlists.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-                <option value="">New folder…</option>
-              </select>
+                onChange={setPlaylist}
+                options={[
+                  { value: NO_PLAYLIST, label: "No folder" },
+                  ...playlists.map((name) => ({ value: name, label: name })),
+                  { value: "", label: "New folder…" },
+                ]}
+                className="min-w-0 max-w-full"
+              />
               {playlist === "" && (
                 <input
                   value={newPlaylist}
@@ -435,12 +437,25 @@ export default function ChordChartEditor({
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Title</span>
           <input
+            ref={titleRef}
             autoFocus={!editing}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (e.target.value.trim()) setTitleError(null);
+            }}
             placeholder="Tune name"
-            className="h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
+            aria-invalid={titleError ? true : undefined}
+            aria-describedby={titleError ? "chart-title-error" : undefined}
+            className={`h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 sm:text-sm ${
+              titleError ? "ring-2 ring-danger/60 focus:ring-danger/60" : "focus:ring-accent/40"
+            }`}
           />
+          {titleError && (
+            <span id="chart-title-error" className="text-xs text-danger">
+              {titleError}
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Composer</span>
@@ -462,7 +477,14 @@ export default function ChordChartEditor({
         </label>
         <div className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Key &amp; time signature</span>
-          <div className="flex items-center gap-2">
+          {/* The time signature's two number fields take digits only (a letter typed there would
+              just sit in red). */}
+          <div
+            className="flex items-center gap-2"
+            onBeforeInput={(e) => {
+              if ((e.target as HTMLInputElement).inputMode === "numeric" && /\D/.test(e.data ?? "")) e.preventDefault();
+            }}
+          >
             <input
               value={key}
               onChange={(e) => setKey(e.target.value)}
@@ -490,12 +512,18 @@ export default function ChordChartEditor({
         </div>
       </div>
 
-      <p className="text-xs text-muted">
-        Click a bar to type its chords — <code>C^7</code>, <code>F-7</code>, <code>Bb7#5/D</code>,{" "}
-        <code>NC</code> for no chord, or two chords separated by a space. Press Enter to move to
-        the next bar. Use the row below to give the active bar a section, a repeat barline, or a
-        coda.
-      </p>
+      <ul className="flex flex-col gap-0.5 text-xs text-muted">
+        <li>
+          <span className="pointer-coarse:hidden">Click</span>
+          <span className="hidden pointer-coarse:inline">Tap</span> a bar and type its chords: <code>C^7</code>, <code>F-7</code>,{" "}
+          <code>Bb7#5/D</code>, or <code>NC</code> for no chord. Two chords in a bar: put a space between them.
+        </li>
+        <li>
+          <span className="pointer-coarse:hidden">Enter</span>
+          <span className="hidden pointer-coarse:inline">The keyboard&apos;s Next key</span> moves to the next bar.
+        </li>
+        <li>The row under the chart adds a section, repeat signs or a coda to the selected bar.</li>
+      </ul>
 
       <PageFit fitHeight={false}>
         {rowsWithOffsets.map(({ placed, start }, rowIdx) => {
@@ -518,8 +546,11 @@ export default function ChordChartEditor({
                       value={bars[globalIndex].text}
                       onChange={(e) => updateBar(globalIndex, { text: e.target.value })}
                       onKeyDown={(e) => handleBarKeyDown(globalIndex, e)}
-                      placeholder={bars[globalIndex].isRepeatBar ? "% (ignored while on)" : "C^7"}
-                      className={`w-full min-w-0 bg-transparent text-center outline-none ${
+                      enterKeyHint="next"
+                      // Short, so it fits the first bar (beside the time signature) at a readable size on phones.
+                      placeholder={bars[globalIndex].isRepeatBar ? "% (ignored while on)" : "Chord"}
+                      // A plain, faint hint, so an empty bar never reads as one with a chord in it.
+                      className={`w-full min-w-0 bg-transparent text-center outline-none placeholder:font-sans placeholder:text-sm placeholder:text-muted/60 max-sm:placeholder:text-lg ${
                         bars[globalIndex].isRepeatBar ? "opacity-40" : ""
                       } ${chordFont.className}`}
                       style={{ fontSize: QUALITY_SIZE }}
@@ -676,19 +707,29 @@ export default function ChordChartEditor({
         </div>
       )}
 
-      <div className="flex flex-wrap justify-end gap-2 border-t border-foreground/10 pt-4">
+      <button
+        type="button"
+        onClick={handleExport}
+        className="inline-flex h-9 items-center self-end rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+      >
+        Export as chart link
+      </button>
+
+      {/* Save and Cancel stay at the bottom of the screen (the chart and keypad are long on a
+          phone), like the routine editor's. */}
+      <div className="sticky bottom-0 z-20 -mx-4 -mb-16 flex gap-2 border-t border-foreground/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:-mx-6 sm:justify-end sm:px-6 lg:-mx-8 lg:px-8">
         <button
           type="button"
-          onClick={handleExport}
-          className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+          onClick={() => guard.requestLeave(onClose)}
+          className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover sm:h-9 sm:flex-none"
         >
-          Export as chart link
+          Cancel
         </button>
         <button
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40"
+          className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-40 sm:h-9 sm:flex-none"
         >
           {saving ? "Saving…" : editing ? "Save changes" : "Save to library"}
         </button>
@@ -766,7 +807,7 @@ function BarToggle({
             glyph
           )}
         </span>
-        <span className={`text-[0.6rem] leading-none ${active ? "" : "text-muted"}`}>{label}</span>
+        <span className={`text-xs leading-none ${active ? "" : "text-muted"}`}>{label}</span>
       </button>
     );
   }

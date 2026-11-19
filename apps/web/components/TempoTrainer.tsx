@@ -13,7 +13,7 @@ import {
   TempoNoteConversionHint,
   TempoNoteValuePicker,
 } from "@/components/MeterFields";
-import StructureEditor from "@/components/StructureEditor";
+import StructureEditor, { StructureEmptyHint } from "@/components/StructureEditor";
 import { EyeOffIcon, MeterIcon, NoteIcon, SpeakerIcon } from "@/components/tools";
 import { soundSummary } from "@/components/metronome/MetronomeOptions";
 import { SUB_LABELS, Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
@@ -243,8 +243,8 @@ export default function TempoTrainer() {
               { value: "structure", label: "Changing meters" },
             ]}
           />
-          {useStructure && (
-            <div className="w-[min(30rem,calc(100vw-2rem))] rounded-lg bg-surface p-4 text-left">
+          {useStructure && structure.sections.length > 0 && (
+            <div className="w-[min(30rem,calc(100cqw-2rem))] rounded-lg bg-surface p-4 text-left">
               <StructureEditor
                 show="form"
                 structure={structure}
@@ -340,15 +340,14 @@ export default function TempoTrainer() {
           tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={setTempoNoteValue} />}
         />
         <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
-        {silentNow ? (
-          <div className="flex h-16 w-full max-w-xs flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center">
-            <EyeOffIcon className="h-5 w-5 text-muted" />
-            <span className="text-sm text-muted">
-              Keep the tempo going — the click will come back
-            </span>
-          </div>
-        ) : (
-          <>
+        {/* The silent stretch hides the beats and plan but keeps their space (the card sits on top
+            of them), so the page doesn't jump when the click drops out and comes back. */}
+        <div className="grid w-full justify-items-center">
+          <div
+            aria-hidden={silentNow}
+            inert={silentNow}
+            className={`flex w-full flex-col items-center gap-4 [grid-area:1/1] ${silentNow ? "invisible" : ""}`}
+          >
             {useStructure && activeSection && (
               <p className="text-sm font-medium text-muted">
                 Section <span className="text-foreground">{activeSection.name}</span> · bar{" "}
@@ -356,9 +355,7 @@ export default function TempoTrainer() {
               </p>
             )}
             {useStructure && !activeSection ? (
-              <p className="rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
-                Open Sections to add sections and arrange a form.
-              </p>
+              <StructureEmptyHint structure={structure} />
             ) : (
               <BeatIndicator
                 accents={displayAccents}
@@ -368,11 +365,28 @@ export default function TempoTrainer() {
                 subAccents={displaySubAccents}
                 currentSub={currentSub}
                 onCycleSub={handleCycleSub}
+                cycleHint
               />
             )}
-            <p className="text-sm text-muted tabular-nums">{plan}</p>
-          </>
-        )}
+            {/* The plan, then (while the click plays) which of its bars this is, like Metric
+                Modulation's "Bar 2 of 4". Kept in place while stopped so Start doesn't move things. */}
+            <p className="text-balance text-center text-sm text-muted tabular-nums">
+              {plan}
+              <span className={`block ${running ? "" : "invisible"}`} aria-hidden={!running}>
+                {useStructure ? "Click bar" : "Bar"} {running ? engineState.barInPhase + 1 : 1} of {onBars}
+              </span>
+            </p>
+          </div>
+          {silentNow && (
+            <div className="flex w-full max-w-xs flex-col items-center justify-center gap-1.5 self-center rounded-lg bg-surface px-4 py-3 text-center [grid-area:1/1]">
+              <EyeOffIcon className="h-5 w-5 text-muted" />
+              {/* How long the silence lasts, but no live countdown: a number changing on every bar
+                  would show where the barlines fall, which is what you're meant to keep yourself. */}
+              <span className="text-sm font-medium text-foreground">Silent for {bars(offBars)}</span>
+              <span className="text-sm text-muted">Count them and keep the tempo going — the click comes back after that</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <button

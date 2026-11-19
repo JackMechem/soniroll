@@ -537,9 +537,12 @@ export default function ScoreEditor({
   const cap = measureCapacity(t);
 
   const btn = (active = false) =>
-    `flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+    `flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-sm font-medium transition-colors disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:min-w-10 ${
       active ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-background text-foreground hover:bg-surface-hover"
     }`;
+
+  /** Phones: the rhythm row's buttons share the row equally. */
+  const phoneRow = "max-sm:order-1 max-sm:flex-1 max-sm:px-1 max-sm:pointer-coarse:min-w-0";
 
   const keyOptions = Object.entries(KEY_NAMES)
     .map(([k, n]) => ({ value: Number(k), label: `${n.major.replace("b", "♭").replace("#", "♯")} major · ${n.minor.replace("b", "♭").replace("#", "♯")} minor` }))
@@ -601,7 +604,7 @@ export default function ScoreEditor({
               max={400}
               value={t.tempo ?? ""}
               onChange={(e) => setMeta({ tempo: e.target.value ? Math.max(20, Math.min(400, Math.round(Number(e.target.value)))) : null })}
-              placeholder="120"
+              placeholder="Optional"
               aria-label="Tempo (BPM)"
               className="h-9 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
             />
@@ -619,8 +622,8 @@ export default function ScoreEditor({
               behind "More", and Undo and More move up beside Play (CSS order), so the palette (which
               stays stuck at the top) is two rows plus the note names and doesn't cover half the
               screen. Undo always shows. */}
-          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-            <div className="flex shrink-0 gap-0.5 rounded-md bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
+          <div className="flex flex-wrap items-center gap-1">
+            <div className="flex shrink-0 gap-0.5 rounded-full bg-background p-0.5" role="radiogroup" aria-label="Mouse mode">
               {(
                 [
                   ["select", "Select", "Clicks only select a note, or a whole bar (Shift+click for a range). Esc"],
@@ -634,7 +637,7 @@ export default function ScoreEditor({
                   aria-checked={mode === m}
                   onClick={() => setMode(m)}
                   title={title}
-                  className={`h-8 rounded-sm px-3 text-sm font-medium transition-colors ${mode === m ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+                  className={`h-8 rounded-full px-3 text-sm font-medium transition-colors pointer-coarse:h-9 ${mode === m ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
                 >
                   {label}
                 </button>
@@ -645,27 +648,32 @@ export default function ScoreEditor({
               {playing ? "Stop" : "Play"}
             </button>
             <span className="mx-1 hidden h-6 w-px shrink-0 bg-foreground/10 sm:block" />
+            {/* Phones: the lengths, dot, triplet and Rest share one full row (a line break before
+                them, equal widths), so Rest doesn't wrap onto a row of its own. */}
+            <span aria-hidden className="hidden basis-full max-sm:order-1 max-sm:block" />
             {(["w", "h", "q", "8", "16"] as NoteValue[]).map((v) => (
-              <button key={v} type="button" onClick={() => pickValue(v)} className={`${btn(picked && selected ? selected.value === v : value === v)} max-sm:order-1`} title={`${NOTE_VALUE_NAMES[v]} (${Object.keys(VALUE_KEYS).find((k) => VALUE_KEYS[k] === v)})`} aria-label={NOTE_VALUE_NAMES[v]}>
+              <button key={v} type="button" onClick={() => pickValue(v)} className={`${btn(picked && selected ? selected.value === v : value === v)} ${phoneRow}`} title={`${NOTE_VALUE_NAMES[v]} (${Object.keys(VALUE_KEYS).find((k) => VALUE_KEYS[k] === v)})`} aria-label={NOTE_VALUE_NAMES[v]}>
                 <NoteValueIcon value={VALUE_ICON[v]} className="h-6 w-3" />
               </button>
             ))}
-            <button type="button" onClick={toggleDot} className={`${btn(picked && selected ? !!selected.dots : dotted)} max-sm:order-1`} title="Dotted (.)" aria-label="Dotted">
+            <button type="button" onClick={toggleDot} className={`${btn(picked && selected ? !!selected.dots : dotted)} ${phoneRow}`} title="Dotted (.)" aria-label="Dotted">
               <span className="text-xl leading-none">·</span>
             </button>
-            <button type="button" onClick={toggleTriplet} className={`${btn(picked && selected ? !!selected.triplet : triplet)} max-sm:order-1`} title="Triplet (T)">
-              3
+            <button type="button" onClick={toggleTriplet} className={`${btn(picked && selected ? !!selected.triplet : triplet)} ${phoneRow}`} title="Triplet (T)" aria-label="Triplet">
+              <span className="sm:hidden">3</span>
+              <span className="max-sm:hidden">Triplet</span>
             </button>
             <span className="mx-1 hidden h-6 w-px shrink-0 bg-foreground/10 sm:block" />
-            <button type="button" onClick={() => addNote(null)} className={`${btn()} max-sm:order-1`} title="Rest (0 or R)">
+            <button type="button" onClick={() => addNote(null)} className={`${btn()} ${phoneRow}`} title="Rest (0 or R)">
               Rest
             </button>
             <div className={`${moreTools ? "contents" : "hidden"} sm:contents max-sm:*:order-2`}>
+            <span aria-hidden className="hidden basis-full max-sm:block" />
             <button type="button" onClick={toggleTie} disabled={!selected?.pitch} className={btn(!!selected?.tie)} title="Tie to the next note (+)">
               Tie
             </button>
-            <button type="button" onClick={toggleGhost} disabled={!selected?.pitch} className={btn(!!selected?.ghost)} title="Ghost note (X)">
-              ×
+            <button type="button" onClick={toggleGhost} disabled={!selected?.pitch} className={btn(!!selected?.ghost)} title="Ghost note: an x note head (X)" aria-label="Ghost note">
+              Ghost
             </button>
             <button type="button" onClick={addChordAtCursor} className={btn(!!chordEdit)} title="Add a chord symbol above the selected note (Ctrl+K)">
               + Chord
@@ -704,19 +712,24 @@ export default function ScoreEditor({
               <ChevronRightIcon className={`h-3.5 w-3.5 ${moreTools ? "-rotate-90" : "rotate-90"}`} />
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-            {(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map((s) => (
-              <button key={s} type="button" onClick={() => addStep(s)} className={`${btn()} w-9 text-base sm:w-10`} title={`Add ${s} (${s})`}>
-                {s}
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1.5 sm:gap-1.5">
+            {/* On phones the note names always fill their own row (the status goes on the line
+                below), so the keys are the same size before and after the first note. */}
+            <div className="flex items-center gap-1 max-sm:w-full sm:gap-1.5">
+              {(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map((s) => (
+                <button key={s} type="button" onClick={() => addStep(s)} className={`${btn()} w-9 text-base sm:w-10 max-sm:flex-1 max-sm:pointer-coarse:min-w-0`} title={`Add ${s} (${s})`}>
+                  {s}
+                </button>
+              ))}
+              <button type="button" onClick={removeSelected} className={`${btn()} max-sm:flex-1 max-sm:pointer-coarse:min-w-0`} title="Delete (Backspace)" aria-label="Delete">
+                ⌫
               </button>
-            ))}
-            <button type="button" onClick={removeSelected} className={btn()} title="Delete (Backspace)">
-              ⌫
-            </button>
+            </div>
             {rhythmError && <span className="text-xs text-danger">That won&apos;t fit in the bar.</span>}
             {clipNote && <span className="text-xs text-accent">{clipNote}</span>}
             <span className="ml-auto text-xs text-muted tabular-nums">
-              {selected?.pitch ? pitchName(selected.pitch) : selected ? "Rest" : "—"} · bar {cursor.measure + 1} · {Math.round((filled / cap) * 100) === 100 ? "full" : `${formatBeats(filled / TICKS_PER_QUARTER)} of ${cap / TICKS_PER_QUARTER} beats`}
+              Bar {cursor.measure + 1} {Math.round((filled / cap) * 100) === 100 ? "is full" : `has ${formatBeats(filled / TICKS_PER_QUARTER)} of ${cap / TICKS_PER_QUARTER} beats`}
+              {selected ? ` · ${selected.pitch ? pitchName(selected.pitch) : "a rest"} selected` : ""}
             </span>
           </div>
         </div>

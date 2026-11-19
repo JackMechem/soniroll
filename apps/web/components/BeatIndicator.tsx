@@ -10,7 +10,7 @@ const LEVEL_LABEL: Record<BeatLevel, string> = {
 };
 
 /** A single vertical bar — a main beat (numbered) or a subdivision tick (unnumbered) — shared by
-    both rows below so they look and behave identically apart from the number. Its three segments
+    both rows below so they look and behave identically apart from the number above it. Its three segments
     fill from the bottom with the click's level: all three for an accent (in the accent colour),
     two for normal, one for soft, none when muted. */
 function Bar({
@@ -25,7 +25,7 @@ function Bar({
   level: BeatLevel;
   active: boolean;
   label: string;
-  /** Shown top-left inside the bar; omitted for a subdivision tick. */
+  /** Shown above the bar; omitted for a subdivision tick. */
   number?: number;
   dim: string;
   /** Each segment's own fixed height (see below). */
@@ -37,27 +37,25 @@ function Bar({
   // bar (flex-1, then grid rows) they came out zero-height in the macOS desktop app — WebKit doesn't
   // give a <button>'s inside a definite height (FB-20, FB-21). Solid colours with `opacity`, too.
   const lit = level === 2 ? "bg-accent" : "bg-foreground opacity-40";
-  const className = `relative block ${dim} shrink-0 rounded-md bg-surface p-[3px] text-left ring-1 ring-inset ring-foreground/10 transition-[transform,filter] ${
-    level === 0 ? "opacity-50" : ""
-  } ${active ? "scale-105 brightness-110 ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`;
+  // The playing beat gets a solid accent ring (outside the bar, with a gap) and an accent tint, so
+  // it stands out in light mode too. The resting ring is a separate class so the two never fight
+  // over the ring colour.
+  const className = `relative block ${dim} shrink-0 rounded-md p-[3px] text-left transition-transform ${
+    level === 0 && !active ? "opacity-50" : ""
+  } ${
+    active
+      ? "scale-105 bg-accent/15 ring-2 ring-accent ring-offset-2 ring-offset-background"
+      : "bg-surface ring-1 ring-inset ring-foreground/10"
+  }`;
   const content = (
     <>
-      {/* Top to bottom; they light from the bottom up. */}
+      {/* Top to bottom; they light from the bottom up. The top two carry the gap below them. */}
       {[2, 1, 0].map((i) => (
-        <span key={i} className={`block w-full ${seg} rounded-[3px] ${i < 2 ? "mb-[3px]" : ""} ${i < rank ? lit : "bg-foreground opacity-10"}`} />
+        <span key={i} className={`block w-full ${seg} rounded-[3px] ${i > 0 ? "mb-[3px]" : ""} ${i < rank ? lit : "bg-foreground opacity-10"}`} />
       ))}
-      {number !== undefined && (
-        <span
-          className={`absolute left-1.5 top-1 text-xs font-semibold tabular-nums ${
-            rank === 3 ? "text-accent-foreground" : "text-muted"
-          } ${level === 0 ? "line-through" : ""}`}
-        >
-          {number}
-        </span>
-      )}
     </>
   );
-  return onClick ? (
+  const bar = onClick ? (
     <button
       type="button"
       onClick={onClick}
@@ -70,6 +68,21 @@ function Bar({
   ) : (
     <div title={label} className={className}>
       {content}
+    </div>
+  );
+  if (number === undefined) return bar;
+  // The number sits above the bar, in its own row: drawn inside, over the top segment, it looked
+  // muddled on phones (FB-25). Subdivision ticks have none and line up by their bottoms.
+  // The gap clears the playing beat's ring (2px offset + 2px ring, scaled 105%) by about 4px.
+  return (
+    <div className="flex flex-col items-center gap-2.5">
+      <span
+        aria-hidden
+        className={`text-xs font-semibold leading-none tabular-nums ${active ? "text-foreground" : "text-muted"} ${level === 0 ? "line-through" : ""}`}
+      >
+        {number}
+      </span>
+      {bar}
     </div>
   );
 }
@@ -87,6 +100,7 @@ export default function BeatIndicator({
   subAccents = [],
   currentSub = 0,
   onCycleSub,
+  cycleHint = false,
 }: {
   accents: BeatLevel[];
   currentBeat: number | null;
@@ -112,6 +126,8 @@ export default function BeatIndicator({
       interaction `onCycle` gives the beats — called with the beat index and the tick's own
       0-based position within that beat (`0` is the first tick after the beat). */
   onCycleSub?: (beatIndex: number, subIndex: number) => void;
+  /** With `onCycle`: a small caption under the beats saying they can be clicked (tapped on touch). */
+  cycleHint?: boolean;
 }) {
   const small = size === "sm";
   const dim = small ? "h-10 w-7" : "h-16 w-10";
@@ -119,7 +135,7 @@ export default function BeatIndicator({
   const seg = small ? "h-[9px]" : "h-[17px]";
   const dotCount = Math.max(0, Math.round(subdivision) - 1);
 
-  return (
+  const row = (
     <div
       className={`flex flex-wrap items-end justify-center ${small ? "gap-2" : "gap-3"}`}
       role="group"
@@ -148,13 +164,23 @@ export default function BeatIndicator({
                 active={currentBeat === i && currentSub === d + 1}
                 label={`Subdivision after beat ${i + 1}${dotCount > 1 ? ` (${d + 1}/${dotCount})` : ""}: ${LEVEL_LABEL[dotLevel]}`}
                 dim={dim}
-            seg={seg}
+                seg={seg}
                 onClick={onCycleSub && (() => onCycleSub(i, d))}
               />
             );
           })}
         </div>
       ))}
+    </div>
+  );
+  if (!cycleHint || !onCycle) return row;
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {row}
+      <p className="text-xs text-muted">
+        <span className="pointer-coarse:hidden">Click</span>
+        <span className="hidden pointer-coarse:inline">Tap</span> a beat to change its accent
+      </p>
     </div>
   );
 }

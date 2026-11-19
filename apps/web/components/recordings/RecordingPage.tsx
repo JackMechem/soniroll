@@ -16,8 +16,13 @@ import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneS
 import { copyRecordingToTuner } from "@/lib/tunerTakes";
 import { useDeviceUrl } from "@/lib/deviceFiles";
 import { OnOtherDevice } from "@/components/files/StorageMove";
+import { libraryHref } from "@/components/library/ui";
+import { goBackOr } from "@/lib/goBack";
 
-/** `/recordings/view?id=…` — one recording: play it, rename it, keep notes on it, link it to a tune
+/** Where Back goes when there's no soniroll page behind this one, and where a delete lands. */
+const RECORDINGS_TAB = libraryHref("recordings");
+
+/** `/tunes/recording?id=…` (was `/recordings/view`) — one recording: play it, rename it, keep notes on it, link it to a tune
     (or change or unlink it), or delete it. Edits save with the Save button, or when you leave. */
 export default function RecordingPage({ id }: { id: string }) {
   const router = useRouter();
@@ -61,6 +66,7 @@ export default function RecordingPage({ id }: { id: string }) {
   if (recording === null) {
     return (
       <PageShell>
+        <PageHeader title="Recording" back={() => goBackOr(router, RECORDINGS_TAB)} />
         <EmptyCard>This recording doesn&apos;t exist anymore.</EmptyCard>
       </PageShell>
     );
@@ -96,7 +102,7 @@ export default function RecordingPage({ id }: { id: string }) {
       <PageHeader
         title={rec.name}
         subtitle={`${formatRecordedAt(rec.createdAt)} · ${formatDuration(rec.durationSec)}`}
-        back={() => router.back()}
+        back={() => goBackOr(router, RECORDINGS_TAB)}
         actions={
           <>
             {dirty && (
@@ -199,7 +205,7 @@ export default function RecordingPage({ id }: { id: string }) {
             pending.current = null;
             setConfirmDelete(false);
             void remove({ id: rec._id });
-            router.push("/recordings");
+            router.replace(RECORDINGS_TAB);
           }}
           onCancel={() => setConfirmDelete(false)}
         />

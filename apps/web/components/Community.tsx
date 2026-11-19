@@ -11,10 +11,11 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { PostListItem } from "@/components/CommunityTunes";
 import LikedPosts from "@/components/LikedPosts";
-import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader, menuPosition } from "@/components/library/shared";
+import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
-import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon } from "@/components/tools";
+import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, UserIcon } from "@/components/tools";
+import { useEdgeFade } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useSetlists } from "@/lib/useSetlists";
 import { SIGN_IN_PATH } from "@/lib/landing";
@@ -27,6 +28,8 @@ const FEEDS: { value: Feed; label: string }[] = [
   { value: "liked", label: "Liked" },
 ];
 const SEARCH_ID = "community-search";
+// The New post menu: room for each choice and its note.
+const NEW_MENU_WIDTH = 320;
 type KindFilter = "all" | "tunes" | "setlist" | "routine" | "milestone";
 
 const KIND_FILTERS: { value: KindFilter; label: string }[] = [
@@ -81,6 +84,8 @@ export default function Community({ initialTab }: { initialTab?: string }) {
     window.history.replaceState(window.history.state, "", url);
   }
   const [kind, setKind] = useState<KindFilter>("all");
+  // The kind filter scrolls sideways on phones; fade the edge with more chips past it.
+  const { attach: kindFadeRef, style: kindFade } = useEdgeFade<HTMLDivElement>();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [deletingId, setDeletingId] = useState<Id<"communityTunes"> | null>(null);
 
@@ -138,10 +143,18 @@ export default function Community({ initialTab }: { initialTab?: string }) {
       router.push(SIGN_IN_PATH);
       return;
     }
-    const pos = menuPosition(e);
+    // Wider than the usual menu so each choice's note fits (kept on screen by ContextMenu).
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const width = Math.min(NEW_MENU_WIDTH, window.innerWidth - 32);
+    const pos = { x: rect.right - width, y: rect.bottom + 4 };
     setMenu({
       ...pos,
+      width,
       items: [
+        // Posting needs a public profile: say so first, with the way to turn it on.
+        ...(profile && !profile.isPublic
+          ? [{ label: "Make your profile public", detail: "You need a public profile to post", icon: <UserIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/account?tab=profile") }]
+          : []),
         { label: "Post tunes", icon: <NoteIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/community/new") },
         setlists.length
           ? {
@@ -160,8 +173,8 @@ export default function Community({ initialTab }: { initialTab?: string }) {
                   0,
                 ),
             }
-          : { label: "Post a setlist (make one in your Library first)", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/tunes") },
-        { label: "Share a routine or progress (from the Shed Log)", icon: <CalendarIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/shed-log/routines") },
+          : { label: "Post a setlist", detail: "Make one in your Library first", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/tunes") },
+        { label: "Share a routine or progress", detail: "From the Shed Log", icon: <CalendarIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/shed-log/routines") },
       ],
     });
   }
@@ -193,6 +206,8 @@ export default function Community({ initialTab }: { initialTab?: string }) {
           <button
             type="button"
             onClick={openNewMenu}
+            // Always the accent button (signed in or out, public or private profile) so it looks the
+            // same everywhere; a private profile is told how to go public when it opens.
             className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
           >
             <PlusIcon className="h-4 w-4" /> New post
@@ -267,7 +282,7 @@ export default function Community({ initialTab }: { initialTab?: string }) {
                     ))}
                   </div>
                   {feed !== "liked" && (
-                    <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+                    <div ref={kindFadeRef} style={kindFade} className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
                       {KIND_FILTERS.map((k) => (
                         <button
                           key={k.value}
@@ -381,17 +396,19 @@ function MeCard({
             <span className="block text-xs text-muted">{isPublic ? "Public profile" : "Private — only you can see it"}</span>
           </span>
         </Link>
-        <div className={`flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted ${column ? "" : "sm:ml-auto"}`}>
+        <div className={`flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted pointer-coarse:gap-x-1 pointer-coarse:gap-y-0 ${column ? "" : "sm:ml-auto"}`}>
           {stats.map(([n, label, href]) => (
-            <Link key={label} href={href} className="transition-colors hover:text-foreground">
-              <span className="font-medium tabular-nums text-foreground">{n}</span> {label.toLowerCase()}
+            // A 32px-tall tap area on touch screens (the counts sit close together).
+            <Link key={label} href={href} className="inline-flex items-center gap-1 transition-colors hover:text-foreground pointer-coarse:min-h-8 pointer-coarse:px-1.5">
+              <span className="font-medium tabular-nums text-foreground">{n}</span>
+              {label.toLowerCase()}
             </Link>
           ))}
         </div>
       </div>
       {!isPublic && (
         <Link href="/account?tab=profile" className="flex items-center border-t border-foreground/10 px-4 py-2.5 text-xs text-muted transition-colors hover:text-foreground">
-          Make your profile public to post and be found →
+          Make your profile public to post and be found&nbsp;→
         </Link>
       )}
     </div>

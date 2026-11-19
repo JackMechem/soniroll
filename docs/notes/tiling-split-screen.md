@@ -390,3 +390,85 @@ active windows"):
    and — the same standing caveat on this whole feature — how any of this feels with a real mouse,
    since this sandbox still can't trigger genuine `:hover`.
 
+
+## 2026-11-18: panes lay out like phones of their own width (FB-22)
+
+Jack's report, from the macOS desktop app with the dashboard and Rhythm Section side by side: the
+right pane's × sat jammed against the window edge on top of the tool's "Log 15 min" button, and
+the tool header was squashed (the "Bass idea … by Rob Moreno" credit wrapped one word per line).
+Same on the website. Root cause: every page's layout uses window-width breakpoints (`sm:`, `md:`,
+`lg:`), so a half-width pane still got the full desktop layout and didn't fit; and the pane's ×
+was absolutely positioned over the page's top-right corner, right where tool headers keep their
+buttons.
+
+**What was built**
+- **Pane-aware breakpoints, everywhere at once** (`app/globals.css`, top). Each pane is a size
+  container named `pane` (`@container/pane`) and marked `data-pane`. The `sm`, `md`, `lg`, `xl`,
+  `2xl`, `max-sm`, `max-md` and `max-lg` variants are redefined with `@custom-variant`: outside a
+  pane they're the usual media queries (the extra `:where(:not([data-pane] *))` adds no
+  specificity, and Tailwind keeps the overridden variants in their usual sort order, so normal
+  pages compile to the same thing). Inside a pane, `sm:`/`md:` (and `max-sm:`/`max-md:`) follow
+  the pane's width, `lg:` and up never apply and `max-lg:` always does. A new `pane:` variant
+  targets anything in a pane.
+- **Why `lg` is off in panes rather than pane-sized:** in this app `lg` is where the phone top bar
+  becomes the sidebar, and pages use `lg:` mostly for that chrome — `pt-[…+4.5rem] lg:pt-8`
+  (room for the phone top bar), `hidden lg:flex` desktop header bars, `lg:hidden` sticky phone
+  bars at `top-[…+3.5rem]`. A pane gets a **top bar that's the phone top bar's twin** (3.5rem,
+  `bg-background/90` + blur, border, the page scrolling under it — sticky inside the pane's
+  scroller with `-mb-14`), holding the page's icon and name (dimmed in inactive panes) and the ×.
+  So every page's phone/tablet layout fits a pane with no per-page changes, and the × can't
+  collide with tool buttons and sits in the same place in every pane. Panes wider than 1024px
+  (big monitors) get the tablet layout too, which reads fine.
+- Options considered and dropped: converting classes page by page to `@sm:`-style container
+  variants (hundreds of classes, and Tailwind's `@sm` is 24rem, not 40rem, so easy to get wrong);
+  making `lg:` pane-sized too (then every page's phone-top-bar padding and phone bars show in a
+  pane, under a bar that isn't there — it would need a separate "desktop chrome" variant on ~40
+  pages); `contain: layout` on panes so `fixed` children stay in their pane (breaks the many
+  non-portaled `fixed` dialogs and context menus, which position from viewport coordinates).
+  Checked: `container-type` alone keeps `fixed` children viewport-relative in Chromium.
+- **Phone-only sheets portaled to `<body>`** carry `lg:hidden`, so in a pane they never showed
+  (Rhythm Section's and Syncopation's Options sheet did nothing). `lib/paneContext.ts`
+  (`PaneContext`, `usePaneElement`) gives the pane's element; `OptionsSheet`
+  (`bassgenius/PlayPanel.tsx`) portals into the pane and uses `absolute`, so it covers just that
+  pane. Use the same for any new phone-only portaled sheet.
+- `100vw` widths in pages became `100cqw` (SettingsBar's chip row, Jam Practice's empty states,
+  the Metronome's and Tempo Trainer's structure editors, the Tuner's error line): `cqw` is the
+  pane's width inside a pane and falls back to the small viewport width elsewhere.
+- The pane scroller is now a flex column like `AppShell`'s, so pages' `flex-1` fills a pane.
+- The divider keeps each pane at least 320px wide (200px tall) while there's room.
+- `ToolLayout`'s header (normal desktop too): the `titleExtra` slot only takes the leftover room
+  and truncates with …, so the title and the right-hand buttons never get squeezed by it (at
+  1024 wide the Rhythm Section title used to truncate to "Rhythm …" and the credit wrapped).
+
+**Gotchas**
+- When writing classes: inside panes `lg:`+ is off. Don't use `lg:` for something a narrow pane
+  needs; use `sm:`/`md:` or a `@container` of your own. JavaScript width checks
+  (`window.innerWidth`, `matchMedia`, `useIsDesktop`) still see the window, not the pane
+  (SettingChip's popover-vs-sheet, PracticeLog's first pane, NotesPage's redirect) — fine so far
+  because panes only exist on desktop windows.
+- `max-*` overrides are new variant names, so Tailwind sorts them last (after `dark:`); nothing
+  combines them with `dark:` on the same property today.
+
+**Verified** (headless Chromium, signed out, plus a throwaway signed-in account created and
+deleted for Shed Log, Shed Notes, Lessons, Community, Account, Score Writer and Syncopation):
+dashboard + Rhythm Section at 1440×900 and 1100×800, 50/50 and 35/65, light and dark; Metronome +
+Slow Downer side by side and stacked; Shed Log + Tuner; Library + Metronome; no horizontal
+overflow in any pane, no console errors; the × in each pane's top bar; Rhythm Section's Options
+sheet opens over its pane; dragging the divider and resizing the window re-lay out the panes (the
+drum notation reflows). Normal pages unchanged: pixel-identical screenshots before/after at 1440
+and 390 for /metronome, /dashboard, /tunes, /shed-log (Rhythm Section differs only in its random
+groove; the dashboard only in its recents list); phones never mount panes. `tsc` (web, desktop)
+and `eslint` pass. **Not verified:** the macOS desktop app (WebKit; container queries and `cqw`
+need Safari 16+, which the app's WebKit has, but it wasn't run), real mouse hover, and how every
+other tool looks in a very narrow (320px) pane.
+
+## 2026-11-18: keyboard shortcuts only in the active pane
+
+Space reached both panes (Metronome + Tuner: one key press started both). `lib/paneContext.ts` now
+has `keyIsForPane(pane, e)` / `usePaneKeyGuard()`: only the pane holding focus reacts, or, if no
+pane has focus, the last-clicked one (`TilingLayout` marks it `data-pane-active`).
+`lib/useSpaceToggle.ts` checks it, which covers the tools using Space; tools with their own key
+listeners call the guard too (Find the Root Enter, Time Test R, Slow Downer B). **Any new tool
+shortcut must go through it.** Outside split screen nothing changes. Also: the intro "?" goes in
+a slot after the pane title (`PaneTitleSlotContext`), and tool idea credits are in the page flow,
+not fixed. Verified headless with Metronome + Tuner side by side; not on a real browser window.

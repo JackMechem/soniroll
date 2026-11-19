@@ -10,7 +10,7 @@ import TuneEditorModal from "@/components/TuneEditorModal";
 import { ChecklistIcon, ListIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
-import { nameId } from "@/lib/standards";
+import { STANDARDS, nameId } from "@/lib/standards";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
 
 function blankTune(name = ""): Tune {
@@ -105,8 +105,16 @@ export default function TunesPanel({
     <>
       <CollapsiblePanel
         id="jam-tunes"
-        title="Tunes I Know"
-        summary={`${tunes.length} tune${tunes.length === 1 ? "" : "s"}`}
+        // In Jam Practice the chip says what random picks come from: the standards (when that's
+        // on) or your list; the list itself is headed "Tunes I Know" inside.
+        title={onPickFromStandardsChange ? "Picking from" : "Tunes I Know"}
+        summary={
+          onPickFromStandardsChange
+            ? pickFromStandards
+              ? `All ${STANDARDS.length} standards`
+              : "Tunes I Know"
+            : `${tunes.length} tune${tunes.length === 1 ? "" : "s"}`
+        }
         wide
         icon={ListIcon}
         action={
@@ -117,7 +125,7 @@ export default function TunesPanel({
               disabled={tunes.length === 0}
               aria-label="Manage tunes"
               title="Manage tunes"
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-40"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-40 pointer-coarse:h-10 pointer-coarse:w-10"
             >
               <ChecklistIcon className="h-4 w-4" />
             </button>
@@ -126,7 +134,7 @@ export default function TunesPanel({
               onClick={() => setPickerOpen(true)}
               aria-label="Add tune"
               title="Add tune"
-              className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground hover:bg-accent-hover"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground hover:bg-accent-hover pointer-coarse:h-10 pointer-coarse:w-10"
             >
               <PlusIcon className="h-4 w-4" />
             </button>
@@ -141,6 +149,7 @@ export default function TunesPanel({
             hint="Draws from the ~630 built-in jazz standards instead of your own tune list below."
           />
         )}
+        {onPickFromStandardsChange && <p className="-mb-1 text-xs font-semibold text-muted">Tunes I Know</p>}
 
         {tunes.length === 0 ? (
           <p className="text-sm text-muted">
@@ -163,8 +172,8 @@ export default function TunesPanel({
                       type="button"
                       onClick={() => setEditing({ tune, isNew: false })}
                       aria-label={`Edit ${tune.name}`}
-                      title="Edit"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                      title={`Edit ${tune.name}`}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground pointer-coarse:h-10 pointer-coarse:w-10"
                     >
                       <PencilIcon className="h-4 w-4" />
                     </button>
@@ -172,8 +181,8 @@ export default function TunesPanel({
                       type="button"
                       onClick={() => onDeleteTune(tune.id)}
                       aria-label={`Delete ${tune.name}`}
-                      title="Delete"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                      title={`Delete ${tune.name}`}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger pointer-coarse:h-10 pointer-coarse:w-10"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -239,7 +248,7 @@ export default function TunesPanel({
             type="button"
             onClick={() => setConfirmingClear(true)}
             disabled={tunes.length === 0}
-            className="ml-auto rounded-md bg-foreground/[0.05] px-3 py-1.5 text-danger hover:bg-surface-hover disabled:opacity-50"
+            className={`ml-auto rounded-md bg-foreground/[0.05] px-3 py-1.5 hover:bg-surface-hover disabled:opacity-50 ${tunes.length === 0 ? "text-foreground" : "text-danger"}`}
           >
             Clear all
           </button>

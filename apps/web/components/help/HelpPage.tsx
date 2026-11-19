@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ShedLogTour from "@/components/practicelog/ShedLogTour";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, PlayIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
+import { BackButton } from "@/components/library/shared";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
 import { HELP_GROUPS, HELP_TOPICS, type HelpTopic, topicById } from "@/lib/helpContent";
 
 /**
@@ -41,11 +42,13 @@ function TopicList({ query, selected, onPick }: { query: string; selected: strin
                     onClick={() => onPick(t.id)}
                     aria-current={on ? "page" : undefined}
                     className={`flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm transition-colors lg:py-1.5 ${
-                      on ? "bg-surface-hover font-medium text-foreground" : "text-foreground/80 hover:bg-surface-hover hover:text-foreground"
+                      // Marked only where the list and the open topic show side by side (narrower,
+                      // the list shows alone, so nothing looks picked before you pick).
+                      on ? "text-foreground/80 hover:bg-surface-hover hover:text-foreground lg:bg-surface-hover lg:font-medium lg:text-foreground" : "text-foreground/80 hover:bg-surface-hover hover:text-foreground"
                     }`}
                   >
                     <TopicIcon topic={t} size="sm" />
-                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                    <span className="min-w-0 flex-1 leading-snug">{t.title}</span>
                     <ChevronRightIcon className={`h-4 w-4 shrink-0 text-muted lg:hidden`} />
                   </button>
                 </li>
@@ -65,9 +68,7 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
   const next = ORDERED[index + 1];
   return (
     <article className="settings-pop mx-auto flex w-full max-w-4xl flex-col gap-8">
-      <button type="button" onClick={onBack} className="-ml-2 flex h-8 items-center gap-1 self-start rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground lg:hidden">
-        <ChevronLeftIcon className="h-4 w-4" /> All topics
-      </button>
+      <BackButton onClick={onBack} label="All topics" className="lg:hidden" />
 
       <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6">
         <div className="min-w-0 flex-1">
@@ -78,7 +79,7 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
           <div className="mt-4 flex flex-wrap gap-2">
             {topic.href && (
               <Link href={topic.href} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-                <PlayIcon className="h-4 w-4" /> Open {topic.title}
+                Open {topic.title} <ChevronRightIcon className="h-4 w-4" />
               </Link>
             )}
             {topic.id === "shed-log" && (
@@ -90,7 +91,12 @@ function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id:
         </div>
       </header>
 
-      {topic.shot && <Shot name={topic.shot} alt={`${topic.title} screenshot`} />}
+      {/* A desktop screenshot squeezed to phone width is unreadable, so phones skip it. */}
+      {topic.shot && (
+        <div className="max-sm:hidden">
+          <Shot name={topic.shot} alt={`${topic.title} screenshot`} />
+        </div>
+      )}
 
       <section>
         <h2 className="mb-3 text-base font-semibold">How it works</h2>

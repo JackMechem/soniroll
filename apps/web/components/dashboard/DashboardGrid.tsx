@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { createContext, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { HintsButton } from "@/components/CollapsiblePanel";
 import Hint from "@/components/Hint";
 import { CloseIcon, DragIcon, PlusIcon } from "@/components/tools";
@@ -15,6 +15,10 @@ import {
   nextSize,
   type DashboardItem,
 } from "@/lib/dashboardLayout";
+
+/** True inside a card's frame while editing: the frame shows the card's name, so a card leaves out
+    its own title there (it showed twice). */
+export const DashboardEditingContext = createContext(false);
 
 type Drop = { id: string; after: boolean; wide: boolean };
 type Drag = { id: string; el: HTMLElement; x0: number; y0: number; x: number; y: number; scroller: HTMLElement | null; scroll0: number };
@@ -43,6 +47,7 @@ export default function DashboardGrid({
   renderCard,
   available,
   emptyText,
+  labelOf,
 }: {
   items: DashboardItem[];
   editing: boolean;
@@ -50,6 +55,8 @@ export default function DashboardGrid({
   renderCard: (item: DashboardItem) => ReactNode | null;
   available: (id: string) => boolean;
   emptyText: (id: string) => string;
+  /** The frame's name for a card when it isn't the usual one (it matches the card's own title). */
+  labelOf?: (id: string) => string | undefined;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
@@ -177,7 +184,7 @@ export default function DashboardGrid({
         const node = renderCard(item);
         if (!editing && node == null) return null;
         const def = cardDef(item.id);
-        const label = def?.label ?? item.id;
+        const label = labelOf?.(item.id) ?? def?.label ?? item.id;
         const sizes = def?.sizes ?? [];
         const isDragging = dragging === item.id;
         const target = drop?.id === item.id ? drop : null;
@@ -229,7 +236,9 @@ export default function DashboardGrid({
                   </button>
                 </div>
                 <div inert className="min-h-0 flex-1 select-none opacity-60">
-                  {node ?? (
+                  {node != null ? (
+                    <DashboardEditingContext.Provider value>{node}</DashboardEditingContext.Provider>
+                  ) : (
                     <div className="flex h-full min-h-24 items-center rounded-lg bg-surface p-5">
                       <p className="text-sm text-muted">{emptyText(item.id)}</p>
                     </div>

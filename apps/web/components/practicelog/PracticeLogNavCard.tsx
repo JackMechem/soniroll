@@ -4,21 +4,31 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
+import { practicedMinutes } from "@/components/practicelog/minutes";
 import { navIconButtonClass, navIconClass, navRowClass } from "@/components/navRow";
-import { CalendarIcon } from "@/components/tools";
+import { CalendarIcon, CheckIcon } from "@/components/tools";
 import { goalOn, minutesOn, todayKey } from "@/lib/practiceLog";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noop = () => () => {};
 
-/** A small ring that fills toward today's goal (green once it's met). */
-function GoalRing({ frac, met }: { frac: number; met: boolean }) {
+/** A small ring that fills toward today's goal, and a green check once it's met. The track is
+    clearly visible so it reads as progress (a thin arc on a faint track looked like a loading
+    spinner). Also used by `StreakBadge`. */
+export function GoalRing({ frac, met }: { frac: number; met: boolean }) {
+  if (met) {
+    return (
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success text-background" aria-hidden>
+        <CheckIcon className="h-3 w-3" />
+      </span>
+    );
+  }
   const R = 6;
   const C = 2 * Math.PI * R;
   return (
     <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0 -rotate-90" aria-hidden>
-      <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2" className="stroke-foreground/10" />
-      {frac > 0 && <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2" strokeLinecap="round" stroke={met ? "var(--success)" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />}
+      <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2.5" className="stroke-foreground/20" />
+      {frac > 0 && <circle cx="8" cy="8" r={R} fill="none" strokeWidth="2.5" stroke="var(--accent)" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />}
     </svg>
   );
 }
@@ -42,7 +52,7 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
 
   if (collapsed) {
     return (
-      <Link href="/shed-log" onClick={onNavigate} title={show ? `Shed Log — ${Math.round(minutes)} of ${goal} min today` : "Shed Log"} aria-label="Shed Log" className={`relative ${navIconButtonClass(active)}`}>
+      <Link href="/shed-log" onClick={onNavigate} title={show ? `Shed Log — ${practicedMinutes(minutes)} of ${goal} min today` : "Shed Log"} aria-label="Shed Log" className={`relative ${navIconButtonClass(active)}`}>
         <CalendarIcon className="h-4 w-4 text-accent" />
         {watch.running && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />}
       </Link>
@@ -57,8 +67,8 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
       <span className="min-w-0 flex-1 truncate">Shed Log</span>
       {timerDot}
       {show && goal > 0 && (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted" title={`${Math.round(minutes)} of ${goal} minutes today`}>
-          {Math.round(minutes)}/{goal}m
+        <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted" title={`${practicedMinutes(minutes)} of ${goal} minutes today`}>
+          {practicedMinutes(minutes)} of {goal} min
           <GoalRing frac={frac} met={met} />
         </span>
       )}

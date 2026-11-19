@@ -4,6 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
+import { formatPracticed } from "@/components/practicelog/minutes";
 import Momentum from "@/components/practicelog/Momentum";
 import DayTimer from "@/components/practicelog/DayTimer";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
@@ -118,48 +119,65 @@ export default function TodayPractice() {
               <button
                 type="button"
                 onClick={() => startRoutine(routine, today, p.done > 0 ? next.id : undefined, false, occurrence)}
-                className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
+                // A tint, not solid: the day timer's Start timer above is the card's main button.
+                className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15"
               >
-                <PlayIcon className="h-3.5 w-3.5" /> {p.done > 0 ? "Continue" : "Start"}
+                <PlayIcon className="h-3.5 w-3.5" /> {p.done > 0 ? "Continue" : <>Start<span className="max-sm:hidden"> routine</span></>}
               </button>
             )}
           </div>
         );
       })}
       {tasks.map((t) => (
-        <div key={t.id} className="flex items-center gap-3 rounded-md bg-foreground/[0.05] px-3 py-2">
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={t.done}
-            aria-label={`${t.title} done`}
-            onClick={(e) => {
-              if (!t.done) burstAt(e.currentTarget, "var(--accent)");
-              log.toggleDayTask(today, t.id);
-            }}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 hover:border-muted"}`}
+        // The whole row ticks it, not just the box.
+        <button
+          key={t.id}
+          type="button"
+          role="checkbox"
+          aria-checked={t.done}
+          aria-label={`${t.title} done`}
+          onClick={(e) => {
+            if (!t.done) burstAt(e.currentTarget.querySelector("[data-check]") ?? e.currentTarget, "var(--accent)");
+            log.toggleDayTask(today, t.id);
+          }}
+          className="group/check flex items-center gap-3 rounded-md bg-foreground/[0.05] px-3 py-2 text-left hover:bg-surface-hover pointer-coarse:py-2.5"
+        >
+          <span
+            data-check
+            aria-hidden
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border ${t.done ? "log-check border-transparent bg-accent text-accent-foreground" : "border-foreground/25 group-hover/check:border-muted"}`}
           >
             {t.done && <CheckIcon className="h-4 w-4" />}
-          </button>
+          </span>
           <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-muted line-through" : ""}`}>{t.title}</span>
           <span className="shrink-0 text-xs text-muted">{formatMinutesShort(t.minutes)}</span>
-        </div>
+        </button>
       ))}
-      <div className="flex items-center gap-2 rounded-md border border-dashed border-foreground/15 px-3 py-1">
+      {/* A form, so Enter or a phone keyboard's Done adds it; Add shows once something's typed. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!title.trim()) return;
+          log.saveDayTask(today, newDayTask(title.trim()));
+          setTitle("");
+        }}
+        className="flex min-h-9 items-center gap-2 rounded-md border border-dashed border-foreground/15 py-1 pl-3 pr-1 pointer-coarse:min-h-10"
+      >
         <PlusIcon className="h-4 w-4 shrink-0 text-muted" />
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && title.trim()) {
-              log.saveDayTask(today, newDayTask(title.trim()));
-              setTitle("");
-            }
-          }}
-          placeholder="Add a task for today — press Enter"
-          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none"
+          enterKeyHint="done"
+          aria-label="New task for today"
+          placeholder="Add a task for today"
+          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none pointer-coarse:text-base"
         />
-      </div>
+        {title.trim() && (
+          <button type="submit" className="h-7 shrink-0 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-foreground hover:bg-accent-hover pointer-coarse:h-8">
+            Add
+          </button>
+        )}
+      </form>
     </div>
   );
 }
@@ -184,6 +202,8 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
     const m = fromDateKey(wk[0].key).getMonth();
     if (i === 0 || m !== fromDateKey(weeks[i - 1][0].key).getMonth()) months.push({ col: i, label: fromDateKey(wk[0].key).toLocaleString(undefined, { month: "short" }) });
   });
+  // The first column's month is dropped when the next month starts too close for both labels.
+  if (months.length > 1 && months[1].col - months[0].col < 3) months.shift();
   return (
     <div className={`flex flex-col gap-3 ${bare ? "" : "rounded-lg bg-surface p-4"} ${className}`}>
       <div className="flex items-baseline justify-between gap-2">
@@ -192,7 +212,7 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
       </div>
       <div className="relative grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${weekCount}, minmax(0, 1fr))` }}>
         {months.map((mo) => (
-          <span key={mo.col} className="text-[10px] font-semibold text-muted" style={{ gridColumn: `${mo.col + 1} / span 3`, gridRow: 1 }}>
+          <span key={mo.col} className="whitespace-nowrap text-xs font-semibold text-muted" style={{ gridColumn: `${mo.col + 1} / span 3`, gridRow: 1 }}>
             {mo.label}
           </span>
         ))}
@@ -201,17 +221,17 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
             <Link
               key={key}
               href={`/shed-log?date=${key}`}
-              title={m < 0 ? undefined : `${fromDateKey(key).toDateString()} · ${m > 0 ? formatMinutesShort(Math.round(m)) : "no practice"}`}
+              title={m < 0 ? undefined : `${fromDateKey(key).toDateString()} · ${m > 0 ? formatPracticed(m) : "no practice"}`}
               className={`aspect-square rounded-[3px] transition-transform hover:scale-125 ${key === today ? "ring-2 ring-accent" : ""}`}
               style={{ gridColumn: w + 1, gridRow: d + 2, background: m < 0 ? "transparent" : LEVEL_BG[dayLevel(m, goalOn(data, key))], pointerEvents: m < 0 ? "none" : undefined }}
             />
           )),
         )}
       </div>
-      <div className="flex items-center justify-end gap-1 text-[10px] font-semibold text-muted">
+      <div className="flex items-center justify-end gap-1 text-xs font-semibold text-muted">
         Less
         {LEVEL_BG.map((c) => (
-          <span key={c} className="h-2.5 w-2.5 rounded-[2px]" style={{ background: c }} />
+          <span key={c} className="h-3 w-3 rounded-[2px]" style={{ background: c }} />
         ))}
         More
       </div>

@@ -90,7 +90,7 @@ export default function TunesManager({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search your ${tunes.length} tune${tunes.length === 1 ? "" : "s"}…`}
+              placeholder={tunes.length > 1 ? `Search your ${tunes.length} tunes…` : "Search your tunes…"}
               aria-label="Search your tunes"
               className="min-w-0 flex-1 bg-transparent text-lg outline-none placeholder:text-muted"
             />

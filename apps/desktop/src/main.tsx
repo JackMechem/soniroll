@@ -12,7 +12,6 @@ import AppChrome from "@/components/AppChrome";
 import BackgroundToolDock from "@/components/BackgroundToolDock";
 import CommandPalette from "@/components/CommandPalette";
 import PracticeTimerAlert from "@/components/PracticeTimerAlert";
-import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import Sidebar from "@/components/Sidebar";
 import UsernamePrompt from "@/components/UsernamePrompt";
 import GoogleSignIn from "./GoogleSignIn";
@@ -51,7 +50,6 @@ createRoot(document.getElementById("root")!).render(
           <>
             <Sidebar />
             <CommandPalette />
-            <PracticeTimerWidget mobile />
             <BackgroundToolDock />
           </>
         }

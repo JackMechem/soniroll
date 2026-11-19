@@ -182,3 +182,64 @@ able to share them with others".
 - **Not checked:** renaming, sharing or deleting a recording, tune song, lesson file or hand-in for
   real (only the type checks and the code paths — Jack's real ones weren't touched); "Save to my
   files" from a second account; Download in a real browser (headless doesn't save files).
+
+## 2026-11-18 — Opening a file in a tool: the file picker and drop anywhere (FB-24)
+
+Jack (FB-24): "files uploaded to slowdowner should go to files and should be uploaded online if i have
+a storage plan"; and "for any of the tools requiring a file like slow downer, make a popup that shows
+all your uploaded files, and if you drag and drop a file anywhere on the screen it will import it into
+it, and have an upload button that opens the system file picker".
+
+- **`components/files/FilePicker.tsx`** (new): `useFilePicker({ filter, onFile, saveToFiles, dropInto,
+  title, uploadLabel, local })` returns `{ open, elements, status, signedIn, save }`. The dialog
+  ("Open a file") lists the account's own files, recordings and tune songs that match the tool's
+  `filter` (`AUDIO_OR_VIDEO`, `AUDIO_ONLY`, or the tool's own), newest first, with a search, as
+  `FileRow`s (`files.storage`, wrapped in `useDeviceUrls`; rows kept on another device show greyed
+  "On Chrome on Linux"). Picking one fetches it into a `File` and hands it to the tool. Upload opens
+  the system picker (with the `SaveWhere` switch when the account has a plan). A bottom sheet on
+  phones. `local` lists files the tool keeps in the browser itself (the Slow Downer's old IndexedDB
+  library), with a remove button and its own `ConfirmDialog`.
+- **Saving to Files (`saveToFiles`):** a file from this device (Upload or a drop) is saved with
+  `useFileUploader(...).uploadAll` (now returned by the hook and resolving whether every file saved —
+  an additive change), so it goes online with a plan and on this device without one, through the
+  usual checks. **Not twice:** skipped when the account's `files.list` already has a file with the
+  same name and size, or this tab saved it in the last minute (the list catching up). `status` shows
+  "Saving to your Files…", "Saved to your Files(, on this device)" or "Not saved to your Files: …"
+  (the tool still opens the file either way, e.g. one over 100 MB).
+- **`lib/useFileDrop.ts`** (new): window `dragover`/`drop` listeners, only for drags carrying files,
+  ignoring drops something else already handled (`defaultPrevented`). The overlay hides 250 ms after
+  `dragover` stops. **Split screen:** the scope is the nearest scrolling box around the tool (a pane's
+  `overflow-y-auto` body); on a normal page (`[data-page-scroll]`) it's the whole window. So a file
+  dropped on the other pane is left for that pane. The picker dialog (portaled to `<body>`, outside the
+  pane) is marked `data-file-drop` so drops on it count too. No tiling files were changed.
+- **Slow Downer:** "Open a file" (the empty state) and the open file's name ("Change", replacing the
+  old Select with "Add new file…") open the dialog; dropping a file anywhere opens it ("Drop to open in
+  Slow Downer"). Signed in, files from the device go to Files and are no longer kept in the old
+  `jam-practice-files` IndexedDB library; files still in that library show under "Only in this
+  browser" (hidden once Files has the same name and size), and opening one saves it to Files and then
+  removes the browser copy (markers are keyed by name and size, so they carry over). Signed out it
+  works as before (kept in the browser, listed in the dialog with a remove button), and the dialog
+  says signing in keeps files in Files. The inline "Saved in this browser" list on the empty page is
+  gone (it's in the dialog).
+- **Also adopted:** the Tuner's Takes → "Open a file" (audio only; opens a file or recording from
+  Files or from this device as a take, as before — not saved to Files, takes stay browser-only) and
+  Rhythm Section → Bass players → Import (MusicXML / exported JSON; a MusicXML kept in Files can be
+  imported now). Neither has drop-anywhere (their file is a side action, not the tool's main input).
+  **Left alone:** Score Writer's import (its own `.json` backups, which Files wouldn't hold), and the
+  avatar/banner/feedback/lesson/notes/chart-import uploads.
+- Help (Slow Downer's "Load a song" step and an "Open a file" option, replacing "Saved files") and the
+  privacy policy (the Slow Downer line said its files always stay in the browser) updated.
+- **Verified** in nix Chromium on dev, signed in as the shared test account: Open a file → Upload a
+  WAV → it plays, "Saved to your Files, on this device", and it's listed in the dialog; a synthetic
+  drop of the same file → opened, no second row; a drop of another file → opened and saved; picking
+  the first one from the dialog reopens it (duration right). The overlay shows during a synthetic
+  file `dragover` and not for a text drag. Signed out (desktop and phone): the dialog shows "From this
+  device", the browser-kept file and the sign-in line. Split screen (Metronome | Slow Downer, signed
+  out): the overlay covers only the Slow Downer pane; a drop on the Metronome pane is ignored, a drop
+  on the Slow Downer pane opens the file. Tuner's dialog opens (signed in); the bass Import dialog
+  imported a MusicXML through it (signed out, phone). 1440 and 390, light and dark, no horizontal
+  overflow, no console errors (one `<p>` around the spinner was found and fixed). Test files deleted
+  from the account afterwards (Files page → Delete).
+- **Not verified:** a real OS drag-and-drop (only synthetic `DragEvent`s), saving online with a storage
+  plan (the test account is free; same `saveFile` path as the Files page), audio by ear, Safari, real
+  phones, a file over 100 MB, and migrating a real old browser-library file signed in.

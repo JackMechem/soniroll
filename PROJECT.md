@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.10 beta** (see versioning).
+**v0.10.11 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -152,6 +152,11 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - In split-screen (tiling) mode, keep the address bar in sync with `history.replaceState`
   (`syncAddressBar`), not Next's router — `router.replace` remounts the pane and stopped running
   audio.
+- Split-screen panes are size containers (`data-pane`): inside one, `sm:`/`md:` follow the
+  pane's width, `lg:` and up never apply and `max-lg:` always does (`@custom-variant`s at the top
+  of `globals.css`). Use `100cqw`, not `100vw`, for widths. A phone-only sheet portaled to `<body>`
+  should portal into `usePaneElement()` (`lib/paneContext.ts`). JS width checks (`useIsDesktop`,
+  `matchMedia`) still see the window. See `docs/notes/tiling-split-screen.md`.
 - Tailwind `translate-*` and `hover:translate-*` on one element fight (both set
   `--tw-translate-y`); put centering on a wrapper.
 - The dev server reads `next.config.ts` only at startup (restart to see a new version number).
@@ -246,6 +251,9 @@ Web (`apps/web`):
 - Files: `components/files/FileParts.tsx` (`useFileActions` — the ⋮/right-click menu, rename,
   share, delete for any `StoredEntry`; `FileViewer`, `FilePreviewDialog`, `useFileUploader`,
   `TuneFiles`), `FileShareDialog`, `lib/files.ts` (`fileKind`, `formatBytes`, `downloadFile`).
+  A tool that opens a file uses `useFilePicker` (`components/files/FilePicker.tsx`: the "Open a
+  file" dialog listing the user's files, Upload, saving to Files) and `lib/useFileDrop.ts`
+  (drop a file anywhere on the tool's page or pane).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
 - Notation: `components/notation/ScoreEditor.tsx` (the one notation editor — never write another;
   wrap it with a `header`) and `Score.tsx` (read-only view too); scores via `lib/useScores.ts`.
@@ -313,9 +321,10 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 
 ## Current state at a glance (2026-10-18)
 
-- **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*`, `/chord-charts*`,
+- **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*` (the Library, with
+  tabs for setlists, charts, files and recordings; `/files` and `/recordings` redirect there), `/chord-charts*`,
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
-  `/recordings*`, `/files`, `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
+  `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
   shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, `/file/[id]`, plus `/privacy`, `/terms`,
   `/credits`.
 - **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
