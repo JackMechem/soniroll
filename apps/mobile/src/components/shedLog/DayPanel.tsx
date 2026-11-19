@@ -32,6 +32,7 @@ import { DayTasks } from '@/components/shedLog/DayTasks';
 import { DayTimerCard, useDayTimerMs } from '@/components/shedLog/DayTimer';
 import { Bar, ChecklistIcon, GhostIcon, Muted, Panel, RoutineIcon, Section, SmallButton, useSuccess } from '@/components/shedLog/parts';
 import { RoutineCard } from '@/components/shedLog/RoutineCard';
+import { AttachedNotes } from '@/components/shedNotes/AttachedNotes';
 import { LogTimeSheet } from '@/components/shedLog/sheets';
 import { ToolTimeCard } from '@/components/shedLog/ToolTimeCard';
 import { useToday } from '@/lib/useClock';
@@ -43,7 +44,8 @@ const QUICK_LOG = [5, 10, 15, 30, 45, 60];
 /**
  * Everything on one day (the website's `DayPanel`): the day's progress and the day timer, its
  * routines, extra tasks, time in tools to log (today), timed practice, logging time by hand, and
- * notes and attachments made on the website. Arrows step a day.
+ * notes: the day's Shed Notes (Add notes), plus older notes and attachments made on the website.
+ * Arrows step a day.
  */
 export function DayPanel({ date, log, onDateChange }: { date: string; log: PracticeLog; onDateChange: (date: string) => void }) {
   const { colors } = useAppTheme();
@@ -153,20 +155,20 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
 
       {!past ? logTime : null}
 
-      {day.notes || (day.attachments?.length ?? 0) > 0 ? (
-        <Section icon={icon(PencilIcon)} title="Notes">
-          <Panel>
-            {day.notes ? (
-              <Text className="font-ui text-sm" style={{ color: colors.foreground }}>
-                {day.notes}
-              </Text>
-            ) : null}
-            {(day.attachments ?? []).map((a, i) => (
-              <AttachmentRow key={i} item={a} />
-            ))}
-          </Panel>
-        </Section>
-      ) : null}
+      <Section icon={icon(PencilIcon)} title="Notes">
+        <Panel>
+          {day.notes ? (
+            <Text className="font-ui text-sm" style={{ color: colors.foreground }}>
+              {day.notes}
+            </Text>
+          ) : null}
+          {(day.attachments ?? []).map((a, i) => (
+            <AttachmentRow key={i} item={a} />
+          ))}
+          {/* Shed Notes on the day (the website's Add notes). */}
+          <AttachedNotes target={{ kind: 'day', date }} label={formatLongDate(date)} newTitle={`Practice · ${formatLongDate(date)}`} />
+        </Panel>
+      </Section>
 
       <ActionSheet
         visible={addMenu}

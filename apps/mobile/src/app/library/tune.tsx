@@ -17,6 +17,7 @@ import { useTuneMenu } from '@/components/library/useTuneMenu';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RecordingRow, RecordingSelectModal, useRecordingPlayer } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TuneShedNotes } from '@/components/shedNotes/AttachedNotes';
 import { recordRecentTune } from '@/lib/chordChartRecents';
 import { recordingsApi } from '@/lib/recordings';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
@@ -319,6 +320,8 @@ function Hub({
             <PencilIcon color={colors.muted} size={18} />
           </Pressable>
         </View>
+
+        <TuneShedNotes tuneId={tune.id} name={tune.name} />
       </ScrollView>
 
       {menu}

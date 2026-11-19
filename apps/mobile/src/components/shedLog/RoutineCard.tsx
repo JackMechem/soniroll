@@ -34,6 +34,7 @@ import {
   StopwatchIcon,
 } from '@/components/icons';
 import { Bar, Field, GhostIcon, RoutineIcon, SmallButton, TaskCheck, routineColor, useSuccess } from '@/components/shedLog/parts';
+import { AttachedNotes } from '@/components/shedNotes/AttachedNotes';
 import { LogTimeSheet, RoutineTimeSheet, type LogTarget } from '@/components/shedLog/sheets';
 import { Subtasks } from '@/components/shedLog/Subtasks';
 import { pause, resume, skip, stop, type EngineState } from '@/lib/practiceTimerEngine';
@@ -337,6 +338,13 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
           {occurrence.notes}
         </Text>
       ) : null}
+      {/* Shed Notes on this routine for this day (the website's Add notes). */}
+      <AttachedNotes
+        target={{ kind: 'routine', date, routineId: routine.id }}
+        label={`${routine.name || 'Untitled routine'} · ${formatShortDate(date)}`}
+        newTitle={`${routine.name || 'Untitled routine'} · ${formatShortDate(date)}`}
+        compact
+      />
 
       <ActionSheet visible={menu} title={routine.name || 'Untitled routine'} subtitle={formatShortDate(date)} actions={actions} onClose={() => setMenu(false)} />
       <RoutineTimeSheet log={log} date={date} routine={routine} occurrence={occurrence} visible={timeSheet} onClose={() => setTimeSheet(false)} />

@@ -139,6 +139,7 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/guess-the-progression': ProgressionIcon,
   '/practice-timer': StopwatchIcon,
   '/shed-log': CalendarCheckIcon,
+  '/shed-notes': mci('file-document-outline'),
   '/lessons': LessonsIcon,
   '/metronome': MetronomeIcon,
   '/random-metric-modulation': MetricModulationIcon,
