@@ -40,8 +40,8 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   components. The real product. Live at soniroll.com.
 - **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app. Paused 2026-10-18,
   **picked up again 2026-11-19**: Jack chose to stay on Expo and bring it up to the website's look
-  and the soniroll name in small stages, checking in after each — **no new tools for now** (see
-  `docs/notes/mobile-refresh.md`). A change to `packages/core` or a Convex function it calls must
+  and the soniroll name in stages, checking in after each; then asked for the tools it lacks to be
+  ported too, one at a time (see `docs/notes/mobile-refresh.md`). A change to `packages/core` or a Convex function it calls must
   still pass `tsc` in `apps/mobile`. It's mobile only (it won't replace the website; see
   `docs/notes/mobile-tool-screens-and-sync.md`) and shares the backend and pure logic with web.
 - **Backend** (`packages/convex`): Convex — accounts (email + password with emailed codes, and
@@ -333,9 +333,10 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
   shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, `/file/[id]`, plus `/privacy`, `/terms`,
   `/credits`.
 - **Mobile:** a bottom tab bar on the main screens (Home · Tools · Library · Community; Account
-  from the top-right button) and native screens for most tools (`src/app/tool/`); anything not
-  ported opens the `[slug]` placeholder. Web-only so far: Rhythm Section, Syncopation, the Shed Log, Lessons and
-  Files / tune and file share links.
+  from the top-right button) and native screens for most tools (`src/app/tool/`), laid out like the
+  website's (setting chips, `components/tool/`); anything not ported opens the `[slug]` placeholder.
+  Web-only so far: Find the Root, Time Test, Rhythm Section, Score Writer, the Shed Log, Shed Notes,
+  Lessons, Files / tune and file share links.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.

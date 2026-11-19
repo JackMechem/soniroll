@@ -114,3 +114,52 @@ horizontal overflow except the Metronome's, which predates this. A debug build o
 tool full-screen, the Library tabs, Account, Community, Back. **Not verified:** anything signed in
 (the avatar on the account button, Favorites from the account, recents with real tunes), a release
 build, iOS, Jack's phone, the themed (monochrome) icon on a real launcher, audio.
+
+## Stage 2 — every tool laid out like the website's (2026-11-19)
+
+Jack: "start updating all the tools like metronome to be the same as desktop and web."
+
+- **The kit** (`components/tool/`): `SettingChip` / `SettingsBar` / `ToolSheet` (options as chips
+  under the main display, each opening a bottom sheet; split chips for on/off settings), `reward.tsx`
+  (`GradientFill`, `Segmented`, `RewardCard`, `OptionGroup`, `usePop`), `Slider` (gesture handler;
+  the sheet has its own `GestureHandlerRootView` because a `Modal` is outside the app's), `meter.tsx`
+  (`BigButton`, `TempoHero`, `TimeSignatureControl`, `MeterQuickPicks`, `SubdivisionPicker`,
+  `SoundPicker`), plus `rhythm.tsx` and `ear.tsx` (the two agents' shared pieces: `ChipRow`,
+  `ChoiceCards`, `PoolPills`, `PillButton`; `ToolScreen`, `QuizRing`, History/Struggles chips,
+  `useGradeColors`). `BeatIndicator` is the website's three-segment bars.
+- **Gradients:** `react-native-svg` gradients sized by `100%` inside a flexible view drew as thin
+  strips; `GradientFill` uses React Native's own `experimental_backgroundImage` linear gradient
+  (with the accent as the background colour underneath) and works on Android.
+- **Done by:** the lead (kit + Metronome), then two agents in parallel (rhythm/practice tools and
+  pitch/ear tools, separate files), then a review of every tool on the emulator. Details per tool are
+  in commit 2613acb's message.
+- `COMMON_METERS` and `SUB_LABELS` moved to `packages/core/meterControls.ts`.
+- **Left over:** `Hint.tsx` still shows option descriptions as always-visible text (against the
+  style guide); the ear-tool screens use `Field` with an ⓘ instead, and Slow Downer / Interval
+  Trainer still use `Hint`. `NumberStepper` draws its buttons in `surface`, invisible in a sheet.
+  The Sticking Warmup's chips sit in one sideways-scrolling row (cut off at the edge) so the
+  notation keeps its room.
+
+## New tools on the phone
+
+Jack then asked for the tools the app didn't have yet, after the restyle. Order planned by size:
+Syncopation, Find the Root, Time Test, Rhythm Section, Score Writer, the Shed Log, Shed Notes,
+Lessons.
+
+### Syncopation (2026-11-19)
+
+- `app/tool/syncopation.tsx`: the website's tool, same settings key and defaults. Play and a
+  sideways row of chips (Tempo, Rhythms, Underneath, Playback, Mix) stay at the top; the 16-bar
+  exercise scrolls under them in a card with New. While it plays, the **bar** being heard is lit
+  (the website lights each note).
+- **The drum kit on the phone** (`lib/drumSounds.ts`, for Rhythm Section later too): the website's
+  player ported — velocity layers, round robins, trims, onset trimming, room reverb (a convolver,
+  `lib/roomImpulse.ts`), hi-hat choke. No compressor (the phone's audio engine has none). The
+  samples are **bundled** from the website's own folder (`lib/drumSamples.ts` requires
+  `apps/web/public/samples/drums/sticks/*.mp3`; Expo's Metro watches the whole monorepo), so they
+  play offline; `decodeAudioData` takes the required module directly (no `expo-asset`).
+- `lib/syncopationEngine.ts`: the website's engine with a plain interval; `lib/notation/
+  syncopationNotation.ts`: the website's score drawn with VexFlow through `vexflowNative.ts`, a row
+  at a time (rests painted `muted`), rendered by `components/SyncopationScore.tsx`.
+- Checked on the emulator: the score renders (2 bars a row at phone width), Play loads the drums
+  and the lit bar follows. Not heard (the emulator runs without audio), not on a phone.

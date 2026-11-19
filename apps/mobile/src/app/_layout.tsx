@@ -101,6 +101,7 @@ function RootNavigator() {
         <Stack.Screen name="tool/random-sticking-warmup" options={{ title: 'Random Sticking Warmup' }} />
         <Stack.Screen name="tool/scale-trainer" options={{ title: 'Scale Trainer' }} />
         <Stack.Screen name="tool/tempo-trainer" options={{ title: 'Tempo Trainer' }} />
+        <Stack.Screen name="tool/syncopation" options={{ title: 'Syncopation' }} />
         <Stack.Screen name="tool/tuner" options={{ title: 'Tuner' }} />
         <Stack.Screen name="account/public-profile" options={{ title: 'Public profile' }} />
         <Stack.Screen name="library/index" options={{ headerShown: false, animation: 'fade' }} />
