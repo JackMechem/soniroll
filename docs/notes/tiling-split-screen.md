@@ -461,3 +461,14 @@ groove; the dashboard only in its recents list); phones never mount panes. `tsc`
 and `eslint` pass. **Not verified:** the macOS desktop app (WebKit; container queries and `cqw`
 need Safari 16+, which the app's WebKit has, but it wasn't run), real mouse hover, and how every
 other tool looks in a very narrow (320px) pane.
+
+## 2026-11-18: keyboard shortcuts only in the active pane
+
+Space reached both panes (Metronome + Tuner: one key press started both). `lib/paneContext.ts` now
+has `keyIsForPane(pane, e)` / `usePaneKeyGuard()`: only the pane holding focus reacts, or, if no
+pane has focus, the last-clicked one (`TilingLayout` marks it `data-pane-active`).
+`lib/useSpaceToggle.ts` checks it, which covers the tools using Space; tools with their own key
+listeners call the guard too (Find the Root Enter, Time Test R, Slow Downer B). **Any new tool
+shortcut must go through it.** Outside split screen nothing changes. Also: the intro "?" goes in
+a slot after the pane title (`PaneTitleSlotContext`), and tool idea credits are in the page flow,
+not fixed. Verified headless with Metronome + Tuner side by side; not on a real browser window.

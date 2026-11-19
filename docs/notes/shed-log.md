@@ -471,3 +471,20 @@ the calendar the full width. Phones are unaffected (the button and the hiding ar
 (`session.link`) — before, a task's "Timing" kept going. Resuming such a run from anywhere
 restarts the day timer (`PracticeLogGlobal` watches the engine, as starting one already did).
 Checked in a harness against the real engine and stopwatch. Not on a phone.
+
+## 2026-11-18: celebrations once a day, one rounding rule (UI/UX audit pass 4)
+
+- Ticking the last task no longer auto-opens the "Day complete!" dialog; the toast keeps its Share
+  button (toasts with Share stay 8 s). Each big moment (goal, all done, each routine, streak toast,
+  hour milestones) celebrates once per day per browser, remembered in localStorage
+  `jam-practice-celebrated`. Wording is "All tasks done" unless the daily goal is met. Toasts hide
+  while the share dialog is open.
+- Practice minutes are summed first, then rounded, everywhere (`components/practicelog/minutes.ts`:
+  `formatPracticed`, `practicedMinutes`; above zero but rounding to 0 shows "<1 min"). Use it for
+  any new total so the day panel, header, calendar, Stats and sidebar agree.
+- The timer card can't show the timer's own time alone (stored data merges ticked task minutes into
+  it), so when stopped it reads "N min · Practiced today" and the button always says "Start timer".
+- Routine editor: "Add a task" focuses the new row, empty rows are dropped on Save, leaving with
+  edits asks first (`useLeaveGuard`), sticky Save/Cancel at every width. Bug fixed: a new routine
+  made a fresh id (the editor's `key`) on every render, so any log sync remounted the editor.
+- Not verified: sounds, split-screen panes, other devices.
