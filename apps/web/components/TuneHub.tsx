@@ -32,6 +32,7 @@ import { TagEditor } from "@/components/library/TagEditor";
 import {
   addChartsToTune,
   allTags,
+  linkedChartIds,
   makeMainChart,
   removeChartFromTune,
   tuneChartIds,
@@ -119,7 +120,14 @@ function Hub({
   const { allSongs: librarySongs, loading: libraryLoading } = useChordChartsLibrary(null);
   const chartIds = libraryLoading ? linkedIds : linkedIds.filter((cid) => librarySongs.some((s) => s.id === cid));
   const shownChartId = pickedChart && chartIds.includes(pickedChart) ? pickedChart : (chartIds[0] ?? null);
-  const { selectedSong: chart, selectedSongLoading, allSongs } = useChordChartsLibrary(shownChartId);
+  const { selectedSong: chart, selectedSongLoading, allSongs, deleteSong } = useChordChartsLibrary(shownChartId);
+  // Every chart belongs to a tune, so a chart goes when its tune does (unless another tune has it).
+  const onlyOnThisTune = (ids: string[]) => {
+    const others = (list: Tune[]) => list.filter((t) => t.id !== tune.id);
+    const elsewhere = linkedChartIds({ tunes: others(all.tunes.tunes), learn: others(all.learn.tunes), library: others(all.library.tunes) });
+    return ids.filter((cid) => !elsewhere.has(cid));
+  };
+  const [confirmDeleteChart, setConfirmDeleteChart] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState("");
   const [{ fit: chartFit }, setChartView] = usePersistedSettings(CHART_VIEW_KEY, CHART_VIEW_DEFAULTS);
   const [editing, setEditing] = useState(false);
@@ -336,13 +344,11 @@ function Hub({
                               { label: "Link another chart", icon: <LinkIcon className="h-4 w-4 text-muted" />, onSelect: () => setPicking(true) },
                               { label: "Write another chart", icon: <PencilIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(writeChartHref) },
                               {
-                                label: chartIds.length > 1 ? "Unlink this chart" : "Unlink the chart",
-                                icon: <ChordChartIcon className="h-4 w-4 text-muted" />,
-                                onSelect: () => {
-                                  if (!shownChartId) return;
-                                  change((t) => removeChartFromTune(t, shownChartId));
-                                  setPickedChart(null);
-                                },
+                                label: chartIds.length > 1 ? "Delete this chart" : "Delete the chart",
+                                icon: <TrashIcon className="h-4 w-4" />,
+                                danger: true,
+                                divider: true,
+                                onSelect: () => shownChartId && setConfirmDeleteChart(shownChartId),
                               },
                             ],
                           })
@@ -539,12 +545,29 @@ function Hub({
           onClose={() => setPicking(false)}
         />
       )}
+      {confirmDeleteChart && (
+        <ConfirmDialog
+          title={`Delete ${chartIds.length > 1 ? `"${chartLabel(confirmDeleteChart)}"` : "this chart"}?`}
+          message={`It's taken off ${tune.name}${onlyOnThisTune([confirmDeleteChart]).length ? " and deleted for good" : " (another tune still has it)"}.`}
+          confirmLabel="Delete"
+          onConfirm={() => {
+            const cid = confirmDeleteChart;
+            setConfirmDeleteChart(null);
+            const gone = onlyOnThisTune([cid]).length > 0;
+            change((t) => removeChartFromTune(t, cid));
+            if (gone) void deleteSong(cid);
+            setPickedChart(null);
+          }}
+          onCancel={() => setConfirmDeleteChart(null)}
+        />
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={`Delete "${tune.name}"?`}
-          message={`This removes it from ${LIST_LABEL[list]}. Its chord charts are kept.`}
+          message={`This removes it from ${LIST_LABEL[list]}${chartIds.length ? `, along with its chord chart${chartIds.length > 1 ? "s" : ""}` : ""}.`}
           confirmLabel="Delete"
           onConfirm={() => {
+            for (const cid of onlyOnThisTune(chartIds)) void deleteSong(cid);
             setTunes((prev) => prev.filter((t) => t.id !== tune.id));
             setConfirmDelete(false);
             onDeleted();

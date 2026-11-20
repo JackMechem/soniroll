@@ -14,7 +14,7 @@ import { useTuneActions } from "@/components/library/useTuneActions";
 import PromptDialog from "@/components/PromptDialog";
 import Select from "@/components/Select";
 import StandardsPicker from "@/components/StandardsPicker";
-import { ChevronRightIcon, ChordChartIcon, DownloadIcon, LibraryIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
+import { ChevronRightIcon, DownloadIcon, LibraryIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
@@ -58,7 +58,7 @@ export default function TunesDashboard() {
   const { isAuthenticated } = useConvexAuth();
   const lists = useTuneLists();
   const { setlists, create: createSetlist } = useSetlists();
-  const { allSongs, totalSongs, loading: chartsLoading } = useChordChartsLibrary(null);
+  const { allSongs, loading: chartsLoading } = useChordChartsLibrary(null);
   useAutoLinkCharts(allSongs, chartsLoading);
   const recent = useRecentTunes();
   const { openTuneMenu, element } = useTuneActions();
@@ -96,7 +96,7 @@ export default function TunesDashboard() {
     const words = q ? q.split(/\s+/) : [];
     const picked = everything.filter(({ tune, list }) => {
       if (listFilter !== "all" && list !== listFilter) return false;
-      if (pickedTags.some((t) => !hasTag(tune, t))) return false;
+      if (pickedTags.length && !pickedTags.some((t) => hasTag(tune, t))) return false;
       if (!words.length) return true;
       // Its charts' titles too (an iReal title can differ from the tune's name).
       const charts = tuneChartIds(tune).map((id) => chartTitles.get(id) ?? "");
@@ -161,11 +161,8 @@ export default function TunesDashboard() {
         </Toolbar>
       </Hero>
 
-      {/* Setlists and chord charts have pages of their own, a tap away. */}
-      <div className="grid grid-cols-2 gap-3">
-        <ShelfLink href="/tunes?tab=setlists" icon={SetlistIcon} title="Setlists" detail={setlists.length ? `${setlists.length}` : "None yet"} />
-        <ShelfLink href="/tunes?tab=charts" icon={ChordChartIcon} title="Chord charts" detail={chartsLoading ? "" : totalSongs ? `${totalSongs}` : "None yet"} />
-      </div>
+      {/* Setlists have a page of their own, a tap away. (Chord charts live on their tunes.) */}
+      <ShelfLink href="/tunes?tab=setlists" icon={SetlistIcon} title="Setlists" detail={setlists.length ? `${setlists.length}` : "None yet"} />
 
       {total === 0 && lists.ready ? (
         <EmptyState
@@ -222,7 +219,7 @@ export default function TunesDashboard() {
           {!filtering && recentCards.length > 1 && <RecentStrip items={recentCards} />}
 
           <Panel
-            title={pickedTags.length ? `${listFilter === "all" ? "Tunes" : TUNE_LIST_LABEL[listFilter]} · ${pickedTags.join(", ")}` : listFilter === "all" ? "All tunes" : TUNE_LIST_LABEL[listFilter]}
+            title={pickedTags.length ? `${listFilter === "all" ? "Tunes" : TUNE_LIST_LABEL[listFilter]} · ${pickedTags.join(" or ")}` : listFilter === "all" ? "All tunes" : TUNE_LIST_LABEL[listFilter]}
             detail={rows.length}
             flush
             actions={
@@ -245,7 +242,7 @@ export default function TunesDashboard() {
               ) : (
                 <EmptyState
                   title="No tunes here yet"
-                  body={pickedTags.length ? "No tune has all of those tags." : "Add a jazz standard or your own tune."}
+                  body={pickedTags.length ? pickedTags.length > 1 ? "No tune has any of those tags." : "No tune has that tag." : "Add a jazz standard or your own tune."}
                   action={!pickedTags.length ? <Pill primary icon={PlusIcon} label="Add a tune" onClick={openAddMenu} /> : undefined}
                 />
               )

@@ -203,7 +203,7 @@ function redirectFor(pathname: string, query: Query): string | null {
   if (pathname === "/welcome") return "/";
   if (pathname === "/practice-log" || pathname.startsWith("/practice-log/")) return pathname.replace("/practice-log", "/shed-log");
   if (pathname === "/tunes/setlists") return "/tunes?tab=setlists";
-  if (pathname === "/chord-charts") return "/tunes?tab=charts";
+  if (pathname === "/chord-charts") return "/tunes";
   if (pathname === "/files") return "/tunes?tab=files";
   if (pathname === "/recordings") return "/tunes?tab=recordings";
   if (pathname === "/recordings/view") return `/tunes/recording?id=${encodeURIComponent(query.get("id") || "")}`;

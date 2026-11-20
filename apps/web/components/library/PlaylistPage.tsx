@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { chartHref } from "@/components/library/ChartsDashboard";
+import { chartHref } from "@/components/library/hrefs";
 import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, Pill, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
 import { ChordChartIcon, DotsVerticalIcon, PlusIcon } from "@/components/tools";
@@ -15,7 +15,7 @@ import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 export default function PlaylistPage({ id }: { id: string }) {
   const router = useRouter();
   const { playlists, allSongs, loading } = useChordChartsLibrary(null);
-  const { openSongMenu, openPlaylistMenu, element } = useChartActions({ onPlaylistDeleted: () => router.push("/tunes?tab=charts") });
+  const { openSongMenu, openPlaylistMenu, element } = useChartActions({ onPlaylistDeleted: () => router.push("/tunes") });
   const [query, setQuery] = useState("");
   const isAll = id === ALL_CHARTS_ID;
   const playlist = useMemo(
@@ -47,8 +47,8 @@ export default function PlaylistPage({ id }: { id: string }) {
       <Hero
         title={playlist?.name ?? "Folder"}
         icon={isAll ? ChordChartIcon : FolderIcon}
-        backHref="/tunes?tab=charts"
-        backLabel="Chord Charts"
+        backHref="/tunes"
+        backLabel="Tunes"
         subtitle={playlist ? `${isAll ? "Every chart in your library" : "Folder"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
         rule={false}
       >
@@ -76,7 +76,7 @@ export default function PlaylistPage({ id }: { id: string }) {
           <LoadingSpinner />
         </div>
       ) : !playlist ? (
-        <EmptyState boxed title="Folder not found" body="This folder isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
+        <EmptyState boxed title="Folder not found" body="This folder isn't in your library anymore." action={<Pill label="Back to Tunes" href="/tunes" />} />
       ) : songs.length === 0 ? (
         <EmptyState
           boxed

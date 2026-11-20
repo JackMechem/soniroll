@@ -71,8 +71,8 @@ export default function ImportChartsPage() {
       <Hero
         title="Import charts"
         icon={DownloadIcon}
-        backHref="/tunes?tab=charts"
-        backLabel="Chord Charts"
+        backHref="/tunes"
+        backLabel="Tunes"
         subtitle={`Add charts to your library — you have ${totalSongs} now.`}
       />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -110,28 +110,30 @@ export default function ImportChartsPage() {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] text-xs font-medium text-muted">2</span>
             <h2 className="text-sm font-medium">Choose how</h2>
           </div>
-          <div className="rounded-md bg-foreground/[0.05] px-3 py-1.5">
+          <div className="flex max-w-lg flex-col gap-3 rounded-lg bg-foreground/[0.05] p-3">
             <SwitchRow
               label="Update charts you already have"
               checked={replaceExisting}
               onChange={setReplaceExisting}
               hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same folder. Turn this off to only add charts you don't have yet."
             />
-            <SwitchRow
-              label="Tag the tunes"
-              checked={tagTunes}
-              onChange={setTagTunes}
-              hint="Each chart joins the tune with its name (or a new tune in your Library list). This gives all those tunes a tag, so you can find them together. Leave the box empty to use the playlist's name."
-            />
-            {tagTunes && (
-              <input
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                placeholder="Tag (the playlist's name)"
-                aria-label="Tag for the imported tunes"
-                className="mb-1.5 h-10 w-full rounded-md bg-background px-3 text-base outline-none placeholder:text-muted focus:ring-2 focus:ring-accent/40 sm:h-9 sm:text-sm"
+            <div className="flex flex-col gap-2">
+              <SwitchRow
+                label="Tag the tunes"
+                checked={tagTunes}
+                onChange={setTagTunes}
+                hint="Each chart joins the tune with its name (or a new tune in your Library list). This gives all those tunes a tag, so you can find them together. Leave the box empty to use the playlist's name."
               />
-            )}
+              {tagTunes && (
+                <input
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value)}
+                  placeholder="Tag (the playlist's name)"
+                  aria-label="Tag for the imported tunes"
+                  className="h-10 w-full rounded-md bg-surface px-3 text-base outline-none placeholder:text-muted focus:ring-2 focus:ring-accent/40 sm:h-9 sm:text-sm"
+                />
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -150,7 +152,6 @@ export default function ImportChartsPage() {
               {status.kind === "ok" && (
                 <div className="flex flex-wrap gap-2">
                   <Pill label="See your tunes" href="/tunes" />
-                  <Pill label="Chord charts" href="/tunes?tab=charts" />
                 </div>
               )}
             </div>

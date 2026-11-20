@@ -7,7 +7,7 @@ import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
-import { playlistHref } from "@/components/library/ChartsDashboard";
+import { playlistHref } from "@/components/library/hrefs";
 import { BackButton } from "@/components/library/shared";
 import { EmptyState, FolderIcon, gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
@@ -31,8 +31,8 @@ import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
 export default function ChartViewPage({ id }: { id: string }) {
   const router = useRouter();
   const { selectedSong: chart, selectedSongLoading, loading, allSongs, playlists } = useChordChartsLibrary(id || null);
-  const { openSongMenu, element } = useChartActions({ onSongDeleted: () => goBackOr(router, "/tunes?tab=charts") });
-  const back = () => goBackOr(router, "/tunes?tab=charts");
+  const { openSongMenu, element } = useChartActions({ onSongDeleted: () => goBackOr(router, "/tunes") });
+  const back = () => goBackOr(router, "/tunes");
   const [transposeKey, setTransposeKey] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const lists = useTuneLists();
@@ -108,7 +108,7 @@ export default function ChartViewPage({ id }: { id: string }) {
     return (
       <LibraryPage>
         <BackButton onClick={back} />
-        <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/tunes?tab=charts" />} />
+        <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Tunes" href="/tunes" />} />
       </LibraryPage>
     );
   }

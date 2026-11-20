@@ -6,7 +6,7 @@ import { useRef } from "react";
 import ChordChartEditor from "@/components/ChordChartEditor";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PageShell } from "@/components/library/shared";
-import { chartHref } from "@/components/library/ChartsDashboard";
+import { chartHref } from "@/components/library/hrefs";
 import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { goBackOr } from "@/lib/goBack";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -89,7 +89,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
             }
           }}
           onClose={() =>
-            goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : savedId.current ? chartHref(savedId.current) : "/tunes?tab=charts")
+            goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : savedId.current ? chartHref(savedId.current) : "/tunes")
           }
         />
       )}

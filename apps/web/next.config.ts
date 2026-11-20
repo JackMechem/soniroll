@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
       { source: "/practice-log/:path*", destination: "/shed-log/:path*", permanent: true },
       // Library's sections became tabs on /tunes (?tab=). Not permanent, so browsers don't cache it.
       { source: "/tunes/setlists", destination: "/tunes?tab=setlists", permanent: false },
-      { source: "/chord-charts", destination: "/tunes?tab=charts", permanent: false },
+      { source: "/chord-charts", destination: "/tunes", permanent: false },
       { source: "/files", destination: "/tunes?tab=files", permanent: false },
       // Recordings joined them; `?id=` carries over to the recording's new page.
       { source: "/recordings", destination: "/tunes?tab=recordings", permanent: false },

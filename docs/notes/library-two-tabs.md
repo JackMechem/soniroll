@@ -112,3 +112,17 @@ uploaded WAV opened in the Slow Downer and the Tuner. 1440 and 390 wide, light a
 overflow or console errors. tsc in web, desktop, mobile, core, convex; `pnpm lint`; mobile eslint.
 **Not verified:** audio by ear, the desktop app, mobile on a device, a real ~1,300-chart account,
 recordings made in the Recorder (Files listed them before this), two tabs racing the first pass.
+
+## Follow-up (2026-11-20, Jack's feedback after the release)
+
+- **Tag filters are OR**: picking several tags shows tunes with *any* of them (they were AND).
+- **No Chord charts page or card.** Every chart belongs to a tune, so the page was confusing.
+  `ChartsDashboard` is deleted (its `chartHref`/`playlistHref` moved to
+  `components/library/hrefs.ts`); `?tab=charts`, `/chord-charts` (Next redirect, desktop router,
+  split-screen panes) and every back link open Tunes. The `/chord-charts` NAV_LINKS entry stays
+  (hidden from the sidebar already; old links and saved panes use it). The chart view, editor,
+  import and folder pages still exist under `/chord-charts/*`.
+- **A chart can't be left without a tune**: the tune page's "Unlink" is now "Delete this chart"
+  (deleted for good unless another tune has it); deleting a tune deletes its charts that no other
+  tune has (the confirm says so); and `useAutoLinkCharts` now links *every* orphan chart each time
+  the Library opens (not only unseen ones; folder tags still only on a chart's first pass).
