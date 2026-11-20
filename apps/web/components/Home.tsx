@@ -374,7 +374,7 @@ export default function Home() {
               <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
               <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
               <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
-              <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes?tab=charts" detail={playlists.length ? `${playlists.length} folder${playlists.length === 1 ? "" : "s"}` : undefined} />
+              <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes" detail={playlists.length ? `${playlists.length} folder${playlists.length === 1 ? "" : "s"}` : undefined} />
             </div>
           </Card>
         );
