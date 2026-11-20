@@ -104,3 +104,9 @@ export function resetSynced<T>(key: string, write: (value: T) => void) {
   }
   entry.seeded = false;
 }
+
+/** Whether `key` holds a real value yet (seeded from the server or set locally) — "loaded", for
+    code that must not act on the empty fallback (e.g. writing a list built from it). */
+export function isSyncedSeeded(key: string): boolean {
+  return getEntry(key).seeded;
+}

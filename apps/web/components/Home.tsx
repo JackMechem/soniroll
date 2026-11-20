@@ -198,7 +198,7 @@ export default function Home() {
     if (!q) return [];
     const words = q.toLowerCase().split(/\s+/);
     const out: { tune: Tune; list: TuneListId }[] = [];
-    for (const list of ["tunes", "learn"] as TuneListId[]) {
+    for (const list of ["tunes", "learn", "library"] as TuneListId[]) {
       for (const tune of lists[list].tunes) if (words.every((w) => tune.name.toLowerCase().includes(w))) out.push({ tune, list });
     }
     return out.slice(0, 8);
@@ -231,7 +231,7 @@ export default function Home() {
     if (recents.length >= 4) break;
   }
   for (const id of recentTunes.ids.slice(0, 2)) {
-    const list = (["tunes", "learn"] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === id));
+    const list = (["tunes", "learn", "library"] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === id));
     const tune = list ? lists[list].tunes.find((t) => t.id === id) : undefined;
     if (list && tune) recents.push({ key: `t:${id}`, icon: NoteIcon, color: "var(--accent)", title: tune.name, detail: "Tune", href: tuneHref(list, id) });
   }

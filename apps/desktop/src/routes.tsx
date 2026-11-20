@@ -109,7 +109,7 @@ const ROUTES: Route[] = [
       </NativeTool>
     ),
   },
-  { path: "/slow-downer", render: () => <SlowDowner /> },
+  { path: "/slow-downer", render: (_, query) => <SlowDowner openStored={opt(query, "open")} /> },
   { path: "/recorder", render: (_, query) => <NativeTool input><Recorder tuneId={opt(query, "tuneId")} /></NativeTool> },
   { path: "/note-trainer", render: () => <NativeTool><NoteTrainer /></NativeTool> },
   { path: "/scale-trainer", render: () => <NativeTool><ScaleTrainer /></NativeTool> },
@@ -136,7 +136,7 @@ const ROUTES: Route[] = [
   { path: "/shed-notes", render: (_, query) => <GatedShedNotes initialId={opt(query, "id")} /> },
 
   { path: "/tunes", render: () => <LibraryHub /> },
-  { path: "/tunes/list", render: (_, query) => <TuneListPage list={query.get("list") === "learn" ? "learn" : "tunes"} /> },
+  { path: "/tunes/list", render: (_, query) => <TuneListPage list={query.get("list") === "learn" ? "learn" : query.get("list") === "library" ? "library" : "tunes"} /> },
   { path: "/tunes/setlist", render: (_, query) => <SetlistPage id={q(query, "id")} /> },
   { path: "/tunes/tune", render: (_, query) => <TuneHub id={q(query, "id")} list={opt(query, "list")} /> },
   { path: "/tunes/recording", render: (_, query) => <RecordingPage id={q(query, "id")} /> },

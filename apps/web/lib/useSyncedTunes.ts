@@ -4,7 +4,7 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import { Tune } from "./types";
 import { getServerSnapshot, getSnapshot, setTunes as setLocalTunes, subscribe } from "./tunesStore";
-import { getSyncedValue, resetSynced, seedSynced, setSyncedValue, subscribeSynced } from "./syncedStore";
+import { getSyncedValue, isSyncedSeeded, resetSynced, seedSynced, setSyncedValue, subscribeSynced } from "./syncedStore";
 
 /** The fixed `syncedSettings` key Jam Practice's whole tune list syncs under — not itself a
     `usePersistedSettings` object (it's `lib/tunesStore.ts`'s own hand-rolled external store), but
@@ -25,8 +25,8 @@ const EMPTY: Tune[] = [];
  * file for the full explanation. Same no-merge rule as `useSyncedSettings`/`usePracticeSessions`
  * throughout — signing in stops consulting local storage entirely, it doesn't merge it.
  */
-export function useSyncedTunes(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void] {
-  const { isAuthenticated } = useConvexAuth();
+export function useSyncedTunes(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const localTunes = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const remote = useQuery(api.syncedSettings.get, isAuthenticated ? { key: TUNES_KEY } : "skip");
   const setRemote = useMutation(api.syncedSettings.set);
@@ -36,6 +36,14 @@ export function useSyncedTunes(): [Tune[], (update: Tune[] | ((prev: Tune[]) => 
     useCallback(() => getSyncedValue(TUNES_KEY, EMPTY), []),
     useCallback(() => EMPTY, []),
   );
+
+  // Loaded: signed in, once the account's list has arrived; signed out, once on the client.
+  const seeded = useSyncExternalStore(
+    useCallback((listener) => subscribeSynced(TUNES_KEY, listener), []),
+    useCallback(() => isSyncedSeeded(TUNES_KEY), []),
+    useCallback(() => false, []),
+  );
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -64,7 +72,14 @@ export function useSyncedTunes(): [Tune[], (update: Tune[] | ((prev: Tune[]) => 
     [isAuthenticated, setRemote],
   );
 
-  return [isAuthenticated ? synced : localTunes, setTunes];
+  return [isAuthenticated ? synced : localTunes, setTunes, !isLoading && (isAuthenticated ? seeded : mounted)];
+}
+
+const noopSubscribe = () => () => {};
+
+/** Tunes I Know as they are right now (outside render, e.g. after an await). */
+export function readTunes(signedIn: boolean): Tune[] {
+  return signedIn ? getSyncedValue(TUNES_KEY, EMPTY) : getSnapshot();
 }
 
 function safeParseTunes(raw: string): Tune[] {

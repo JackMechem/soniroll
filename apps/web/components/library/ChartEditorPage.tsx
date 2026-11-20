@@ -1,5 +1,6 @@
 "use client";
 
+import { addChartsToTune } from "@jam-practice/core/tuneLibrary";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef } from "react";
 import ChordChartEditor from "@/components/ChordChartEditor";
@@ -13,7 +14,7 @@ import { useRecentCharts } from "@/lib/recents";
 
 /** `?tune=<list>:<id>` — the tune a new chart is being written for (from its page). */
 function parseTune(value: string | null): { list: TuneListId; id: string } | null {
-  const m = value?.match(/^(tunes|learn):(.+)$/);
+  const m = value?.match(/^(tunes|learn|library):(.+)$/);
   return m ? { list: m[1] as TuneListId, id: m[2] } : null;
 }
 
@@ -76,7 +77,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
           prefill={prefill}
           defaultPlaylist={playlist && names.includes(playlist) ? playlist : undefined}
           onSave={async (song, playlistName) => {
-            const { added, ids } = await importSongs([song], playlistName);
+            const { added, ids } = await importSongs([song], playlistName, { link: !forTune });
             if (added === 0) throw new Error("A chart with this title, composer and key is already in your library.");
             if (ids[0]) {
               recordRecent(ids[0]);
@@ -84,7 +85,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
             }
             // Written for a tune: link it, so the tune's page shows it straight away.
             if (forTune && ids[0]) {
-              lists[forTune.list].setTunes((prev) => prev.map((t) => (t.id === forTune.id ? { ...t, chordChartId: ids[0] } : t)));
+              lists[forTune.list].setTunes((prev) => prev.map((t) => (t.id === forTune.id ? addChartsToTune(t, [ids[0]]) : t)));
             }
           }}
           onClose={() =>

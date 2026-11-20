@@ -38,6 +38,7 @@ import { KeptHereHint } from "@/components/files/StorageMove";
 import SaveWhere from "@/components/files/SaveWhere";
 import PdfEditor from "@/components/pdf/PdfEditor";
 import PdfInline from "@/components/pdf/PdfInline";
+import { useOpenInTool } from "@/components/files/openInTool";
 
 // ---------------------------------------------------------------- icons
 
@@ -352,6 +353,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     }
   }
   const router = useRouter();
+  const openIn = useOpenInTool();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [open, setOpen] = useState<StoredEntry | null>(null);
   const [renaming, setRenaming] = useState<StoredEntry | null>(null);
@@ -369,6 +371,8 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     const where = goTo(item);
     return [
       { label: "Open", onSelect: () => setOpen(item), icon: <FileIcon className="h-4 w-4" /> },
+      // Audio (and video): open it in a tool that plays it.
+      ...openIn.toolsFor(item).map((t) => ({ label: `Open in ${t.label}`, onSelect: t.open, icon: <t.icon className="h-4 w-4" /> })),
       ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
       ...(item.kind !== "profile" ? [{ label: item.sharedId ? "Shared — manage link" : "Share a link", onSelect: () => setSharing(item), icon: <ShareIcon className="h-4 w-4" /> }] : []),
       ...(item.url ? [{ label: "Download", onSelect: () => void downloadFile(item.url!, item.name), icon: <DownloadIcon className="h-4 w-4" /> }] : []),
@@ -475,6 +479,11 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
           onClose={() => setOpen(null)}
           actions={
             <>
+              {openIn.toolsFor(open).map((t) => (
+                <button key={t.href} type="button" className={actionBtn} onClick={t.open} disabled={!!openIn.busy}>
+                  <t.icon className="h-4 w-4" /> Open in {t.label}
+                </button>
+              ))}
               {open.kind !== "profile" && (
                 <button type="button" className={actionBtn} onClick={() => setRenaming(open)}>
                   <PencilIcon className="h-4 w-4" /> Rename
@@ -528,7 +537,17 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
   }
 
   /** `status`: what's happening while a file is being put online or saved here. */
-  return { openMenu, contextMenu, openFile: setOpen, deleteMany, putOnline, error, status: moving, clearError: () => setError(null), dialogs };
+  return {
+    openMenu,
+    contextMenu,
+    openFile: setOpen,
+    deleteMany,
+    putOnline,
+    error: error ?? openIn.error,
+    status: moving ?? (openIn.busy ? `Opening “${openIn.busy}” in the Tuner…` : null),
+    clearError: () => setError(null),
+    dialogs,
+  };
 }
 
 // ---------------------------------------------------------------- picking files already uploaded

@@ -17,6 +17,8 @@ import {
   resolvePlaylists,
 } from "./chordChartsLibrary";
 import { usePersistedSettings } from "./usePersistedSettings";
+import { useChartLinker } from "./useTuneLists";
+import type { LinkResult } from "@jam-practice/core/tuneLibrary";
 
 const IMPORT_CHUNK = 150;
 
@@ -31,6 +33,8 @@ export type LibrarySongMeta = {
   playlistIds: string[];
   /** Those playlists' names, comma-separated ("" when it's in none) — for a row's subtitle. */
   playlistNames: string;
+  /** The same names as a list (tags made from folders). */
+  playlistNameList: string[];
 };
 
 export type LibraryPlaylist = { id: string; name: string; songs: LibrarySongMeta[] };
@@ -89,6 +93,8 @@ export function useChordChartsLibrary(selectedSongId: string | null) {
   const updateMutation = useMutation(api.chordCharts.updateSong);
   const deletePlaylistMutation = useMutation(api.chordCharts.deletePlaylist);
   const migrateMutation = useMutation(api.chordCharts.migrateFromSyncedSettings);
+  // Every chart belongs to a tune: what's imported is linked to its tune (or a new Library tune).
+  const { link: linkToTunes } = useChartLinker();
 
   // Runs once per sign-in (not once ever, and not on every render) — the mutation itself is a
   // no-op once already migrated, so calling it again on a later sign-in costs one cheap read.
@@ -117,6 +123,7 @@ export function useChordChartsLibrary(selectedSongId: string | null) {
         key: s.key,
         timeSignature: s.timeSignature,
         playlistIds: memberships.get(s.id) ?? [],
+        playlistNameList: (memberships.get(s.id) ?? []).map((id) => names.get(id)).filter((n): n is string => !!n),
         playlistNames: (memberships.get(s.id) ?? []).map((id) => names.get(id)).filter(Boolean).join(", "),
       }));
       const byId = new Map(all.map((s) => [s.id, s]));
@@ -135,6 +142,7 @@ export function useChordChartsLibrary(selectedSongId: string | null) {
       key: s.key,
       timeSignature: s.timeSignature,
       playlistIds: s.playlistIds,
+      playlistNameList: s.playlistIds.map((id) => names.get(id)).filter((n): n is string => !!n),
       playlistNames: s.playlistIds.map((id) => names.get(id)).filter(Boolean).join(", "),
     }));
     const byPlaylist = new Map<string, LibrarySongMeta[]>();
@@ -172,8 +180,24 @@ export function useChordChartsLibrary(selectedSongId: string | null) {
 
   /** `replaceExisting` overwrites charts already in the library (same title/composer/key) in
       place — for re-importing after the importer improved. Signed in, big imports go in chunks:
-      one Convex function can only read 4,096 documents, and replacing reads each chart's bars. */
-  async function importSongs(songs: IRealSong[], playlistName: string | null, options: { replaceExisting?: boolean } = {}) {
+      one Convex function can only read 4,096 documents, and replacing reads each chart's bars.
+      Each chart is then linked to a tune (`useChartLinker`; `tags` go on those tunes) unless
+      `link: false` — for callers that link the chart to a tune themselves. */
+  async function importSongs(
+    songs: IRealSong[],
+    playlistName: string | null,
+    options: { replaceExisting?: boolean; link?: boolean; tags?: string[] } = {},
+  ) {
+    const result = await importOnly(songs, playlistName, options);
+    let linked: LinkResult | null = null;
+    if (options.link !== false) {
+      const charts = songs.map((s, i) => ({ id: result.ids[i], title: s.title, timeSignature: s.timeSignature })).filter((c) => !!c.id);
+      linked = linkToTunes(charts, { tags: options.tags });
+    }
+    return { ...result, linked };
+  }
+
+  async function importOnly(songs: IRealSong[], playlistName: string | null, options: { replaceExisting?: boolean }) {
     if (isAuthenticated) {
       const totals = { added: 0, skipped: 0, updated: 0, ids: [] as string[] };
       for (let i = 0; i < songs.length; i += IMPORT_CHUNK) {

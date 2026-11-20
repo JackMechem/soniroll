@@ -77,6 +77,7 @@ export function TunePickerModal({ exclude, onAdd, onClose }: { exclude: string[]
   const lists = useTuneLists();
   const known = lists.tunes.tunes;
   const learn = lists.learn.tunes;
+  const library = lists.library.tunes;
   const addToKnown = lists.tunes.setTunes;
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
@@ -88,7 +89,7 @@ export function TunePickerModal({ exclude, onAdd, onClose }: { exclude: string[]
     const skip = new Set(exclude);
     const all: PickerRow[] = [];
     const have = new Set<string>();
-    for (const [list, tunes] of [["tunes", known], ["learn", learn]] as const)
+    for (const [list, tunes] of [["tunes", known], ["learn", learn], ["library", library]] as const)
       for (const tune of tunes) {
         have.add(nameId(tune.name));
         if (!skip.has(tune.id)) all.push({ key: tune.id, tune, list });
@@ -107,7 +108,7 @@ export function TunePickerModal({ exclude, onAdd, onClose }: { exclude: string[]
       (have.has(nameId(typed)) || standardRows.some((r) => "standard" in r && nameId(r.standard.name) === nameId(typed)) || newNames.some((n) => nameId(n) === nameId(typed)));
     const newRows: PickerRow[] = newNames.map((newName) => ({ key: `new:${newName}`, newName }));
     return { mine: mineRows, standards: standardRows, fresh: newRows, canCreate: !taken };
-  }, [known, learn, exclude, query, newNames]);
+  }, [known, learn, library, exclude, query, newNames]);
 
   const toggle = (id: string) => setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 

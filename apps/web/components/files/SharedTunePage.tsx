@@ -1,5 +1,6 @@
 "use client";
 
+import { addChartsToTune, tuneChartIds } from "@jam-practice/core/tuneLibrary";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -202,14 +203,14 @@ function SaveTune({ shareId, tune, chart, files }: { shareId: string; tune: Shar
       const existing: Tune | undefined = [...myTunes, ...learn].find((t) => nameId(t.name) === nameId(tune.name));
       const target = existing ?? toOwnTune(tune);
       let chartId: string | undefined;
-      if (chart && !target.chordChartId) {
+      if (chart && tuneChartIds(target).length === 0) {
         try {
-          chartId = (await importSongs([chart], "Shared with me")).ids[0] ?? undefined;
+          chartId = (await importSongs([chart], "Shared with me", { link: false })).ids[0] ?? undefined;
         } catch {
           // The tune still saves without its chart.
         }
       }
-      const linked = chartId ? { ...target, chordChartId: chartId } : target;
+      const linked = chartId ? addChartsToTune(target, [chartId]) : target;
       if (!existing) setMyTunes((prev) => [...prev, linked]);
       else if (chartId) setMyTunes((prev) => prev.map((t) => (t.id === existing.id ? linked : t)));
 

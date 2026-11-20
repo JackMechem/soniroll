@@ -1,5 +1,6 @@
 "use client";
 
+import { mainChartId } from "@jam-practice/core/tuneLibrary";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
@@ -63,7 +64,7 @@ export default function SetlistPage({ id }: { id: string }) {
 
   const found: { tune: Tune; list: TuneListId }[] = [];
   for (const tuneId of setlist.tuneIds) {
-    for (const list of ["tunes", "learn"] as TuneListId[]) {
+    for (const list of ["tunes", "learn", "library"] as TuneListId[]) {
       const tune = lists[list].tunes.find((t) => t.id === tuneId);
       if (tune) {
         found.push({ tune, list });
@@ -72,7 +73,7 @@ export default function SetlistPage({ id }: { id: string }) {
     }
   }
   const tunes = found.map((f) => f.tune);
-  const info = (tune: Tune) => playInfo(tune, setlist.overrides?.[tune.id], tune.chordChartId ? chartKeys.get(tune.chordChartId) : undefined);
+  const info = (tune: Tune) => playInfo(tune, setlist.overrides?.[tune.id], mainChartId(tune) ? chartKeys.get(mainChartId(tune)!) : undefined);
 
   async function doShare() {
     if (!setlist) return;
@@ -132,14 +133,15 @@ export default function SetlistPage({ id }: { id: string }) {
     if (i > 0) items.push({ label: "Move to top", onSelect: () => move(i, 0) }, { label: "Move up", onSelect: () => move(i, i - 1) });
     if (i < found.length - 1) items.push({ label: "Move down", onSelect: () => move(i, i + 1) });
     items.push({ label: "Key & tempo for this set", onSelect: () => setSettingsFor(tune) });
-    if (tune.chordChartId) items.push({ label: "Open chord chart", onSelect: () => router.push(`/chord-charts/view?id=${encodeURIComponent(tune.chordChartId!)}`) });
+    const chartId = mainChartId(tune);
+    if (chartId) items.push({ label: "Open chord chart", onSelect: () => router.push(`/chord-charts/view?id=${encodeURIComponent(chartId)}`) });
     items.push({ label: "Remove from setlist", danger: true, onSelect: () => patch(setlist.id, { tuneIds: setlist.tuneIds.filter((x) => x !== tune.id) }) });
     setMenu({ ...menuPosition(e), items });
   }
 
   const settings = settingsFor ? info(settingsFor) : null;
 
-  const withCharts = tunes.filter((t) => t.chordChartId).length;
+  const withCharts = tunes.filter((t) => mainChartId(t)).length;
   const changed = tunes.filter((t) => setlist.overrides?.[t.id]).length;
 
   return (
@@ -205,7 +207,7 @@ export default function SetlistPage({ id }: { id: string }) {
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5">
                             <span className="truncate text-sm font-medium">{tune.name}</span>
-                            {tune.chordChartId && (
+                            {mainChartId(tune) && (
                               <span title="Has a chord chart" className="shrink-0 text-muted">
                                 <ChordChartIcon className="h-3.5 w-3.5" />
                               </span>

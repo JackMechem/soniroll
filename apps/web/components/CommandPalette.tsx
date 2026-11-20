@@ -58,9 +58,11 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Pages", href: "/dashboard", label: "Dashboard", words: "home start today", icon: HomeIcon },
   { group: "Pages", href: "/tunes/list?list=tunes", label: "Tunes I Know", detail: "Library", words: "library tunes repertoire songs list", icon: ListIcon },
   { group: "Pages", href: "/tunes/list?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
-  { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library", words: "library gig set list", icon: SetlistIcon },
-  { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents", icon: FileIcon, account: true },
-  { group: "Pages", href: "/tunes?tab=recordings", label: "Recordings", detail: "Library", words: "library takes audio recorded clips", icon: MicIcon, account: true },
+  { group: "Pages", href: "/tunes/list?list=library", label: "Library list", detail: "Tunes that came with charts", words: "library tunes unsorted imported charts list", icon: ListIcon },
+  { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library · Tunes", words: "library gig set list", icon: SetlistIcon },
+  { group: "Pages", href: "/chord-charts/import", label: "Import chord charts", detail: "Library", words: "import ireal playlist link charts", icon: ChordChartIcon },
+  { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents audio", icon: FileIcon, account: true },
+  { group: "Pages", href: "/tunes?tab=recordings", label: "Recordings", detail: "Library · Files", words: "library takes audio recorded clips", icon: MicIcon, account: true },
   { group: "Pages", href: "/community/new", label: "New post", detail: "Community", words: "community post share", icon: PlusIcon, account: true },
   { group: "Pages", href: "/community/liked", label: "Liked posts", detail: "Community", words: "community likes hearts saved favorites", icon: HeartIcon, account: true },
   { group: "Pages", href: "/community/following", label: "Following and followers", detail: "Community", words: "community people friends follow", icon: UsersIcon, account: true },
@@ -107,7 +109,7 @@ export function useSearchExtras(query: string, { charts: withCharts = true }: { 
   const lists = useTuneLists();
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const tunes: Item[] = words.length
-    ? (["tunes", "learn"] as TuneListId[])
+    ? (["tunes", "learn", "library"] as TuneListId[])
         .flatMap((list) =>
           lists[list].tunes
             .filter((t) => words.every((w) => t.name.toLowerCase().includes(w)))

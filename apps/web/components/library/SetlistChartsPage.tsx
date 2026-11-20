@@ -1,5 +1,7 @@
 "use client";
 
+import { mainChartId } from "@jam-practice/core/tuneLibrary";
+import { useLibraryTunes } from "@/lib/useTuneLists";
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
 import { setlistHref } from "@/components/library/setlistParts";
 import { useQuery } from "convex/react";
@@ -47,6 +49,7 @@ export default function SetlistChartsPage({ mine, post, shared, start }: { mine?
   const { setlists } = useSetlists();
   const [tunes] = useSyncedTunes();
   const [learn] = useTunesToLearn();
+  const [library] = useLibraryTunes();
   const postData = useQuery(api.communityTunes.get, post && ID_RE.test(post) ? { id: post as Id<"communityTunes"> } : "skip");
   const sharedData = useQuery(api.setlists.getShared, shared ? { id: shared } : "skip");
 
@@ -56,14 +59,14 @@ export default function SetlistChartsPage({ mine, post, shared, start }: { mine?
   const backHref = mine ? setlistHref(mine) : post ? `/post/${encodeURIComponent(post)}` : shared ? `/setlist/${encodeURIComponent(shared)}` : "/tunes?tab=setlists";
   if (mine) {
     const setlist = setlists.find((s) => s.id === mine);
-    const all = [...tunes, ...learn];
+    const all = [...tunes, ...learn, ...library];
     title = setlist?.name ?? "Setlist";
     pages = (setlist?.tuneIds ?? [])
       .map((id) => all.find((t) => t.id === id))
       .filter((t): t is Tune => !!t)
       .map((t) => {
         const o = setlist?.overrides?.[t.id];
-        return { key: t.id, name: t.name, chartId: t.chordChartId ?? null, toKey: o?.key ?? null, tempo: o?.tempo ?? t.tempos.find((x) => x.enabled)?.value ?? null };
+        return { key: t.id, name: t.name, chartId: mainChartId(t) ?? null, toKey: o?.key ?? null, tempo: o?.tempo ?? t.tempos.find((x) => x.enabled)?.value ?? null };
       });
   } else if (post) {
     if (postData !== undefined) {

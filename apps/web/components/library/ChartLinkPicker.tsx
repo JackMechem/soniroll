@@ -10,12 +10,15 @@ const BUTTON = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0
 /** Search your chord charts and pick one to link — starts searched for the tune's own name. */
 export default function ChartLinkPicker({
   songs,
+  exclude,
   initialQuery,
   onPick,
   onClose,
 }: {
   /** Every chart in the library (`useChordChartsLibrary`'s `allSongs`). */
   songs: LibrarySongMeta[];
+  /** Charts not to offer (the ones the tune already has). */
+  exclude?: string[];
   initialQuery: string;
   onPick: (songId: string) => void;
   onClose: () => void;
@@ -29,9 +32,10 @@ export default function ChartLinkPicker({
   const q = query.trim().toLowerCase();
   const rows = useMemo(() => {
     const out: { song: LibrarySongMeta; playlist: string }[] = [];
-    for (const s of songs) if (!q || `${s.title} ${s.composer}`.toLowerCase().includes(q)) out.push({ song: s, playlist: s.playlistNames });
+    const skip = new Set(exclude ?? []);
+    for (const s of songs) if (!skip.has(s.id) && (!q || `${s.title} ${s.composer}`.toLowerCase().includes(q))) out.push({ song: s, playlist: s.playlistNames });
     return out;
-  }, [songs, q]);
+  }, [songs, q, exclude]);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>

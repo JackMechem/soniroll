@@ -679,6 +679,15 @@ export function BookmarkIcon({ className }: { className?: string }) {
   );
 }
 
+export function TagIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3.5 12.1V4.5a1 1 0 011-1h7.6a1 1 0 01.7.3l8 8a1 1 0 010 1.4l-7.6 7.6a1 1 0 01-1.4 0l-8-8a1 1 0 01-.3-.7z" />
+      <circle cx="8" cy="8" r="1.4" />
+    </svg>
+  );
+}
+
 export function StarIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
     <svg {...svgProps(className)} fill={filled ? "currentColor" : "none"}>

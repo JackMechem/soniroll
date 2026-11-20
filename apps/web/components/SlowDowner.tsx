@@ -114,7 +114,8 @@ function TransportButton({
   );
 }
 
-export default function SlowDowner() {
+/** `openStored`: a stored file to open straight away (`<kind>:<id>`, from "Open in" in Files). */
+export default function SlowDowner({ openStored }: { openStored?: string }) {
   const [settings, updateSettings] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, settings.speed));
   const { preservePitch, volume, maximized } = settings;
@@ -323,6 +324,7 @@ export default function SlowDowner() {
     filter: AUDIO_OR_VIDEO,
     saveToFiles: true,
     dropInto: "Slow Downer",
+    openStored,
     onFile: (next, from) => loadFile(next, !from && !isAuthenticated),
     local: {
       title: "Only in this browser",

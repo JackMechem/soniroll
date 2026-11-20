@@ -4,7 +4,7 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import { Tune } from "./types";
 import { TUNES_TO_LEARN_KEY } from "./tunesToLearn";
-import { getSyncedValue, resetSynced, seedSynced, setSyncedValue, subscribeSynced } from "./syncedStore";
+import { getSyncedValue, isSyncedSeeded, resetSynced, seedSynced, setSyncedValue, subscribeSynced } from "./syncedStore";
 
 const EMPTY: Tune[] = [];
 
@@ -23,8 +23,8 @@ const EMPTY: Tune[] = [];
  * different in-memory key would still be a second real store to maintain for a feature that isn't
  * reachable signed out anyway).
  */
-export function useTunesToLearn(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void] {
-  const { isAuthenticated } = useConvexAuth();
+export function useTunesToLearn(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const remote = useQuery(
     api.syncedSettings.get,
     isAuthenticated ? { key: TUNES_TO_LEARN_KEY } : "skip",
@@ -35,6 +35,12 @@ export function useTunesToLearn(): [Tune[], (update: Tune[] | ((prev: Tune[]) =>
     useCallback((listener) => subscribeSynced(TUNES_TO_LEARN_KEY, listener), []),
     useCallback(() => getSyncedValue(TUNES_TO_LEARN_KEY, EMPTY), []),
     useCallback(() => EMPTY, []),
+  );
+
+  const seeded = useSyncExternalStore(
+    useCallback((listener) => subscribeSynced(TUNES_TO_LEARN_KEY, listener), []),
+    useCallback(() => isSyncedSeeded(TUNES_TO_LEARN_KEY), []),
+    useCallback(() => false, []),
   );
 
   useEffect(() => {
@@ -63,7 +69,13 @@ export function useTunesToLearn(): [Tune[], (update: Tune[] | ((prev: Tune[]) =>
     [isAuthenticated, setRemote],
   );
 
-  return [isAuthenticated ? synced : EMPTY, setTunesToLearn];
+  // Signed out there's no list to load (it's account-only), so it's ready at once.
+  return [isAuthenticated ? synced : EMPTY, setTunesToLearn, !isLoading && (!isAuthenticated || seeded)];
+}
+
+/** Tunes to Learn as they are right now (outside render). Empty signed out. */
+export function readTunesToLearn(signedIn: boolean): Tune[] {
+  return signedIn ? getSyncedValue(TUNES_TO_LEARN_KEY, EMPTY) : EMPTY;
 }
 
 function safeParseTunes(raw: string): Tune[] {
