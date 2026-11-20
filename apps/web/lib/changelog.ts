@@ -33,6 +33,20 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.12",
+    date: "2026-11-19",
+    title: "soniroll for Android (alpha)",
+    summary: "The phone app is out as an early test, for Android phones.",
+    changes: [
+      {
+        kind: "new",
+        text: "**soniroll for Android**, an early alpha: every tool laid out for a phone, the Shed Log, your Library, Community and Lessons, with the same account. Get it from the Download page; expect rough edges, and tell us what breaks.",
+      },
+      { kind: "fixed", text: "Shed Log: a routine whose tasks have overlapping times shows as one block on the calendar instead of several small ones." },
+      { kind: "fixed", text: "Deleting your account now also removes your saved settings, tunes and Shed Log." },
+    ],
+  },
+  {
     version: "0.10.11",
     date: "2026-11-18",
     title: "Polish everywhere, recordings in the Library",

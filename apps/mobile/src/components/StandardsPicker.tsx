@@ -64,7 +64,7 @@ export function StandardsPicker({
               onChangeText={setQuery}
               placeholder={`Search ${STANDARDS.length} jazz standards…`}
               placeholderTextColor={colors.muted}
-              className="min-w-0 flex-1 text-base font-inter"
+              className="min-w-0 flex-1 text-base font-ui"
               style={{ color: colors.foreground }}
             />
             <Pressable
@@ -84,7 +84,7 @@ export function StandardsPicker({
             contentContainerStyle={{ padding: 8, paddingBottom: 24 }}
             ListEmptyComponent={
               canCreate ? null : (
-                <Text className="px-4 py-6 text-center text-sm font-inter" style={{ color: colors.muted }}>
+                <Text className="px-4 py-6 text-center text-sm font-ui" style={{ color: colors.muted }}>
                   No standards match &ldquo;{typed}&rdquo;
                 </Text>
               )
@@ -98,12 +98,12 @@ export function StandardsPicker({
                   <View className="h-7 w-7 items-center justify-center rounded" style={{ backgroundColor: colors.accent }}>
                     <PlusIcon color={colors['accent-foreground']} size={16} />
                   </View>
-                  <Text numberOfLines={1} className="min-w-0 flex-1 text-base font-inter" style={{ color: colors.foreground }}>
+                  <Text numberOfLines={1} className="min-w-0 flex-1 text-base font-ui" style={{ color: colors.foreground }}>
                     Create custom tune &ldquo;{typed}&rdquo;
                   </Text>
                 </Pressable>
               ) : results.length > shown.length ? (
-                <Text className="px-4 py-3 text-center text-sm font-inter" style={{ color: colors.muted }}>
+                <Text className="px-4 py-3 text-center text-sm font-ui" style={{ color: colors.muted }}>
                   {results.length - shown.length} more — keep typing to narrow it down
                 </Text>
               ) : null
@@ -116,10 +116,10 @@ export function StandardsPicker({
                   className="flex-row items-center gap-3 rounded-xl px-4 py-3"
                 >
                   <View className="min-w-0 flex-1">
-                    <Text numberOfLines={1} className="text-base font-inter" style={{ color: colors.foreground }}>
+                    <Text numberOfLines={1} className="text-base font-ui" style={{ color: colors.foreground }}>
                       {standard.name}
                     </Text>
-                    <Text numberOfLines={1} className="text-xs font-inter" style={{ color: colors.muted }}>
+                    <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
                       {standard.composer} · {standard.key} · {standard.bpm} BPM
                       {standard.timeSignature !== '4/4' ? ` · ${standard.timeSignature}` : ''}
                     </Text>
@@ -127,7 +127,7 @@ export function StandardsPicker({
                   {isAdded ? (
                     <View className="flex-row items-center gap-1.5">
                       <CheckIcon color={colors.accent} size={16} />
-                      <Text className="text-sm font-inter" style={{ color: colors.accent }}>
+                      <Text className="text-sm font-ui" style={{ color: colors.accent }}>
                         Added
                       </Text>
                     </View>
@@ -142,7 +142,7 @@ export function StandardsPicker({
           />
 
           <View className="border-t px-4 py-3" style={{ borderColor: colors['surface-hover'] }}>
-            <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+            <Text className="text-xs font-ui" style={{ color: colors.muted }}>
               {tunes.length} in your list · Tap to add
             </Text>
           </View>

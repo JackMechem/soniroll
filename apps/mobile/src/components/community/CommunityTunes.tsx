@@ -4,18 +4,24 @@ import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View, Share } from 'react-native';
 
-import { ChordChartIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
+import { EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** "just now", "5m", "3h", "2d", then a date. */
-function timeAgo(ms: number) {
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A post's date, short and plain: "just now", "5 min ago", "3 h ago", "2 days ago", then "Oct 18"
+    (with the year once it's not this year: "Oct 18, 2025"). Never the phone's numeric format. */
+export function postDate(ms: number) {
   const s = Math.max(0, (Date.now() - ms) / 1000);
   if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d`;
-  return new Date(ms).toLocaleDateString();
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  const days = Math.floor(s / 86400);
+  if (days < 7) return days === 1 ? 'yesterday' : `${days} days ago`;
+  const d = new Date(ms);
+  const label = `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
+  return d.getFullYear() === new Date().getFullYear() ? label : `${label}, ${d.getFullYear()}`;
 }
 
 export type TunePostSummary = {
@@ -47,11 +53,16 @@ export type TunePostSummary = {
   isMine?: boolean;
 };
 
+/** "1 tune", "4 charts". */
+function plural(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
 /**
  * One post in a list (Community's feed and search, My posts, Liked posts, a profile's posts) — a
  * card: author and how long ago on top; a "Setlist" tag for setlist posts; the title, description
- * and a preview of the first few tunes (numbered for a setlist); then a footer with tune/chart
- * counts, Share (copies the link) and the like button. Tap opens the post's page; the author opens
+ * and a preview of the first few tunes (numbered for a setlist); then a footer saying how many
+ * tunes and charts it has, Share (copies the link) and the like button. Tap opens the post's page; the author opens
  * their profile. Long-press deletes, when `onDelete` is given (your own posts).
  */
 export function PostListItem({
@@ -72,7 +83,7 @@ export function PostListItem({
 
   async function handleShare() {
     if (!post) return;
-    const url = `https://sheddex.com/post/${post.id}`;
+    const url = `https://www.soniroll.com/post/${post.id}`;
     try {
       await Share.share({ message: `${post.title} — ${url}`, url, title: post.title });
     } catch {
@@ -98,21 +109,21 @@ export function PostListItem({
               hitSlop={6}
             >
               <UserAvatar url={post.authorAvatarUrl ?? null} size="sm" />
-              <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 {post.authorUsername}
               </Text>
             </Pressable>
           ) : null}
-          <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-sm" style={{ color: colors.muted }}>
             {post.authorUsername ? '· ' : ''}
-            {timeAgo(post.createdAt)}
+            {postDate(post.createdAt)}
           </Text>
           <View className="flex-1" />
           {post.unlisted ? <EyeOffIcon color={colors.muted} size={16} /> : null}
           {isSetlist ? (
             <View className="flex-row items-center gap-1 rounded-full px-2.5 py-1" style={{ backgroundColor: `${colors.accent}22` }}>
               <SetlistIcon color={colors.accent} size={14} />
-              <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
+              <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                 Setlist
               </Text>
             </View>
@@ -120,11 +131,11 @@ export function PostListItem({
         </View>
 
         <View className="gap-1">
-          <Text numberOfLines={2} className="font-inter-bold text-lg font-bold leading-snug" style={{ color: colors.foreground }}>
+          <Text numberOfLines={2} className="font-ui-bold text-lg font-bold leading-snug" style={{ color: colors.foreground }}>
             {post.title}
           </Text>
           {post.description ? (
-            <Text numberOfLines={2} className="font-inter text-sm" style={{ color: colors.muted }}>
+            <Text numberOfLines={2} className="font-ui text-sm" style={{ color: colors.muted }}>
               {post.description}
             </Text>
           ) : null}
@@ -135,19 +146,19 @@ export function PostListItem({
             {preview.map((name, i) => (
               <View key={`${name}-${i}`} className="flex-row items-center gap-2.5">
                 {isSetlist ? (
-                  <Text className="font-inter-bold w-4 text-right text-sm font-bold tabular-nums" style={{ color: colors.accent }}>
+                  <Text className="font-ui-bold w-4 text-right text-sm font-bold tabular-nums" style={{ color: colors.accent }}>
                     {i + 1}
                   </Text>
                 ) : (
                   <MusicNoteIcon color={colors.accent} size={14} />
                 )}
-                <Text numberOfLines={1} className="font-inter flex-1 text-sm" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui flex-1 text-sm" style={{ color: colors.foreground }}>
                   {name}
                 </Text>
               </View>
             ))}
             {more > 0 ? (
-              <Text className="font-inter pl-6 text-xs" style={{ color: colors.muted }}>
+              <Text className="font-ui pl-6 text-xs" style={{ color: colors.muted }}>
                 +{more} more
               </Text>
             ) : null}
@@ -156,31 +167,21 @@ export function PostListItem({
       </View>
 
       <View className="flex-row items-center gap-4 px-4 pb-1.5">
-        <View className="flex-row items-center gap-1">
-          <MusicNoteIcon color={colors.muted} size={15} />
-          <Text className="font-inter-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
-            {post.tuneCount}
-          </Text>
-        </View>
-        {post.chartCount > 0 ? (
-          <View className="flex-row items-center gap-1">
-            <ChordChartIcon color={colors.muted} size={15} />
-            <Text className="font-inter-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
-              {post.chartCount}
-            </Text>
-          </View>
-        ) : null}
+        {/* What's in it, in words ("4 tunes · 2 charts"). */}
+        <Text className="font-ui text-xs" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+          {[plural(post.tuneCount, 'tune'), post.chartCount > 0 ? plural(post.chartCount, 'chart') : null].filter(Boolean).join(' · ')}
+        </Text>
         <View className="flex-1" />
-        <Pressable onPress={() => void handleShare()} accessibilityLabel="Share this post" className="h-10 w-10 items-center justify-center">
+        <Pressable onPress={() => void handleShare()} accessibilityLabel="Share this post" className="h-11 w-11 items-center justify-center">
           <ShareIcon color={colors.muted} size={19} />
         </Pressable>
         <Pressable
           onPress={() => void toggleLike({ id: post.id })}
           accessibilityLabel={liked ? 'Unlike this post' : 'Like this post'}
-          className="h-10 flex-row items-center gap-1.5 pl-1"
+          className="h-11 min-w-11 flex-row items-center gap-1.5 pl-1"
         >
           <HeartIcon color={liked ? colors.danger : colors.muted} size={21} filled={liked} />
-          <Text className="font-inter-bold text-sm font-bold tabular-nums" style={{ color: liked ? colors.danger : colors.muted }}>
+          <Text className="font-ui-bold text-sm font-bold tabular-nums" style={{ color: liked ? colors.danger : colors.muted }}>
             {post.likeCount}
           </Text>
         </Pressable>

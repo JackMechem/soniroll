@@ -46,7 +46,7 @@ export function ChartPager({ pages, initialIndex = 0, onIndexChange }: { pages: 
   if (pages.length === 0) {
     return (
       <View className="flex-1 items-center justify-center px-10">
-        <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+        <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
           No tunes yet.
         </Text>
       </View>
@@ -110,10 +110,10 @@ function NoChart({ name, missing }: { name: string; missing?: boolean }) {
   return (
     <View className="flex-1 items-center justify-center gap-3 px-10">
       <ChordChartIcon color={colors.muted} size={32} />
-      <Text className="font-inter-bold text-center text-xl font-bold" style={{ color: colors.foreground }}>
+      <Text className="font-ui-bold text-center text-xl font-bold" style={{ color: colors.foreground }}>
         {name}
       </Text>
-      <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+      <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
         {missing ? "Couldn't find this tune's chart." : 'No chord chart for this tune.'}
       </Text>
     </View>
@@ -135,7 +135,7 @@ function ChartBody({ song: original, toKey, tempo }: { song: IRealSong; toKey?: 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: 6, paddingTop: 2, paddingBottom: 16 }}>
       {info ? (
-        <Text numberOfLines={1} className="font-inter px-2 pb-1 text-xs" style={{ color: colors.muted }}>
+        <Text numberOfLines={1} className="font-ui px-2 pb-1 text-xs" style={{ color: colors.muted }}>
           {info}
         </Text>
       ) : null}

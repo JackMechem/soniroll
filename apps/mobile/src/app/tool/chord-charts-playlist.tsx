@@ -15,7 +15,6 @@ import {
   ALL_CHARTS_ID,
 } from '@/components/ChordChartList';
 import { DotsVerticalIcon, PlusIcon } from '@/components/icons';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import type { LibrarySongMeta } from '@/lib/useChordChartsLibrary';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -127,7 +126,7 @@ function ChordChartsPlaylistScreen() {
           </View>
         ) : !playlist ? (
           <View className="flex-1 items-center justify-center px-16">
-            <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
               This playlist is empty now.
             </Text>
           </View>
@@ -144,9 +143,9 @@ function ChordChartsPlaylistScreen() {
               windowSize={11}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
-              contentContainerStyle={{ paddingLeft: 16, paddingRight: showScrubber ? 0 : 16, paddingBottom: 32 + TAB_BAR_CONTENT_HEIGHT }}
+              contentContainerStyle={{ paddingLeft: 16, paddingRight: showScrubber ? 0 : 16, paddingBottom: 32 }}
               ListEmptyComponent={
-                <Text className="font-inter py-4 text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui py-4 text-sm" style={{ color: colors.muted }}>
                   {q ? <>No charts match &ldquo;{query}&rdquo;.</> : isAll ? 'No charts yet — tap + to create one.' : 'No charts here yet — tap + to create one, or add charts with a chart’s ⋮ → Playlists.'}
                 </Text>
               }

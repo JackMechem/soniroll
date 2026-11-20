@@ -61,7 +61,7 @@ export function PublicSetlist({
           style={{ backgroundColor: colors.accent }}
         >
           <SlidesIcon color={colors['accent-foreground']} size={19} />
-          <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
             View all charts
           </Text>
         </Pressable>
@@ -73,7 +73,7 @@ export function PublicSetlist({
               style={{ backgroundColor: colors.surface }}
             >
               <PencilIcon color={colors.foreground} size={18} />
-              <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 Edit setlist
               </Text>
             </Pressable>
@@ -86,14 +86,14 @@ export function PublicSetlist({
             style={{ backgroundColor: colors.surface }}
           >
             {saving ? <LoadingSpinner size="sm" /> : <DownloadIcon color={colors.foreground} size={18} />}
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
               {savedId ? 'Saved — open it' : saving ? 'Saving…' : 'Save as my setlist'}
             </Text>
           </Pressable>
         )}
       </View>
       {!isMine && !savedId && chartCount > 0 ? (
-        <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+        <Text className="font-ui text-xs" style={{ color: colors.muted }}>
           Saving copies the {chartCount} chart{chartCount === 1 ? '' : 's'} into a &ldquo;{title}&rdquo; playlist and adds any tunes you don&apos;t have.
         </Text>
       ) : null}
@@ -107,14 +107,14 @@ export function PublicSetlist({
               className="flex-row items-center gap-3 px-3"
               style={{ minHeight: 60 }}
             >
-              <Text className="font-inter-bold w-6 text-right text-base font-bold tabular-nums" style={{ color: colors.accent }}>
+              <Text className="font-ui-bold w-6 text-right text-base font-bold tabular-nums" style={{ color: colors.accent }}>
                 {i + 1}
               </Text>
               <View className="flex-1 py-2">
-                <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                   {t.name}
                 </Text>
-                <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+                <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                   {[
                     setlistKey({ overrideRoot: t.setKey, chartKey: t.linkedChart?.key, tuneKeys: t.keys.filter((k) => k.enabled).map((k) => k.value) }),
                     (t.setTempo ?? t.tempos.find((x) => x.enabled)?.value) ? `${t.setTempo ?? t.tempos.find((x) => x.enabled)?.value} BPM` : null,
@@ -134,7 +134,7 @@ export function PublicSetlist({
                 >
                   <MicrophoneIcon color={openRecordings === i ? colors['accent-foreground'] : colors.foreground} size={15} />
                   <Text
-                    className="font-inter-bold text-xs font-bold tabular-nums"
+                    className="font-ui-bold text-xs font-bold tabular-nums"
                     style={{ color: openRecordings === i ? colors['accent-foreground'] : colors.foreground }}
                   >
                     {t.recordings.length}

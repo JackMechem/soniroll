@@ -38,7 +38,7 @@ export function MyPostsTab() {
           <LoadingSpinner />
         </View>
       ) : posts.length === 0 ? (
-        <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+        <Text className="text-sm font-ui" style={{ color: colors.muted }}>
           You haven&apos;t posted anything yet.
         </Text>
       ) : (

@@ -70,11 +70,11 @@ function TuneNotesScreen() {
           title: 'Notes',
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-inter-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
                 Notes
               </Text>
               {found ? (
-                <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                   {found.tune.name}
                 </Text>
               ) : null}
@@ -86,10 +86,10 @@ function TuneNotesScreen() {
                 flush();
                 router.back();
               }}
-              className="rounded-full px-5 py-2"
+              className="min-h-10 justify-center rounded-lg px-4 py-2"
               style={{ backgroundColor: colors.accent }}
             >
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 Done
               </Text>
             </Pressable>
@@ -106,7 +106,7 @@ function TuneNotesScreen() {
             multiline
             placeholder="Form, tricky changes, voicings, recordings to check out…"
             placeholderTextColor={colors.muted}
-            className="font-inter text-base"
+            className="font-ui text-base"
             style={{
               flex: 1,
               backgroundColor: colors.surface,
@@ -120,7 +120,7 @@ function TuneNotesScreen() {
         </View>
       ) : (
         <View className="flex-1 items-center justify-center px-10">
-          <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
             That tune isn&apos;t in your library.
           </Text>
         </View>

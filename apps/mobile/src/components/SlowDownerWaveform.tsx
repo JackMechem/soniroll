@@ -86,9 +86,11 @@ export function SlowDownerWaveform({
       onSeek(timeAt(e.x));
     });
   // `changeX`/`scaleChange` are each event's change since the last one.
+  // Sideways drags only, so an up-and-down drag still scrolls the page around the waveform.
   const pan = Gesture.Pan()
     .runOnJS(true)
-    .minDistance(8)
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-12, 12])
     .onStart(() => trace('pan start'))
     .onChange((e) => onPan((-e.changeX / Math.max(1, width)) * span));
   const pinch = Gesture.Pinch()
@@ -113,7 +115,7 @@ export function SlowDownerWaveform({
     <GestureDetector gesture={gesture}>
       <View
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        style={{ height, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surface }}
+        style={{ height, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.surface }}
       >
         {width > 0 ? (
           <Svg width={width} height={height}>
@@ -127,6 +129,7 @@ export function SlowDownerWaveform({
                 opacity={loopActive ? 0.18 : 0.07}
               />
             ) : null}
+            <Line x1={0} x2={width} y1={height / 2} y2={height / 2} stroke={colors.muted} strokeWidth={1} opacity={0.4} />
             <Path d={upcoming} stroke={colors.muted} strokeWidth={1.4} opacity={0.6} />
             <Path d={played} stroke={colors.accent} strokeWidth={1.4} />
             {loop
@@ -136,12 +139,12 @@ export function SlowDownerWaveform({
               : null}
             {markers.map((m) =>
               inView(m.time) ? (
-                <Line key={m.id} x1={xAt(m.time)} x2={xAt(m.time)} y1={0} y2={height} stroke={colors.foreground} strokeWidth={1} opacity={0.5} />
+                <Line key={m.id} x1={xAt(m.time)} x2={xAt(m.time)} y1={0} y2={height} stroke={colors.accent} strokeWidth={1} />
               ) : null,
             )}
             {markers.map((m) =>
               inView(m.time) ? (
-                <Polygon key={`f${m.id}`} points={`${xAt(m.time)},0 ${xAt(m.time) + 10},5 ${xAt(m.time)},10`} fill={colors.foreground} opacity={0.75} />
+                <Polygon key={`f${m.id}`} points={`${xAt(m.time)},0 ${xAt(m.time) + 10},5 ${xAt(m.time)},10`} fill={colors.accent} />
               ) : null,
             )}
             {inView(time) ? <Line x1={xAt(time)} x2={xAt(time)} y1={0} y2={height} stroke={colors.foreground} strokeWidth={2} /> : null}

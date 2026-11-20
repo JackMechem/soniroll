@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="November 17, 2026">
+    <LegalPage title="Privacy policy" updated="November 19, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
@@ -40,8 +40,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Where files are kept:</strong> on the free plan, the files, recordings and tune songs themselves are kept on the device that saved
-            them (in that browser, or in the desktop app) and aren&apos;t uploaded. Clearing that browser&apos;s data for soniroll.com deletes them, and
-            soniroll can&apos;t get them back. With a storage plan they&apos;re stored online instead. Files you share by link, lesson files, hand-ins
+            them (in that browser, in the desktop app, or in the phone app) and aren&apos;t uploaded. Clearing that browser&apos;s data for soniroll.com,
+            or uninstalling the phone app, deletes them, and soniroll can&apos;t get them back. So your other devices can say where a file is, your
+            account keeps a short name for the device that has it (like &ldquo;Chrome on Linux&rdquo; or your phone&apos;s model). With a storage plan they&apos;re stored online instead. Files you share by link, lesson files, hand-ins
             and profile pictures are always stored online (free accounts have 50 MB for these).
           </li>
           <li>
@@ -104,7 +105,7 @@ export default function PrivacyPage() {
           To see what&apos;s useful, soniroll counts, per day: visits, page views, which tools are started and how long they run, and whether a visit
           was signed in. Only daily totals are kept (for example, &quot;the Metronome was started 40 times on Tuesday&quot;). They aren&apos;t tied to
           you, your account or your device, and no IP address or advertising ID is stored. Nothing is counted if your browser sends Do Not Track or
-          Global Privacy Control. Account activity soniroll already has (like when an account was created) is also summed into charts for the
+          Global Privacy Control. The phone app counts only which tools are started and how long they run, the same way. Account activity soniroll already has (like when an account was created) is also summed into charts for the
           administrator.
         </p>
       </LegalSection>

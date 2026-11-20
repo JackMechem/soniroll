@@ -26,7 +26,7 @@ export function SwitchRow({
     <View className="gap-1">
       <View className="flex-row items-center justify-between gap-2">
         <View className="flex-1 flex-row items-center gap-1.5">
-          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
             {label}
           </Text>
           {hint ? <InfoButton title={label} text={hint} size={16} /> : null}

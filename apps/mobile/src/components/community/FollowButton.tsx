@@ -35,11 +35,11 @@ export function FollowButton({ targetUserId }: { targetUserId: Id<'users'> }) {
     <Pressable
       onPress={() => void toggle()}
       disabled={disabled}
-      className="rounded-full px-5 py-2"
+      className="min-h-10 justify-center rounded-lg px-4 py-2"
       style={{ backgroundColor: isFollowing ? colors.surface : colors.accent, opacity: disabled ? 0.5 : 1 }}
     >
       <Text
-        className="text-sm font-semibold font-inter-semibold"
+        className="text-sm font-semibold font-ui-semibold"
         style={{ color: isFollowing ? colors.foreground : colors['accent-foreground'] }}
       >
         {isFollowing ? 'Following' : 'Follow'}

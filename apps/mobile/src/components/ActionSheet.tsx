@@ -34,11 +34,11 @@ export function ActionSheet({
         </View>
         {title ? (
           <View className="gap-0.5 px-5 pb-3 pt-3">
-            <Text numberOfLines={1} className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+            <Text numberOfLines={1} className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
               {title}
             </Text>
             {subtitle ? (
-              <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                 {subtitle}
               </Text>
             ) : null}
@@ -58,7 +58,7 @@ export function ActionSheet({
               style={{ minHeight: 54 }}
             >
               {a.icon}
-              <Text className="font-inter-semibold flex-1 text-base font-semibold" style={{ color: a.danger ? colors.danger : colors.foreground }}>
+              <Text className="font-ui-semibold flex-1 text-base font-semibold" style={{ color: a.danger ? colors.danger : colors.foreground }}>
                 {a.label}
               </Text>
             </Pressable>

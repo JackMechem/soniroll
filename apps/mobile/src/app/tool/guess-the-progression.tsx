@@ -1,6 +1,6 @@
 import { formatChordParts, parseChordInput, pcLabel } from '@jam-practice/core/chords';
 import { levelQueue } from '@jam-practice/core/learningPath';
-import { GRADE_COLOR, scoreOf, type Grade } from '@jam-practice/core/noteGrade';
+import { scoreOf, type Grade } from '@jam-practice/core/noteGrade';
 import { ACCIDENTAL_STYLES, type AccidentalStyle } from '@jam-practice/core/noteSpelling';
 import {
   DEFAULT_ENABLED_PROGRESSION_IDS,
@@ -20,30 +20,49 @@ import {
 } from '@jam-practice/core/progressions';
 import { bumpGradeCounts, rankWeak, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { shuffled } from '@jam-practice/core/trainerUtils';
-import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
 
-import { CountdownRing } from '@/components/CountdownRing';
-import { ElapsedTimer } from '@/components/CountdownLabel';
-import { Dropdown } from '@/components/Dropdown';
-import { CountdownText, ProgressTab, ResultsCard } from '@/components/EarTrainingParts';
-import { Hint } from '@/components/Hint';
-import { SlidersIcon } from '@/components/icons';
+import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
+import { NoteIcon, PencilIcon, PlayIcon, ProgressionIcon, StopwatchIcon } from '@/components/icons';
 import { LearningPath } from '@/components/learning/LearningPath';
 import { LevelComplete } from '@/components/learning/LevelComplete';
-import { ModeSwitch } from '@/components/learning/ModeSwitch';
-import { NumberStepper } from '@/components/NumberStepper';
 import { ProgressionAnswerKeyboard } from '@/components/ProgressionAnswerKeyboard';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import {
+  FeedbackLine,
+  Field,
+  GroupLabel,
+  HistoryChip,
+  IDLE_RING,
+  IdleHint,
+  IdleStatus,
+  LevelLabel,
+  MutedText,
+  Pill,
+  PillChoice,
+  PoolHeader,
+  QuizRing,
+  ResultsPanel,
+  SheetText,
+  SliderField,
+  StrugglesChip,
+  TextButton,
+  ToolScreen,
+  useGradeColors,
+} from '@/components/tool/ear';
+import { BigButton } from '@/components/tool/meter';
+import { Segmented } from '@/components/tool/reward';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { Button } from '@/components/ui';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playChordSequence } from '@/lib/sampledTones';
 import { startTone } from '@/lib/toneGenerator';
 import { useLearnSession } from '@/lib/useLearnSession';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/GuessTheProgression.tsx` — same features, same synced
@@ -51,7 +70,9 @@ import { useAppTheme } from '@/theme/ThemeProvider';
  * the key's tonic) and you type it, in Roman numerals (`ii7 V7 I^7`, case = major/minor) or chord
  * names (the first chord's root given), with or without the qualities. Same round/timer/history/
  * struggles machinery as Guess the Chord, plus Learn mode's levelled path. Answers go on
- * `ProgressionAnswerKeyboard`, fixed to the bottom of the screen (the tab bar is hidden here).
+ * `ProgressionAnswerKeyboard`, fixed to the bottom of the screen. Otherwise laid out like the
+ * website's (`components/tool/ear.tsx`): History / Struggles chips, the ring and chord slots, Start,
+ * Practice / Learn and the option chips.
  */
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -183,8 +204,8 @@ function weakEntriesOf(stats: Record<string, GradeCounts>): WeakProgression[] {
 
 function GuessTheProgressionScreen() {
   const { colors } = useAppTheme();
+  const GRADE_COLOR = useGradeColors();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const learn = useLearnSession('progression');
 
   const { roundSeconds, advanceDelayMs, soundFeedback, drillMode, typeQualities, playKeyFirst, playbackStyle, chordSeconds, learnMode } = settings;
@@ -200,6 +221,8 @@ function GuessTheProgressionScreen() {
 
   const [round, setRound] = useState<ProgressionRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/guess-the-progression', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [marks, setMarks] = useState<boolean[] | null>(null);
@@ -509,202 +532,357 @@ function GuessTheProgressionScreen() {
 
   const typedTokens = splitAnswer(typed, answerMode);
   const right = marks ? marks.filter(Boolean).length : 0;
-  const centerLabel = !round ? '—' : status && marks ? `${right}/${marks.length}` : '?';
+  const centerLabel = !round ? '?' : status && marks ? `${right}/${marks.length}` : '?';
   const glow = running && status ? GRADE_COLOR[status] : null;
   const answering = running && !!round && !status;
   const showingSummary = summary !== null && !running;
 
   if (!settingsReady) return <ScreenSpinner />;
 
-  const label = (text: string) => (
-    <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
-      {text}
-    </Text>
+  const showSide = !running && (history.length > 0 || weakEntries.length > 0);
+  const keyLabel = KEY_OPTIONS.find((k) => k.value === keyChoice)?.label ?? 'Random';
+
+  // How to write an answer, for the Answer chip's sheet and the first round's keyboard.
+  const answerHowTo =
+    answerMode === 'numerals'
+      ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
+      : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`;
+
+  // The mode switch first, then History and Struggles (hidden until there's something in them, and
+  // while a session runs). While answering, the keyboard is pinned at the bottom (`footer`) with a
+  // quiet Stop above it; results bring their own Try again. The chips hide while a session runs.
+  const chipList = (
+    <>
+      {!learnMode ? (
+        <SettingChip Icon={ProgressionIcon} label="Progressions" value={`${pool.length} of ${PROGRESSIONS.length}`}>
+          <PoolHeader
+            count={pool.length}
+            total={PROGRESSIONS.length}
+            onAll={() => updateSettings({ progressionIds: PROGRESSIONS.map((p) => p.id) })}
+            onNone={() => updateSettings({ progressionIds: [] })}
+            hint="Which progressions can be picked for a round. At least one must stay selected."
+          />
+          {PROGRESSION_CATEGORIES.map((category) => (
+            <View key={category} className="gap-1.5">
+              <GroupLabel>{category}</GroupLabel>
+              <View className="flex-row flex-wrap gap-1.5">
+                {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
+                  const selected = settings.progressionIds.includes(p.id);
+                  return (
+                    <Pill
+                      key={p.id}
+                      on={selected}
+                      label={p.name}
+                      onPress={() =>
+                        updateSettings({
+                          progressionIds: selected ? settings.progressionIds.filter((x) => x !== p.id) : [...settings.progressionIds, p.id],
+                        })
+                      }
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+          <SwitchRow
+            label="Drill every progression"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            hint="Plays each selected progression once, in shuffled order; any you don't get fully right come back later in a new key."
+          />
+        </SettingChip>
+      ) : null}
+
+      <SettingChip
+        Icon={PencilIcon}
+        label="Answer"
+        value={
+          answerMode === 'numerals'
+            ? typeQualities
+              ? 'Numerals + qualities'
+              : 'Numerals only'
+            : typeQualities
+              ? 'Chord symbols'
+              : 'Chord roots only'
+        }
+      >
+        <Field label="Answer with" hint="Type the progression as Roman numerals (ii V I), or as chord names in the key that was played (Dm G C).">
+          <Segmented label="Answer with" value={answerMode} options={ANSWER_MODES} onChange={(v) => updateSettings({ answerMode: v })} />
+        </Field>
+        <Field label="How to write it">
+          <SheetText>{answerHowTo}</SheetText>
+        </Field>
+        <SwitchRow
+          label="Type chord qualities"
+          checked={typeQualities}
+          onChange={(v) => updateSettings({ typeQualities: v })}
+          hint={
+            answerMode === 'numerals'
+              ? 'On: each numeral needs its quality too (ii7, V7, I^7, iiø7). Off: just the numerals — upper case for major, lower case for minor.'
+              : 'On: each chord needs its full symbol (D-7, G7, C^7). Off: just the roots, with a minor sign (D-) where the chord is minor.'
+          }
+        />
+        {answerMode === 'chords' ? (
+          <Field label="Accidentals" hint="How sharps and flats are spelled in the given root and revealed chords, e.g. F# vs Gb.">
+            <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+          </Field>
+        ) : null}
+      </SettingChip>
+
+      <SettingChip Icon={NoteIcon} label="Key & sound" value={`${keyLabel} · ${register.label}`}>
+        <Field label="Key" hint="A new random key every round, or always the same one.">
+          <PillChoice label="Key" value={keyChoice} options={KEY_OPTIONS} onChange={(v) => updateSettings({ keyChoice: v })} />
+        </Field>
+        <Field label="Register" hint="How high or low the chords sit.">
+          <PillChoice label="Register" value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
+        </Field>
+        <SwitchRow
+          label="Play the key first"
+          checked={playKeyFirst}
+          onChange={(v) => updateSettings({ playKeyFirst: v })}
+          hint="Plays the key's tonic chord, then a beat of rest, before the progression — handy for one that doesn't start on I."
+        />
+        <SliderField
+          label="Chord length"
+          value={chordSeconds}
+          unit=" s"
+          min={MIN_CHORD_SECONDS}
+          max={MAX_CHORD_SECONDS}
+          step={0.1}
+          onChange={(v) => updateSettings({ chordSeconds: Math.round(v * 10) / 10 })}
+          hint="How long each chord lasts before the next — shorter is faster and harder."
+        />
+        <Field label="Playback style" hint="Whether each chord's notes play all at once or as a quick rolled arpeggio.">
+          <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
+        </Field>
+        <Field label="Tone" hint="Which sound plays the chords.">
+          <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+        <SwitchRow
+          label="Sound feedback"
+          checked={soundFeedback}
+          onChange={(v) => updateSettings({ soundFeedback: v })}
+          hint="A click each second of the countdown, plus a click the instant a round is graded."
+        />
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
+        <SliderField
+          label="Max time to answer"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={1}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint="How long you have to enter and submit an answer (counting while it plays) before it's graded as typed."
+        />
+        <SliderField
+          label="Time between rounds"
+          value={advanceDelayMs / 1000}
+          unit=" s"
+          min={MIN_ADVANCE_DELAY_MS / 1000}
+          max={MAX_ADVANCE_DELAY_MS / 1000}
+          step={0.25}
+          onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+          hint="How long the revealed answer stays on screen before the next progression plays."
+        />
+        {!drillMode && !learnMode ? (
+          <SliderField
+            label="Number of rounds"
+            value={roundCount}
+            min={MIN_ROUND_COUNT}
+            max={MAX_ROUND_COUNT}
+            step={1}
+            onChange={(v) => updateSettings({ roundCount: v })}
+            hint="How many progressions make up one session."
+          />
+        ) : null}
+      </SettingChip>
+    </>
   );
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Guess the Progression' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-5 py-3">
-          {/* Hidden while a session runs, so the round has the screen to itself. */}
-          {!running ? (
-            <View className="flex-row items-center justify-between">
-              <ModeSwitch
-                value={learnMode ? 'learn' : 'practice'}
-                options={[
-                  { value: 'practice', label: 'Practice' },
-                  { value: 'learn', label: 'Learn' },
-                ]}
-                onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
-              />
-              <Pressable
-                onPress={() => setOptionsOpen(true)}
-                hitSlop={8}
-                accessibilityLabel="Options"
-                className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-                style={{ backgroundColor: colors.surface }}
-              >
-                <SlidersIcon color={colors.foreground} size={18} />
-                <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
-                  Options
-                </Text>
-              </Pressable>
-            </View>
-          ) : activeLevel !== null ? (
-            <View className="items-center">
-              <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.accent}1f` }}>
-                <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
-                  Level {activeLevel + 1} · {learn.levels[activeLevel].title}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          <View className="flex-1 items-center justify-center gap-4">
-            {learnMode && !running ? (
-              <LearningPath track="progression" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
-            ) : showingSummary && summary ? (
-              <ResultsCard
-                score={score}
-                total={summary.results.length}
-                elapsed={lastElapsedMs}
-                bestMs={bestMs}
-                isNewBest={isNewBest}
-                tallies={(['correct', 'partial', 'incorrect'] as const).map((g) => ({ grade: g, count: tally(g) }))}
-                chips={summary.rounds.map((r, i) => ({
-                  label:
-                    r.progression.chords.map((_, j) => answerFor(r, j)).join(' ') +
-                    (summary.results[i] !== 'correct' && summary.answers[i] ? ` (you: ${summary.answers[i]})` : ''),
-                  grade: summary.results[i],
-                }))}
-                onAgain={() => start(lastMode)}
-                onClose={() => setSummary(null)}
-              />
-            ) : (
-              <>
-                {status && running ? (
-                  <View className="items-center gap-0.5">
-                    {label('NEXT PROGRESSION IN')}
-                    <CountdownText active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} color={GRADE_COLOR[status]} />
-                  </View>
-                ) : null}
-
-                <CountdownRing active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs}>
-                  <Text
-                    className="font-inter-bold text-center text-4xl font-bold tabular-nums"
-                    style={{
-                      color: glow ?? colors.foreground,
-                      textShadowColor: glow ?? 'transparent',
-                      textShadowRadius: glow ? 10 : 0,
-                      textShadowOffset: { width: 0, height: 0 },
-                    }}
-                  >
-                    {centerLabel}
-                  </Text>
-                </CountdownRing>
-
-                {running && round ? (
-                  <>
-                    <View className="flex-row flex-wrap justify-center gap-1.5">
-                      {round.progression.chords.map((_, i) => {
-                        const mark = marks?.[i];
-                        const token = typedTokens[i];
-                        const shown = status ? answerFor(round, i) : token ? prettyToken(token, answerMode) : '?';
-                        return (
-                          <View
-                            key={i}
-                            className="items-center rounded-xl px-2.5 py-2"
-                            style={{
-                              minWidth: 54,
-                              backgroundColor: playingIndex === i ? `${colors.accent}33` : colors.surface,
-                              borderWidth: 2,
-                              borderColor: playingIndex === i ? colors.accent : 'transparent',
-                            }}
-                          >
-                            <Text
-                              className="font-inter-bold text-lg font-bold"
-                              style={{ color: status ? (mark ? GRADE_COLOR.correct : GRADE_COLOR.incorrect) : token ? colors.foreground : colors.muted }}
-                            >
-                              {shown}
-                            </Text>
-                            {status && !mark && token ? (
-                              <Text className="font-inter text-[11px]" style={{ color: colors.muted, textDecorationLine: 'line-through' }}>
-                                {prettyToken(token, answerMode)}
-                              </Text>
-                            ) : null}
-                          </View>
-                        );
-                      })}
-                    </View>
-                    <Text className="font-inter text-center text-xs" style={{ color: colors.muted }}>
-                      {status
-                        ? `Key of ${pcLabel(round.tonicPc, accidentalStyle, 0)}${round.progression.minor ? ' minor' : ''} · ${round.progression.name}`
-                        : answerMode === 'chords'
-                          ? `Starts on ${firstChordRoot(round, accidentalStyle)}`
-                          : `${round.progression.chords.length} chords`}
-                    </Text>
-                    <Pressable onPress={() => void playProgression(round)} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
-                      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-                        ▶ Replay
-                      </Text>
-                    </Pressable>
-                  </>
-                ) : null}
-
-                {running && progress ? (
-                  <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
-                    Progression {progress.index} of {progress.total} · <ElapsedTimer active={running} startedAt={sessionStartedAt} />
-                  </Text>
-                ) : null}
-
-                {!running ? (
-                  <Text className="font-inter max-w-[300px] text-center text-xs" style={{ color: colors.muted }}>
-                    {answerMode === 'numerals'
-                      ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
-                      : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`}
-                  </Text>
-                ) : null}
-              </>
-            )}
-
-            {error ? (
-              <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
-                {error}
+    <ToolScreen
+      title="Guess the Progression"
+      mode={
+        !running ? (
+          <Segmented
+            onPage
+            label="Mode"
+            value={learnMode ? 'learn' : 'practice'}
+            onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
+            options={[
+              { value: 'practice', label: 'Practice' },
+              { value: 'learn', label: 'Learn' },
+            ]}
+          />
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: e.progression.name, counts: e.counts }))}
+              shedLabel="Shed weak progressions"
+              emptyText="No struggles tracked yet — a progression you don't get fully right adds it here."
+              running={running}
+              onShed={() => start('weak')}
+              onClear={() => {
+                statsRef.current = {};
+                updateSettings({ progressionStats: {} });
+              }}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      footer={
+        answering ? (
+          <View>
+            {/* How to write the answer, beside the keyboard, in the first round only. */}
+            {progress?.index === 1 ? (
+              <Text className="font-ui px-4 pb-2 text-center text-xs leading-4" style={{ color: colors.muted }}>
+                {answerHowTo}
               </Text>
             ) : null}
-
-            {!showingSummary && !answering ? (
-              <Pressable
-                onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
-                className="min-w-[200px] items-center rounded-full py-3.5"
-                style={{ backgroundColor: running ? colors.surface : colors.accent }}
-              >
-                <Text className="font-inter-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
-                  {running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
-                </Text>
-              </Pressable>
-            ) : null}
-            {answering ? (
-              <Pressable onPress={endSession} hitSlop={8}>
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
-                  Stop session
-                </Text>
-              </Pressable>
-            ) : null}
+            <ProgressionAnswerKeyboard
+              mode={answerMode}
+              onInsert={insertText}
+              onBackspace={() => setTypedValue(typedRef.current.slice(0, -1))}
+              onClear={() => setTypedValue('')}
+              onGiveUp={gradeAndReveal}
+              onSubmit={gradeAndReveal}
+            />
           </View>
-        </View>
-        {answering ? (
-          <ProgressionAnswerKeyboard
-            mode={answerMode}
-            onInsert={insertText}
-            onBackspace={() => setTypedValue(typedRef.current.slice(0, -1))}
-            onClear={() => setTypedValue('')}
-            onGiveUp={gradeAndReveal}
-            onSubmit={gradeAndReveal}
+        ) : null
+      }
+      action={
+        !answering && (!showingSummary || learnMode) ? (
+          <BigButton
+            label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
+            secondary={running}
+            onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
           />
-        ) : null}
-      </SafeAreaView>
+        ) : null
+      }
+      chips={!running ? chipList : null}
+    >
+
+
+      {learnMode && !running ? (
+        <LearningPath track="progression" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
+      ) : showingSummary && summary ? (
+        <ResultsPanel
+          score={score}
+          total={summary.results.length}
+          elapsed={lastElapsedMs}
+          bestMs={bestMs}
+          isNewBest={isNewBest}
+          grades={(['correct', 'partial', 'incorrect'] as const).map((g) => ({ grade: g, count: tally(g) }))}
+          tags={summary.rounds.map((r, i) => ({
+            label:
+              r.progression.chords.map((_, j) => answerFor(r, j)).join(' ') +
+              (summary.results[i] !== 'correct' && summary.answers[i] ? ` · you: ${summary.answers[i]}` : ''),
+            grade: summary.results[i],
+          }))}
+          onAgain={() => start(lastMode)}
+          onClose={() => setSummary(null)}
+        />
+      ) : (
+        <View className="w-full items-center gap-3">
+          {activeLevel !== null && running ? (
+            <LevelLabel>
+              Level {activeLevel + 1} · {learn.levels[activeLevel].title}
+            </LevelLabel>
+          ) : null}
+          <QuizRing size={running ? 112 : IDLE_RING} running={running} timer={noteTimer}>
+            {running ? (
+              <Text className="font-ui-bold text-center text-3xl font-bold tabular-nums" style={{ color: glow ?? colors.foreground }}>
+                {centerLabel}
+              </Text>
+            ) : (
+              <IdleStatus history={history} />
+            )}
+          </QuizRing>
+          {/* How to write the answer is in the Answer chip, and beside the keyboard in round 1. */}
+          {!running && !history.length ? <IdleHint>You&apos;ll hear a few chords, then write them down.</IdleHint> : null}
+
+          {running && round ? (
+            <>
+              <View className="flex-row flex-wrap justify-center gap-1.5">
+                {round.progression.chords.map((_, i) => {
+                  const mark = marks?.[i];
+                  const token = typedTokens[i];
+                  const shown = status ? answerFor(round, i) : token ? prettyToken(token, answerMode) : '?';
+                  const color = status ? (mark ? GRADE_COLOR.correct : GRADE_COLOR.incorrect) : undefined;
+                  return (
+                    // Right / wrong tints the box; the chord that's playing gets an accent edge.
+                    <View
+                      key={i}
+                      className="h-[60px] items-center justify-center rounded-lg px-2.5"
+                      style={{
+                        minWidth: 56,
+                        backgroundColor: color ? withAlpha(color, 0.12) : colors.surface,
+                        borderWidth: 2,
+                        borderColor: playingIndex === i ? colors.accent : (color ?? 'transparent'),
+                      }}
+                    >
+                      <Text className="font-ui-semibold text-lg font-semibold" style={{ color: color ?? (token ? colors.foreground : colors.muted) }}>
+                        {shown}
+                      </Text>
+                      {status && !mark && token ? (
+                        <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+                          You: {prettyToken(token, answerMode)}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+              <FeedbackLine>
+                <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+                  {status ? (
+                    <>
+                      Key of {pcLabel(round.tonicPc, accidentalStyle, 0)}
+                      {round.progression.minor ? ' minor' : ''} · {round.progression.name} · next in{' '}
+                    </>
+                  ) : answerMode === 'chords' ? (
+                    `${round.progression.chords.length} chords · starts on ${firstChordRoot(round, accidentalStyle)}`
+                  ) : (
+                    `${round.progression.chords.length} chords`
+                  )}
+                </Text>
+                {status ? <CountdownLabel active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} textClassName="font-ui text-xs tabular-nums" /> : null}
+              </FeedbackLine>
+              <Button label="Replay" kind="secondary" Icon={PlayIcon} onPress={() => void playProgression(round)} />
+            </>
+          ) : null}
+
+          {running && progress ? (
+            <View className="flex-row items-center">
+              <MutedText className="tabular-nums">
+                Progression {progress.index} of {progress.total} ·{' '}
+              </MutedText>
+              <ElapsedTimer active={running} startedAt={sessionStartedAt} />
+            </View>
+          ) : null}
+          {/* While answering, the keyboard's at the bottom: a quiet Stop. */}
+          {answering ? <TextButton label="Stop" onPress={endSession} /> : null}
+        </View>
+      )}
+
+      {error ? (
+        <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+          {error}
+        </Text>
+      ) : null}
+
+
 
       {learn.result ? (
         <LevelComplete
@@ -715,230 +893,7 @@ function GuessTheProgressionScreen() {
           onClose={learn.clearResult}
         />
       ) : null}
-
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Guess the Progression options"
-        tabs={[
-          ...(learnMode
-            ? []
-            : [
-                {
-                  key: 'progressions',
-                  label: 'Progressions',
-                  content: () => (
-                    <>
-                      <View className="flex-row items-center justify-between">
-                        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-                          {pool.length} of {PROGRESSIONS.length} selected
-                        </Text>
-                        <View className="flex-row gap-3">
-                          <Pressable onPress={() => updateSettings({ progressionIds: PROGRESSIONS.map((p) => p.id) })}>
-                            <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
-                              All
-                            </Text>
-                          </Pressable>
-                          <Pressable onPress={() => updateSettings({ progressionIds: [] })}>
-                            <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.muted }}>
-                              None
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                      <Hint>Which progressions can be picked for a round. At least one must stay selected.</Hint>
-                      {PROGRESSION_CATEGORIES.map((category) => (
-                        <View key={category} className="gap-1.5">
-                          {label(category)}
-                          <View className="flex-row flex-wrap gap-1.5">
-                            {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
-                              const selected = settings.progressionIds.includes(p.id);
-                              return (
-                                <Pressable
-                                  key={p.id}
-                                  accessibilityLabel={p.name}
-                                  onPress={() =>
-                                    updateSettings({
-                                      progressionIds: selected ? settings.progressionIds.filter((x) => x !== p.id) : [...settings.progressionIds, p.id],
-                                    })
-                                  }
-                                  className="rounded-full px-3 py-1.5"
-                                  style={{ backgroundColor: selected ? colors.accent : colors.surface }}
-                                >
-                                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
-                                    {p.name}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      ))}
-                    </>
-                  ),
-                },
-              ]),
-          {
-            key: 'answer',
-            label: 'Answer',
-            content: () => (
-              <>
-                <View className="gap-1.5">
-                  {label('ANSWER WITH')}
-                  <Dropdown value={answerMode} options={ANSWER_MODES} onChange={(v) => updateSettings({ answerMode: v })} />
-                  <Hint>Roman numerals (relative to the key) or the actual chord names, starting from the first chord&apos;s root.</Hint>
-                </View>
-                <SwitchRow
-                  label="Type chord qualities"
-                  checked={typeQualities}
-                  onChange={(v) => updateSettings({ typeQualities: v })}
-                  hint={
-                    answerMode === 'numerals'
-                      ? 'On: each numeral needs its quality too (ii7, V7, I^7, iiø7). Off: just the numerals — upper case for major, lower case for minor.'
-                      : 'On: each chord needs its full symbol (D-7, G7, C^7). Off: just the roots, with a minor sign (D-) where the chord is minor.'
-                  }
-                />
-                {answerMode === 'chords' ? (
-                  <View className="gap-1.5">
-                    {label('ACCIDENTALS')}
-                    <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-                    <Hint>How sharps and flats are spelled in the given root and revealed chords, e.g. F# vs Gb.</Hint>
-                  </View>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'key',
-            label: 'Key',
-            content: () => (
-              <>
-                <View className="gap-1.5">
-                  {label('KEY')}
-                  <Dropdown value={keyChoice} options={KEY_OPTIONS} onChange={(v) => updateSettings({ keyChoice: v })} />
-                  <Hint>A new random key every round, or always the same one.</Hint>
-                </View>
-                <View className="gap-1.5">
-                  {label('REGISTER')}
-                  <Dropdown value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
-                  <Hint>How high or low the chords sit.</Hint>
-                </View>
-                <SwitchRow
-                  label="Play the key first"
-                  checked={playKeyFirst}
-                  onChange={(v) => updateSettings({ playKeyFirst: v })}
-                  hint="Plays the key's tonic chord, then a beat of rest, before the progression — handy for one that doesn't start on I."
-                />
-              </>
-            ),
-          },
-          {
-            key: 'timing',
-            label: 'Timing',
-            content: () => (
-              <>
-                <NumberStepper
-                  label="Max time to answer"
-                  value={roundSeconds}
-                  unit="s"
-                  min={MIN_ROUND_SECONDS}
-                  max={MAX_ROUND_SECONDS}
-                  step={1}
-                  onChange={(v) => updateSettings({ roundSeconds: v })}
-                  hint="How long you have to enter and submit an answer (counting while it plays) before it's graded as typed."
-                />
-                <NumberStepper
-                  label="Time between rounds"
-                  value={advanceDelayMs / 1000}
-                  unit="s"
-                  min={MIN_ADVANCE_DELAY_MS / 1000}
-                  max={MAX_ADVANCE_DELAY_MS / 1000}
-                  step={0.25}
-                  onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-                  hint="How long the revealed answer stays on screen before the next progression plays."
-                />
-                <SwitchRow
-                  label="Sound feedback"
-                  checked={soundFeedback}
-                  onChange={(v) => updateSettings({ soundFeedback: v })}
-                  hint="A click each second of the countdown, plus a click the instant a round is graded."
-                />
-                {!learnMode ? (
-                  <SwitchRow
-                    label="Drill every progression"
-                    checked={drillMode}
-                    onChange={(v) => updateSettings({ drillMode: v })}
-                    hint="Plays each selected progression once, in shuffled order; any you don't get fully right come back later in a new key."
-                  />
-                ) : null}
-                {!drillMode && !learnMode ? (
-                  <NumberStepper
-                    label="Number of rounds"
-                    value={roundCount}
-                    unit=""
-                    min={MIN_ROUND_COUNT}
-                    max={MAX_ROUND_COUNT}
-                    step={1}
-                    onChange={(v) => updateSettings({ roundCount: v })}
-                    hint="How many progressions make up one session."
-                  />
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound',
-            content: () => (
-              <>
-                <NumberStepper
-                  label="Chord length"
-                  value={chordSeconds}
-                  unit="s"
-                  min={MIN_CHORD_SECONDS}
-                  max={MAX_CHORD_SECONDS}
-                  step={0.1}
-                  onChange={(v) => updateSettings({ chordSeconds: Math.round(v * 10) / 10 })}
-                  hint="How long each chord lasts before the next — shorter is faster and harder."
-                />
-                <View className="gap-1.5">
-                  {label('PLAYBACK STYLE')}
-                  <Dropdown value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
-                  <Hint>Whether each chord&apos;s notes play all at once or as a quick rolled arpeggio.</Hint>
-                </View>
-                <View className="gap-1.5">
-                  {label('TONE')}
-                  <Dropdown value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
-                  <Hint>Which sound plays the chords — real recorded piano or Rhodes.</Hint>
-                </View>
-              </>
-            ),
-          },
-          {
-            key: 'progress',
-            label: 'Progress',
-            content: () => (
-              <ProgressTab
-                bestMs={bestMs}
-                history={matchingHistory}
-                onClearHistory={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
-                weak={weakEntries.map((e) => ({ key: e.key, label: e.progression.name, counts: e.counts }))}
-                weakNoun="progressions"
-                running={running}
-                onShedWeak={() => {
-                  setOptionsOpen(false);
-                  start('weak');
-                }}
-                onClearStats={() => {
-                  statsRef.current = {};
-                  updateSettings({ progressionStats: {} });
-                }}
-              />
-            ),
-          },
-        ]}
-      />
-    </View>
+    </ToolScreen>
   );
 }
 

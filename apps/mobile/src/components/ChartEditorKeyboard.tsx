@@ -36,7 +36,7 @@ export function ChartEditorKeyboard({
 }) {
   const { colors } = useAppTheme();
   const text = (t: string, size = 18) => (
-    <Text className="font-inter-semibold font-semibold" style={{ fontSize: size, color: colors.foreground }}>
+    <Text className="font-ui-semibold font-semibold" style={{ fontSize: size, color: colors.foreground }}>
       {t}
     </Text>
   );
@@ -73,7 +73,7 @@ export function ChartEditorKeyboard({
         <Key onPress={() => onInsert('+')}>{quality('+')}</Key>
         <Key onPress={() => onInsert('/')}>{text('/', 19)}</Key>
         <Key flex={2.4} onPress={() => onInsert(' ')} accessibilityLabel="Space — next chord in this bar">
-          <Text className="font-inter text-xs" style={{ color: colors.muted }}>
+          <Text className="font-ui text-xs" style={{ color: colors.muted }}>
             space
           </Text>
         </Key>
@@ -97,7 +97,7 @@ export function ChartEditorKeyboard({
           className="items-center justify-center rounded-lg"
           style={{ flex: 1.8, height: 46, backgroundColor: colors.accent }}
         >
-          <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
             Next
           </Text>
         </Pressable>
@@ -163,16 +163,16 @@ function ToolKey({
         <Text style={{ fontFamily: 'Petaluma', fontSize: 18, lineHeight: 22, color: fg }}>{glyph}</Text>
       ) : boxed ? (
         <View style={{ borderWidth: 1.5, borderColor: fg, borderRadius: 3, paddingHorizontal: 3 }}>
-          <Text numberOfLines={1} className="font-inter-bold text-xs font-bold" style={{ color: fg }}>
+          <Text numberOfLines={1} className="font-ui-bold text-xs font-bold" style={{ color: fg }}>
             {label}
           </Text>
         </View>
       ) : (
-        <Text numberOfLines={1} className="font-inter-bold text-sm font-bold" style={{ color: fg }}>
+        <Text numberOfLines={1} className="font-ui-bold text-sm font-bold" style={{ color: fg }}>
           {label}
         </Text>
       )}
-      <Text numberOfLines={1} style={{ fontSize: 8, color: on ? colors['accent-foreground'] : colors.muted }} className="font-inter">
+      <Text numberOfLines={1} style={{ fontSize: 8, color: on ? colors['accent-foreground'] : colors.muted }} className="font-ui">
         {caption}
       </Text>
     </Pressable>

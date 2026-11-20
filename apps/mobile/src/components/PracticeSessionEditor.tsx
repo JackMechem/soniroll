@@ -5,17 +5,17 @@ import {
   type PracticeSession,
   type Segment,
 } from '@jam-practice/core/practiceTimer';
-import { Fragment } from 'react';
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Fragment, type ReactNode } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { PlusIcon, TrashIcon } from '@/components/icons';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@/components/icons';
+import { OptionGroup, Segmented } from '@/components/tool/reward';
+import { OptionLabel } from '@/components/tool/rhythm';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** The session editor's own working copy — always keeps both `segments` and `pomodoro` around
     regardless of `type`, so switching the type toggle back and forth doesn't throw away whichever
-    half isn't currently shown. Native sibling of the `Draft` type `apps/web/components/
-    PracticeTimer.tsx` keeps inline — pulled into its own exported type here since the mobile
-    screen and this editor are two separate files. */
+    half isn't currently shown. */
 export type Draft = {
   /** `null` means this is a brand-new, never-saved session — Save creates instead of updates. */
   id: string | null;
@@ -39,13 +39,33 @@ export function blankDraft(): Draft {
   return { id: null, name: '', type: 'custom', segments: [newSegment()], pomodoro: { ...DEFAULT_POMODORO } };
 }
 
+const MAX_CYCLES = 24;
+
+/** How many cycle names there are slots for: one per work cycle, or, when it keeps going, one per
+    cycle in a round (names repeat after each long break). Same as the website's `PomodoroEditor`. */
+function nameSlots(config: PomodoroConfig) {
+  return config.totalCycles ?? config.cyclesBeforeLongBreak;
+}
+
+/** Keeps `workTitles` to exactly the cycles that exist and drops trailing blanks (the website's
+    `normalizePomodoro`). */
+function normalizePomodoro(config: PomodoroConfig): PomodoroConfig {
+  const titles = config.workTitles.slice(0, nameSlots(config));
+  while (titles.length && !titles[titles.length - 1].trim()) titles.pop();
+  return { ...config, workTitles: titles };
+}
+
+function formatTotal(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
+}
+
 /**
- * The create/edit form for a saved session — a native port of `apps/web/components/
- * PracticeTimer.tsx`'s own inline editor, pulled into its own file (the same "a tool's secondary
- * editor gets its own component" split `StructureEditor.tsx` already established for Metronome).
- * Reorder buttons (↑/↓) instead of drag-to-reorder — simplest to get right reliably without a real
- * device to iterate drag-gesture math against, same reasoning as the web version's own original
- * (pre-drag) segment list.
+ * The create/edit page for a saved session, like the website's session editor
+ * (`apps/web/components/PracticeTimer.tsx` and `PomodoroEditor.tsx`): a name, Custom / Pomodoro,
+ * then either the list of segments (each with its minutes, moved with ↑ ↓) or the Pomodoro's timing
+ * cards, cycles, one optional name per cycle and a preview of the run; Save and Cancel at the end.
  */
 export function PracticeSessionEditor({
   draft,
@@ -60,7 +80,7 @@ export function PracticeSessionEditor({
   onCancel: () => void;
   saving?: boolean;
 }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
 
   function updateSegment(index: number, patch: Partial<Segment>) {
     onChange({ ...draft, segments: draft.segments.map((s, i) => (i === index ? { ...s, ...patch } : s)) });
@@ -79,270 +99,336 @@ export function PracticeSessionEditor({
     onChange({ ...draft, segments: segments.length > 0 ? segments : [newSegment()] });
   }
 
-  function updatePomodoro(patch: Partial<PomodoroConfig>) {
-    onChange({ ...draft, pomodoro: { ...draft.pomodoro, ...patch } });
-  }
-
-  function updateWorkTitle(index: number, title: string) {
-    const workTitles = draft.pomodoro.workTitles.map((t, i) => (i === index ? title : t));
-    updatePomodoro({ workTitles });
-  }
-
-  function moveWorkTitle(index: number, dir: -1 | 1) {
-    const titles = draft.pomodoro.workTitles;
-    const target = index + dir;
-    if (target < 0 || target >= titles.length) return;
-    const workTitles = [...titles];
-    [workTitles[index], workTitles[target]] = [workTitles[target], workTitles[index]];
-    updatePomodoro({ workTitles });
-  }
-
-  function removeWorkTitle(index: number) {
-    updatePomodoro({ workTitles: draft.pomodoro.workTitles.filter((_, i) => i !== index) });
-  }
+  const input = 'font-ui h-11 rounded-lg px-3 text-[15px]';
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} keyboardShouldPersistTaps="handled">
-      <Text className="text-lg font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 20 }} keyboardShouldPersistTaps="handled">
+      <Text className="font-ui-bold text-xl font-bold" style={{ color: colors.foreground }}>
         {draft.id === null ? 'New session' : 'Edit session'}
       </Text>
 
-      <Field label="Name">
+      <OptionGroup title="Name">
         <TextInput
           value={draft.name}
           onChangeText={(name) => onChange({ ...draft, name })}
           placeholder="e.g. Morning warmup"
           placeholderTextColor={colors.muted}
-          className="rounded-xl px-3 py-2.5 text-base font-inter"
-          style={{ backgroundColor: colors.surface, color: colors.foreground }}
+          accessibilityLabel="Session name"
+          className={input}
+          style={{ backgroundColor: derived.fill, color: colors.foreground }}
         />
-      </Field>
+      </OptionGroup>
 
-      <View className="flex-row gap-2">
-        {(['custom', 'pomodoro'] as const).map((type) => {
-          const selected = draft.type === type;
-          return (
-            <Pressable
-              key={type}
-              onPress={() => onChange({ ...draft, type })}
-              className="flex-1 items-center rounded-xl py-2.5"
-              style={{ backgroundColor: selected ? colors.accent : colors.surface }}
-            >
-              <Text
-                className="text-sm font-bold font-inter-bold"
-                style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}
-              >
-                {type === 'custom' ? 'Custom' : 'Pomodoro'}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View className="gap-2.5">
+        <OptionLabel
+          title="Type"
+          hint="Custom chains named timers back to back, in order. Pomodoro alternates work intervals with breaks automatically, with a longer break every few cycles."
+        />
+        <Segmented
+          onPage
+          label="Session type"
+          value={draft.type}
+          onChange={(type) => onChange({ ...draft, type })}
+          options={[
+            { value: 'custom', label: 'Custom' },
+            { value: 'pomodoro', label: 'Pomodoro' },
+          ]}
+        />
       </View>
-      <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
-        Custom chains named timers back to back, in order. Pomodoro alternates work intervals with
-        breaks automatically, with a longer break every few cycles.
-      </Text>
 
       {draft.type === 'custom' ? (
-        <View className="gap-2">
+        <OptionGroup title="Segments">
           {draft.segments.map((segment, i) => (
-            <View key={segment.id} className="flex-row items-center gap-1.5">
+            <View key={segment.id} className="gap-2 rounded-xl p-2" style={{ backgroundColor: colors.surface }}>
               <TextInput
                 value={segment.title}
                 onChangeText={(title) => updateSegment(i, { title })}
                 placeholder="e.g. Scales"
                 placeholderTextColor={colors.muted}
-                className="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm font-inter"
-                style={{ backgroundColor: colors.surface, color: colors.foreground }}
+                accessibilityLabel="Segment name"
+                className={input}
+                style={{ backgroundColor: colors.background, color: colors.foreground }}
               />
-              <MinutesStepper
-                value={segment.minutes}
-                min={1}
-                max={180}
-                onChange={(minutes) => updateSegment(i, { minutes })}
-              />
-              <RowButton onPress={() => moveSegment(i, -1)} disabled={i === 0} label="Move up">
-                ↑
-              </RowButton>
-              <RowButton onPress={() => moveSegment(i, 1)} disabled={i === draft.segments.length - 1} label="Move down">
-                ↓
-              </RowButton>
-              <RowButton onPress={() => removeSegment(i)} label="Remove segment" danger>
-                <TrashIcon color={colors.danger} size={14} />
-              </RowButton>
+              <View className="flex-row items-center gap-1">
+                <MinutesStepper value={segment.minutes} min={1} max={180} label={`${segment.title || 'Segment'} minutes`} onChange={(minutes) => updateSegment(i, { minutes })} />
+                <Text className="font-ui ml-1 text-xs" style={{ color: colors.muted }}>
+                  min
+                </Text>
+                <View className="flex-1" />
+                <RowButton onPress={() => moveSegment(i, -1)} disabled={i === 0} label="Move up">
+                  <ArrowUpIcon color={colors.muted} size={18} />
+                </RowButton>
+                <RowButton onPress={() => moveSegment(i, 1)} disabled={i === draft.segments.length - 1} label="Move down">
+                  <ArrowDownIcon color={colors.muted} size={18} />
+                </RowButton>
+                {/* Set apart, so it isn't hit by mistake. */}
+                <View className="w-2" />
+                <RowButton onPress={() => removeSegment(i)} label="Remove segment">
+                  <TrashIcon color={colors.danger} size={18} />
+                </RowButton>
+              </View>
             </View>
           ))}
           <AddRowButton label="Add segment" onPress={() => onChange({ ...draft, segments: [...draft.segments, newSegment()] })} />
-        </View>
+        </OptionGroup>
       ) : (
-        <View className="gap-3">
-          <LabeledStepper label="Work minutes" value={draft.pomodoro.workMinutes} min={1} max={180} onChange={(workMinutes) => updatePomodoro({ workMinutes })} />
-
-          <View className="gap-1.5 border-t pt-3" style={{ borderColor: colors['surface-hover'] }}>
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-              Cycle names (optional)
-            </Text>
-            <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
-              Names each work cycle in order — e.g. &quot;Scales&quot;, &quot;Chords&quot;,
-              &quot;Improv&quot; — repeating if there are more cycles than names. Leave empty to
-              just show &quot;Work&quot; every cycle. Breaks aren&apos;t individually nameable.
-            </Text>
-            {draft.pomodoro.workTitles.map((title, i) => (
-              <View key={i} className="flex-row items-center gap-1.5">
-                <TextInput
-                  value={title}
-                  onChangeText={(t) => updateWorkTitle(i, t)}
-                  placeholder={`Cycle ${i + 1}`}
-                  placeholderTextColor={colors.muted}
-                  className="min-w-0 flex-1 rounded-xl px-3 py-2 text-sm font-inter"
-                  style={{ backgroundColor: colors.surface, color: colors.foreground }}
-                />
-                <RowButton onPress={() => moveWorkTitle(i, -1)} disabled={i === 0} label="Move up">
-                  ↑
-                </RowButton>
-                <RowButton onPress={() => moveWorkTitle(i, 1)} disabled={i === draft.pomodoro.workTitles.length - 1} label="Move down">
-                  ↓
-                </RowButton>
-                <RowButton onPress={() => removeWorkTitle(i)} label="Remove cycle name" danger>
-                  <TrashIcon color={colors.danger} size={14} />
-                </RowButton>
-              </View>
-            ))}
-            <AddRowButton
-              label="Add cycle name"
-              onPress={() => updatePomodoro({ workTitles: [...draft.pomodoro.workTitles, ''] })}
-            />
-          </View>
-
-          <LabeledStepper
-            label="Short break minutes"
-            value={draft.pomodoro.shortBreakMinutes}
-            min={1}
-            max={60}
-            onChange={(shortBreakMinutes) => updatePomodoro({ shortBreakMinutes })}
-          />
-          <LabeledStepper
-            label="Long break minutes"
-            value={draft.pomodoro.longBreakMinutes}
-            min={1}
-            max={60}
-            onChange={(longBreakMinutes) => updatePomodoro({ longBreakMinutes })}
-          />
-          <LabeledStepper
-            label="Cycles before long break"
-            value={draft.pomodoro.cyclesBeforeLongBreak}
-            min={1}
-            max={12}
-            onChange={(cyclesBeforeLongBreak) => updatePomodoro({ cyclesBeforeLongBreak })}
-          />
-          <View className="flex-row items-center justify-between gap-2 border-t pt-3" style={{ borderColor: colors['surface-hover'] }}>
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-              Keep going indefinitely
-            </Text>
-            <Switch
-              value={draft.pomodoro.totalCycles === null}
-              onValueChange={(checked) => updatePomodoro({ totalCycles: checked ? null : DEFAULT_POMODORO.totalCycles })}
-              trackColor={{ false: colors.background, true: colors.accent }}
-            />
-          </View>
-          {draft.pomodoro.totalCycles !== null ? (
-            <LabeledStepper
-              label="Total work cycles"
-              value={draft.pomodoro.totalCycles}
-              min={1}
-              max={99}
-              onChange={(totalCycles) => updatePomodoro({ totalCycles })}
-            />
-          ) : null}
-        </View>
+        <PomodoroFields config={draft.pomodoro} onChange={(pomodoro) => onChange({ ...draft, pomodoro })} />
       )}
 
       <View className="flex-row gap-2 pt-2">
-        <Pressable
-          onPress={onSave}
-          disabled={saving}
-          className="flex-1 items-center rounded-full py-3"
-          style={{ backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
-        >
-          <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
-            {saving ? 'Saving…' : 'Save'}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onCancel}
-          disabled={saving}
-          className="flex-1 items-center rounded-full py-3"
-          style={{ backgroundColor: colors.surface, opacity: saving ? 0.6 : 1 }}
-        >
-          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-            Cancel
-          </Text>
-        </Pressable>
+        <EditorButton label={saving ? 'Saving…' : 'Save'} primary disabled={saving} onPress={onSave} />
+        <EditorButton label="Cancel" disabled={saving} onPress={onCancel} />
       </View>
     </ScrollView>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/** The Pomodoro half of the editor (the website's `PomodoroEditor`): everything follows from the
+    cycles — three timing cards, how many cycles (or keep going) and how often the long break comes,
+    then one optional name per cycle, and a preview of the run in order. */
+function PomodoroFields({ config, onChange }: { config: PomodoroConfig; onChange: (config: PomodoroConfig) => void }) {
+  const { colors } = useAppTheme();
+  const update = (patch: Partial<PomodoroConfig>) => onChange(normalizePomodoro({ ...config, ...patch }));
+  const forever = config.totalCycles === null;
+  const slots = nameSlots(config);
+  const every = config.cyclesBeforeLongBreak;
+
+  function setName(i: number, name: string) {
+    const titles = Array.from({ length: slots }, (_, j) => (j === i ? name : (config.workTitles[j] ?? '')));
+    update({ workTitles: titles });
+  }
+
+  const cycles = forever ? every : (config.totalCycles ?? 0);
+  const steps: { kind: 'work' | 'short' | 'long'; label: string; minutes: number }[] = [];
+  for (let i = 0; i < cycles; i++) {
+    steps.push({ kind: 'work', label: config.workTitles[i]?.trim() || 'Work', minutes: config.workMinutes });
+    const last = i === cycles - 1;
+    if (last && !forever) break;
+    const long = (i + 1) % every === 0;
+    steps.push({
+      kind: long ? 'long' : 'short',
+      label: long ? 'Long break' : 'Break',
+      minutes: long ? config.longBreakMinutes : config.shortBreakMinutes,
+    });
+  }
+  const total = steps.reduce((sum, s) => sum + s.minutes, 0);
+
+  return (
+    <>
+      <OptionGroup title="Timing">
+        <View className="flex-row gap-2">
+          <MinutesCard label="Work" value={config.workMinutes} min={1} max={180} onChange={(workMinutes) => update({ workMinutes })} />
+          <MinutesCard label="Break" value={config.shortBreakMinutes} min={1} max={60} onChange={(shortBreakMinutes) => update({ shortBreakMinutes })} />
+          <MinutesCard label="Long break" value={config.longBreakMinutes} min={1} max={60} onChange={(longBreakMinutes) => update({ longBreakMinutes })} />
+        </View>
+      </OptionGroup>
+
+      <OptionGroup title="Cycles">
+        <Segmented
+          onPage
+          label="Length"
+          value={forever ? 'forever' : 'set'}
+          onChange={(v) => update({ totalCycles: v === 'forever' ? null : Math.max(every, 4) })}
+          options={[
+            { value: 'set', label: 'Set number' },
+            { value: 'forever', label: 'Keep going' },
+          ]}
+        />
+        {!forever ? (
+          <CountRow
+            label="Work cycles"
+            value={config.totalCycles ?? 1}
+            min={1}
+            max={MAX_CYCLES}
+            suffix={config.totalCycles === 1 ? 'cycle' : 'cycles'}
+            onChange={(totalCycles) => update({ totalCycles })}
+          />
+        ) : null}
+        <CountRow
+          label="Long break every"
+          value={every}
+          min={1}
+          max={12}
+          suffix={every === 1 ? 'cycle' : 'cycles'}
+          onChange={(cyclesBeforeLongBreak) => update({ cyclesBeforeLongBreak })}
+        />
+      </OptionGroup>
+
+      <OptionGroup
+        title={forever ? `Cycle names (repeat every ${every})` : 'Cycle names'}
+        aside={
+          <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+            Optional
+          </Text>
+        }
+      >
+        {Array.from({ length: slots }, (_, i) => (
+          <View key={i} className="flex-row items-center gap-3">
+            <Text className="font-ui w-6 text-right text-sm" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+              {i + 1}
+            </Text>
+            <TextInput
+              value={config.workTitles[i] ?? ''}
+              onChangeText={(t) => setName(i, t)}
+              placeholder="Work"
+              placeholderTextColor={colors.muted}
+              accessibilityLabel={`Name for work cycle ${i + 1}`}
+              className="font-ui h-11 min-w-0 flex-1 rounded-lg px-3 text-[15px]"
+              style={{ backgroundColor: colors.surface, color: colors.foreground }}
+            />
+          </View>
+        ))}
+      </OptionGroup>
+
+      <OptionGroup
+        title="Preview"
+        aside={
+          <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+            {forever ? `${formatTotal(total)} per round` : formatTotal(total)}
+          </Text>
+        }
+      >
+        <View className="flex-row flex-wrap items-center gap-1.5">
+          {steps.map((s, i) => (
+            <View
+              key={i}
+              className="flex-row items-baseline gap-1 rounded-md px-2 py-1"
+              style={{ backgroundColor: s.kind === 'work' ? withAlpha(colors.accent, 0.15) : colors.surface }}
+            >
+              <Text
+                className="font-ui-semibold text-xs font-semibold"
+                style={{ color: s.kind === 'work' ? colors.accent : s.kind === 'long' ? colors.foreground : colors.muted }}
+              >
+                {s.label}
+              </Text>
+              <Text className="font-ui text-xs" style={{ color: s.kind === 'work' ? colors.accent : colors.muted }}>
+                {s.minutes}m
+              </Text>
+            </View>
+          ))}
+          {forever ? (
+            <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+              ↻ then repeats
+            </Text>
+          ) : null}
+        </View>
+      </OptionGroup>
+    </>
+  );
+}
+
+/** A small "label, then − number +" card; three sit side by side. */
+function MinutesCard({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void }) {
   const { colors } = useAppTheme();
   return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+    <View className="flex-1 items-center gap-1 rounded-xl px-1 py-2.5" style={{ backgroundColor: colors.surface }}>
+      <Text numberOfLines={1} className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
-      {children}
+      <View className="flex-row items-center">
+        <StepText label={`Less ${label.toLowerCase()}`} disabled={value <= min} onPress={() => onChange(Math.max(min, value - 1))}>
+          −
+        </StepText>
+        <Text className="font-ui-semibold w-9 text-center text-xl font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+          {value}
+        </Text>
+        <StepText label={`More ${label.toLowerCase()}`} disabled={value >= max} onPress={() => onChange(Math.min(max, value + 1))}>
+          +
+        </StepText>
+      </View>
+      <Text className="font-ui text-[11px]" style={{ color: colors.muted }}>
+        min
+      </Text>
     </View>
   );
 }
 
-function LabeledStepper({
+function CountRow({
   label,
   value,
   min,
   max,
   onChange,
+  suffix,
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
-  onChange: (value: number) => void;
+  onChange: (n: number) => void;
+  suffix: string;
 }) {
   const { colors } = useAppTheme();
   return (
     <View className="flex-row items-center justify-between gap-3">
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <Text className="font-ui text-sm" style={{ color: colors.muted }}>
         {label}
       </Text>
-      <MinutesStepper value={value} min={min} max={max} onChange={onChange} />
+      <View className="flex-row items-center gap-1.5">
+        <RowButton label={`Fewer: ${label}`} disabled={value <= min} onPress={() => onChange(Math.max(min, value - 1))} filled>
+          <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+            −
+          </Text>
+        </RowButton>
+        <Text className="font-ui-semibold w-20 text-center text-sm font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+          {value} {suffix}
+        </Text>
+        <RowButton label={`More: ${label}`} disabled={value >= max} onPress={() => onChange(Math.min(max, value + 1))} filled>
+          <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+            +
+          </Text>
+        </RowButton>
+      </View>
     </View>
   );
 }
 
+/** − n + for a timer's minutes, inside a timer's card. */
 function MinutesStepper({
   value,
   min,
   max,
+  label,
   onChange,
 }: {
   value: number;
   min: number;
   max: number;
+  label: string;
   onChange: (value: number) => void;
 }) {
   const { colors } = useAppTheme();
   return (
-    <View className="flex-row items-center gap-1.5">
-      <RowButton onPress={() => onChange(Math.max(min, value - 1))} disabled={value <= min} label="Decrease">
+    <View className="flex-row items-center rounded-lg" style={{ backgroundColor: colors.background }} accessibilityLabel={label}>
+      <StepText label="Fewer minutes" disabled={value <= min} onPress={() => onChange(Math.max(min, value - 1))}>
         −
-      </RowButton>
-      <Text className="min-w-[32px] text-center text-sm font-bold font-inter-bold tabular-nums" style={{ color: colors.foreground }}>
-        {value}
+      </StepText>
+      <Text className="font-ui-semibold min-w-[32px] text-center text-base font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+        {Math.round(value)}
       </Text>
-      <RowButton onPress={() => onChange(Math.min(max, value + 1))} disabled={value >= max} label="Increase">
+      <StepText label="More minutes" disabled={value >= max} onPress={() => onChange(Math.min(max, value + 1))}>
         +
-      </RowButton>
+      </StepText>
     </View>
+  );
+}
+
+function StepText({ label, disabled, onPress, children }: { label: string; disabled?: boolean; onPress: () => void; children: string }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={4}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="h-10 w-9 items-center justify-center"
+      style={{ opacity: disabled ? 0.3 : 1 }}
+    >
+      <Text className="font-ui-semibold text-lg font-semibold" style={{ color: colors.muted }}>
+        {children}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -350,46 +436,63 @@ function RowButton({
   onPress,
   disabled,
   label,
-  danger,
+  filled,
   children,
 }: {
   onPress: () => void;
   disabled?: boolean;
   label: string;
-  danger?: boolean;
-  children: React.ReactNode;
+  /** On the surface colour (for rows sitting on the page). */
+  filled?: boolean;
+  children: ReactNode;
 }) {
   const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      hitSlop={6}
+      hitSlop={4}
+      accessibilityRole="button"
       accessibilityLabel={label}
-      className="h-8 w-8 shrink-0 items-center justify-center rounded-full"
-      style={{ backgroundColor: colors.surface, opacity: disabled ? 0.4 : 1 }}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+      style={{ opacity: disabled ? 0.3 : 1, ...(filled ? { backgroundColor: colors.surface } : null) }}
     >
-      {typeof children === 'string' ? (
-        <Text className="text-sm font-bold font-inter-bold" style={{ color: danger ? colors.danger : colors.foreground }}>
-          {children}
-        </Text>
-      ) : (
-        <Fragment>{children}</Fragment>
-      )}
+      <Fragment>{children}</Fragment>
     </Pressable>
   );
 }
 
 function AddRowButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center justify-center gap-1.5 rounded-xl py-2.5"
-      style={{ backgroundColor: colors.surface }}
+      accessibilityRole="button"
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-11 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-lg"
+      style={{ backgroundColor: derived.fill }}
     >
-      <PlusIcon color={colors.muted} size={16} />
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <PlusIcon color={colors.muted} size={18} />
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function EditorButton({ label, onPress, primary, disabled }: { label: string; onPress: () => void; primary?: boolean; disabled?: boolean }) {
+  const { colors, derived } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
+      className="h-12 flex-1 items-center justify-center overflow-hidden rounded-full"
+      style={{ backgroundColor: primary ? colors.accent : derived.fill, opacity: disabled ? 0.6 : 1 }}
+    >
+      <Text className="font-ui-semibold text-base font-semibold" style={{ color: primary ? colors['accent-foreground'] : colors.foreground }}>
         {label}
       </Text>
     </Pressable>

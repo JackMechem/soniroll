@@ -100,12 +100,12 @@ export default function ChordChartView({
       >
         <View style={{ flex: 1, gap: 2 }}>
           <Text
-            className="font-inter-bold"
+            className="font-ui-bold"
             style={{ fontSize: 22, fontWeight: '700', color: colors.foreground }}
           >
             {song.title || 'Untitled'}
           </Text>
-          <Text className="font-inter" style={{ fontSize: 13, color: colors.muted }}>
+          <Text className="font-ui" style={{ fontSize: 13, color: colors.muted }}>
             {song.style}
             {song.style ? ' · ' : ''}
             {song.key} · {song.timeSignature.top}/{song.timeSignature.bottom}
@@ -115,7 +115,7 @@ export default function ChordChartView({
           <View style={{ alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
             {headerActions}
             {song.composer ? (
-              <Text className="font-inter" style={{ fontSize: 13, color: colors.muted }}>
+              <Text className="font-ui" style={{ fontSize: 13, color: colors.muted }}>
                 {formatComposer(song.composer)}
               </Text>
             ) : null}
@@ -125,7 +125,7 @@ export default function ChordChartView({
       )}
 
       {song.bars.length === 0 ? (
-        <Text className="font-inter" style={{ fontSize: 13, color: colors.muted }}>
+        <Text className="font-ui" style={{ fontSize: 13, color: colors.muted }}>
           No chords found in this chart.
         </Text>
       ) : (
@@ -265,7 +265,7 @@ export function Row({
                 paddingLeft: 4,
               }}
             >
-              <Text className="font-inter-semibold" style={{ fontSize: SMALL_LABEL_SIZE, fontWeight: '600', color: colors.muted }}>
+              <Text className="font-ui-semibold" style={{ fontSize: SMALL_LABEL_SIZE, fontWeight: '600', color: colors.muted }}>
                 {s.label}.
               </Text>
             </View>

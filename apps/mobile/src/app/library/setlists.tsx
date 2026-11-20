@@ -1,11 +1,13 @@
 import { sortByText } from '@jam-practice/core/sortText';
 import { Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
-import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import { PlusIcon } from '@/components/icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { EmptyState, IconButton, SearchField, SortControl } from '@/components/ui';
+import { LibraryHeader } from '@/components/TabHeader';
+import { PlusIcon, SetlistIcon } from '@/components/icons';
 import { SETLIST_ROW_H, SetlistRow } from '@/components/library/SetlistRow';
 import { NameDialog } from '@/components/NameDialog';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
@@ -14,10 +16,14 @@ import { useTuneLists } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 type Sort = 'recent' | 'name';
+const SORTS: { value: Sort; label: string }[] = [
+  { value: 'recent', label: 'Recent' },
+  { value: 'name', label: 'A–Z' },
+];
 
 /**
- * Every setlist — the Tunes tab's "See all" for setlists. Searchable (by setlist name or any tune
- * in it), sorted by most recently changed or A–Z; + makes a new one.
+ * The Library's Setlists tab. Searchable (by setlist name or any tune in it), sorted by most
+ * recently changed or A–Z; + (or the empty state's New setlist) makes a new one.
  */
 function SetlistsScreen() {
   const bottomSpace = useTabBarSpace();
@@ -43,41 +49,26 @@ function SetlistsScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          title: 'Setlists',
-          headerRight: () => (
-            <Pressable
-              onPress={() => setNaming(true)}
-              accessibilityLabel="New setlist"
-              className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.accent }}
-            >
-              <PlusIcon color={colors['accent-foreground']} size={22} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView edges={['top']}>
+        <LibraryHeader right={<IconButton primary Icon={PlusIcon} label="New setlist" onPress={() => setNaming(true)} />} />
+      </SafeAreaView>
       {!ready || !tunesReady ? (
         <ScreenSpinner />
+      ) : setlists.length === 0 ? (
+        <View className="px-4 pt-4">
+          <EmptyState
+            Icon={SetlistIcon}
+            title="No setlists yet"
+            body="Make one for a gig or a session, then share it by link or post it to Community."
+            action={{ label: 'New setlist', Icon: PlusIcon, onPress: () => setNaming(true) }}
+          />
+        </View>
       ) : (
         <>
-          <View className="gap-2 px-4 pb-2 pt-1">
-            <SearchField value={query} onChange={setQuery} placeholder={`Search ${setlists.length} setlists…`} />
-            <View className="flex-row gap-2">
-              {(['recent', 'name'] as Sort[]).map((key) => (
-                <Pressable
-                  key={key}
-                  onPress={() => setSort(key)}
-                  className="rounded-full px-3.5 py-1.5"
-                  style={{ backgroundColor: sort === key ? colors.accent : colors.surface }}
-                >
-                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: sort === key ? colors['accent-foreground'] : colors.foreground }}>
-                    {key === 'recent' ? 'Recent' : 'A–Z'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <View className="gap-2 px-4 pb-2 pt-3">
+            <SearchField value={query} onChangeText={setQuery} placeholder="Search setlists" />
+            <SortControl value={sort} options={SORTS} onChange={setSort} />
           </View>
           <FlatList
             data={shown}
@@ -88,8 +79,8 @@ function SetlistsScreen() {
             contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: bottomSpace }}
             renderItem={({ item }) => <SetlistRow setlist={item} />}
             ListEmptyComponent={
-              <Text className="font-inter py-8 text-center text-sm" style={{ color: colors.muted }}>
-                {query ? `No setlists match “${query}”.` : 'No setlists yet — tap + to make one.'}
+              <Text className="font-ui py-8 text-center text-sm" style={{ color: colors.muted }}>
+                No setlists match “{query}”.
               </Text>
             }
           />

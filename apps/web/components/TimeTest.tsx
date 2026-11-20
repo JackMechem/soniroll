@@ -29,6 +29,7 @@ import { DEFAULT_CLICK_SOUND_ID, type BeatLevel, type ClickSettings } from "@/li
 import { HintsContext } from "@/lib/hints";
 import { MAX_BEATS } from "@/lib/meters";
 import { NEXT_LEVEL, clampBpm, convertTempo, defaultAccents, defaultSubAccents, nearestNoteValue, useTapTempo } from "@/lib/meterControls";
+import { COMMON_METERS } from "@jam-practice/core/meterControls";
 import { analyze, type Analysis, type AnalysisParams, type Calibration, type Take } from "@/lib/timeTest/analysis";
 import {
   getTimeTestServerSnapshot,
@@ -49,17 +50,6 @@ import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
 import { toolPresets } from "@/lib/toolPresets";
 import { usePaneKeyGuard } from "@/lib/paneContext";
-
-const COMMON_METERS: [number, number][] = [
-  [4, 4],
-  [3, 4],
-  [2, 4],
-  [6, 8],
-  [5, 4],
-  [7, 8],
-  [9, 8],
-  [12, 8],
-];
 
 const TOLERANCES = [5, 10, 15, 20, 30];
 

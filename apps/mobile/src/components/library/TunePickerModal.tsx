@@ -146,16 +146,16 @@ export function TunePickerModal({
           <Pressable onPress={onClose} accessibilityLabel="Close" className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
             <CloseIcon color={colors.foreground} size={20} />
           </Pressable>
-          <Text className="font-inter-bold flex-1 text-xl font-bold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-bold flex-1 text-xl font-bold" style={{ color: colors.foreground }}>
             Add tunes
           </Text>
           <Pressable
             onPress={add}
             disabled={picked.length === 0}
-            className="rounded-full px-5 py-2"
+            className="min-h-10 justify-center rounded-lg px-4 py-2"
             style={{ backgroundColor: colors.accent, opacity: picked.length ? 1 : 0.4 }}
           >
-            <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
               {picked.length ? `Add ${picked.length}` : 'Add'}
             </Text>
           </Pressable>
@@ -170,7 +170,7 @@ export function TunePickerModal({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
           ListEmptyComponent={
-            <Text className="font-inter py-8 text-center text-sm" style={{ color: colors.muted }}>
+            <Text className="font-ui py-8 text-center text-sm" style={{ color: colors.muted }}>
               {query.trim() ? `No tunes match “${query}”.` : 'Everything is already in here.'}
             </Text>
           }
@@ -178,7 +178,7 @@ export function TunePickerModal({
             if (item.kind === 'header')
               return (
                 <View style={{ height: HEADER_H }} className="justify-end px-1 pb-1.5">
-                  <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
                     {item.label}
                   </Text>
                 </View>
@@ -195,10 +195,10 @@ export function TunePickerModal({
                     <PlusIcon color={colors.accent} size={16} />
                   </View>
                   <View className="flex-1">
-                    <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.accent }}>
+                    <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.accent }}>
                       {item.name ? `Create “${item.name}”` : 'Create a new tune'}
                     </Text>
-                    <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+                    <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                       A tune of your own, added to Tunes I Know
                     </Text>
                   </View>
@@ -226,10 +226,10 @@ export function TunePickerModal({
                   {on ? <CheckIcon color={colors['accent-foreground']} size={16} /> : null}
                 </View>
                 <View className="flex-1">
-                  <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                  <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                     {title}
                   </Text>
-                  <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+                  <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                     {subtitle}
                   </Text>
                 </View>

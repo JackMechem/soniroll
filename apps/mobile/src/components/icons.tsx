@@ -49,6 +49,15 @@ export const IntervalIcon = mci('ruler');
 export const ChordIcon = mci('piano');
 export const ShuffleIcon = mci('shuffle');
 export const BookIcon = mci('book-music');
+export const ToolsIcon = mci('view-grid-outline');
+// Setting chips (the website's MeterIcon, NoteIcon and SpeakerIcon).
+export const MeterIcon = mci('fraction-one-half');
+export const SubdivisionChipIcon = mci('music-note-eighth');
+export const SpeakerIcon = mci('volume-high');
+export const SectionsIcon = mci('format-list-numbered');
+export const RootlessIcon = mci('piano-off');
+export const TargetIcon = mci('bullseye');
+export const LibraryIcon = mci('bookshelf');
 export const SearchIcon = mci('magnify');
 export const MenuIcon = mci('menu');
 export const CloseIcon = mci('close');
@@ -121,6 +130,8 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/jam-practice': ShuffleIcon,
   '/note-trainer': NoteIcon,
   '/rhythm-section': BassIcon,
+  '/find-the-root': RootlessIcon,
+  '/time-test': TargetIcon,
   '/scale-trainer': ScaleIcon,
   '/interval-trainer': IntervalIcon,
   '/guess-the-interval': EarIcon,
@@ -128,6 +139,7 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/guess-the-progression': ProgressionIcon,
   '/practice-timer': StopwatchIcon,
   '/shed-log': CalendarCheckIcon,
+  '/shed-notes': mci('file-document-outline'),
   '/lessons': LessonsIcon,
   '/metronome': MetronomeIcon,
   '/random-metric-modulation': MetricModulationIcon,
@@ -139,5 +151,6 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/recorder': RecordIcon,
   '/random-sticking-warmup': DrumIcon,
   '/syncopation': DrumIcon,
+  '/score-writer': mci('music-clef-treble'),
   '/community': UsersIcon,
 };

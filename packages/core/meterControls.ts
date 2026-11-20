@@ -156,6 +156,21 @@ export const SUBDIVISIONS: SubdivisionOption[] = [
   { value: 6, label: "16th sextuplets" },
 ];
 
+/** Short names for each subdivision, for a setting chip's value and the picker's cards. */
+export const SUB_LABELS: Record<number, string> = { 1: "Beat", 2: "8ths", 3: "Triplets", 4: "16ths", 5: "Quintuplets", 6: "Sextuplets" };
+
+/** The time signatures people reach for most, as quick-pick cards (Metronome, Time Test). */
+export const COMMON_METERS: [number, number][] = [
+  [4, 4],
+  [3, 4],
+  [2, 4],
+  [6, 8],
+  [5, 4],
+  [7, 8],
+  [9, 8],
+  [12, 8],
+];
+
 const TAP_HISTORY = 5;
 const TAP_RESET_MS = 2000;
 

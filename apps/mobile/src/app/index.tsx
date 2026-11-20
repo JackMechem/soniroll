@@ -1,24 +1,18 @@
-import { NAV_LINKS_DATA, filterNavLinks, groupByCategory, hrefToSlug, type NavLinkInfo } from '@jam-practice/core/navLinks';
+import { useConvexAuth } from '@convex-dev/auth/react';
+import type { NavLinkInfo } from '@jam-practice/core/navLinks';
 import type { Tune } from '@jam-practice/core/types';
 import { Stack, useRouter } from 'expo-router';
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useState, type ReactNode } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import {
-  ChevronRightIcon,
-  ChordChartIcon,
-  ClearIcon,
-  MusicNoteIcon,
-  NAV_LINK_ICONS,
-  SearchIcon,
-  SetlistIcon,
-  ThemeIcon,
-  type IconProps,
-} from '@/components/icons';
-import { TAB_HREFS, ToolRow, ToolTile, chunk } from '@/components/ToolGrid';
+import { ChordChartIcon, MusicNoteIcon, NAV_LINK_ICONS, SetlistIcon } from '@/components/icons';
+import { ACCOUNT_ONLY_HREFS, TOOL_LINKS, ToolSection, ToolTiles, searchTools, toolRoute } from '@/components/ToolGrid';
+import { AccountButton } from '@/components/TabHeader';
+import { Button, Card, Chip, EmptyText, IconTile, ListRow, PageTitle, SearchField, ToolIcon, useScrolled } from '@/components/ui';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TodayPracticeCard } from '@/components/shedLog/TodayPracticeCard';
 import { Logo } from '@/components/Logo';
 import { useRecentItems } from '@/lib/chordChartRecents';
 import { useRecentTools } from '@/lib/toolRecents';
@@ -31,33 +25,59 @@ import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
 import { summarizeLearning } from '@jam-practice/core/learningPath';
 import { useLearningProgress } from '@/lib/useLearnSession';
 
-/** Shown in place of Favorites until you've starred some tools. */
-const STARTER_HREFS = ['/metronome', '/jam-practice', '/tuner', '/practice-timer'];
-const TOOLS = NAV_LINKS_DATA.filter((l) => !TAB_HREFS.includes(l.href));
-const TOOL_BY_HREF = new Map(TOOLS.map((l) => [l.href, l]));
+/** Shown in place of Favorites until you've starred some tools, in this order. */
+const STARTER_HREFS = ['/metronome', '/tuner', '/practice-timer', '/jam-practice'];
+const TOOL_BY_HREF = new Map(TOOL_LINKS.map((l) => [l.href, l]));
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** "Thursday, November 19", like the website's dashboard. */
+function todayLabel(d: Date) {
+  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** Every word of the search is somewhere in the name. */
+function matchesWords(name: string, words: string[]) {
+  const n = name.toLowerCase();
+  return words.every((w) => n.includes(w));
+}
+
+type RecentKind = 'Tool' | 'Tune' | 'Chart';
+type Recent = { key: string; kind: RecentKind; icon: ReactNode; title: string; extra?: string; onPress: () => void };
 
 /**
- * Home — an overview with the tools front and centre: your favorite tools as big cards (a starter
- * set until you star some), "Jump back in" (the tools, tunes and charts you opened last), your
- * library at a glance (tunes, setlists, charts — each opening its page), then every tool by
- * category. The search finds tools and your tunes.
+ * Home — the website's dashboard, made for a phone: the logo and the account button, the page title
+ * and date, a search (tools, tunes, charts and setlists), then: Today's practice (signed in),
+ * Favorites / Get started as compact tiles, a slim sign-in banner (signed out, under the tools so
+ * they come first), Pick up where you left off (only once there's something, and only what works
+ * signed out when you are), Tune of the day (once you have tunes), and the ear training path as one
+ * slim row per trainer. Rows inside Home's cards have no fill of their own (no card-in-card).
+ * Every tool is on the Tools tab and everything you've saved is in the Library tab, so Home
+ * doesn't repeat them.
  */
 function Home() {
   const bottomSpace = useTabBarSpace();
   const router = useRouter();
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [query, setQuery] = useState('');
+  const [today] = useState(() => new Date());
   const { favorites, toggleFavorite, ready } = useFavorites();
   const recentTools = useRecentTools();
   const recentItems = useRecentItems();
   const { lists, ready: tunesReady } = useTuneLists();
   const { setlists } = useSetlists();
-  const { allSongs, totalSongs } = useChordChartsLibrary(null);
+  const { allSongs } = useChordChartsLibrary(null);
   const [learningProgress] = useLearningProgress();
   const learningSummaries = summarizeLearning(learningProgress);
+  const { scrolled, onScroll, scrollEventThrottle } = useScrolled();
 
   const q = query.trim();
-  const openTool = (item: NavLinkInfo) => router.push(`/tool/${hrefToSlug(item.href)}`);
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const openTool = (item: NavLinkInfo) => router.push(toolRoute(item.href));
+  const openTune = (list: TuneListId, id: string) => router.push({ pathname: '/library/tune', params: { list, id } });
+  const openChart = (id: string) => router.push({ pathname: '/tool/chord-charts-view', params: { id } });
 
   const chartMeta = useMemo(() => {
     const m = new Map<string, { title: string; key: string }>();
@@ -65,15 +85,25 @@ function Home() {
     return m;
   }, [allSongs]);
 
-  const tuneMatches = useMemo(() => {
-    if (!q) return [];
-    const words = q.toLowerCase().split(/\s+/);
-    const out: { tune: Tune; list: TuneListId }[] = [];
+  const tuneMatches: { tune: Tune; list: TuneListId }[] = [];
+  if (words.length) {
     for (const list of ['tunes', 'learn'] as TuneListId[]) {
-      for (const tune of lists[list].tunes) if (words.every((w) => tune.name.toLowerCase().includes(w))) out.push({ tune, list });
+      for (const tune of lists[list].tunes) if (tuneMatches.length < 8 && matchesWords(tune.name, words)) tuneMatches.push({ tune, list });
     }
-    return out.slice(0, 8);
-  }, [q, lists]);
+  }
+  const chartMatches = words.length ? allSongs.filter((s) => matchesWords(s.title, words)).slice(0, 8) : [];
+  const setlistMatches = words.length ? setlists.filter((s) => matchesWords(s.name, words)).slice(0, 5) : [];
+
+  // Tune of the day: the same one all day, from Tunes I Know (the website's rule, so both agree).
+  const known = lists.tunes.tunes;
+  const tuneOfDay = useMemo(() => {
+    if (!known.length) return null;
+    const day = Math.floor(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) / 86400000);
+    const tune = known[day % known.length];
+    const keys = tune.keys.filter((k) => k.enabled);
+    const tempos = tune.tempos.filter((t) => t.enabled);
+    return { tune, key: keys.length ? keys[day % keys.length].value : null, tempo: tempos.length ? tempos[day % tempos.length].value : null };
+  }, [today, known]);
 
   if (!ready || !tunesReady) {
     return (
@@ -84,189 +114,151 @@ function Home() {
     );
   }
 
-  const favoriteTools = TOOLS.filter((t) => favorites.includes(t.href));
-  const pinned = favoriteTools.length ? favoriteTools : TOOLS.filter((t) => STARTER_HREFS.includes(t.href));
+  const signedOut = !authLoading && !isAuthenticated;
+  const favoriteTools = TOOL_LINKS.filter((t) => favorites.includes(t.href));
+  const pinned = favoriteTools.length ? favoriteTools : STARTER_HREFS.flatMap((h) => TOOL_BY_HREF.get(h) ?? []);
 
-  // "Jump back in": recent tools first, then recent tunes and charts.
-  const jumpCards: { key: string; Icon: ComponentType<IconProps>; title: string; detail: string; onPress: () => void }[] = [];
+  // Pick up where you left off: recent tools first, then recent tunes and charts.
+  const recents: Recent[] = [];
   for (const href of recentTools) {
     const tool = TOOL_BY_HREF.get(href);
-    const Icon = NAV_LINK_ICONS[href];
-    if (tool && Icon) jumpCards.push({ key: href, Icon, title: tool.label, detail: 'Tool', onPress: () => openTool(tool) });
-    if (jumpCards.length >= 4) break;
+    // Signed out, leave out tools that need an account (they'd only show the sign-in gate).
+    if (signedOut && ACCOUNT_ONLY_HREFS.has(href)) continue;
+    if (tool && NAV_LINK_ICONS[href]) recents.push({ key: href, kind: 'Tool', icon: <ToolIcon tool={tool} size={34} />, title: tool.label, onPress: () => openTool(tool) });
+    if (recents.length >= 3) break;
   }
   for (const item of recentItems) {
-    if (jumpCards.length >= 10) break;
+    if (recents.length >= 5) break;
     if (item.kind === 'tune') {
       const list = (['tunes', 'learn'] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === item.id));
       const tune = list ? lists[list].tunes.find((t) => t.id === item.id) : undefined;
       if (list && tune) {
-        jumpCards.push({
-          key: `t:${tune.id}`,
-          Icon: MusicNoteIcon,
-          title: tune.name,
-          detail: 'Tune',
-          onPress: () => router.push({ pathname: '/library/tune', params: { list, id: tune.id } }),
-        });
+        recents.push({ key: `t:${tune.id}`, kind: 'Tune', icon: <IconTile Icon={MusicNoteIcon} size={34} />, title: tune.name, onPress: () => openTune(list, tune.id) });
       }
     } else {
       const meta = chartMeta.get(item.id);
       if (meta) {
-        jumpCards.push({
-          key: `c:${item.id}`,
-          Icon: ChordChartIcon,
-          title: meta.title,
-          detail: meta.key ? `Chart · ${meta.key}` : 'Chart',
-          onPress: () => router.push({ pathname: '/tool/chord-charts-view', params: { id: item.id } }),
-        });
+        recents.push({ key: `c:${item.id}`, kind: 'Chart', icon: <IconTile Icon={ChordChartIcon} size={34} />, title: meta.title, extra: meta.key || undefined, onPress: () => openChart(item.id) });
       }
     }
   }
+  // Say what each one is only when the list mixes kinds.
+  const mixed = new Set(recents.map((r) => r.kind)).size > 1;
+  const recentDetail = (r: Recent) => (mixed ? [r.kind, r.extra].filter(Boolean).join(' · ') : r.extra);
 
-  const toolMatches = q ? filterNavLinks(TOOLS, q) : [];
+  const results = q ? searchTools(q) : null;
+  const nothingFound =
+    !!results && !results.tools.length && !results.shortcuts.length && !tuneMatches.length && !chartMatches.length && !setlistMatches.length;
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center justify-between px-5 pb-3 pt-4">
-          <Logo height={30} />
-          <Pressable
-            onPress={() => router.push('/theme')}
-            accessibilityLabel="Theme"
-            className="h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <ThemeIcon color={colors.foreground} size={20} />
-          </Pressable>
-        </View>
-
-        <View className="px-5 pb-2">
-          <View className="flex-row items-center gap-2.5 rounded-full pl-4" style={{ backgroundColor: colors.surface }}>
-            <SearchIcon color={colors.muted} size={18} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search tools and tunes…"
-              placeholderTextColor={colors.muted}
-              returnKeyType="search"
-              className="font-inter flex-1 text-base"
-              style={{ color: colors.foreground, paddingVertical: 10 }}
-            />
-            {query ? (
-              <Pressable onPress={() => setQuery('')} accessibilityLabel="Clear search" className="h-11 w-11 items-center justify-center">
-                <ClearIcon color={colors.muted} size={18} />
-              </Pressable>
-            ) : null}
-          </View>
+        <View
+          className="h-14 flex-row items-center justify-between px-4"
+          style={{ borderBottomWidth: 1, borderBottomColor: scrolled ? derived.hairline : 'transparent' }}
+        >
+          <Logo height={26} />
+          <AccountButton />
         </View>
 
         <ScrollView
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: bottomSpace, gap: 26 }}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: bottomSpace, gap: 16 }}
         >
-          {q ? (
-            <>
-              <Section title="Tools">
-                {toolMatches.length ? (
-                  <ToolList items={toolMatches} favorites={favorites} onOpen={openTool} onToggle={toggleFavorite} />
-                ) : (
-                  <Muted text={`No tools match “${q}”.`} />
-                )}
-              </Section>
-              <Section title="Your tunes">
+          <PageTitle title="Your practice space" detail={todayLabel(today)} />
+          <SearchField value={query} onChangeText={setQuery} placeholder="Search tools, tunes and charts" />
+
+          {results ? (
+            nothingFound ? (
+              <EmptyText>Nothing matches “{q}”.</EmptyText>
+            ) : (
+              <>
+                {results.tools.length ? (
+                  <ToolSection title="Tools" items={results.tools} favorites={favorites} onOpen={openTool} onToggleFavorite={toggleFavorite} />
+                ) : null}
+                {results.shortcuts.length ? (
+                  <ToolSection title="Go to" items={results.shortcuts} onOpen={(item) => router.navigate(toolRoute(item.href))} />
+                ) : null}
                 {tuneMatches.length ? (
-                  <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
-                    {tuneMatches.map(({ tune, list }, i) => (
-                      <Pressable
+                  <Card title="Tunes">
+                    {tuneMatches.map(({ tune, list }) => (
+                      <ListRow
+                        plain
                         key={tune.id}
-                        onPress={() => router.push({ pathname: '/library/tune', params: { list, id: tune.id } })}
-                        android_ripple={{ color: colors['surface-hover'] }}
-                        className="flex-row items-center gap-3 px-4"
-                        style={{ minHeight: 56, borderTopWidth: i ? 1 : 0, borderTopColor: colors.background }}
-                      >
-                        <MusicNoteIcon color={colors.accent} size={18} />
-                        <View className="flex-1 py-2">
-                          <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
-                            {tune.name}
-                          </Text>
-                          <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
-                            {[list === 'learn' ? 'To learn' : 'I know', tuneSummary(tune)].filter(Boolean).join(' · ')}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : (
-                  <Muted text="No tunes match." />
-                )}
-              </Section>
-            </>
-          ) : (
-            <>
-              <Section title={favoriteTools.length ? 'Favorites' : 'Get started'} detail={favoriteTools.length ? undefined : 'Tap ☆ on a tool to pin it here'}>
-                {chunk(pinned, 2).map((row, i) => (
-                  <View key={i} className="flex-row gap-3">
-                    {row.map((item) => (
-                      <ToolTile
-                        key={item.href}
-                        item={item}
-                        favorited={favorites.includes(item.href)}
-                        onPress={() => openTool(item)}
-                        onToggleFavorite={() => toggleFavorite(item.href)}
+                        icon={<IconTile Icon={MusicNoteIcon} size={34} />}
+                        title={tune.name}
+                        detail={[list === 'learn' ? 'To learn' : 'I know', tuneSummary(tune)].filter(Boolean).join(' · ')}
+                        onPress={() => openTune(list, tune.id)}
                       />
                     ))}
-                    {row.length === 1 ? <View className="flex-1" /> : null}
-                  </View>
-                ))}
-              </Section>
-
-              {jumpCards.length ? (
-                <Section title="Jump back in">
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}>
-                    {jumpCards.map((c) => (
-                      <Pressable
-                        key={c.key}
-                        onPress={c.onPress}
-                        className="justify-between rounded-2xl p-3"
-                        style={{ width: 140, height: 104, backgroundColor: colors.surface }}
-                      >
-                        <View className="h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${colors.accent}22` }}>
-                          <c.Icon color={colors.accent} size={19} />
-                        </View>
-                        <View>
-                          <Text numberOfLines={1} className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
-                            {c.title}
-                          </Text>
-                          <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
-                            {c.detail}
-                          </Text>
-                        </View>
-                      </Pressable>
+                  </Card>
+                ) : null}
+                {chartMatches.length ? (
+                  <Card title="Chord charts">
+                    {chartMatches.map((s) => (
+                      <ListRow plain key={s.id} icon={<IconTile Icon={ChordChartIcon} size={34} />} title={s.title} detail={s.key || undefined} onPress={() => openChart(s.id)} />
                     ))}
-                  </ScrollView>
-                </Section>
+                  </Card>
+                ) : null}
+                {setlistMatches.length ? (
+                  <Card title="Setlists">
+                    {setlistMatches.map((s) => (
+                      <ListRow
+                        plain
+                        key={s.id}
+                        icon={<IconTile Icon={SetlistIcon} size={34} />}
+                        title={s.name || 'Untitled setlist'}
+                        detail={`${s.tuneIds.length} ${s.tuneIds.length === 1 ? 'tune' : 'tunes'}`}
+                        onPress={() => router.push({ pathname: '/library/setlist', params: { id: s.id } })}
+                      />
+                    ))}
+                  </Card>
+                ) : null}
+              </>
+            )
+          ) : (
+            <>
+              {isAuthenticated ? <TodayPracticeCard /> : null}
+
+              <Card plain title={favoriteTools.length ? 'Favorites' : 'Get started'} action={{ label: 'All tools', onPress: () => router.navigate('/tools') }}>
+                <ToolTiles items={pinned} favorites={favorites} onOpen={openTool} onToggleFavorite={toggleFavorite} />
+              </Card>
+
+              {signedOut ? <SignInBanner /> : null}
+
+              {recents.length ? (
+                <Card title="Pick up where you left off">
+                  {recents.map((r) => (
+                    <ListRow plain key={r.key} icon={r.icon} title={r.title} detail={recentDetail(r)} onPress={r.onPress} />
+                  ))}
+                </Card>
               ) : null}
 
-              <Section title="Your library">
-                <View className="flex-row gap-3">
-                  <LibraryCard Icon={MusicNoteIcon} count={lists.tunes.tunes.length + lists.learn.tunes.length} label="Tunes" onPress={() => router.push('/library')} />
-                  <LibraryCard Icon={SetlistIcon} count={setlists.length} label="Setlists" onPress={() => router.push(setlists.length ? '/library/setlists' : '/library')} />
-                  <LibraryCard Icon={ChordChartIcon} count={totalSongs} label="Charts" onPress={() => router.push('/charts')} />
-                </View>
-              </Section>
+              {/* Only once there are tunes to pick from (the Library's empty state says how). */}
+              {tuneOfDay ? (
+                <Card title="Tune of the day" action={{ label: 'Jam Practice', onPress: () => router.push('/tool/jam-practice') }}>
+                  <View className="gap-2.5">
+                    <Text className="font-ui-semibold text-xl font-semibold leading-tight tracking-tight" style={{ color: colors.foreground }}>
+                      {tuneOfDay.tune.name}
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                      {tuneOfDay.key ? <Chip>in {tuneOfDay.key}</Chip> : null}
+                      {tuneOfDay.tempo ? <Chip>{tuneOfDay.tempo} BPM</Chip> : null}
+                      <Chip muted>{tuneOfDay.tune.timeSignature}</Chip>
+                    </View>
+                  </View>
+                  <Button label="Open the tune" onPress={() => openTune('tunes', tuneOfDay.tune.id)} style={{ alignSelf: 'flex-start' }} />
+                </Card>
+              ) : null}
 
-              <Section title="Ear training path" detail="Learn mode in each tool">
-                <EarTrainingProgress summaries={learningSummaries} links />
-              </Section>
-
-              {groupByCategory(TOOLS).map(({ category, items }) => (
-                <Section key={category} title={category}>
-                  <ToolList items={items} favorites={favorites} onOpen={openTool} onToggle={toggleFavorite} />
-                </Section>
-              ))}
+              <Card title="Ear training path" detail="Learn mode in each tool">
+                <EarTrainingProgress summaries={learningSummaries} links compact />
+              </Card>
             </>
           )}
         </ScrollView>
@@ -275,75 +267,18 @@ function Home() {
   );
 }
 
-function Section({ title, detail, children }: { title: string; detail?: string; children: ReactNode }) {
+/** Signed out: a slim banner under the tools — what an account adds, in a line, and Sign in (the
+    Account screen also has Create an account). The header's Sign in pill stays too. */
+function SignInBanner() {
+  const router = useRouter();
   const { colors } = useAppTheme();
   return (
-    <View className="gap-2.5">
-      <View className="flex-row items-baseline gap-2 px-1">
-        <Text className="font-inter-bold text-xl font-bold" style={{ color: colors.foreground }}>
-          {title}
-        </Text>
-        {detail ? (
-          <Text numberOfLines={1} className="font-inter flex-1 text-xs" style={{ color: colors.muted }}>
-            {detail}
-          </Text>
-        ) : null}
-      </View>
-      {children}
+    <View className="flex-row items-center gap-3 rounded-xl py-2.5 pl-4 pr-2.5" style={{ backgroundColor: colors.surface }}>
+      <Text className="font-ui flex-1 text-sm leading-5" style={{ color: colors.muted }}>
+        Sign in for a Shed Log, recordings and your tunes on soniroll.com.
+      </Text>
+      <Button label="Sign in" kind="secondary" onPress={() => router.push('/profile')} />
     </View>
-  );
-}
-
-function ToolList({
-  items,
-  favorites,
-  onOpen,
-  onToggle,
-}: {
-  items: NavLinkInfo[];
-  favorites: string[];
-  onOpen: (item: NavLinkInfo) => void;
-  onToggle: (href: string) => void;
-}) {
-  const { colors } = useAppTheme();
-  return (
-    <View className="overflow-hidden rounded-2xl px-3" style={{ backgroundColor: colors.surface }}>
-      {items.map((item, i) => (
-        <View key={item.href}>
-          <ToolRow item={item} favorited={favorites.includes(item.href)} onPress={() => onOpen(item)} onToggleFavorite={() => onToggle(item.href)} />
-          {i < items.length - 1 ? <View style={{ height: 1, marginHorizontal: -12, backgroundColor: colors.background }} /> : null}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function LibraryCard({ Icon, count, label, onPress }: { Icon: ComponentType<IconProps>; count: number; label: string; onPress: () => void }) {
-  const { colors } = useAppTheme();
-  return (
-    <Pressable onPress={onPress} android_ripple={{ color: colors['surface-hover'] }} className="flex-1 gap-2 overflow-hidden rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
-      <View className="flex-row items-center justify-between">
-        <Icon color={colors.accent} size={20} />
-        <ChevronRightIcon color={colors.muted} size={16} />
-      </View>
-      <View>
-        <Text className="font-inter-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
-          {count}
-        </Text>
-        <Text numberOfLines={1} className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function Muted({ text }: { text: string }) {
-  const { colors } = useAppTheme();
-  return (
-    <Text className="font-inter rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
-      {text}
-    </Text>
   );
 }
 

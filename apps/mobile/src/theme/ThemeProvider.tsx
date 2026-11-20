@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { categoryColor } from '@jam-practice/core/accentColors';
+import { CATEGORIES, type Category } from '@jam-practice/core/navLinks';
 import {
   ALL_PRESETS,
   CUSTOM_THEME_ID,
@@ -7,7 +9,7 @@ import {
   getPreset,
 } from '@jam-practice/core/themes';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 
 /**
  * The native side of `apps/web/lib/theme.ts` — same storage key (`jam-practice-theme`, though
@@ -25,10 +27,10 @@ import { View } from 'react-native';
  *   yet; `presetId`/`setPreset` cover every preset (including picking "custom" once something has
  *   already seeded it, which nothing does yet), matching the bulk of what `ThemeModal.tsx` is for
  *   (picking a preset) without yet porting its own color-editing UI.
- * - **No system-preference fallback** on first launch (web's own `read()` checks
- *   `matchMedia('(prefers-color-scheme: dark)')` when nothing's stored yet) — defaults straight to
- *   `"light"`, the same hardcoded default `lib/theme.ts`'s own `DEFAULT_STATE` uses before that
- *   check runs.
+ *
+ * **"Same as my phone"** (`SYSTEM_THEME_ID`, the default when nothing is stored): Light or Dark
+ * from the phone's colour scheme, following it when it changes (`useColorScheme`; `app.json`'s
+ * `userInterfaceStyle` is `automatic`). The website does the same check once, on first visit.
  *
  * Colors are applied via plain React Context + inline `style` props, not NativeWind's `vars()`/
  * CSS custom properties (what a first pass here used, to mirror the web app's own mechanism as
@@ -50,15 +52,51 @@ const STORAGE_KEY = 'jam-practice-theme';
 
 type StoredThemeState = { id: string; custom: ThemeColors | null };
 
-const DEFAULT_STATE: StoredThemeState = { id: 'light', custom: null };
+/** Follow the phone: Light or Dark from its colour scheme. */
+export const SYSTEM_THEME_ID = 'system';
 
-function resolveColors(state: StoredThemeState): ThemeColors {
+const DEFAULT_STATE: StoredThemeState = { id: SYSTEM_THEME_ID, custom: null };
+
+function resolveColors(state: StoredThemeState, scheme: 'light' | 'dark'): ThemeColors {
   if (state.id === CUSTOM_THEME_ID && state.custom) return state.custom;
+  if (state.id === SYSTEM_THEME_ID) return getPreset(scheme)!.colors;
   return (getPreset(state.id) ?? getPreset('light'))!.colors;
+}
+
+/** `hex` (`#rrggbb`) at `opacity` (0–1), as `#rrggbbaa`. */
+export function withAlpha(hex: string, opacity: number): string {
+  const a = Math.round(Math.min(1, Math.max(0, opacity)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${hex.slice(0, 7)}${a}`;
+}
+
+/** Colours made from the theme, the same ones the website uses: */
+export interface DerivedColors {
+  /** A dark theme (the background is dark): light status-bar icons, etc. */
+  isDark: boolean;
+  /** The faint fill on rows, secondary buttons and inputs (the web's `bg-foreground/[0.05]`). */
+  fill: string;
+  /** A hairline between rows or under a bar. */
+  hairline: string;
+  /** One colour per tool category (the web's `--cat-N`): the accent turned round the colour wheel. */
+  category: Record<Category, string>;
+}
+
+function derive(colors: ThemeColors): DerivedColors {
+  const n = parseInt(colors.background.slice(1, 7), 16);
+  const luminance = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return {
+    isDark: luminance < 0.5,
+    fill: withAlpha(colors.foreground, 0.05),
+    hairline: withAlpha(colors.foreground, 0.08),
+    category: Object.fromEntries(CATEGORIES.map((c) => [c, categoryColor(colors.accent, c)])) as Record<Category, string>,
+  };
 }
 
 interface ThemeContextValue {
   colors: ThemeColors;
+  derived: DerivedColors;
   presetId: string;
   setPreset: (id: string) => void;
   allPresets: ThemePreset[];
@@ -68,6 +106,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<StoredThemeState>(DEFAULT_STATE);
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -94,11 +133,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [state],
   );
 
-  const colors = useMemo(() => resolveColors(state), [state]);
+  const colors = useMemo(() => resolveColors(state, scheme), [state, scheme]);
+  const derived = useMemo(() => derive(colors), [colors]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({ colors, presetId: state.id, setPreset, allPresets: ALL_PRESETS }),
-    [colors, state.id, setPreset],
+    () => ({ colors, derived, presetId: state.id, setPreset, allPresets: ALL_PRESETS }),
+    [colors, derived, state.id, setPreset],
   );
 
   return (

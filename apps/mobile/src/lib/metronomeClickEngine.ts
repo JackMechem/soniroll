@@ -2,14 +2,16 @@ import {
   getClickSound,
   resolveMainBeatClick,
   resolveSubClick,
+  type BeatLevel,
   type ClickSettings,
 } from '@jam-practice/core/clickSounds';
 
 import { getAudioContext } from '@/lib/audioContext';
+import { setSteadyInterval } from '@/lib/steadyTimer';
 
 /**
  * The native sibling of `apps/web/lib/clickEngine.ts` — same lookahead-scheduling algorithm (one
- * shared `setInterval` tick, a short lookahead window, per-track `{nextTime, beat, sub}` state,
+ * shared `setSteadyInterval` tick (it keeps ticking in the background, `steadyTimer.ts`), a short lookahead window, per-track `{nextTime, beat, sub}` state,
  * the exact same `ClickSettings`/`ClickTrack`/gain formulas from `@jam-practice/core/clickSounds`),
  * and now, as of `react-native-audio-api` replacing `expo-audio`, the *exact same scheduling
  * mechanism too* — real oscillators scheduled against `AudioContext.currentTime` via `osc.start
@@ -76,6 +78,10 @@ export function scheduleClick(
 export type ClickTrack = {
   getSettings: (beat: number, sub: number) => ClickSettings;
   onBeat: (beat: number, sub: number) => void;
+  /** Called as each tick is scheduled (ahead of time), muted ones too, with the exact
+      `AudioContext` time it plays at and its level — the web engine's `onSchedule`. The Time Test
+      lines its recording up with these. */
+  onSchedule?: (tick: { time: number; beat: number; sub: number; level: BeatLevel; settings: ClickSettings }) => void;
 };
 
 export type ClickEngineHandle = { stop: () => void };
@@ -88,9 +94,9 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngineHandle {
   const state = tracks.map(() => ({ nextTime: startAt, beat: 0, sub: 0 }));
   const timeouts = new Set<ReturnType<typeof setTimeout>>();
 
-  const intervalId = setInterval(() => {
+  const stopTicks = setSteadyInterval(() => {
     for (let i = 0; i < tracks.length; i++) {
-      const { getSettings, onBeat } = tracks[i];
+      const { getSettings, onBeat, onSchedule } = tracks[i];
       const st = state[i];
       while (st.nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
         const s = getSettings(st.beat, st.sub);
@@ -102,15 +108,17 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngineHandle {
         const subSlots = Math.max(0, s.subdivision - 1);
 
         let click: { freq: number; gain: number; length: number } | null = null;
+        let level: BeatLevel = 0;
         if (st.sub === 0) {
-          const level = s.accents[st.beat] ?? 1;
+          level = s.accents[st.beat] ?? 1;
           click = resolveMainBeatClick(level, sound, vol);
         } else if (subSlots > 0) {
           const subIndex = st.beat * subSlots + (st.sub - 1);
-          const level = s.subAccents[subIndex] ?? 1;
+          level = s.subAccents[subIndex] ?? 1;
           click = resolveSubClick(level, sound, vol);
         }
         if (click) scheduleClick(ctx, st.nextTime, sound.wave, click.freq, click.gain, click.length);
+        onSchedule?.({ time: st.nextTime, beat: st.beat, sub: st.sub, level, settings: s });
 
         const shownBeat = st.beat;
         const shownSub = st.sub;
@@ -134,7 +142,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngineHandle {
 
   return {
     stop: () => {
-      clearInterval(intervalId);
+      stopTicks();
       for (const t of timeouts) clearTimeout(t);
       timeouts.clear();
     },

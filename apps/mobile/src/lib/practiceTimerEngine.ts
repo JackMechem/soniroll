@@ -10,6 +10,7 @@ import {
   scheduleTimerNotification,
 } from '@/lib/notifications';
 import { playTransitionChime } from '@/lib/practiceTimerChime';
+import { queueLogEntry } from '@/lib/practiceLogQueue';
 
 export type EngineState = {
   /** A snapshot of the session being run, not a live reference — editing or deleting the saved
@@ -115,6 +116,27 @@ function persist() {
   });
 }
 
+/** Records the current step for the Shed Log (like the website's engine): `done` when its time ran
+    out, otherwise how long it ran before Skip or Stop. Breaks aren't practice, so they're left out.
+    A routine's steps carry its `link`, so they check off its tasks; anything else is a session on
+    the day it ran. Taken in by the Shed Log signed in (`lib/practiceLogQueue.ts`). */
+function recordStep(done: boolean) {
+  if (!state || state.current.isBreak) return;
+  const elapsed = state.paused
+    ? state.durationMs - (state.remainingMsAtPause ?? state.durationMs)
+    : Math.min(state.durationMs, Date.now() - state.startedAt);
+  const session = state.session;
+  queueLogEntry({
+    at: Date.now(),
+    ms: done ? state.durationMs : Math.max(0, elapsed),
+    done,
+    session: session.name || 'Practice Timer',
+    title: state.current.title,
+    segmentId: session.type === 'custom' ? (session.segments[state.index]?.id ?? '') : 'pomodoro',
+    ...(session.type === 'custom' && session.link ? { link: session.link } : {}),
+  });
+}
+
 function clearScheduled() {
   if (timeoutId !== null) {
     clearTimeout(timeoutId);
@@ -203,7 +225,7 @@ function loadStep(
   stopAlarmVibration();
   const current = stepAt(session, index);
   if (!current) {
-    stop();
+    endRun();
     return;
   }
   const next = stepAt(session, index + 1);
@@ -246,6 +268,7 @@ function enterAlarm() {
 
 function advance() {
   if (!state) return;
+  recordStep(true);
   if (state.alarmMode) {
     enterAlarm();
     return;
@@ -282,13 +305,17 @@ function ensureHydrated() {
           // here on this same step rather than silently moving past it; no vibration on restore,
           // same "don't surprise someone the instant the app reopens" reasoning as the non-alarm
           // branch below.
-          state = { ...saved, current, next: stepAt(saved.session, saved.index + 1), alarming: true };
+          state = { ...saved, current, next: stepAt(saved.session, saved.index + 1) };
+          if (!saved.alarming) recordStep(true);
+          state = { ...state, alarming: true };
           notify();
           updateOngoingNotification();
         } else {
           // Enough real time passed while the app was away that this step is already over — move
           // on to the next one, starting fresh, rather than trying to simulate every step that
           // might have silently elapsed in between.
+          state = { ...saved, current, next: stepAt(saved.session, saved.index + 1) };
+          recordStep(true);
           loadStep(saved.session, saved.index + 1, saved.soundEnabled, saved.alarmMode, saved.fullScreenAlert, false);
         }
       } else {
@@ -361,11 +388,18 @@ export function resume() {
     cascade with a fresh one starting from the new step, so nothing further needs cancelling here. */
 export function skip() {
   if (!state) return;
+  // While alarming, the step already counted as done when its time ran out.
+  if (!state.alarming) recordStep(false);
   loadStep(state.session, state.index + 1, state.soundEnabled, state.alarmMode, state.fullScreenAlert, true);
 }
 
-/** Ends the run entirely. */
+/** Ends the run entirely (what was done of the current step goes to the Shed Log). */
 export function stop() {
+  if (state && !state.alarming) recordStep(false);
+  endRun();
+}
+
+function endRun() {
   clearScheduled();
   stopAlarmVibration();
   void cancelAllTimerNotifications();

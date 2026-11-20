@@ -94,7 +94,7 @@ function TuneEditScreen() {
   if (params.id && !existing) {
     return (
       <View className="flex-1 items-center justify-center px-10" style={{ backgroundColor: colors.background }}>
-        <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+        <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
           That tune isn&apos;t in your library anymore.
         </Text>
       </View>
@@ -110,8 +110,8 @@ function TuneEditScreen() {
         options={{
           title: existing ? 'Edit tune' : 'New tune',
           headerRight: () => (
-            <Pressable onPress={save} className="rounded-full px-5 py-2" style={{ backgroundColor: colors.accent }}>
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+            <Pressable onPress={save} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
+              <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                 Save
               </Text>
             </Pressable>
@@ -120,13 +120,13 @@ function TuneEditScreen() {
       />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: bottomSpace }}>
         <Field label="Name">
-          <TextInput value={name} onChangeText={setName} placeholder="e.g. Autumn Leaves" placeholderTextColor={colors.muted} autoFocus={!existing && !params.name} className="font-inter text-base" style={input} />
+          <TextInput value={name} onChangeText={setName} placeholder="e.g. Autumn Leaves" placeholderTextColor={colors.muted} autoFocus={!existing && !params.name} className="font-ui text-base" style={input} />
         </Field>
         <Field label="Time signature">
           <TimeSignaturePicker key={loadedFor ?? 'new'} value={timeSignature} onChange={setTimeSignature} />
         </Field>
         <Field label="Tempos (BPM)" info="Separate several with commas, e.g. 120, 160. Jam Practice picks one at random.">
-          <TextInput value={temposText} onChangeText={setTemposText} placeholder="120, 160" placeholderTextColor={colors.muted} keyboardType="numbers-and-punctuation" className="font-inter text-base" style={input} />
+          <TextInput value={temposText} onChangeText={setTemposText} placeholder="120, 160" placeholderTextColor={colors.muted} keyboardType="numbers-and-punctuation" className="font-ui text-base" style={input} />
         </Field>
 
         <Field label="List">
@@ -142,7 +142,7 @@ function TuneEditScreen() {
                   className="flex-1 items-center rounded-xl py-2.5"
                   style={{ backgroundColor: on ? colors.accent : colors.surface, opacity: disabled ? 0.4 : 1 }}
                 >
-                  <Text className="font-inter-semibold text-sm font-semibold" style={{ color: on ? colors['accent-foreground'] : colors.foreground }}>
+                  <Text className="font-ui-semibold text-sm font-semibold" style={{ color: on ? colors['accent-foreground'] : colors.foreground }}>
                     {TUNE_LIST_LABEL[id]}
                   </Text>
                 </Pressable>
@@ -157,10 +157,10 @@ function TuneEditScreen() {
               <View className="flex-row items-center gap-3">
                 <ChordChartIcon color={colors.accent} size={24} />
                 <View className="flex-1">
-                  <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                  <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                     {linked?.song.title ?? 'Linked chart'}
                   </Text>
-                  <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+                  <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                     {linked ? [linked.song.composer, linked.playlistName].filter(Boolean).join(' · ') : 'Not found in your chord charts'}
                   </Text>
                 </View>
@@ -190,7 +190,7 @@ function TuneEditScreen() {
         </Field>
 
         {error ? (
-          <Text className="font-inter text-sm" style={{ color: colors.danger }}>
+          <Text className="font-ui text-sm" style={{ color: colors.danger }}>
             {error}
           </Text>
         ) : null}
@@ -198,7 +198,7 @@ function TuneEditScreen() {
         {existing ? (
           <Pressable onPress={() => setConfirmDelete(true)} className="mt-2 flex-row items-center justify-center gap-2 rounded-xl py-3" style={{ backgroundColor: colors.surface }}>
             <TrashIcon color={colors.danger} size={18} />
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.danger }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.danger }}>
               Delete tune
             </Text>
           </Pressable>
@@ -238,7 +238,7 @@ function Field({ label, info, children }: { label: string; info?: string; childr
   return (
     <View className="gap-1.5">
       <View className="flex-row items-center gap-1.5">
-        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+        <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
           {label}
         </Text>
         {info ? <InfoButton title={label} text={info} size={15} /> : null}
@@ -257,7 +257,7 @@ function ChipButton({ label, icon, onPress, grow }: { label: string; icon: React
       style={{ backgroundColor: grow ? colors.surface : colors.background, flexGrow: grow ? 1 : 0 }}
     >
       {icon}
-      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
         {label}
       </Text>
     </Pressable>

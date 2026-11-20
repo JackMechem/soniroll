@@ -148,9 +148,11 @@ export function layoutText(text: string, family: string, sizePx: number) {
 }
 
 /** `[style] [weight] <size> <family>` — VexFlow's own `Font.fromCSSString` needs the DOM to do this. */
-function parseCSSFont(css: string): { size: string; family: string } {
-  const m = /^\s*(?:(?:italic|oblique|normal)\s+)?(?:(?:bold|bolder|lighter|normal|\d{3})\s+)?([\d.]+[a-z%]*)\s+(.+)$/i.exec(css);
-  return m ? { size: m[1], family: m[2] } : { size: '10pt', family: css };
+function parseCSSFont(css: string): { size: string; family: string; weight: string; style: string } {
+  const m = /^\s*(?:(italic|oblique|normal)\s+)?(?:(bold|bolder|lighter|normal|\d{3})\s+)?([\d.]+[a-z%]*)\s+(.+)$/i.exec(css);
+  return m
+    ? { style: m[1] ?? 'normal', weight: m[2] ?? 'normal', size: m[3], family: m[4] }
+    : { style: 'normal', weight: 'normal', size: '10pt', family: css };
 }
 
 declare const __DEV__: boolean | undefined;
@@ -171,6 +173,9 @@ export function installVexFlowNative() {
   if (installed) return;
   installed = true;
   VexFlowApi.setFonts('Bravura', 'Academico');
+  // VexFlow parses a CSS font string with a DOM element (`Font.fromCSSString`); the modifiers that
+  // copy their note's font (parentheses around a ghost note) would crash without one.
+  (Font as unknown as { fromCSSString: (css: string) => ReturnType<typeof parseCSSFont> }).fromCSSString = parseCSSFont;
   const measureContext = {
     font: '',
     measureText(text: string) {
@@ -206,8 +211,25 @@ export type DrawItem =
       strokeLinecap?: 'butt' | 'round' | 'square';
       /** Glyph outlines: translate + uniform scale (y already flipped in the outline data). */
       glyph?: { x: number; y: number; scale: number };
+      /** The `data-tag` of the group it was drawn in (see `tagGroups`), e.g. a note to light. */
+      tag?: string;
     }
-  | { kind: 'rect'; x: number; y: number; width: number; height: number; fill: string; stroke: string; strokeWidth: number };
+  | { kind: 'rect'; x: number; y: number; width: number; height: number; fill: string; stroke: string; strokeWidth: number; tag?: string };
+
+/** Marks the groups VexFlow drew for some elements (a `StaveNote`'s group, by its id) with a
+    `data-tag`, which `flattenTree` then copies onto everything drawn inside them — the native
+    stand-in for the web's `getSVGElement()?.setAttribute(...)` (that needs a DOM). */
+export function tagGroups(root: FakeNode, tags: Map<string, string>) {
+  if (!tags.size) return;
+  const byId = new Map<string, string>();
+  for (const [id, tag] of tags) byId.set(`vf-${id}`, tag);
+  const walk = (node: FakeNode) => {
+    const tag = node.attrs.id ? byId.get(node.attrs.id) : undefined;
+    if (tag !== undefined) node.attrs['data-tag'] = tag;
+    for (const child of node.children) walk(child);
+  };
+  walk(root);
+}
 
 const INK = new Set(['black', '#000', '#000000', 'currentColor']);
 
@@ -234,6 +256,7 @@ export function flattenTree(root: FakeNode): DrawItem[] {
         strokeWidth,
         strokeDasharray: a['stroke-dasharray'] && a['stroke-dasharray'] !== 'none' ? a['stroke-dasharray'] : undefined,
         strokeLinecap: a['stroke-linecap'] as 'butt' | 'round' | 'square' | undefined,
+        ...(a['data-tag'] !== undefined ? { tag: a['data-tag'] } : null),
       });
     } else if (node.nodeName === 'rect') {
       items.push({
@@ -245,6 +268,7 @@ export function flattenTree(root: FakeNode): DrawItem[] {
         fill: paint(a.fill),
         stroke: paint(a.stroke),
         strokeWidth,
+        ...(a['data-tag'] !== undefined ? { tag: a['data-tag'] } : null),
       });
     } else if (node.nodeName === 'text' && node.textContent) {
       const px = Font.convertSizeToPixelValue(a['font-size'] ?? '10pt');
@@ -259,6 +283,7 @@ export function flattenTree(root: FakeNode): DrawItem[] {
           stroke: 'none',
           strokeWidth: 0,
           glyph: { x: x + g.x, y, scale: g.scale },
+          ...(a['data-tag'] !== undefined ? { tag: a['data-tag'] } : null),
         });
       }
     }

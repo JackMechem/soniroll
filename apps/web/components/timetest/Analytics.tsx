@@ -5,7 +5,7 @@ import { SUB_LABELS } from "@/components/metronome/MetronomeOptions";
 import { PlayIcon, StopIcon } from "@/components/tools";
 import type { Analysis, Hit, Take } from "@/lib/timeTest/analysis";
 import { playbackPosition } from "@/lib/timeTest/session";
-import { STATUS_COLOR, STATUS_LABEL, describeMs, fmtTime, signedMs, statusOf, whereLabel, type Status } from "@/lib/timeTest/timing";
+import { STATUS_COLOR, STATUS_LABEL, describeMs, fmtTime, signedMs, statusOf, verdict, whereLabel, type Status } from "@/lib/timeTest/timing";
 import Waveform, { clampView, type View } from "./Waveform";
 
 const GRID_LINE = "var(--surface-hover)";
@@ -62,40 +62,6 @@ function StatusLegend({ tol }: { tol: number }) {
       ))}
     </div>
   );
-}
-
-/** A few plain sentences on what the take shows. */
-function verdict(a: Analysis, bpm: number): string {
-  const s = a.stats;
-  if (s.hits === 0) {
-    return "No strokes were picked up after the count-in. Check the mic's sensitivity (hit the pad and watch the level under Microphone), then try again.";
-  }
-  const tol = a.toleranceMs;
-  const parts: string[] = [];
-  const bias = Math.max(2, tol * 0.3);
-  if (Math.abs(s.meanMs) < bias) parts.push(`No real push or pull: on average you're ${Math.abs(s.meanMs).toFixed(1)} ms from the click.`);
-  else if (s.meanMs < 0) parts.push(`You're rushing: on average ${Math.abs(s.meanMs).toFixed(1)} ms ahead of the click.`);
-  else parts.push(`You're dragging: on average ${s.meanMs.toFixed(1)} ms behind the click.`);
-
-  const sd = s.stdMs;
-  parts.push(
-    sd < 5
-      ? `Very consistent stroke to stroke (±${sd.toFixed(1)} ms).`
-      : sd < 10
-        ? `Fairly consistent (±${sd.toFixed(1)} ms stroke to stroke).`
-        : sd < 20
-          ? `Your placement wanders quite a bit (±${sd.toFixed(1)} ms).`
-          : `Your placement is all over the place (±${sd.toFixed(1)} ms). Try a slower tempo.`,
-  );
-
-  if (s.tempoRatio && Math.abs(s.tempoRatio - 1) > 0.004) {
-    parts.push(`Over the take you ${s.tempoRatio > 1 ? "sped up" : "slowed down"} to about ${(bpm * s.tempoRatio).toFixed(1)} BPM.`);
-  }
-  const worst = a.byPosition.filter((p) => p.count >= 3).sort((x, y) => Math.abs(y.meanMs) - Math.abs(x.meanMs))[0];
-  if (a.byPosition.length > 1 && worst && Math.abs(worst.meanMs) > Math.max(tol / 2, Math.abs(s.meanMs) + 3)) {
-    parts.push(`Watch the "${worst.label}"s: they land ${Math.abs(worst.meanMs).toFixed(1)} ms ${worst.meanMs < 0 ? "early" : "late"} on average.`);
-  }
-  return parts.join(" ");
 }
 
 type Tip = { x: number; y: number; content: ReactNode } | null;

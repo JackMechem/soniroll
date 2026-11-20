@@ -10,36 +10,59 @@ import {
   type IntervalDef,
   type IntervalRound,
 } from '@jam-practice/core/intervals';
-import { GRADE_COLOR, scoreOf, type Grade } from '@jam-practice/core/noteGrade';
+import { scoreOf, type Grade } from '@jam-practice/core/noteGrade';
 import { parseRange } from '@jam-practice/core/noteRange';
 import { ACCIDENTAL_STYLES, spellNote, type AccidentalStyle } from '@jam-practice/core/noteSpelling';
 import { bumpGradeCounts, rankWeak, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { shuffled } from '@jam-practice/core/trainerUtils';
-import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
 
-import { CountdownRing } from '@/components/CountdownRing';
 import { LearningPath } from '@/components/learning/LearningPath';
 import { LevelComplete } from '@/components/learning/LevelComplete';
-import { ModeSwitch } from '@/components/learning/ModeSwitch';
 import { cumulativeItems, intervalLevelOptions, levelQueue } from '@jam-practice/core/learningPath';
 import { useLearnSession } from '@/lib/useLearnSession';
-import { CountdownText, ProgressTab, ResultsCard } from '@/components/EarTrainingParts';
-import { ElapsedTimer } from '@/components/CountdownLabel';
+import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { Hint } from '@/components/Hint';
-import { SlidersIcon } from '@/components/icons';
-import { NumberStepper } from '@/components/NumberStepper';
+import { IntervalIcon, NoteIcon, PlayIcon, StopwatchIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import {
+  AnswerButton,
+  FeedbackLine,
+  Field,
+  IDLE_RING,
+  IdleHint,
+  IdleStatus,
+  toneLabel,
+  LevelLabel,
+  MutedText,
+  Pill,
+  PillChoice,
+  PoolHeader,
+  QuizRing,
+  ResultsPanel,
+  SheetInput,
+  SliderField,
+  StrugglesChip,
+  HistoryChip,
+  TextButton,
+  ToolScreen,
+  instrumentShortName,
+  noteGlyphs,
+  useGradeColors,
+} from '@/components/tool/ear';
+import { BigButton } from '@/components/tool/meter';
+import { Segmented } from '@/components/tool/reward';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNote, playNotesTogether } from '@/lib/sampledTones';
 import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/GuessTheInterval.tsx` — same features, same synced settings
@@ -51,9 +74,10 @@ import { useAppTheme } from '@/theme/ThemeProvider';
  * requeued in a fresh octave), lifetime Struggles with "Shed weak intervals", and a History of
  * times for identical settings.
  *
- * Laid out like this app's other trainers: the round, its countdown ring, the answer grid and
- * Start/Stop on the main screen; everything else in the tabbed Options sheet. The only web feature
- * without a counterpart is the Space-bar shortcut (no hardware keyboard).
+ * Laid out like the website's (`components/tool/ear.tsx`): History / Struggles chips above the
+ * round, the ring, the answer grid and Start; Practice / Learn and the option chips under it
+ * (hidden while a session runs). The only web feature without a counterpart is the Space-bar
+ * shortcut (no hardware keyboard).
  */
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -146,8 +170,8 @@ function weakIntervalEntries(stats: Record<string, GradeCounts>): WeakInterval[]
 
 function GuessTheIntervalScreen() {
   const { colors } = useAppTheme();
+  const GRADE_COLOR = useGradeColors();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const learnMode = settings.learnMode;
   const learn = useLearnSession('interval');
 
@@ -165,6 +189,8 @@ function GuessTheIntervalScreen() {
 
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/guess-the-interval', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [guessedId, setGuessedId] = useState<string | null>(null);
@@ -430,8 +456,8 @@ function GuessTheIntervalScreen() {
   }
 
   const revealedLabel = (r: IntervalRound) => `${r.direction === 1 ? '↑' : '↓'} ${r.interval.label}`;
-  const mainLabel = round ? (status ? revealedLabel(round) : '?') : '—';
-  const glow = running && status ? GRADE_COLOR[status] : null;
+  const mainLabel = running && round ? (status ? revealedLabel(round) : '?') : '?';
+  const glow = running && status === 'correct' ? GRADE_COLOR.correct : null;
   const score = summary ? scoreOf(summary.results) : 0;
   const tally = (grade: Grade) => summary?.results.filter((g) => g === grade).length ?? 0;
   const currentConfig: HistoryConfig = {
@@ -453,180 +479,299 @@ function GuessTheIntervalScreen() {
       : null;
   const showingSummary = summary !== null && !running;
 
+  const pickedLabel =
+    status === 'incorrect' ? (guessedId ? `You picked ${answerChoices.find((i) => i.id === guessedId)?.label ?? 'another interval'}` : 'No answer') : null;
+
   if (!settingsReady) return <ScreenSpinner />;
 
-  const label = (text: string) => (
-    <Text className="font-inter-bold text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
-      {text}
-    </Text>
+  const showSide = !running && (history.length > 0 || weakEntries.length > 0);
+  const instrumentLabel = isCustom ? 'Custom' : instrumentShortName(instrumentId);
+
+  const chipList = (
+    <>
+      {!learnMode ? (
+        <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
+          <PoolHeader
+            count={pool.length}
+            total={INTERVALS.length}
+            onAll={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}
+            onNone={() => updateSettings({ intervalIds: [] })}
+            hint="Which intervals can be played — and the choices offered for each round. At least one must stay selected."
+          />
+          <View className="flex-row flex-wrap gap-1.5">
+            {INTERVALS.map((interval) => {
+              const selected = settings.intervalIds.includes(interval.id);
+              return (
+                <Pill
+                  key={interval.id}
+                  on={selected}
+                  label={interval.label}
+                  onPress={() =>
+                    updateSettings({
+                      intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
+                    })
+                  }
+                />
+              );
+            })}
+          </View>
+          <SwitchRow
+            label="Include descending intervals"
+            checked={includeDescending}
+            onChange={(v) => updateSettings({ includeDescending: v })}
+            hint="Lets a round play the interval below the starting note, not just above it — the choices are still just the interval's name, not its direction."
+          />
+          <SwitchRow
+            label="Drill every interval"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
+          />
+        </SettingChip>
+      ) : null}
+
+      <SettingChip Icon={NoteIcon} label="Range" value={`${instrumentLabel} · ${rangeInput.replace('-', '–')}`}>
+        <Field
+          label="Instrument"
+          hint="The register the starting note is drawn from — a comfortable range for your ear, not necessarily an instrument you're playing along with."
+        >
+          <Dropdown
+            value={instrumentId}
+            options={[...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })), { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' }]}
+            onChange={(v) => updateSettings({ instrumentId: v })}
+          />
+        </Field>
+        {isCustom ? (
+          <Field label="Custom range" hint="The lowest and highest notes to draw starting notes from, e.g. A1-A6.">
+            <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} placeholder="A1-A6" />
+          </Field>
+        ) : null}
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
+        <SliderField
+          label="Max time to answer"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={0.5}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint="How long you have to pick an answer before it's marked a miss and moves on."
+        />
+        <SliderField
+          label="Time between rounds"
+          value={advanceDelayMs / 1000}
+          unit=" s"
+          min={MIN_ADVANCE_DELAY_MS / 1000}
+          max={MAX_ADVANCE_DELAY_MS / 1000}
+          step={0.25}
+          onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+          hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays."
+        />
+        {!drillMode && !learnMode ? (
+          <SliderField
+            label="Number of rounds"
+            value={roundCount}
+            min={MIN_ROUND_COUNT}
+            max={MAX_ROUND_COUNT}
+            step={1}
+            onChange={(v) => updateSettings({ roundCount: v })}
+            hint="How many intervals make up one session."
+          />
+        ) : null}
+      </SettingChip>
+
+      <SettingChip
+        Icon={ToneIcon}
+        label="Sound & display"
+        value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
+      >
+        <Field label="Playback style" hint="Whether the two notes play one after another or together.">
+          <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
+        </Field>
+        <Field label="Tone" hint="Which sound plays the interval.">
+          <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+        <SwitchRow
+          label="Sound feedback"
+          checked={soundFeedback}
+          onChange={(v) => updateSettings({ soundFeedback: v })}
+          hint="A click each second of the countdown, plus a click the instant a round is graded."
+        />
+        <SwitchRow
+          label="Reveal notes after answering"
+          checked={revealNotes}
+          onChange={(v) => updateSettings({ revealNotes: v })}
+          hint="Shows the actual note names once a round is graded, e.g. C4 → E4."
+        />
+        {revealNotes ? (
+          <Field label="Accidentals" hint="How sharps and flats are spelled in the revealed notes, e.g. C# vs Db.">
+            <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+          </Field>
+        ) : null}
+      </SettingChip>
+    </>
   );
 
+  // The mode switch first: it decides what the screen is.
+  // History and Struggles: hidden until there's something in them, and while a session runs.
+  // The answers sit low (`footer`), within reach of the thumb, over Stop.
+  // Start: while the results show, their own "Try again" is the one start button.
+  // The chips: hidden while a session runs, so the round has the screen to itself.
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Guess the Interval' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-5 py-3">
-          {/* Hidden while a session runs, so the round has the screen to itself. */}
-          {!running ? (
-          <View className="flex-row items-center justify-between">
-            <ModeSwitch
-              value={learnMode ? 'learn' : 'practice'}
-              options={[
-                { value: 'practice', label: 'Practice' },
-                { value: 'learn', label: 'Learn' },
-              ]}
-              onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
+    <ToolScreen
+      title="Guess the Interval"
+      mode={
+        !running ? (
+          <Segmented
+            onPage
+            label="Mode"
+            value={learnMode ? 'learn' : 'practice'}
+            onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
+            options={[
+              { value: 'practice', label: 'Practice' },
+              { value: 'learn', label: 'Learn' },
+            ]}
+          />
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
             />
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
-                Options
-              </Text>
-            </Pressable>
-          </View>
-          ) : activeLevel !== null ? (
-            <View className="items-center">
-              <View className="rounded-full px-3 py-1" style={{ backgroundColor: `${colors.accent}1f` }}>
-                <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent }}>
-                  Level {activeLevel + 1} · {learn.levels[activeLevel].title}
-                </Text>
-              </View>
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: e.interval.label, counts: e.counts }))}
+              shedLabel="Shed weak intervals"
+              emptyText="No struggles tracked yet — a wrong guess adds it here."
+              running={running}
+              onShed={() => start('weak')}
+              onClear={() => {
+                intervalStatsRef.current = {};
+                updateSettings({ intervalStats: {} });
+              }}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      footer={
+        running && round && answerChoices.length > 0 ? (
+          <View className="gap-1 px-4 pt-2">
+            <View className="w-full flex-row flex-wrap justify-center" style={{ gap: 6 }}>
+              {answerChoices.map((interval) => {
+                const answered = status !== null;
+                const color = !answered
+                  ? undefined
+                  : interval.id === round.interval.id
+                    ? GRADE_COLOR.correct
+                    : interval.id === guessedId
+                      ? GRADE_COLOR.incorrect
+                      : undefined;
+                return <AnswerButton key={interval.id} label={interval.label} width="32%" color={color} answered={answered} onPress={() => submitGuess(interval.id)} />;
+              })}
             </View>
+            {/* "I don't know" until answered, then the countdown to the next one, in the same slot. */}
+            <View className="min-h-11 items-center justify-center">
+              {!status ? (
+                <TextButton label="I don't know" onPress={() => submitGuess(null)} />
+              ) : (
+                <View className="flex-row items-center">
+                  <MutedText>Next interval in </MutedText>
+                  <CountdownLabel active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} />
+                </View>
+              )}
+            </View>
+          </View>
+        ) : null
+      }
+      action={
+        !showingSummary || learnMode ? (
+          <BigButton
+            label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
+            secondary={running}
+            onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
+          />
+        ) : null
+      }
+      chips={!running ? chipList : null}
+    >
+
+
+      {learnMode && !running ? (
+        <LearningPath track="interval" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
+      ) : showingSummary && summary ? (
+        <ResultsPanel
+          score={score}
+          total={summary.results.length}
+          elapsed={lastElapsedMs}
+          bestMs={bestMs}
+          isNewBest={isNewBest}
+          grades={(['correct', 'incorrect'] as const).map((g) => ({ grade: g, count: tally(g) }))}
+          tags={summary.rounds.map((r, i) => ({ label: revealedLabel(r), grade: summary.results[i] }))}
+          onAgain={() => start(lastMode)}
+          onClose={() => setSummary(null)}
+        />
+      ) : (
+        <View className="w-full items-center gap-3">
+          {activeLevel !== null && running ? (
+            <LevelLabel>
+              Level {activeLevel + 1} · {learn.levels[activeLevel].title}
+            </LevelLabel>
+          ) : null}
+          <QuizRing size={running ? 144 : IDLE_RING} running={running} timer={noteTimer}>
+            {running ? (
+              <Text
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+                className={`font-ui-bold text-center font-bold ${round && status ? 'text-2xl' : 'text-4xl'}`}
+                style={{ color: glow ?? colors.foreground }}
+              >
+                {mainLabel}
+              </Text>
+            ) : (
+              <IdleStatus history={history} />
+            )}
+          </QuizRing>
+          {!running && !history.length ? <IdleHint>You&apos;ll hear two notes, then pick the interval.</IdleHint> : null}
+
+          {running && round ? (
+            <>
+              <FeedbackLine>
+                <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold">
+                  {pickedLabel ? <Text style={{ color: GRADE_COLOR.incorrect }}>{pickedLabel}</Text> : null}
+                  {pickedLabel && revealedNotes ? <Text style={{ color: colors.muted }}> · </Text> : null}
+                  {revealedNotes ? <Text style={{ color: colors.muted }}>{noteGlyphs(revealedNotes)}</Text> : null}
+                </Text>
+              </FeedbackLine>
+              <Button label="Replay" kind="secondary" Icon={PlayIcon} onPress={() => playIntervalSound(round.notes)} />
+            </>
           ) : null}
 
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
-            {learnMode && !running ? (
-              <LearningPath track="interval" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
-            ) : showingSummary && summary ? (
-              <ResultsCard
-                score={score}
-                total={summary.results.length}
-                elapsed={lastElapsedMs}
-                bestMs={bestMs}
-                isNewBest={isNewBest}
-                tallies={(['correct', 'incorrect'] as const).map((g) => ({ grade: g, count: tally(g) }))}
-                chips={summary.rounds.map((r, i) => ({ label: revealedLabel(r), grade: summary.results[i] }))}
-                onAgain={() => start(lastMode)}
-                onClose={() => setSummary(null)}
-              />
-            ) : (
-              <>
-                {status && running ? (
-                  <View className="items-center gap-0.5">
-                    {label('NEXT INTERVAL IN')}
-                    <CountdownText active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} color={GRADE_COLOR[status]} />
-                  </View>
-                ) : null}
 
-                <CountdownRing active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs}>
-                  <View style={{ maxWidth: 110 }}>
-                    <Text
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.5}
-                      className="font-inter-bold text-center text-3xl font-bold"
-                      style={{
-                        color: glow ?? colors.foreground,
-                        textShadowColor: glow ?? 'transparent',
-                        textShadowRadius: glow ? 10 : 0,
-                        textShadowOffset: { width: 0, height: 0 },
-                      }}
-                    >
-                      {mainLabel}
-                    </Text>
-                  </View>
-                </CountdownRing>
 
-                {running && round ? (
-                  <View className="flex-row items-center gap-3">
-                    <Pressable onPress={() => playIntervalSound(round.notes)} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.surface }}>
-                      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-                        ▶ Replay
-                      </Text>
-                    </Pressable>
-                    {!status ? (
-                      <Pressable onPress={() => submitGuess(null)} hitSlop={8}>
-                        <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
-                          I don&apos;t know
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ) : null}
-
-                {revealedNotes ? (
-                  <Text className="font-inter-semibold text-sm font-semibold tabular-nums" style={{ color: colors.muted }}>
-                    {revealedNotes}
-                  </Text>
-                ) : null}
-
-                {running && round && answerChoices.length > 0 ? (
-                  <View className="w-full flex-row flex-wrap justify-center" style={{ gap: 8 }}>
-                    {answerChoices.map((interval) => {
-                      const answered = status !== null;
-                      const color = !answered
-                        ? null
-                        : interval.id === round.interval.id
-                          ? GRADE_COLOR.correct
-                          : interval.id === guessedId
-                            ? GRADE_COLOR.incorrect
-                            : null;
-                      return (
-                        <Pressable
-                          key={interval.id}
-                          onPress={() => submitGuess(interval.id)}
-                          disabled={answered}
-                          className="items-center justify-center rounded-xl px-2"
-                          style={{
-                            width: '31.5%',
-                            minHeight: 48,
-                            backgroundColor: color ? `${color}26` : colors.surface,
-                            opacity: answered && !color ? 0.45 : 1,
-                          }}
-                        >
-                          <Text numberOfLines={2} className="font-inter-semibold text-center text-sm font-semibold" style={{ color: color ?? colors.foreground }}>
-                            {interval.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ) : null}
-
-                {running && progress ? (
-                  <Text className="font-inter text-sm tabular-nums" style={{ color: colors.muted }}>
-                    Interval {progress.index} of {progress.total} · <ElapsedTimer active={running} startedAt={sessionStartedAt} />
-                  </Text>
-                ) : null}
-              </>
-            )}
-
-            {error ? (
-              <Text className="font-inter text-center text-sm" style={{ color: colors.danger }}>
-                {error}
-              </Text>
-            ) : null}
-
-            {!showingSummary ? (
-              <Pressable
-                onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
-                className="min-w-[200px] items-center rounded-full py-3.5"
-                style={{ backgroundColor: running ? colors.surface : colors.accent }}
-              >
-                <Text className="font-inter-bold text-base font-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
-                  {running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+          {running && progress ? (
+            <View className="flex-row items-center">
+              <MutedText className="tabular-nums">
+                Interval {progress.index} of {progress.total} ·{' '}
+              </MutedText>
+              <ElapsedTimer active={running} startedAt={sessionStartedAt} />
+            </View>
+          ) : null}
         </View>
-      </SafeAreaView>
+      )}
+
+      {error ? (
+        <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+          {error}
+        </Text>
+      ) : null}
+
+
 
       {learn.result ? (
         <LevelComplete
@@ -637,215 +782,7 @@ function GuessTheIntervalScreen() {
           onClose={learn.clearResult}
         />
       ) : null}
-
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Guess the Interval options"
-        tabs={[
-          ...(learnMode ? [] : [{
-            key: 'intervals',
-            label: 'Intervals',
-            content: () => (
-              <>
-                <View className="flex-row items-center justify-between">
-                  <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-                    {pool.length} of {INTERVALS.length} selected
-                  </Text>
-                  <View className="flex-row gap-3">
-                    <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}>
-                      <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
-                        All
-                      </Text>
-                    </Pressable>
-                    <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: [] })}>
-                      <Text className="font-inter-bold text-xs font-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
-                        None
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <Hint>Which intervals can be played — and the choices offered for each round. At least one must stay selected.</Hint>
-                <View className="flex-row flex-wrap gap-1.5">
-                  {INTERVALS.map((interval) => {
-                    const selected = settings.intervalIds.includes(interval.id);
-                    return (
-                      <Pressable
-                        key={interval.id}
-                        disabled={running}
-                        onPress={() =>
-                          updateSettings({
-                            intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
-                          })
-                        }
-                        className="rounded-full px-3 py-1.5"
-                        style={{ backgroundColor: selected ? colors.accent : colors.surface, opacity: running ? 0.6 : 1 }}
-                      >
-                        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
-                          {interval.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <SwitchRow
-                  label="Include descending intervals"
-                  checked={includeDescending}
-                  onChange={(v) => updateSettings({ includeDescending: v })}
-                  disabled={running}
-                  hint="Lets a round play the interval below the starting note, not just above it — the choices are still just the interval's name, not its direction."
-                />
-              </>
-            ),
-          }]),
-          {
-            key: 'range',
-            label: 'Range',
-            content: () => (
-              <>
-                <View className="gap-1.5">
-                  {label('INSTRUMENT')}
-                  <Dropdown
-                    value={instrumentId}
-                    options={[...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range})` })), { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' }]}
-                    onChange={(v) => updateSettings({ instrumentId: v })}
-                  />
-                  <Hint>The register the starting note is drawn from — a comfortable range for your ear, not necessarily an instrument you&apos;re playing along with.</Hint>
-                </View>
-                {isCustom ? (
-                  <View className="gap-1.5">
-                    {label('CUSTOM RANGE')}
-                    <TextInput
-                      value={customRange}
-                      onChangeText={(v) => updateSettings({ customRange: v })}
-                      editable={!running}
-                      placeholder="A1-A6"
-                      placeholderTextColor={colors.muted}
-                      autoCapitalize="characters"
-                      className="font-inter rounded-xl px-3 py-2.5 text-base"
-                      style={{ backgroundColor: colors.surface, color: colors.foreground }}
-                    />
-                    <Hint>The lowest and highest notes to draw starting notes from, e.g. A1-A6.</Hint>
-                  </View>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'timing',
-            label: 'Timing',
-            content: () => (
-              <>
-                <NumberStepper
-                  label="Max time to answer"
-                  value={roundSeconds}
-                  unit="s"
-                  min={MIN_ROUND_SECONDS}
-                  max={MAX_ROUND_SECONDS}
-                  step={0.5}
-                  disabled={running}
-                  onChange={(v) => updateSettings({ roundSeconds: v })}
-                  hint="How long you have to pick an answer before it's marked a miss and moves on."
-                />
-                <NumberStepper
-                  label="Time between rounds"
-                  value={advanceDelayMs / 1000}
-                  unit="s"
-                  min={MIN_ADVANCE_DELAY_MS / 1000}
-                  max={MAX_ADVANCE_DELAY_MS / 1000}
-                  step={0.25}
-                  disabled={running}
-                  onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-                  hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays."
-                />
-                <SwitchRow
-                  label="Sound feedback"
-                  checked={soundFeedback}
-                  onChange={(v) => updateSettings({ soundFeedback: v })}
-                  disabled={running}
-                  hint="A click each second of the countdown, plus a click the instant a round is graded."
-                />
-                {!learnMode ? (
-                <SwitchRow
-                  label="Drill every interval"
-                  checked={drillMode}
-                  onChange={(v) => updateSettings({ drillMode: v })}
-                  disabled={running}
-                  hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
-                />
-                ) : null}
-                {!drillMode && !learnMode ? (
-                  <NumberStepper
-                    label="Number of rounds"
-                    value={roundCount}
-                    unit=""
-                    min={MIN_ROUND_COUNT}
-                    max={MAX_ROUND_COUNT}
-                    step={1}
-                    disabled={running}
-                    onChange={(v) => updateSettings({ roundCount: v })}
-                    hint="How many intervals make up one session."
-                  />
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound & display',
-            content: () => (
-              <>
-                <View className="gap-1.5">
-                  {label('PLAYBACK STYLE')}
-                  <Dropdown value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
-                  <Hint>Whether the two notes play one after another or together.</Hint>
-                </View>
-                <View className="gap-1.5">
-                  {label('TONE')}
-                  <Dropdown value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
-                  <Hint>Which sound plays the interval — real recorded piano or Rhodes.</Hint>
-                </View>
-                <SwitchRow
-                  label="Reveal notes after answering"
-                  checked={revealNotes}
-                  onChange={(v) => updateSettings({ revealNotes: v })}
-                  hint="Shows the actual note names once a round is graded, e.g. C4 → E4."
-                />
-                {revealNotes ? (
-                  <View className="gap-1.5">
-                    {label('ACCIDENTALS')}
-                    <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-                    <Hint>How sharps and flats are spelled in the revealed notes, e.g. C# vs Db.</Hint>
-                  </View>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'progress',
-            label: 'Progress',
-            content: () => (
-              <ProgressTab
-                bestMs={bestMs}
-                history={matchingHistory}
-                onClearHistory={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
-                weak={weakEntries.map((e) => ({ key: e.key, label: e.interval.label, counts: e.counts }))}
-                weakNoun="intervals"
-                running={running}
-                onShedWeak={() => {
-                  setOptionsOpen(false);
-                  start('weak');
-                }}
-                onClearStats={() => {
-                  intervalStatsRef.current = {};
-                  updateSettings({ intervalStats: {} });
-                }}
-              />
-            ),
-          },
-        ]}
-      />
-    </View>
+    </ToolScreen>
   );
 }
 

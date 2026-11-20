@@ -1,7 +1,8 @@
 import { DEFAULT_CLICK_SOUND_ID, type BeatLevel } from '@jam-practice/core/clickSounds';
 import {
+  COMMON_METERS,
   NEXT_LEVEL,
-  accentsFromGroups,
+  SUB_LABELS,
   clampBpm,
   defaultAccents,
   defaultSubAccents,
@@ -10,23 +11,26 @@ import {
 } from '@jam-practice/core/meterControls';
 import { MAX_BEATS } from '@jam-practice/core/meters';
 import { EMPTY_STRUCTURE, type Structure, cycleSectionAccent, cycleSectionSubAccent, sectionAt } from '@jam-practice/core/structure';
-import { Stack } from 'expo-router';
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useSyncExternalStore } from 'react';
+import { Text } from 'react-native';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { SlidersIcon } from '@/components/icons';
-import {
-  AccentAndSubdivisionControls,
-  SoundOptions,
-  TempoControls,
-  TempoNoteValueControls,
-  TimeSignatureControls,
-} from '@/components/MetronomeControls';
+import { MeterIcon, SectionsIcon, SpeakerIcon, SubdivisionChipIcon } from '@/components/icons';
 import { StructureEditor } from '@/components/StructureEditor';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import {
+  BigButton,
+  MeterQuickPicks,
+  SoundPicker,
+  SubdivisionPicker,
+  TempoHero,
+  TempoNoteConversionHint,
+  TempoNoteValuePicker,
+  TimeSignatureControl,
+  soundSummary,
+} from '@/components/tool/meter';
+import { Segmented } from '@/components/tool/reward';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import {
   getMetronomeSnapshot,
@@ -38,6 +42,8 @@ import {
 } from '@/lib/metronomeEngine';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 const SETTINGS_KEY = 'jam-practice-metronome';
 const DEFAULT_SETTINGS = {
@@ -55,23 +61,17 @@ const DEFAULT_SETTINGS = {
 };
 
 /**
- * Native port of `apps/web/components/Metronome.tsx`. The screen itself follows a new, deliberately
- * reusable shape per a direct request meant to apply to every future tool, not just this one: the
- * main display shows only the handful of controls someone reaches for constantly — time signature,
- * tempo, the beat indicator, Start/Stop — sized to fit one screen with **no scrolling at all**;
- * everything else (subdivision, accent grouping, tempo note value, structures, sound) lives behind
- * one "Options" button in a tabbed sheet (`ToolOptionsSheet`, itself written to be generic, not
- * Metronome-specific — see its own doc comment). See `MetronomeControls.tsx`'s own doc comment for
- * exactly which control moved where and why.
+ * The Metronome, laid out like every tool (`ToolFrame`): One meter / Changing meters at the top,
+ * the tempo (− / number / +, the note value it counts, a slider, −10 −5 Tap tempo +5 +10) and the
+ * beat strip (tap a beat to change its accent) in the middle, then the footer: Start and the
+ * setting chips — Time, Subdivision (or Sections) and Sound — each opening a sheet.
  *
  * Settings sync to the signed-in account via `useSyncedSettings` (falling back to this device's
- * own `AsyncStorage` cache whenever the account isn't reachable — offline, or signed out) — see
- * that hook's own doc comment for exactly how the two are reconciled.
+ * own `AsyncStorage` cache when the account isn't reachable).
  */
 function MetronomeScreen() {
   const { colors } = useAppTheme();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const bpm = clampBpm(settings.bpm);
   const beatsPerBar = Math.min(MAX_BEATS, Math.max(1, Math.round(settings.beatsPerBar)));
@@ -82,6 +82,8 @@ function MetronomeScreen() {
 
   const engineState = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot);
   const { running, currentBeat, currentSub } = engineState;
+  useToolActivity('/metronome', running);
+  useKeepAwakeWhile(running);
 
   useEffect(() => {
     updateMetronomeSettings({ bpm, beatsPerBar, beatUnit, accents, subdivision, subAccents, volume, soundId, tempoNoteValue });
@@ -147,154 +149,99 @@ function MetronomeScreen() {
   if (!settingsReady) return <ScreenSpinner />;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Metronome' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-6 py-4">
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
+    <ToolFrame
+      title="Metronome"
+      // The meter mode first: it decides what the display and the chips are.
+      mode={
+        <Segmented
+          onPage
+          label="Meter"
+          value={useStructure ? 'structure' : 'single'}
+          onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+          options={[
+            { value: 'single', label: 'One meter' },
+            { value: 'structure', label: 'Changing meters' },
+          ]}
+        />
+      }
+      action={<BigButton label={running ? 'Stop' : 'Start'} secondary={running} disabled={!running && !canStart} onPress={running ? stopMetronome : start} />}
+      chips={
+        <SettingsBar>
+          {useStructure ? (
+            <SettingChip
+              Icon={SectionsIcon}
+              label="Sections"
+              value={structure.sections.length ? `${structure.sections.length} section${structure.sections.length === 1 ? '' : 's'}` : 'Add sections'}
             >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                Options
-              </Text>
-            </Pressable>
-          </View>
-
-          <View
-            className="flex-1 items-center justify-center gap-10"
-            style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}
-          >
-            <View className="items-center gap-4">
-              <TempoNoteValueControls
-                tempoNoteValue={tempoNoteValue}
-                setTempoNoteValue={(next) => updateSettings({ tempoNoteValue: next })}
-                effectiveBeatUnit={effectiveBeatUnit}
+              <StructureEditor
+                structure={structure}
+                onChange={(next) => updateSettings({ structure: next })}
+                activeFormIndex={running ? engineState.formIndex : null}
               />
-              <TempoControls bpm={bpm} setBpm={(next) => updateSettings({ bpm: next })} onTap={tap} />
-              <TimeSignatureControls
-                beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-                beatUnit={activeSection?.beatUnit ?? beatUnit}
-                onChangeBeats={changeBeats}
-                onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
-              />
-            </View>
-
-            <View className="items-center gap-3">
-              {useStructure && activeSection ? (
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                  Section <Text style={{ color: colors.foreground }}>{activeSection.name}</Text> ·
-                  bar {engineState.barInSection + 1} of {activeSection.bars}
-                </Text>
-              ) : null}
-
-              {useStructure && !activeSection ? (
-                <View className="rounded-2xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
-                  <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
-                    Open Options to add sections and build a form.
-                  </Text>
-                </View>
-              ) : (
-                <BeatIndicator
-                  accents={displayAccents}
-                  currentBeat={running ? currentBeat : null}
-                  onCycle={handleCycleBeat}
-                  subdivision={displaySubdivision}
-                  subAccents={displaySubAccents}
-                  currentSub={currentSub}
-                  onCycleSub={handleCycleSub}
+            </SettingChip>
+          ) : (
+            <>
+              <SettingChip Icon={MeterIcon} label="Time" title="Time signature" value={`${beatsPerBar}/${beatUnit}`}>
+                <TimeSignatureControl
+                  beatsPerBar={beatsPerBar}
+                  beatUnit={beatUnit}
+                  onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
+                  onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
                 />
-              )}
-            </View>
-
-            <Pressable
-              onPress={running ? stopMetronome : start}
-              disabled={!running && !canStart}
-              className="min-w-[220px] items-center rounded-full py-4"
-              style={{
-                backgroundColor: running ? colors.surface : colors.accent,
-                opacity: !running && !canStart ? 0.5 : 1,
-              }}
-            >
-              <Text
-                className="text-base font-bold font-inter-bold"
-                style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
-              >
-                {running ? 'Stop' : 'Start'}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
-
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Metronome options"
-        tabs={[
-          {
-            key: 'meter',
-            label: 'Meter',
-            content: () => (
-              <>
-                <AccentAndSubdivisionControls
-                  accents={accents}
-                  subdivision={subdivision}
-                  onSetSubdivision={(next) => updateSettings({ subdivision: next })}
-                  onApplyGroups={(groups) =>
-                    updateSettings({
-                      beatsPerBar: groups.reduce((a, b) => a + b, 0),
-                      accents: accentsFromGroups(groups),
-                    })
-                  }
+                <MeterQuickPicks
+                  meters={COMMON_METERS}
+                  beatsPerBar={beatsPerBar}
+                  beatUnit={beatUnit}
+                  onPick={(b, u) => updateSettings({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
                 />
-                <View className="gap-3 rounded-3xl p-4" style={{ backgroundColor: colors.surface }}>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                      Use a structure
-                    </Text>
-                    <Switch
-                      value={useStructure}
-                      onValueChange={(value) => updateSettings({ useStructure: value })}
-                      trackColor={{ false: colors['surface-hover'], true: colors.accent }}
-                    />
-                  </View>
-                  <Text className="text-xs leading-4 font-inter" style={{ color: colors.muted }}>
-                    Chain bars of different time signatures in a fixed, looping sequence — e.g. 2
-                    bars of 11/8, then a bar of 12/8, then a bar of 15/8 — instead of one meter for
-                    the whole run.
-                  </Text>
-                  {useStructure ? (
-                    <StructureEditor
-                      structure={structure}
-                      onChange={(next) => updateSettings({ structure: next })}
-                      activeFormIndex={running ? engineState.formIndex : null}
-                    />
-                  ) : null}
-                </View>
-              </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound',
-            content: () => (
-              <SoundOptions
-                soundId={soundId}
-                setSoundId={(id) => updateSettings({ soundId: id })}
-                volume={volume}
-                setVolume={(next) => updateSettings({ volume: next })}
-              />
-            ),
-          },
-        ]}
+              </SettingChip>
+              <SettingChip Icon={SubdivisionChipIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? String(subdivision)}>
+                <SubdivisionPicker value={subdivision} onChange={(next) => updateSettings({ subdivision: next })} />
+              </SettingChip>
+            </>
+          )}
+          <SettingChip Icon={SpeakerIcon} label="Sound" value={soundSummary(soundId, volume)}>
+            <SoundPicker
+              soundId={soundId}
+              setSoundId={(id) => updateSettings({ soundId: id })}
+              volume={volume}
+              setVolume={(next) => updateSettings({ volume: next })}
+            />
+          </SettingChip>
+        </SettingsBar>
+      }
+    >
+      <TempoHero
+        bpm={bpm}
+        setBpm={(next) => updateSettings({ bpm: clampBpm(next) })}
+        beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
+        beatUnit={activeSection?.beatUnit ?? beatUnit}
+        onTap={tap}
+        tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
       />
-    </View>
+      <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
+      {useStructure && activeSection ? (
+        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+          Section <Text style={{ color: colors.foreground }}>{activeSection.name}</Text> · bar {engineState.barInSection + 1} of {activeSection.bars}
+        </Text>
+      ) : null}
+      {useStructure && !activeSection ? (
+        <Text className="font-ui px-6 text-center text-sm" style={{ color: colors.muted }}>
+          Add sections and put them in the form to start.
+        </Text>
+      ) : (
+        <BeatIndicator
+          accents={displayAccents}
+          currentBeat={running ? currentBeat : null}
+          onCycle={handleCycleBeat}
+          subdivision={displaySubdivision}
+          subAccents={displaySubAccents}
+          currentSub={currentSub}
+          onCycleSub={handleCycleSub}
+          cycleHint
+        />
+      )}
+    </ToolFrame>
   );
 }
 

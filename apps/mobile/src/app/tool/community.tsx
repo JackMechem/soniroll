@@ -7,12 +7,13 @@ import { useMemo, useState, type ComponentType } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SearchField } from '@/components/ChordChartList';
 import { PostListItem } from '@/components/community/CommunityTunes';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { TabHeader } from '@/components/TabHeader';
+import { EmptyState, IconButton, SearchField, SectionHeader, SignInGate, useScrolled } from '@/components/ui';
 import { ActionSheet } from '@/components/ActionSheet';
-import { FollowersIcon, HeartIcon, MusicNoteIcon, PlusIcon, PostIcon, SetlistIcon, type IconProps } from '@/components/icons';
+import { FollowersIcon, HeartIcon, MusicNoteIcon, PlusIcon, PostIcon, SetlistIcon, UsersIcon, type IconProps } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -20,15 +21,15 @@ import { useSetlists } from '@/lib/useSetlists';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
- * The Community tab, laid out like the Tunes and Chord Charts dashboards: a big title with a +
- * (post tunes, or post one of your setlists), one search across people and posts, stat cards that
- * open Liked posts / Following / My posts, then the latest posts. Every post opens its own page
+ * The Community tab: a big title with a + (post tunes, or post one of your setlists), one search
+ * across people and posts, a compact row of counts that open Liked posts / Following / My posts
+ * (only once one of them has something), then the latest posts. Every post opens its own page
  * (`/post/[id]`). Posting itself is the full-page composer (`/community/new`), which checks for a
  * public profile.
  */
 function CommunityScreen() {
   const bottomSpace = useTabBarSpace();
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
   const authed = isAuthenticated ? {} : 'skip';
@@ -44,6 +45,7 @@ function CommunityScreen() {
   const [newOpen, setNewOpen] = useState(false);
   const [pickSetlist, setPickSetlist] = useState(false);
   const [deletingId, setDeletingId] = useState<Id<'communityTunes'> | null>(null);
+  const { scrolled, onScroll, scrollEventThrottle } = useScrolled();
 
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
   const trimmed = query.trim();
@@ -60,31 +62,20 @@ function CommunityScreen() {
 
   if (isLoading) return <ScreenSpinner />;
 
-  const gated = (go: () => void) => (isAuthenticated ? go() : router.push('/profile'));
-
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-2 px-5 pb-3 pt-4">
-          <Text className="font-inter-extrabold flex-1 text-3xl font-extrabold" style={{ color: colors.foreground }}>
-            Community
-          </Text>
-          <Pressable
-            onPress={() => gated(() => setNewOpen(true))}
-            accessibilityLabel="New post"
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.accent }}
-          >
-            <PlusIcon color={colors['accent-foreground']} size={24} />
-          </Pressable>
-        </View>
-        <View className="px-4 pb-2">
-          <SearchField value={query} onChange={setQuery} placeholder="Search people and posts…" />
+        {/* Posting needs an account: no + until you're signed in (the gate below says why). */}
+        <TabHeader title="Community" right={isAuthenticated ? <IconButton primary Icon={PlusIcon} label="New post" onPress={() => setNewOpen(true)} /> : undefined} />
+        <View className="px-4 pb-2" style={{ borderBottomWidth: 1, borderBottomColor: scrolled ? derived.hairline : 'transparent' }}>
+          <SearchField value={query} onChangeText={setQuery} placeholder="Search people and posts" />
         </View>
 
         <ScrollView
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
           contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: bottomSpace, gap: 22 }}
         >
           {trimmed ? (
@@ -108,11 +99,11 @@ function CommunityScreen() {
                       >
                         <UserAvatar url={p.avatarUrl} />
                         <View className="min-w-0 flex-1">
-                          <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                          <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                             @{p.username}
                           </Text>
                           {p.instruments.length > 0 ? (
-                            <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                            <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                               {p.instruments.join(', ')}
                             </Text>
                           ) : null}
@@ -142,30 +133,29 @@ function CommunityScreen() {
             </>
           ) : (
             <>
-              <View className="flex-row gap-3">
-                <StatCard Icon={HeartIcon} count={likedIds?.length} label="Liked" onPress={() => gated(() => router.push('/liked-posts'))} />
-                <StatCard Icon={FollowersIcon} count={following?.length} label="Following" onPress={() => gated(() => router.push('/community/following'))} />
-                <StatCard Icon={PostIcon} count={mine?.length} label="My posts" onPress={() => gated(() => router.push('/account/posts'))} />
-              </View>
+              {/* Counts, once they've all arrived and one isn't zero (no "–" next to a "0"). */}
+              {likedIds && following && mine && likedIds.length + following.length + mine.length > 0 ? (
+                <View className="flex-row flex-wrap gap-2">
+                  <CountLink Icon={HeartIcon} count={likedIds.length} label="Liked" onPress={() => router.push('/liked-posts')} />
+                  <CountLink Icon={FollowersIcon} count={following.length} label="Following" onPress={() => router.push('/community/following')} />
+                  <CountLink Icon={PostIcon} count={mine.length} label="My posts" onPress={() => router.push('/account/posts')} />
+                </View>
+              ) : null}
 
               <Section title="Latest posts">
                 {!isAuthenticated ? (
-                  <View className="gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-                    <Text className="font-inter text-sm" style={{ color: colors.muted }}>
-                      Sign in to see what sheddex users have posted — tunes, setlists, and the chord charts that come with them.
-                    </Text>
-                    <Pressable onPress={() => router.push('/profile')} className="items-center rounded-xl py-3" style={{ backgroundColor: colors.accent }}>
-                      <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
-                        Sign in
-                      </Text>
-                    </Pressable>
-                  </View>
+                  <SignInGate Icon={UsersIcon} title="See what musicians are sharing" body="Tunes, setlists and the chord charts that come with them. Free with an account." />
                 ) : posts === undefined ? (
                   <View className="items-center py-6">
                     <LoadingSpinner />
                   </View>
                 ) : posts.length === 0 ? (
-                  <Empty text="Nobody's posted yet — be the first with +." />
+                  <EmptyState
+                    Icon={PostIcon}
+                    title="Nobody's posted yet"
+                    body="Share the tunes you play, or a setlist, and be the first."
+                    action={{ label: 'New post', Icon: PlusIcon, onPress: () => setNewOpen(true) }}
+                  />
                 ) : (
                   <View className="gap-2">
                     {posts.map((post) => (
@@ -220,12 +210,9 @@ function CommunityScreen() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const { colors } = useAppTheme();
   return (
     <View className="gap-2">
-      <Text className="font-inter-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
-        {title}
-      </Text>
+      <SectionHeader title={title} />
       {children}
     </View>
   );
@@ -234,25 +221,31 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Empty({ text }: { text: string }) {
   const { colors } = useAppTheme();
   return (
-    <Text className="font-inter rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
+    <Text className="font-ui rounded-2xl p-4 text-sm" style={{ backgroundColor: colors.surface, color: colors.muted }}>
       {text}
     </Text>
   );
 }
 
-function StatCard({ Icon, count, label, onPress }: { Icon: ComponentType<IconProps>; count: number | undefined; label: string; onPress: () => void }) {
-  const { colors } = useAppTheme();
+/** A count that opens its list: a small pill with an icon, the name and the number. */
+function CountLink({ Icon, count, label, onPress }: { Icon: ComponentType<IconProps>; count: number; label: string; onPress: () => void }) {
+  const { colors, derived } = useAppTheme();
   return (
-    <Pressable onPress={onPress} android_ripple={{ color: colors['surface-hover'] }} className="flex-1 gap-2 overflow-hidden rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
-      <Icon color={colors.accent} size={22} />
-      <View>
-        <Text className="font-inter-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
-          {count ?? '–'}
-        </Text>
-        <Text numberOfLines={1} className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-          {label}
-        </Text>
-      </View>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${count}`}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-9 flex-row items-center gap-1.5 overflow-hidden rounded-full px-3.5"
+      style={{ backgroundColor: derived.fill }}
+    >
+      <Icon color={colors.muted} size={16} />
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+        {label}
+      </Text>
+      <Text className="font-ui text-sm" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+        {count}
+      </Text>
     </Pressable>
   );
 }

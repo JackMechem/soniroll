@@ -1,171 +1,187 @@
-import {
-  type NavLinkInfo,
-  NAV_LINKS_DATA,
-  filterNavLinks,
-  groupByCategory,
-  hrefToSlug,
-} from '@jam-practice/core/navLinks';
-import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useConvexAuth } from '@convex-dev/auth/react';
+import { NAV_LINKS_DATA, filterNavLinks, hrefToSlug, type NavLinkInfo } from '@jam-practice/core/navLinks';
+import type { Href } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { NAV_LINK_ICONS, StarIcon } from '@/components/icons';
-import { useFavorites } from '@/lib/useFavorites';
+import { LockIcon, StarIcon } from '@/components/icons';
+import { SectionHeader, ToolIcon } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** Community and Chord Charts have their own tabs in `FloatingTabBar`, so they are not repeated in
-    this list (a direct request: Chord Charts is "a big and main feature" that belongs in the nav). */
-export const TAB_HREFS = ['/community', '/chord-charts', '/tunes'];
+/** The Library (tunes), its Charts, the Shed Log and Community are main screens with their own tabs
+    in `FloatingTabBar`, so the tool lists leave them out (search still finds them, as shortcuts). */
+export const TAB_HREFS = ['/community', '/chord-charts', '/tunes', '/shed-log'];
 
-/** Splits a list into fixed-size rows for the Favorites grid. `SectionList`'s own `numColumns`
-    doesn't exist — chunking rows by hand is the usual workaround — but a `FlatList`/`FlashList`
-    switch isn't warranted here either: Favorites is a small, fixed-length subset, not a feed, so a
-    plain `ScrollView` over pre-chunked rows is simplest. */
+/** Where each tab tool lives in the app, for search shortcuts. */
+const TAB_ROUTES: Record<string, Href> = {
+  '/tunes': '/library',
+  '/chord-charts': '/charts',
+  '/community': '/tool/community',
+  '/shed-log': '/tool/shed-log',
+};
+
+/** Every tool that isn't a tab, in the website's order. */
+export const TOOL_LINKS = NAV_LINKS_DATA.filter((l) => !TAB_HREFS.includes(l.href));
+
+/** The tab tools, found by search as shortcuts. */
+export const SHORTCUT_LINKS = NAV_LINKS_DATA.filter((l) => TAB_HREFS.includes(l.href));
+
+/** The tools most people reach for every day, first on the Tools tab. */
+export const EVERYDAY_HREFS = ['/metronome', '/tuner', '/recorder', '/practice-timer', '/jam-practice'];
+
+/** Tools that only work signed in (each shows what it is and Sign in otherwise): a lock shows on
+    them while signed out. */
+export const ACCOUNT_ONLY_HREFS = new Set(['/shed-log', '/shed-notes', '/lessons', '/recorder', '/community']);
+
+/** The app route that opens a tool, or a tab for a tab tool. */
+export function toolRoute(href: string): Href {
+  return TAB_ROUTES[href] ?? (`/tool/${hrefToSlug(href)}` as Href);
+}
+
+/** Search: matching tools, and the tabs (Library, Chord Charts, Community, Shed Log) as shortcuts. */
+export function searchTools(query: string) {
+  return { tools: filterNavLinks(TOOL_LINKS, query), shortcuts: filterNavLinks(SHORTCUT_LINKS, query) };
+}
+
+/** The name to show in a list: the short name when the full one is long ("Metric Modulation" for
+    "Polyrhythm Metric Modulation Metronome"). Titles elsewhere keep the full name. */
+export function toolName(item: NavLinkInfo): string {
+  return item.short && item.label.length > 21 ? item.short : item.label;
+}
+
+/** Splits a list into fixed-size rows for the Favorites grid. */
 export function chunk<T>(items: T[], size: number): T[][] {
   const rows: T[][] = [];
   for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
   return rows;
 }
 
-/**
- * The tool browser — per a direct follow-up reversing the previous round's own icon-grid redesign
- * for everything except Favorites: "I want all the tools to be in a list not a grid, except for
- * the favorites section which will be at the top in a grid." Category headers lost both their
- * small leading icon and the all-caps/tracking-wide styling (`CATEGORIES`'s own entries,
- * `@jam-practice/core/navLinks`, are already properly capitalized — e.g. "Timing & Tuning" — the
- * `.toUpperCase()` call that used to force them to shout was the only thing making them look
- * uppercase at all, not the source data). This *is* `Home`'s own content now (`app/index.tsx`) —
- * `Home` owns the fixed top bar/search row above this and hands down `query`; this component is
- * purely the scrollable content below it.
- *
- * **Favorites** (`useFavorites`, the same account-only Convex-backed list web's own sidebar star
- * uses, under the identical `"jam-practice-favorites"` syncedSettings key) renders first, as its
- * own small 2-column grid of the same icon-chip cards the whole browser used to be — the one
- * place that style still earns its keep, since a short, hand-curated set of favorites is exactly
- * the "a few special things" case a card grid suits, unlike a long flat list of everything.
- * Every row/card gets a star toggle (`StarIcon`, filled once favorited) — signed out, or before
- * `useFavorites` has anything synced yet, the star still shows (so it's discoverable) but tapping
- * it simply has nothing to persist to, matching `useFavorites`'s own documented signed-out
- * behavior rather than hiding the control entirely.
- */
-export function ToolGrid({
-  query = '',
-  bottomInset = TAB_BAR_CONTENT_HEIGHT + 40,
-}: {
-  query?: string;
-  /** Extra scroll padding so the last row isn't hidden behind the floating tab bar. */
-  bottomInset?: number;
-}) {
-  const router = useRouter();
-  const { colors } = useAppTheme();
-  const { favorites, toggleFavorite } = useFavorites();
-  // Community and Chord Charts each have their own tab in the bottom nav, so they aren't repeated here.
-  const visible = filterNavLinks(NAV_LINKS_DATA, query).filter((link) => !TAB_HREFS.includes(link.href));
-  const sections = groupByCategory(visible);
-  const favoriteItems = visible.filter((item) => favorites.includes(item.href));
-
-  function go(item: NavLinkInfo) {
-    router.push(`/tool/${hrefToSlug(item.href)}`);
-  }
-
-  if (visible.length === 0) {
-    return (
-      <View className="items-center px-6 py-16">
-        <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-          No tools match &ldquo;{query}&rdquo;.
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottomInset }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      {favoriteItems.length > 0 ? (
-        <View className="mb-6 mt-4">
-          <Text className="mb-2 px-1 text-2xl font-bold font-inter-bold" style={{ color: colors.foreground }}>
-            Favorites
-          </Text>
-          {chunk(favoriteItems, 2).map((row, i) => (
-            <View key={i} className="mb-3 flex-row gap-3">
-              {row.map((item) => (
-                <ToolTile
-                  key={item.href}
-                  item={item}
-                  favorited
-                  onPress={() => go(item)}
-                  onToggleFavorite={() => toggleFavorite(item.href)}
-                />
-              ))}
-              {row.length === 1 ? <View className="flex-1" /> : null}
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {sections.map(({ category, items }) => (
-        <View key={category} className="mb-6 mt-4">
-          <Text className="mb-2 px-1 text-2xl font-bold font-inter-bold" style={{ color: colors.foreground }}>
-            {category}
-          </Text>
-          <View className="overflow-hidden rounded-2xl px-3" style={{ backgroundColor: colors.surface }}>
-            {items.map((item, i) => (
-              <View key={item.href}>
-                <ToolRow
-                  item={item}
-                  favorited={favorites.includes(item.href)}
-                  onPress={() => go(item)}
-                  onToggleFavorite={() => toggleFavorite(item.href)}
-                />
-                {i < items.length - 1 ? (
-                  <View style={{ height: 1, marginHorizontal: -12, backgroundColor: colors.background }} />
-                ) : null}
-              </View>
-            ))}
-          </View>
-        </View>
-      ))}
-    </ScrollView>
-  );
+/** Signed out and the tool needs an account. */
+export function useLocked(href: string) {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  return ACCOUNT_ONLY_HREFS.has(href) && !isAuthenticated && !isLoading;
 }
 
-export function ToolRow({
-  item,
-  favorited,
-  onPress,
-  onToggleFavorite,
-}: {
-  item: NavLinkInfo;
-  favorited: boolean;
-  onPress: () => void;
-  onToggleFavorite: () => void;
-}) {
+/** The star that pins a tool to Favorites (the account's signed in, this phone's signed out). */
+function FavoriteStar({ item, favorited, onToggle }: { item: NavLinkInfo; favorited: boolean; onToggle: () => void }) {
   const { colors } = useAppTheme();
-  const Icon = NAV_LINK_ICONS[item.href];
   return (
     <Pressable
-      onPress={onPress}
-      className="flex-row items-center gap-3 px-2 py-3"
+      onPress={onToggle}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={favorited ? `Unfavorite ${item.label}` : `Favorite ${item.label}`}
+      className="h-11 w-11 items-center justify-center"
     >
-      {Icon ? <Icon color={colors.muted} size={18} /> : null}
-      <Text className="flex-1 text-sm font-semibold font-inter-semibold" numberOfLines={1} style={{ color: colors.foreground }}>
-        {item.label}
-      </Text>
-      <Pressable
-        onPress={onToggleFavorite}
-        hitSlop={8}
-        accessibilityLabel={favorited ? `Unfavorite ${item.label}` : `Favorite ${item.label}`}
-        className="h-8 w-8 items-center justify-center"
-      >
-        <StarIcon color={favorited ? colors.accent : colors.muted} size={16} filled={favorited} />
-      </Pressable>
+      <StarIcon color={favorited ? colors.accent : colors.muted} size={18} filled={favorited} />
     </Pressable>
   );
 }
 
+/** A tool's name with a small lock after it when it needs an account and you're signed out. */
+function ToolName({ item, lines, className }: { item: NavLinkInfo; lines: number; className: string }) {
+  const { colors } = useAppTheme();
+  const locked = useLocked(item.href);
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <Text numberOfLines={lines} className={className} style={{ color: colors.foreground, flexShrink: 1 }}>
+        {toolName(item)}
+      </Text>
+      {locked ? (
+        <View accessibilityLabel="Needs an account">
+          <LockIcon color={colors.muted} size={14} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** What a tool does in one short line (its `blurb`; the description when there isn't one). */
+export function toolBlurb(item: NavLinkInfo): string {
+  return item.blurb ?? item.description;
+}
+
+/** A tool in a list: its icon in its category colour, its name, what it does in one short muted
+    line, and the favorite star. Without `onToggleFavorite` (a shortcut to a tab) there's no star.
+    Rows sit directly on a surface section (`ToolSection`), a hairline between them — `divider`
+    draws the one above this row. */
+export function ToolRow({
+  item,
+  favorited = false,
+  onPress,
+  onToggleFavorite,
+  divider,
+}: {
+  item: NavLinkInfo;
+  favorited?: boolean;
+  onPress: () => void;
+  onToggleFavorite?: () => void;
+  divider?: boolean;
+}) {
+  const { colors, derived } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      accessibilityHint={toolBlurb(item)}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="min-h-[60px] flex-row items-center gap-3 py-2.5 pl-3"
+      style={{ paddingRight: onToggleFavorite ? 0 : 12, borderTopWidth: divider ? 1 : 0, borderTopColor: derived.hairline }}
+    >
+      <ToolIcon tool={item} size={34} />
+      <View className="flex-1 gap-0.5">
+        <ToolName item={item} lines={1} className="font-ui-semibold text-[15px] font-semibold" />
+        <Text numberOfLines={1} className="font-ui text-[13px] leading-4" style={{ color: colors.muted }}>
+          {toolBlurb(item)}
+        </Text>
+      </View>
+      {onToggleFavorite ? <FavoriteStar item={item} favorited={favorited} onToggle={onToggleFavorite} /> : null}
+    </Pressable>
+  );
+}
+
+/** A group of tools: its name as a plain label, then the rows on one surface section with
+    hairlines between them (no filled rows inside a filled card). */
+export function ToolSection({
+  title,
+  items,
+  favorites,
+  onOpen,
+  onToggleFavorite,
+}: {
+  title: string;
+  items: NavLinkInfo[];
+  /** Starred hrefs; leave out for rows without a star (shortcuts to the tabs). */
+  favorites?: string[];
+  onOpen: (item: NavLinkInfo) => void;
+  onToggleFavorite?: (href: string) => void;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="gap-1.5">
+      <SectionHeader title={title} />
+      <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
+        {items.map((item, i) => (
+          <ToolRow
+            key={item.href}
+            item={item}
+            divider={i > 0}
+            favorited={favorites?.includes(item.href)}
+            onPress={() => onOpen(item)}
+            onToggleFavorite={favorites && onToggleFavorite ? () => onToggleFavorite(item.href) : undefined}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** Exactly half a row each (less the gap), whatever the names: `flex-1` alone let a lone last
+    tile beside an empty spacer come out wider than the ones above it. */
+const HALF = { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 } as const;
+
+/** A tool as a compact tile in the Favorites grid (two to a row): its icon, its name and the star
+    on one line, about half the height of the old cards. */
 export function ToolTile({
   item,
   favorited,
@@ -178,36 +194,48 @@ export function ToolTile({
   onToggleFavorite: () => void;
 }) {
   const { colors } = useAppTheme();
-  const Icon = NAV_LINK_ICONS[item.href];
   return (
     <Pressable
       onPress={onPress}
-      className="flex-1 rounded-2xl border p-4"
-      style={{ backgroundColor: colors.surface, borderColor: colors['surface-hover'] }}
+      accessibilityRole="button"
+      accessibilityLabel={item.label}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="min-h-[56px] flex-row items-center gap-2.5 overflow-hidden rounded-xl py-2 pl-3"
+      style={[HALF, { backgroundColor: colors.surface }]}
     >
-      <View className="flex-row items-start justify-between">
-        {/* Icon chip tinted with the theme's own accent at low alpha — a plain hex-with-alpha-suffix
-            (`#RRGGBBAA`), not a Tailwind `/opacity` modifier, since this app's theme colors are flat
-            hex strings rather than rgb()-triplets (see `ThemeProvider.tsx`'s own doc comment on why
-            color lives in inline style at all here). Works identically across every one of the 30
-            presets without needing to know anything about the specific hex value. */}
-        <View
-          className="mb-3 h-11 w-11 items-center justify-center rounded-2xl"
-          style={{ backgroundColor: `${colors.accent}22` }}
-        >
-          {Icon ? <Icon color={colors.accent} size={20} /> : null}
-        </View>
-        <Pressable onPress={onToggleFavorite} hitSlop={8} accessibilityLabel={favorited ? `Unfavorite ${item.label}` : `Favorite ${item.label}`}>
-          <StarIcon color={favorited ? colors.accent : colors.muted} size={16} filled={favorited} />
-        </Pressable>
+      <ToolIcon tool={item} size={32} />
+      <View className="flex-1">
+        <ToolName item={item} lines={2} className="font-ui-semibold text-[14px] font-semibold leading-[18px]" />
       </View>
-      <Text
-        className="text-[15px] font-bold font-inter-bold"
-        numberOfLines={2}
-        style={{ color: colors.foreground }}
-      >
-        {item.label}
-      </Text>
+      <View style={{ marginLeft: -6 }}>
+        <FavoriteStar item={item} favorited={favorited} onToggle={onToggleFavorite} />
+      </View>
     </Pressable>
+  );
+}
+
+/** Tools as a grid of compact tiles, two to a row. */
+export function ToolTiles({
+  items,
+  favorites,
+  onOpen,
+  onToggleFavorite,
+}: {
+  items: NavLinkInfo[];
+  favorites: string[];
+  onOpen: (item: NavLinkInfo) => void;
+  onToggleFavorite: (href: string) => void;
+}) {
+  return (
+    <View className="gap-2.5">
+      {chunk(items, 2).map((row, i) => (
+        <View key={i} className="flex-row gap-2.5">
+          {row.map((item) => (
+            <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} onPress={() => onOpen(item)} onToggleFavorite={() => onToggleFavorite(item.href)} />
+          ))}
+          {row.length === 1 ? <View style={HALF} /> : null}
+        </View>
+      ))}
+    </View>
   );
 }

@@ -1,7 +1,5 @@
 import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from '@jam-practice/core/instruments';
 import {
-  GRADE_COLOR,
-  GRADE_LABEL,
   type Grade,
   describePitch,
   frequencyToMidi,
@@ -23,15 +21,12 @@ import {
 } from '@jam-practice/core/noteSpelling';
 import {
   type GradeCounts,
-  attempts,
   bumpGradeCounts,
   rankWeak,
 } from '@jam-practice/core/struggleStats';
-import { formatDuration, shuffled } from '@jam-practice/core/trainerUtils';
-import { Stack } from 'expo-router';
+import { shuffled } from '@jam-practice/core/trainerUtils';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
 
 import { getAudioContext } from '@/lib/audioContext';
 import { SENSITIVITY, startAudioInput, type AudioInput } from '@/lib/audioInput';
@@ -39,27 +34,48 @@ import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
-import { CountdownRing } from '@/components/CountdownRing';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { Hint } from '@/components/Hint';
-import { SlidersIcon } from '@/components/icons';
-import { NumberStepper } from '@/components/NumberStepper';
+import { MicrophoneIcon, NoteIcon, StopwatchIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet, type ToolOptionsTab } from '@/components/ToolOptionsSheet';
+import {
+  Field,
+  HistoryChip,
+  IDLE_RING,
+  IdleHint,
+  IdleStatus,
+  MutedText,
+  PillChoice,
+  QuizRing,
+  ResultsPanel,
+  SheetButton,
+  SheetDivider,
+  SheetInput,
+  SheetText,
+  SliderField,
+  StrugglesChip,
+  ToolScreen,
+  instrumentShortName,
+  noteGlyphs,
+  useGradeColors,
+} from '@/components/tool/ear';
+import { BigButton } from '@/components/tool/meter';
+import { Segmented } from '@/components/tool/reward';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/NoteTrainer.tsx`. Same "quiz" (notes shown, optionally
  * spoken out loud) and mic-based "listen mode" (graded correct/partial/incorrect live) shape, the
  * same lifetime "Struggles" stats and "Shed weak notes"/"Shed a string" focused sessions, and the
- * same per-config timed "History" list — all pure logic/data, so it ports essentially 1:1. What
- * changed is purely the screen shape, following every other tool ported this round: the main
- * screen shows only the note itself, the countdown ring, live grading feedback, and Start/Stop,
- * with no `ScrollView` at all; every setting (instrument/range, accidental style, listen-mode
- * tuning, sound, and the Struggles/History panels — web's own `sidePanel`) lives in a tabbed
- * `ToolOptionsSheet`.
+ * same per-config timed "History" list — all pure logic/data, so it ports essentially 1:1. Laid
+ * out like the website's (`components/tool/ear.tsx`): History / Struggles chips (Listen, once
+ * there's something in them), the note in its ring, Start, then Timed / Listen and the Range, Time
+ * per note, Microphone (Listen) and Sound & display chips.
  *
  * Settings sync to the account via `useSyncedSettings`, under the *same* key web already uses
  * (`"jam-practice-note-trainer"`) with the same field names wherever the two platforms share a
@@ -77,10 +93,8 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
  *   triangle/sawtooth/square), not web's full `TONES` list (organ/pluck/piano/rhodes) — there's no
  *   sampled-tone playback mechanism on native yet (that's a separate, bigger task: fetching/
  *   decoding real audio assets). Matches the Tuner's own tone-generator picker exactly.
- * - **Dropdown-based pickers (instrument, accidentals, sensitivity) aren't disabled while a
- *   session is running** — `Dropdown` has no disabled state on this app yet, and the Metronome/
- *   Tuner's own Options sheets already leave every control live while running rather than locking
- *   them — a changed setting just takes effect the next time `start()` runs, same as those two.
+ * - **The instrument dropdown isn't disabled while a session runs** — `Dropdown` has no disabled
+ *   state yet; a changed setting just takes effect the next time `start()` runs.
  * - **No keyboard shortcut** (web's "press Space to start/stop") — no physical keyboard.
  */
 const SETTINGS_KEY = 'jam-practice-note-trainer';
@@ -215,8 +229,9 @@ function playClick() {
 
 function NoteTrainerScreen() {
   const { colors } = useAppTheme();
+  const GRADE_COLOR = useGradeColors();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [rangeOpen, setRangeOpen] = useState(false);
 
   const {
     customRange,
@@ -259,6 +274,8 @@ function NoteTrainerScreen() {
   const [note, setNote] = useState<string | null>(null);
   const [nextNote, setNextNote] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/note-trainer', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -678,7 +695,7 @@ function NoteTrainerScreen() {
   }
 
   const noteLabel = (n: string, seq = 0) => spellNote(n, accidentalStyle, seq, effectiveIgnoreOctave);
-  const mainLabel = note ? noteLabel(note, noteSeed) : '—';
+  const mainLabel = note ? noteLabel(note, noteSeed) : '?';
   const mainLabelIsDouble = mainLabel.includes('/');
   const glow = running && status ? GRADE_COLOR[status] : null;
   const score = summary ? scoreOf(summary.results) : 0;
@@ -704,135 +721,86 @@ function NoteTrainerScreen() {
   const parsedRange = parseRange(rangeInput);
   const weakCountInRange = parsedRange ? weakNotesInRange(settings.noteStats, parsedRange).length : 0;
 
-  const tabs: ToolOptionsTab[] = [
-    {
-      key: 'notes',
-      label: 'Notes',
-      content: () => (
-        <>
-          <SwitchRow
-            label="Ignore octave"
-            checked={ignoreOctave}
-            onChange={(checked) => updateSettings({ ignoreOctave: checked })}
-            disabled={running}
-            hint="Collapses the note pool to one octave (12 notes) and, in listen mode, accepts the right note in any octave."
+  const rangeSummary = `${instrumentShortName(instrumentId)} · ${ignoreOctave ? 'any octave' : rangeInput.replace('-', '–')}`;
+  const showSide = listenMode && !running && (history.length > 0 || weakEntries.length > 0);
+  const showingSummary = summary !== null && !running;
+  const locked = running ? <SheetText>Stop to change these.</SheetText> : null;
+
+  const chipList = (
+    <>
+      <SettingChip Icon={NoteIcon} label="Range" value={rangeSummary} open={rangeOpen} onOpenChange={setRangeOpen}>
+        {locked}
+        <SwitchRow
+          label="Ignore octave"
+          checked={ignoreOctave}
+          onChange={(checked) => updateSettings({ ignoreOctave: checked })}
+          disabled={running}
+          hint="Collapses the note pool to one octave (12 notes) and, in listen mode, accepts the right note in any octave."
+        />
+        <Field label="Accidentals" hint="How sharps and flats are spelled, e.g. C# vs Db.">
+          <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} disabled={running} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+        </Field>
+        <Field label="Instrument" hint="Sets the range notes are drawn from, to match what you're practicing on.">
+          <Dropdown
+            value={instrumentId}
+            options={[
+              ...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })),
+              { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' },
+            ]}
+            onChange={(v) => updateSettings({ instrumentId: v })}
           />
-
-          <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              ACCIDENTALS
-            </Text>
-            <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-            <Hint>How sharps and flats are spelled, e.g. C# vs Db.</Hint>
-          </View>
-
-          <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              INSTRUMENT
-            </Text>
-            <Dropdown
-              value={instrumentId}
-              options={[
-                ...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range})` })),
-                { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' },
-              ]}
-              onChange={(v) => updateSettings({ instrumentId: v })}
-            />
-            <Hint>Sets the range notes are drawn from, to match what you&apos;re practicing on.</Hint>
-          </View>
-
-          {isCustom && !ignoreOctave ? (
-            <View className="gap-1.5">
-              <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                CUSTOM RANGE
-              </Text>
-              <TextInput
-                value={customRange}
-                onChangeText={(v) => updateSettings({ customRange: v })}
-                editable={!running}
-                placeholder="A1-A6"
-                placeholderTextColor={colors.muted}
-                autoCapitalize="characters"
-                className="rounded-xl px-3 py-2.5 text-base font-inter"
-                style={{ backgroundColor: colors.background, color: colors.foreground }}
-              />
-              <Hint>The lowest and highest notes to draw from, e.g. A1-A6.</Hint>
+        </Field>
+        {isCustom && !ignoreOctave ? (
+          <Field label="Custom range" hint="The lowest and highest notes to draw from, e.g. A1-A6.">
+            <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} editable={!running} placeholder="A1-A6" />
+          </Field>
+        ) : null}
+        {instrument?.strings ? (
+          <Field
+            label="Shed a string"
+            hint={`Starts a listen-mode session on every note of just that string — its open note up to two octaves above it (or the top of ${instrument.label}'s range, if that's lower) — always shown and graded with the octave, regardless of Ignore octave above.`}
+          >
+            <View className="flex-row flex-wrap gap-2">
+              {instrument.strings.map((openNote, i) => (
+                <SheetButton
+                  key={i}
+                  label={noteGlyphs(spellNote(openNote, accidentalStyle, i, false))}
+                  disabled={running}
+                  onPress={() => {
+                    setRangeOpen(false);
+                    void start({ kind: 'string', stringIndex: i });
+                  }}
+                />
+              ))}
             </View>
-          ) : null}
+          </Field>
+        ) : null}
+      </SettingChip>
 
-          {instrument?.strings ? (
-            <View className="gap-2">
-              <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                SHED A STRING
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {instrument.strings.map((openNote, i) => (
-                  <Pressable
-                    key={i}
-                    onPress={() => void start({ kind: 'string', stringIndex: i })}
-                    disabled={running}
-                    className="rounded-lg px-3 py-1.5"
-                    style={{ backgroundColor: colors.background, opacity: running ? 0.5 : 1 }}
-                  >
-                    <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
-                      {spellNote(openNote, accidentalStyle, i, false)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <Hint>
-                Starts a listen-mode session on every note of just that string — its open note up to two
-                octaves above it (or the top of {instrument.label}&apos;s range, if that&apos;s lower) —
-                always shown and graded with the octave, regardless of Ignore octave above.
-              </Hint>
-            </View>
-          ) : null}
-
-          {!listenMode ? (
-            <NumberStepper
-              label="Interval"
-              value={intervalSeconds}
-              unit="s"
-              min={MIN_INTERVAL_SECONDS}
-              max={MAX_INTERVAL_SECONDS}
-              step={0.5}
-              disabled={running}
-              onChange={(v) => updateSettings({ intervalSeconds: v })}
-              hint="How long each note stays on screen before the next one shows."
-            />
-          ) : null}
-        </>
-      ),
-    },
-    {
-      key: 'listen',
-      label: 'Listen mode',
-      content: () => (
-        <>
-          <SwitchRow
-            label="Listen mode"
-            checked={listenMode}
-            onChange={(checked) => updateSettings({ listenMode: checked })}
-            disabled={running}
-            hint="Listens through the microphone and grades each note correct, partial, or incorrect — instead of just showing you what to play."
-          />
-
-          <NumberStepper
-            label="Max time"
-            value={intervalSeconds}
-            unit="s"
-            min={MIN_INTERVAL_SECONDS}
-            max={MAX_INTERVAL_SECONDS}
-            step={0.5}
-            disabled={running}
-            onChange={(v) => updateSettings({ intervalSeconds: v })}
-            hint="How long you have to play each note before it's marked a miss and moves on."
-          />
-
-          <NumberStepper
+      {/* How long each note shows (Timed), or how long you have to play it and the pause after
+          (Listen): the same setting either way, so one name. */}
+      <SettingChip Icon={StopwatchIcon} label="Time per note" value={`${intervalSeconds} s`}>
+        {locked}
+        <SliderField
+          label="Time per note"
+          value={intervalSeconds}
+          unit=" s"
+          min={MIN_INTERVAL_SECONDS}
+          max={MAX_INTERVAL_SECONDS}
+          step={0.5}
+          disabled={running}
+          onChange={(v) => updateSettings({ intervalSeconds: v })}
+          hint={
+            listenMode
+              ? "How long you have to play each note before it's marked a miss and moves on."
+              : 'How long each note stays on screen before the next one shows.'
+          }
+        />
+        {listenMode ? (
+          <SliderField
             label="Time between notes"
             value={advanceDelayMs / 1000}
-            unit="s"
+            unit=" s"
             min={MIN_ADVANCE_DELAY_MS / 1000}
             max={MAX_ADVANCE_DELAY_MS / 1000}
             step={0.25}
@@ -840,7 +808,12 @@ function NoteTrainerScreen() {
             onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
             hint="How long the graded note (with its countdown ring) stays on screen before the next one starts."
           />
+        ) : null}
+      </SettingChip>
 
+      {listenMode ? (
+        <SettingChip Icon={MicrophoneIcon} label="Microphone" value={SENSITIVITY[sensitivity].label.split(' (')[0]}>
+          {locked}
           <SwitchRow
             label="Sound feedback"
             checked={soundFeedback}
@@ -848,94 +821,86 @@ function NoteTrainerScreen() {
             disabled={running}
             hint="A click each second of the countdown, plus a click the instant a note is graded."
           />
-
           <SwitchRow
             label="Drill every note"
             checked={drillMode}
             onChange={(checked) => updateSettings({ drillMode: checked })}
-            disabled={!listenMode || running}
+            disabled={running}
             hint="Plays every note in the range once, in a random order, instead of a fixed count."
           />
-
           {drillMode ? (
             <SwitchRow
               label="Revisit partials"
               checked={requeuePartials}
               onChange={(checked) => updateSettings({ requeuePartials: checked })}
-              disabled={!listenMode || running}
+              disabled={running}
               hint="A note you got right after a wrong attempt goes back on the end of the queue too, not just full misses."
             />
           ) : (
-            <NumberStepper
+            <SliderField
               label="Number of notes"
               value={noteCount}
-              unit=""
               min={MIN_NOTE_COUNT}
               max={MAX_NOTE_COUNT}
               step={1}
-              disabled={running || !listenMode}
+              disabled={running}
               onChange={(v) => updateSettings({ noteCount: v })}
               hint="How many random notes make up one session."
             />
           )}
-
-          <View className="h-px" style={{ backgroundColor: colors['surface-hover'] }} />
-          <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-            ADVANCED
-          </Text>
-
-          <NumberStepper
+          <SheetDivider title="Advanced" />
+          <SliderField
             label="Tuning tolerance"
             value={toleranceCents}
             unit="¢"
             min={10}
             max={100}
             step={5}
-            disabled={running || !listenMode}
+            disabled={running}
             onChange={(v) => updateSettings({ toleranceCents: v })}
             hint="How many cents off pitch still counts as correct, so a slightly out-of-tune instrument still passes."
           />
-          <NumberStepper
+          <SliderField
             label="Note hold time"
             value={holdMs}
             unit=" ms"
             min={30}
             max={300}
             step={30}
-            disabled={running || !listenMode}
+            disabled={running}
             onChange={(v) => updateSettings({ holdMs: v })}
             hint="How long a pitch has to stay steady before it's graded, so a quick slide or slip isn't counted."
           />
-          <NumberStepper
+          <SliderField
             label="Reference pitch (A4)"
             value={refA}
             unit=" Hz"
             min={415}
             max={466}
             step={1}
-            disabled={running || !listenMode}
+            disabled={running}
             onChange={(v) => updateSettings({ refA: v })}
             hint="The frequency concert A is tuned to. 440 is standard."
           />
-          <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              INPUT SENSITIVITY
-            </Text>
-            <Dropdown
+          <Field label="Input sensitivity" hint="How quiet a signal can be before it's treated as silence — raise it in a noisy room.">
+            <PillChoice
+              label="Input sensitivity"
               value={sensitivity}
               options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
+              disabled={running}
               onChange={(v) => updateSettings({ sensitivity: v })}
             />
-            <Hint>How quiet a signal can be before it&apos;s treated as silence — raise it in a noisy room.</Hint>
-          </View>
+          </Field>
           <SwitchRow
             label="Half credit after a wrong note"
             checked={partialCredit}
             onChange={(checked) => updateSettings({ partialCredit: checked })}
-            disabled={running || !listenMode}
+            disabled={running}
             hint="A wrong note played before the right one still counts, but only for half credit instead of a full point."
           />
-          <Pressable
+          <SheetButton
+            label="Reset advanced settings"
+            disabled={running}
             onPress={() =>
               updateSettings({
                 toleranceCents: DEFAULT_SETTINGS.toleranceCents,
@@ -945,378 +910,162 @@ function NoteTrainerScreen() {
                 partialCredit: DEFAULT_SETTINGS.partialCredit,
               })
             }
-            disabled={running}
-            className="self-start rounded-lg px-3 py-1.5"
-            style={{ backgroundColor: colors.background, opacity: running ? 0.5 : 1 }}
-          >
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-              Reset advanced settings
-            </Text>
-          </Pressable>
-        </>
-      ),
-    },
-    {
-      key: 'sound',
-      label: 'Sound & display',
-      content: () => (
-        <>
-          <SwitchRow
-            label="Play note out loud"
-            checked={playSound && !listenMode}
-            onChange={(checked) => updateSettings({ playSound: checked })}
-            disabled={listenMode}
-            hint="Sounds each note when it appears, so you can hear it as well as see its name. Not available in listen mode."
           />
-          <SwitchRow
-            label="Show next note"
-            checked={showNext}
-            onChange={(checked) => updateSettings({ showNext: checked })}
-            hint="Shows a preview of the upcoming note next to the current one."
-          />
-          <View className="gap-1.5">
-            <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-              TONE
-            </Text>
-            <Dropdown value={toneId} options={TONES} onChange={(v) => updateSettings({ toneId: v })} />
-            <Hint>Which sound plays notes out loud.</Hint>
-          </View>
-        </>
-      ),
-    },
-  ];
+        </SettingChip>
+      ) : null}
 
-  if (listenMode) {
-    tabs.push({
-      key: 'progress',
-      label: 'Progress',
-      content: () => (
-        <>
-          <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-            History
-          </Text>
-          {bestMs !== null ? (
-            <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
-              Best {formatDuration(bestMs)}
-            </Text>
-          ) : null}
-          {matchingHistory.length === 0 ? (
-            <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-              No attempts yet with these settings.
-            </Text>
-          ) : (
-            <View className="gap-1">
-              {[...matchingHistory]
-                .sort((a, b) => b.at - a.at)
-                .map((entry, i) => (
-                  <View
-                    key={i}
-                    className="flex-row items-center justify-between gap-3 border-b py-2"
-                    style={{ borderColor: `${colors.background}b3` }}
-                  >
-                    <View>
-                      <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
-                        {formatDuration(entry.elapsedMs)}
-                      </Text>
-                      <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-                        {entry.config.drillMode ? 'Drill' : 'Quiz'} · {new Date(entry.at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <Text
-                      className="text-sm font-inter tabular-nums"
-                      style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}
-                    >
-                      {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          )}
-          {matchingHistory.length > 0 ? (
-            <Pressable
-              onPress={() =>
-                updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })
-              }
-              className="self-start"
-            >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                Clear these times
-              </Text>
-            </Pressable>
-          ) : null}
-
-          <View className="mt-2 h-px" style={{ backgroundColor: colors['surface-hover'] }} />
-          <Text className="mt-2 text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-            Struggles
-          </Text>
-          {weakEntries.length === 0 ? (
-            <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-              No struggles tracked yet — a wrong or partial note in listen mode adds it here.
-            </Text>
-          ) : (
-            <View className="gap-1">
-              {weakEntries.map((entry) => (
-                <View
-                  key={entry.key}
-                  className="flex-row items-center justify-between gap-3 border-b py-2"
-                  style={{ borderColor: `${colors.background}b3` }}
-                >
-                  <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
-                    {noteLabel(entry.key)}
-                  </Text>
-                  <View className="flex-row items-center gap-2">
-                    {entry.counts.incorrect > 0 ? (
-                      <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
-                        ✕{entry.counts.incorrect}
-                      </Text>
-                    ) : null}
-                    {entry.counts.partial > 0 ? (
-                      <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.partial }}>
-                        ~{entry.counts.partial}
-                      </Text>
-                    ) : null}
-                    <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
-                      /{attempts(entry.counts)}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-          <Pressable
-            onPress={() => void start({ kind: 'weak' })}
-            disabled={running || weakCountInRange === 0}
-            className="self-start rounded-lg px-3 py-1.5"
-            style={{ backgroundColor: colors.accent, opacity: running || weakCountInRange === 0 ? 0.5 : 1 }}
-          >
-            <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
-              Shed weak notes{weakCountInRange > 0 ? ` (${weakCountInRange})` : ''}
-            </Text>
-          </Pressable>
-          {weakEntries.length > 0 ? (
-            <Pressable onPress={clearNoteStats} disabled={running} className="self-start">
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
-                Clear stats
-              </Text>
-            </Pressable>
-          ) : null}
-        </>
-      ),
-    });
-  }
-
-  const ringActive = running;
-  const isDoubleWide = mainLabelIsDouble;
+      <SettingChip
+        Icon={ToneIcon}
+        label="Sound & display"
+        value={`${playSound && !listenMode ? (TONES.find((t) => t.value === toneId)?.label ?? 'Played') : 'Silent'}${showNext ? ' · next shown' : ''}`}
+      >
+        <SwitchRow
+          label="Play note out loud"
+          checked={playSound && !listenMode}
+          onChange={(checked) => updateSettings({ playSound: checked })}
+          disabled={listenMode}
+          hint="Sounds each note when it appears, so you can hear it as well as see its name. Not available in listen mode."
+        />
+        <SwitchRow
+          label="Show next note"
+          checked={showNext}
+          onChange={(checked) => updateSettings({ showNext: checked })}
+          hint="Shows a preview of the upcoming note next to the current one."
+        />
+        <Field label="Tone" hint="Which sound plays notes out loud.">
+          <PillChoice label="Tone" value={toneId} options={TONES} disabled={!playSound || listenMode} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+      </SettingChip>
+    </>
+  );
 
   // Saved settings not read yet — a spinner rather than defaults that then jump to the real values.
   if (!settingsReady) return <ScreenSpinner />;
 
+  // The mode switch first: it decides what the screen is. Then listen mode's History and Struggles,
+  // once there's something in them.
+  // Start: while the results show, their own "Try again" is the one start button.
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Note Trainer' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-6 py-4">
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                Options
+    <ToolScreen
+      title="Note Trainer"
+      mode={
+        !running ? (
+          <Segmented
+            onPage
+            label="Mode"
+            value={listenMode ? 'listen' : 'timed'}
+            onChange={(v) => updateSettings({ listenMode: v === 'listen' })}
+            disabled={running}
+            options={[
+              { value: 'timed', label: 'Timed' },
+              { value: 'listen', label: 'Listen' },
+            ]}
+          />
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: noteGlyphs(noteLabel(e.key)), counts: e.counts }))}
+              shedLabel="Shed weak notes"
+              shedCount={weakCountInRange}
+              emptyText="No struggles tracked yet — a wrong or partial note in listen mode adds it here."
+              running={running}
+              onShed={() => void start({ kind: 'weak' })}
+              onClear={clearNoteStats}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      action={!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
+      chips={chipList}
+    >
+      {showingSummary && summary ? (
+        <ResultsPanel
+          score={score}
+          total={summary.results.length}
+          elapsed={lastElapsedMs}
+          bestMs={bestMs}
+          isNewBest={isNewBest}
+          grades={(['correct', 'partial', 'incorrect'] as const).map((g) => ({ grade: g, count: tally(g) }))}
+          tags={summary.notes.map((n, i) => ({ label: noteGlyphs(noteLabel(n, i)), grade: summary.results[i] }))}
+          onAgain={() => void start(lastRequest)}
+          onClose={() => setSummary(null)}
+        />
+      ) : (
+        <View className="items-center gap-2">
+          {status && running && listenMode && noteTimer ? (
+            <View className="items-center">
+              <MutedText className="text-xs">Next note in</MutedText>
+              <CountdownLabel
+                active={running}
+                startedAt={noteTimer.startedAt}
+                durationMs={noteTimer.durationMs}
+                textClassName="font-ui-semibold text-3xl font-semibold tabular-nums"
+                color={GRADE_COLOR[status]}
+              />
+            </View>
+          ) : null}
+          <View>
+            <QuizRing size={running ? 168 : IDLE_RING} running={running} timer={noteTimer}>
+              {running ? (
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  className={`font-ui-bold font-bold tabular-nums ${mainLabelIsDouble ? 'text-3xl' : 'text-6xl'}`}
+                  style={{ color: glow ?? colors.foreground }}
+                >
+                  {noteGlyphs(mainLabel)}
+                </Text>
+              ) : (
+                <IdleStatus history={listenMode ? history : []} />
+              )}
+            </QuizRing>
+            {showNext && nextNote && running ? (
+              <Text
+                accessibilityLabel={`Next note ${noteLabel(nextNote, noteSeed + 1)}`}
+                className="font-ui-semibold text-xl font-semibold tabular-nums"
+                style={{ position: 'absolute', bottom: 4, left: '100%', marginLeft: 12, color: colors.muted }}
+              >
+                {noteGlyphs(noteLabel(nextNote, noteSeed + 1))}
               </Text>
-            </Pressable>
-          </View>
-
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
-            {status && running && listenMode && noteTimer ? (
-              <View className="items-center gap-0.5">
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                  NEXT NOTE IN
-                </Text>
-                <CountdownLabel
-                  active={running}
-                  startedAt={noteTimer.startedAt}
-                  durationMs={noteTimer.durationMs}
-                  textClassName="text-3xl font-extrabold font-inter-extrabold tabular-nums"
-                  color={GRADE_COLOR[status]}
-                />
-              </View>
             ) : null}
-
-            <View style={{ position: 'relative' }}>
-              <CountdownRing active={ringActive} startedAt={noteTimer?.startedAt ?? 0} durationMs={noteTimer?.durationMs ?? 0}>
-                <Text
-                  className={`font-extrabold font-inter-extrabold tabular-nums ${isDoubleWide ? 'text-2xl' : 'text-5xl'}`}
-                  style={{
-                    color: glow ?? colors.foreground,
-                    ...(glow
-                      ? { textShadowColor: glow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14 }
-                      : null),
-                  }}
-                >
-                  {mainLabel}
-                </Text>
-              </CountdownRing>
-              {showNext && nextNote && running ? (
-                <Text
-                  accessibilityLabel={`Next note ${noteLabel(nextNote, noteSeed + 1)}`}
-                  className="text-lg font-semibold font-inter-semibold tabular-nums"
-                  style={{
-                    position: 'absolute',
-                    bottom: 4,
-                    left: '100%',
-                    marginLeft: 10,
-                    color: colors.muted,
-                  }}
-                >
-                  {noteLabel(nextNote, noteSeed + 1)}
-                </Text>
+          </View>
+          {/* Until there's history, one line of what a round is. */}
+          {!running && !(listenMode && history.length) ? (
+            <IdleHint>{listenMode ? 'Play each note shown; the mic checks it.' : 'A note shows; play it before the next one.'}</IdleHint>
+          ) : null}
+          {running && progress ? (
+            <View className="items-center gap-0.5">
+              <View className="flex-row items-center">
+                <MutedText className="tabular-nums">
+                  Note {progress.index} of {progress.total} ·{' '}
+                </MutedText>
+                <ElapsedTimer active={running} startedAt={sessionStartedAt} />
+              </View>
+              <MutedText className="tabular-nums">{heard ? `Heard ${noteGlyphs(heard)}` : 'Listening…'}</MutedText>
+              {waiting ? (
+                <View className="mt-2">
+                  <Button label="Skip note" kind="secondary" onPress={() => skipRef.current?.()} />
+                </View>
               ) : null}
             </View>
-
-            {running && progress ? (
-              <View className="items-center gap-0.5">
-                <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
-                  Note {progress.index} of {progress.total}
-                  {' · '}
-                  <ElapsedTimer active={running} startedAt={sessionStartedAt} />
-                </Text>
-                <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
-                  {heard ? `Heard ${heard}` : 'Listening…'}
-                </Text>
-                {waiting ? (
-                  <Pressable
-                    onPress={() => skipRef.current?.()}
-                    className="mt-2 rounded-full px-4 py-1.5"
-                    style={{ backgroundColor: colors.surface }}
-                  >
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                      Skip note
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-
-            {error ? (
-              <Text className="text-center text-sm font-inter" style={{ color: colors.danger }}>
-                {error}
-              </Text>
-            ) : null}
-
-            <Pressable
-              onPress={running ? stop : () => void start()}
-              className="min-w-[220px] items-center rounded-full py-4"
-              style={{ backgroundColor: running ? colors.surface : colors.accent }}
-            >
-              <Text
-                className="text-base font-bold font-inter-bold"
-                style={{ color: running ? colors.foreground : colors['accent-foreground'] }}
-              >
-                {running ? 'Stop' : 'Start'}
-              </Text>
-            </Pressable>
-          </View>
+          ) : null}
         </View>
-      </SafeAreaView>
+      )}
 
-      <ToolOptionsSheet visible={optionsOpen} onClose={() => setOptionsOpen(false)} title="Note Trainer options" tabs={tabs} />
-
-      <Modal visible={!!summary} transparent animationType="fade" onRequestClose={() => setSummary(null)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: `${colors.overlay}99`, justifyContent: 'center', padding: 20 }}
-          onPress={() => setSummary(null)}
-        >
-          <Pressable
-            onPress={() => {}}
-            className="gap-4 rounded-3xl p-5"
-            style={{ backgroundColor: colors.surface, maxHeight: '80%' }}
-          >
-            {summary ? (
-              <ScrollView contentContainerStyle={{ gap: 16 }}>
-                <View className="flex-row items-end justify-between gap-3">
-                  <View>
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.muted }}>
-                      Results
-                    </Text>
-                    <Text className="text-4xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: colors.foreground }}>
-                      {score % 1 === 0 ? score : score.toFixed(1)}
-                      <Text className="text-xl font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                        {' '}
-                        / {summary.results.length}
-                      </Text>
-                    </Text>
-                  </View>
-                  <Text className="text-2xl font-semibold font-inter-semibold tabular-nums" style={{ color: colors.muted }}>
-                    {summary.results.length ? Math.round((score / summary.results.length) * 100) : 0}%
-                  </Text>
-                </View>
-
-                {lastElapsedMs !== null ? (
-                  <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
-                    Time {formatDuration(lastElapsedMs)}
-                    {bestMs !== null ? ` · Best ${formatDuration(bestMs)}` : ''}
-                    {isNewBest ? (
-                      <Text className="font-semibold font-inter-semibold" style={{ color: GRADE_COLOR.correct }}>
-                        {'  New best!'}
-                      </Text>
-                    ) : null}
-                  </Text>
-                ) : null}
-
-                <View className="flex-row gap-2">
-                  {(['correct', 'partial', 'incorrect'] as const).map((grade) => (
-                    <View key={grade} className="flex-1 items-center rounded-2xl px-2 py-3" style={{ backgroundColor: colors.background }}>
-                      <Text className="text-2xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
-                        {tally(grade)}
-                      </Text>
-                      <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-                        {GRADE_LABEL[grade]}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View className="flex-row flex-wrap gap-1.5">
-                  {summary.notes.map((n, i) => (
-                    <View
-                      key={i}
-                      className="rounded-full px-2.5 py-1"
-                      style={{ backgroundColor: `${GRADE_COLOR[summary.results[i]]}26` }}
-                    >
-                      <Text className="text-xs font-bold font-inter-bold tabular-nums" style={{ color: GRADE_COLOR[summary.results[i]] }}>
-                        {noteLabel(n, i)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View className="flex-row gap-2">
-                  <Pressable
-                    onPress={() => void start(lastRequest)}
-                    className="rounded-xl px-4 py-2.5"
-                    style={{ backgroundColor: colors.accent }}
-                  >
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
-                      Try again
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={() => setSummary(null)} className="rounded-xl px-4 py-2.5" style={{ backgroundColor: colors.background }}>
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                      Close
-                    </Text>
-                  </Pressable>
-                </View>
-              </ScrollView>
-            ) : null}
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </View>
+      {error ? (
+        <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+          {error}
+        </Text>
+      ) : null}
+    </ToolScreen>
   );
 }
 

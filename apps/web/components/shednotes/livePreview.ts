@@ -3,6 +3,7 @@ import { type EditorState, Facet, type Range, StateField } from "@codemirror/sta
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { WIKILINK_RE, parseLinkInner, titleKey } from "@jam-practice/core/shedNotes";
+import { scoreIdOf } from "@jam-practice/core/shedNoteBlocks";
 import type { NoteActions } from "./commands";
 import { blockBox, unwatchBlockBox } from "./blockBox";
 import { addEmbed, ownerFacet, removeEmbed } from "./embedStore";
@@ -321,7 +322,8 @@ export function findBlocks(state: EditorState): Block[] {
 }
 
 /** A score block's id (its first non-empty line). */
-export const scoreIdOf = (body: string) => body.trim().split(/\s+/)[0] ?? "";
+/** The score id inside a ```score block (shared with the phone). */
+export { scoreIdOf };
 
 /** abcjs is big — loaded the first time a note shows ABC notation. */
 let abcjsPromise: Promise<typeof import("abcjs")> | null = null;

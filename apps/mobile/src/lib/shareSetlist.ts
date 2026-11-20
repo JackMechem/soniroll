@@ -8,7 +8,7 @@ import { Share } from 'react-native';
 import type { Setlist } from '@/lib/useSetlists';
 
 /** Where a shared setlist's link points — the website's setlist page. */
-export const SETLIST_SHARE_BASE = 'https://sheddex.com/setlist/';
+export const SETLIST_SHARE_BASE = 'https://www.soniroll.com/setlist/';
 
 /**
  * Share a setlist by link, then open the phone's share sheet with it. The link always shows the

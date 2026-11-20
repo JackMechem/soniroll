@@ -34,21 +34,6 @@ const KEYS: Record<DrumVoice, string> = {
 };
 const FEET = new Set<DrumVoice>(["kick", "pedal"]);
 
-export const DRUM_LEGEND: { voice: DrumVoice; label: string }[] = [
-  { voice: "crash", label: "Crash" },
-  { voice: "hhClosed", label: "Hi-hat" },
-  { voice: "ride", label: "Ride" },
-  { voice: "bell", label: "Ride bell" },
-  { voice: "cowbell", label: "Cowbell" },
-  { voice: "tomHigh", label: "High tom" },
-  { voice: "snare", label: "Snare" },
-  { voice: "crossStick", label: "Cross-stick" },
-  { voice: "tomLow", label: "Floor tom" },
-  { voice: "block", label: "Woodblock" },
-  { voice: "kick", label: "Bass drum" },
-  { voice: "pedal", label: "Hi-hat foot" },
-];
-
 const ROW_MIN_BAR = 230;
 
 type Slot = { step: number; len: number; voices: { voice: DrumVoice; velocity: number }[] };

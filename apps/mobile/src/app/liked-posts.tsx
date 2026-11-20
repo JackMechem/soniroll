@@ -8,7 +8,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PostListItem } from '@/components/community/CommunityTunes';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
@@ -32,14 +31,14 @@ function LikedPostsScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Liked Posts' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 + TAB_BAR_CONTENT_HEIGHT, gap: 12 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}>
           {posts === undefined ? (
             <View className="items-center py-8">
               <LoadingSpinner />
             </View>
           ) : posts.length === 0 ? (
             <Text
-              className="rounded-2xl p-5 text-center text-sm font-inter"
+              className="rounded-2xl p-5 text-center text-sm font-ui"
               style={{ backgroundColor: colors.surface, color: colors.muted }}
             >
               Nothing here yet — tap the heart on a post in Community to save it here.

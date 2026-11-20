@@ -93,7 +93,7 @@ export function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }) {
             className="rounded-xl px-3 py-2"
             style={{ backgroundColor: colors.background, opacity: uploading ? 0.5 : 1 }}
           >
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               {avatarUrl ? 'Change picture' : 'Upload picture'}
             </Text>
           </Pressable>
@@ -111,7 +111,7 @@ export function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }) {
           {uploading ? <LoadingSpinner size="sm" /> : null}
         </View>
         {error ? (
-          <Text className="text-xs font-inter" style={{ color: colors.danger }}>
+          <Text className="text-xs font-ui" style={{ color: colors.danger }}>
             {error}
           </Text>
         ) : null}

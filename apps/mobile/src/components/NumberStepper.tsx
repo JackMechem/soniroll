@@ -1,16 +1,13 @@
 import { Pressable, Text, View } from 'react-native';
 
-import { Hint } from '@/components/Hint';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { InfoButton } from '@/components/InfoButton';
+import { GradientFill } from '@/components/tool/reward';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
- * The native sibling of `apps/web/components/AdvancedSlider.tsx` — a labeled numeric control with
- * a live readout, for a value like "Tolerance" or "Hold time (ms)". Rendered as ±1-step buttons
- * instead of a drag slider, matching this app's own established mobile-specific precedent
- * (Metronome's BPM/volume steppers — see `PROJECT.md`'s own note on why: genuinely easier to hit
- * precisely with a finger than a continuous slider, and how most native mobile apps handle this
- * kind of control in the first place) rather than pulling in a slider dependency this app has
- * otherwise avoided.
+ * A labelled number with a readout, − / + buttons and a bar showing where it sits in its range
+ * (the chord chart editor's time signature). The description, if any, is behind an ⓘ. For a
+ * continuous value prefer `components/tool/Slider.tsx`.
  */
 export function NumberStepper({
   label,
@@ -46,10 +43,13 @@ export function NumberStepper({
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-          {label}
-        </Text>
-        <Text className="text-sm font-inter tabular-nums" style={{ color: colors.foreground }}>
+        <View className="flex-row items-center gap-1.5">
+          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+            {label}
+          </Text>
+          {hint ? <InfoButton title={label} text={hint} size={16} /> : null}
+        </View>
+        <Text className="text-sm font-ui tabular-nums" style={{ color: colors.foreground }}>
           {value}
           {unit}
         </Text>
@@ -60,14 +60,10 @@ export function NumberStepper({
           disabled={disabled || value <= min}
           onPress={() => onChange(round(clamp(value - step)))}
         />
-        <View className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: colors['surface-hover'] }}>
-          <View
-            className="h-full rounded-full"
-            style={{
-              width: `${((value - min) / (max - min)) * 100}%`,
-              backgroundColor: disabled ? colors.muted : colors.accent,
-            }}
-          />
+        <View className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ backgroundColor: withAlpha(colors.foreground, 0.1) }}>
+          <View className="h-full overflow-hidden rounded-full" style={{ width: `${((value - min) / (max - min)) * 100}%`, opacity: disabled ? 0.5 : 1 }}>
+            <GradientFill />
+          </View>
         </View>
         <StepperButton
           symbol="+"
@@ -75,7 +71,6 @@ export function NumberStepper({
           onPress={() => onChange(round(clamp(value + step)))}
         />
       </View>
-      {hint ? <Hint>{hint}</Hint> : null}
     </View>
   );
 }
@@ -89,15 +84,17 @@ function StepperButton({
   onPress: () => void;
   disabled?: boolean;
 }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className="h-9 w-9 items-center justify-center rounded-full"
-      style={{ backgroundColor: colors.surface, opacity: disabled ? 0.4 : 1 }}
+      accessibilityRole="button"
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-9 w-9 items-center justify-center overflow-hidden rounded-full"
+      style={{ backgroundColor: derived.fill, opacity: disabled ? 0.4 : 1 }}
     >
-      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
+      <Text className="text-lg font-bold font-ui-bold" style={{ color: colors.foreground }}>
         {symbol}
       </Text>
     </Pressable>

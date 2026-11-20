@@ -29,10 +29,10 @@ export function ConfirmDialog({
       >
         <Pressable onPress={() => {}} className="gap-4 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
           <View className="gap-1.5">
-            <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               {title}
             </Text>
-            <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+            <Text className="text-sm font-ui" style={{ color: colors.muted }}>
               {message}
             </Text>
           </View>
@@ -42,7 +42,7 @@ export function ConfirmDialog({
               className="rounded-xl px-4 py-2"
               style={{ backgroundColor: colors.background }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                 Cancel
               </Text>
             </Pressable>
@@ -51,7 +51,7 @@ export function ConfirmDialog({
               className="rounded-xl px-4 py-2"
               style={{ backgroundColor: colors.danger }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.background }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.background }}>
                 {confirmLabel}
               </Text>
             </Pressable>

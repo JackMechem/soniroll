@@ -1,65 +1,91 @@
 import '../global.css';
 
 import {
-  Inter_400Regular,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
+  Geist_400Regular,
+  Geist_600SemiBold,
+  Geist_700Bold,
+  Geist_800ExtraBold,
   useFonts,
-} from '@expo-google-fonts/inter';
+} from '@expo-google-fonts/geist';
+import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
+import { api } from '@jam-practice/convex/_generated/api';
+import { useQuery } from 'convex/react';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useRecordToolVisits } from '@/lib/toolRecents';
 import { View } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { LaunchSplash } from '@/components/LaunchSplash';
 import { FloatingTabBar } from '@/components/FloatingTabBar';
+import { NowPlayingHeaderButton, NowPlayingService } from '@/components/NowPlaying';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HeaderTitle } from '@/components/HeaderTitle';
+import { ToolHelpButton, toolIntroHref } from '@/components/tool/ToolIntro';
 import { PracticeTimerAlert } from '@/components/PracticeTimerAlert';
 import { PracticeTimerWidget } from '@/components/PracticeTimerWidget';
+import { ShedLogGlobal } from '@/components/shedLog/ShedLogGlobal';
 import { ConvexClientProvider } from '@/convex/ConvexClientProvider';
 import { useAppTheme, ThemeProvider } from '@/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
 
 /**
- * Per a direct request ("i dont like the font its using... can you use inter?") — nothing in this
- * app loaded a custom font before this, so every `Text` rendered in whatever system default font
- * React Native falls back to (Roboto/San Francisco), not the `--font-display` stack `global.css`
- * declares (that CSS variable was never actually applied anywhere — confirmed by grepping for
- * `fontFamily` across `src/` and finding zero matches). Inter is loaded here (`useFonts` below)
- * and applied via four plain NativeWind classes instead of a global default: `font-inter`/
- * `font-inter-semibold`/`font-inter-bold`/`font-inter-extrabold` (`tailwind.config.js`), one per
- * `<Text>` matching whatever weight it already used (`font-bold` etc.) — the usual
- * `Text.defaultProps.style` trick for a global default doesn't apply anymore: `Text` is a plain
- * function component in this React Native version (confirmed by reading its real source,
- * `node_modules/react-native/Libraries/Text/Text.js`), which carries no `defaultProps` at all
- * (also confirmed directly — `tsc` correctly refuses `Text.defaultProps` as a type error). A
- * single custom TTF also has no synthetic-bold fallback the way a system font does, so pairing the
- * exact matching weighted cut with each existing `font-bold`/`font-semibold`/`font-extrabold`
- * className (rather than one blanket regular default) is what's required for those to actually
- * render bold, not just switch fonts.
+ * Fonts: Geist, the website's UI font, loaded here and applied through the `font-ui*` classes
+ * (`tailwind.config.js`), one per `<Text>` matching its weight — a custom font has no synthetic
+ * bold, and `Text.defaultProps` doesn't exist on this React Native version, so there's no global
+ * default. (It was Inter until the 2026-11 redesign matched the website.)
  */
 
 /**
- * Root navigation shell — a plain `Stack` plus the floating tab bar. There's no drawer/hamburger
- * menu anymore: a direct request collapsed Home and "the menu" into one screen ("I don't really
- * want a home page at all, I want the menu to be the home page") — Home (`app/index.tsx`) now
- * *is* the full tool browser, so there's nothing left for a separate slide-out panel to hold.
- * `react-native-drawer-layout`/`Sidebar.tsx`/`DrawerController` were all removed outright once
- * nothing referenced them anymore, not left as unreferenced dead code.
+ * Root navigation shell — one flat `Stack` plus the tab bar for the five main screens: Home (the
+ * dashboard), Tools (every tool), the Shed Log, Library (tunes, setlists, charts, files,
+ * recordings) and Community. The
+ * tab bar shows only on those; everything opened from them covers the screen with a back button.
+ * Your account is the button at the top right of the main screens (`components/TabHeader.tsx`).
  */
+/** A session whose account is gone (deleted, here or on the website) signs out, rather than
+    leaving a nameless account that can't do anything. */
+function SignOutIfAccountGone() {
+  const { isAuthenticated } = useConvexAuth();
+  const user = useQuery(api.users.current, isAuthenticated ? {} : 'skip');
+  const { signOut } = useAuthActions();
+  useEffect(() => {
+    if (isAuthenticated && user === null) void signOut();
+  }, [isAuthenticated, user, signOut]);
+  return null;
+}
+
+/** A header's right side: a tool that's playing (`NowPlaying.tsx`; on every screen with a
+    header — the main screens show it on the tab bar), then on a tool's screen its ? button (see
+    `components/tool/ToolIntro.tsx`). */
+function headerRight(routeName: string) {
+  const href = toolIntroHref(routeName);
+  const Right = () => (
+    <View className="flex-row items-center gap-1">
+      <NowPlayingHeaderButton routeName={routeName} />
+      {href ? <ToolHelpButton href={href} /> : null}
+    </View>
+  );
+  return Right;
+}
+
 function RootNavigator() {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   useRecordToolVisits();
 
   return (
     <View style={{ flex: 1 }}>
+      {/* The clock and icons follow the theme (they were white on light themes). */}
+      <StatusBar style={derived.isDark ? 'light' : 'dark'} />
+      <SignOutIfAccountGone />
       <Stack
-        screenOptions={{
+        screenOptions={({ route }) => ({
+          // A tool that's playing, and a tool's "?" (what it is and its options) on its own screen.
+          headerRight: headerRight(route.name),
           headerTintColor: colors.accent,
           headerStyle: { backgroundColor: colors.background },
           headerShadowVisible: false,
@@ -67,12 +93,14 @@ function RootNavigator() {
           headerTitleAlign: 'left',
           headerLeft: () => <HeaderBackButton />,
           headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>,
-        }}
+        })}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        {/* The main screens (and the Library's parts) fade in rather than slide, like tabs. */}
+        <Stack.Screen name="index" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="tools" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="tool/[slug]" options={{ title: '' }} />
-        <Stack.Screen name="theme" options={{ title: 'Theme', headerLargeTitle: true }} />
-        <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="theme" options={{ title: 'Theme' }} />
+        <Stack.Screen name="profile" options={{ title: 'Account' }} />
         {/* Titles up front, so the header is right the instant a screen is pushed — each screen
             mounts its real content a frame later (see `components/ScreenLoader.tsx`), and its own
             <Stack.Screen options> only apply once it mounts. Dynamic titles ('') fill in then. */}
@@ -80,22 +108,23 @@ function RootNavigator() {
         <Stack.Screen name="post/[id]" options={{ title: 'Post' }} />
         <Stack.Screen name="u/[username]" options={{ title: 'Profile' }} />
         <Stack.Screen name="tool/chord-charts" options={{ title: 'Chord Charts' }} />
-        <Stack.Screen name="charts/index" options={{ headerShown: false }} />
+        <Stack.Screen name="charts/index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="charts/import" options={{ title: 'Import charts' }} />
         <Stack.Screen name="tool/chord-charts-playlist" options={{ title: '' }} />
         <Stack.Screen name="tool/chord-charts-view" options={{ title: '' }} />
         <Stack.Screen name="tool/chord-charts-new" options={{ title: 'New chart' }} />
         <Stack.Screen name="tool/chord-charts-editor" options={{ title: '' }} />
-        <Stack.Screen name="tool/community" options={{ headerShown: false }} />
+        <Stack.Screen name="tool/community" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="community/new" options={{ title: 'New post' }} />
         <Stack.Screen name="community/following" options={{ title: 'Following' }} />
         <Stack.Screen name="library/setlist" options={{ title: '' }} />
-        <Stack.Screen name="library/setlists" options={{ title: 'Setlists' }} />
+        <Stack.Screen name="library/setlists" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="setlist-charts" options={{ title: '' }} />
         <Stack.Screen name="setlist/[id]" options={{ title: 'Setlist' }} />
         <Stack.Screen name="tool/guess-the-chord" options={{ title: 'Guess the Chord' }} />
         <Stack.Screen name="tool/guess-the-progression" options={{ title: 'Guess the Progression' }} />
         <Stack.Screen name="tool/guess-the-interval" options={{ title: 'Guess the Interval' }} />
+        <Stack.Screen name="tool/find-the-root" options={{ title: 'Find the Root' }} />
         <Stack.Screen name="tool/interval-trainer" options={{ title: 'Interval Trainer' }} />
         <Stack.Screen name="tool/slow-downer" options={{ title: 'Slow Downer' }} />
         <Stack.Screen name="tool/jam-practice" options={{ title: 'Jam Practice' }} />
@@ -107,15 +136,39 @@ function RootNavigator() {
           options={{ title: 'Polyrhythm Metric Modulation Metronome' }}
         />
         <Stack.Screen name="tool/recorder" options={{ title: 'Recorder' }} />
-        <Stack.Screen name="recordings/index" options={{ title: 'My recordings' }} />
+        <Stack.Screen name="recordings/index" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="files/index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="recordings/save" options={{ title: 'Save recording' }} />
         <Stack.Screen name="recordings/[id]" options={{ title: '' }} />
         <Stack.Screen name="tool/random-sticking-warmup" options={{ title: 'Random Sticking Warmup' }} />
         <Stack.Screen name="tool/scale-trainer" options={{ title: 'Scale Trainer' }} />
         <Stack.Screen name="tool/tempo-trainer" options={{ title: 'Tempo Trainer' }} />
+        <Stack.Screen name="tool/syncopation" options={{ title: 'Syncopation' }} />
+        <Stack.Screen name="tool/rhythm-section" options={{ title: 'Rhythm Section' }} />
+        <Stack.Screen name="tool/score-writer" options={{ title: 'Score Writer' }} />
+        <Stack.Screen name="tool/time-test" options={{ title: 'Time Test' }} />
+        {/* A main screen (a tab): its own header, no back button. */}
+        <Stack.Screen name="tool/shed-log" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="tool/shed-log-routines" options={{ title: 'Routines' }} />
+        <Stack.Screen name="tool/shed-log-routine" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-log-routine-edit" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-notes" options={{ title: 'Shed Notes' }} />
+        <Stack.Screen name="tool/shed-notes-note" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-notes-templates" options={{ title: 'Templates' }} />
+        <Stack.Screen name="tool/shed-notes-settings" options={{ title: 'Shed Notes settings' }} />
+        <Stack.Screen name="tool/lessons" options={{ title: 'Lessons' }} />
+        <Stack.Screen name="tool/lessons-student" options={{ title: 'Lessons' }} />
+        <Stack.Screen name="tool/lessons-teacher" options={{ title: 'Lessons' }} />
+        <Stack.Screen name="tool/lessons-lesson" options={{ title: '' }} />
+        <Stack.Screen name="tool/lessons-notes" options={{ title: 'Lesson notes' }} />
+        <Stack.Screen name="tool/lessons-note" options={{ title: 'Lesson notes' }} />
+        <Stack.Screen name="tool/lessons-materials" options={{ title: '' }} />
+        <Stack.Screen name="tool/lessons-settings" options={{ title: 'Lesson settings' }} />
+        <Stack.Screen name="tool/lessons-join" options={{ title: 'Join lessons' }} />
+        <Stack.Screen name="tool/lessons-book" options={{ title: 'Pick a lesson time' }} />
         <Stack.Screen name="tool/tuner" options={{ title: 'Tuner' }} />
         <Stack.Screen name="account/public-profile" options={{ title: 'Public profile' }} />
-        <Stack.Screen name="library/index" options={{ headerShown: false }} />
+        <Stack.Screen name="library/index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="library/tunes" options={{ title: '' }} />
         <Stack.Screen name="library/tune" options={{ title: '' }} />
         <Stack.Screen name="library/tune-edit" options={{ title: 'Edit tune' }} />
@@ -130,22 +183,26 @@ function RootNavigator() {
           running — mounted app-wide (not inside the tool screen itself) so the widget stays
           visible on every page and the full-screen alert can interrupt you anywhere. */}
       <PracticeTimerWidget />
+      {/* The media notification that keeps a playing tool going in the background. */}
+      <NowPlayingService />
       <PracticeTimerAlert />
+      {/* The Shed Log's app-wide part: takes in timed practice, counts time in tools, celebrates. */}
+      <ShedLogGlobal />
     </View>
   );
 }
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
+    Geist_400Regular,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    Geist_800ExtraBold,
     // The two Petaluma faces Chord Charts renders notation through — see
     // `components/ChordChart.tsx`'s own doc comment for why it's two faces, not one
     // (`PetalumaScript` for root letters/digits/most of a quality suffix, `Petaluma` itself for
     // the two SMuFL glyphs — Δ and ° — that face doesn't cover). Loaded globally, once, the same
-    // as Inter, rather than per-screen, since both are small (under 400KB combined) and a chord
+    // as Geist, rather than per-screen, since both are small (under 400KB combined) and a chord
     // chart can be reached from more than one route (the tool itself, a tiled pane, eventually a
     // Community post preview).
     Petaluma: require('../assets/fonts/petaluma/Petaluma.otf'),
@@ -153,15 +210,15 @@ export default function RootLayout() {
   });
 
   // Keep the native splash screen up (already held via `preventAutoHideAsync()` above) until
-  // Inter's own files are actually loaded — otherwise the very first frame would briefly flash
-  // the system default font before swapping to Inter.
+  // the fonts are actually loaded — otherwise the very first frame would briefly flash
+  // the system default font before swapping to Geist.
   if (!fontsLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ConvexClientProvider>
         <ThemeProvider>
-          <AnimatedSplashOverlay />
+          <LaunchSplash />
           <RootNavigator />
         </ThemeProvider>
       </ConvexClientProvider>

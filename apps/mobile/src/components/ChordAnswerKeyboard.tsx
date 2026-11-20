@@ -31,7 +31,7 @@ export function ChordAnswerKeyboard({
 }) {
   const { colors } = useAppTheme();
   const text = (t: string, size = 18) => (
-    <Text className="font-inter-semibold font-semibold" style={{ fontSize: size, color: colors.foreground }}>
+    <Text className="font-ui-semibold font-semibold" style={{ fontSize: size, color: colors.foreground }}>
       {t}
     </Text>
   );
@@ -84,7 +84,7 @@ export function ChordAnswerKeyboard({
       </View>
       <View className="flex-row" style={{ gap: 5 }}>
         <Key flex={2.2} onPress={onGiveUp}>
-          <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
             I don&apos;t know
           </Text>
         </Key>
@@ -97,7 +97,7 @@ export function ChordAnswerKeyboard({
           className="items-center justify-center rounded-lg"
           style={{ flex: 2.6, height: 46, backgroundColor: colors.accent }}
         >
-          <Text className="font-inter-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
             Submit
           </Text>
         </Pressable>

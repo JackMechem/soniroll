@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
+import { useTabBarHeight } from '@/components/FloatingTabBar';
 import { PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, StopwatchIcon } from '@/components/icons';
 import { getSnapshot, pause, resume, skip, stop, subscribe } from '@/lib/practiceTimerEngine';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -24,6 +24,7 @@ export function PracticeTimerWidget() {
   const state = useSyncExternalStore(subscribe, getSnapshot);
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const router = useRouter();
   const [remainingMs, setRemainingMs] = useState(0);
 
@@ -59,7 +60,7 @@ export function PracticeTimerWidget() {
         position: 'absolute',
         left: 24,
         right: 24,
-        bottom: insets.bottom + TAB_BAR_CONTENT_HEIGHT + 10,
+        bottom: insets.bottom + tabBarHeight + 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,
@@ -69,26 +70,27 @@ export function PracticeTimerWidget() {
     >
       <Pressable
         onPress={() => router.push('/tool/practice-timer')}
-        className="flex-row items-center gap-2 rounded-full border px-4 py-3"
-        style={{ backgroundColor: colors.surface, borderColor: colors['surface-hover'] }}
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="flex-row items-center gap-2 overflow-hidden rounded-full py-2 pl-4 pr-2"
+        style={{ backgroundColor: colors.surface }}
       >
         <StopwatchIcon color={state.alarming ? colors.danger : colors.accent} size={18} />
         <View className="min-w-0 flex-1">
           <Text
             numberOfLines={1}
-            className="text-sm font-bold font-inter-bold"
+            className="font-ui-semibold text-sm font-semibold"
             style={{ color: state.alarming ? colors.danger : colors.foreground }}
           >
-            {state.alarming ? "Time's up!" : state.current.title}
+            {state.alarming ? "Time's up" : state.current.title}
           </Text>
           {!state.alarming && state.next ? (
-            <Text numberOfLines={1} className="text-xs font-inter" style={{ color: colors.muted }}>
+            <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
               Next: {state.next.title}
             </Text>
           ) : null}
         </View>
         <Text
-          className="shrink-0 text-base font-bold font-inter-bold tabular-nums"
+          className="font-ui-semibold shrink-0 text-base font-semibold tabular-nums"
           style={{ color: state.alarming ? colors.danger : colors.foreground }}
         >
           {formatClock(remainingMs)}
@@ -134,13 +136,15 @@ function WidgetButton({
   label: string;
   children: React.ReactNode;
 }) {
+  const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
       hitSlop={6}
       accessibilityLabel={label}
       accessibilityRole="button"
-      className="h-8 w-8 items-center justify-center rounded-full"
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-9 w-9 items-center justify-center overflow-hidden rounded-full"
     >
       {children}
     </Pressable>

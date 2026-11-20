@@ -25,24 +25,24 @@ function ToolPlaceholder() {
       <SafeAreaView className="flex-1 gap-4 p-6" edges={['bottom']}>
         {tool ? (
           <>
-            <Text className="mt-2 text-2xl font-bold font-inter-bold" style={{ color: colors.foreground }}>
+            <Text className="mt-2 text-2xl font-bold font-ui-bold" style={{ color: colors.foreground }}>
               {tool.label}
             </Text>
-            <Text className="text-base leading-6 font-inter" style={{ color: colors.muted }}>
+            <Text className="text-base leading-6 font-ui" style={{ color: colors.muted }}>
               {tool.description}
             </Text>
             <View className="gap-1 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-              <Text className="font-bold font-inter-bold" style={{ color: colors.accent }}>
+              <Text className="font-bold font-ui-bold" style={{ color: colors.accent }}>
                 Not migrated yet
               </Text>
-              <Text className="text-sm leading-5 font-inter" style={{ color: colors.muted }}>
+              <Text className="text-sm leading-5 font-ui" style={{ color: colors.muted }}>
                 This tool still only exists in the web app. It&apos;ll get a real native screen in
                 a later pass of the migration.
               </Text>
             </View>
           </>
         ) : (
-          <Text className="font-inter" style={{ color: colors.muted }}>
+          <Text className="font-ui" style={{ color: colors.muted }}>
             Nothing here — &ldquo;{slug}&rdquo; isn&apos;t a known tool.
           </Text>
         )}

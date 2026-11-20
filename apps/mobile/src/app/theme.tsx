@@ -1,134 +1,123 @@
-import { MORE_PRESETS, PRESETS, type ThemePreset } from '@jam-practice/core/themes';
-import { Pressable, SectionList, Text, View } from 'react-native';
+import { MORE_PRESETS, PRESETS, getPreset, type ThemeColors } from '@jam-practice/core/themes';
+import { Pressable, ScrollView, Text, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon } from '@/components/icons';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { SectionHeader } from '@/components/ui';
+import { SYSTEM_THEME_ID, useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 
 /**
- * A native port of `ThemeModal.tsx`'s own two-tier structure (`PRESETS`, the small quick-pick
- * set, then "more themes" — `MORE_PRESETS` — below it) rather than its exact grid/modal
- * presentation: a full screen (reached from Home's own palette button) instead of a popover,
- * since this app doesn't have a modal-sheet primitive wired up yet and a full screen is the more
- * natural native shape for "pick one of 30 things" anyway. The custom-theme color editor isn't
- * ported — see `ThemeProvider.tsx`'s own doc comment for the full list of what's deferred.
- *
- * **Redesigned** per a direct report ("this looks really ugly") — the original version filled
- * each entire row with *that preset's own* colors, which read as visually chaotic (a white row
- * next to a near-black row next to a tan row, with no consistent list language tying them
- * together), and had a loud, fully-accent-filled selected row. Every row now uses the *app's own
- * current* surface/foreground colors uniformly — only the four small swatch dots preview each
- * preset's own palette, which is the actual point of a theme picker, rather than recoloring the
- * whole row and fighting for attention with its neighbors. The selected row gets a quiet accent
- * border and a plain checkmark (the app's own `CheckIcon`) instead of a solid accent fill. Section
- * headers also dropped the all-caps/tracking-wide treatment to match the rest of the app's own
- * "Capitalized words, not shouting caps" convention adopted elsewhere.
+ * Theme: "Same as my phone" first (the default — Light or Dark from the phone's setting), then the
+ * quick-pick presets and the rest (`@jam-practice/core/themes`, the website's list) as a two-column
+ * grid of swatch cards: each card shows a small preview drawn in that theme's own colours (its
+ * background, a surface bar, the accent and the text) with the name under it. The picked card has
+ * an accent ring and a tick (the ring is always there, transparent, so nothing shifts). Every edge
+ * is the foreground at 20% — a hairline was too faint to see a white swatch on a white card. The
+ * custom-theme colour editor isn't ported (see `ThemeProvider.tsx`).
  */
 function ThemeScreen() {
   const { presetId, setPreset, colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const active = [...PRESETS, ...MORE_PRESETS].find((p) => p.id === presetId);
-
-  const sections = [
-    { title: 'Themes', data: PRESETS },
-    { title: 'More themes', data: MORE_PRESETS },
-  ];
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const phone = getPreset(scheme)!;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, gap: 8 }}
-        renderSectionHeader={({ section }) => (
-          <Text className="mb-2 mt-4 text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
-            {section.title}
-          </Text>
-        )}
-        renderItem={({ item }) => (
-          <PresetRow preset={item} selected={item.id === presetId} onPress={() => setPreset(item.id)} />
-        )}
+    <ScrollView
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: insets.bottom + 32, gap: 20 }}
+    >
+      <ThemeCard
+        wide
+        label="Same as my phone"
+        detail={`Light or Dark, as your phone is set (${phone.label} now)`}
+        swatches={phone.colors}
+        selected={presetId === SYSTEM_THEME_ID}
+        onPress={() => setPreset(SYSTEM_THEME_ID)}
       />
-      {/* A card of the *currently active* theme's own colors, pinned to the bottom — confirms at a
-          glance that picking a preset above actually re-themed the app live, not just this list.
-          `marginBottom` clears the bottom nav bar (`FloatingTabBar.tsx`, an absolutely-positioned
-          overlay mounted once in `_layout.tsx`, above every screen including this one) rather than
-          sitting underneath it. */}
-      {active ? (
-        <View
-          className="mx-4 flex-row items-center gap-3 rounded-2xl border p-4"
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors['surface-hover'],
-            marginBottom: insets.bottom + TAB_BAR_CONTENT_HEIGHT + 24,
-          }}
-        >
-          <View className="flex-row -space-x-1.5">
-            <Swatch color={active.colors.background} />
-            <Swatch color={active.colors.surface} />
-            <Swatch color={active.colors.accent} />
-            <Swatch color={active.colors.foreground} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-              Active theme
-            </Text>
-            <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-              {active.label}
-            </Text>
+      {(
+        [
+          ['Themes', PRESETS],
+          ['More themes', MORE_PRESETS],
+        ] as const
+      ).map(([title, presets]) => (
+        <View key={title} className="gap-1.5">
+          <SectionHeader title={title} />
+          <View className="flex-row flex-wrap justify-between" style={{ rowGap: 10 }}>
+            {presets.map((p) => (
+              <ThemeCard key={p.id} label={p.label} swatches={p.colors} selected={p.id === presetId} onPress={() => setPreset(p.id)} />
+            ))}
           </View>
         </View>
-      ) : null}
-    </View>
+      ))}
+    </ScrollView>
   );
 }
 
-function PresetRow({
-  preset,
+/** A theme as a card: its preview, then its name (and a tick when picked). `wide` is the full-width
+    "Same as my phone" card, with a line under the name. */
+function ThemeCard({
+  label,
+  detail,
+  swatches,
   selected,
+  wide,
   onPress,
 }: {
-  preset: ThemePreset;
+  label: string;
+  detail?: string;
+  swatches: ThemeColors;
   selected: boolean;
+  wide?: boolean;
   onPress: () => void;
 }) {
   const { colors } = useAppTheme();
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center justify-between rounded-2xl border p-3"
-      style={{
-        backgroundColor: colors.surface,
-        borderColor: selected ? colors.accent : colors['surface-hover'],
-        borderWidth: selected ? 2 : 1,
-      }}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={label}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="gap-2 overflow-hidden rounded-xl p-2.5"
+      style={{ width: wide ? '100%' : '48.5%', backgroundColor: colors.surface, borderWidth: 2, borderColor: selected ? colors.accent : 'transparent' }}
     >
-      <View className="flex-row items-center gap-3">
-        <View className="flex-row -space-x-1.5">
-          <Swatch color={preset.colors.background} />
-          <Swatch color={preset.colors.surface} />
-          <Swatch color={preset.colors.accent} />
-          <Swatch color={preset.colors.foreground} />
+      <Preview colors={swatches} />
+      <View className="min-h-[22px] flex-row items-center gap-1.5 px-0.5">
+        <View className="flex-1">
+          <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            {label}
+          </Text>
+          {detail ? (
+            <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+              {detail}
+            </Text>
+          ) : null}
         </View>
-        <Text className="text-[15px] font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-          {preset.label}
-        </Text>
+        {selected ? <CheckIcon color={colors.accent} size={18} /> : null}
       </View>
-      {selected ? <CheckIcon color={colors.accent} size={18} /> : null}
     </Pressable>
   );
 }
 
-function Swatch({ color }: { color: string }) {
+/** The theme in miniature: its background, a surface bar with a line of text, and dots for the
+    accent and the text colour. The frame's edge is this app's foreground at 20% (so a swatch the
+    card's own colour still shows); inside, edges use the previewed theme's own foreground at 20%. */
+function Preview({ colors: c }: { colors: ThemeColors }) {
   const { colors } = useAppTheme();
+  const ring = withAlpha(c.foreground, 0.2);
   return (
-    <View
-      className="h-6 w-6 rounded-full border-2"
-      style={{ backgroundColor: color, borderColor: colors.surface }}
-    />
+    <View className="h-[64px] justify-between rounded-lg p-2" style={{ backgroundColor: c.background, borderWidth: 1, borderColor: withAlpha(colors.foreground, 0.2) }}>
+      <View className="h-[22px] flex-row items-center gap-1.5 rounded-md px-2" style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: ring }}>
+        <View className="h-1.5 w-10 rounded-full" style={{ backgroundColor: c.foreground }} />
+        <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: c.muted }} />
+      </View>
+      <View className="flex-row items-center gap-1.5">
+        {[c.accent, c.foreground, c.surface].map((color, i) => (
+          <View key={i} className="h-[18px] w-[18px] rounded-full" style={{ backgroundColor: color, borderWidth: 1, borderColor: ring }} />
+        ))}
+      </View>
+    </View>
   );
 }
 

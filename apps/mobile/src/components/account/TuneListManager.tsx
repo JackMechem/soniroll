@@ -138,7 +138,7 @@ export function TuneListManager({
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-row items-center gap-2">
           <Icon color={colors.muted} size={18} />
-          <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+          <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
             {countOnly
               ? `${tunes.length} tune${tunes.length === 1 ? '' : 's'}`
               : `${title}${tunes.length ? ` (${tunes.length})` : ''}`}
@@ -166,17 +166,17 @@ export function TuneListManager({
           onChangeText={setQuery}
           placeholder={searchPlaceholder}
           placeholderTextColor={colors.muted}
-          className="min-w-0 flex-1 text-sm font-inter"
+          className="min-w-0 flex-1 text-sm font-ui"
           style={{ color: colors.foreground }}
         />
       </View>
 
       {tunes.length === 0 ? (
-        <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+        <Text className="text-sm font-ui" style={{ color: colors.muted }}>
           {emptyMessage}
         </Text>
       ) : shown.length === 0 ? (
-        <Text className="text-sm font-inter" style={{ color: colors.muted }}>
+        <Text className="text-sm font-ui" style={{ color: colors.muted }}>
           No tunes match &ldquo;{trimmedQuery}&rdquo;.
         </Text>
       ) : (
@@ -189,10 +189,10 @@ export function TuneListManager({
                 className="flex-row items-center gap-3 rounded-xl px-3 py-2.5"
               >
                 <View className="min-w-0 flex-1 gap-0.5">
-                  <Text numberOfLines={1} className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                  <Text numberOfLines={1} className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                     {tune.name}
                   </Text>
-                  <Text numberOfLines={1} className="text-xs font-inter" style={{ color: colors.muted }}>
+                  <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
                     {summary(tune)}
                   </Text>
                   {tune.chordChartId ? (
@@ -204,7 +204,7 @@ export function TuneListManager({
                       className="mt-0.5 flex-row items-center gap-1 self-start"
                     >
                       <LinkIcon color={colors.accent} size={11} />
-                      <Text className="text-xs font-inter-semibold" style={{ color: colors.accent }}>
+                      <Text className="text-xs font-ui-semibold" style={{ color: colors.accent }}>
                         Linked chart
                       </Text>
                     </Pressable>
@@ -308,7 +308,7 @@ function TuneEditorModal({
           style={{ ...sheetEdge(colors), backgroundColor: colors.surface, maxHeight: '85%' }}
         >
           <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+            <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
               {isNew ? 'New tune' : 'Edit tune'}
             </Text>
             <Pressable
@@ -330,7 +330,7 @@ function TuneEditorModal({
                   onChangeText={setName}
                   placeholder="e.g. Autumn Leaves"
                   placeholderTextColor={colors.muted}
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={inputStyle}
                 />
               </Field>
@@ -340,7 +340,7 @@ function TuneEditorModal({
                   onChangeText={setTimeSignature}
                   placeholder="4/4"
                   placeholderTextColor={colors.muted}
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={inputStyle}
                 />
               </Field>
@@ -351,7 +351,7 @@ function TuneEditorModal({
                   placeholder="e.g. 120, 160"
                   placeholderTextColor={colors.muted}
                   keyboardType="numbers-and-punctuation"
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={inputStyle}
                 />
               </Field>
@@ -361,7 +361,7 @@ function TuneEditorModal({
                   onChangeText={setKeysText}
                   placeholder="e.g. Bb, Eb"
                   placeholderTextColor={colors.muted}
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={inputStyle}
                 />
               </Field>
@@ -373,7 +373,7 @@ function TuneEditorModal({
                   placeholderTextColor={colors.muted}
                   multiline
                   numberOfLines={3}
-                  className="rounded-xl px-3 py-2.5 text-base font-inter"
+                  className="rounded-xl px-3 py-2.5 text-base font-ui"
                   style={[inputStyle, { minHeight: 72, textAlignVertical: 'top' }]}
                 />
               </Field>
@@ -384,7 +384,7 @@ function TuneEditorModal({
                   style={inputStyle}
                 >
                   <ChordChartIcon color={linkedSong ? colors.accent : colors.muted} size={16} />
-                  <Text numberOfLines={1} className="min-w-0 flex-1 text-base font-inter" style={{ color: linkedSong ? colors.foreground : colors.muted }}>
+                  <Text numberOfLines={1} className="min-w-0 flex-1 text-base font-ui" style={{ color: linkedSong ? colors.foreground : colors.muted }}>
                     {linkedSong ? linkedSong.title : 'None'}
                   </Text>
                   {chordChartId ? (
@@ -422,7 +422,7 @@ function TuneEditorModal({
               className="flex-1 items-center rounded-xl py-3"
               style={{ backgroundColor: colors.accent, opacity: name.trim() ? 1 : 0.5 }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors['accent-foreground'] }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors['accent-foreground'] }}>
                 {isNew ? 'Add tune' : 'Save changes'}
               </Text>
             </Pressable>
@@ -431,7 +431,7 @@ function TuneEditorModal({
               className="items-center rounded-xl px-5 py-3"
               style={{ backgroundColor: colors.background }}
             >
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                 Cancel
               </Text>
             </Pressable>
@@ -478,7 +478,7 @@ function ChordChartPickerModal({
     <Modal visible animationType="slide" onRequestClose={onClose}>
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pt-14">
-          <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+          <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
             Link a chord chart
           </Text>
           <Pressable
@@ -498,13 +498,13 @@ function ChordChartPickerModal({
             placeholder="Search your chord charts"
             placeholderTextColor={colors.muted}
             autoFocus
-            className="min-w-0 flex-1 text-sm font-inter"
+            className="min-w-0 flex-1 text-sm font-ui"
             style={{ color: colors.foreground }}
           />
         </View>
         {rows.length === 0 ? (
           <View className="flex-1 items-center justify-center p-8">
-            <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
+            <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>
               {songs.length === 0
                 ? "You don't have any chord charts yet — add some from the Chord Charts tool first."
                 : `No charts match "${trimmedQuery}".`}
@@ -520,10 +520,10 @@ function ChordChartPickerModal({
               >
                 <ChordChartIcon color={colors.muted} size={16} />
                 <View className="min-w-0 flex-1">
-                  <Text numberOfLines={1} className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+                  <Text numberOfLines={1} className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                     {song.title}
                   </Text>
-                  <Text numberOfLines={1} className="text-xs font-inter" style={{ color: colors.muted }}>
+                  <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
                     {song.composer ? `${song.composer} · ` : ''}
                     {playlistName}
                   </Text>
@@ -542,7 +542,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   const { colors } = useAppTheme();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
         {label}
       </Text>
       {children}

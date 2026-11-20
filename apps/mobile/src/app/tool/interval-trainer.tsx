@@ -12,8 +12,6 @@ import {
   type IntervalRound,
 } from '@jam-practice/core/intervals';
 import {
-  GRADE_COLOR,
-  GRADE_LABEL,
   describePitch,
   frequencyToMidi,
   gradePitch,
@@ -22,36 +20,59 @@ import {
 } from '@jam-practice/core/noteGrade';
 import { ACCIDENTAL_STYLES, spellNote, type AccidentalStyle } from '@jam-practice/core/noteSpelling';
 import { midiToNote, noteToFrequency, parseNote, parseRange } from '@jam-practice/core/noteRange';
-import { bumpGradeCounts, rankWeak, attempts, type GradeCounts } from '@jam-practice/core/struggleStats';
-import { formatDuration, shuffled } from '@jam-practice/core/trainerUtils';
-import { Stack } from 'expo-router';
+import { bumpGradeCounts, rankWeak, type GradeCounts } from '@jam-practice/core/struggleStats';
+import { shuffled } from '@jam-practice/core/trainerUtils';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
 
-import { CountdownRing } from '@/components/CountdownRing';
-import { ElapsedTimer } from '@/components/CountdownLabel';
+import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { Hint } from '@/components/Hint';
-import { SlidersIcon } from '@/components/icons';
-import { NumberStepper } from '@/components/NumberStepper';
+import { IntervalIcon, MicrophoneIcon, NoteIcon, StopwatchIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
+import {
+  Field,
+  HistoryChip,
+  IDLE_RING,
+  IdleHint,
+  IdleStatus,
+  MutedText,
+  Pill,
+  PillChoice,
+  PoolHeader,
+  QuizRing,
+  ResultsPanel,
+  SheetButton,
+  SheetDivider,
+  SheetInput,
+  SheetText,
+  SliderField,
+  StrugglesChip,
+  ToolScreen,
+  instrumentShortName,
+  noteGlyphs,
+  useGradeColors,
+} from '@/components/tool/ear';
+import { BigButton } from '@/components/tool/meter';
+import { Segmented } from '@/components/tool/reward';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { SENSITIVITY, startAudioInput } from '@/lib/audioInput';
 import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/IntervalTrainer.tsx`. Same two-note-round grading loop as
  * Scale Trainer's own listen mode (start note, then target note — always exactly two), built on
  * the same mic-input/pitch-detection engine the Tuner already proved on-device
  * (`@/lib/audioInput`'s `startAudioInput` + `@jam-practice/core/pitchDetect`'s YIN detector) rather
- * than a new one. Follows this app's own established "essentials on the main display, everything
- * else in a tabbed `ToolOptionsSheet`" shape: the main screen shows only the current round, its
- * countdown ring, listen-mode grading feedback, and Start/Stop — no `ScrollView` at all.
+ * than a new one. Laid out like the website's (`components/tool/ear.tsx`): History / Struggles chips
+ * (Listen, once there's something in them), the round in its ring, Start, then Timed / Listen and
+ * the Intervals, Range, Time per interval, Microphone (Listen) and Sound & display chips.
  *
  * Settings (including the lifetime "Struggles" stats and the timed "History" list) sync to the
  * signed-in account via `useSyncedSettings`, falling back to this device's own cache when offline
@@ -68,14 +89,6 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
  *   `@/lib/toneGenerator` already supports** (same catalog the Tuner's own tone generator uses),
  *   not web's full `lib/tones.ts` catalog (piano/organ/pluck samples) — no sampled-tone engine has
  *   been ported to native yet.
- * - **The post-session summary drops the full per-round chip list** web shows below the score —
- *   kept to score/percentage/time/tally so it fits the main screen's own no-scroll budget; the
- *   generic bottom Start/Stop button is also hidden while a summary is showing, since "Try again"/
- *   "Close" already cover what it would do there.
- * - **The "Interval duration"/"Max time to answer" field is one control, not two that swap
- *   places** — web moves the same `roundSeconds` setting between its "Range" and "Listen mode"
- *   panels depending on the toggle; here it lives once in the Range tab with a label/hint that
- *   changes meaning instead.
  */
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -205,9 +218,9 @@ function playClick() {
 }
 
 function IntervalTrainerScreen() {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
+  const GRADE_COLOR = useGradeColors();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const {
     customRange,
@@ -250,6 +263,8 @@ function IntervalTrainerScreen() {
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [nextRound, setNextRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
+  useToolActivity('/interval-trainer', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -767,7 +782,7 @@ function IntervalTrainerScreen() {
   const arrow = (r: IntervalRound) => (r.direction === 1 ? '↑' : '↓');
   const rootLabel = (r: IntervalRound, seq = 0) => spellNote(midiToNote(r.startMidi), accidentalStyle, seq, ignoreOctave);
   const roundLabel = (r: IntervalRound, seq = 0) => `${rootLabel(r, seq)} ${arrow(r)} ${r.interval.label}`;
-  const mainLabel = round ? roundLabel(round, roundSeed) : '—';
+  const mainLabel = round ? roundLabel(round, roundSeed) : '?';
   const glow = running && status ? GRADE_COLOR[status] : null;
   const score = summary ? scoreOf(summary.results) : 0;
   const tally = (grade: Grade) => summary?.results.filter((g) => g === grade).length ?? 0;
@@ -791,682 +806,398 @@ function IntervalTrainerScreen() {
   const weakEntries = weakIntervalEntries(settings.intervalStats);
   const showingSummary = summary !== null && !running;
 
+  const rangeSummary = `${instrumentShortName(instrumentId)} · ${ignoreOctave ? 'any octave' : rangeInput.replace('-', '–')}`;
+  const showSide = listenMode && !running && (history.length > 0 || weakEntries.length > 0);
+  const locked = running ? <SheetText>Stop to change these.</SheetText> : null;
+
+  const chipList = (
+    <>
+      <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
+        {locked}
+        <PoolHeader
+          count={pool.length}
+          total={INTERVALS.length}
+          disabled={running}
+          onAll={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}
+          onNone={() => updateSettings({ intervalIds: [] })}
+          hint="Which intervals can be picked for a round. At least one must stay selected."
+        />
+        <View className="flex-row flex-wrap gap-1.5">
+          {INTERVALS.map((interval) => {
+            const selected = settings.intervalIds.includes(interval.id);
+            return (
+              <Pill
+                key={interval.id}
+                on={selected}
+                label={interval.label}
+                disabled={running}
+                onPress={() =>
+                  updateSettings({
+                    intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
+                  })
+                }
+              />
+            );
+          })}
+        </View>
+        <SwitchRow
+          label="Include descending intervals"
+          checked={includeDescending}
+          onChange={(v) => updateSettings({ includeDescending: v })}
+          disabled={running}
+          hint="Lets a round ask for the interval below the starting note, not just above it."
+        />
+      </SettingChip>
+
+      <SettingChip Icon={NoteIcon} label="Range" value={rangeSummary}>
+        {locked}
+        <SwitchRow
+          label="Ignore octave"
+          checked={ignoreOctave}
+          onChange={(v) => updateSettings({ ignoreOctave: v })}
+          disabled={running}
+          hint="Hides the octave number (e.g. Major 3rd instead of C4 Major 3rd) and accepts either note played in any octave."
+        />
+        <Field label="Accidentals" hint="How sharps and flats are spelled, e.g. C# vs Db.">
+          <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} disabled={running} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+        </Field>
+        <Field label="Instrument" hint="Sets the range starting notes are drawn from, to match what you're practicing on.">
+          <Dropdown
+            value={instrumentId}
+            options={[
+              ...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })),
+              { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' },
+            ]}
+            onChange={(v) => updateSettings({ instrumentId: v })}
+          />
+        </Field>
+        {isCustom ? (
+          <Field label="Custom range" hint="The lowest and highest notes to draw starting notes from, e.g. A1-A6.">
+            <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} editable={!running} placeholder="A1-A6" />
+          </Field>
+        ) : null}
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Time per interval" value={`${roundSeconds} s`}>
+        {locked}
+        <SliderField
+          label="Time per interval"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={0.5}
+          disabled={running}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint={
+            listenMode
+              ? "How long you have to finish playing each round before it's marked a miss and moves on."
+              : 'How long each round stays on screen before the next one shows.'
+          }
+        />
+        {listenMode ? (
+          <SliderField
+            label="Time between rounds"
+            value={advanceDelayMs / 1000}
+            unit=" s"
+            min={MIN_ADVANCE_DELAY_MS / 1000}
+            max={MAX_ADVANCE_DELAY_MS / 1000}
+            step={0.25}
+            disabled={running}
+            onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+            hint="How long the graded round stays on screen before the next one starts."
+          />
+        ) : null}
+      </SettingChip>
+
+      {listenMode ? (
+        <SettingChip Icon={MicrophoneIcon} label="Microphone" value={SENSITIVITY[sensitivity].label.split(' (')[0]}>
+          {locked}
+          <SwitchRow
+            label="Sound feedback"
+            checked={soundFeedback}
+            onChange={(v) => updateSettings({ soundFeedback: v })}
+            disabled={running}
+            hint="A click each second of the countdown, plus a click the instant a round is graded."
+          />
+          <SwitchRow
+            label="Continue from previous note"
+            checked={chainIntervals}
+            onChange={(v) => updateSettings({ chainIntervals: v })}
+            disabled={running || drillMode}
+            hint="After the first round, each one continues from where the last interval left off instead of a fresh starting note."
+          />
+          <SwitchRow
+            label="Drill every interval"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            disabled={running || chainIntervals}
+            hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
+          />
+          {!drillMode ? (
+            <SliderField
+              label="Number of rounds"
+              value={roundCount}
+              min={MIN_ROUND_COUNT}
+              max={MAX_ROUND_COUNT}
+              step={1}
+              disabled={running}
+              onChange={(v) => updateSettings({ roundCount: v })}
+              hint="How many intervals make up one session."
+            />
+          ) : null}
+          <SheetDivider title="Advanced" />
+          <SliderField
+            label="Tuning tolerance"
+            value={toleranceCents}
+            unit="¢"
+            min={10}
+            max={100}
+            step={5}
+            disabled={running}
+            onChange={(v) => updateSettings({ toleranceCents: v })}
+            hint="How many cents off pitch still counts as correct, so a slightly out-of-tune instrument still passes."
+          />
+          <SliderField
+            label="Note hold time"
+            value={holdMs}
+            unit=" ms"
+            min={30}
+            max={300}
+            step={30}
+            disabled={running}
+            onChange={(v) => updateSettings({ holdMs: v })}
+            hint="How long a pitch has to stay steady before it's graded, so a quick slide or slip isn't counted."
+          />
+          <SliderField
+            label="Reference pitch (A4)"
+            value={refA}
+            unit=" Hz"
+            min={MIN_REF}
+            max={MAX_REF}
+            step={1}
+            disabled={running}
+            onChange={(v) => updateSettings({ refA: v })}
+            hint="The frequency concert A is tuned to. 440 is standard."
+          />
+          <Field label="Input sensitivity" hint="How quiet a signal can be before it's treated as silence — raise it in a noisy room.">
+            <PillChoice
+              label="Input sensitivity"
+              value={sensitivity}
+              options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
+              disabled={running}
+              onChange={(v) => updateSettings({ sensitivity: v })}
+            />
+          </Field>
+          <SwitchRow
+            label="Partial credit"
+            checked={partialCredit}
+            onChange={(v) => updateSettings({ partialCredit: v })}
+            disabled={running}
+            hint="A wrong note gets one retry; missing it twice fails the round instead of failing on the first miss."
+          />
+          <SwitchRow
+            label="Ignore repeated notes"
+            checked={ignoreRepeatedNotes}
+            onChange={(v) => updateSettings({ ignoreRepeatedNotes: v })}
+            disabled={running}
+            hint="A fresh attack of the note you just played (e.g. a double pluck) is ignored instead of graded as wrong."
+          />
+          <SheetButton
+            label="Reset advanced settings"
+            disabled={running}
+            onPress={() =>
+              updateSettings({
+                toleranceCents: DEFAULT_SETTINGS.toleranceCents,
+                holdMs: DEFAULT_SETTINGS.holdMs,
+                refA: DEFAULT_SETTINGS.refA,
+                sensitivity: DEFAULT_SETTINGS.sensitivity,
+                partialCredit: DEFAULT_SETTINGS.partialCredit,
+                ignoreRepeatedNotes: DEFAULT_SETTINGS.ignoreRepeatedNotes,
+              })
+            }
+          />
+        </SettingChip>
+      ) : null}
+
+      <SettingChip
+        Icon={ToneIcon}
+        label="Sound & display"
+        value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showIntervalNotes ? ' · notes shown' : ''}`}
+      >
+        <SwitchRow
+          label="Play interval out loud"
+          checked={playSound && !listenMode}
+          onChange={(v) => updateSettings({ playSound: v })}
+          disabled={listenMode}
+          hint="Plays both notes of the interval in order as it appears. Not available in listen mode."
+        />
+        <SwitchRow
+          label="Show next interval"
+          checked={showNext}
+          onChange={(v) => updateSettings({ showNext: v })}
+          hint="Shows a preview of the upcoming interval under the current one."
+        />
+        <SwitchRow
+          label="Show interval notes"
+          checked={showIntervalNotes}
+          onChange={(v) => updateSettings({ showIntervalNotes: v })}
+          hint="The two notes under the ring in listen mode, showing your progress through the round."
+        />
+        <Field label="Tone" hint="Which oscillator sound plays an interval out loud.">
+          <PillChoice label="Tone" value={wave} options={WAVEFORMS} disabled={!playSound || listenMode} onChange={(v) => updateSettings({ wave: v })} />
+        </Field>
+      </SettingChip>
+    </>
+  );
+
   // Saved settings not read yet — a spinner rather than defaults that then jump to the real values.
   if (!settingsReady) return <ScreenSpinner />;
 
+  // The mode switch first: it decides what the screen is.
+  // History and Struggles (listen mode), once there's something in them.
+  // Start: while the results show, their own "Try again" is the one start button.
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Interval Trainer' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-6 py-3">
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                Options
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
-            {showingSummary && summary ? (
-              <View className="w-full gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-                <View className="flex-row items-end justify-between gap-3">
-                  <View>
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      RESULTS
-                    </Text>
-                    <Text className="text-3xl font-extrabold font-inter-extrabold tabular-nums" style={{ color: colors.foreground }}>
-                      {score % 1 === 0 ? score : score.toFixed(1)}
-                      <Text className="text-lg font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                        {' '}
-                        / {summary.results.length}
-                      </Text>
-                    </Text>
-                  </View>
-                  <Text className="text-xl font-semibold font-inter-semibold tabular-nums" style={{ color: colors.muted }}>
-                    {summary.results.length ? Math.round((score / summary.results.length) * 100) : 0}%
-                  </Text>
-                </View>
-
-                {lastElapsedMs !== null ? (
-                  <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
-                    Time {formatDuration(lastElapsedMs)}
-                    {bestMs !== null ? ` · Best ${formatDuration(bestMs)}` : ''}
-                    {isNewBest ? (
-                      <Text className="font-bold font-inter-bold" style={{ color: GRADE_COLOR.correct }}>
-                        {' '}
-                        New best!
-                      </Text>
-                    ) : null}
-                  </Text>
-                ) : null}
-
-                <View className="flex-row gap-2">
-                  {(['correct', 'partial', 'incorrect'] as const).map((grade) => (
-                    <View key={grade} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
-                      <Text className="text-xl font-bold font-inter-bold tabular-nums" style={{ color: GRADE_COLOR[grade] }}>
-                        {tally(grade)}
-                      </Text>
-                      <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
-                        {GRADE_LABEL[grade]}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View className="flex-row gap-2">
-                  <Pressable onPress={() => void start(lastMode)} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.accent }}>
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
-                      Try again
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={() => setSummary(null)} className="flex-1 items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
-                    <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                      Close
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <>
-                {status && running ? (
-                  <View className="items-center gap-0.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      NEXT INTERVAL IN
-                    </Text>
-                    <CountdownText
-                      active={running}
-                      startedAt={noteTimer.startedAt}
-                      durationMs={noteTimer.durationMs}
-                      color={GRADE_COLOR[status]}
-                    />
-                  </View>
-                ) : null}
-
-                <CountdownRing active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs}>
-                  <View style={{ maxWidth: 96 }}>
-                    <Text
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.5}
-                      className="text-center text-lg font-bold font-inter-bold"
-                      style={{
-                        color: glow ?? colors.foreground,
-                        textShadowColor: glow ?? 'transparent',
-                        textShadowRadius: glow ? 10 : 0,
-                        textShadowOffset: { width: 0, height: 0 },
-                      }}
-                    >
-                      {mainLabel}
-                    </Text>
-                  </View>
-                </CountdownRing>
-
-                {showNext && nextRound && running ? (
-                  <Text className="max-w-[220px] text-center text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                    Next: {roundLabel(nextRound, roundSeed + 1)}
-                  </Text>
-                ) : null}
-
-                {listenMode && running && round && showIntervalNotes ? (
-                  <View className="flex-row flex-wrap justify-center gap-1.5">
-                    {round.notes.map((n, i) => {
-                      const label = spellNote(n, accidentalStyle, roundSeed, true);
-                      const matched = i < intervalProgress;
-                      const failed = i === intervalProgress && status === 'incorrect';
-                      const retrying = i === intervalProgress && degreeMiss && !failed;
-                      const color = matched
-                        ? GRADE_COLOR.correct
-                        : failed
-                          ? GRADE_COLOR.incorrect
-                          : retrying
-                            ? GRADE_COLOR.partial
-                            : colors.foreground;
-                      return (
-                        <View
-                          key={i}
-                          className="rounded-full px-2.5 py-1"
-                          style={{ backgroundColor: colors.surface }}
-                        >
-                          <Text className="text-xs font-bold font-inter-bold tabular-nums" style={{ color }}>
-                            {label}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ) : null}
-
-                {running && progress ? (
-                  <View className="items-center gap-0.5">
-                    <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
-                      Interval {progress.index} of {progress.total} ·{' '}
-                      <ElapsedTimer active={running} startedAt={sessionStartedAt} />
-                    </Text>
-                    <Text className="text-sm font-inter tabular-nums" style={{ color: colors.muted }}>
-                      {heard ? `Heard ${heard}` : 'Listening…'}
-                    </Text>
-                    {waiting ? (
-                      <Pressable
-                        onPress={() => skipRef.current?.()}
-                        className="mt-2 rounded-full px-4 py-1.5"
-                        style={{ backgroundColor: colors.surface }}
-                      >
-                        <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                          Skip interval
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ) : null}
-              </>
-            )}
-
-            {error ? (
-              <Text className="text-center text-sm font-inter" style={{ color: colors.danger }}>
-                {error}
-              </Text>
-            ) : null}
-
-            {!showingSummary ? (
-              <Pressable
-                onPress={running ? stop : () => void start()}
-                className="min-w-[200px] items-center rounded-full py-3.5"
-                style={{ backgroundColor: running ? colors.surface : colors.accent }}
+    <ToolScreen
+      title="Interval Trainer"
+      mode={
+        !running ? (
+          <Segmented
+            onPage
+            label="Mode"
+            value={listenMode ? 'listen' : 'timed'}
+            onChange={(v) => updateSettings({ listenMode: v === 'listen' })}
+            disabled={running}
+            options={[
+              { value: 'timed', label: 'Timed' },
+              { value: 'listen', label: 'Listen' },
+            ]}
+          />
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: `${e.interval.label} ${e.direction === 1 ? '↑' : '↓'}`, counts: e.counts }))}
+              shedLabel="Shed weak intervals"
+              emptyText="No struggles tracked yet — a wrong or partial round in listen mode adds it here."
+              running={running}
+              onShed={() => void start('weak')}
+              onClear={clearIntervalStats}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      action={!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
+      chips={chipList}
+    >
+      {showingSummary && summary ? (
+        <ResultsPanel
+          score={score}
+          total={summary.results.length}
+          elapsed={lastElapsedMs}
+          bestMs={bestMs}
+          isNewBest={isNewBest}
+          grades={(['correct', 'partial', 'incorrect'] as const).map((g) => ({ grade: g, count: tally(g) }))}
+          tags={summary.rounds.map((r, i) => ({ label: noteGlyphs(roundLabel(r, i)), grade: summary.results[i] }))}
+          onAgain={() => void start(lastMode)}
+          onClose={() => setSummary(null)}
+        />
+      ) : (
+        <View className="w-full items-center gap-2">
+          {status && running ? (
+            <View className="items-center">
+              <MutedText className="text-xs">Next interval in</MutedText>
+              <CountdownLabel
+                active={running}
+                startedAt={noteTimer.startedAt}
+                durationMs={noteTimer.durationMs}
+                textClassName="font-ui-semibold text-3xl font-semibold tabular-nums"
+                color={GRADE_COLOR[status]}
+              />
+            </View>
+          ) : null}
+          <QuizRing size={running ? 168 : IDLE_RING} running={running} timer={noteTimer}>
+            {running ? (
+              <Text
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+                className="font-ui-bold text-center text-2xl font-bold"
+                style={{ color: glow ?? colors.foreground }}
               >
-                <Text className="text-base font-bold font-inter-bold" style={{ color: running ? colors.foreground : colors['accent-foreground'] }}>
-                  {running ? 'Stop' : 'Start'}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-      </SafeAreaView>
+                {noteGlyphs(mainLabel)}
+              </Text>
+            ) : (
+              <IdleStatus history={listenMode ? history : []} />
+            )}
+          </QuizRing>
+          {/* Until there's history, one line of what a round is. */}
+          {!running && !(listenMode && history.length) ? (
+            <IdleHint>{listenMode ? 'Play each interval shown; the mic checks it.' : 'An interval shows; play it before the next one.'}</IdleHint>
+          ) : null}
 
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Interval Trainer options"
-        tabs={[
-          {
-            key: 'intervals',
-            label: 'Intervals',
-            content: () => (
-              <>
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                    {pool.length} of {INTERVALS.length} selected
-                  </Text>
-                  <View className="flex-row gap-3">
-                    <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}>
-                      <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.accent, opacity: running ? 0.5 : 1 }}>
-                        All
-                      </Text>
-                    </Pressable>
-                    <Pressable disabled={running} onPress={() => updateSettings({ intervalIds: [] })}>
-                      <Text className="text-xs font-bold font-inter-bold" style={{ color: colors.muted, opacity: running ? 0.5 : 1 }}>
-                        None
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <Hint>Which intervals can be picked for a round. At least one must stay selected.</Hint>
-                <View className="flex-row flex-wrap gap-1.5">
-                  {INTERVALS.map((interval) => {
-                    const selected = settings.intervalIds.includes(interval.id);
-                    return (
-                      <Pressable
-                        key={interval.id}
-                        disabled={running}
-                        onPress={() =>
-                          updateSettings({
-                            intervalIds: settings.intervalIds.includes(interval.id)
-                              ? settings.intervalIds.filter((x) => x !== interval.id)
-                              : [...settings.intervalIds, interval.id],
-                          })
-                        }
-                        className="rounded-full px-3 py-1.5"
-                        style={{ backgroundColor: selected ? colors.accent : colors.surface, opacity: running ? 0.6 : 1 }}
-                      >
-                        <Text className="text-xs font-semibold font-inter-semibold" style={{ color: selected ? colors['accent-foreground'] : colors.foreground }}>
-                          {interval.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <SwitchRow
-                  label="Include descending intervals"
-                  checked={includeDescending}
-                  onChange={(v) => updateSettings({ includeDescending: v })}
-                  disabled={running}
-                  hint="Lets a round ask for the interval below the starting note, not just above it."
-                />
-              </>
-            ),
-          },
-          {
-            key: 'range',
-            label: 'Range',
-            content: () => (
-              <>
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    ACCIDENTALS
-                  </Text>
-                  <Dropdown value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-                  <Hint>How sharps and flats are spelled, e.g. C# vs Db.</Hint>
-                </View>
+          {showNext && nextRound && running ? <MutedText className="text-xs">Next: {noteGlyphs(roundLabel(nextRound, roundSeed + 1))}</MutedText> : null}
 
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INSTRUMENT
-                  </Text>
-                  <Dropdown
-                    value={instrumentId}
-                    options={[
-                      ...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range})` })),
-                      { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' },
-                    ]}
-                    onChange={(v) => updateSettings({ instrumentId: v })}
-                  />
-                  <Hint>Sets the range starting notes are drawn from, to match what you&apos;re practicing on.</Hint>
-                </View>
-
-                {isCustom ? (
-                  <View className="gap-1.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      CUSTOM RANGE
-                    </Text>
-                    <TextInput
-                      value={customRange}
-                      onChangeText={(v) => updateSettings({ customRange: v })}
-                      placeholder="A1-A6"
-                      placeholderTextColor={colors.muted}
-                      className="rounded-xl px-3 py-2.5 text-base font-inter"
-                      style={{ backgroundColor: colors.surface, color: colors.foreground }}
-                    />
-                    <Hint>The lowest and highest notes to draw starting notes from, e.g. A1-A6.</Hint>
-                  </View>
-                ) : null}
-
-                <SwitchRow
-                  label="Ignore octave"
-                  checked={ignoreOctave}
-                  onChange={(v) => updateSettings({ ignoreOctave: v })}
-                  disabled={running}
-                  hint="Hides the octave number (e.g. Major 3rd instead of C4 Major 3rd) and accepts either note played in any octave."
-                />
-
-                <NumberStepper
-                  label={listenMode ? 'Max time to answer' : 'Round duration'}
-                  value={roundSeconds}
-                  unit="s"
-                  min={MIN_ROUND_SECONDS}
-                  max={MAX_ROUND_SECONDS}
-                  step={0.5}
-                  disabled={running}
-                  onChange={(v) => updateSettings({ roundSeconds: v })}
-                  hint={
-                    listenMode
-                      ? "How long you have to finish playing each round before it's marked a miss and moves on."
-                      : 'How long each round stays on screen before the next one shows.'
-                  }
-                />
-              </>
-            ),
-          },
-          {
-            key: 'listen',
-            label: 'Listen mode',
-            content: () => (
-              <>
-                <SwitchRow
-                  label="Listen mode"
-                  checked={listenMode}
-                  onChange={(v) => updateSettings({ listenMode: v })}
-                  disabled={running}
-                  hint="Grades what you actually play through the microphone instead of just showing the interval."
-                />
-
-                <NumberStepper
-                  label="Time between rounds"
-                  value={advanceDelayMs / 1000}
-                  unit="s"
-                  min={MIN_ADVANCE_DELAY_MS / 1000}
-                  max={MAX_ADVANCE_DELAY_MS / 1000}
-                  step={0.25}
-                  disabled={running || !listenMode}
-                  onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-                  hint="How long the graded round stays on screen before the next one starts."
-                />
-
-                <SwitchRow
-                  label="Sound feedback"
-                  checked={soundFeedback}
-                  onChange={(v) => updateSettings({ soundFeedback: v })}
-                  disabled={running || !listenMode}
-                  hint="A click each second of the countdown, plus a click the instant a round is graded."
-                />
-
-                <SwitchRow
-                  label="Continue from previous note"
-                  checked={chainIntervals}
-                  onChange={(v) => updateSettings({ chainIntervals: v })}
-                  disabled={!listenMode || running || drillMode}
-                  hint="After the first round, each one continues from where the last interval left off instead of a fresh starting note."
-                />
-
-                <SwitchRow
-                  label="Drill every interval"
-                  checked={drillMode}
-                  onChange={(v) => updateSettings({ drillMode: v })}
-                  disabled={!listenMode || running || chainIntervals}
-                  hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
-                />
-
-                {!drillMode ? (
-                  <NumberStepper
-                    label="Number of rounds"
-                    value={roundCount}
-                    unit=""
-                    min={MIN_ROUND_COUNT}
-                    max={MAX_ROUND_COUNT}
-                    step={1}
-                    disabled={running || !listenMode}
-                    onChange={(v) => updateSettings({ roundCount: v })}
-                    hint="How many intervals make up one session."
-                  />
-                ) : null}
-
-                <NumberStepper
-                  label="Tuning tolerance"
-                  value={toleranceCents}
-                  unit="¢"
-                  min={10}
-                  max={100}
-                  step={5}
-                  disabled={running || !listenMode}
-                  onChange={(v) => updateSettings({ toleranceCents: v })}
-                  hint="How many cents off pitch still counts as correct, so a slightly out-of-tune instrument still passes."
-                />
-
-                <NumberStepper
-                  label="Note hold time"
-                  value={holdMs}
-                  unit=" ms"
-                  min={30}
-                  max={300}
-                  step={30}
-                  disabled={running || !listenMode}
-                  onChange={(v) => updateSettings({ holdMs: v })}
-                  hint="How long a pitch has to stay steady before it's graded, so a quick slide or slip isn't counted."
-                />
-
-                <NumberStepper
-                  label="Reference pitch (A4)"
-                  value={refA}
-                  unit=" Hz"
-                  min={MIN_REF}
-                  max={MAX_REF}
-                  step={1}
-                  disabled={running || !listenMode}
-                  onChange={(v) => updateSettings({ refA: v })}
-                  hint="The frequency concert A is tuned to. 440 is standard."
-                />
-
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INPUT SENSITIVITY
-                  </Text>
-                  <Dropdown
-                    value={sensitivity}
-                    options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
-                    onChange={(v) => updateSettings({ sensitivity: v })}
-                  />
-                  <Hint>How quiet a signal can be before it&apos;s treated as silence — raise it in a noisy room.</Hint>
-                </View>
-
-                <SwitchRow
-                  label="Partial credit"
-                  checked={partialCredit}
-                  onChange={(v) => updateSettings({ partialCredit: v })}
-                  disabled={running || !listenMode}
-                  hint="A wrong note gets one retry; missing it twice fails the round instead of failing on the first miss."
-                />
-
-                <SwitchRow
-                  label="Ignore repeated notes"
-                  checked={ignoreRepeatedNotes}
-                  onChange={(v) => updateSettings({ ignoreRepeatedNotes: v })}
-                  disabled={running || !listenMode}
-                  hint="A fresh attack of the note you just played (e.g. a double pluck) is ignored instead of graded as wrong."
-                />
-
-                <Pressable
-                  disabled={running}
-                  onPress={() =>
-                    updateSettings({
-                      toleranceCents: DEFAULT_SETTINGS.toleranceCents,
-                      holdMs: DEFAULT_SETTINGS.holdMs,
-                      refA: DEFAULT_SETTINGS.refA,
-                      sensitivity: DEFAULT_SETTINGS.sensitivity,
-                      partialCredit: DEFAULT_SETTINGS.partialCredit,
-                      ignoreRepeatedNotes: DEFAULT_SETTINGS.ignoreRepeatedNotes,
-                    })
-                  }
-                  className="self-start rounded-lg px-3 py-1.5"
-                  style={{ backgroundColor: colors.surface, opacity: running ? 0.5 : 1 }}
-                >
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                    Reset advanced settings
-                  </Text>
-                </Pressable>
-              </>
-            ),
-          },
-          {
-            key: 'sound',
-            label: 'Sound & display',
-            content: () => (
-              <>
-                <SwitchRow
-                  label="Play interval out loud"
-                  checked={playSound && !listenMode}
-                  onChange={(v) => updateSettings({ playSound: v })}
-                  disabled={listenMode}
-                  hint="Plays both notes of the interval in order as it appears. Not available in listen mode."
-                />
-
-                <SwitchRow
-                  label="Show next interval"
-                  checked={showNext}
-                  onChange={(v) => updateSettings({ showNext: v })}
-                  hint="Shows a preview of the upcoming interval next to the current one."
-                />
-
-                <SwitchRow
-                  label="Show interval notes"
-                  checked={showIntervalNotes}
-                  onChange={(v) => updateSettings({ showIntervalNotes: v })}
-                  hint="The two note pills below the ring in listen mode, showing progress through the round."
-                />
-
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    TONE
-                  </Text>
-                  <Dropdown value={wave} options={WAVEFORMS} onChange={(v) => updateSettings({ wave: v })} />
-                  <Hint>Which oscillator sound plays an interval out loud.</Hint>
-                </View>
-              </>
-            ),
-          },
-          {
-            key: 'progress',
-            label: 'Progress',
-            content: () => (
-              <>
-                <View className="gap-2">
-                  <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                    History
-                  </Text>
-                  {bestMs !== null ? (
-                    <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
-                      Best {formatDuration(bestMs)}
-                    </Text>
-                  ) : null}
-                  {matchingHistory.length === 0 ? (
-                    <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-                      No attempts yet with these settings.
-                    </Text>
-                  ) : (
-                    <View className="gap-1">
-                      {[...matchingHistory]
-                        .sort((a, b) => b.at - a.at)
-                        .map((entry, i) => (
-                          <View
-                            key={i}
-                            className="flex-row items-center justify-between gap-3 border-b py-2"
-                            style={{ borderColor: colors['surface-hover'] }}
-                          >
-                            <View>
-                              <Text className="text-sm font-semibold font-inter-semibold tabular-nums" style={{ color: colors.foreground }}>
-                                {formatDuration(entry.elapsedMs)}
-                              </Text>
-                              <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-                                {entry.config.drillMode ? 'Drill' : entry.config.chainIntervals ? 'Chained' : 'Quiz'} ·{' '}
-                                {new Date(entry.at).toLocaleDateString()}
-                              </Text>
-                            </View>
-                            <Text
-                              className="text-sm font-inter tabular-nums"
-                              style={{ color: entry.score === entry.total ? GRADE_COLOR.correct : colors.muted }}
-                            >
-                              {entry.score % 1 === 0 ? entry.score : entry.score.toFixed(1)}/{entry.total}
-                            </Text>
-                          </View>
-                        ))}
-                    </View>
-                  )}
-                  {matchingHistory.length > 0 ? (
-                    <Pressable onPress={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}>
-                      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                        Clear these times
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-
-                <View className="gap-2">
-                  <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                    Struggles
-                  </Text>
-                  {weakEntries.length === 0 ? (
-                    <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-                      No struggles tracked yet — a wrong or partial interval in listen mode adds it here.
-                    </Text>
-                  ) : (
-                    <View className="gap-1">
-                      {weakEntries.map((entry) => (
-                        <View
-                          key={entry.key}
-                          className="flex-row items-center justify-between gap-3 border-b py-2"
-                          style={{ borderColor: colors['surface-hover'] }}
-                        >
-                          <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                            {entry.interval.label} {entry.direction === 1 ? '↑' : '↓'}
-                          </Text>
-                          <View className="flex-row items-center gap-2">
-                            {entry.counts.incorrect > 0 ? (
-                              <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.incorrect }}>
-                                ✕{entry.counts.incorrect}
-                              </Text>
-                            ) : null}
-                            {entry.counts.partial > 0 ? (
-                              <Text className="text-xs font-inter tabular-nums" style={{ color: GRADE_COLOR.partial }}>
-                                ~{entry.counts.partial}
-                              </Text>
-                            ) : null}
-                            <Text className="text-xs font-inter tabular-nums" style={{ color: colors.muted }}>
-                              /{attempts(entry.counts)}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  <Pressable
-                    disabled={running || weakEntries.length === 0}
-                    onPress={() => {
-                      setOptionsOpen(false);
-                      void start('weak');
+          {listenMode && running && round && showIntervalNotes ? (
+            <View className="flex-row flex-wrap justify-center gap-1.5">
+              {round.notes.map((n, i) => {
+                const label = spellNote(n, accidentalStyle, roundSeed, true);
+                const matched = i < intervalProgress;
+                const failed = i === intervalProgress && status === 'incorrect';
+                const retrying = i === intervalProgress && degreeMiss && !failed;
+                const current = i === intervalProgress && !matched && !failed && !retrying;
+                const color = matched ? GRADE_COLOR.correct : failed ? GRADE_COLOR.incorrect : retrying ? GRADE_COLOR.partial : undefined;
+                return (
+                  <View
+                    key={i}
+                    className="rounded-md px-2.5 py-1"
+                    style={{
+                      backgroundColor: color ? withAlpha(color, 0.15) : derived.fill,
+                      borderWidth: 1.5,
+                      borderColor: current ? colors.accent : 'transparent',
                     }}
-                    className="self-start rounded-lg px-3 py-1.5"
-                    style={{ backgroundColor: colors.accent, opacity: running || weakEntries.length === 0 ? 0.5 : 1 }}
                   >
-                    <Text className="text-sm font-bold font-inter-bold" style={{ color: colors['accent-foreground'] }}>
-                      Shed weak intervals{weakEntries.length > 0 ? ` (${weakEntries.length})` : ''}
+                    <Text className="font-ui-semibold text-xs font-semibold tabular-nums" style={{ color: color ?? colors.foreground }}>
+                      {noteGlyphs(label)}
                     </Text>
-                  </Pressable>
-                  {weakEntries.length > 0 ? (
-                    <Pressable disabled={running} onPress={clearIntervalStats}>
-                      <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.danger, opacity: running ? 0.6 : 1 }}>
-                        Clear stats
-                      </Text>
-                    </Pressable>
-                  ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {running && progress ? (
+            <View className="items-center gap-0.5">
+              <View className="flex-row items-center">
+                <MutedText className="tabular-nums">
+                  Interval {progress.index} of {progress.total} ·{' '}
+                </MutedText>
+                <ElapsedTimer active={running} startedAt={sessionStartedAt} />
+              </View>
+              <MutedText className="tabular-nums">{heard ? `Heard ${noteGlyphs(heard)}` : 'Listening…'}</MutedText>
+              {waiting ? (
+                <View className="mt-2">
+                  <Button label="Skip interval" kind="secondary" onPress={() => skipRef.current?.()} />
                 </View>
-              </>
-            ),
-          },
-        ]}
-      />
-    </View>
-  );
-}
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      )}
 
-/** A small, local, colored sibling of `@/components/CountdownLabel`'s `CountdownLabel` — that
-    shared component always renders in `colors.muted`, but this screen needs it colored by the
-    round's own grade (green/amber/red) instead. Kept local rather than extending the shared
-    component's own API, since that file's being read by other tools being ported in parallel right
-    now. */
-function CountdownText({
-  active,
-  startedAt,
-  durationMs,
-  color,
-}: {
-  active: boolean;
-  startedAt: number;
-  durationMs: number;
-  color: string;
-}) {
-  const [remainingMs, setRemainingMs] = useState(durationMs);
-
-  useEffect(() => {
-    if (!active) return;
-    function tick() {
-      setRemainingMs(Math.max(0, durationMs - (Date.now() - startedAt)));
-    }
-    tick();
-    const id = setInterval(tick, 100);
-    return () => clearInterval(id);
-  }, [active, startedAt, durationMs]);
-
-  if (!active) return null;
-
-  return (
-    <Text className="text-3xl font-bold font-inter-bold tabular-nums" style={{ color }}>
-      {Math.ceil(remainingMs / 1000)}s
-    </Text>
+      {error ? (
+        <Text className="text-center text-sm font-ui" style={{ color: colors.danger }}>
+          {error}
+        </Text>
+      ) : null}
+    </ToolScreen>
   );
 }
 

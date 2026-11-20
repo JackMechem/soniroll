@@ -1,4 +1,5 @@
 import { getAudioContext } from '@/lib/audioContext';
+import { setSteadyInterval } from '@/lib/steadyTimer';
 
 /**
  * The native sibling of `apps/web/lib/metronome.ts`'s own `playCountOff`/`parseBeatsPerBar` — for
@@ -88,19 +89,19 @@ export function playCountOff(
 
   const durationMs = (totalBeats * beatDuration + 0.1) * 1000;
 
-  const intervalId = setInterval(() => {
+  const stopTicks = setSteadyInterval(() => {
     const horizon = ctx.currentTime + LOOKAHEAD_SEC;
     while ((continueIndefinitely || nextBeat < totalBeats) && startTime + nextBeat * beatDuration < horizon) {
       scheduleBeat(nextBeat);
       nextBeat++;
     }
-    if (!continueIndefinitely && nextBeat >= totalBeats) clearInterval(intervalId);
+    if (!continueIndefinitely && nextBeat >= totalBeats) stopTicks();
   }, SCHEDULER_INTERVAL_MS);
 
   return {
     durationMs: continueIndefinitely ? Infinity : durationMs,
     stop: () => {
-      clearInterval(intervalId);
+      stopTicks();
       for (const t of timeouts) clearTimeout(t);
       timeouts.clear();
       // Each click's own `osc.stop(time + 0.06)` only takes effect at that already-scheduled

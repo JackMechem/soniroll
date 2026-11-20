@@ -2,17 +2,16 @@
 
 import { useState } from "react";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
-import { type Occurrence, type Routine, formatTime, parseTime, routineSpan, tasksOf, timeString } from "@/lib/practiceLog";
+import { type Occurrence, type Routine, formatTime, parseTime, routineSpan, timeString } from "@/lib/practiceLog";
 import type { usePracticeLog } from "@/lib/usePracticeLog";
+import { hasFixedTimes } from "@jam-practice/core/practiceLogDay";
 
 type Log = ReturnType<typeof usePracticeLog>;
 
 const QUICK = [8 * 60, 12 * 60, 17 * 60, 19 * 60];
 
-/** Some of the routine's tasks have a clock time of their own, so moving its start doesn't move them. */
-export function hasFixedTimes(routine: Routine, occurrence: Occurrence = {}): boolean {
-  return tasksOf(routine, occurrence).some((t) => parseTime(t.time) !== null);
-}
+// Lives in the shared core now (the phone's day view uses it too).
+export { hasFixedTimes };
 
 /**
  * Picks when a routine happens: a quick time or any time you type, just for this day or every

@@ -8,10 +8,10 @@ import { parseLinkInner } from "@jam-practice/core/shedNotes";
 import Score from "@/components/notation/Score";
 import { ScoreIcon } from "@/components/tools";
 import { cleanScore } from "@/lib/bassTranscription";
-import { loadAbcjs, renderNotation, scoreIdOf } from "./livePreview";
+import { splitNote } from "@jam-practice/core/shedNoteBlocks";
+import { loadAbcjs, renderNotation } from "./livePreview";
 import type { ScoreContext } from "./ScoreEmbeds";
 import { FileEmbedView } from "./FileEmbeds";
-import { parseEmbedLine } from "./fileEmbedSetup";
 
 /**
  * A note drawn as a page, not an editor — for printing (Export as PDF) and for a note opened from
@@ -76,53 +76,9 @@ md.use({
   ],
 });
 
-type Part = { kind: "md"; text: string } | { kind: "score"; id: string } | { kind: "abc"; abc: string } | { kind: "file"; ref: string; name: string; width?: number };
-
-/** The note's text, split around its notation blocks (the same fences the editor draws). */
-export function splitNote(body: string): Part[] {
-  const lines = body.split("\n");
-  const parts: Part[] = [];
-  let buf: string[] = [];
-  const flush = () => {
-    if (buf.length) parts.push({ kind: "md", text: buf.join("\n") });
-    buf = [];
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const fence = /^(```|~~~)\s*(\S*)/.exec(lines[i]);
-    const kind = fence ? (/^score$/i.test(fence[2]) ? "score" : /^(abc|music)$/i.test(fence[2]) ? "abc" : null) : null;
-    const file = fence ? null : parseEmbedLine(lines[i]);
-    if (file) {
-      flush();
-      parts.push({ kind: "file", ...file });
-      continue;
-    }
-    if (!fence || !kind) {
-      buf.push(lines[i]);
-      // Skip over other code blocks whole, so a fence inside them isn't read as notation.
-      if (fence) {
-        const close = new RegExp(`^${fence[1]}\\s*$`);
-        for (i++; i < lines.length; i++) {
-          buf.push(lines[i]);
-          if (close.test(lines[i])) break;
-        }
-      }
-      continue;
-    }
-    const close = new RegExp(`^${fence[1]}\\s*$`);
-    let end = i + 1;
-    while (end < lines.length && !close.test(lines[end])) end++;
-    if (end >= lines.length) {
-      buf.push(lines[i]);
-      continue;
-    }
-    flush();
-    const inner = lines.slice(i + 1, end).join("\n");
-    parts.push(kind === "score" ? { kind: "score", id: scoreIdOf(inner) } : { kind: "abc", abc: inner });
-    i = end;
-  }
-  flush();
-  return parts;
-}
+/** The note's text, split around its notation blocks and file lines — shared with the phone
+    (`packages/core/shedNoteBlocks.ts`). */
+export { splitNote };
 
 const noop = () => {};
 

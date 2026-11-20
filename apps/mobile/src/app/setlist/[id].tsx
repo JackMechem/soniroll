@@ -26,7 +26,7 @@ function SharedSetlistScreen() {
     return (
       <View className="flex-1 items-center justify-center px-10" style={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ title: 'Setlist' }} />
-        <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+        <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
           This setlist isn&apos;t shared anymore, or the link is wrong.
         </Text>
       </View>
@@ -40,12 +40,12 @@ function SharedSetlistScreen() {
         <View className="gap-1">
           <View className="flex-row items-center gap-2">
             <SetlistIcon color={colors.accent} size={22} />
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
               {`Setlist · ${shared.tunes.length} tunes${shared.ownerUsername ? ` · shared by @${shared.ownerUsername}` : ''}`}
             </Text>
           </View>
           {shared.description ? (
-            <Text className="font-inter text-base" style={{ color: colors.foreground }}>
+            <Text className="font-ui text-base" style={{ color: colors.foreground }}>
               {shared.description}
             </Text>
           ) : null}

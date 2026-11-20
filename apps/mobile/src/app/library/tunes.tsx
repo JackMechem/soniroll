@@ -1,11 +1,11 @@
 import { sortByText } from '@jam-practice/core/sortText';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
-import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import { PlusIcon } from '@/components/icons';
+import { MusicNoteIcon, PlusIcon } from '@/components/icons';
+import { EmptyState, IconButton, SearchField } from '@/components/ui';
 import { TUNE_ROW_H, TuneRow } from '@/components/library/TuneRow';
 import { useTuneMenu } from '@/components/library/useTuneMenu';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
@@ -45,25 +45,18 @@ function TunesListScreen() {
       <Stack.Screen
         options={{
           title,
-          headerRight: () => (
-            <Pressable
-              onPress={() => setAdding(true)}
-              accessibilityLabel={`Add to ${title}`}
-              className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.accent }}
-            >
-              <PlusIcon color={colors['accent-foreground']} size={22} />
-            </Pressable>
-          ),
+          headerRight: () => <IconButton primary Icon={PlusIcon} label={`Add to ${title}`} onPress={() => setAdding(true)} />,
         }}
       />
       {!ready ? (
         <ScreenSpinner />
       ) : (
         <>
-          <View className="px-4 pb-2 pt-2">
-            <SearchField value={query} onChange={setQuery} placeholder={`Search ${tunes.length} ${list === 'learn' ? 'tunes to learn' : 'tunes you know'}…`} />
-          </View>
+          {tunes.length ? (
+            <View className="px-4 pb-2 pt-2">
+              <SearchField value={query} onChangeText={setQuery} placeholder={list === 'learn' ? 'Search tunes to learn' : 'Search tunes you know'} />
+            </View>
+          ) : null}
           <FlatList
             data={shown}
             keyExtractor={(t) => t.id}
@@ -79,9 +72,21 @@ function TunesListScreen() {
               />
             )}
             ListEmptyComponent={
-              <Text className="font-inter py-8 text-center text-sm" style={{ color: colors.muted }}>
-                {query.trim() ? `No tunes match “${query}”.` : 'Nothing here yet — tap + to add a jazz standard or your own tune.'}
-              </Text>
+              query.trim() ? (
+                <Text className="font-ui py-8 text-center text-sm" style={{ color: colors.muted }}>
+                  No tunes match “{query}”.
+                </Text>
+              ) : (
+                <View className="pt-2">
+                  <EmptyState
+                    Icon={MusicNoteIcon}
+                    title={list === 'learn' ? 'Nothing to learn yet' : 'No tunes yet'}
+                    body={list === 'learn' ? 'Tunes you want to learn, kept apart from your practice list.' : 'Jam Practice and Tune of the day pick from these.'}
+                    action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => router.push({ pathname: '/library/tune-edit', params: { list } }) }}
+                    secondary={{ label: 'Pick from the standards', onPress: () => setAdding(true) }}
+                  />
+                </View>
+              )
             }
           />
         </>

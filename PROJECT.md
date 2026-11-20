@@ -38,11 +38,11 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
   components. The real product. Live at soniroll.com.
-- **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app. **Development is paused
-  as of 2026-10-18** — Jack may pick it up again later. Until he does, don't build or port features
-  to it, don't make builds for his phone, and don't say "mobile isn't done yet" as a to-do in your
-  replies. Do keep it from breaking: a change to `packages/core` or a Convex function it calls
-  should still pass `tsc` in `apps/mobile`. It's mobile only (it won't replace the website; see
+- **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app. Paused 2026-10-18,
+  **picked up again 2026-11-19**: Jack chose to stay on Expo and bring it up to the website's look
+  and the soniroll name in stages, then had every tool it lacked ported too (see
+  `docs/notes/mobile-refresh.md`). Not yet released or built for his phone with all of it. A change to `packages/core` or a Convex function it calls must
+  still pass `tsc` in `apps/mobile`. It's mobile only (it won't replace the website; see
   `docs/notes/mobile-tool-screens-and-sync.md`) and shares the backend and pure logic with web.
 - **Backend** (`packages/convex`): Convex — accounts (email + password with emailed codes, and
   Google), synced settings, the chart library, Community, recordings, files, Lessons, admin,
@@ -57,7 +57,7 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   `https://www.soniroll.com` (`soniroll.com` and `sheddex.com` redirect there); emails come from
   `noreply@soniroll.com`. New chart links start with `soniroll://`, and old `sheddex://` links still
   import. On purpose still sheddex: the GitHub repo, lesson calendar UIDs, bass-file format IDs,
-  storage keys, the preview demo emails and the paused mobile app — see
+  storage keys, the preview demo emails and the mobile app's package id and link scheme — see
   `docs/notes/rename-soniroll.md`. Keep "Shed Log" and "Your shed" (Jack's choice). Don't use
   older names in UI text (sheddex, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
@@ -183,8 +183,9 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - `expo start` reads `.env.local` only at startup. Typed routes regenerate only when `expo start`
   runs — after adding a route, run `CI=1 npx expo start --offline` briefly or `tsc` fails.
 - `Text.defaultProps` doesn't exist on this RN version; every `<Text>`/`<TextInput>` needs an
-  explicit `font-inter*` class (custom fonts have no synthetic bold).
-- Screens scrolling under the floating tab bar use `useTabBarSpace()` for bottom padding.
+  explicit `font-ui*` class (Geist; custom fonts have no synthetic bold).
+- The tab bar shows only on the main screens; scrolling pages use `useTabBarSpace()` for bottom
+  padding (it knows whether the bar is showing), never `TAB_BAR_CONTENT_HEIGHT` by hand.
 
 ## Standing rules
 
@@ -260,8 +261,11 @@ Web (`apps/web`):
 - Notes: `components/shednotes/AttachedNotes.tsx` (Shed Notes on anything — a `NoteTarget` from
   `packages/core/shedNotes.ts`), `NoteEditor` (CodeMirror markdown editor), `renderNotation` (abcjs).
 
-Mobile (`apps/mobile/src`): `ToolOptionsSheet` (tabbed options sheet — tool screens don't scroll;
-essentials on the main screen, the rest in the sheet), `FloatingTabBar` (+ `useTabBarSpace`),
+Mobile (`apps/mobile/src`): `components/ui.tsx` (`Card`, `ListRow`, `ToolIcon`, `Button`,
+`IconButton`, `SearchField`, `PageTitle` — the website's look), `TabHeader` / `LibraryHeader` /
+`AccountButton`, `useAppTheme().derived` (faint fill, hairline, category colours from
+`@jam-practice/core/accentColors`), `ToolOptionsSheet` (tabbed options sheet — tool screens don't
+scroll; essentials on the main screen, the rest in the sheet), `FloatingTabBar` (+ `useTabBarSpace`),
 `useAppTheme`, `lib/useSyncedSettings.ts` (offline-first: AsyncStorage, then the account),
 `lib/metronomeClickEngine.ts`, `lib/sampledTones.ts` (react-native-audio-api), `Dropdown`,
 `InfoButton`, `withScreenLoader`, VexFlow on native in `lib/notation/`.
@@ -276,6 +280,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Monorepo structure, Vercel root dir, convex.json incident | `repo-structure.md` |
 | Mobile: setup, NativeWind theming, device-only bugs, home/menu, Convex on mobile, metronome port | `mobile-foundations.md` |
 | Mobile: tool-screen layout, Inter, offline sync, account page, icons, EAS fix, mobile-only pivot | `mobile-tool-screens-and-sync.md` |
+| Mobile refresh (2026-11-19, in stages): soniroll name, logo, icons and launch animation; Geist; the web's look (`ui.tsx`); Home · Tools · Library · Community navigation; testing on the emulator | `mobile-refresh.md` |
 | Mobile: Tunes and Chord Charts tabs, the iReal importer rewrite, chart backend (2026-10-07) | `tunes-and-chord-charts-2026-10-07.md` |
 | Mobile ports: Guess the Interval/Chord, Slow Downer, metric modulation, sticking warmup | `mobile-tool-ports.md` |
 | Web parity: setlists, sharing, Community dashboard, Home, logo | `web-parity-setlists-community-home.md` |
@@ -327,10 +332,12 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
   `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
   shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, `/file/[id]`, plus `/privacy`, `/terms`,
   `/credits`.
-- **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
-  native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
-  placeholder. Web-only so far: Rhythm Section, Syncopation, the Shed Log, Lessons and
-  Files / tune and file share links.
+- **Mobile:** a bottom tab bar on the main screens (Home · Tools · Library · Community; Account
+  from the top-right button) and native screens for most tools (`src/app/tool/`), laid out like the
+  website's (setting chips, `components/tool/`); anything not ported opens the `[slug]` placeholder.
+  Every tool, the Shed Log, Shed Notes and Lessons are on the phone since 2026-11-19 (each port's
+  notes in `docs/notes/mobile-refresh.md`). Web-only still: the Files browser, tune/file share
+  pages, presets, the Shed Log's week time grid, PDF/zip export.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.

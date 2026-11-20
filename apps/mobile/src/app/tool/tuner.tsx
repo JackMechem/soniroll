@@ -1,15 +1,18 @@
 import { midiToNote, parseNote } from '@jam-practice/core/noteRange';
 import { TUNER_INSTRUMENTS, getInstrument, getTuning } from '@jam-practice/core/tunings';
-import { Stack } from 'expo-router';
+import { getRecordingPermissionsAsync } from 'expo-audio';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { SlidersIcon } from '@/components/icons';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
-import { TunerDial } from '@/components/TunerDial';
+import { MicrophoneIcon, TunerIcon } from '@/components/icons';
+import { ToneIcon } from '@/components/tool/toolIcons';
+import { SwitchRow } from '@/components/SwitchRow';
+import { Field, PillChoice, SheetButton, SheetText, SliderField, noteGlyphs } from '@/components/tool/ear';
+import { BigButton, StepButton } from '@/components/tool/meter';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
+import { TunerDial, TunerMeter } from '@/components/TunerDial';
 import { SENSITIVITY } from '@/lib/audioInput';
 import { startTone, type ToneHandle } from '@/lib/toneGenerator';
 import {
@@ -23,14 +26,19 @@ import {
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/Tuner.tsx`. Same mic-listening engine shape
  * (`lib/tunerEngine.ts`, a plain module like `metronomeEngine.ts`/`practiceTimerEngine.ts` — the
  * screen just pushes settings in and reads the live reading back out via `useSyncExternalStore`),
- * same `TunerDial` ring-of-12-notes concept (now `react-native-svg` instead of a DOM `<svg>`), and
- * the same "main display has only the essentials, everything else lives in a tabbed
- * `ToolOptionsSheet`" shape every tool since the Metronome has followed. Deliberately **no input-
+ * same `TunerDial` ring-of-12-notes concept (now `react-native-svg` instead of a DOM `<svg>`), laid
+ * out like every tool (`ToolFrame`): the dial (the heard note big inside it) fitted to the space,
+ * the cents meter (the main feedback), the strings, then the footer: Start listening and the
+ * Instrument, Microphone and Reference & tone chips (the octave of tapped notes is in that last
+ * sheet). It starts listening by itself when the microphone's already allowed. The website's recorded
+ * takes (Record, the Takes chip) aren't on mobile. Deliberately **no input-
  * device picker** — `lib/audioInput.ts`'s own doc comment explains why there's no native
  * equivalent of web's `MediaDeviceInfo` enumeration to build one from.
  */
@@ -74,9 +82,8 @@ function freqOfMidi(midi: number, refA: number) {
 type Playing = { midi: number };
 
 function TunerScreen() {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const instrument = getInstrument(settings.instrumentId);
   const tuning = getTuning(instrument, settings.tuningId);
   const refA = Math.min(MAX_REF, Math.max(MIN_REF, settings.refA));
@@ -92,6 +99,10 @@ function TunerScreen() {
   const tunerState = useSyncExternalStore(subscribeTuner, getTunerSnapshot);
   const { listening, error, reading } = tunerState;
   const [playing, setPlaying] = useState<Playing | null>(null);
+  useToolActivity('/tuner', listening || playing !== null);
+  useKeepAwakeWhile(listening || playing !== null);
+  const [dialBox, setDialBox] = useState({ w: 0, h: 0 });
+  const dialSize = Math.floor(Math.max(0, Math.min(340, dialBox.w, dialBox.h)));
 
   const toneRef = useRef<ToneHandle | null>(null);
   const mountedRef = useRef(true);
@@ -104,6 +115,20 @@ function TunerScreen() {
     // render for no reason.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refA, sensitivity, tuning.id]);
+
+  // Start listening straight away when the microphone's already allowed (asking for it waits for
+  // Start listening, so the permission prompt never appears out of nowhere).
+  useEffect(() => {
+    let cancelled = false;
+    getRecordingPermissionsAsync()
+      .then(({ granted }) => {
+        if (granted && !cancelled && !getTunerSnapshot().listening) void startTunerListening();
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -157,342 +182,179 @@ function TunerScreen() {
   if (!settingsReady) return <ScreenSpinner />;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Tuner' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-6 py-3">
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                Options
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="flex-1 items-center justify-center gap-4" style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}>
-            <TunerDial detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass}>
-              <Pressable
-                onPress={() => updateSettings({ sustain: !sustain })}
-                className="rounded-full px-3 py-1"
-                style={{ backgroundColor: sustain ? colors.accent : colors.surface }}
-              >
-                <Text
-                  className="text-xs font-bold font-inter-bold"
-                  style={{ color: sustain ? colors['accent-foreground'] : colors.muted }}
-                >
-                  Sustain
-                </Text>
-              </Pressable>
-
-              <View className="items-center">
-                {noteLetter ? (
-                  <>
-                    <View className="flex-row items-start">
-                      <Text className="text-4xl font-bold font-inter-bold" style={{ color }}>
-                        {noteLetter}
-                      </Text>
-                      <Text className="mt-1 text-base font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                        {noteOctave}
-                      </Text>
-                    </View>
-                    <Text className="text-xs font-semibold font-inter-semibold" style={{ color }}>
-                      {reading!.cents > 0 ? '+' : ''}
-                      {reading!.cents.toFixed(1)} cents
-                    </Text>
-                    <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
-                      {reading!.freq.toFixed(1)} Hz
-                    </Text>
-                  </>
-                ) : playing ? (
-                  <>
-                    <Text className="text-3xl font-bold font-inter-bold" style={{ color: colors.accent }}>
-                      {midiToNote(playing.midi + transpose).replace(/-?\d+$/, '')}
-                    </Text>
-                    <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-                      {freqOfMidi(playing.midi, refA).toFixed(1)} Hz
-                    </Text>
-                  </>
-                ) : (
-                  <Text className="px-2 text-center text-xs font-inter" style={{ color: colors.muted }}>
-                    {listening ? 'Play a note…' : 'Tap a note to hear it'}
-                  </Text>
-                )}
-              </View>
-
-              <View className="items-center">
-                <Text
-                  className="text-[10px] font-bold font-inter-bold tracking-wide"
-                  style={{ color: colors.muted }}
-                >
-                  OCTAVE
-                </Text>
-                <View className="flex-row items-center gap-3">
-                  <Pressable
-                    onPress={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}
-                    disabled={octave <= MIN_OCTAVE}
-                    accessibilityLabel="Octave down"
-                    className="h-7 w-7 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.surface, opacity: octave <= MIN_OCTAVE ? 0.4 : 1 }}
-                  >
-                    <Text className="text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                      −
-                    </Text>
-                  </Pressable>
-                  <Text className="w-4 text-center text-lg font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
-                    {octave}
-                  </Text>
-                  <Pressable
-                    onPress={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}
-                    disabled={octave >= MAX_OCTAVE}
-                    accessibilityLabel="Octave up"
-                    className="h-7 w-7 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.surface, opacity: octave >= MAX_OCTAVE ? 0.4 : 1 }}
-                  >
-                    <Text className="text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                      +
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </TunerDial>
-
-            <View className="w-full items-center gap-1.5">
-              <View className="h-2 w-full rounded-full" style={{ backgroundColor: colors.surface }}>
-                <View
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    top: -3,
-                    width: 1,
-                    height: 14,
-                    backgroundColor: `${colors.muted}99`,
+    <ToolFrame
+      title="Tuner"
+      scroll={false}
+      // While a tone plays (the tuner doesn't listen then anyway) the one button stops it.
+      action={
+        <BigButton
+          label={playing ? 'Stop tone' : listening ? 'Stop listening' : 'Start listening'}
+          secondary={listening || playing !== null}
+          onPress={playing ? stopTone : listening ? stopTunerListening : () => void startTunerListening()}
+        />
+      }
+      chips={
+        <SettingsBar>
+            <SettingChip Icon={TunerIcon} label="Instrument" value={instrument.label.split(' (')[0]}>
+              <Field label="Instrument" hint="Sets which strings the dial and the tap-to-hear buttons below are built from.">
+                <PillChoice
+                  label="Instrument"
+                  value={instrument.id}
+                  options={TUNER_INSTRUMENTS.map((i) => ({ value: i.id, label: i.label }))}
+                  onChange={(instrumentId) => {
+                    const next = getInstrument(instrumentId);
+                    updateSettings({ instrumentId, tuningId: next.tunings[0].id });
                   }}
                 />
-                {reading ? (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: `${50 + cents}%`,
-                      width: 6,
-                      height: 16,
-                      marginLeft: -3,
-                      marginTop: -8,
-                      borderRadius: 3,
-                      backgroundColor: color,
-                    }}
-                  />
-                ) : null}
-              </View>
-              <View className="w-full flex-row justify-between">
-                <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
-                  ♭ flat
-                </Text>
-                <Text className="text-[11px] font-bold font-inter-bold" style={{ color: reading ? color : colors.muted }}>
-                  {verdict}
-                </Text>
-                <Text className="text-[11px] font-inter" style={{ color: colors.muted }}>
-                  sharp ♯
-                </Text>
-              </View>
-            </View>
-
-            {tuning.strings.length > 0 ? (
-              <View className="w-full items-center gap-2">
-                <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                  Tap a string to hear its pitch
-                </Text>
-                <View className="flex-row flex-wrap justify-center gap-2">
-                  {tuning.strings.map((s, i) => {
-                    const midi = stringMidis[i];
-                    const isHeard = reading?.target === midi;
-                    const isPlaying = playing?.midi === midi;
-                    return (
-                      <Pressable
-                        key={`${s}-${i}`}
-                        onPress={() => playMidi(midi)}
-                        className="min-w-[56px] items-center rounded-xl px-3 py-2"
-                        style={{
-                          backgroundColor: isPlaying ? colors.accent : isHeard ? color : colors.surface,
-                        }}
-                      >
-                        <Text
-                          className="text-sm font-semibold font-inter-semibold"
-                          style={{ color: isPlaying ? colors['accent-foreground'] : isHeard ? colors.background : colors.foreground }}
-                        >
-                          {s}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : null}
-
-            {error ? (
-              <Text className="text-center text-sm font-inter" style={{ color: colors.danger }}>
-                {error}
-              </Text>
-            ) : null}
-
-            <View className="flex-row items-center gap-3">
-              <Pressable
-                onPress={() => (listening ? stopTunerListening() : void startTunerListening())}
-                className="rounded-full px-8 py-3"
-                style={{ backgroundColor: listening ? colors.surface : colors.accent }}
-              >
-                <Text
-                  className="text-base font-bold font-inter-bold"
-                  style={{ color: listening ? colors.foreground : colors['accent-foreground'] }}
-                >
-                  {listening ? 'Stop' : 'Start listening'}
-                </Text>
-              </Pressable>
-              {playing ? (
-                <Pressable
-                  onPress={stopTone}
-                  className="rounded-full px-5 py-3"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <Text className="text-base font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                    Stop tone
-                  </Text>
-                </Pressable>
+              </Field>
+              {instrument.tunings.length > 1 ? (
+                <Field label="Tuning" hint="An alternate string tuning for this instrument, e.g. drop D or open G.">
+                  <Dropdown value={tuning.id} options={instrument.tunings.map((t) => ({ value: t.id, label: t.label }))} onChange={(tuningId) => updateSettings({ tuningId })} />
+                </Field>
               ) : null}
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
+              {transpose !== 0 ? <SheetText>Notes are shown as written for this transposing instrument, not concert pitch.</SheetText> : null}
+            </SettingChip>
 
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        title="Tuner options"
-        tabs={[
-          {
-            key: 'instrument',
-            label: 'Instrument',
-            content: () => (
-              <>
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    INSTRUMENT
-                  </Text>
-                  <Dropdown
-                    value={instrument.id}
-                    options={TUNER_INSTRUMENTS.map((i) => ({ value: i.id, label: i.label }))}
-                    onChange={(instrumentId) => {
-                      const next = getInstrument(instrumentId);
-                      updateSettings({ instrumentId, tuningId: next.tunings[0].id });
-                    }}
-                  />
-                </View>
-                {instrument.tunings.length > 1 ? (
-                  <View className="gap-1.5">
-                    <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                      TUNING
-                    </Text>
-                    <Dropdown
-                      value={tuning.id}
-                      options={instrument.tunings.map((t) => ({ value: t.id, label: t.label }))}
-                      onChange={(tuningId) => updateSettings({ tuningId })}
-                    />
-                  </View>
-                ) : null}
-                {transpose !== 0 ? (
-                  <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-                    Notes are shown as written for this transposing instrument, not concert pitch.
-                  </Text>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: 'input',
-            label: 'Input',
-            content: () => (
-              <View className="gap-1.5">
-                <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                  SENSITIVITY
-                </Text>
-                <Dropdown
+            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
+              <Field label="Sensitivity" hint="How quiet a signal can be before it's ignored as silence — raise it in a noisy room.">
+                <PillChoice
+                  label="Sensitivity"
                   value={sensitivity in SENSITIVITY ? sensitivity : 'normal'}
                   options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
                   onChange={(value) => updateSettings({ sensitivity: value })}
                 />
-                <Text className="text-xs font-inter" style={{ color: colors.muted }}>
-                  How quiet a signal can be before it&apos;s ignored as silence — raise it in a noisy room.
+              </Field>
+            </SettingChip>
+
+            <SettingChip Icon={ToneIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
+              <SliderField
+                label="Reference pitch (A4)"
+                value={refA}
+                unit=" Hz"
+                min={MIN_REF}
+                max={MAX_REF}
+                step={1}
+                onChange={(v) => updateSettings({ refA: v })}
+                hint="The frequency of concert A, in Hz. 440 is standard; some orchestras and older recordings tune a little sharp or flat of it."
+              />
+              {refA !== 440 ? <SheetButton label="Reset to 440" onPress={() => updateSettings({ refA: 440 })} /> : null}
+            <Field label="Octave of tapped notes" hint="Which octave a note you tap on the dial plays in.">
+              <View className="flex-row items-center gap-3">
+                <StepButton label="Octave down" disabled={octave <= MIN_OCTAVE} onPress={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}>
+                  −
+                </StepButton>
+                <Text className="font-ui-semibold w-6 text-center text-xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
+                  {octave}
                 </Text>
+                <StepButton label="Octave up" disabled={octave >= MAX_OCTAVE} onPress={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}>
+                  +
+                </StepButton>
               </View>
-            ),
-          },
-          {
-            key: 'tone',
-            label: 'Reference & tone',
-            content: () => (
-              <>
-                <View className="items-center gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    REFERENCE PITCH (A4)
-                  </Text>
-                  <View className="flex-row items-center gap-3">
-                    <Pressable
-                      onPress={() => updateSettings({ refA: Math.max(MIN_REF, refA - 1) })}
-                      disabled={refA <= MIN_REF}
-                      accessibilityLabel="Decrease reference pitch"
-                      className="h-10 w-10 items-center justify-center rounded-full"
-                      style={{ backgroundColor: colors.surface, opacity: refA <= MIN_REF ? 0.4 : 1 }}
-                    >
-                      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                        −
-                      </Text>
-                    </Pressable>
-                    <Text className="min-w-[72px] text-center text-xl font-extrabold font-inter-extrabold" style={{ color: colors.foreground }}>
-                      {refA} Hz
+            </Field>
+              <Field label="Tone generator sound" hint="The waveform played when you tap a note on the dial or a string below to hear it.">
+                <PillChoice label="Tone generator sound" value={waveform} options={WAVEFORMS} onChange={(value) => updateSettings({ waveform: value })} />
+              </Field>
+              <SwitchRow
+                label="Hold tapped notes"
+                checked={sustain}
+                onChange={(v) => updateSettings({ sustain: v })}
+                hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
+              />
+            </SettingChip>
+        </SettingsBar>
+      }
+    >
+      <View className="flex-1 items-center gap-4 px-4 pb-2 pt-3">
+        {/* The dial takes what's left, square, up to 340 across. */}
+        <View className="w-full flex-1 items-center justify-center" style={{ minHeight: 0 }} onLayout={(e) => setDialBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+          {dialSize > 0 ? (
+            <TunerDial size={dialSize} detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass}>
+              {noteLetter ? (
+                <View className="items-center">
+                  <View className="flex-row items-start">
+                    <Text className="font-ui-bold font-bold" style={{ color, fontSize: Math.round(dialSize * 0.22), lineHeight: Math.round(dialSize * 0.26) }}>
+                      {noteGlyphs(noteLetter)}
                     </Text>
-                    <Pressable
-                      onPress={() => updateSettings({ refA: Math.min(MAX_REF, refA + 1) })}
-                      disabled={refA >= MAX_REF}
-                      accessibilityLabel="Increase reference pitch"
-                      className="h-10 w-10 items-center justify-center rounded-full"
-                      style={{ backgroundColor: colors.surface, opacity: refA >= MAX_REF ? 0.4 : 1 }}
-                    >
-                      <Text className="text-lg font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                        +
-                      </Text>
-                    </Pressable>
+                    <Text className="font-ui-semibold mt-2 text-xl font-semibold" style={{ color: colors.muted }}>
+                      {noteOctave}
+                    </Text>
                   </View>
-                  {refA !== 440 ? (
-                    <Pressable onPress={() => updateSettings({ refA: 440 })}>
-                      <Text className="text-xs font-semibold font-inter-semibold" style={{ color: colors.accent }}>
-                        Reset to 440
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                  <Text className="text-center text-xs font-inter" style={{ color: colors.muted }}>
-                    The frequency of concert A, in Hz. 440 is standard; some orchestras and older recordings tune a
-                    little sharp or flat of it.
+                  <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color }}>
+                    {reading!.cents > 0 ? '+' : ''}
+                    {reading!.cents.toFixed(1)} cents
+                  </Text>
+                  <Text className="font-ui text-[11px] tabular-nums" style={{ color: colors.muted }}>
+                    {reading!.freq.toFixed(1)} Hz
                   </Text>
                 </View>
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold font-inter-bold tracking-wide" style={{ color: colors.muted }}>
-                    TONE GENERATOR SOUND
+              ) : playing ? (
+                <View className="items-center">
+                  <Text className="font-ui-bold font-bold" style={{ color: colors.accent, fontSize: Math.round(dialSize * 0.18), lineHeight: Math.round(dialSize * 0.22) }}>
+                    {noteGlyphs(midiToNote(playing.midi + transpose).replace(/-?\d+$/, ''))}
                   </Text>
-                  <Dropdown value={waveform} options={WAVEFORMS} onChange={(value) => updateSettings({ waveform: value })} />
+                  <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
+                    {freqOfMidi(playing.midi, refA).toFixed(1)} Hz
+                  </Text>
                 </View>
-              </>
-            ),
-          },
-        ]}
-      />
-    </View>
+              ) : (
+                // Nothing heard: what it's set up for.
+                <View className="items-center px-2">
+                  <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-bold text-2xl font-bold" style={{ color: listening ? colors.muted : colors.foreground }}>
+                    {listening ? '–' : instrument.label.split(' (')[0]}
+                  </Text>
+                  <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+                    {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}
+                  </Text>
+                </View>
+              )}
+            </TunerDial>
+          ) : null}
+        </View>
+
+        <TunerMeter
+          cents={reading ? cents : null}
+          color={color}
+          zoneColor={IN_TUNE}
+          caption={reading ? verdict : playing ? 'Playing a tone' : listening ? 'Play a note…' : 'Start listening, or tap a note to hear it'}
+          captionColor={reading ? color : colors.muted}
+        />
+
+        {tuning.strings.length > 0 ? (
+          <View accessibilityLabel="Tap a string to hear its pitch" className="w-full flex-row flex-wrap justify-center gap-1.5">
+            {tuning.strings.map((s, i) => {
+              const midi = stringMidis[i];
+              const isHeard = reading?.target === midi;
+              const isPlaying = playing?.midi === midi;
+              return (
+                <Pressable
+                  key={`${s}-${i}`}
+                  onPress={() => playMidi(midi)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Hear ${s}`}
+                  accessibilityState={{ selected: isPlaying }}
+                  android_ripple={{ color: colors['surface-hover'] }}
+                  className="h-11 min-w-12 items-center justify-center overflow-hidden rounded-lg px-3"
+                  style={{ backgroundColor: isPlaying ? colors.accent : isHeard ? color : derived.fill }}
+                >
+                  <Text
+                    className="font-ui-semibold text-sm font-semibold tabular-nums"
+                    style={{ color: isPlaying ? colors['accent-foreground'] : isHeard ? colors.background : colors.foreground }}
+                  >
+                    {noteGlyphs(s)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {error ? (
+          <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+            {error}
+          </Text>
+        ) : null}
+      </View>
+    </ToolFrame>
   );
 }
 

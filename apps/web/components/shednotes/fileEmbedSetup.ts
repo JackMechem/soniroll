@@ -1,5 +1,6 @@
 import { type EditorState, Facet, type Range, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { parseEmbedLine, parseEmbedName } from "@jam-practice/core/shedNoteBlocks";
 import { blockBox, unwatchBlockBox } from "./blockBox";
 
 /**
@@ -13,24 +14,10 @@ import { blockBox, unwatchBlockBox } from "./blockBox";
  * it's saved, so leaving mid-upload never leaves a broken line behind).
  */
 
-/** A line that's only an embed: the name (with an optional `|width`), then the address. */
-const EMBED_LINE = /^\s*!\[([^\]\n]*)\]\(\s*(file:[^\s)]+|https:\/\/[^\s)]+)\s*\)\s*$/;
-
 export type FileEmbed = { from: number; to: number; ref: string; name: string; width?: number };
 
-/** "Lead sheet|300" → the name and width. */
-export function parseEmbedName(raw: string): { name: string; width?: number } {
-  const m = /^(.*?)\s*\|\s*(\d{2,4})\s*$/.exec(raw);
-  return m ? { name: m[1], width: Number(m[2]) } : { name: raw };
-}
-
-/** An embed line's file: its ref (what follows `file:`, or the whole https address), name, width. */
-export function parseEmbedLine(text: string): Omit<FileEmbed, "from" | "to"> | null {
-  const m = EMBED_LINE.exec(text);
-  if (!m) return null;
-  const ref = m[2].startsWith("file:") ? m[2].slice(5) : m[2];
-  return { ref, ...parseEmbedName(m[1]) };
-}
+// The embed line's pattern and parsing are shared with the phone (`packages/core/shedNoteBlocks.ts`).
+export { parseEmbedLine, parseEmbedName };
 
 /** Every embed line in the note, outside code blocks. */
 export function findFileEmbeds(state: EditorState): FileEmbed[] {

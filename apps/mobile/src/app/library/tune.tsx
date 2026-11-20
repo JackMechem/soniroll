@@ -17,7 +17,9 @@ import { useTuneMenu } from '@/components/library/useTuneMenu';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RecordingRow, RecordingSelectModal, useRecordingPlayer } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TuneShedNotes } from '@/components/shedNotes/AttachedNotes';
 import { recordRecentTune } from '@/lib/chordChartRecents';
+import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi } from '@/lib/recordings';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
@@ -78,7 +80,7 @@ function TuneHubScreen() {
   if (!found) {
     return (
       <View className="flex-1 items-center justify-center px-10" style={{ backgroundColor: colors.background }}>
-        <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+        <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
           That tune isn&apos;t in your library.
         </Text>
       </View>
@@ -153,10 +155,10 @@ function Hub({
           title: tune.name,
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-inter-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
                 {tune.name}
               </Text>
-              <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                 {subtitle}
               </Text>
             </View>
@@ -182,7 +184,7 @@ function Hub({
         {/* Chord chart */}
         <View className="gap-2">
           <View className="flex-row items-center justify-between px-1">
-            <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
               Chord chart
             </Text>
             {chart ? (
@@ -196,10 +198,10 @@ function Hub({
                 />
                 <Pressable
                   onPress={() => router.push({ pathname: '/tool/chord-charts-view', params: { id: tune.chordChartId! } })}
-                  className="rounded-full px-4 py-2"
+                  className="min-h-10 justify-center rounded-lg px-4 py-2"
                   style={{ backgroundColor: colors.surface }}
                 >
-                  <Text className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                  <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
                     Open
                   </Text>
                 </Pressable>
@@ -218,22 +220,22 @@ function Hub({
             </Pressable>
           ) : (
             <View className="gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-              <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+              <Text className="font-ui text-sm" style={{ color: colors.muted }}>
                 {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : 'No chord chart linked yet.'}
               </Text>
               {matches.map((m) => (
                 <View key={m.id} className="flex-row items-center gap-3 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
                   <ChordChartIcon color={colors.accent} size={22} />
                   <View className="flex-1">
-                    <Text numberOfLines={1} className="font-inter-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                    <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                       {m.title}
                     </Text>
-                    <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                    <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                       {m.detail}
                     </Text>
                   </View>
-                  <Pressable onPress={() => patch({ chordChartId: m.id })} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.accent }}>
-                    <Text className="font-inter-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
+                  <Pressable onPress={() => patch({ chordChartId: m.id })} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
+                    <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                       Link it
                     </Text>
                   </Pressable>
@@ -254,7 +256,7 @@ function Hub({
         {/* Keys */}
         <View className="gap-2">
           <View className="flex-row items-center gap-2 px-1">
-            <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
               Keys I know it in
             </Text>
             <InfoButton
@@ -262,7 +264,7 @@ function Hub({
               text="Tap a key to mark that you can play the tune in it (tap again to unmark). Jam Practice picks from these keys. Long-press a known key to preview the chart in it."
               size={16}
             />
-            <Text className="font-inter ml-auto text-sm tabular-nums" style={{ color: colors.muted }}>
+            <Text className="font-ui ml-auto text-sm tabular-nums" style={{ color: colors.muted }}>
               {knownPcs.size} of 12
             </Text>
           </View>
@@ -286,7 +288,7 @@ function Hub({
                     borderColor: colors.foreground,
                   }}
                 >
-                  <Text className="font-inter-bold text-base font-bold" style={{ color: known ? colors['accent-foreground'] : colors.muted }}>
+                  <Text className="font-ui-bold text-base font-bold" style={{ color: known ? colors['accent-foreground'] : colors.muted }}>
                     {name}
                     {suffix}
                   </Text>
@@ -300,7 +302,7 @@ function Hub({
 
         {/* Notes — a preview; writing happens on its own page so the keyboard never covers it */}
         <View className="gap-2">
-          <Text className="font-inter-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
+          <Text className="font-ui-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
             Notes
           </Text>
           <Pressable
@@ -311,7 +313,7 @@ function Hub({
           >
             <Text
               numberOfLines={8}
-              className="font-inter flex-1 text-base"
+              className="font-ui flex-1 text-base"
               style={{ color: tune.notes.trim() ? colors.foreground : colors.muted, lineHeight: 22 }}
             >
               {tune.notes.trim() || 'Tap to write notes — form, tricky changes, voicings, recordings to check out…'}
@@ -319,6 +321,8 @@ function Hub({
             <PencilIcon color={colors.muted} size={18} />
           </Pressable>
         </View>
+
+        <TuneShedNotes tuneId={tune.id} name={tune.name} />
       </ScrollView>
 
       {menu}
@@ -341,7 +345,7 @@ function TuneRecordings({ tuneId }: { tuneId: string }) {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
-  const recordings = useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : 'skip');
+  const recordings = useDeviceUrls(useQuery(recordingsApi.listForTune, isAuthenticated ? { tuneId } : 'skip'));
   const [linking, setLinking] = useState(false);
   const all = useQuery(recordingsApi.list, isAuthenticated && linking ? {} : 'skip');
   const update = useMutation(recordingsApi.update);
@@ -350,18 +354,18 @@ function TuneRecordings({ tuneId }: { tuneId: string }) {
   return (
     <View className="gap-2">
       <View className="flex-row items-center px-1">
-        <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
+        <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
           Recordings
         </Text>
         {recordings && recordings.length > 0 ? (
-          <Text className="font-inter ml-auto text-sm tabular-nums" style={{ color: colors.muted }}>
+          <Text className="font-ui ml-auto text-sm tabular-nums" style={{ color: colors.muted }}>
             {recordings.length}
           </Text>
         ) : null}
       </View>
       {!isAuthenticated ? (
         <View className="rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-          <Text className="font-inter text-sm" style={{ color: colors.muted }}>
+          <Text className="font-ui text-sm" style={{ color: colors.muted }}>
             Sign in to record takes of this tune — recordings are saved to your account.
           </Text>
         </View>
@@ -410,7 +414,7 @@ function HubButton({ label, icon, onPress }: { label: string; icon: React.ReactN
   return (
     <Pressable onPress={onPress} className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
       {icon}
-      <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
         {label}
       </Text>
     </Pressable>

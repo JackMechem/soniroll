@@ -13,14 +13,14 @@ import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** A sheddex chart link first, quietly falling back to an iReal Pro playlist link — never naming
+/** A soniroll chart link first, quietly falling back to an iReal Pro playlist link — never naming
     iReal Pro anywhere a user can see (same rule as the web app). */
 function parsePlaylistInput(text: string) {
   if (looksLikeChartString(text)) return decodeChartString(text);
   try {
     return parseIrealPlaylist(text);
   } catch {
-    throw new Error("Couldn't read that — paste a sheddex chord chart link.");
+    throw new Error("Couldn't read that — paste a soniroll chord chart link.");
   }
 }
 
@@ -86,7 +86,7 @@ function ImportChartsScreen() {
           placeholderTextColor={colors.muted}
           autoFocus
           multiline
-          className="font-inter text-base"
+          className="font-ui text-base"
           style={{
             backgroundColor: colors.surface,
             borderRadius: 16,
@@ -109,18 +109,18 @@ function ImportChartsScreen() {
           className="items-center rounded-xl py-3"
           style={{ backgroundColor: colors.accent, opacity: canImport ? 1 : 0.4 }}
         >
-          <Text className="font-inter-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
+          <Text className="font-ui-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
             {importing ? 'Importing…' : 'Import'}
           </Text>
         </Pressable>
         {status ? (
           <View className="gap-2">
-            <Text className="font-inter text-sm" style={{ color: status.kind === 'error' ? colors.danger : colors.foreground }}>
+            <Text className="font-ui text-sm" style={{ color: status.kind === 'error' ? colors.danger : colors.foreground }}>
               {status.message}
             </Text>
             {status.kind === 'ok' ? (
               <Pressable onPress={() => router.back()} className="items-center rounded-xl py-2.5" style={{ backgroundColor: colors.surface }}>
-                <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                   Back to chord charts
                 </Text>
               </Pressable>
@@ -135,7 +135,7 @@ function ImportChartsScreen() {
           style={{ opacity: totalSongs === 0 ? 0.4 : 1 }}
         >
           <TrashIcon color={colors.danger} size={16} />
-          <Text className="font-inter-semibold text-sm" style={{ color: colors.danger }}>
+          <Text className="font-ui-semibold text-sm" style={{ color: colors.danger }}>
             Delete all chord charts
           </Text>
         </Pressable>

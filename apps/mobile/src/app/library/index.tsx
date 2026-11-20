@@ -1,41 +1,32 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
 import type { Tune } from '@jam-practice/core/types';
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/ActionSheet';
-import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import {
-  BookIcon,
-  ChevronRightIcon,
-  SetlistIcon,
-  MusicNoteIcon,
-  PlusIcon,
-  StarOutlineIcon,
-  type IconProps,
-} from '@/components/icons';
-import { SetlistRow } from '@/components/library/SetlistRow';
+import { LibraryHeader } from '@/components/TabHeader';
+import { EmptyState, IconButton, SearchField, SectionHeader } from '@/components/ui';
+import { BookIcon, ChevronRightIcon, MusicNoteIcon, PlusIcon, StarOutlineIcon } from '@/components/icons';
 import { TuneRow } from '@/components/library/TuneRow';
 import { useTuneMenu } from '@/components/library/useTuneMenu';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { StandardsPicker } from '@/components/StandardsPicker';
 import { useRecentItems } from '@/lib/chordChartRecents';
-import { useSetlists } from '@/lib/useSetlists';
 import { tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
-import { NameDialog } from '@/components/NameDialog';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 const PREVIEW = 5;
 const SEARCH_LIMIT = 25;
 
 /**
- * The Tunes tab (route `/library`) — a dashboard for your tune lists: Tunes I Know and Tunes to
- * Learn. Counts (each opens the full list), the tunes you opened most recently, and the tunes you
- * added most recently in each list; one search box covers both. The + adds a jazz standard, a new
- * tune or a tune to learn. Every tune has the tune ⋮ menu (`useTuneMenu`: edit, link / open / edit
+ * The Tunes tab (route `/library`) — only about tunes: Tunes I Know and Tunes to Learn, each with
+ * its count in its heading and "See all", the tunes you opened most recently, and the tunes you
+ * added most recently in each list; one search box covers both (hidden while there are none).
+ * Setlists have their own tab. The + adds a jazz standard, a new tune or a tune to learn; an empty
+ * list says what it's for and offers the same. Every tune has the tune ⋮ menu (`useTuneMenu`: edit, link / open / edit
  * its chord chart, move between lists, delete). Chord charts have a tab of their own
  * (`app/charts/index.tsx`).
  */
@@ -51,12 +42,9 @@ function LibraryScreen() {
   const [createOpen, setCreateOpen] = useState(false);
   const [addingStandard, setAddingStandard] = useState<TuneListId | null>(null);
   const [listAdd, setListAdd] = useState<TuneListId | null>(null);
-  const [namingSetlist, setNamingSetlist] = useState(false);
-  const { setlists, ready: setlistsReady, create: createSetlist } = useSetlists();
 
   const tunes = lists.tunes.tunes;
   const learn = lists.learn.tunes;
-  const unlinked = tunes.filter((t) => !t.chordChartId).length;
 
   const q = query.trim().toLowerCase();
   const results = useMemo(() => {
@@ -66,7 +54,7 @@ function LibraryScreen() {
     return { tunes: tunes.filter(matchTune), learn: learn.filter(matchTune) };
   }, [q, tunes, learn]);
 
-  if (!ready || !setlistsReady) return <ScreenSpinner />;
+  if (!ready) return <ScreenSpinner />;
 
   // Tunes in the order they were opened (charts have their own tab); anything since deleted is skipped.
   const recentCards: { key: string; title: string; detail: string; onPress: () => void }[] = [];
@@ -98,25 +86,19 @@ function LibraryScreen() {
     };
   }
 
+  const empty = tunes.length === 0 && learn.length === 0;
+  const addTune = (list: TuneListId) => router.push({ pathname: '/library/tune-edit', params: { list } });
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center justify-between px-5 pb-3 pt-4">
-          <Text className="font-inter-extrabold text-3xl font-extrabold" style={{ color: colors.foreground }}>
-            Tunes
-          </Text>
-          <Pressable
-            onPress={() => setCreateOpen(true)}
-            accessibilityLabel="Add a tune"
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.accent }}
-          >
-            <PlusIcon color={colors['accent-foreground']} size={24} />
-          </Pressable>
-        </View>
-        <View className="px-4 pb-2">
-          <SearchField value={query} onChange={setQuery} placeholder="Search your tunes…" />
-        </View>
+        <LibraryHeader right={<IconButton primary Icon={PlusIcon} label="Add a tune" onPress={() => setCreateOpen(true)} />} />
+        {/* Search only once there's something to search. */}
+        {!empty ? (
+          <View className="px-4 pb-2 pt-3">
+            <SearchField value={query} onChangeText={setQuery} placeholder="Search your tunes" />
+          </View>
+        ) : null}
 
         <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: bottomSpace, gap: 22 }}>
           {results ? (
@@ -128,19 +110,21 @@ function LibraryScreen() {
                 {results.learn.slice(0, SEARCH_LIMIT).map(tuneRow('learn'))}
               </ResultSection>
               {results.tunes.length + results.learn.length === 0 ? (
-                <Text className="font-inter py-6 text-center text-sm" style={{ color: colors.muted }}>
+                <Text className="font-ui py-6 text-center text-sm" style={{ color: colors.muted }}>
                   Nothing matches &ldquo;{query}&rdquo;.
                 </Text>
               ) : null}
             </>
+          ) : empty ? (
+            <EmptyState
+              Icon={MusicNoteIcon}
+              title="No tunes yet"
+              body="Add the tunes you know. Jam Practice and Tune of the day pick from them."
+              action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => addTune('tunes') }}
+              secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('tunes') }}
+            />
           ) : (
             <>
-              <View className="flex-row gap-3">
-                <StatCard Icon={MusicNoteIcon} count={tunes.length} label="I Know" onPress={() => router.push({ pathname: '/library/tunes', params: { list: 'tunes' } })} />
-                <StatCard Icon={StarOutlineIcon} count={learn.length} label="To Learn" onPress={() => router.push({ pathname: '/library/tunes', params: { list: 'learn' } })} />
-                <StatCard Icon={SetlistIcon} count={setlists.length} label="Setlists" onPress={() => (setlists.length ? router.push('/library/setlists') : setNamingSetlist(true))} />
-              </View>
-
               {recentCards.length > 0 ? (
                 <View className="gap-2">
                   <SectionHeader title="Recently opened" />
@@ -149,15 +133,16 @@ function LibraryScreen() {
                       <Pressable
                         key={card.key}
                         onPress={card.onPress}
-                        className="justify-between rounded-2xl p-3"
+                        android_ripple={{ color: colors['surface-hover'] }}
+                        className="justify-between overflow-hidden rounded-xl p-3"
                         style={{ width: 150, height: 92, backgroundColor: colors.surface }}
                       >
                         <MusicNoteIcon color={colors.accent} size={20} />
                         <View>
-                          <Text numberOfLines={1} className="font-inter-bold text-sm font-bold" style={{ color: colors.foreground }}>
+                          <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                             {card.title}
                           </Text>
-                          <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+                          <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                             {card.detail}
                           </Text>
                         </View>
@@ -168,34 +153,19 @@ function LibraryScreen() {
               ) : null}
 
               <View className="gap-1">
-                <SectionHeader title="Setlists" detail={setlists.length > PREVIEW ? String(setlists.length) : undefined} href={setlists.length ? '/library/setlists' : undefined}
-                  onAdd={() => setNamingSetlist(true)}
-                  addLabel="New setlist"
-                />
-                {setlists.length === 0 ? (
-                  <Pressable onPress={() => setNamingSetlist(true)} className="flex-row items-center gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-                    <SetlistIcon color={colors.accent} size={22} />
-                    <Text className="font-inter flex-1 text-sm" style={{ color: colors.muted }}>
-                      Make a setlist for a gig or a session — share it by link or post it to Community.
-                    </Text>
-                  </Pressable>
-                ) : (
-                  [...setlists]
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
-                    .slice(0, PREVIEW)
-                    .map((sl) => <SetlistRow key={sl.id} setlist={sl} />)
-                )}
-              </View>
-
-              <View className="gap-1">
                 <SectionHeader
                   title="Tunes I Know"
-                  detail={tunes.length && unlinked ? `${unlinked} without a chart` : undefined}
-                  href={{ pathname: '/library/tunes', params: { list: 'tunes' } }}
-                  onAdd={() => setListAdd('tunes')}
+                  count={tunes.length}
+                  detail="Ready to play · Jam Practice picks from these"
+                  right={<SectionLinks href={{ pathname: '/library/tunes', params: { list: 'tunes' } }} onAdd={() => setListAdd('tunes')} addLabel="Add to Tunes I Know" />}
                 />
                 {tunes.length === 0 ? (
-                  <EmptyCard text="No tunes yet — tap + to add a jazz standard or your own." />
+                  <EmptyState
+                    title="No tunes you know yet"
+                    body="Jam Practice and Tune of the day pick from these."
+                    action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => addTune('tunes') }}
+                    secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('tunes') }}
+                  />
                 ) : (
                   [...tunes].reverse().slice(0, PREVIEW).map(tuneRow('tunes'))
                 )}
@@ -203,15 +173,24 @@ function LibraryScreen() {
 
               {isAuthenticated ? (
                 <View className="gap-1">
-                  <SectionHeader title="Tunes to Learn" href={{ pathname: '/library/tunes', params: { list: 'learn' } }} onAdd={() => setListAdd('learn')} />
+                  <SectionHeader
+                    title="Tunes to Learn"
+                    count={learn.length}
+                    detail="Still learning · kept apart from your practice"
+                    right={<SectionLinks href={{ pathname: '/library/tunes', params: { list: 'learn' } }} onAdd={() => setListAdd('learn')} addLabel="Add to Tunes to Learn" />}
+                  />
                   {learn.length === 0 ? (
-                    <EmptyCard text="Tunes you want to learn, kept apart from your practice list." />
+                    <EmptyState
+                      title="Nothing to learn yet"
+                      body="Tunes you want to learn, kept apart from your practice list."
+                      action={{ label: 'Add a tune to learn', Icon: PlusIcon, onPress: () => addTune('learn') }}
+                      secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('learn') }}
+                    />
                   ) : (
                     [...learn].reverse().slice(0, PREVIEW).map(tuneRow('learn'))
                   )}
                 </View>
               ) : null}
-
             </>
           )}
         </ScrollView>
@@ -220,10 +199,9 @@ function LibraryScreen() {
       {tuneMenu}
       <ActionSheet
         visible={createOpen}
-        title="Add to Tunes"
+        title="Add a tune"
         onClose={() => setCreateOpen(false)}
         actions={[
-          { key: 'setlist', icon: <SetlistIcon color={colors.accent} size={22} />, label: 'New setlist', onPress: () => setNamingSetlist(true) },
           { key: 'standard', icon: <BookIcon color={colors.accent} size={22} />, label: 'Jazz standard', onPress: () => setAddingStandard('tunes') },
           { key: 'tune', icon: <MusicNoteIcon color={colors.accent} size={22} />, label: 'New tune', onPress: () => router.push({ pathname: '/library/tune-edit', params: { list: 'tunes' } }) },
           ...(isAuthenticated
@@ -245,17 +223,6 @@ function LibraryScreen() {
           },
         ]}
       />
-      <NameDialog
-        visible={namingSetlist}
-        title="New setlist"
-        placeholder="e.g. Friday gig"
-        confirmLabel="Create"
-        onSubmit={(name) => {
-          const sl = createSetlist(name);
-          router.push({ pathname: '/library/setlist', params: { id: sl.id } });
-        }}
-        onClose={() => setNamingSetlist(false)}
-      />
       {addingStandard ? (
         <StandardsPicker
           tunes={lists[addingStandard].tunes}
@@ -271,57 +238,29 @@ function LibraryScreen() {
   );
 }
 
-function StatCard({ Icon, count, label, onPress }: { Icon: ComponentType<IconProps>; count: number; label: string; onPress: () => void }) {
-  const { colors } = useAppTheme();
-  return (
-    <Pressable onPress={onPress} android_ripple={{ color: colors['surface-hover'] }} className="flex-1 gap-2 rounded-2xl p-3" style={{ backgroundColor: colors.surface }}>
-      <Icon color={colors.accent} size={22} />
-      <View>
-        <Text className="font-inter-extrabold text-2xl font-extrabold tabular-nums" style={{ color: colors.foreground }}>
-          {count}
-        </Text>
-        <Text className="font-inter-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function SectionHeader({ title, detail, href, onAdd, addLabel }: { title: string; detail?: string; href?: Href; onAdd?: () => void; addLabel?: string }) {
-  const { colors } = useAppTheme();
+/** A list section's links: + (add to it) and See all. */
+function SectionLinks({ href, onAdd, addLabel }: { href: Href; onAdd: () => void; addLabel: string }) {
+  const { colors, derived } = useAppTheme();
   const router = useRouter();
   return (
-    <View className="flex-row items-end justify-between px-1 pb-1">
-      <View className="flex-row items-center gap-2">
-        <Text className="font-inter-bold text-lg font-bold" style={{ color: colors.foreground }}>
-          {title}
+    <View className="flex-row items-center gap-1">
+      <Pressable
+        onPress={onAdd}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={addLabel}
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="h-8 w-8 items-center justify-center overflow-hidden rounded-full"
+        style={{ backgroundColor: derived.fill }}
+      >
+        <PlusIcon color={colors.foreground} size={18} />
+      </Pressable>
+      <Pressable onPress={() => router.push(href)} hitSlop={8} accessibilityRole="link" className="h-11 flex-row items-center pl-2">
+        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+          See all
         </Text>
-        {onAdd ? (
-          <Pressable
-            onPress={onAdd}
-            hitSlop={8}
-            accessibilityLabel={addLabel ?? `Add to ${title}`}
-            className="h-7 w-7 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <PlusIcon color={colors.accent} size={16} />
-          </Pressable>
-        ) : null}
-        {detail ? (
-          <Text className="font-inter text-xs" style={{ color: colors.muted }}>
-            {detail}
-          </Text>
-        ) : null}
-      </View>
-      {href ? (
-        <Pressable onPress={() => router.push(href)} hitSlop={8} className="flex-row items-center">
-          <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.accent }}>
-            See all
-          </Text>
-          <ChevronRightIcon color={colors.accent} size={18} />
-        </Pressable>
-      ) : null}
+        <ChevronRightIcon color={colors.muted} size={18} />
+      </Pressable>
     </View>
   );
 }
@@ -331,24 +270,13 @@ function ResultSection({ title, count, children }: { title: string; count: numbe
   if (count === 0) return null;
   return (
     <View className="gap-1">
-      <SectionHeader title={title} detail={count > SEARCH_LIMIT ? `showing ${SEARCH_LIMIT} of ${count}` : String(count)} />
+      <SectionHeader title={title} count={count} />
       {children}
       {count > SEARCH_LIMIT ? (
-        <Text className="font-inter px-3 text-xs" style={{ color: colors.muted }}>
+        <Text className="font-ui px-3 text-xs" style={{ color: colors.muted }}>
           Keep typing to narrow it down.
         </Text>
       ) : null}
-    </View>
-  );
-}
-
-function EmptyCard({ text }: { text: string }) {
-  const { colors } = useAppTheme();
-  return (
-    <View className="rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-      <Text className="font-inter text-sm" style={{ color: colors.muted }}>
-        {text}
-      </Text>
     </View>
   );
 }

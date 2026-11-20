@@ -20,6 +20,7 @@ import {
   DotsVerticalIcon,
   DragIcon,
   LinkIcon,
+  MusicNoteIcon,
   PencilIcon,
   PlusIcon,
   ShareIcon,
@@ -33,6 +34,7 @@ import { SetlistTuneSheet } from '@/components/library/SetlistTuneSheet';
 import { TunePickerModal } from '@/components/library/TunePickerModal';
 import { NameDialog } from '@/components/NameDialog';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { EmptyState } from '@/components/ui';
 import { useShareSetlist } from '@/lib/shareSetlist';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useSetlists } from '@/lib/useSetlists';
@@ -90,7 +92,7 @@ function SetlistScreen() {
   if (!setlist) {
     return (
       <View className="flex-1 items-center justify-center px-10" style={{ backgroundColor: colors.background }}>
-        <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
+        <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
           That setlist isn&apos;t here anymore.
         </Text>
       </View>
@@ -207,10 +209,10 @@ function SetlistScreen() {
           title: setlist.name,
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-inter-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
                 {setlist.name}
               </Text>
-              <Text numberOfLines={1} className="font-inter text-xs" style={{ color: colors.muted }}>
+              <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                 {`Setlist · ${tunes.length} tune${tunes.length === 1 ? '' : 's'}${setlist.shareId ? ' · shared' : ''}`}
               </Text>
             </View>
@@ -229,7 +231,7 @@ function SetlistScreen() {
       />
       <ScrollView scrollEnabled={!dragging} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: bottomSpace }}>
         {setlist.description ? (
-          <Text className="font-inter text-base" style={{ color: colors.foreground }}>
+          <Text className="font-ui text-base" style={{ color: colors.foreground }}>
             {setlist.description}
           </Text>
         ) : null}
@@ -241,7 +243,7 @@ function SetlistScreen() {
             style={{ backgroundColor: colors.accent }}
           >
             <SlidesIcon color={colors['accent-foreground']} size={20} />
-            <Text className="font-inter-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
+            <Text className="font-ui-bold text-base font-bold" style={{ color: colors['accent-foreground'] }}>
               View all charts
             </Text>
           </Pressable>
@@ -249,7 +251,7 @@ function SetlistScreen() {
         <View className="flex-row gap-2">
           <Pressable onPress={() => void doShare()} disabled={busy} className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3" style={{ backgroundColor: colors.surface, opacity: busy ? 0.5 : 1 }}>
             <ShareIcon color={colors.foreground} size={18} />
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
               {busy ? 'Sharing…' : 'Share link'}
             </Text>
           </Pressable>
@@ -263,24 +265,24 @@ function SetlistScreen() {
             style={{ backgroundColor: colors.surface }}
           >
             <UsersIcon color={colors.foreground} size={18} />
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
               {postId ? 'View post' : 'Post to Community'}
             </Text>
           </Pressable>
         </View>
         {message ? (
-          <Text className="font-inter text-sm" style={{ color: colors.danger }}>
+          <Text className="font-ui text-sm" style={{ color: colors.danger }}>
             {message}
           </Text>
         ) : null}
 
         {found.length === 0 ? (
-          <Pressable onPress={() => setPicking(true)} className="items-center gap-2 rounded-2xl p-6" style={{ backgroundColor: colors.surface }}>
-            <PlusIcon color={colors.accent} size={26} />
-            <Text className="font-inter text-center text-sm" style={{ color: colors.muted }}>
-              No tunes yet — tap to add some from your lists.
-            </Text>
-          </Pressable>
+          <EmptyState
+            Icon={MusicNoteIcon}
+            title="No tunes in this setlist yet"
+            body="Pick them from Tunes I Know and Tunes to Learn."
+            action={{ label: 'Add tunes', Icon: PlusIcon, onPress: () => setPicking(true) }}
+          />
         ) : (
           <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
             <DraggableList
@@ -303,12 +305,12 @@ function SetlistScreen() {
                       android_ripple={{ color: colors['surface-hover'] }}
                       className="h-full flex-1 flex-row items-center gap-3"
                     >
-                      <Text className="font-inter-bold w-5 text-right text-base font-bold tabular-nums" style={{ color: colors.accent }}>
+                      <Text className="font-ui-bold w-5 text-right text-base font-bold tabular-nums" style={{ color: colors.accent }}>
                         {i + 1}
                       </Text>
                       <View className="flex-1">
                         <View className="flex-row items-center gap-1.5">
-                          <Text numberOfLines={1} className="font-inter-semibold flex-shrink text-base font-semibold" style={{ color: colors.foreground }}>
+                          <Text numberOfLines={1} className="font-ui-semibold flex-shrink text-base font-semibold" style={{ color: colors.foreground }}>
                             {tune.name}
                           </Text>
                           {tune.chordChartId ? <ChordChartIcon color={colors.accent} size={15} /> : null}
@@ -328,7 +330,7 @@ function SetlistScreen() {
         {found.length > 0 ? (
           <Pressable onPress={() => setPicking(true)} className="flex-row items-center justify-center gap-1.5 rounded-xl py-3" style={{ backgroundColor: colors.surface }}>
             <PlusIcon color={colors.foreground} size={18} />
-            <Text className="font-inter-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
               Add tunes
             </Text>
           </Pressable>
@@ -396,9 +398,9 @@ function PlayInfoLine({
   if (info.tempo != null) parts.push({ text: `${info.tempo} BPM`, changed: info.tempoChanged });
   if (timeSignature) parts.push({ text: timeSignature, changed: false });
   return (
-    <Text numberOfLines={1} className="font-inter text-sm" style={{ color: colors.muted }}>
+    <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
       {parts.map((p, i) => (
-        <Text key={i} className={p.changed ? 'font-inter-bold font-bold' : 'font-inter'} style={p.changed ? { color: colors.accent } : undefined}>
+        <Text key={i} className={p.changed ? 'font-ui-bold font-bold' : 'font-ui'} style={p.changed ? { color: colors.accent } : undefined}>
           {i ? ' · ' : ''}
           {p.text}
         </Text>

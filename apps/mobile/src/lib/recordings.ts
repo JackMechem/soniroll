@@ -1,7 +1,8 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { File } from 'expo-file-system';
-import { FileSystemUploadType, getInfoAsync, uploadAsync } from 'expo-file-system/legacy';
+
+import type { DeviceRef } from '@/lib/deviceFiles';
 
 export type Recording = {
   _id: Id<'recordings'>;
@@ -12,7 +13,10 @@ export type Recording = {
   tuneId: string | null;
   createdAt: number;
   updatedAt: number;
+  /** Null when it's kept on a device (`device`) — `useDeviceUrls` fills in this phone's copy. */
   url: string | null;
+  /** Set when it's kept on a device instead of online (free accounts). */
+  device?: DeviceRef | null;
 };
 
 export const RECORDING_MIME = 'audio/mp4';
@@ -32,26 +36,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export function formatRecordedAt(ms: number): string {
   const d = new Date(ms);
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-/** Uploads a local take to Convex file storage (`generateUploadUrl` → POST the file) and returns
-    the stored file's id, for `api.recordings.create`. The file is streamed natively from disk
-    (`uploadAsync`, binary body) — reading it through `fetch(file://…).blob()` first arrived at
-    Convex empty on Android (a 400). */
-export async function uploadRecordingFile(uri: string, generateUploadUrl: () => Promise<string>) {
-  const info = await getInfoAsync(uri);
-  if (!info.exists || !info.size) throw new Error('The recording file is empty.');
-  const uploadUrl = await generateUploadUrl();
-  const res = await uploadAsync(uploadUrl, uri, {
-    httpMethod: 'POST',
-    uploadType: FileSystemUploadType.BINARY_CONTENT,
-    headers: { 'Content-Type': RECORDING_MIME },
-  });
-  if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Upload failed (${res.status}${res.body ? `: ${res.body.slice(0, 120)}` : ''}).`);
-  }
-  const { storageId } = JSON.parse(res.body) as { storageId: Id<'_storage'> };
-  return storageId;
 }
 
 /** Deletes a local take once it's uploaded or discarded. Never throws. */

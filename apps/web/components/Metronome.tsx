@@ -33,6 +33,7 @@ import {
   nearestNoteValue,
   useTapTempo,
 } from "@/lib/meterControls";
+import { COMMON_METERS } from "@jam-practice/core/meterControls";
 import {
   EMPTY_STRUCTURE,
   type Structure,
@@ -55,18 +56,6 @@ import { useToolActivity } from "@/lib/toolTime";
 import { toolPresets } from "@/lib/toolPresets";
 
 const DEFAULT_BPM = 100;
-
-/** The time signatures people reach for most, as quick-pick cards in the Time popover. */
-const COMMON_METERS: [number, number][] = [
-  [4, 4],
-  [3, 4],
-  [2, 4],
-  [6, 8],
-  [5, 4],
-  [7, 8],
-  [9, 8],
-  [12, 8],
-];
 
 const SETTINGS_KEY = "jam-practice-metronome";
 const DEFAULT_SETTINGS = {

@@ -51,9 +51,15 @@ const DURATION_BY_SPEED: Record<CellSpeed, string> = {
 
 export type BarRect = { x: number; width: number };
 
+/** The sticking letters' size, in points: VexFlow's default is 10 (13⅓ units); the phone draws
+    them at 12 (16 units) so they stay readable (14 px and up) at the scale a phone-width bar is
+    drawn. The website keeps the default. */
+export const STICKING_FONT_PT = 12;
+
 function buildNote(hand: string, dur: string) {
   const note = new StaveNote({ keys: ['b/4'], duration: dur, clef: 'percussion' });
   const annotation = new Annotation(hand);
+  annotation.setFontSize(STICKING_FONT_PT);
   annotation.setVerticalJustification(AnnotationVerticalJustify.BOTTOM);
   note.addModifier(annotation, 0);
   return note;

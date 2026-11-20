@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PostListItem } from '@/components/community/CommunityTunes';
 import { FollowButton } from '@/components/community/FollowButton';
 import { PublicTuneList } from '@/components/community/PublicTuneList';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserAvatar } from '@/components/UserAvatar';
 import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
@@ -58,10 +57,10 @@ function PublicProfileScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-2 px-8" style={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ title: 'Profile' }} />
-        <Text className="text-center text-xl font-semibold font-inter-semibold" style={{ color: colors.foreground }}>
+        <Text className="text-center text-xl font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
           This profile isn&apos;t available
         </Text>
-        <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
+        <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>
           It might not exist, or its owner hasn&apos;t made it public.
         </Text>
       </View>
@@ -87,15 +86,15 @@ function PublicProfileScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: profile.username }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 + TAB_BAR_CONTENT_HEIGHT, gap: 16 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}>
           <View className="items-center gap-3">
             <UserAvatar url={profile.avatarUrl} size="xl" />
-            <Text className="text-2xl font-bold font-inter-bold" style={{ color: colors.accent }}>
+            <Text className="text-2xl font-bold font-ui-bold" style={{ color: colors.accent }}>
               {profile.username}
             </Text>
             {!isOwnProfile && viewer ? <FollowButton targetUserId={profile.userId as Id<'users'>} /> : null}
             {!isOwnProfile && !viewer ? (
-              <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+              <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                 Sign in to follow {profile.username}.
               </Text>
             ) : null}
@@ -103,13 +102,13 @@ function PublicProfileScreen() {
 
           {profile.instruments.length > 0 ? (
             <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                 Instruments
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {profile.instruments.map((name) => (
                   <View key={name} className="rounded-full px-3 py-1" style={{ backgroundColor: colors.background }}>
-                    <Text className="text-xs font-inter-semibold" style={{ color: colors.foreground }}>
+                    <Text className="text-xs font-ui-semibold" style={{ color: colors.foreground }}>
                       {name}
                     </Text>
                   </View>
@@ -121,10 +120,10 @@ function PublicProfileScreen() {
           {earTraining && levelsPassed > 0 ? (
             <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
               <View className="flex-row items-baseline justify-between">
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                   Ear training
                 </Text>
-                <Text className="text-xs font-inter" style={{ color: colors.muted }}>
+                <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                   {levelsPassed} level{levelsPassed === 1 ? '' : 's'} passed
                 </Text>
               </View>
@@ -134,7 +133,7 @@ function PublicProfileScreen() {
 
           {profile.tunes.length > 0 ? (
             <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                 Tunes I Know
               </Text>
               <PublicTuneList tunes={profile.tunes} canAdd={canAdd} />
@@ -143,7 +142,7 @@ function PublicProfileScreen() {
 
           {profile.tunesToLearn.length > 0 ? (
             <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-              <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                 Tunes to Learn
               </Text>
               <PublicTuneList tunes={profile.tunesToLearn} canAdd={canAdd} />
@@ -153,7 +152,7 @@ function PublicProfileScreen() {
           {viewer ? (
             posts && posts.length > 0 ? (
               <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-                <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
+                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
                   Posts
                 </Text>
                 <View className="gap-2">
@@ -164,13 +163,13 @@ function PublicProfileScreen() {
               </View>
             ) : null
           ) : (
-            <Text className="text-center text-xs font-inter" style={{ color: colors.muted }}>
+            <Text className="text-center text-xs font-ui" style={{ color: colors.muted }}>
               Sign in to see {profile.username}&apos;s Community posts.
             </Text>
           )}
 
           {hasNothing ? (
-            <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
+            <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>
               {profile.username} hasn&apos;t added any instruments, tunes, or posts yet.
             </Text>
           ) : null}

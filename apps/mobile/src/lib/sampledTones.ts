@@ -149,6 +149,26 @@ export function playNote(note: string, durationSeconds: number, instrument: Samp
     .catch(() => {});
 }
 
+const midiFreq = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
+
+/** Downloads the sample a MIDI note plays from (once), so a run scheduled after it starts on time —
+    the notation editor's Play (`components/notation/ScoreEditor.tsx`). */
+export function prepareSampledMidi(instrument: SampledInstrumentId, midi: number): Promise<void> {
+  const { url } = resolve(instrument, midiFreq(midi));
+  return loadBuffer(context(), url).then(() => undefined);
+}
+
+/** Plays a MIDI note at `when` on the audio clock (seconds), ringing `durationSeconds`. Silent if its
+    sample can't be had (`prepareSampledMidi` first for exact timing). */
+export function playSampledMidi(instrument: SampledInstrumentId, midi: number, durationSeconds: number, when: number) {
+  const freq = midiFreq(midi);
+  const ctx = context();
+  const { url, sampleFreq } = resolve(instrument, freq);
+  loadBuffer(ctx, url)
+    .then((buffer) => playBuffer(ctx, buffer, freq / sampleFreq, durationSeconds, when))
+    .catch(() => {});
+}
+
 /** Plays several notes so they genuinely start together (a block chord, a harmonic interval): waits
     for *every* note's sample to be downloaded before starting any of them, then starts them all at
     one shared time — the same fix web's `playNotesTogether` documents for "one note plays slightly

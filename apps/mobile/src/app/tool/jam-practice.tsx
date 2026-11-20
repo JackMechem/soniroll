@@ -1,37 +1,35 @@
 import { STANDARDS, standardToTune } from '@jam-practice/core/standards';
 import type { Key, Tempo, Tune } from '@jam-practice/core/types';
-import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
 
 import type { BeatLevel } from '@jam-practice/core/clickSounds';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { Dropdown } from '@/components/Dropdown';
-import { TAB_BAR_CONTENT_HEIGHT } from '@/components/FloatingTabBar';
-import { Hint } from '@/components/Hint';
-import { BookIcon, SlidersIcon } from '@/components/icons';
+import { BookIcon, MetronomeIcon, PlusIcon, ShuffleIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
-import { ToolOptionsSheet } from '@/components/ToolOptionsSheet';
 import { TuneListManager } from '@/components/account/TuneListManager';
+import { BigButton } from '@/components/tool/meter';
+import { ChoiceCards, ListIcon, OptionLabel } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
+import { EmptyState } from '@/components/ui';
 import { type CountOff, parseBeatsPerBar, playCountOff } from '@/lib/jamPracticeCountOff';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useSyncedTunes } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
- * Native port of `apps/web/components/JamPractice.tsx` — a random tune/tempo/key picker with a
- * count-off metronome, same shape as every other tool since the Metronome: the picked tune's own
- * display plus Pick/Stop on the main screen, with Tunes and Count-off both tucked into
- * `ToolOptionsSheet`. The "Tunes" tab reuses the same `TuneListManager` (`allowStandards`) the
- * account page's own Tunes/Tunes to Learn tabs use, rather than building a third tune-CRUD UI —
- * web's own `TunesPanel.tsx` additionally shows per-tempo/per-key enable/disable chips inline,
- * which `TuneListManager`'s simplified editor doesn't expose (every tempo/key it saves is always
- * enabled, the same cut already accepted for the account page); `pickRandom` below still reads
- * each tune's own `enabled` tempos/keys, so a tune edited on web with some disabled stays correct
- * here too, it just can't be *toggled* from this screen.
+ * Jam Practice — a random tune/tempo/key picker with a count-off metronome — laid out like the
+ * website's (`apps/web/components/JamPractice.tsx`): the picked tune (name, key and time
+ * signature, notes, the tempo big, the beat strip with what the click is doing), Pick a tune (and
+ * Stop while it clicks), then the "Picking from" and Click chips. The "Picking from" sheet holds
+ * the standards switch and the same `TuneListManager` the Library uses (`allowStandards`), so it
+ * can't toggle a tune's individual tempos/keys the way the website's list can; `pickRandom` still
+ * honours each tune's `enabled` tempos/keys.
  */
 const SETTINGS_KEY = 'jam-practice-settings-v2';
 const DEFAULT_SETTINGS = {
@@ -54,8 +52,10 @@ function JamPracticeScreen() {
   const [pick, setPick] = useState<PickResult | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
   const [isCounting, setIsCounting] = useState(false);
+  useToolActivity('/jam-practice', isCounting);
+  useKeepAwakeWhile(isCounting);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
-  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [tunesOpen, setTunesOpen] = useState(false);
 
   const countOffRef = useRef<CountOff | null>(null);
   const countOffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -124,201 +124,175 @@ function JamPracticeScreen() {
   // Saved settings not read yet — a spinner rather than defaults that then jump to the real values.
   if (!settingsReady || !tunesReady) return <ScreenSpinner />;
 
+  const nothingToPick = !pickFromStandards && tunes.length === 0;
+  const muted = { color: colors.muted };
+
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Jam Practice' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 px-6 py-3">
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityLabel="Options"
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <SlidersIcon color={colors.foreground} size={18} />
-              <Text className="text-sm font-bold font-inter-bold" style={{ color: colors.foreground }}>
-                Options
-              </Text>
-            </Pressable>
-          </View>
-
-          <View
-            className="flex-1 items-center justify-center gap-5"
-            style={{ paddingBottom: TAB_BAR_CONTENT_HEIGHT }}
-          >
-            <View className="items-center gap-2">
-              {pick ? (
-                <Text
-                  className="text-xs font-bold font-inter-bold tracking-widest"
-                  style={{ color: colors.muted }}
-                >
-                  NOW PRACTICING
-                </Text>
-              ) : null}
-              <Text
-                className="text-center text-3xl font-bold font-inter-bold"
-                style={{ color: colors.foreground }}
-              >
-                {pick ? pick.tune.name : '—'}
-              </Text>
-              {pick ? (
-                <View className="flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1">
-                  <Text className="text-base font-inter" style={{ color: colors.muted }}>
-                    {pick.tempo ? `${pick.tempo.value} BPM` : 'no enabled tempo'}
-                  </Text>
-                  <Text className="text-base font-inter" style={{ color: colors.muted }}>
-                    {pick.key ? pick.key.value : 'no enabled key'}
-                  </Text>
-                  <Text className="text-base font-inter" style={{ color: colors.muted }}>
-                    {pick.tune.timeSignature}
-                  </Text>
-                </View>
-              ) : null}
-              {pick?.tune.notes ? (
-                <Text
-                  className="max-w-xs text-center text-sm font-inter"
-                  style={{ color: colors.muted }}
-                >
-                  {pick.tune.notes}
-                </Text>
-              ) : null}
-              {!pick && tunes.length === 0 && !pickFromStandards && !pickError ? (
-                <Text className="text-center text-sm font-inter" style={{ color: colors.muted }}>
-                  Add some tunes in Options, then pick one at random.
-                </Text>
-              ) : null}
+    <ToolFrame
+      title="Jam Practice"
+      action={
+        <View className="flex-row gap-2">
+          {isCounting ? (
+            <View className="flex-1">
+              <BigButton label="Stop" secondary onPress={stopCountOff} />
             </View>
-
-            {isCounting && pick?.tempo ? (
-              <View className="items-center gap-4">
-                <View className="items-center">
-                  <Text
-                    className="text-6xl font-bold font-inter-bold tabular-nums"
-                    style={{ color: colors.foreground }}
-                  >
-                    {pick.tempo.value}
-                  </Text>
-                  <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-                    BPM · {pick.tune.timeSignature}
-                  </Text>
-                </View>
-                <BeatIndicator
-                  accents={Array.from(
-                    { length: parseBeatsPerBar(pick.tune.timeSignature) },
-                    (_, i): BeatLevel => (accentFirstBeat && i === 0 ? 2 : 1),
-                  )}
-                  currentBeat={currentBeat}
-                />
-                <View className="flex-row items-center gap-3">
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.accent }}>
-                    {keepGoingIndefinitely
-                      ? 'Metronome running…'
-                      : `Counting off ${countOffBars} bar${countOffBars === 1 ? '' : 's'}…`}
-                  </Text>
-                  <Pressable
-                    onPress={stopCountOff}
-                    className="rounded-full px-4 py-2"
-                    style={{ backgroundColor: colors.surface }}
-                  >
-                    <Text className="text-sm font-inter" style={{ color: colors.foreground }}>
-                      Stop
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <View className="items-center gap-3">
-                {pickError ? (
-                  <Text className="text-sm font-inter" style={{ color: colors.danger }}>
-                    {pickError}
-                  </Text>
-                ) : null}
-                <Text className="text-sm font-inter" style={{ color: colors.muted }}>
-                  {pickFromStandards
-                    ? `Random picks come from all ${STANDARDS.length} built-in standards.`
-                    : 'Random picks come from your Tunes I Know.'}
-                </Text>
-                <Pressable
-                  onPress={pickRandom}
-                  className="rounded-full px-8 py-3"
-                  style={{ backgroundColor: colors.accent }}
-                >
-                  <Text className="text-base font-semibold font-inter-semibold" style={{ color: colors['accent-foreground'] }}>
-                    {pick ? 'Pick another' : 'Pick a tune'}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
+          ) : null}
+          <View className="flex-1">
+            <BigButton label={pick ? 'Pick another' : 'Pick a tune'} disabled={nothingToPick} onPress={pickRandom} />
           </View>
         </View>
-      </SafeAreaView>
+      }
+      chips={
+        <SettingsBar>
+          <SettingChip
+            Icon={ListIcon}
+            label="Picking from"
+            value={pickFromStandards ? `All ${STANDARDS.length} standards` : 'Tunes I Know'}
+            open={tunesOpen}
+            onOpenChange={setTunesOpen}
+          >
+            <SwitchRow
+              label="Pick from all jazz standards"
+              checked={pickFromStandards}
+              onChange={(checked) => {
+                updateSettings({ pickFromStandards: checked });
+                setPickError(null);
+              }}
+              hint={`Draws from the ${STANDARDS.length} built-in jazz standards instead of your own tune list below.`}
+            />
+            <TuneListManager
+              title="Tunes I Know"
+              icon={BookIcon}
+              tunes={tunes}
+              setTunes={setTunes}
+              searchPlaceholder="Search your tunes…"
+              emptyMessage="No tunes yet — tap + to search jazz standards or create your own."
+              allowStandards
+            />
+          </SettingChip>
 
-      <ToolOptionsSheet
-        visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
-        tabs={[
-          {
-            key: 'tunes',
-            label: 'Tunes I Know',
-            content: () => (
-              <View className="gap-4">
-                <SwitchRow
-                  label="Pick from all jazz standards"
-                  checked={pickFromStandards}
-                  onChange={(checked) => updateSettings({ pickFromStandards: checked })}
-                  hint="Draws from the ~630 built-in jazz standards instead of your own tune list below."
-                />
-                <TuneListManager
-                  title="Tunes I Know"
-                  icon={BookIcon}
-                  tunes={tunes}
-                  setTunes={setTunes}
-                  searchPlaceholder="Search your tunes…"
-                  emptyMessage="No tunes yet — tap + to search jazz standards or create your own."
-                  allowStandards
-                />
-              </View>
-            ),
-          },
-          {
-            key: 'countoff',
-            label: 'Count-off',
-            content: () => (
-              <View className="gap-4">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-sm font-semibold font-inter-semibold" style={{ color: colors.muted }}>
-                    Count-off bars
-                  </Text>
-                  <Dropdown
-                    value={countOffBars}
-                    options={BAR_OPTIONS}
-                    onChange={(countOffBars) => updateSettings({ countOffBars })}
-                  />
-                </View>
-                <Hint>
-                  How many bars click before the tune starts (or, with Keep metronome going on,
-                  before it hands off to the running metronome).
-                </Hint>
-                <SwitchRow
-                  label="Accent"
-                  checked={accentFirstBeat}
-                  onChange={(accentFirstBeat) => updateSettings({ accentFirstBeat })}
-                  hint="Plays beat 1 of every bar louder and higher-pitched, so you can hear where the bar starts."
-                />
-                <SwitchRow
-                  label="Keep metronome going"
-                  checked={keepGoingIndefinitely}
-                  onChange={(keepGoingIndefinitely) => updateSettings({ keepGoingIndefinitely })}
-                  hint="Keeps clicking at the tune's tempo after the count-off, instead of stopping once it ends."
-                />
-              </View>
-            ),
-          },
-        ]}
-      />
-    </View>
+          {/* Its value says what the number means ("8-bar count-off", not a bare "8 bars"). */}
+          <SettingChip
+            Icon={MetronomeIcon}
+            label="Click"
+            value={`${countOffBars}-bar count-off${keepGoingIndefinitely ? ', keeps going' : ''}`}
+          >
+            <View className="gap-2.5">
+              <OptionLabel
+                title="Count-off bars"
+                hint="How many bars click before the tune starts (or, with Keep metronome going on, before it hands off to the running metronome)."
+              />
+              <ChoiceCards label="Count-off bars" cardWidth="18%" options={BAR_OPTIONS} value={countOffBars} onChange={(n) => updateSettings({ countOffBars: n })} />
+            </View>
+            <SwitchRow
+              label="Accent"
+              checked={accentFirstBeat}
+              onChange={(next) => updateSettings({ accentFirstBeat: next })}
+              hint="Plays beat 1 of every bar louder and higher-pitched, so you can hear where the bar starts."
+            />
+            <SwitchRow
+              label="Keep metronome going"
+              checked={keepGoingIndefinitely}
+              onChange={(next) => updateSettings({ keepGoingIndefinitely: next })}
+              hint="Keeps clicking at the tune's tempo after the count-off, instead of stopping once it ends."
+            />
+          </SettingChip>
+        </SettingsBar>
+      }
+    >
+      <View className="w-full items-center gap-3">
+        {pick ? (
+          <>
+            <Text className="font-ui text-sm" style={muted}>
+              Now practicing
+            </Text>
+            <Text className="font-ui-semibold text-center text-3xl font-semibold tracking-tight" style={{ color: colors.foreground }}>
+              {pick.tune.name}
+            </Text>
+            {/* Only what the tune has: a tune with no key just shows its time signature. */}
+            <View className="flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              {pick.key ? (
+                <Text className="font-ui text-base" style={muted}>
+                  {pick.key.value}
+                </Text>
+              ) : null}
+              <Text className="font-ui text-base" style={muted}>
+                {pick.tune.timeSignature}
+              </Text>
+            </View>
+            {pick.tune.notes ? (
+              <Text className="font-ui max-w-xs text-center text-sm" style={muted}>
+                {pick.tune.notes}
+              </Text>
+            ) : null}
+          </>
+        ) : nothingToPick ? (
+          // Nothing to pick from yet: offer both ways in, right here.
+          <View className="w-full">
+            <EmptyState
+              Icon={BookIcon}
+              title="Your tune list is empty"
+              body={`Add the tunes you know, or pick from ${STANDARDS.length} jazz standards.`}
+              action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => setTunesOpen(true) }}
+              secondary={{
+                label: 'Pick from the standards',
+                onPress: () => {
+                  updateSettings({ pickFromStandards: true });
+                  setPickError(null);
+                },
+              }}
+            />
+          </View>
+        ) : (
+          <View className="w-full">
+            <EmptyState
+              Icon={ShuffleIcon}
+              title="No tune picked yet"
+              body="Pick a tune gives you a random one to play, with its key and tempo and a count-off."
+            />
+          </View>
+        )}
+
+        {/* The tempo shows once, big (the line above has the key and time signature). */}
+        {pick?.tempo ? (
+          <View className="mt-4 items-center">
+            <Text className="font-ui-bold text-6xl font-bold tracking-tight" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+              {pick.tempo.value}
+            </Text>
+            <Text className="font-ui text-sm" style={muted}>
+              BPM
+            </Text>
+          </View>
+        ) : null}
+        {/* Stays in place (dimmed, still) after Stop, so the buttons below don't jump up. */}
+        {pick?.tempo ? (
+          <View className="items-center gap-3" style={{ opacity: isCounting ? 1 : 0.5 }}>
+            <BeatIndicator
+              accents={Array.from(
+                { length: parseBeatsPerBar(pick.tune.timeSignature) },
+                (_, i): BeatLevel => (accentFirstBeat && i === 0 ? 2 : 1),
+              )}
+              currentBeat={isCounting ? currentBeat : null}
+            />
+            <Text className="font-ui text-sm" style={muted}>
+              {!isCounting
+                ? 'Click stopped'
+                : keepGoingIndefinitely
+                  ? 'Metronome running'
+                  : `Counting off ${countOffBars} bar${countOffBars === 1 ? '' : 's'}`}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      {pickError && nothingToPick ? (
+        <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+          {pickError}
+        </Text>
+      ) : null}
+      <Text className="font-ui text-xs" style={muted}>
+        Idea by Rob Moreno
+      </Text>
+    </ToolFrame>
   );
 }
 

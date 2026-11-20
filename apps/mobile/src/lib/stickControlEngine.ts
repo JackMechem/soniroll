@@ -9,6 +9,7 @@ import {
 } from '@jam-practice/core/stickControl';
 
 import { getAudioContext } from '@/lib/audioContext';
+import { setSteadyInterval } from '@/lib/steadyTimer';
 import { scheduleClick } from '@/lib/metronomeClickEngine';
 
 /**
@@ -77,7 +78,7 @@ let snapshot: StickControlSnapshot = {
   currentBeat: null,
 };
 
-let timerId: ReturnType<typeof setInterval> | null = null;
+let stopTicks: (() => void) | null = null;
 const timeouts = new Set<ReturnType<typeof setTimeout>>();
 
 const SCHEDULER_INTERVAL_MS = 25;
@@ -152,8 +153,8 @@ export function advanceStickControlPattern() {
 }
 
 function stopInterval() {
-  if (timerId !== null) clearInterval(timerId);
-  timerId = null;
+  stopTicks?.();
+  stopTicks = null;
   for (const t of timeouts) clearTimeout(t);
   timeouts.clear();
 }
@@ -175,7 +176,7 @@ function beginScheduling() {
   let nextTime = ctx.currentTime + 0.06;
   let stopRequested = false;
 
-  timerId = setInterval(() => {
+  stopTicks = setSteadyInterval(() => {
     while (!stopRequested && nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
       const beatDuration = 60 / Math.max(1, settings.bpm);
       const sound = getClickSound(settings.soundId);
@@ -283,9 +284,9 @@ function beginScheduling() {
         }
       }
     }
-    if (stopRequested && timerId !== null) {
-      clearInterval(timerId);
-      timerId = null;
+    if (stopRequested && stopTicks) {
+      stopTicks();
+      stopTicks = null;
     }
   }, SCHEDULER_INTERVAL_MS);
 }
