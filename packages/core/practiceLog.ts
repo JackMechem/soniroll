@@ -16,7 +16,7 @@
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday
 
 export type Attachment =
-  | { kind: "tune"; id: string; list: "tunes" | "learn"; label: string }
+  | { kind: "tune"; id: string; list: "tunes" | "learn" | "library"; label: string }
   | { kind: "setlist"; id: string; label: string }
   | { kind: "chart"; id: string; label: string }
   | { kind: "tool"; href: string; label: string };
