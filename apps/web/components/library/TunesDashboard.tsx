@@ -14,7 +14,7 @@ import { useTuneActions } from "@/components/library/useTuneActions";
 import PromptDialog from "@/components/PromptDialog";
 import Select from "@/components/Select";
 import StandardsPicker from "@/components/StandardsPicker";
-import { ChevronRightIcon, DownloadIcon, LibraryIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
+import { ChevronRightIcon, ChordChartIcon, DownloadIcon, LibraryIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
@@ -34,7 +34,9 @@ type Sort = "name" | "added";
 
 /** This device remembers the filter and order (a per-viewer convenience). */
 const VIEW_KEY = "jam-practice-library-tunes-view";
-const VIEW_DEFAULTS: { list: ListFilter; tags: string[]; sort: Sort } = { list: "all", tags: [], sort: "name" };
+/** Tunes with a chord chart, without one, or either. */
+type ChartFilter = "any" | "with" | "without";
+const VIEW_DEFAULTS: { list: ListFilter; tags: string[]; sort: Sort; charts: ChartFilter } = { list: "all", tags: [], sort: "name", charts: "any" };
 
 function blankTune(name = ""): Tune {
   return { id: makeId(), name, tempos: [], keys: [], timeSignature: DEFAULT_TIME_SIGNATURE, notes: "" };
@@ -91,12 +93,22 @@ export default function TunesDashboard() {
   const chartKey = useMemo(() => new Map(allSongs.map((s) => [s.id, s.key])), [allSongs]);
   const chartTitles = useMemo(() => new Map(allSongs.map((s) => [s.id, s.title])), [allSongs]);
 
+  // Has a chart that's really there (a deleted chart's id can linger until the library has loaded).
+  const hasChart = useMemo(() => (tune: Tune) => tuneChartIds(tune).some((id) => chartsLoading || chartTitles.has(id)), [chartsLoading, chartTitles]);
+  const chartCounts = useMemo(() => {
+    const inList = everything.filter(({ list }) => listFilter === "all" || list === listFilter);
+    const withCharts = inList.filter(({ tune }) => hasChart(tune)).length;
+    return { with: withCharts, without: inList.length - withCharts };
+  }, [everything, listFilter, hasChart]);
+  const chartFilter: ChartFilter = view.charts === "with" || view.charts === "without" ? view.charts : "any";
+
   const q = query.trim().toLowerCase();
   const rows = useMemo(() => {
     const words = q ? q.split(/\s+/) : [];
     const picked = everything.filter(({ tune, list }) => {
       if (listFilter !== "all" && list !== listFilter) return false;
       if (pickedTags.length && !pickedTags.some((t) => hasTag(tune, t))) return false;
+      if (chartFilter !== "any" && hasChart(tune) !== (chartFilter === "with")) return false;
       if (!words.length) return true;
       // Its charts' titles too (an iReal title can differ from the tune's name).
       const charts = tuneChartIds(tune).map((id) => chartTitles.get(id) ?? "");
@@ -105,7 +117,7 @@ export default function TunesDashboard() {
     });
     if (view.sort === "added") return [...picked].sort((a, b) => addedAt(b.tune) - addedAt(a.tune) || b.index - a.index);
     return sortByText(picked, (r) => r.tune.name);
-  }, [everything, listFilter, pickedTags, q, view.sort, chartTitles]);
+  }, [everything, listFilter, pickedTags, q, view.sort, chartFilter, hasChart, chartTitles]);
 
   const counts: Record<TuneListId, number> = { tunes: known.length, learn: learn.length, library: library.length };
   const total = known.length + (isAuthenticated ? learn.length : 0) + library.length;
@@ -145,7 +157,7 @@ export default function TunesDashboard() {
       ],
     });
 
-  const filtering = listFilter !== "all" || pickedTags.length > 0 || !!q;
+  const filtering = listFilter !== "all" || pickedTags.length > 0 || chartFilter !== "any" || !!q;
   const pill = (active: boolean) =>
     `inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors ${
       active ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
@@ -190,6 +202,20 @@ export default function TunesDashboard() {
                     {TUNE_LIST_LABEL[l]} <span className="text-xs tabular-nums opacity-80">{counts[l]}</span>
                   </button>
                 ))}
+                <span className="mx-0.5 w-px shrink-0 self-stretch bg-foreground/10" aria-hidden />
+                {(["with", "without"] as const).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={chartFilter === c}
+                    onClick={() => setFilter({ charts: chartFilter === c ? "any" : c })}
+                    className={pill(chartFilter === c)}
+                    title={c === "with" ? "Only tunes that have a chord chart" : "Only tunes with no chord chart yet"}
+                  >
+                    {c === "with" && <ChordChartIcon className="h-3.5 w-3.5" />}
+                    {c === "with" ? "With charts" : "Without charts"} <span className="text-xs tabular-nums opacity-80">{chartCounts[c]}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -219,7 +245,7 @@ export default function TunesDashboard() {
           {!filtering && recentCards.length > 1 && <RecentStrip items={recentCards} />}
 
           <Panel
-            title={pickedTags.length ? `${listFilter === "all" ? "Tunes" : TUNE_LIST_LABEL[listFilter]} · ${pickedTags.join(" or ")}` : listFilter === "all" ? "All tunes" : TUNE_LIST_LABEL[listFilter]}
+            title={`${pickedTags.length ? `${listFilter === "all" ? "Tunes" : TUNE_LIST_LABEL[listFilter]} · ${pickedTags.join(" or ")}` : listFilter === "all" ? "All tunes" : TUNE_LIST_LABEL[listFilter]}${chartFilter === "with" ? " · with charts" : chartFilter === "without" ? " · without charts" : ""}`}
             detail={rows.length}
             flush
             actions={
@@ -237,6 +263,10 @@ export default function TunesDashboard() {
             {rows.length === 0 ? (
               q ? (
                 <EmptyState title={`Nothing matches “${query}”`} body="Try a different name, key or tag." />
+              ) : chartFilter === "with" && !pickedTags.length ? (
+                <EmptyState title="No tunes with charts here" body="Import chord charts, or write one from a tune's page." action={<Pill icon={DownloadIcon} label="Import charts" href="/chord-charts/import" />} />
+              ) : chartFilter === "without" && !pickedTags.length ? (
+                <EmptyState title="Every tune here has a chart" body="Tunes without a chord chart show up here." />
               ) : listFilter === "library" ? (
                 <EmptyState title="Nothing in the Library list" body="Tunes that come in with imported chord charts land here until you move them to Tunes I Know or Tunes to Learn." />
               ) : (
