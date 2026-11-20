@@ -25,6 +25,9 @@ export default function ImportChartsPage() {
   const { importSongs, clearAll, totalSongs } = useChordChartsLibrary(null);
   const [text, setText] = useState("");
   const [replaceExisting, setReplaceExisting] = useState(true);
+  // Every imported chart's tune gets a tag: what's typed, or the playlist's name.
+  const [tagTunes, setTagTunes] = useState(true);
+  const [tag, setTag] = useState("");
   const [importing, setImporting] = useState(false);
   const [status, setStatus] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -41,14 +44,18 @@ export default function ImportChartsPage() {
     setImporting(true);
     setStatus(null);
     try {
-      const { added, skipped, updated } = await importSongs(playlist.songs, playlist.name, { replaceExisting });
-      const plural = (n: number) => `${n} chart${n === 1 ? "" : "s"}`;
+      const tagName = tagTunes ? (tag.trim() || playlist.name || "").trim() : "";
+      const { added, skipped, updated, linked } = await importSongs(playlist.songs, playlist.name, { replaceExisting, tags: tagName ? [tagName] : [] });
+      const plural = (n: number, what = "chart") => `${n} ${what}${n === 1 ? "" : "s"}`;
       setStatus({
         kind: "ok",
         message:
           `Imported ${plural(added)} into "${playlist.name}".` +
           (updated ? ` Updated ${plural(updated)} you already had.` : "") +
-          (skipped > 0 ? ` (${skipped} already in your library, left as they were.)` : ""),
+          (skipped > 0 ? ` (${skipped} already in your library, left as they were.)` : "") +
+          (linked && linked.linked ? ` ${plural(linked.linked)} joined tunes you have.` : "") +
+          (linked && linked.created ? ` ${plural(linked.created, "new tune")} ${linked.created === 1 ? "is" : "are"} in your Library list.` : "") +
+          (linked && tagName ? ` Tagged “${tagName}”.` : ""),
       });
       setText("");
       if (fileRef.current) fileRef.current.value = "";
@@ -110,6 +117,21 @@ export default function ImportChartsPage() {
               onChange={setReplaceExisting}
               hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same folder. Turn this off to only add charts you don't have yet."
             />
+            <SwitchRow
+              label="Tag the tunes"
+              checked={tagTunes}
+              onChange={setTagTunes}
+              hint="Each chart joins the tune with its name (or a new tune in your Library list). This gives all those tunes a tag, so you can find them together. Leave the box empty to use the playlist's name."
+            />
+            {tagTunes && (
+              <input
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                placeholder="Tag (the playlist's name)"
+                aria-label="Tag for the imported tunes"
+                className="mb-1.5 h-10 w-full rounded-md bg-background px-3 text-base outline-none placeholder:text-muted focus:ring-2 focus:ring-accent/40 sm:h-9 sm:text-sm"
+              />
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -125,7 +147,12 @@ export default function ImportChartsPage() {
           {status && (
             <div className={`flex flex-col gap-2 rounded-md p-3 ${status.kind === "error" ? "bg-danger/10" : "bg-accent/10"}`}>
               <p className={`text-sm ${status.kind === "error" ? "text-danger" : ""}`}>{status.message}</p>
-              {status.kind === "ok" && <Pill label="Back to chord charts" href="/tunes?tab=charts" />}
+              {status.kind === "ok" && (
+                <div className="flex flex-wrap gap-2">
+                  <Pill label="See your tunes" href="/tunes" />
+                  <Pill label="Chord charts" href="/tunes?tab=charts" />
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -134,6 +161,7 @@ export default function ImportChartsPage() {
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-sm">
             <h2 className="text-sm font-medium">What happens</h2>
             <p className="text-muted">An iReal Pro playlist comes in as a folder of the same name. Charts you already have are updated or left alone, never doubled up.</p>
+            <p className="text-muted">Every chart joins the tune with the same name. A chart with no tune yet gets a new one in your Library list; move it to Tunes I Know or Tunes to Learn whenever you like.</p>
             <p className="text-muted">The chart builder can turn a chart you make into a link to share.</p>
           </section>
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-sm">

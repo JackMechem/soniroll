@@ -333,3 +333,48 @@ and a UI dump is what found it.)
 Checked on the emulator with a throwaway free-plan account: uploading a PDF, an image, an audio
 file and a video; each in the viewer; a share link (the file went online, the share sheet opened);
 delete (row and phone copy gone). The account was deleted afterwards.
+
+### Beat ring no longer moves the beats (2026-11-20, FB-33)
+
+Jack: "In mobile app metronome beats move things vertically when active with the outline". The
+playing beat in `components/BeatIndicator.tsx` had a 2 dp border (1 dp otherwise), so the lit bar
+grew 2 dp taller; rows are bottom-aligned, so its number rose above the others and the row grew.
+Jack chose to keep the outline: every bar now always has a 1 dp border, and the playing beat's
+2 dp accent ring is an absolutely placed overlay (`pointerEvents="none"`, inset −1 so it sits on
+the border) that doesn't take part in layout. The 1.05 scale stays (a transform, no layout). One
+component, so the fix covers every user: Metronome, Tempo Trainer, Jam Practice, Random Metric
+Modulation, Random Sticking Warmup, Time Test, Recorder's count-in, the StructureEditor.
+Checked: `tsc`, `eslint`. Not checked on a device or the emulator.
+
+### Progress cards and sharing on the phone (2026-11-20, FB-32)
+
+Jack: "Mobile app doesn't have a way to share stats and share the progress cards, id want to post
+them on social media as that's their main purpose (also the community ofc)". Progress cards and the
+day report were on the Shed Log's "left out" list; now they're in.
+
+- `components/shedLog/ProgressCard.tsx`: the website's canvas card (`ProgressCard.tsx`) redrawn in
+  **react-native-svg** — the same 1080×1350 layout, numbers and wording (Streak / Hours / Days for a
+  week, month or year; the day report). SVG text can't be measured before it's drawn, so the
+  canvas's cut-to-fit and shrink-to-fit use Geist ExtraBold's real advance widths (read from the
+  font file into a table). Text uses the loaded `Geist_700Bold` / `Geist_800ExtraBold` families.
+- The image: `Svg.toDataURL(cb, { width: 1080, height: 1350 })` (react-native-svg draws the view
+  into a bitmap at that size) → a PNG in the cache (`expo-file-system`) → `expo-sharing`'s share
+  sheet. **No new native package** — react-native-svg, expo-file-system and expo-sharing were
+  already in the app. react-native-view-shot was not needed.
+- `components/shedLog/ProgressShareSheet.tsx` ("Share your progress", the website's
+  `ProgressShareDialog`): card pills, range pills or a day stepper for the report, the preview,
+  Share image, and Post to Community with a caption — `communityTunes.create` with
+  `kind: "milestone"` and the card as payload, exactly what the website posts (no backend change);
+  needs a public profile, as on the website. Mounted once in `ShedLogGlobal`, opened from anywhere
+  with `openProgressShare` (`lib/progressShare.ts`, a tiny store standing in for the website's
+  `SHARE_PROGRESS_EVENT`).
+- Ways in: a Share button in the Shed Log's header; share buttons on the Stats sheet's Streak and
+  In total cards and on "Your practice" (Days); "Day report" under the day's date (today and past
+  days); a **Share** button on the goal / everything-done / streak-milestone / hours-milestone
+  toasts (those stay 8 s instead of 4.2 s, as on the website).
+- A milestone post now shows its card on the phone's post page (`app/post/[id].tsx`); before, it
+  showed as an empty tune list.
+- Checked: `tsc`, `eslint`; the four card kinds rendered through the real component (react-native-svg
+  stubbed to plain SVG, rasterised with rsvg-convert and Geist) against seeded data — layout and
+  text match the website's cards. **Not checked:** anything on a phone or the emulator —
+  `toDataURL`'s PNG, the fonts inside it, the share sheet, posting signed in, the toasts' button.

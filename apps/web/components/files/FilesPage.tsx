@@ -10,7 +10,7 @@ import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUpload
 import { MenuButton } from "@/components/library/shared";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, MicIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
@@ -79,7 +79,7 @@ const COLUMNS = "sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,13rem)_5.5rem_6.5r
  * right-click): rename, share a link, download, attach to a tune (uploads), delete. Tick several to
  * delete them together (Delete key works too).
  */
-export default function FilesPage() {
+export default function FilesPage({ initialSource = "all" }: { initialSource?: Source | "all" }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
   const tunes = useTuneIndex();
@@ -89,7 +89,7 @@ export default function FilesPage() {
   const actions = useFileActions({ tuneName });
 
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState<Source | "all">("all");
+  const [source, setSource] = useState<Source | "all">(initialSource);
   const [kind, setKind] = useState<FileKind | "all">("all");
   const [sort, setSort] = useState<Sort>({ key: "added", dir: "desc" });
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -282,7 +282,7 @@ export default function FilesPage() {
                 options={[
                   { value: "source:all", label: `Everything · ${items.length}` },
                   ...(Object.keys(SOURCE_LABEL) as Source[])
-                    .filter((s) => counts.bySource.get(s))
+                    .filter((s) => counts.bySource.get(s) || s === source)
                     .map((s) => ({ value: `source:${s}`, label: `${SOURCE_LABEL[s]} · ${counts.bySource.get(s)}` })),
                   ...(Object.keys(FILE_KIND_LABEL) as FileKind[])
                     .filter((k) => counts.byKind.get(k))
@@ -301,7 +301,7 @@ export default function FilesPage() {
               <div className="flex flex-wrap items-center gap-1.5">
                 <FilterChip active={source === "all"} onClick={() => setSource("all")} label="Everything" count={items.length} />
                 {(Object.keys(SOURCE_LABEL) as Source[])
-                  .filter((s) => counts.bySource.get(s))
+                  .filter((s) => counts.bySource.get(s) || s === source)
                   .map((s) => (
                     <FilterChip key={s} active={source === s} onClick={() => setSource(s)} label={SOURCE_LABEL[s]} count={counts.bySource.get(s) ?? 0} />
                   ))}
@@ -376,10 +376,10 @@ export default function FilesPage() {
                   <>
                     {/* No count here: the filter above already shows it. */}
                     <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
-                    {/* Recordings have their own tab (playback, takes per tune). */}
+                    {/* Showing recordings: make another one. */}
                     {source === "recording" && (
-                      <Link href="/tunes?tab=recordings" replace scroll={false} className="ml-auto inline-flex h-8 items-center gap-0.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
-                        All recordings <ChevronRightIcon className="h-4 w-4" />
+                      <Link href="/recorder" className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
+                        <MicIcon className="h-4 w-4" /> Record
                       </Link>
                     )}
                     {shown.length > 0 && (
@@ -396,7 +396,11 @@ export default function FilesPage() {
               </div>
 
               {shown.length === 0 ? (
-                <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
+                source === "recording" && !query && kind === "all" ? (
+                  <EmptyState title="No recordings yet" body="Record a take in the Recorder or on a tune's page and it shows up here." />
+                ) : (
+                  <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
+                )
               ) : (
                 <div role="table" aria-label="Your files" className="flex flex-col divide-y divide-foreground/10">
                   <div role="row" className={`hidden h-9 items-center px-1.5 text-xs font-medium text-muted sm:grid ${COLUMNS}`}>

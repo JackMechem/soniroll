@@ -1,4 +1,5 @@
 "use client";
+import PdfInline from "@/components/pdf/PdfInline";
 import { AssignmentWork, StatusChip, SubmitSettings, type Submission } from "@/components/lessons/assignment";
 import type { SubmitConfig } from "@jam-practice/core/lessonFiles";
 
@@ -212,7 +213,7 @@ export function FileView({ url, name, type }: { url: string; name: string; type:
           Open
         </a>
       </div>
-      {pdf && open && <iframe src={url} title={name} className="h-[70vh] w-full rounded-md bg-foreground/[0.05] bg-white" />}
+      {pdf && open && <PdfInline url={url} name={name} className="h-[70vh] w-full overflow-hidden rounded-md" />}
     </div>
   );
 }

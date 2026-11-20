@@ -1,4 +1,5 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
+import { replaceMainChart } from '@jam-practice/core/tuneLibrary';
 import { KEY_NAMES, keyPitchClass, transposeSong } from '@jam-practice/core/iRealPro';
 import { makeId, type Tune } from '@jam-practice/core/types';
 import { useMutation, useQuery } from 'convex/react';
@@ -234,7 +235,7 @@ function Hub({
                       {m.detail}
                     </Text>
                   </View>
-                  <Pressable onPress={() => patch({ chordChartId: m.id })} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
+                  <Pressable onPress={() => setTunes((prev) => prev.map((t) => (t.id === tune.id ? replaceMainChart(t, m.id) : t)))} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
                     <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                       Link it
                     </Text>
@@ -331,7 +332,7 @@ function Hub({
         initialQuery={tune.name}
         onClose={() => setPicking(false)}
         onPick={(song) => {
-          patch({ chordChartId: song.id });
+          setTunes((prev) => prev.map((t) => (t.id === tune.id ? replaceMainChart(t, song.id) : t)));
           setPicking(false);
         }}
       />

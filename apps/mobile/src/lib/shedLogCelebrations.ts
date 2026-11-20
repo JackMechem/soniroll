@@ -26,7 +26,9 @@ import { getAudioContext } from '@/lib/audioContext';
  */
 
 export type ToastKind = 'routine' | 'goal' | 'day' | 'streak' | 'hours';
-export type Toast = { id: number; kind: ToastKind; title: string; detail?: string };
+/** `share`: the toast has a Share button that opens that progress card (`celebrate`: the sheet
+    opens as "Day complete!"). */
+export type Toast = { id: number; kind: ToastKind; title: string; detail?: string; share?: 'streak' | 'hours' | 'day'; celebrate?: boolean };
 type State = { toasts: Toast[]; rain: number | null };
 
 let state: State = { toasts: [], rain: null };
@@ -57,7 +59,8 @@ export function dismissToast(id: number) {
 function toast(t: Omit<Toast, 'id'>) {
   const id = nextId++;
   set({ toasts: [...state.toasts.slice(-2), { ...t, id }] });
-  setTimeout(() => dismissToast(id), 4200);
+  // One you can share stays long enough to reach its button.
+  setTimeout(() => dismissToast(id), t.share ? 8000 : 4200);
 }
 
 function rain() {
@@ -192,7 +195,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean, effects: 
     const goal = goalOn(data, now.today);
     const goalMet = goal <= 0 || now.todayMinutes >= goal;
     if (goal > 0 && was.todayMinutes < goal && now.todayMinutes >= goal && firstTime(now.today, 'goal')) {
-      toast({ kind: 'goal', title: 'Daily goal reached!', detail: `${goal} minutes today. Anything more is a bonus.` });
+      toast({ kind: 'goal', title: 'Daily goal reached!', detail: `${goal} minutes today. Anything more is a bonus.`, share: 'day' });
       big = true;
     }
 
@@ -200,8 +203,8 @@ export function useCelebrations(data: PracticeLogData, ready: boolean, effects: 
       const tasks = `${now.todayTotal} of ${now.todayTotal} task${now.todayTotal === 1 ? '' : 's'}`;
       toast(
         goalMet
-          ? { kind: 'day', title: 'Everything done today', detail: `${tasks}. That's a full day.` }
-          : { kind: 'day', title: 'All tasks done', detail: `${tasks} ticked off. Nice work.` },
+          ? { kind: 'day', title: 'Everything done today', detail: `${tasks}. That's a full day.`, share: 'day', celebrate: true }
+          : { kind: 'day', title: 'All tasks done', detail: `${tasks} ticked off. Nice work.`, share: 'day', celebrate: true },
       );
       big = true;
     }
@@ -209,7 +212,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean, effects: 
     if (was.todayMinutes === 0 && now.todayMinutes > 0 && firstTime(now.today, 'streak')) {
       const s = streak(data, now.today);
       if (STREAK_MILESTONES.includes(s)) {
-        toast({ kind: 'streak', title: `${s}-day streak!`, detail: "You've practiced every day. Keep the chain going." });
+        toast({ kind: 'streak', title: `${s}-day streak!`, detail: "You've practiced every day. Keep the chain going.", share: 'streak' });
         big = true;
       } else if (s >= 2) {
         toast({ kind: 'streak', title: `Streak: ${s} days`, detail: 'Today counts — the streak lives on.' });
@@ -220,7 +223,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean, effects: 
 
     const hit = HOUR_MILESTONES.find((h) => was.hours < h && now.hours >= h);
     if (hit && firstTime(now.today, `hours:${hit}`)) {
-      toast({ kind: 'hours', title: `${hit} hour${hit === 1 ? '' : 's'} of practice!`, detail: 'All logged here, one session at a time.' });
+      toast({ kind: 'hours', title: `${hit} hour${hit === 1 ? '' : 's'} of practice!`, detail: 'All logged here, one session at a time.', share: 'hours' });
       big = true;
     }
 

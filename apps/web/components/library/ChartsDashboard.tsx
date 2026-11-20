@@ -6,14 +6,14 @@ import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { menuPosition } from "@/components/library/shared";
-import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, PlaylistItem, RecentStrip, Rows, Toolbar } from "@/components/library/ui";
+import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, Panel, Pill, PlaylistItem, RecentStrip, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
-import { LibraryIcon, DownloadIcon, PlusIcon } from "@/components/tools";
+import { ChordChartIcon, DownloadIcon, PlusIcon } from "@/components/tools";
 import { formatComposer } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
-import StoragePill from "@/components/files/StoragePill";
+import { useAutoLinkCharts } from "@/lib/useAutoLinkCharts";
 
 /** Up to this many charts are listed on the tab itself (all of them when there are no folders). */
 const LIST_ON_TAB_MAX = 40;
@@ -33,6 +33,8 @@ export const playlistHref = (id: string) => `/chord-charts/playlist?id=${encodeU
 export default function ChartsDashboard() {
   const router = useRouter();
   const { playlists: raw, allSongs, totalSongs, loading, createPlaylist } = useChordChartsLibrary(null);
+  // Charts from before every chart had a tune get one (once).
+  useAutoLinkCharts(allSongs, loading);
   const { openSongMenu, openPlaylistMenu, element } = useChartActions();
   const recent = useRecentCharts();
   const [query, setQuery] = useState("");
@@ -80,13 +82,7 @@ export default function ChartsDashboard() {
 
   return (
     <LibraryPage>
-      <Hero
-        title="Library"
-        icon={LibraryIcon}
-        titleExtra={<StoragePill />}
-        helpTopic="chord-charts"
-        tabs={<LibraryTabs active="charts" />}
-      >
+      <Hero title="Chord charts" icon={ChordChartIcon} helpTopic="chord-charts" backHref="/tunes" backLabel="Tunes" rule={false}>
         <Toolbar>
           <HeroSearch value={query} onChange={setQuery} placeholder={totalSongs > 1 ? `Search ${totalSongs} charts…` : "Search charts…"} />
           {/* Labelled on phones too (an icon alone didn't say what it does); search still has room. */}

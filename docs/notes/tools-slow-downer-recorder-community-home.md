@@ -359,3 +359,56 @@ FB-15/16/17. Volume moved out of the Speed chip into its own Volume chip. A ⏮ 
 loop's start, or the file's start with no loop on; the key is ignored in inputs, dialogs and with
 modifiers. Enter was considered (Logic/Pro Tools use Return) but it would fight focused buttons.
 Checked headless at 1440/390; not by ear.
+
+
+### Slow Downer: draggable markers, number keys, saved loops (2026-11-20)
+
+FB-29. Jack: "make the markers in the slow downer have more functionality, also have ability to
+save loop values so I can go back to a loop and make it so i can set a loop start/end to a marker,
+and yes make the markers draggable and make keyboard number keys go to the marker index number."
+Web only (the mobile Slow Downer is unchanged).
+
+- **Dragging markers** (`components/Waveform.tsx`, new `onMarkerMove(id, time, final)` prop): a
+  `marker` drag kind like the loop-edge one: it grabs after 4px (10px for a finger), a short tap
+  still goes to the marker (the old `onClick` is gone; the tap is handled in `onPointerUp`, since
+  the box captures the pointer). Each marker is now two elements, a line strip (`z-10`, 24px wide on
+  touch screens) and the name flag (`z-[21]`). The flag sits above the loop edges (now `z-[11]`) and
+  the playhead (`z-20`): after "Loop to the next marker" a marker sits right on a loop edge, and
+  after going to a marker the playhead sits on it; without that the marker couldn't be grabbed or
+  right-clicked. Below the flag, a loop edge on a marker still wins. While dragging, the list isn't
+  re-sorted (numbers stay put); it's sorted by time when let go.
+- **Number keys:** 1–9 go to markers 1–9 in time order, 0 to the 10th, in the same keydown
+  listener as B (pane guard, ignored in inputs and dialogs and with Ctrl/Alt/Meta; Shift allowed
+  because some keyboard layouts need it for digits). Nothing else on the site uses bare digits.
+  The number shows on the flag (`numberMarkers`, hidden on `pointer: coarse`), in the Markers list
+  and as the menu hint. Going to a marker scrolls a zoomed view to it (`reveal`).
+- **Marker menu** (`markerMenuItems`), from a right-click on a marker or the new ⋮ on each row of
+  the Markers chip (the row's ✕ moved into it): Go to marker, Play from here, Loop from this
+  marker, Loop to this marker (both through `setEdge`, same rules as the Loop start/end buttons),
+  Loop to the next marker (or "to the end" on the last one), Rename marker (right-click only — the
+  list has the name box; it opens `PromptDialog`), Delete. A right-click between markers adds
+  "Loop between markers" (the markers either side, or the file's start/end). The ContextMenu
+  (`role="menu"`) opens over the chip's popover/sheet without closing it.
+- **Saved loops:** `lib/markers.ts` now also keeps `SavedLoop {id, name, start, end}` per file
+  under `jam-practice-slow-downer-loops` in localStorage, keyed like markers (`name|size`), same
+  100-file cap; deleting a browser-kept file clears both. "Save loop" appears in the loop row
+  (when the loop isn't saved yet) and in the right-click menu; a new **Loops** chip lists them
+  (time range button = loop it again and go to its start, highlighted when it's the current
+  loop; a name box; ✕ to delete) with "Save current loop". The default name is the markers at
+  both ends ("Verse to Chorus"), the start marker's name, or the first free "Loop N". Saving the
+  same loop twice says "Already saved as …". When the current loop is a saved one, its name
+  shows instead of "Loop" beside the times.
+- Not synced to the account, like markers (they point at a file name and size, not a Files row).
+  Help (Markers and a new Loops option, features) and the Shortcuts list updated. The Help text is
+  shared with the phone app's intro, which doesn't have these yet.
+- **Verified** headless (nix Chromium, dev server, signed out) with a generated 20 s WAV: three
+  markers added; 2 and 3 jump to 0:10 / 0:15, 9 does nothing; dragging marker 1's flag past
+  marker 2 moved it to 12.07 s and re-sorted the stored list without moving the playhead; a click
+  on a flag goes to it; the right-click menus (marker and empty space) and the ⋮ menu show the
+  right items; Loop to the next marker → 0:10–0:12.1, Save loop → named "Marker 2 to Marker 1";
+  Loop between markers → 0:00–0:10, saved; picking a saved loop in the chip restores it; rename;
+  everything still there after a reload. Touch emulation at 390 (`pointer: coarse`): flag numbers
+  hidden, a touch drag moved a marker, a tap on a flag went to it. 1440 and 390, light and dark,
+  no horizontal overflow, no console errors. `tsc` (web, desktop) and `eslint` pass.
+- **Not verified:** a real mouse/finger (only synthetic events), Safari/WebKit and the desktop app,
+  audio by ear, keyboards that need Shift for digits.

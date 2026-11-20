@@ -1,4 +1,5 @@
 import { toOwnTune } from "@/components/PublicTuneList";
+import { addChartsToTune, tuneChartIds } from "@jam-practice/core/tuneLibrary";
 import type { IRealSong } from "@/lib/iRealPro";
 import type { PublicTune } from "@/lib/profileTunes";
 import { nameId } from "@/lib/standards";
@@ -44,7 +45,7 @@ export function useSaveSetlist() {
           ...(pt.setTempo != null ? { tempo: pt.setTempo } : {}),
         };
       }
-      const canLink = !tune.chordChartId && (myIds.has(tune.id) || added.includes(tune));
+      const canLink = tuneChartIds(tune).length === 0 && (myIds.has(tune.id) || added.includes(tune));
       if (pt.linkedChart && canLink) wantChart.push({ tuneId: tune.id, chart: pt.linkedChart as unknown as IRealSong });
     }
 
@@ -54,6 +55,7 @@ export function useSaveSetlist() {
         const result = await importSongs(
           wantChart.map((w) => w.chart),
           title,
+          { link: false },
         );
         result.ids.forEach((chartId, i) => {
           if (chartId) chartFor.set(wantChart[i].tuneId, chartId);
@@ -62,7 +64,7 @@ export function useSaveSetlist() {
         // Charts couldn't be imported — the tunes and setlist still save.
       }
     }
-    const link = (t: Tune) => (chartFor.has(t.id) ? { ...t, chordChartId: chartFor.get(t.id) } : t);
+    const link = (t: Tune) => (chartFor.has(t.id) ? addChartsToTune(t, [chartFor.get(t.id)!]) : t);
     if (added.length || chartFor.size) setMyTunes((prev) => [...prev.map(link), ...added.map(link)]);
     return create(title, ids, overrides).id;
   };

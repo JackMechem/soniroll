@@ -5,8 +5,10 @@ import { useQuery } from 'convex/react';
 import { useEffect } from 'react';
 
 import { Celebrations } from '@/components/shedLog/Celebrations';
+import { ProgressShareSheet } from '@/components/shedLog/ProgressShareSheet';
 import { startDayTimer } from '@/lib/dayStopwatch';
 import { onPendingLogEntries, takePendingLogEntries } from '@/lib/practiceLogQueue';
+import { closeProgressShare, useProgressShareRequest } from '@/lib/progressShare';
 import { getSnapshot as engineState, subscribe as subscribeEngine } from '@/lib/practiceTimerEngine';
 import { useCelebrations } from '@/lib/shedLogCelebrations';
 import { useToolTimeTracker } from '@/lib/toolTime';
@@ -23,7 +25,8 @@ const SITE_DEFAULTS = { clock: '12', celebrations: true };
  * once in `app/_layout.tsx`: it takes in the Practice Timer's steps, the day timer's time and
  * tools' logged time as they happen (signed in), keeps routines teachers assigned (Lessons) in
  * step, restarts the day timer when a Shed Log run on the Practice Timer resumes, adds up time in
- * tools (`useToolTimeTracker`), and celebrates wherever you are.
+ * tools (`useToolTimeTracker`), celebrates wherever you are, and hosts "Share your progress"
+ * (`openProgressShare` from anywhere, a celebration toast's Share among them).
  */
 export function ShedLogGlobal() {
   const { isAuthenticated } = useConvexAuth();
@@ -75,6 +78,12 @@ export function ShedLogGlobal() {
   // Tools keep their own usage log (signed out too).
   useToolUsage();
   useToolTimeTracker();
+  const sharing = useProgressShareRequest();
 
-  return <Celebrations />;
+  return (
+    <>
+      <Celebrations />
+      {ready ? <ProgressShareSheet data={log.data} request={sharing} onClose={closeProgressShare} /> : null}
+    </>
+  );
 }

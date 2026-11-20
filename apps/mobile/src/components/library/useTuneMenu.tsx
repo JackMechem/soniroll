@@ -1,4 +1,5 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
+import { removeChartFromTune, replaceMainChart } from '@jam-practice/core/tuneLibrary';
 import type { Tune } from '@jam-practice/core/types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -36,15 +37,8 @@ export function useTuneMenu() {
   const [picking, setPicking] = useState<{ list: TuneListId; tune: Tune } | null>(null);
   const [deleting, setDeleting] = useState<{ list: TuneListId; tune: Tune } | null>(null);
 
-  function patchTune(list: TuneListId, id: string, patch: Partial<Tune>) {
-    lists[list].setTunes((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const next = { ...t, ...patch };
-        if (next.chordChartId === undefined) delete next.chordChartId;
-        return next;
-      }),
-    );
+  function replaceTune(list: TuneListId, id: string, fn: (t: Tune) => Tune) {
+    lists[list].setTunes((prev) => prev.map((t) => (t.id === id ? fn(t) : t)));
   }
 
   const actions: SheetAction[] = [];
@@ -59,7 +53,8 @@ export function useTuneMenu() {
         { key: 'open', icon: icon(ChordChartIcon), label: 'Open chord chart', onPress: () => router.push({ pathname: '/tool/chord-charts-view', params: { id: chartId } }) },
         { key: 'editChart', icon: icon(PencilIcon), label: 'Edit chord chart', onPress: () => router.push({ pathname: '/tool/chord-charts-editor', params: { songId: chartId } }) },
         { key: 'relink', icon: icon(LinkIcon), label: 'Change linked chart', onPress: () => setPicking(target) },
-        { key: 'unlink', icon: icon(CloseIcon), label: 'Unlink chord chart', onPress: () => patchTune(list, tune.id, { chordChartId: undefined }) },
+        // Unlinks the main chart only; any other charts the tune has (linked on the website) stay.
+        { key: 'unlink', icon: icon(CloseIcon), label: 'Unlink chord chart', onPress: () => replaceTune(list, tune.id, (t) => removeChartFromTune(t, chartId)) },
       );
     } else {
       actions.push(
@@ -96,7 +91,7 @@ export function useTuneMenu() {
         initialQuery={picking?.tune.name ?? ''}
         onClose={() => setPicking(null)}
         onPick={(song) => {
-          if (picking) patchTune(picking.list, picking.tune.id, { chordChartId: song.id });
+          if (picking) replaceTune(picking.list, picking.tune.id, (t) => replaceMainChart(t, song.id));
           setPicking(null);
         }}
       />

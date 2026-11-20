@@ -1,5 +1,6 @@
 "use client";
 
+import { mainChartId, removeChartFromTune, replaceMainChart } from "@jam-practice/core/tuneLibrary";
 import { useEffect, useState } from "react";
 import { KeyPicker, MeterPicker, TempoPicker } from "@/components/TuneFields";
 import { sortByText } from "@jam-practice/core/sortText";
@@ -108,12 +109,13 @@ export default function TuneEditorModal({
           <label className="flex flex-col gap-2 text-sm">
             <span className="text-xs font-medium text-muted">Linked chord chart</span>
             <select
-              value={draft.chordChartId ?? ""}
+              value={mainChartId(draft) ?? ""}
               onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  chordChartId: e.target.value || undefined,
-                }))
+                setDraft((d) => {
+                  const main = mainChartId(d);
+                  // Changes the main chart (any others stay linked); None unlinks the main one.
+                  return e.target.value ? replaceMainChart(d, e.target.value) : main ? removeChartFromTune(d, main) : d;
+                })
               }
               className={inputClass}
             >

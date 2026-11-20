@@ -1,10 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { todayKey } from '@jam-practice/core/practiceLog';
 import { useEffect } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeInUp, FadeOut, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FLAME } from '@/components/shedLog/parts';
+import { openProgressShare } from '@/lib/progressShare';
 import { dismissToast, useCelebrationState, type Toast } from '@/lib/shedLogCelebrations';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -40,6 +42,7 @@ const ICONS: Record<Toast['kind'], React.ComponentProps<typeof MaterialCommunity
 
 function ToastCard({ toast }: { toast: Toast }) {
   const { colors } = useAppTheme();
+  const share = toast.share;
   return (
     <Animated.View entering={FadeInUp.duration(220)} exiting={FadeOut.duration(200)}>
       <Pressable
@@ -59,6 +62,24 @@ function ToastCard({ toast }: { toast: Toast }) {
             </Text>
           ) : null}
         </View>
+        {share ? (
+          <Pressable
+            onPress={() => {
+              dismissToast(toast.id);
+              openProgressShare(share === 'day' ? { kind: 'day', date: todayKey(), celebrate: toast.celebrate } : { kind: share });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Share"
+            hitSlop={6}
+            android_ripple={{ color: colors['accent-hover'] }}
+            className="h-9 justify-center overflow-hidden rounded-lg px-3"
+            style={{ backgroundColor: colors.accent }}
+          >
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors['accent-foreground'] }}>
+              Share
+            </Text>
+          </Pressable>
+        ) : null}
       </Pressable>
     </Animated.View>
   );

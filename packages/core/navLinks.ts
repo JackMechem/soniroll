@@ -221,8 +221,8 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     href: "/tunes",
     label: "Library",
     description:
-      "Your library: the tunes you know and the ones you're learning, setlists, chord charts and files.",
-    blurb: "Your tunes, setlists, charts and files",
+      "Your library, in two tabs: Tunes (the tunes you know, the ones you're learning and the rest, each with its chord charts; setlists and tags) and Files (uploads and recordings).",
+    blurb: "Your tunes, charts, setlists and files",
     category: "Community",
   },
   {
@@ -268,7 +268,7 @@ const SEARCH_WORDS: Record<string, string> = {
   "/slow-downer": "transcribe slow down speed loop",
   "/practice-timer": "pomodoro countdown",
   "/rhythm-section": "backing band bass drums play along",
-  "/tunes": "library tunes setlists charts files recordings",
+  "/tunes": "library tunes setlists charts files recordings tags",
 };
 
 /** The tools a search matches: every word has to appear somewhere in the tool's name, its short

@@ -9,6 +9,7 @@ import type { Tune } from "@/lib/types";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { type DeviceRef, useDeviceUrl } from "@/lib/deviceFiles";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
+import { useLibraryTunes } from "@/lib/useTuneLists";
 
 /** A saved recording, as `convex/recordings.ts`'s queries return it — shared with the app. */
 export type Recording = {
@@ -99,16 +100,19 @@ export async function uploadRecordingBlob(blob: Blob, generateUploadUrl: () => P
   return storageId;
 }
 
-export type TuneListId = "tunes" | "learn";
+import type { TuneListId } from "@jam-practice/core/tuneLibrary";
+export type { TuneListId };
 
 /** Every tune of yours by id, from both lists — for showing and picking a recording's tune. */
 export function useTuneIndex() {
   const [tunes] = useSyncedTunes();
   const [learn] = useTunesToLearn();
+  const [library] = useLibraryTunes();
   return useMemo(() => {
     const byId = new Map<string, { tune: Tune; list: TuneListId }>();
     for (const tune of tunes) byId.set(tune.id, { tune, list: "tunes" });
     for (const tune of learn) byId.set(tune.id, { tune, list: "learn" });
+    for (const tune of library) byId.set(tune.id, { tune, list: "library" });
     return byId;
-  }, [tunes, learn]);
+  }, [tunes, learn, library]);
 }

@@ -11,12 +11,13 @@ import { EmptyCard, PageHeader, PageShell } from "@/components/library/shared";
 import { SavedMixPlayer } from "@/components/recordings/MixPlayer";
 import TakePlayer from "@/components/recordings/TakePlayer";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { LinkIcon, TrashIcon, TunerIcon } from "@/components/tools";
+import { LinkIcon, TrashIcon, TunerIcon, WaveIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
 import { copyRecordingToTuner } from "@/lib/tunerTakes";
 import { useDeviceUrl } from "@/lib/deviceFiles";
 import { OnOtherDevice } from "@/components/files/StorageMove";
 import { libraryHref } from "@/components/library/ui";
+import { openInToolHref } from "@/components/files/openInTool";
 import { goBackOr } from "@/lib/goBack";
 
 /** Where Back goes when there's no soniroll page behind this one, and where a delete lands. */
@@ -122,6 +123,17 @@ export default function RecordingPage({ id }: { id: string }) {
                 {toTuner === "busy" ? <LoadingSpinner size="sm" inline label="Opening in the Tuner" /> : <TunerIcon className="h-4 w-4 text-muted" />}
                 <span className="hidden sm:inline">Open in Tuner</span>
               </button>
+            )}
+            {rec.url && (
+              <Link
+                href={openInToolHref("/slow-downer", { kind: "recording", id: rec._id })}
+                aria-label="Open in Slow Downer"
+                title="Slow it down and loop parts of it"
+                className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+              >
+                <WaveIcon className="h-4 w-4 text-muted" />
+                <span className="hidden sm:inline">Open in Slow Downer</span>
+              </Link>
             )}
             <button
               type="button"

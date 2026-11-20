@@ -1,5 +1,6 @@
 "use client";
 
+import { tuneChartIds } from "@jam-practice/core/tuneLibrary";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
@@ -35,7 +36,7 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
   const lists = useTuneLists();
 
   const byId = new Map<string, Tune>();
-  for (const t of [...lists.tunes.tunes, ...lists.learn.tunes]) byId.set(t.id, t);
+  for (const t of [...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes]) byId.set(t.id, t);
 
   const fromSetlist = setlistId ? setlists.find((s) => s.id === setlistId) : undefined;
   const [seededFrom, setSeededFrom] = useState<string | null>(null);
@@ -152,7 +153,7 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
                     <span className="w-6 text-right text-sm tabular-nums text-muted">{i + 1}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{t.name}</span>
-                      <span className="block truncate text-xs text-muted">{[tuneSummary(t), t.chordChartId ? "chart included" : null].filter(Boolean).join(" · ")}</span>
+                      <span className="block truncate text-xs text-muted">{[tuneSummary(t), tuneChartIds(t).length ? "chart included" : null].filter(Boolean).join(" · ")}</span>
                     </span>
                     {!fromSetlist && (
                       <button type="button" onClick={() => setTuneIds((prev) => prev.filter((x) => x !== t.id))} aria-label={`Remove ${t.name}`} className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">

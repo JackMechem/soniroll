@@ -15,11 +15,13 @@ import {
   startOfWeek,
   streak,
   type PracticeLogData,
+  type ProgressCardKind,
 } from '@jam-practice/core/practiceLog';
 import { isDarkColors } from '@jam-practice/core/themes';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { ShareIcon } from '@/components/icons';
 import { useDayTimerMs } from '@/components/shedLog/DayTimer';
 import { Bar, FLAME, FlameIcon, useSuccess } from '@/components/shedLog/parts';
 import { ToolSheet } from '@/components/tool/SettingChip';
@@ -124,8 +126,19 @@ function hoursNote(hours: number, to: number): string {
   return `${formatMinutesShort(left)} to ${to} hours`;
 }
 
-/** The four stat cards (the website's `Momentum`). */
-export function Momentum({ data, today, onGoal }: { data: PracticeLogData; today: string; onGoal: () => void }) {
+/** A stat card's share button (opens "Share your progress" on that card). */
+function ShareAction({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable onPress={onPress} hitSlop={10} accessibilityRole="button" accessibilityLabel={label}>
+      <ShareIcon color={colors.muted} size={16} />
+    </Pressable>
+  );
+}
+
+/** The four stat cards (the website's `Momentum`). `onShare` puts a share button on the streak and
+    total cards. */
+export function Momentum({ data, today, onGoal, onShare }: { data: PracticeLogData; today: string; onGoal: () => void; onShare?: (kind: ProgressCardKind) => void }) {
   const { colors } = useAppTheme();
   const success = useSuccess();
   const goal = goalOn(data, today);
@@ -197,6 +210,7 @@ export function Momentum({ data, today, onGoal }: { data: PracticeLogData; today
         <View className="flex-1">
           <StatCard
             label="Streak"
+            action={onShare ? <ShareAction label="Share your streak" onPress={() => onShare('streak')} /> : undefined}
             value={
               <View className="flex-row items-center gap-1.5">
                 <Value value={s} unit={s === 1 ? 'day' : 'days'} />
@@ -218,6 +232,7 @@ export function Momentum({ data, today, onGoal }: { data: PracticeLogData; today
         <View className="flex-1">
           <StatCard
             label="In total"
+            action={onShare ? <ShareAction label="Share your hours" onPress={() => onShare('hours')} /> : undefined}
             value={hours < 1 ? <Value value={formatPracticed(hours * 60)} /> : <Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />}
           >
             <Bar frac={Math.max(0.03, Math.min(1, (hours - ms.from) / (ms.to - ms.from)))} />
@@ -331,7 +346,23 @@ export function HeatGrid({ data, today, weeks: count = 18, onOpenDay }: { data: 
 }
 
 /** "Your stats" (the website's `StatsDialog`): the cards, the last 18 weeks and a summary. */
-export function StatsSheet({ data, today, visible, onClose, onGoal, onOpenDay }: { data: PracticeLogData; today: string; visible: boolean; onClose: () => void; onGoal: () => void; onOpenDay: (date: string) => void }) {
+export function StatsSheet({
+  data,
+  today,
+  visible,
+  onClose,
+  onGoal,
+  onOpenDay,
+  onShare,
+}: {
+  data: PracticeLogData;
+  today: string;
+  visible: boolean;
+  onClose: () => void;
+  onGoal: () => void;
+  onOpenDay: (date: string) => void;
+  onShare: (kind: ProgressCardKind) => void;
+}) {
   const { colors } = useAppTheme();
   const monthStart = `${today.slice(0, 8)}01`;
   let month = 0;
@@ -347,11 +378,14 @@ export function StatsSheet({ data, today, visible, onClose, onGoal, onOpenDay }:
   ];
   return (
     <ToolSheet visible={visible} onClose={onClose} title="Your stats">
-      <Momentum data={data} today={today} onGoal={onGoal} />
+      <Momentum data={data} today={today} onGoal={onGoal} onShare={onShare} />
       <View className="gap-2 rounded-xl p-4" style={{ backgroundColor: colors.background }}>
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-          Your practice
-        </Text>
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            Your practice
+          </Text>
+          <ShareAction label="Share your days practiced" onPress={() => onShare('year')} />
+        </View>
         <HeatGrid data={data} today={today} onOpenDay={onOpenDay} />
       </View>
       <View className="rounded-xl px-4 py-1" style={{ backgroundColor: colors.background }}>

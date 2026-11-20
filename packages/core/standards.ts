@@ -741,7 +741,7 @@ function normalizeKey(text: string): string {
 }
 
 /** Moves a trailing article ("Foggy Day, A") to the front so it reads and searches naturally. */
-function tidyName(name: string): string {
+export function tidyName(name: string): string {
   const match = /^(.*), (A|An|The)$/.exec(name);
   return match ? `${match[2]} ${match[1]}` : name;
 }

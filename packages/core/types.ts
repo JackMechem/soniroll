@@ -27,6 +27,12 @@ export type Tune = {
       view of a tune (`PublicTune` below) instead carries a fully-resolved `linkedChart` snapshot,
       not this raw id, so a viewer who doesn't own the referenced chart can still see it. */
   chordChartId?: string;
+  /** Every chart linked to the tune, main (`chordChartId`) first — only stored when there are two
+      or more, so a big library stays small. Read with `tuneChartIds` and write with `withChartIds`
+      (`tuneLibrary.ts`), never directly. */
+  chordChartIds?: string[];
+  /** The tune's tags (any number), for filtering in the Library. */
+  tags?: string[];
 };
 
 export const DEFAULT_TIME_SIGNATURE = "4/4";

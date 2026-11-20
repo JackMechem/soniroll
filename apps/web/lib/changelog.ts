@@ -33,6 +33,36 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.14",
+    date: "2026-11-20",
+    title: "Mark up your PDFs, and a simpler Library",
+    summary: "PDFs open in a full viewer you can write on, and the Library is down to two tabs: Tunes and Files.",
+    changes: [
+      {
+        kind: "new",
+        text: "**PDF viewer and editor.** Open a PDF from Files to mark it up: pen, highlighter, eraser, text, music symbols (fermatas, codas, segnos, repeats, dynamics, accents), rehearsal letters and bar numbers that count up, hairpins and shapes. Your markings are saved with the file, and the PDF itself never changes.",
+      },
+      { kind: "new", text: "PDF pages: reorder, turn, delete, add blank or staff-paper pages, and insert the pages of another PDF. **Download with markings** makes a new PDF with everything in it." },
+      { kind: "new", text: "**Play** from a PDF: full screen, one or two pages at a time, turned with the arrow keys, space, a Bluetooth page-turner pedal, a tap or a swipe." },
+      {
+        kind: "improved",
+        text: "**The Library has two tabs, Tunes and Files.** Setlists and chord charts live inside Tunes, and recordings are in Files with your other audio.",
+      },
+      {
+        kind: "improved",
+        text: "Every chord chart belongs to a tune, and a tune can have several charts. Importing charts adds them to the tune of the same name, or makes the tune in a new **Library** list (neither Tunes I Know nor Tunes to Learn). Charts you already had are linked the same way.",
+      },
+      { kind: "new", text: "**Tags on tunes**: give a tune several tags and filter by one or more. Importing charts can tag everything it adds." },
+      { kind: "new", text: "Audio in Files (uploads and recordings) opens straight in the **Slow Downer** or the **Tuner**." },
+      {
+        kind: "new",
+        text: "Slow Downer: drag markers, jump to one with the number keys 1–9 and 0, loop from or to a marker, and **save loops** to come back to.",
+      },
+      { kind: "new", text: "Phone app: share your Shed Log progress cards as images, or post them to Community." },
+      { kind: "fixed", text: "Phone app: the playing beat's outline on the Metronome no longer nudges the beats up and down." },
+    ],
+  },
+  {
     version: "0.10.13",
     date: "2026-11-19",
     title: "A page for the phone app",

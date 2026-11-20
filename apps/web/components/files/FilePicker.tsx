@@ -72,6 +72,9 @@ type Options = {
   /** What the dialog's button for a file from this device says ("Upload" when it's saved). */
   uploadLabel?: string;
   local?: LocalFiles;
+  /** A stored file to open when the tool loads (`<kind>:<id>`, from the page's `?open=` — "Open
+      in…" in Files). */
+  openStored?: string | null;
 };
 
 /** Files this tab has just saved (name and size → when): opening one again before the account's
@@ -80,7 +83,7 @@ const justSaved = new Map<string, number>();
 const JUST_SAVED_MS = 60_000;
 const keyOf = (f: { name: string; size: number }) => `${f.name}|${f.size}`;
 
-export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, title = "Open a file", uploadLabel, local }: Options) {
+export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, title = "Open a file", uploadLabel, local, openStored }: Options) {
   const { isAuthenticated } = useConvexAuth();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +99,36 @@ export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, t
   useEffect(() => () => {
     if (noteTimer.current) clearTimeout(noteTimer.current);
   }, []);
+  // "Open in…" from Files: the stored file named in `?open=`, opened once the account's list loads.
+  const linked = openStored || null;
+  const linkedStorage = useQuery(filesApi.storage, linked && isAuthenticated ? {} : "skip");
+  const linkedItems = useDeviceUrls(linkedStorage?.items as StoredEntry[] | undefined);
+  const onFileRef = useRef(onFile);
+  useEffect(() => {
+    onFileRef.current = onFile;
+  });
+  const linkedDone = useRef(false);
+  useEffect(() => {
+    if (!linked || linkedDone.current || !linkedItems) return;
+    linkedDone.current = true;
+    // Take `open` out of the address, so a reload doesn't open it again.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("open");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    const entry = linkedItems.find((i) => `${i.kind}:${i.id}` === linked);
+    void (async () => {
+      if (!entry || !filter.matches(entry)) return setError("That file isn't in your Files any more.");
+      if (!entry.url) return setError(entry.device ? `“${entry.name}” is kept on ${entry.device.label}. Open it there.` : `Couldn't open “${entry.name}”.`);
+      try {
+        const res = await fetch(entry.url);
+        if (!res.ok) throw new Error(String(res.status));
+        const blob = await res.blob();
+        onFileRef.current(new File([blob], entry.name, { type: entry.mimeType || blob.type }), entry);
+      } catch {
+        setError(`Couldn't open “${entry.name}”. Check your connection and try again.`);
+      }
+    })();
+  }, [linked, linkedItems, filter]);
 
   /** Saves a file from this device to Files unless it's there already. Resolves whether it's in
       Files now. */

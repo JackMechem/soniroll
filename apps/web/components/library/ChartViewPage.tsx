@@ -11,6 +11,9 @@ import { playlistHref } from "@/components/library/ChartsDashboard";
 import { BackButton } from "@/components/library/shared";
 import { EmptyState, FolderIcon, gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
+import { moveTune } from "@/lib/useTuneLists";
+import { addChartsToTune, tuneChartIds, tuneMatchKey } from "@jam-practice/core/tuneLibrary";
+import { tidyName } from "@jam-practice/core/standards";
 import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
@@ -58,22 +61,27 @@ export default function ChartViewPage({ id }: { id: string }) {
     return semis ? transposeSong(chart, semis) : chart;
   }, [chart, transposeKey]);
 
-  const linkedTunes = [
-    ...lists.tunes.tunes.filter((t) => t.chordChartId === id).map((t) => ({ tune: t, list: "tunes" as TuneListId })),
-    ...lists.learn.tunes.filter((t) => t.chordChartId === id).map((t) => ({ tune: t, list: "learn" as TuneListId })),
-  ];
-  /** Puts this chart's tune in one of your lists, linked to the chart: the tune of the same name
-      if the list has one, else a new tune with the chart's title, key and time. */
+  const linkedTunes = (["tunes", "learn", "library"] as TuneListId[]).flatMap((list) =>
+    lists[list].tunes.filter((t) => tuneChartIds(t).includes(id)).map((t) => ({ tune: t, list })),
+  );
+  /** Puts this chart's tune in one of your lists: its tune moves there if it has one (from the
+      Library list, say), else the tune of the same name in that list gets the chart, else a new
+      tune with the chart's title, key and time. */
   function addToList(list: TuneListId) {
     if (!chart) return;
-    const name = chart.title.trim().toLowerCase();
+    const own = linkedTunes.find((l) => l.list !== list);
+    if (own) {
+      moveTune(lists, own.list, list, own.tune);
+      return;
+    }
+    const name = tuneMatchKey(chart.title);
     lists[list].setTunes((prev) => {
-      if (prev.some((t) => t.name.trim().toLowerCase() === name && !t.chordChartId)) {
-        return prev.map((t) => (t.name.trim().toLowerCase() === name && !t.chordChartId ? { ...t, chordChartId: id } : t));
+      if (prev.some((t) => tuneMatchKey(t.name) === name)) {
+        return prev.map((t) => (tuneMatchKey(t.name) === name ? addChartsToTune(t, [id]) : t));
       }
       const tune: Tune = {
         id: makeId(),
-        name: chart.title,
+        name: tidyName(chart.title),
         tempos: [],
         keys: chart.key ? [{ id: makeId(), value: displayKey(chart.key), enabled: true }] : [],
         timeSignature: chart.timeSignature ? `${chart.timeSignature.top}/${chart.timeSignature.bottom}` : DEFAULT_TIME_SIGNATURE,
@@ -214,12 +222,12 @@ export default function ChartViewPage({ id }: { id: string }) {
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {!inList("tunes") && (
                   <button type="button" onClick={() => addToList("tunes")} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-                    <PlusIcon className="h-4 w-4" /> Add to {TUNE_LIST_LABEL.tunes}
+                    <PlusIcon className="h-4 w-4" /> {linkedTunes.length ? "Move to" : "Add to"} {TUNE_LIST_LABEL.tunes}
                   </button>
                 )}
                 {isAuthenticated && !inList("learn") && (
                   <button type="button" onClick={() => addToList("learn")} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-                    <PlusIcon className="h-4 w-4" /> Add to {TUNE_LIST_LABEL.learn}
+                    <PlusIcon className="h-4 w-4" /> {linkedTunes.length ? "Move to" : "Add to"} {TUNE_LIST_LABEL.learn}
                   </button>
                 )}
               </div>

@@ -60,6 +60,10 @@ export default defineConfig({
       exact("@/lib/recorderEngine", "native/recorderEngine.ts"),
       exact("@/lib/tunerRecorder", "native/tunerRecorder.ts"),
       exact("@/lib/padInput", "native/padInput.ts"),
+      exact("@/lib/pdfWorker", "native/pdfWorker.ts"),
+      // pdf.js's legacy build: the system web views (WebKitGTK, older macOS) lack some of what
+      // the modern build uses.
+      { find: /^pdfjs-dist$/, replacement: path.join(web, "node_modules/pdfjs-dist/legacy/build/pdf.mjs") },
       exact("@convex-dev/auth/react", "native/convexAuthReact.ts"),
       { find: /^convex-auth-react-original$/, replacement: require.resolve("@convex-dev/auth/react") },
       exact("next/link", "shims/next-link.tsx"),

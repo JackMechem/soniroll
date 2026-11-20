@@ -12,6 +12,7 @@ import { type Attachment, attachmentKey } from "@/lib/practiceLog";
 import { useTuneIndex } from "@/lib/recordings";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { useSetlists } from "@/lib/useSetlists";
+import { TUNE_LIST_LABEL } from "@jam-practice/core/tuneLibrary";
 
 type IconType = (props: { className?: string }) => React.JSX.Element;
 
@@ -139,7 +140,7 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
       return sortByText(all, (t) => t.tune.name).map((t) => ({
         attachment: { kind: "tune", id: t.tune.id, list: t.list, label: t.tune.name },
         title: t.tune.name,
-        detail: t.list === "tunes" ? "Tunes I Know" : "Tunes to Learn",
+        detail: TUNE_LIST_LABEL[t.list],
       }));
     }
     if (tab === "setlists") {

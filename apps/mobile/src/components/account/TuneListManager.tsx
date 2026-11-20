@@ -1,4 +1,5 @@
 import { DEFAULT_TIME_SIGNATURE, makeId, type Key, type Tempo, type Tune } from '@jam-practice/core/types';
+import { mainChartId, removeChartFromTune, replaceMainChart } from '@jam-practice/core/tuneLibrary';
 import { useRouter } from 'expo-router';
 import type { ComponentType } from 'react';
 import { useMemo, useState } from 'react';
@@ -286,15 +287,17 @@ function TuneEditorModal({
   function save() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    onSave({
-      id: initial.id,
+    // Built on the tune as it was, so what this form doesn't show (tags, other charts) is kept.
+    const base: Tune = {
+      ...initial,
       name: trimmedName,
       timeSignature: timeSignature.trim() || DEFAULT_TIME_SIGNATURE,
       tempos: parseTempos(temposText),
       keys: parseKeys(keysText),
       notes,
-      ...(chordChartId ? { chordChartId } : {}),
-    });
+    };
+    const main = mainChartId(base);
+    onSave(chordChartId ? replaceMainChart(base, chordChartId) : main ? removeChartFromTune(base, main) : base);
   }
 
   const inputStyle = { backgroundColor: colors.background, color: colors.foreground };

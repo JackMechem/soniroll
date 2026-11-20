@@ -3,7 +3,8 @@ import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { Component, type ReactNode, useState } from 'react';
-import { Pressable, ScrollView, Text, View, Share } from 'react-native';
+import type { ProgressCard } from '@jam-practice/core/practiceLog';
+import { Pressable, ScrollView, Text, View, Share, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -11,6 +12,7 @@ import { PublicSetlist } from '@/components/community/PublicSetlist';
 import { PublicTuneList } from '@/components/community/PublicTuneList';
 import { EyeOffIcon, HeartIcon, ShareIcon, TrashIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ProgressCardView } from '@/components/shedLog/ProgressCard';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
@@ -73,6 +75,7 @@ function PostScreen() {
 
 function PostScreenContent() {
   const { colors } = useAppTheme();
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const idLooksValid = !!id && VALID_ID_RE.test(id);
@@ -201,7 +204,12 @@ function PostScreenContent() {
               </Text>
             ) : null}
 
-            {post.kind === 'setlist' ? (
+            {post.kind === 'milestone' && post.payload ? (
+              // A Shed Log progress card (posted from "Share your progress"), drawn as on the website.
+              <View className="items-center">
+                <ProgressCardView card={post.payload as ProgressCard} username={post.authorUsername} width={Math.min(width - 32, 420)} />
+              </View>
+            ) : post.kind === 'setlist' ? (
               <PublicSetlist title={post.title} tunes={post.tunes} isMine={post.isMine} ownSetlistId={post.setlistId} chartsParams={{ post: post.id }} />
             ) : (
               <PublicTuneList tunes={post.tunes} canAdd />

@@ -102,15 +102,17 @@ export function nameOfFile(fileName: string): string {
 }
 
 /** A copy of an account recording, kept with the Tuner's takes (one copy per recording). */
-export async function copyRecordingToTuner(recording: { id: string; name: string; url: string; durationSec: number }): Promise<string> {
-  const existing = (await listTakes()).find((t) => t.meta.source === "recording" && t.meta.sourceId === recording.id);
+/** `source`: "file" for one of your other stored files (Files' "Open in Tuner"). */
+export async function copyRecordingToTuner(recording: { id: string; name: string; url: string; durationSec: number; source?: "recording" | "file" }): Promise<string> {
+  const source = recording.source ?? "recording";
+  const existing = (await listTakes()).find((t) => t.meta.source === source && t.meta.sourceId === recording.id);
   if (existing) return existing.id;
   const res = await fetch(recording.url);
   if (!res.ok) throw new Error(`Couldn't download the recording (${res.status}).`);
   const blob = await res.blob();
   const id = await saveTake(blob, recording.name, {
     durationSec: recording.durationSec,
-    source: "recording",
+    source,
     sourceId: recording.id,
     ext: extensionFor(blob.type),
   });

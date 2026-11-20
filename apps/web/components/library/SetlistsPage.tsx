@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import PromptDialog from "@/components/PromptDialog";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, Rows, SetlistItem } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, Pill, Rows, SetlistItem } from "@/components/library/ui";
 import { setlistHref } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
-import { LibraryIcon, PlusIcon } from "@/components/tools";
+import { PlusIcon, SetlistIcon } from "@/components/tools";
 import { useSetlists } from "@/lib/useSetlists";
 import { sortByText } from "@jam-practice/core/sortText";
-import StoragePill from "@/components/files/StoragePill";
 
 type Sort = "recent" | "name";
 
@@ -24,7 +23,7 @@ export default function SetlistsPage() {
   const [naming, setNaming] = useState(false);
 
   const shown = useMemo(() => {
-    const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes].map((t) => [t.id, t.name]));
+    const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes].map((t) => [t.id, t.name]));
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const filtered = words.length
       ? setlists.filter((s) => {
@@ -33,19 +32,13 @@ export default function SetlistsPage() {
         })
       : setlists;
     return sort === "name" ? sortByText(filtered, (s) => s.name) : [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [setlists, lists.tunes.tunes, lists.learn.tunes, query, sort]);
+  }, [setlists, lists.tunes.tunes, lists.learn.tunes, lists.library.tunes, query, sort]);
 
-  const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes].map((t) => [t.id, t.name]));
+  const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes].map((t) => [t.id, t.name]));
 
   return (
     <LibraryPage>
-      <Hero
-        title="Library"
-        icon={LibraryIcon}
-        helpTopic="tunes"
-        titleExtra={<StoragePill />}
-        tabs={<LibraryTabs active="setlists" />}
-      >
+      <Hero title="Setlists" icon={SetlistIcon} helpTopic="tunes" backHref="/tunes" backLabel="Tunes" rule={false}>
         {/* Phones: the sort toggle gets its own row under search + New, so the search box keeps
             most of the width. Hidden until there are setlists to sort. */}
         <div className="flex min-w-0 flex-wrap items-center gap-2">

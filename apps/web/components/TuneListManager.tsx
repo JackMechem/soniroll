@@ -1,5 +1,6 @@
 "use client";
 
+import { tuneChartIds } from "@jam-practice/core/tuneLibrary";
 import Link from "next/link";
 
 import { ReactNode, useMemo, useRef, useState } from "react";
@@ -71,7 +72,7 @@ export default function TuneListManager({
   exportFilenamePrefix: string;
   infoBlurb?: ReactNode;
   /** Which list this is — each tune's name then links to its own page (`/tune`). */
-  listId?: "tunes" | "learn";
+  listId?: "tunes" | "learn" | "library";
   /** "page": the Tunes page's own full list (`TuneListPage`) — a header card with the search in
       it, then the list in its own card with each tune's key badge. "card" (default): one card,
       as on the account page. */
@@ -152,7 +153,7 @@ export default function TuneListManager({
   }
 
   const openAdd = () => (allowStandards ? setPickerOpen(true) : setEditing({ tune: blankTune(), isNew: true }));
-  const chartCount = tunes.filter((t) => t.chordChartId).length;
+  const chartCount = tunes.filter((t) => tuneChartIds(t).length).length;
   const list = (
     <>
       {tunes.length === 0 ? (
@@ -182,7 +183,7 @@ export default function TuneListManager({
                   <Link href={`/tunes/tune?list=${listId}&id=${encodeURIComponent(tune.id)}`} className="min-w-0 flex-1 text-left">
                     <div className="truncate text-sm font-medium hover:underline">
                       {tune.name}
-                      {variant === "page" && tune.chordChartId && <ChordChartIcon className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-muted" />}
+                      {variant === "page" && tuneChartIds(tune).length > 0 && <ChordChartIcon className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-muted" />}
                     </div>
                     <div className="truncate text-xs text-muted">{summary(tune)}</div>
                   </Link>

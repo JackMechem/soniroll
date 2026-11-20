@@ -12,6 +12,7 @@ import type { Tune } from "@/lib/types";
 import type { LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import type { Setlist } from "@/lib/useSetlists";
 import { displayKey } from "@jam-practice/core/setlistKeys";
+import { tuneChartIds, tuneTags } from "@jam-practice/core/tuneLibrary";
 
 /** The look of the Library pages (`components/library/*`): a plain title with underline tabs,
     a search-and-buttons toolbar, then bordered panels holding divided rows (each tune or chart
@@ -162,27 +163,27 @@ export function useEdgeFade<T extends HTMLElement>() {
   return { attach: setEl, style: mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined };
 }
 
-export type LibraryTab = "tunes" | "setlists" | "charts" | "files" | "recordings";
-export const LIBRARY_TABS: readonly LibraryTab[] = ["tunes", "setlists", "charts", "files", "recordings"];
+/** Library's two tabs. */
+export type LibraryTab = "tunes" | "files";
+/** Everything `/tunes?tab=` can show: the two tabs, plus Setlists and Chord Charts (pages inside
+    Tunes) and Recordings (Files, showing recordings) — kept so older links still land somewhere. */
+export type LibraryView = LibraryTab | "setlists" | "charts" | "recordings";
+export const LIBRARY_VIEWS: readonly LibraryView[] = ["tunes", "files", "setlists", "charts", "recordings"];
 
 /** Library is one page (`/tunes`); its tabs are a `?tab=` query (none means Tunes). */
-export function libraryHref(tab: LibraryTab): string {
-  return tab === "tunes" ? "/tunes" : `/tunes?tab=${tab}`;
+export function libraryHref(view: LibraryView): string {
+  return view === "tunes" ? "/tunes" : `/tunes?tab=${view}`;
 }
 
-/** Tunes · Setlists · Chord Charts · Files · Recordings — Library's tabs, under its title. They
-    swap the `?tab=` query in place (replace, no scroll) rather than going to another page. */
+/** Tunes · Files — Library's tabs, under its title. They swap the `?tab=` query in place
+    (replace, no scroll) rather than going to another page. */
 export function LibraryTabs({ active }: { active: LibraryTab }) {
   const tabs = [
     { id: "tunes", label: "Tunes", href: libraryHref("tunes") },
-    { id: "setlists", label: "Setlists", href: libraryHref("setlists") },
-    { id: "charts", label: "Chord Charts", short: "Charts", href: libraryHref("charts") },
     { id: "files", label: "Files", href: libraryHref("files") },
-    { id: "recordings", label: "Recordings", href: libraryHref("recordings") },
   ] as const;
-  const { attach: fadeRef, style: fadeStyle } = useEdgeFade<HTMLElement>();
   return (
-    <nav ref={fadeRef} style={fadeStyle} className="flex max-w-full overflow-x-auto border-b border-foreground/10 [scrollbar-width:none] sm:gap-2" aria-label="Library">
+    <nav className="flex max-w-full border-b border-foreground/10 sm:gap-2" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
@@ -190,18 +191,11 @@ export function LibraryTabs({ active }: { active: LibraryTab }) {
           replace
           scroll={false}
           aria-current={active === t.id ? "page" : undefined}
-          className={`-mb-px flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-2 text-sm transition-colors sm:px-3 ${
+          className={`-mb-px flex h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-sm transition-colors ${
             active === t.id ? "border-foreground font-medium text-foreground" : "border-transparent text-muted hover:text-foreground"
           }`}
         >
-          {"short" in t ? (
-            <>
-              <span className="sm:hidden">{t.short}</span>
-              <span className="hidden sm:inline">{t.label}</span>
-            </>
-          ) : (
-            t.label
-          )}
+          {t.label}
         </Link>
       ))}
     </nav>
@@ -337,9 +331,12 @@ export function Panel({
   children,
   className = "",
   flush = false,
+  actions,
 }: {
   title: string;
   detail?: ReactNode;
+  /** Small controls at the right of the header (e.g. a sort menu). */
+  actions?: ReactNode;
   href?: string;
   hrefLabel?: string;
   onAdd?: (e: React.MouseEvent) => void;
@@ -363,6 +360,7 @@ export function Panel({
         )}
         {detail != null && <span className="shrink-0 text-xs tabular-nums text-muted">{detail}</span>}
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {actions}
           {href && (
             <Link href={href} className="flex h-8 items-center rounded-md px-2 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
               {hrefLabel}
@@ -464,24 +462,55 @@ function RowShell({
   );
 }
 
-/** A tune: its key badge, name (with a chart mark if it has one), tempo / time / keys known. */
-export function TuneItem({ tune, href, onMenu }: { tune: Tune; href: string; onMenu?: (e: React.MouseEvent) => void }) {
+/** A tune: its key badge (the keys you know it in, else its chart's key), name (with a chart mark,
+    and how many charts when there are several), then which list it's in (`listLabel`, when the
+    page shows several lists), its tags and tempo / time / keys known. */
+export function TuneItem({
+  tune,
+  href,
+  onMenu,
+  listLabel,
+  chartKey,
+}: {
+  tune: Tune;
+  href: string;
+  onMenu?: (e: React.MouseEvent) => void;
+  listLabel?: string;
+  chartKey?: string | null;
+}) {
   const keys = tune.keys.filter((k) => k.enabled);
   const tempo = tune.tempos.find((t) => t.enabled)?.value;
+  const charts = tuneChartIds(tune).length;
+  const tags = tuneTags(tune);
   const meta = [tempo != null ? `${tempo} BPM` : null, tune.timeSignature || null, keys.length > 1 ? `${keys.length} keys` : null].filter(Boolean).join(" · ");
+  const line = !tempo && !keys.length ? tuneSummary(tune) || (charts ? "" : "No key or tempo yet") : meta;
   return (
     <RowShell
       href={href}
-      leading={<KeyBadge label={keys[0]?.value} />}
+      leading={<KeyBadge label={keys[0]?.value ?? chartKey} />}
       title={tune.name}
       extra={
-        tune.chordChartId && (
-          <span title="Has a chord chart" className="shrink-0 text-muted">
+        charts > 0 && (
+          <span title={charts > 1 ? `${charts} chord charts` : "Has a chord chart"} className="flex shrink-0 items-center gap-0.5 text-xs tabular-nums text-muted">
             <ChordChartIcon className="h-3.5 w-3.5" />
+            {charts > 1 && charts}
           </span>
         )
       }
-      meta={<span className="truncate">{!tempo && !keys.length ? tuneSummary(tune) || "No key or tempo yet" : meta}</span>}
+      meta={
+        listLabel || tags.length || line ? (
+          <>
+            {listLabel && <Chip>{listLabel}</Chip>}
+            {tags.slice(0, 2).map((t) => (
+              <Chip key={t} accent>
+                <span className="max-w-[8rem] truncate">{t}</span>
+              </Chip>
+            ))}
+            {tags.length > 2 && <Chip accent>+{tags.length - 2}</Chip>}
+            {line && <span className="truncate">{line}</span>}
+          </>
+        ) : undefined
+      }
       onMenu={onMenu}
     />
   );

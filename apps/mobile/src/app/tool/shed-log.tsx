@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/ActionSheet';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, SpeakerIcon, TargetIcon } from '@/components/icons';
+import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, ShareIcon, SpeakerIcon, TargetIcon } from '@/components/icons';
 import { MonthView, WeekList, daySummary, weekSummary } from '@/components/shedLog/Calendar';
 import { DayView } from '@/components/shedLog/DayView';
 import { DayPanel } from '@/components/shedLog/DayPanel';
@@ -28,6 +28,7 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { TabHeader } from '@/components/TabHeader';
 import { Segmented } from '@/components/tool/reward';
 import { IconButton, useScrolled } from '@/components/ui';
+import { openProgressShare } from '@/lib/progressShare';
 import { useToday } from '@/lib/useClock';
 import { usePracticeLog } from '@/lib/usePracticeLog';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
@@ -39,8 +40,8 @@ const VIEW_DEFAULTS = { view: 'month' };
 
 /**
  * The Shed Log on the phone — one of the five main screens (a tab, so no back button), the native
- * port of the website's `/shed-log` (`apps/web/components/PracticeLog.tsx`): the header (Stats, and
- * ⋮ for your routines, the daily goal and sounds), today against the goal and the streak, then
+ * port of the website's `/shed-log` (`apps/web/components/PracticeLog.tsx`): the header (Share your
+ * progress, Stats, and ⋮ for your routines, the daily goal and sounds), today against the goal and the streak, then
  * two tabs — the day (routines to check off and run on the timer, tasks for the day, the day timer,
  * time in tools to log, logging time) and the calendar (month, week or day). Adding is
  * done where it happens (Add routine, the task box), not from a header button. For account
@@ -50,8 +51,9 @@ const VIEW_DEFAULTS = { view: 'month' };
  * to drag a routine or task to another time); the week is the website's phone list.
  *
  * Left out from the website: the time-grid week (and dragging to another day); recordings and
- * clips on a day; Shed Notes and attaching tunes / charts (shown when made on the website);
- * progress cards and the day report; the tour.
+ * clips on a day; Shed Notes and attaching tunes / charts (shown when made on the website); the
+ * tour. Progress cards and the day report are shared through `ProgressShareSheet` (in
+ * `ShedLogGlobal`).
  */
 function ShedLogScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -135,6 +137,7 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
       scrolled={scrolled}
       right={
         <>
+          <IconButton Icon={ShareIcon} label="Share your progress" onPress={() => openProgressShare({ kind: 'streak' })} />
           <IconButton Icon={StatsIcon} label="Stats" onPress={() => setStatsOpen(true)} />
           <IconButton Icon={DotsVerticalIcon} label="More: routines, daily goal, sounds" onPress={() => setSettingsOpen(true)} />
         </>
@@ -232,6 +235,10 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
         onOpenDay={(date) => {
           setStatsOpen(false);
           openDay(date);
+        }}
+        onShare={(kind) => {
+          setStatsOpen(false);
+          openProgressShare({ kind });
         }}
       />
       <GoalSheet log={log} visible={goalOpen} onClose={() => setGoalOpen(false)} />

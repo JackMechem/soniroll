@@ -1,4 +1,5 @@
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tempo, type Tune } from '@jam-practice/core/types';
+import { mainChartId, removeChartFromTune, replaceMainChart } from '@jam-practice/core/tuneLibrary';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -72,15 +73,18 @@ function TuneEditScreen() {
       setError('Give the tune a name.');
       return;
     }
-    const tune: Tune = {
+    // Built on the existing tune, so what this form doesn't show (tags, other charts) is kept.
+    const base: Tune = {
+      ...(existing ?? {}),
       id: existing?.id ?? makeId(),
       name: trimmed,
       timeSignature: timeSignature.trim() || DEFAULT_TIME_SIGNATURE,
       tempos: parseTempos(temposText, existing?.tempos ?? []),
       keys: existing?.keys ?? [],
       notes: existing?.notes ?? '',
-      ...(chordChartId ? { chordChartId } : {}),
     };
+    const main = mainChartId(base);
+    const tune: Tune = chordChartId ? replaceMainChart(base, chordChartId) : main ? removeChartFromTune(base, main) : base;
     if (existing && list === startList) {
       lists[list].setTunes((prev) => prev.map((t) => (t.id === tune.id ? tune : t)));
     } else {

@@ -36,6 +36,9 @@ import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
 import { KeptHereHint } from "@/components/files/StorageMove";
 import SaveWhere from "@/components/files/SaveWhere";
+import PdfEditor from "@/components/pdf/PdfEditor";
+import PdfInline from "@/components/pdf/PdfInline";
+import { useOpenInTool } from "@/components/files/openInTool";
 
 // ---------------------------------------------------------------- icons
 
@@ -129,7 +132,7 @@ export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; auto
     );
   }
   if (!url) return <p className="p-8 text-sm text-muted">This file isn&apos;t available.</p>;
-  if (kind === "pdf") return <iframe src={url} title={file.name} className="h-full min-h-[60vh] w-full border-0" />;
+  if (kind === "pdf") return <PdfInline url={url} name={file.name} />;
   if (kind === "image") {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={url} alt={file.name} className="max-h-full max-w-full object-contain p-2" />;
@@ -350,6 +353,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     }
   }
   const router = useRouter();
+  const openIn = useOpenInTool();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [open, setOpen] = useState<StoredEntry | null>(null);
   const [renaming, setRenaming] = useState<StoredEntry | null>(null);
@@ -367,6 +371,8 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     const where = goTo(item);
     return [
       { label: "Open", onSelect: () => setOpen(item), icon: <FileIcon className="h-4 w-4" /> },
+      // Audio (and video): open it in a tool that plays it.
+      ...openIn.toolsFor(item).map((t) => ({ label: `Open in ${t.label}`, onSelect: t.open, icon: <t.icon className="h-4 w-4" /> })),
       ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
       ...(item.kind !== "profile" ? [{ label: item.sharedId ? "Shared — manage link" : "Share a link", onSelect: () => setSharing(item), icon: <ShareIcon className="h-4 w-4" /> }] : []),
       ...(item.url ? [{ label: "Download", onSelect: () => void downloadFile(item.url!, item.name), icon: <DownloadIcon className="h-4 w-4" /> }] : []),
@@ -464,12 +470,20 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
   const dialogs = (
     <>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
-      {open && (
+      {open && open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf" && (
+        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} />
+      )}
+      {open && !(open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf") && (
         <FilePreviewDialog
           file={open}
           onClose={() => setOpen(null)}
           actions={
             <>
+              {openIn.toolsFor(open).map((t) => (
+                <button key={t.href} type="button" className={actionBtn} onClick={t.open} disabled={!!openIn.busy}>
+                  <t.icon className="h-4 w-4" /> Open in {t.label}
+                </button>
+              ))}
               {open.kind !== "profile" && (
                 <button type="button" className={actionBtn} onClick={() => setRenaming(open)}>
                   <PencilIcon className="h-4 w-4" /> Rename
@@ -523,7 +537,17 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
   }
 
   /** `status`: what's happening while a file is being put online or saved here. */
-  return { openMenu, contextMenu, openFile: setOpen, deleteMany, putOnline, error, status: moving, clearError: () => setError(null), dialogs };
+  return {
+    openMenu,
+    contextMenu,
+    openFile: setOpen,
+    deleteMany,
+    putOnline,
+    error: error ?? openIn.error,
+    status: moving ?? (openIn.busy ? `Opening “${openIn.busy}” in the Tuner…` : null),
+    clearError: () => setError(null),
+    dialogs,
+  };
 }
 
 // ---------------------------------------------------------------- picking files already uploaded
