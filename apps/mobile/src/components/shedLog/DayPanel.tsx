@@ -26,6 +26,7 @@ import {
   PencilIcon,
   PlusIcon,
   RepeatIcon,
+  ShareIcon,
   StopwatchIcon,
 } from '@/components/icons';
 import { DayTasks } from '@/components/shedLog/DayTasks';
@@ -36,6 +37,7 @@ import { AttachedNotes } from '@/components/shedNotes/AttachedNotes';
 import { LogTimeSheet } from '@/components/shedLog/sheets';
 import { ToolTimeCard } from '@/components/shedLog/ToolTimeCard';
 import { useToday } from '@/lib/useClock';
+import { openProgressShare } from '@/lib/progressShare';
 import type { PracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -83,10 +85,21 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
           <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
             {formatLongDate(date)}
           </Text>
-          <Text className="font-ui text-xs" style={{ color: colors.muted }}>
-            {isToday ? 'Today · ' : ''}
-            {minutes > 0 ? `${formatPracticed(minutes)} practiced` : 'Nothing logged yet'}
-          </Text>
+          <View className="flex-row items-center">
+            <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+              {isToday ? 'Today · ' : ''}
+              {minutes > 0 ? `${formatPracticed(minutes)} practiced` : 'Nothing logged yet'}
+              {canLog ? ' · ' : ''}
+            </Text>
+            {canLog ? (
+              <Pressable onPress={() => openProgressShare({ kind: 'day', date })} hitSlop={10} accessibilityRole="button" accessibilityLabel="Share this day's report" className="flex-row items-center gap-1">
+                <ShareIcon color={colors.foreground} size={12} />
+                <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.foreground }}>
+                  Day report
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         <GhostIcon Icon={ChevronRightIcon} label="Next day" onPress={() => onDateChange(addDays(date, 1))} color={colors.foreground} size={22} />
       </View>
