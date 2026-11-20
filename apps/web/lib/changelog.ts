@@ -33,6 +33,17 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.13",
+    date: "2026-11-19",
+    title: "A page for the phone app",
+    changes: [
+      {
+        kind: "improved",
+        text: "The Android app (alpha) has its own page, **soniroll.com/mobile**, linked from the home page on phones, the footer and the menus. You couldn't find it on a phone before.",
+      },
+    ],
+  },
+  {
     version: "0.10.12",
     date: "2026-11-19",
     title: "soniroll for Android (alpha)",

@@ -708,6 +708,16 @@ export function CloudIcon({ className }: { className?: string }) {
   );
 }
 
+/** A phone (the phone app). */
+export function PhoneIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="7" y="2.5" width="10" height="19" rx="2" />
+      <path d="M11 18.5h2" />
+    </svg>
+  );
+}
+
 /** This device (files kept on the computer or phone). */
 export function DeviceIcon({ className }: { className?: string }) {
   return (

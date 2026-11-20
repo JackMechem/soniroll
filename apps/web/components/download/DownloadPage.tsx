@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { CheckIcon, DownloadIcon } from "@/components/tools";
+import { CheckIcon, DownloadIcon, PhoneIcon } from "@/components/tools";
 import { inDesktopApp } from "@/lib/deviceFiles";
-import { useAndroidRelease } from "@/lib/androidRelease";
+import { MOBILE_PATH } from "@/lib/androidRelease";
 import { type Download, type Platform, PLATFORM_NAME, RELEASES_URL, detectPlatform, useDesktopRelease } from "@/lib/desktopRelease";
 import { formatBytes } from "@/lib/files";
 
@@ -12,7 +13,7 @@ import { formatBytes } from "@/lib/files";
  * `/download` — the desktop app: one big button for the computer you're on (picked from the
  * browser), every platform's files below with how to open them the first time (the builds aren't
  * signed yet), and NixOS. The files come from the newest GitHub release (`lib/desktopRelease.ts`).
- * Below them, the Android app's alpha (`AndroidSection`, from the newest `android-v*` release).
+ * The phone app has its own page (`/mobile`, `MobilePage.tsx`); this one links to it.
  */
 
 const noSubscribe = () => () => {};
@@ -76,10 +77,10 @@ export default function DownloadPage() {
               everywhere.
             </p>
             <a
-              href="#android"
+              href={MOBILE_PATH}
               className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground hover:bg-surface-hover"
             >
-              <DownloadIcon className="h-4 w-4" /> Android app (alpha)
+              <PhoneIcon className="h-4 w-4" /> Get the Android app (alpha)
             </a>
           </div>
         ) : (
@@ -134,7 +135,14 @@ export default function DownloadPage() {
 
       <NixSection version={release?.version} />
 
-      <AndroidSection />
+      <Link href={MOBILE_PATH} className="flex items-center gap-3 rounded-2xl bg-surface p-4 hover:bg-surface-hover">
+        <PhoneIcon className="h-5 w-5 shrink-0 text-accent" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">soniroll for your phone</span>
+          <span className="block text-sm text-muted">The Android app, in alpha</span>
+        </span>
+        <span className="text-sm font-medium text-accent">Get it</span>
+      </Link>
     </main>
   );
 }
@@ -166,53 +174,6 @@ function PlatformCard({ platform, downloads, yours }: { platform: Platform; down
       )}
       <p className="text-xs text-muted">{FIRST_RUN[platform]}</p>
     </div>
-  );
-}
-
-/** The phone app for Android, in alpha: the newest `android-v*` release's APK, with how to install it. */
-function AndroidSection() {
-  const android = useAndroidRelease();
-  return (
-    <section id="android" className="flex scroll-mt-20 flex-col gap-3 rounded-2xl bg-surface p-4 sm:p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-bold">soniroll for Android</h2>
-        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">Alpha</span>
-      </div>
-      <p className="text-sm text-muted">
-        An early test of the phone app: every tool, the Shed Log, your Library and Community, with the same account. It&apos;s an alpha, so
-        expect rough edges, and tell us what breaks (the bug button, top right). Not on the Play Store yet, and not on iPhone yet.
-      </p>
-      {android === undefined ? (
-        <LoadingSpinner size="sm" />
-      ) : android?.apk ? (
-        <div className="flex flex-col items-start gap-1.5">
-          <a
-            href={android.apk.url}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-bold text-accent-foreground hover:bg-accent-hover"
-          >
-            <DownloadIcon className="h-4 w-4" /> Download for Android
-          </a>
-          <p className="text-xs text-muted">
-            Version {android.version} · {formatBytes(android.apk.size)} ·{" "}
-            <a href={android.url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-              What&apos;s in it
-            </a>
-          </p>
-        </div>
-      ) : (
-        <p className="text-sm text-muted">
-          The download couldn&apos;t be loaded just now.{" "}
-          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
-            Find it on GitHub
-          </a>
-          .
-        </p>
-      )}
-      <p className="text-xs text-muted">
-        Open the downloaded file on your phone. The first time, Android asks you to allow installing apps from your browser: allow it, then tap
-        Install.
-      </p>
-    </section>
   );
 }
 

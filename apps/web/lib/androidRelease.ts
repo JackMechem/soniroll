@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
  */
 
 const API = "https://api.github.com/repos/JackMechem/soniroll/releases?per_page=30";
+/** The phone app's page (`app/mobile`). */
+export const MOBILE_PATH = "/mobile";
 
 export type AndroidRelease = { version: string; url: string; apk: { url: string; size: number } | null; published: string };
 

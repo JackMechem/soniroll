@@ -17,6 +17,7 @@ import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
+import { MOBILE_PATH } from "@/lib/androidRelease";
 import { DOWNLOAD_PATH } from "@/lib/desktopRelease";
 import { DesktopAppRow } from "@/components/download/DesktopAppRow";
 import { useInDesktopApp } from "@/lib/deviceFiles";
@@ -29,6 +30,7 @@ import {
   MegaphoneIcon,
   CloudIcon,
   DownloadIcon,
+  PhoneIcon,
   HeartIcon,
   HelpIcon,
   ShieldIcon,
@@ -843,15 +845,26 @@ export default function Sidebar() {
                       }}
                     />
                     {!inDesktop && (
-                      <FlyoutItem
-                        icon={DownloadIcon}
-                        label="Desktop app"
-                        onSelect={() => {
-                          setMobileOpen(false);
-                          router.push(DOWNLOAD_PATH);
-                          close();
-                        }}
-                      />
+                      <>
+                        <FlyoutItem
+                          icon={DownloadIcon}
+                          label="Desktop app"
+                          onSelect={() => {
+                            setMobileOpen(false);
+                            router.push(DOWNLOAD_PATH);
+                            close();
+                          }}
+                        />
+                        <FlyoutItem
+                          icon={PhoneIcon}
+                          label="Phone app"
+                          onSelect={() => {
+                            setMobileOpen(false);
+                            router.push(MOBILE_PATH);
+                            close();
+                          }}
+                        />
+                      </>
                     )}
                     <FlyoutItem
                       icon={settingsIcon}
@@ -994,14 +1007,24 @@ export default function Sidebar() {
                   }}
                 />
                 {!inDesktop && (
-                  <FlyoutItem
-                    icon={DownloadIcon}
-                    label="Desktop app"
-                    onSelect={() => {
-                      router.push(DOWNLOAD_PATH);
-                      close();
-                    }}
-                  />
+                  <>
+                    <FlyoutItem
+                      icon={DownloadIcon}
+                      label="Desktop app"
+                      onSelect={() => {
+                        router.push(DOWNLOAD_PATH);
+                        close();
+                      }}
+                    />
+                    <FlyoutItem
+                      icon={PhoneIcon}
+                      label="Phone app"
+                      onSelect={() => {
+                        router.push(MOBILE_PATH);
+                        close();
+                      }}
+                    />
+                  </>
                 )}
                 {fabHidden && (
                   <FlyoutItem
@@ -1131,14 +1154,24 @@ export default function Sidebar() {
                       }}
                     />
                     {!inDesktop && (
-                      <FlyoutItem
-                        icon={DownloadIcon}
-                        label="Desktop app"
-                        onSelect={() => {
-                          router.push(DOWNLOAD_PATH);
-                          close();
-                        }}
-                      />
+                      <>
+                        <FlyoutItem
+                          icon={DownloadIcon}
+                          label="Desktop app"
+                          onSelect={() => {
+                            router.push(DOWNLOAD_PATH);
+                            close();
+                          }}
+                        />
+                        <FlyoutItem
+                          icon={PhoneIcon}
+                          label="Phone app"
+                          onSelect={() => {
+                            router.push(MOBILE_PATH);
+                            close();
+                          }}
+                        />
+                      </>
                     )}
                     {fabHidden && (
                       <FlyoutItem
@@ -1203,6 +1236,7 @@ const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: str
   { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
   { match: (p) => p === "/plans", label: "Storage plans", href: "/plans", icon: CloudIcon },
   { match: (p) => p === DOWNLOAD_PATH, label: "Desktop app", href: DOWNLOAD_PATH, icon: DownloadIcon },
+  { match: (p) => p === MOBILE_PATH, label: "Phone app", href: MOBILE_PATH, icon: PhoneIcon },
   { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
   { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
   { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },
