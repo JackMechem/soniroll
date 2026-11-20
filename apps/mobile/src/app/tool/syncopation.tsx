@@ -234,7 +234,7 @@ function SyncopationScreen() {
           <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${settings.bpm} BPM`}>
             <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
           </SettingChip>
-          <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(' · ')}>
+          <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(', ')}>
             <OptionGroup title="In the mix">
               <PoolPills
                 label="Rhythms in the mix"

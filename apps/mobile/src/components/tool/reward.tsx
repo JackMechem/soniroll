@@ -96,7 +96,7 @@ export function Segmented<T extends string | number>({
     <View
       accessibilityRole="radiogroup"
       accessibilityLabel={label}
-      className="flex-row gap-1 rounded-full p-1.5"
+      className="flex-row gap-1 rounded-full p-1"
       style={{ backgroundColor: onPage ? colors.surface : colors.background, opacity: disabled ? 0.6 : 1 }}
     >
       {options.map((o) => (
@@ -115,7 +115,7 @@ function Segment({ label, on, disabled, onPress }: { label: string; on: boolean;
       disabled={disabled}
       accessibilityRole="radio"
       accessibilityState={{ checked: on, disabled }}
-      className="min-h-10 flex-1 items-center justify-center overflow-hidden rounded-full px-5 py-2.5"
+      className="min-h-10 flex-1 items-center justify-center overflow-hidden rounded-full px-5 py-2"
       style={on ? { backgroundColor: colors.accent } : undefined}
     >
       <Animated.View style={on ? pop : undefined}>

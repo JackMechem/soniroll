@@ -228,7 +228,7 @@ function TempoTrainerScreen() {
               </SettingChip>
             </>
           )}
-          <SettingChip Icon={EyeOffIcon} label="Mute cycle" value={`${onBars} on · ${offBars} off`}>
+          <SettingChip Icon={EyeOffIcon} label="Mute cycle" value={`${onBars} on, ${offBars} off`}>
             <CountField
               title="Bars audible"
               hint="How many bars the click plays before it cuts out."

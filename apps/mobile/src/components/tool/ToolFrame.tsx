@@ -51,7 +51,7 @@ export function ToolFrame({
       {title ? <Stack.Screen options={{ title }} /> : null}
       <SafeAreaView className="flex-1" edges={['bottom']}>
         {top ? (
-          <View className="items-center gap-3 px-4 pt-4">
+          <View className="items-center gap-2.5 px-4 pt-3">
             {mode ? <View className="w-full items-center">{mode}</View> : null}
             {side}
           </View>
@@ -61,7 +61,7 @@ export function ToolFrame({
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap }}
           >
             {children}
           </ScrollView>
@@ -70,7 +70,7 @@ export function ToolFrame({
         )}
         {below}
         {footer ? (
-          <View className="gap-3 px-4 pb-3 pt-2">
+          <View className="gap-2.5 px-4 pb-3 pt-1">
             {action}
             {chips}
           </View>

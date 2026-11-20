@@ -57,7 +57,7 @@ export function BigButton({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       android_ripple={{ color: secondary ? colors['surface-hover'] : colors['accent-hover'] }}
-      className="h-14 flex-row items-center justify-center gap-2 self-stretch overflow-hidden rounded-full px-6"
+      className="h-12 flex-row items-center justify-center gap-2 self-stretch overflow-hidden rounded-full px-6"
       style={{ backgroundColor: secondary ? derived.fill : colors.accent, opacity: disabled ? 0.5 : 1 }}
     >
       {icon}

@@ -1,5 +1,29 @@
-import { Children, Fragment, cloneElement, createContext, isValidElement, useContext, useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
-import { Animated as RNAnimated, Easing as RNEasing, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import {
+  Children,
+  Fragment,
+  cloneElement,
+  createContext,
+  isValidElement,
+  useContext,
+  useEffect,
+  useState,
+  type ComponentType,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
+import {
+  Animated as RNAnimated,
+  Easing as RNEasing,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,25 +62,28 @@ function flattenChildren(children: ReactNode, prefix = ''): ReactElement[] {
 const ChipGridContext = createContext(false);
 
 /**
- * A tool's setting chips as a tidy grid: two equal columns filling the space between the 16dp
- * gutters, each chip's content left-aligned; an odd last chip spans the whole row. At most `max`
- * chips show (put the most-used first); when there are more, the rest go in one "N more" chip
- * (`MoreOptionsChip`) — unless it would hold just one, which then simply shows. A tool that
- * builds its own `MoreOptionsChip` keeps it as it is.
+ * A tool's setting chips as one compact strip: a single row of cells on the surface colour, split
+ * by hairlines, each showing its value with its icon and name small under it; a cell's width
+ * follows its value. At most four show (put the most-used first): with more than four, the first
+ * three and one "N more" cell (`MoreOptionsChip`). A tool that builds its own `MoreOptionsChip`
+ * keeps it as it is. (It was a two-column grid of 56-dp chips, which with the big Start button
+ * pushed tool screens into scrolling; Jack: everything on a tool should always be visible.)
  */
 export function SettingsBar({ children, max = 4 }: { children: ReactNode; max?: number }) {
+  const { colors, derived } = useAppTheme();
   let items = flattenChildren(children);
   const hasMore = items.some((c) => c.type === MoreOptionsChip);
-  if (!hasMore && items.length > max + 1) {
-    items = [...items.slice(0, max), <MoreOptionsChip key="more">{items.slice(max)}</MoreOptionsChip>];
+  if (!hasMore && items.length > max) {
+    items = [...items.slice(0, max - 1), <MoreOptionsChip key="more">{items.slice(max - 1)}</MoreOptionsChip>];
   }
   return (
     <ChipGridContext.Provider value>
-      <View className="w-full flex-row flex-wrap gap-2">
+      <View className="w-full flex-row overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
         {items.map((child, i) => (
-          // flexBasis under half with flexGrow: two to a row at equal widths, a lone last one grows
-          // to the full row.
-          <View key={child.key ?? i} style={{ flexGrow: 1, flexBasis: '40%', minWidth: 0 }}>
+          <View
+            key={child.key ?? i}
+            style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 0, borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: derived.hairline }}
+          >
             {child}
           </View>
         ))}
@@ -65,19 +92,74 @@ export function SettingsBar({ children, max = 4 }: { children: ReactNode; max?: 
   );
 }
 
+/** A setting as a cell of the strip: the value (popping when it changes), then its icon and name
+    small under it; a toggle's switch as a small disc before them. */
+function StripCell({
+  Icon,
+  label,
+  value,
+  pop,
+  toggle,
+  onPress,
+}: {
+  Icon: ComponentType<IconProps>;
+  label: string;
+  value?: string;
+  pop?: ReturnType<typeof usePop>;
+  toggle?: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean };
+  onPress: () => void;
+}) {
+  const { colors } = useAppTheme();
+  // The strip shows a value's main part ("Woodblock" of "Woodblock · 35%"); the rest is in the
+  // sheet (and the accessibility label), so four cells fit across a phone without cutting words.
+  const shown = value?.split(' · ')[0];
+  return (
+    <View className="h-[52px] flex-row items-center" style={{ opacity: toggle && !toggle.checked ? 0.7 : 1 }}>
+      {toggle ? (
+        <Pressable
+          onPress={() => toggle.onChange(!toggle.checked)}
+          disabled={toggle.disabled}
+          accessibilityRole="switch"
+          accessibilityLabel={label}
+          accessibilityState={{ checked: toggle.checked, disabled: toggle.disabled }}
+          hitSlop={{ top: 10, bottom: 10, left: 8, right: 2 }}
+          className="h-[52px] items-center justify-center pl-2.5"
+        >
+          <View
+            className="h-6 w-6 items-center justify-center rounded-full"
+            style={toggle.checked ? { backgroundColor: colors.accent } : { borderWidth: 2, borderColor: withAlpha(colors.foreground, 0.35) }}
+          >
+            {toggle.checked ? <CheckIcon color={colors['accent-foreground']} size={14} /> : null}
+          </View>
+        </Pressable>
+      ) : null}
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={value ? `${label}: ${value}` : label}
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="h-[52px] flex-1 justify-center px-2.5"
+        style={toggle ? { paddingLeft: 8 } : undefined}
+      >
+        <Animated.View style={pop}>
+          <Text numberOfLines={1} className="font-ui-bold text-[15px] font-bold" style={{ color: colors.foreground }}>
+            {shown || label}
+          </Text>
+        </Animated.View>
+        <View className="flex-row items-center gap-1">
+          <Icon color={colors.muted} size={12} />
+          <Text numberOfLines={1} className="font-ui text-[11px]" style={{ color: colors.muted, flexShrink: 1 }}>
+            {label}
+          </Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 /** The bottom sheet a chip opens: the title and a close button, then its controls, which scroll on
     their own if they're long. Floats a little in from the screen's edges, over a dimmed page. */
-export function ToolSheet({
-  visible,
-  onClose,
-  title,
-  children,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  title: string;
-  children: ReactNode;
-}) {
+export function ToolSheet({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   // Android draws edge to edge, so nothing lifts the sheet for the keyboard there (iOS uses the
@@ -112,12 +194,7 @@ export function ToolSheet({
               <Text numberOfLines={1} className="font-ui-semibold flex-1 text-base font-semibold" style={{ color: colors.foreground }}>
                 {title}
               </Text>
-              <Pressable
-                onPress={onClose}
-                accessibilityLabel="Close"
-                accessibilityRole="button"
-                className="h-10 w-10 items-center justify-center rounded-full"
-              >
+              <Pressable onPress={onClose} accessibilityLabel="Close" accessibilityRole="button" className="h-10 w-10 items-center justify-center rounded-full">
                 <CloseIcon color={colors.muted} size={18} />
               </Pressable>
             </View>
@@ -233,6 +310,15 @@ export function SettingChip({
     return <ChipListRow Icon={Icon} label={label} value={value} toggle={toggle} onPress={() => chipMode.pick(label, onOpenChange)} />;
   }
 
+  if (inGrid) {
+    return (
+      <>
+        <StripCell Icon={Icon} label={label} value={hasValue ? value : undefined} pop={pop} toggle={toggle} onPress={() => setOpen(true)} />
+        {sheet}
+      </>
+    );
+  }
+
   const text = hasValue ? (
     <View style={{ flexShrink: 1 }}>
       <Animated.View style={pop}>
@@ -256,7 +342,10 @@ export function SettingChip({
   const chip = toggle ? (
     // A split chip: the round disc on the left is the switch (filled with a tick when on, an empty
     // ring when off); the rest of the chip opens the sheet.
-    <View className="h-14 flex-row items-center overflow-hidden rounded-full" style={{ ...fill, backgroundColor: colors.surface, opacity: toggle.checked ? 1 : 0.75 }}>
+    <View
+      className="h-14 flex-row items-center overflow-hidden rounded-full"
+      style={{ ...fill, backgroundColor: colors.surface, opacity: toggle.checked ? 1 : 0.75 }}
+    >
       <Pressable
         onPress={() => toggle.onChange(!toggle.checked)}
         disabled={toggle.disabled}
@@ -268,11 +357,7 @@ export function SettingChip({
       >
         <View
           className="h-9 w-9 items-center justify-center rounded-full"
-          style={
-            toggle.checked
-              ? { backgroundColor: colors.accent }
-              : { borderWidth: 2, borderColor: withAlpha(colors.foreground, 0.35) }
-          }
+          style={toggle.checked ? { backgroundColor: colors.accent } : { borderWidth: 2, borderColor: withAlpha(colors.foreground, 0.35) }}
         >
           {toggle.checked ? <CheckIcon color={colors['accent-foreground']} size={18} /> : null}
         </View>
@@ -364,7 +449,10 @@ function ChipListRow({
             accessibilityState={{ checked: toggle.checked, disabled: toggle.disabled }}
             className="h-14 items-center justify-center px-3"
           >
-            <View className="h-7 w-12 justify-center rounded-full" style={{ backgroundColor: toggle.checked ? colors.accent : withAlpha(colors.foreground, 0.12) }}>
+            <View
+              className="h-7 w-12 justify-center rounded-full"
+              style={{ backgroundColor: toggle.checked ? colors.accent : withAlpha(colors.foreground, 0.12) }}
+            >
               <View
                 className="h-5 w-5 rounded-full"
                 style={{
@@ -403,28 +491,33 @@ export function MoreOptionsChip({ children, label = 'More options' }: { children
       onOpenChange?.(true);
     }, 280);
   };
+  const opener = inGrid ? (
+    <StripCell Icon={MoreIcon} label={names.length ? names.join(', ') : label} value={count ? `${count} more` : 'More'} onPress={() => setListOpen(true)} />
+  ) : (
+    <Pressable
+      onPress={() => setListOpen(true)}
+      accessibilityRole="button"
+      accessibilityLabel={names.length ? `${label}: ${names.join(', ')}` : label}
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-14 flex-row items-center gap-2.5 overflow-hidden rounded-full pl-2.5 pr-4"
+      style={{ ...(inGrid ? { alignSelf: 'stretch' as const } : null), backgroundColor: colors.surface }}
+    >
+      <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
+        <MoreIcon color={colors.accent} size={18} />
+      </View>
+      <View style={{ flexShrink: 1 }}>
+        <Text numberOfLines={1} className="font-ui-extrabold text-base font-extrabold" style={{ color: colors.foreground }}>
+          {count ? `${count} more` : 'More'}
+        </Text>
+        <Text numberOfLines={1} className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted }}>
+          {names.length ? names.join(', ') : label}
+        </Text>
+      </View>
+    </Pressable>
+  );
   return (
     <>
-      <Pressable
-        onPress={() => setListOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel={names.length ? `${label}: ${names.join(', ')}` : label}
-        android_ripple={{ color: colors['surface-hover'] }}
-        className="h-14 flex-row items-center gap-2.5 overflow-hidden rounded-full pl-2.5 pr-4"
-        style={{ ...(inGrid ? { alignSelf: 'stretch' as const } : null), backgroundColor: colors.surface }}
-      >
-        <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
-          <MoreIcon color={colors.accent} size={18} />
-        </View>
-        <View style={{ flexShrink: 1 }}>
-          <Text numberOfLines={1} className="font-ui-extrabold text-base font-extrabold" style={{ color: colors.foreground }}>
-            {count ? `${count} more` : 'More'}
-          </Text>
-          <Text numberOfLines={1} className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted }}>
-            {names.length ? names.join(', ') : label}
-          </Text>
-        </View>
-      </Pressable>
+      {opener}
       <ToolSheet visible={listOpen} onClose={() => setListOpen(false)} title={label}>
         <View className="gap-2">
           <ChipModeContext.Provider value={{ mode: 'row', pick }}>{children}</ChipModeContext.Provider>
