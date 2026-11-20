@@ -38,9 +38,8 @@ function Bar({
   const lit = level === 2 ? colors.accent : withAlpha(colors.foreground, 0.4);
   const base = small ? 28 : 40;
   const width = fit ?? base;
-  // Narrow bars (sextuplets in 4/4) keep most of their height: there's room for it, and they still
-  // read as bars rather than dots.
-  const seg = fit === undefined ? (small ? 9 : 17) : small ? 8 : 13;
+  // Bars keep their height; only a really narrow one (many beats of many ticks) gets shorter.
+  const seg = width >= (small ? 18 : 24) ? (small ? 9 : 17) : small ? 8 : 13;
   const pad = width < 20 ? 2 : 3;
 
   const bar = (
@@ -114,46 +113,64 @@ export function BeatIndicator({
   const small = size === 'sm';
   const dotCount = Math.max(0, Math.round(subdivision) - 1);
   const [width, setWidth] = useState(0);
-  // Fit every beat and tick on one row: the bars share the width (less the gaps) and only shrink
-  // (down to 10 dp; past that, e.g. 12 beats of nonuplets, it wraps).
+  // As many beats to a row as fit with every bar at least `minW` wide, rows kept even (Sextuplets
+  // in 4/4 is two rows of two beats); the bars only narrow a little to fit. Squeezing all the beats
+  // onto one row made them thin slivers (Jack: "that does not look good with the beats squished").
   const groupGap = small ? 8 : 12;
   const beats = accents.length;
-  const bars = beats * (1 + dotCount);
-  const room = width - groupGap * Math.max(0, beats - 1) - 2 * dotCount * beats;
-  const fitted = width && bars ? Math.max(10, Math.floor(room / bars)) : undefined;
-  const fit = fitted !== undefined && fitted < (small ? 28 : 40) ? fitted : undefined;
+  const base = small ? 28 : 40;
+  const minW = small ? 18 : 24;
+  const widthFor = (k: number) => Math.floor((width - groupGap * (k - 1) - 2 * dotCount * k) / (k * (1 + dotCount)));
+  let perRow = Math.max(1, beats);
+  if (width) {
+    perRow = 1;
+    for (let k = beats; k >= 1; k--)
+      if (widthFor(k) >= minW) {
+        perRow = k;
+        break;
+      }
+    perRow = Math.ceil(beats / Math.ceil(beats / perRow));
+  }
+  const barW = width ? Math.min(base, widthFor(perRow)) : base;
+  const fit = barW < base ? Math.max(10, barW) : undefined;
+  const rows = Array.from({ length: Math.ceil(beats / perRow) }, (_, r) => accents.map((_, i) => i).slice(r * perRow, r * perRow + perRow));
 
   return (
     <View className="items-center gap-3 self-stretch" onLayout={(e) => setWidth(Math.floor(e.nativeEvent.layout.width))}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'center', gap: groupGap }}>
-        {accents.map((level, i) => (
-          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-            <Bar
-              level={level}
-              active={currentBeat === i && currentSub === 0}
-              label={`Beat ${i + 1}: ${LEVEL_LABEL[level]}`}
-              number={i + 1}
-              small={small}
-              fit={fit}
-              onPress={onCycle ? () => onCycle(i) : undefined}
-            />
-            {Array.from({ length: dotCount }, (_, d) => {
-              const dotLevel = subAccents[i * dotCount + d] ?? 1;
-              return (
+      {rows.map((row, r) => (
+        <View key={r} style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: groupGap }}>
+          {row.map((i) => {
+            const level = accents[i];
+            return (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
                 <Bar
-                  key={d}
-                  level={dotLevel}
-                  active={currentBeat === i && currentSub === d + 1}
-                  label={`Subdivision after beat ${i + 1}${dotCount > 1 ? ` (${d + 1}/${dotCount})` : ''}: ${LEVEL_LABEL[dotLevel]}`}
+                  level={level}
+                  active={currentBeat === i && currentSub === 0}
+                  label={`Beat ${i + 1}: ${LEVEL_LABEL[level]}`}
+                  number={i + 1}
                   small={small}
                   fit={fit}
-                  onPress={onCycleSub ? () => onCycleSub(i, d) : undefined}
+                  onPress={onCycle ? () => onCycle(i) : undefined}
                 />
-              );
-            })}
-          </View>
-        ))}
-      </View>
+                {Array.from({ length: dotCount }, (_, d) => {
+                  const dotLevel = subAccents[i * dotCount + d] ?? 1;
+                  return (
+                    <Bar
+                      key={d}
+                      level={dotLevel}
+                      active={currentBeat === i && currentSub === d + 1}
+                      label={`Subdivision after beat ${i + 1}${dotCount > 1 ? ` (${d + 1}/${dotCount})` : ''}: ${LEVEL_LABEL[dotLevel]}`}
+                      small={small}
+                      fit={fit}
+                      onPress={onCycleSub ? () => onCycleSub(i, d) : undefined}
+                    />
+                  );
+                })}
+              </View>
+            );
+          })}
+        </View>
+      ))}
       {cycleHint && onCycle ? (
         <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
           Tap a beat to change its accent
