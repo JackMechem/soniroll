@@ -8,6 +8,7 @@ import {
   type Block,
   type CalendarTarget,
   type DragItem,
+  layoutLanes,
 } from '@jam-practice/core/practiceLogDay';
 import {
   WEEKDAY_SHORT,
@@ -42,6 +43,8 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 const HOUR = 64;
 /** dp per minute. */
 const PX = HOUR / 60;
+/** The shortest a block is drawn (dp): one line of text. */
+const MIN_BLOCK = 24;
 const DAY_MIN = 24 * 60;
 /** The hour labels down the side. */
 const LABEL_W = 44;
@@ -68,6 +71,9 @@ export function DayView({ date, log, today, onDragChange }: { date: string; log:
   const gridH = Math.max(320, Math.round(windowH * 0.55));
   const { data } = log;
   const day = useMemo(() => dayInfo(data, date, today), [data, date, today]);
+  // Lanes by the height a block is drawn (at least 24 dp), so short blocks a few minutes apart sit
+  // side by side instead of covering each other.
+  const blocks = useMemo(() => layoutLanes(day.blocks, (MIN_BLOCK + 2) / PX), [day.blocks]);
   const now = new Date(useNowCoarse());
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const [colW, setColW] = useState(0);
@@ -324,7 +330,7 @@ export function DayView({ date, log, today, onDragChange }: { date: string; log:
               <View key={`m${h}`} pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: h * HOUR + HOUR / 2, height: 1, backgroundColor: withAlpha(colors.foreground, 0.035) }} />,
             ])}
             {colW > 0
-              ? day.blocks.map((b) => (
+              ? blocks.map((b) => (
                   <Draggable
                     key={b.id}
                     enabled={!!b.drag}
@@ -380,7 +386,7 @@ function Draggable({
 function GridBlock({ block: b, colW, dragging, onPress }: { block: Block; colW: number; dragging: boolean; onPress: () => void }) {
   const { colors } = useAppTheme();
   const top = b.start * PX;
-  const height = Math.max(24, (b.end - b.start) * PX - 2);
+  const height = Math.max(MIN_BLOCK, (b.end - b.start) * PX - 2);
   const complete = b.total > 0 && b.done === b.total;
   const tall = height > 34;
   const progress = b.total > 1 && !complete ? ` · ${b.done}/${b.total}` : '';

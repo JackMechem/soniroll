@@ -87,7 +87,8 @@ export function isSameDragItem(a: DragItem | null | undefined, b: DragItem): boo
   return a.kind === "routine" ? b.kind === "routine" && a.routineId === b.routineId : b.kind === "task" && a.taskId === b.taskId;
 }
 
-/** A routine's timed tasks as blocks — tasks back to back are one block. */
+/** A routine's timed tasks as blocks — tasks back to back (or overlapping, when their own clock
+    times overlap) are one block. */
 export function blocksFor(item: DayRoutine, key: string): BlockBase[] {
   const { routine, occurrence } = item;
   const { done, total } = progressOf(routine, occurrence);
@@ -96,8 +97,8 @@ export function blocksFor(item: DayRoutine, key: string): BlockBase[] {
   let cur: BlockBase | null = null;
   for (const s of scheduleTasks(routine, occurrence)) {
     if (s.start === null || s.end === null) continue;
-    if (cur && Math.abs(cur.end - s.start) < 0.5) {
-      cur.end = s.end;
+    if (cur && s.start <= cur.end + 0.5) {
+      cur.end = Math.max(cur.end, s.end);
       cur.tasks.push(s.task.title || "Task");
     } else {
       cur = {
@@ -121,8 +122,10 @@ export function blocksFor(item: DayRoutine, key: string): BlockBase[] {
   return out;
 }
 
-/** Side-by-side lanes for blocks that overlap. */
-export function layoutLanes(blocks: BlockBase[]): Block[] {
+/** Side-by-side lanes for blocks that overlap. `minLength` (minutes) is the shortest a block is
+    drawn: short blocks drawn taller than their time count as that long, so they don't cover the
+    next one. */
+export function layoutLanes(blocks: BlockBase[], minLength = 0): Block[] {
   const sorted = [...blocks].sort((a, b) => a.start - b.start || b.end - a.end);
   const out: Block[] = [];
   let cluster: Block[] = [];
@@ -136,14 +139,15 @@ export function layoutLanes(blocks: BlockBase[]): Block[] {
   for (const b of sorted) {
     if (b.start >= clusterEnd) flush();
     let lane = laneEnds.findIndex((end) => end <= b.start);
+    const end = Math.max(b.end, b.start + minLength);
     if (lane < 0) {
       lane = laneEnds.length;
-      laneEnds.push(b.end);
-    } else laneEnds[lane] = b.end;
+      laneEnds.push(end);
+    } else laneEnds[lane] = end;
     const block: Block = { ...b, lane, lanes: 1 };
     cluster.push(block);
     out.push(block);
-    clusterEnd = Math.max(clusterEnd, b.end);
+    clusterEnd = Math.max(clusterEnd, end);
   }
   flush();
   return out;
