@@ -49,10 +49,10 @@ import { Segmented } from '@/components/tool/reward';
 import { MoreOptionsChip, SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { ToolFrame } from '@/components/tool/ToolFrame';
 import { EmptyState } from '@/components/ui';
-import { compReady, loadComp, setCompRoom, setCompVolume, type CompInstrument } from '@/lib/compSounds';
-import { ALL_VOICES, drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from '@/lib/drumSounds';
+import { compReady, loadComp, setCompVolume, type CompInstrument } from '@/lib/compSounds';
+import { ALL_VOICES, drumsReady, loadDrums, setDrumsVolume } from '@/lib/drumSounds';
 import { previewChorus, previewDrums, startRhythmSection, type BassSwing, type RhythmSectionRun } from '@/lib/rhythmSectionEngine';
-import { loadUprightBass, setUprightBassRoom, setUprightBassVolume, uprightBassReady } from '@/lib/uprightBass';
+import { loadUprightBass, setUprightBassVolume, uprightBassReady } from '@/lib/uprightBass';
 import { useBassPlayers, usePlayerTranscriptions } from '@/lib/useBassPlayers';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useToolActivity } from '@/lib/toolTime';
@@ -245,7 +245,7 @@ function RhythmSectionScreen() {
   const { colors } = useAppTheme();
   const [settings, update, bandReady] = useSyncedSettings(BAND_KEY, BAND_DEFAULTS);
   const [grooveSettings, updateGroove, grooveReady] = useSyncedSettings(GROOVE_KEY, GROOVE_DEFAULTS);
-  const { source: storedSource, chartId, typedText, typedKey, typedMeter, player, playerMode, feel, touch, choruses, click, swing, volume, room, transposeKey, chordStyle, chordVolume, clickVolume, roomAmount, drumsVolume } =
+  const { source: storedSource, chartId, typedText, typedKey, typedMeter, player, playerMode, feel, touch, choruses, click, swing, volume, transposeKey, chordStyle, chordVolume, clickVolume, drumsVolume } =
     settings;
   const countIn = settings.countIn && grooveSettings.countIn;
   const drumConfig = useMemo(() => drumConfigOf(settings.drumConfig), [settings.drumConfig]);
@@ -356,15 +356,12 @@ function RhythmSectionScreen() {
   }, [grooveSettings.parts]);
 
   useEffect(() => setUprightBassVolume(volume), [volume]);
-  useEffect(() => setUprightBassRoom(room ? roomAmount : 0), [room, roomAmount]);
   useEffect(() => runRef.current?.setBpm(bpm), [bpm]);
   useEffect(() => runRef.current?.setClick(click), [click]);
   useEffect(() => runRef.current?.setSwing(swing), [swing]);
   useEffect(() => setCompVolume(chordVolume), [chordVolume]);
-  useEffect(() => setCompRoom(room ? roomAmount : 0), [room, roomAmount]);
   useEffect(() => runRef.current?.setClickVolume(clickVolume), [clickVolume]);
   useEffect(() => setDrumsVolume(drumsVolume), [drumsVolume]);
-  useEffect(() => setDrumsRoom(room ? roomAmount : 0), [room, roomAmount]);
   useEffect(() => runRef.current?.setDrumsComping(drumsComping), [drumsComping]);
   useEffect(() => runRef.current?.setDrumConfig(drumConfig), [drumConfig]);
   useEffect(() => runRef.current?.setHumanize(grooveSettings.humanize), [grooveSettings.humanize]);
@@ -475,11 +472,8 @@ function RhythmSectionScreen() {
     }
     if (!startingRef.current) return; // stopped while loading
     setUprightBassVolume(volume);
-    setUprightBassRoom(room ? roomAmount : 0);
     setDrumsVolume(drumsVolume);
-    setDrumsRoom(room ? roomAmount : 0);
     setCompVolume(chordVolume);
-    setCompRoom(room ? roomAmount : 0);
     setWrittenChoruses([]);
     setWrittenDrums([]);
     setDrumWindow(0);
@@ -999,7 +993,6 @@ function RhythmSectionScreen() {
                     onTurnOn={drumsOn ? undefined : () => update({ click: true })}
                   />
                 ) : null}
-                <LevelRow label="Room" value={room ? roomAmount : 0} onChange={(v) => update({ roomAmount: v, room: v > 0 })} />
               </SettingChip>
             </MoreOptionsChip>
           </SettingsBar>

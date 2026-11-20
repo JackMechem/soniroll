@@ -27,7 +27,7 @@ import { ChoiceCards, PoolPills } from '@/components/tool/rhythm';
 import { MoreOptionsChip, SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { ToolFrame } from '@/components/tool/ToolFrame';
 import { Slider } from '@/components/tool/Slider';
-import { drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from '@/lib/drumSounds';
+import { drumsReady, loadDrums, setDrumsVolume } from '@/lib/drumSounds';
 import { startSyncopation, VOICES, type SyncopationPlayback, type SyncopationRun } from '@/lib/syncopationEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -126,7 +126,6 @@ function SyncopationScreen() {
   const tap = useTapTempo(setBpm);
 
   useEffect(() => setDrumsVolume(settings.volume), [settings.volume]);
-  useEffect(() => setDrumsRoom(settings.room), [settings.room]);
   useEffect(() => runRef.current?.setBpm(settings.bpm), [settings.bpm]);
   useEffect(() => runRef.current?.setPlayback(playback), [playback]);
   useEffect(() => () => runRef.current?.stop(), []);
@@ -151,7 +150,6 @@ function SyncopationScreen() {
       return;
     }
     setDrumsVolume(settings.volume);
-    setDrumsRoom(settings.room);
     let list: SyncopationBar[][] = [preview];
     setPlayed(list);
     setShown(0);
@@ -176,7 +174,7 @@ function SyncopationScreen() {
     });
     setStarting(false);
     setRunning(true);
-  }, [starting, settings.volume, settings.room, settings.bpm, settings.countIn, playback, preview]);
+  }, [starting, settings.volume, settings.bpm, settings.countIn, playback, preview]);
 
   // Follow the music: which exercise is showing, and the bar being heard.
   useEffect(() => {
@@ -289,9 +287,6 @@ function SyncopationScreen() {
             <SettingChip Icon={SpeakerIcon} label="Mix" value={`${Math.round(settings.volume * 100)}%`}>
               <OptionGroup title="Drums" aside={<Percent value={settings.volume} />}>
                 <Slider label="Drums" value={settings.volume} onChange={(v) => update({ volume: Math.round(v * 20) / 20 })} />
-              </OptionGroup>
-              <OptionGroup title="Room" aside={<Percent value={settings.room} />}>
-                <Slider label="Room" value={settings.room} onChange={(v) => update({ room: Math.round(v * 20) / 20 })} />
               </OptionGroup>
             </SettingChip>
           </MoreOptionsChip>

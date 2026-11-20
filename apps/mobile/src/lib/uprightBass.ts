@@ -1,7 +1,6 @@
 import type { AudioBuffer, GainNode } from 'react-native-audio-api';
 
 import { getAudioContext } from '@/lib/audioContext';
-import { roomImpulse } from '@/lib/roomImpulse';
 import { UPRIGHT_BASS_SAMPLES } from '@/lib/uprightBassSamples';
 
 /**
@@ -90,7 +89,7 @@ export function loadUprightBass(onProgress?: (fraction: number) => void): Promis
   return loading.finally(() => onProgress && progressListeners.delete(onProgress));
 }
 
-type Chain = { input: GainNode; master: GainNode; wet: GainNode };
+type Chain = { input: GainNode; master: GainNode };
 let chain: Chain | null = null;
 
 function getChain(): Chain {
@@ -98,17 +97,10 @@ function getChain(): Chain {
   if (chain) return chain;
   const input = ctx.createGain();
   const master = ctx.createGain();
-  const wet = ctx.createGain();
-  const reverb = ctx.createConvolver();
-  reverb.buffer = roomImpulse(ctx);
   input.connect(master);
-  input.connect(reverb);
-  reverb.connect(wet);
-  wet.connect(master);
   master.connect(ctx.destination);
-  wet.gain.value = 0.16;
   master.gain.value = 0.9;
-  chain = { input, master, wet };
+  chain = { input, master };
   return chain;
 }
 
@@ -116,11 +108,6 @@ export function setUprightBassVolume(volume: number) {
   getChain().master.gain.setTargetAtTime(volume * 1.1, getAudioContext().currentTime, 0.05);
 }
 
-/** Room sound around the bass: true/false, or an amount 0–1 (0.5 = the usual touch). */
-export function setUprightBassRoom(amount: boolean | number) {
-  const a = typeof amount === 'boolean' ? (amount ? 0.5 : 0) : amount;
-  getChain().wet.gain.setTargetAtTime(a * 0.32, getAudioContext().currentTime, 0.05);
-}
 
 const lastTake = new Map<string, number>();
 

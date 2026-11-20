@@ -10,13 +10,9 @@ import {
 } from '@jam-practice/core/syncopation';
 
 import { getAudioContext } from '@/lib/audioContext';
+import { setSteadyInterval } from '@/lib/steadyTimer';
 import { playDrum } from '@/lib/drumSounds';
 
-/** The website's `setSteadyInterval` is for background browser tabs; a plain interval here. */
-function setSteadyInterval(fn: () => void, ms: number) {
-  const id = setInterval(fn, ms);
-  return () => clearInterval(id);
-}
 
 // A port of the website's `apps/web/lib/syncopationEngine.ts`. Plays Syncopation: the pattern (snare, or snare and bass drum) and the part underneath on the real kit, scheduled a bar at a
 // time on the audio clock. What a bar plays (snare on/off, ostinato, click) is read when the bar

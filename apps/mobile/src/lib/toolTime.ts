@@ -131,8 +131,23 @@ export function useToolTimeTracker() {
 // ---------------------------------------------------------------- live time
 
 const listeners = new Set<() => void>();
+const activeListeners = new Set<() => void>();
 function emit() {
   for (const l of listeners) l();
+  for (const l of activeListeners) l();
+}
+
+/** Tells `listener` when the set of running tools may have changed (`lib/nowPlaying.ts`). */
+export function subscribeActiveTools(listener: () => void) {
+  activeListeners.add(listener);
+  return () => {
+    activeListeners.delete(listener);
+  };
+}
+
+/** The tools running right now whose screens are open (`useToolActivity`). */
+export function activeToolHrefs(): string[] {
+  return [...active];
 }
 
 let ticker: ReturnType<typeof setInterval> | null = null;

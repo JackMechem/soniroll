@@ -7,7 +7,7 @@ import { Pressable, Text, View } from 'react-native';
 import { ActionSheet } from '@/components/ActionSheet';
 import { ChordChartSongMenu, type MenuTarget } from '@/components/ChordChartSongMenu';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { TAB_BAR_CONTENT_HEIGHT, useTabBarVisible } from '@/components/FloatingTabBar';
+import { useTabBarHeight } from '@/components/FloatingTabBar';
 import { ChevronRightIcon, DotsVerticalIcon, FolderIcon, TrashIcon } from '@/components/icons';
 import { forgetRecentChart } from '@/lib/chordChartRecents';
 import { useChordChartsLibrary, type LibrarySongMeta } from '@/lib/useChordChartsLibrary';
@@ -254,7 +254,7 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
   const { colors } = useAppTheme();
   const stripRef = useRef<View>(null);
   const geom = useRef({ top: 0, height: 1 });
-  const tabBarVisible = useTabBarVisible();
+  const tabBarHeight = useTabBarHeight();
   const lastRef = useRef<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
 
@@ -283,7 +283,7 @@ export function LetterScrubber({ available, onLetter }: { available: Map<string,
   return (
     <>
       <View
-        style={{ width: 28, paddingTop: 4, paddingBottom: 8 + (tabBarVisible ? TAB_BAR_CONTENT_HEIGHT : 0) }}
+        style={{ width: 28, paddingTop: 4, paddingBottom: 8 + tabBarHeight }}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderTerminationRequest={() => false}

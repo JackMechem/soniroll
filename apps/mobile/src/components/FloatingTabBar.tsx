@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HomeIcon, LibraryIcon, NAV_LINK_ICONS, ToolsIcon, UsersIcon, type IconProps } from '@/components/icons';
 import { LIBRARY_TABS } from '@/components/TabHeader';
+import { NOW_PLAYING_HEIGHT, NowPlayingStrip } from '@/components/NowPlaying';
+import { useNowPlaying } from '@/lib/nowPlaying';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -38,12 +40,19 @@ export function useTabBarVisible() {
   return ROOTS.has(usePathname());
 }
 
+/** How tall the bar is above the device's bottom inset right now: 0 when it's hidden, more while
+    a tool plays (the "now playing" strip on top of it). */
+export function useTabBarHeight() {
+  const visible = useTabBarVisible();
+  const playing = useNowPlaying().length > 0;
+  return visible ? TAB_BAR_CONTENT_HEIGHT + (playing ? NOW_PLAYING_HEIGHT : 0) : 0;
+}
+
 /** Bottom padding for a scrolling page: the tab bar when it's showing, the device's bottom inset, and
     `extra` breathing room so the last item doesn't sit against the edge. */
 export function useTabBarSpace(extra = 32) {
   const insets = useSafeAreaInsets();
-  const visible = useTabBarVisible();
-  return (visible ? TAB_BAR_CONTENT_HEIGHT : 0) + insets.bottom + extra;
+  return useTabBarHeight() + insets.bottom + extra;
 }
 
 export function FloatingTabBar() {
@@ -51,6 +60,7 @@ export function FloatingTabBar() {
   const pathname = usePathname();
   const { colors, derived } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const playing = useNowPlaying();
 
   if (!ROOTS.has(pathname)) return null;
 
@@ -61,39 +71,41 @@ export function FloatingTabBar() {
         left: 0,
         right: 0,
         bottom: 0,
-        flexDirection: 'row',
-        height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
         paddingBottom: insets.bottom,
         backgroundColor: colors.surface,
         borderTopWidth: 1,
         borderTopColor: derived.hairline,
       }}
     >
-      {TABS.map(({ href, label, Icon, matches }) => {
-        const active = matches.includes(pathname);
-        return (
-          <Pressable
-            key={href}
-            onPress={() => {
-              if (!active) router.navigate(href);
-            }}
-            accessibilityRole="tab"
-            accessibilityLabel={label}
-            accessibilityState={{ selected: active }}
-            android_ripple={{ color: colors['surface-hover'], borderless: true }}
-            className="flex-1 items-center justify-center gap-1"
-          >
-            <Icon color={active ? colors.accent : colors.muted} size={24} />
-            <Text
-              numberOfLines={1}
-              className={`text-[11px] ${active ? 'font-ui-semibold font-semibold' : 'font-ui'}`}
-              style={{ color: active ? colors.foreground : colors.muted }}
+      {/* A tool that's playing, docked on top of the tabs (`components/NowPlaying.tsx`). */}
+      <NowPlayingStrip playing={playing} />
+      <View style={{ flexDirection: 'row', height: TAB_BAR_CONTENT_HEIGHT }}>
+        {TABS.map(({ href, label, Icon, matches }) => {
+          const active = matches.includes(pathname);
+          return (
+            <Pressable
+              key={href}
+              onPress={() => {
+                if (!active) router.navigate(href);
+              }}
+              accessibilityRole="tab"
+              accessibilityLabel={label}
+              accessibilityState={{ selected: active }}
+              android_ripple={{ color: colors['surface-hover'], borderless: true }}
+              className="flex-1 items-center justify-center gap-1"
             >
-              {label}
-            </Text>
-          </Pressable>
-        );
-      })}
+              <Icon color={active ? colors.accent : colors.muted} size={24} />
+              <Text
+                numberOfLines={1}
+                className={`text-[11px] ${active ? 'font-ui-semibold font-semibold' : 'font-ui'}`}
+                style={{ color: active ? colors.foreground : colors.muted }}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

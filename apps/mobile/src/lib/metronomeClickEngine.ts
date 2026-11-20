@@ -7,10 +7,11 @@ import {
 } from '@jam-practice/core/clickSounds';
 
 import { getAudioContext } from '@/lib/audioContext';
+import { setSteadyInterval } from '@/lib/steadyTimer';
 
 /**
  * The native sibling of `apps/web/lib/clickEngine.ts` — same lookahead-scheduling algorithm (one
- * shared `setInterval` tick, a short lookahead window, per-track `{nextTime, beat, sub}` state,
+ * shared `setSteadyInterval` tick (it keeps ticking in the background, `steadyTimer.ts`), a short lookahead window, per-track `{nextTime, beat, sub}` state,
  * the exact same `ClickSettings`/`ClickTrack`/gain formulas from `@jam-practice/core/clickSounds`),
  * and now, as of `react-native-audio-api` replacing `expo-audio`, the *exact same scheduling
  * mechanism too* — real oscillators scheduled against `AudioContext.currentTime` via `osc.start
@@ -93,7 +94,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngineHandle {
   const state = tracks.map(() => ({ nextTime: startAt, beat: 0, sub: 0 }));
   const timeouts = new Set<ReturnType<typeof setTimeout>>();
 
-  const intervalId = setInterval(() => {
+  const stopTicks = setSteadyInterval(() => {
     for (let i = 0; i < tracks.length; i++) {
       const { getSettings, onBeat, onSchedule } = tracks[i];
       const st = state[i];
@@ -141,7 +142,7 @@ export function startClickEngine(tracks: ClickTrack[]): ClickEngineHandle {
 
   return {
     stop: () => {
-      clearInterval(intervalId);
+      stopTicks();
       for (const t of timeouts) clearTimeout(t);
       timeouts.clear();
     },

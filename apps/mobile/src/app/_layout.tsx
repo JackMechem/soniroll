@@ -21,6 +21,7 @@ import { View } from 'react-native';
 
 import { LaunchSplash } from '@/components/LaunchSplash';
 import { FloatingTabBar } from '@/components/FloatingTabBar';
+import { NowPlayingHeaderButton, NowPlayingService } from '@/components/NowPlaying';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HeaderTitle } from '@/components/HeaderTitle';
 import { ToolHelpButton, toolIntroHref } from '@/components/tool/ToolIntro';
@@ -58,10 +59,18 @@ function SignOutIfAccountGone() {
   return null;
 }
 
-/** The header's right side on a tool screen: its ? button (see `components/tool/ToolIntro.tsx`). */
-function toolHeaderRight(routeName: string) {
+/** A header's right side: a tool that's playing (`NowPlaying.tsx`; on every screen with a
+    header — the main screens show it on the tab bar), then on a tool's screen its ? button (see
+    `components/tool/ToolIntro.tsx`). */
+function headerRight(routeName: string) {
   const href = toolIntroHref(routeName);
-  return href ? () => <ToolHelpButton href={href} /> : undefined;
+  const Right = () => (
+    <View className="flex-row items-center gap-1">
+      <NowPlayingHeaderButton routeName={routeName} />
+      {href ? <ToolHelpButton href={href} /> : null}
+    </View>
+  );
+  return Right;
 }
 
 function RootNavigator() {
@@ -75,8 +84,8 @@ function RootNavigator() {
       <SignOutIfAccountGone />
       <Stack
         screenOptions={({ route }) => ({
-          // A tool's "?" (what it is and its options), on the tools' own screens.
-          headerRight: toolHeaderRight(route.name),
+          // A tool that's playing, and a tool's "?" (what it is and its options) on its own screen.
+          headerRight: headerRight(route.name),
           headerTintColor: colors.accent,
           headerStyle: { backgroundColor: colors.background },
           headerShadowVisible: false,
@@ -174,6 +183,8 @@ function RootNavigator() {
           running — mounted app-wide (not inside the tool screen itself) so the widget stays
           visible on every page and the full-screen alert can interrupt you anywhere. */}
       <PracticeTimerWidget />
+      {/* The media notification that keeps a playing tool going in the background. */}
+      <NowPlayingService />
       <PracticeTimerAlert />
       {/* The Shed Log's app-wide part: takes in timed practice, counts time in tools, celebrates. */}
       <ShedLogGlobal />

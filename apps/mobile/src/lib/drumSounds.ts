@@ -3,13 +3,13 @@ import type { AudioBuffer, GainNode } from 'react-native-audio-api';
 
 import { getAudioContext } from '@/lib/audioContext';
 import { DRUM_SAMPLES } from '@/lib/drumSamples';
-import { roomImpulse } from '@/lib/roomImpulse';
 
 /**
  * The real drum kit, for Syncopation (and the Rhythm Section to come) — a port of the website's
  * `apps/web/lib/drumSounds.ts`: the same samples (bundled, `drumSamples.ts`), velocity layers,
- * round robins, level trims, onset trimming, room reverb and hi-hat choke. The phone's audio engine
- * has no compressor, so the drums go straight to the room and the master level.
+ * round robins, level trims, onset trimming and hi-hat choke. The phone plays them dry, straight to
+ * the master level: no compressor, and no room reverb (the audio library's convolver smeared
+ * everything into a faint, cave-like wash on a real phone — it expects 128-frame audio blocks).
  */
 
 type Layer = { velocity: number; files: string[] };
@@ -121,33 +121,22 @@ export function loadDrums(_kit: DrumKit, onProgress?: (fraction: number) => void
   return job;
 }
 
-type Chain = { input: GainNode; master: GainNode; wet: GainNode };
+type Chain = { input: GainNode; master: GainNode };
 let chain: Chain | null = null;
 function getChain(): Chain {
   if (chain) return chain;
   const ctx = getAudioContext();
   const input = ctx.createGain();
   const master = ctx.createGain();
-  const wet = ctx.createGain();
-  const reverb = ctx.createConvolver();
-  reverb.buffer = roomImpulse(ctx);
   input.connect(master);
-  input.connect(reverb);
-  reverb.connect(wet);
-  wet.connect(master);
   master.connect(ctx.destination);
-  wet.gain.value = 0.2;
   master.gain.value = 0.7;
-  chain = { input, master, wet };
+  chain = { input, master };
   return chain;
 }
 
 export function setDrumsVolume(volume: number) {
   getChain().master.gain.setTargetAtTime(volume * 1.1, getAudioContext().currentTime, 0.05);
-}
-/** Room sound around the drums, 0–1 (0.5 = the usual touch). */
-export function setDrumsRoom(amount: number) {
-  getChain().wet.gain.setTargetAtTime(amount * 0.4, getAudioContext().currentTime, 0.05);
 }
 
 let openHat: { gain: GainNode; start: number } | null = null;

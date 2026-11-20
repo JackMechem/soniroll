@@ -176,6 +176,10 @@ export function ToolSection({
   );
 }
 
+/** Exactly half a row each (less the gap), whatever the names: `flex-1` alone let a lone last
+    tile beside an empty spacer come out wider than the ones above it. */
+const HALF = { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 } as const;
+
 /** A tool as a compact tile in the Favorites grid (two to a row): its icon, its name and the star
     on one line, about half the height of the old cards. */
 export function ToolTile({
@@ -196,8 +200,8 @@ export function ToolTile({
       accessibilityRole="button"
       accessibilityLabel={item.label}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="min-h-[56px] flex-1 flex-row items-center gap-2.5 overflow-hidden rounded-xl py-2 pl-3"
-      style={{ backgroundColor: colors.surface }}
+      className="min-h-[56px] flex-row items-center gap-2.5 overflow-hidden rounded-xl py-2 pl-3"
+      style={[HALF, { backgroundColor: colors.surface }]}
     >
       <ToolIcon tool={item} size={32} />
       <View className="flex-1">
@@ -229,7 +233,7 @@ export function ToolTiles({
           {row.map((item) => (
             <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} onPress={() => onOpen(item)} onToggleFavorite={() => onToggleFavorite(item.href)} />
           ))}
-          {row.length === 1 ? <View className="flex-1" /> : null}
+          {row.length === 1 ? <View style={HALF} /> : null}
         </View>
       ))}
     </View>

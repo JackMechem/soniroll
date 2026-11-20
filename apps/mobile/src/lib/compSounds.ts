@@ -1,7 +1,6 @@
 import type { AudioBuffer, GainNode } from 'react-native-audio-api';
 
 import { getAudioContext } from '@/lib/audioContext';
-import { roomImpulse } from '@/lib/roomImpulse';
 
 /**
  * The Rhythm Section's comping piano — a port of the website's `apps/web/lib/compSounds.ts`: the
@@ -58,33 +57,22 @@ export function loadComp(instrument: CompInstrument, onProgress?: (fraction: num
   return job;
 }
 
-type Chain = { input: GainNode; master: GainNode; wet: GainNode };
+type Chain = { input: GainNode; master: GainNode };
 let chain: Chain | null = null;
 function getChain(): Chain {
   if (chain) return chain;
   const ctx = getAudioContext();
   const input = ctx.createGain();
   const master = ctx.createGain();
-  const wet = ctx.createGain();
-  const reverb = ctx.createConvolver();
-  reverb.buffer = roomImpulse(ctx);
   input.connect(master);
-  input.connect(reverb);
-  reverb.connect(wet);
-  wet.connect(master);
   master.connect(ctx.destination);
-  wet.gain.value = 0.22;
   master.gain.value = 0.6;
-  chain = { input, master, wet };
+  chain = { input, master };
   return chain;
 }
 
 export function setCompVolume(volume: number) {
   getChain().master.gain.setTargetAtTime(volume, getAudioContext().currentTime, 0.05);
-}
-/** Room sound around the chords, 0–1 (0.5 = the usual touch). */
-export function setCompRoom(amount: number) {
-  getChain().wet.gain.setTargetAtTime(amount * 0.44, getAudioContext().currentTime, 0.05);
 }
 
 /** Plays one note of a chord at `time` for `seconds` (then a damper-like release). */

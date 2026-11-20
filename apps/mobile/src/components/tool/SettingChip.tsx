@@ -1,7 +1,7 @@
-import { Children, Fragment, cloneElement, createContext, isValidElement, useContext, useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Children, Fragment, cloneElement, createContext, isValidElement, useContext, useEffect, useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
+import { Animated as RNAnimated, Easing as RNEasing, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { Easing, SlideInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon, ChevronRightIcon, CloseIcon, SlidersIcon, type IconProps } from '@/components/icons';
@@ -82,30 +82,29 @@ export function ToolSheet({
   const insets = useSafeAreaInsets();
   // Android draws edge to edge, so nothing lifts the sheet for the keyboard there (iOS uses the
   // KeyboardAvoidingView below): sit it on top of the keyboard, whose height leaves out the
-  // gesture bar under it.
+  // gesture bar under it. Only a real keyboard counts — a sliver of "keyboard" with nothing
+  // typed (seen on Android 17) floated every sheet up the screen.
   const keyboard = useKeyboardHeight();
-  const lift = Platform.OS === 'android' ? keyboard : 0;
+  const lift = Platform.OS === 'android' && keyboard > MIN_KEYBOARD ? keyboard : 0;
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+    // The Modal fades the backdrop in and `SheetSlide` slides the sheet up. The sheet sits in the
+    // normal layout (a column that ends at the bottom), not absolutely positioned, and slides with
+    // React Native's own Animated: on Jack's Android 17 phone a Reanimated entering animation plus
+    // absolute positioning left the sheet floating mid-screen with none of its buttons working.
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {/* A Modal is outside the app's own gesture root; sliders in here need one of their own. */}
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <Pressable style={{ flex: 1, backgroundColor: withAlpha(colors.overlay, 0.6) }} onPress={onClose} accessibilityLabel="Close" />
-          <Animated.View
-            entering={SlideInDown.duration(240).easing(Easing.out(Easing.cubic))}
-            className="overflow-hidden rounded-3xl"
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(colors.overlay, 0.6) }]} onPress={onClose} accessibilityLabel="Close" />
+          <SheetSlide
             style={{
-              position: 'absolute',
-              left: 12,
-              right: 12,
-              bottom: insets.bottom + 12 + lift,
+              marginHorizontal: 12,
+              marginBottom: insets.bottom + 12 + lift,
               maxHeight: '80%',
+              borderRadius: 24,
+              overflow: 'hidden',
               backgroundColor: colors.surface,
-              shadowColor: '#000',
-              shadowOpacity: 0.3,
-              shadowRadius: 30,
-              shadowOffset: { width: 0, height: 12 },
               elevation: 16,
             }}
           >
@@ -138,11 +137,23 @@ export function ToolSheet({
             >
               <View style={{ gap: 16 }}>{visible ? children : null}</View>
             </ScrollView>
-          </Animated.View>
+          </SheetSlide>
         </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
   );
+}
+
+/** Less than this isn't a keyboard (dp). */
+const MIN_KEYBOARD = 150;
+
+/** The sheet sliding up as it mounts (React Native's Animated, on the native thread). */
+function SheetSlide({ style, children }: { style: ViewStyle; children: ReactNode }) {
+  const [offset] = useState(() => new RNAnimated.Value(48));
+  useEffect(() => {
+    RNAnimated.timing(offset, { toValue: 0, duration: 220, easing: RNEasing.out(RNEasing.cubic), useNativeDriver: true }).start();
+  }, [offset]);
+  return <RNAnimated.View style={[style, { transform: [{ translateY: offset }] }]}>{children}</RNAnimated.View>;
 }
 
 /** How a `SettingChip` draws itself: as a chip on the page (normally); as a row in the "More

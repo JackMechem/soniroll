@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TAB_BAR_CONTENT_HEIGHT, useTabBarVisible } from '@/components/FloatingTabBar';
+import { useTabBarHeight } from '@/components/FloatingTabBar';
 import { PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, StopwatchIcon } from '@/components/icons';
 import { getSnapshot, pause, resume, skip, stop, subscribe } from '@/lib/practiceTimerEngine';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -24,7 +24,7 @@ export function PracticeTimerWidget() {
   const state = useSyncExternalStore(subscribe, getSnapshot);
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const tabBarVisible = useTabBarVisible();
+  const tabBarHeight = useTabBarHeight();
   const router = useRouter();
   const [remainingMs, setRemainingMs] = useState(0);
 
@@ -60,7 +60,7 @@ export function PracticeTimerWidget() {
         position: 'absolute',
         left: 24,
         right: 24,
-        bottom: insets.bottom + (tabBarVisible ? TAB_BAR_CONTENT_HEIGHT : 0) + 10,
+        bottom: insets.bottom + tabBarHeight + 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,

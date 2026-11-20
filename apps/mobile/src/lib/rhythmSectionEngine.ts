@@ -1,4 +1,5 @@
 import { getAudioContext } from '@/lib/audioContext';
+import { setSteadyInterval } from '@/lib/steadyTimer';
 import { scheduleClick } from '@/lib/metronomeClickEngine';
 import {
   chartHarmony,
@@ -36,11 +37,6 @@ import {
 } from '@jam-practice/core/rhythmSection';
 import { playUprightBassNote } from '@/lib/uprightBass';
 
-/** The website's `setSteadyInterval` is for background browser tabs; a plain interval here. */
-function setSteadyInterval(fn: () => void, ms: number) {
-  const id = setInterval(fn, ms);
-  return () => clearInterval(id);
-}
 
 // A port of the website's `apps/web/lib/rhythmSectionEngine.ts` (imports only changed).
 // Plays Rhythm Section: bass, chords and drums on one clock. Everything is written a chorus at a
