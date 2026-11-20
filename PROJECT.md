@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.11 beta** (see versioning).
+**v0.10.14 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -301,6 +301,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Library as two tabs (Tunes, Files; FB-30, 2026-11-20): every chart on a tune (`tuneChartIds`, several per tune), the Library tune list, tags, linking on import and the one-time pass (`useAutoLinkCharts`), Open in Slow Downer/Tuner from Files | `library-two-tabs.md` |
+| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias | `pdf-editor.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
 | Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
