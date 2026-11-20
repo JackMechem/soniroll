@@ -25,7 +25,9 @@ const cssInteropPath = path.dirname(
   }),
 );
 
-const nativeWindConfig = withNativeWind(config, { input: './src/global.css' });
+// rem = 16 like the web (NativeWind's native default is 14, which drew every size about 12% smaller
+// than written: a 48-dp button came out at 42).
+const nativeWindConfig = withNativeWind(config, { input: './src/global.css', inlineRem: 16 });
 
 nativeWindConfig.resolver.extraNodeModules = {
   ...nativeWindConfig.resolver.extraNodeModules,

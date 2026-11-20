@@ -69,6 +69,8 @@ export function withAlpha(hex: string, opacity: number): string {
 
 /** Colours made from the theme, the same ones the website uses: */
 export interface DerivedColors {
+  /** A dark theme (the background is dark): light status-bar icons, etc. */
+  isDark: boolean;
   /** The faint fill on rows, secondary buttons and inputs (the web's `bg-foreground/[0.05]`). */
   fill: string;
   /** A hairline between rows or under a bar. */
@@ -78,7 +80,10 @@ export interface DerivedColors {
 }
 
 function derive(colors: ThemeColors): DerivedColors {
+  const n = parseInt(colors.background.slice(1, 7), 16);
+  const luminance = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
   return {
+    isDark: luminance < 0.5,
     fill: withAlpha(colors.foreground, 0.05),
     hairline: withAlpha(colors.foreground, 0.08),
     category: Object.fromEntries(CATEGORIES.map((c) => [c, categoryColor(colors.accent, c)])) as Record<Category, string>,

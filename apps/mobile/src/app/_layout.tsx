@@ -7,7 +7,12 @@ import {
   Geist_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/geist';
+import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
+import { api } from '@jam-practice/convex/_generated/api';
+import { useQuery } from 'convex/react';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -39,12 +44,27 @@ SplashScreen.preventAutoHideAsync();
  * tab bar shows only on those; everything opened from them covers the screen with a back button.
  * Your account is the button at the top right of the main screens (`components/TabHeader.tsx`).
  */
+/** A session whose account is gone (deleted, here or on the website) signs out, rather than
+    leaving a nameless account that can't do anything. */
+function SignOutIfAccountGone() {
+  const { isAuthenticated } = useConvexAuth();
+  const user = useQuery(api.users.current, isAuthenticated ? {} : 'skip');
+  const { signOut } = useAuthActions();
+  useEffect(() => {
+    if (isAuthenticated && user === null) void signOut();
+  }, [isAuthenticated, user, signOut]);
+  return null;
+}
+
 function RootNavigator() {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   useRecordToolVisits();
 
   return (
     <View style={{ flex: 1 }}>
+      {/* The clock and icons follow the theme (they were white on light themes). */}
+      <StatusBar style={derived.isDark ? 'light' : 'dark'} />
+      <SignOutIfAccountGone />
       <Stack
         screenOptions={{
           headerTintColor: colors.accent,
