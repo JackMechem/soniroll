@@ -21,7 +21,8 @@
       "package": "com.jackmechem.sheddex",
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "output": "static",
