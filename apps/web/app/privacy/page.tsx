@@ -53,6 +53,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Profile:</strong> your username, and if you add them, a picture, banner and instruments.
           </li>
+          <li>
+            <strong>PDF markings:</strong> what you draw and type on your PDFs, and the page changes you make, are saved to your account with the
+            file (the PDF itself isn&apos;t changed). They&apos;re private, and deleted with the file or your account.
+          </li>
           <li>Emailed confirmation codes are stored hashed and expire after 15 minutes.</li>
         </ul>
         <p>

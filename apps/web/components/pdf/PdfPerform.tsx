@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import PdfPageView from "@/components/pdf/PdfPageView";
-import { pageAspect, type Layer } from "@/components/pdf/markup";
+import type { Layer } from "@/components/pdf/markup";
+import type { PdfSources } from "@/components/pdf/usePdfDoc";
 import { CloseIcon, SlidesIcon } from "@/components/tools";
-import type { PDFDocumentProxy } from "@/lib/pdfjs";
 
 /**
  * Playing from the PDF: full screen, the page (or two side by side) as big as it fits, turned with
  * the arrow keys, space, Page Up/Down (what Bluetooth page-turner pedals send), a tap on either
  * side, or a swipe. Escape leaves, back on the page you were on.
  */
-export default function PdfPerform({ doc, layer, aspects, start, hideMarks, onExit }: { doc: PDFDocumentProxy | null; layer: Layer; aspects: number[]; start: number; hideMarks: boolean; onExit: (page: number) => void }) {
+export default function PdfPerform({ sources, layer, start, hideMarks, onExit }: { sources: PdfSources; layer: Layer; start: number; hideMarks: boolean; onExit: (page: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [index, setIndex] = useState(start);
@@ -98,10 +98,10 @@ export default function PdfPerform({ doc, layer, aspects, start, hideMarks, onEx
       onPointerMove={() => !chrome && setChrome(true)}
     >
       {size.w > 0 &&
-        shown.map((p) => <PdfPageView key={p.id} doc={doc} page={p} aspect={pageAspect(p, aspects)} width={Math.floor(fit(pageAspect(p, aspects)))} hideMarks={hideMarks} eager />)}
+        shown.map((p) => <PdfPageView key={p.id} doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} width={Math.floor(fit(sources.aspectOf(p)))} hideMarks={hideMarks} eager />)}
       {/* The next pages, drawn ahead so turning is instant. */}
       <div className="pointer-events-none absolute -left-[9999px] top-0 opacity-0" aria-hidden>
-        {size.w > 0 && pages.slice(first + step, first + step * 2).map((p) => <PdfPageView key={p.id} doc={doc} page={p} aspect={pageAspect(p, aspects)} width={Math.floor(fit(pageAspect(p, aspects)))} hideMarks={hideMarks} eager />)}
+        {size.w > 0 && pages.slice(first + step, first + step * 2).map((p) => <PdfPageView key={p.id} doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} width={Math.floor(fit(sources.aspectOf(p)))} hideMarks={hideMarks} eager />)}
       </div>
 
       <div className={`absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] transition-opacity duration-300 ${chrome ? "opacity-100" : "pointer-events-none opacity-0"}`}>

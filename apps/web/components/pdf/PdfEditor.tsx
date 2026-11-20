@@ -37,7 +37,9 @@ import {
   ZoomOutIcon,
 } from "@/components/tools";
 import { downloadFile, errorText } from "@/lib/files";
-import { usePdfDoc } from "@/components/pdf/usePdfDoc";
+import { usePdfDoc, usePdfDocs, type PdfSources } from "@/components/pdf/usePdfDoc";
+import { useDeviceUrls } from "@/lib/deviceFiles";
+import type { PDFDocumentProxy } from "@/lib/pdfjs";
 
 export type PdfFile = {
   /** A `files` row of the signed-in user's: markings are saved to it. Without one (a shared file,
@@ -105,6 +107,21 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
   );
   const undo = () => setHistory((h) => (h && h.past.length ? { layer: h.past[h.past.length - 1], past: h.past.slice(0, -1), future: [h.layer, ...h.future] } : h));
   const redo = () => setHistory((h) => (h && h.future.length ? { layer: h.future[0], past: [...h.past, h.layer], future: h.future.slice(1) } : h));
+
+  // Pages inserted from your other PDFs: their files' addresses, then the PDFs themselves.
+  const otherIds = useMemo(() => [...new Set((layer?.pages ?? []).flatMap((p) => (p.src.kind === "pdf" && p.src.file ? [p.src.file] : [])))], [layer]);
+  const myFiles = useDeviceUrls(useQuery(api.files.list, canEdit && otherIds.length ? {} : "skip"));
+  const otherUrls = useMemo(() => Object.fromEntries(otherIds.map((id) => [id, myFiles?.find((f) => f._id === id)?.url])), [otherIds, myFiles]);
+  const others = usePdfDocs(otherUrls);
+  const otherAspects = useMemo(() => Object.fromEntries(Object.entries(others).map(([id, o]) => [id, o === "error" ? undefined : o.aspects])), [others]);
+  const sources: PdfSources = useMemo(
+    () => ({
+      docFor: (p) => (p.src.kind === "pdf" && p.src.file ? (others[p.src.file] === "error" ? null : (others[p.src.file] as { doc: PDFDocumentProxy } | undefined)?.doc ?? null) : doc),
+      aspectOf: (p) => pageAspect(p, aspects, otherAspects),
+      pageCount: doc?.numPages ?? 0,
+    }),
+    [doc, aspects, others, otherAspects],
+  );
 
   const updatePage = useCallback((pageId: string, change: (p: LayerPage) => LayerPage) => commit((l) => ({ ...l, pages: l.pages.map((p) => (p.id === pageId ? change(p) : p)) })), [commit]);
 
@@ -253,7 +270,9 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
     }
     setBusy("Making your PDF…");
     try {
-      const bytes = await exportPdf(bytesRef.current, layer);
+      const extra: Record<string, ArrayBuffer> = {};
+      for (const [id, o] of Object.entries(others)) if (o !== "error") extra[id] = o.bytes;
+      const bytes = await exportPdf(bytesRef.current, layer, extra);
       const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -506,9 +525,9 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
       {/* Pages */}
       {view === "pages" && layer && doc ? (
         <PdfPages
-          doc={doc}
+          sources={sources}
+          fileId={fileId ?? ""}
           layer={layer}
-          aspects={aspects}
           onChange={(next) => commit(() => next)}
           onOpen={(i) => {
             setView("read");
@@ -528,9 +547,9 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
               {pages.map((p) => (
                 <PdfPageView
                   key={p.id}
-                  doc={doc}
+                  doc={sources.docFor(p)}
                   page={p}
-                  aspect={pageAspect(p, aspects)}
+                  aspect={sources.aspectOf(p)}
                   width={pageWidth}
                   hideMarks={hideMarks}
                   editingText={typing?.pageId === p.id ? typing.mark : null}
@@ -586,7 +605,7 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
         </div>
       )}
 
-      {view === "perform" && layer && <PdfPerform doc={doc} layer={layer} aspects={aspects} start={current} hideMarks={hideMarks} onExit={(i) => { setView("read"); requestAnimationFrame(() => requestAnimationFrame(() => goToPage(i))); }} />}
+      {view === "perform" && layer && <PdfPerform sources={sources} layer={layer} start={current} hideMarks={hideMarks} onExit={(i) => { setView("read"); requestAnimationFrame(() => requestAnimationFrame(() => goToPage(i))); }} />}
 
       {(busy || error) && (
         <div className="absolute inset-x-0 top-20 z-10 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm shadow-lg ring-1 ring-foreground/10">

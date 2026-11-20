@@ -9,10 +9,12 @@ const MARK_SCALE = 3;
  * original, so its text and music stay sharp), added blank and staff pages, and the markings drawn
  * over each page. The original file isn't touched.
  */
-export async function exportPdf(original: ArrayBuffer, layer: Layer): Promise<Uint8Array> {
+export async function exportPdf(original: ArrayBuffer, layer: Layer, others: Record<string, ArrayBuffer> = {}): Promise<Uint8Array> {
   const { PDFDocument, degrees, rgb } = await import("pdf-lib");
   const src = await PDFDocument.load(original, { ignoreEncryption: true });
   const out = await PDFDocument.create();
+  const otherDocs: Record<string, Awaited<ReturnType<typeof PDFDocument.load>>> = {};
+  for (const [id, bytes] of Object.entries(others)) otherDocs[id] = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const first = src.getPageCount() ? src.getPage(0) : null;
   const firstSize = first ? first.getSize() : { width: 612, height: 792 };
   const turned = first ? (first.getRotation().angle % 180 !== 0) : false;
@@ -24,8 +26,10 @@ export async function exportPdf(original: ArrayBuffer, layer: Layer): Promise<Ui
   for (const page of layer.pages) {
     let pdfPage;
     let total = page.rotate as number; // how far the page is turned, clockwise, as shown
-    if (page.src.kind === "pdf") {
-      const [copied] = await out.copyPages(src, [page.src.page]);
+    const from = page.src.kind === "pdf" ? (page.src.file ? otherDocs[page.src.file] : src) : null;
+    if (page.src.kind === "pdf" && !from) continue; // an inserted PDF that's since been deleted
+    if (page.src.kind === "pdf" && from) {
+      const [copied] = await out.copyPages(from, [page.src.page]);
       total = (copied.getRotation().angle + page.rotate) % 360;
       copied.setRotation(degrees(total));
       pdfPage = out.addPage(copied);

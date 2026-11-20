@@ -10,7 +10,11 @@
 export type Rotation = 0 | 90 | 180 | 270;
 
 /** Where a page comes from: a page of the PDF (0-based), or a page added in the editor. */
-export type PageSource = { kind: "pdf"; page: number } | { kind: "blank" } | { kind: "staff" };
+export type PageSource =
+  /** `file`: a page of another of your PDFs (a `files` id), inserted into this one. */
+  | { kind: "pdf"; page: number; file?: string }
+  | { kind: "blank" }
+  | { kind: "staff" };
 
 export type InkMark = { id: string; t: "ink"; pts: number[]; color: string; width: number; highlight?: boolean };
 
@@ -67,13 +71,13 @@ export function freshLayer(pageCount: number): Layer {
 }
 
 /** A saved layer, or a fresh one when there's none (or it can't be read). Pages that point past the
-    end of the PDF are dropped. */
+    end of this PDF are dropped. */
 export function parseLayer(json: string | null | undefined, pageCount: number): Layer {
   if (!json) return freshLayer(pageCount);
   try {
     const layer = JSON.parse(json) as Layer;
     if (layer?.v !== 1 || !Array.isArray(layer.pages)) return freshLayer(pageCount);
-    const pages = layer.pages.filter((p) => p.src.kind !== "pdf" || p.src.page < pageCount);
+    const pages = layer.pages.filter((p) => p.src.kind !== "pdf" || !!p.src.file || p.src.page < pageCount);
     return { v: 1, pages };
   } catch {
     return freshLayer(pageCount);
@@ -83,14 +87,15 @@ export function parseLayer(json: string | null | undefined, pageCount: number): 
 export function isEmptyLayer(layer: Layer, pageCount: number) {
   return (
     layer.pages.length === pageCount &&
-    layer.pages.every((p, i) => p.src.kind === "pdf" && p.src.page === i && p.rotate === 0 && p.marks.length === 0)
+    layer.pages.every((p, i) => p.src.kind === "pdf" && !p.src.file && p.src.page === i && p.rotate === 0 && p.marks.length === 0)
   );
 }
 
 /** Height ÷ width of a page as it's shown. `pdfAspects[i]` is the PDF page's own (with its own
-    rotation); added pages take the first page's shape. */
-export function pageAspect(page: LayerPage, pdfAspects: number[]) {
-  const base = page.src.kind === "pdf" ? pdfAspects[page.src.page] ?? 1.294 : pdfAspects[0] ?? 1.294;
+    rotation), `others` the same for inserted PDFs; added pages take the first page's shape. */
+export function pageAspect(page: LayerPage, pdfAspects: number[], others?: Record<string, number[] | undefined>) {
+  const own = page.src.kind === "pdf" ? (page.src.file ? others?.[page.src.file] : pdfAspects)?.[page.src.page] : undefined;
+  const base = own ?? pdfAspects[0] ?? 1.294;
   return page.rotate % 180 === 0 ? base : 1 / base;
 }
 
