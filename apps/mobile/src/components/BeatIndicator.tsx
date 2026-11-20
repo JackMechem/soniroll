@@ -13,7 +13,7 @@ const LEVEL_RANK: Record<BeatLevel, number> = { 0: 0, 3: 1, 1: 2, 2: 3 };
  * One beat (or subdivision tick) as a tall bar of three segments that light from the bottom with
  * its level — in the accent for an accent — like the website's beat strip
  * (`apps/web/components/BeatIndicator.tsx`). The beat's number sits above it. The one playing is
- * scaled up and ringed in the accent.
+ * scaled up and ringed in the accent; the ring is drawn over the bar, so it never moves anything.
  */
 function Bar({
   level,
@@ -50,7 +50,9 @@ function Bar({
         gap: pad,
         borderRadius: width < 20 ? 4 : 6,
         backgroundColor: active ? withAlpha(colors.accent, 0.15) : colors.surface,
-        borderWidth: active ? 2 : 1,
+        // Always 1dp: the playing beat's thicker ring is the overlay below, so lighting a beat never
+        // changes its size (a 2dp border made the bar taller and lifted its number — FB-33).
+        borderWidth: 1,
         borderColor: active ? colors.accent : withAlpha(colors.foreground, 0.1),
         opacity: level === 0 && !active ? 0.5 : 1,
         ...(active ? { transform: [{ scale: 1.05 }] } : null),
@@ -59,6 +61,12 @@ function Bar({
       {[2, 1, 0].map((i) => (
         <View key={i} style={{ height: seg, borderRadius: 3, backgroundColor: i < rank ? lit : withAlpha(colors.foreground, 0.1) }} />
       ))}
+      {active ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: -1, left: -1, right: -1, bottom: -1, borderRadius: width < 20 ? 4 : 6, borderWidth: 2, borderColor: colors.accent }}
+        />
+      ) : null}
     </View>
   );
 

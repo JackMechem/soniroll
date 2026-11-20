@@ -333,3 +333,15 @@ and a UI dump is what found it.)
 Checked on the emulator with a throwaway free-plan account: uploading a PDF, an image, an audio
 file and a video; each in the viewer; a share link (the file went online, the share sheet opened);
 delete (row and phone copy gone). The account was deleted afterwards.
+
+### Beat ring no longer moves the beats (2026-11-20, FB-33)
+
+Jack: "In mobile app metronome beats move things vertically when active with the outline". The
+playing beat in `components/BeatIndicator.tsx` had a 2 dp border (1 dp otherwise), so the lit bar
+grew 2 dp taller; rows are bottom-aligned, so its number rose above the others and the row grew.
+Jack chose to keep the outline: every bar now always has a 1 dp border, and the playing beat's
+2 dp accent ring is an absolutely placed overlay (`pointerEvents="none"`, inset −1 so it sits on
+the border) that doesn't take part in layout. The 1.05 scale stays (a transform, no layout). One
+component, so the fix covers every user: Metronome, Tempo Trainer, Jam Practice, Random Metric
+Modulation, Random Sticking Warmup, Time Test, Recorder's count-in, the StructureEditor.
+Checked: `tsc`, `eslint`. Not checked on a device or the emulator.
