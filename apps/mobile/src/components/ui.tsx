@@ -261,3 +261,78 @@ export function EmptyText({ children }: { children: ReactNode }) {
     </Text>
   );
 }
+
+/** The one empty state: an icon on a tinted tile, a one-line title, one short line, and the action
+    that fills it — on the surface colour, like a card. Use it for every empty list or screen. */
+export function EmptyState({
+  Icon,
+  title,
+  body,
+  action,
+  secondary,
+}: {
+  Icon?: ComponentType<IconProps>;
+  title: string;
+  body?: string;
+  action?: { label: string; onPress: () => void; Icon?: ComponentType<IconProps> };
+  secondary?: { label: string; onPress: () => void };
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="items-center gap-3 rounded-xl px-5 py-7" style={{ backgroundColor: colors.surface }}>
+      {Icon ? <IconTile Icon={Icon} size={44} /> : null}
+      <View className="items-center gap-1">
+        <Text className="font-ui-semibold text-center text-base font-semibold" style={{ color: colors.foreground }}>
+          {title}
+        </Text>
+        {body ? (
+          <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
+            {body}
+          </Text>
+        ) : null}
+      </View>
+      {action || secondary ? (
+        <View className="flex-row flex-wrap justify-center gap-2">
+          {action ? <Button label={action.label} Icon={action.Icon} onPress={action.onPress} /> : null}
+          {secondary ? <Button label={secondary.label} kind="secondary" onPress={secondary.onPress} /> : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** The one sort control: small pills, the current one filled. Keep the options in a fixed order
+    (most useful first — usually Recent, then A–Z). */
+export function SortControl<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  const { colors, derived } = useAppTheme();
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel="Sort" className="flex-row gap-1.5">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            android_ripple={{ color: colors['surface-hover'] }}
+            className="h-9 justify-center overflow-hidden rounded-full px-3.5"
+            style={{ backgroundColor: on ? colors.foreground : derived.fill }}
+          >
+            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: on ? colors.background : colors.foreground }}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
