@@ -337,7 +337,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
   website's (setting chips, `components/tool/`); anything not ported opens the `[slug]` placeholder.
   Every tool, the Shed Log, Shed Notes and Lessons are on the phone since 2026-11-19 (each port's
   notes in `docs/notes/mobile-refresh.md`). Web-only still: the Files browser, tune/file share
-  pages, presets, the Shed Log's time grid, PDF/zip export.
+  pages, presets, the Shed Log's week time grid, PDF/zip export.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.

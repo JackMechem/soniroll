@@ -240,8 +240,27 @@ Lessons.
   helpers moved to `packages/core/toolUsage.ts`) and the anonymous usage counts (`usage.track`:
   play/time only; the server skips admins; privacy page says so). As on the website nothing goes
   into the Shed Log until it's logged. `formatPracticed` moved to `packages/core/practiceMinutes.ts`.
-- **Left out**: the time-grid week/day views and dragging, recordings/clips, Shed Notes and adding
-  attachments, progress cards and the day report, the tour, the per-tool stats pills.
+- **Left out**: the time-grid week view and dragging to another day, recordings/clips, Shed Notes and
+  adding attachments, progress cards and the day report, the tour, the per-tool stats pills.
+- **Day view** (added the same day; `components/shedLog/DayView.tsx`): the calendar's switch is
+  Month · Week · Day (the website's `jam-practice-practice-log-view` key, so `day` chosen on either
+  shows on both). Title "Nov 19", subtitle "40 min · goal 1 hr" / "· goal met"; the arrows step a
+  day (no sideways swipe — Month and Week don't have one on the phone either). The website's time
+  grid at 64 dp an hour inside its own ScrollView (55% of the window tall, `nestedScrollEnabled`),
+  opening at now − 1 h today, else the first timed item or 8 AM; a now line today; an Any time row
+  (one pill per untimed routine and per untimed task, like the website's day view, so each can be
+  dragged). Tapping opens a `ToolSheet` with the Today tab's own `RoutineCard` (tick, Start, ⋮ Set a
+  time → `RoutineTimeSheet`) or `DayTasks`; hidden while another screen is pushed on top
+  (`useIsFocused`). Press and hold (350 ms, `Gesture.Pan().activateAfterLongPress`, `runOnJS`) to
+  drag to a time (15-min snap, dashed preview with the time) or onto Any time; it writes what the
+  website writes for a same-day drop (routine: the day's `Occurrence.startTime`, removed when it's
+  the routine's own time; task: `moveDayTask` with the new `time`) and skips the write when the
+  time didn't change. Not draggable: skipped routines, routines whose tasks have clock times. Both
+  ScrollViews stop scrolling while dragging (`onDragChange`); held near the grid's top/bottom edge
+  it scrolls. Positions come from `onLayout`/`onScroll` plus the pan's `translationY` (no window
+  coordinates). The grid's pure parts (`dayInfo`, `layoutLanes`, `blocksFor`, `routineDrag`,
+  `taskDrag`, `hasFixedTimes`, `TASK_COLOR`, `SNAP`) moved from the website's `Calendar.tsx` to
+  `packages/core/practiceLogDay.ts`; the website imports them from there.
 
 ### Find the Root, Time Test, Score Writer, Shed Notes, Lessons (2026-11-19)
 

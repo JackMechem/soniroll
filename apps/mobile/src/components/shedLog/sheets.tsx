@@ -6,7 +6,6 @@ import {
   formatMinutesShort,
   minutesOn,
   newSubtask,
-  parseTime,
   routineSpan,
   routinesOn,
   tasksOf,
@@ -17,6 +16,7 @@ import {
   type Occurrence,
   type Routine,
 } from '@jam-practice/core/practiceLog';
+import { hasFixedTimes } from '@jam-practice/core/practiceLogDay';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -407,11 +407,6 @@ function TaskBody({
 }
 
 // ---------------------------------------------------------------- a routine's time
-
-/** Some of the routine's tasks have a clock time of their own, so moving its start doesn't move them. */
-export function hasFixedTimes(routine: Routine, occurrence: Occurrence = {}): boolean {
-  return tasksOf(routine, occurrence).some((t) => parseTime(t.time) !== null);
-}
 
 /** When a routine happens (the website's `RoutineTimePicker`): a time just for this day or every
     time it comes round, or any time. */

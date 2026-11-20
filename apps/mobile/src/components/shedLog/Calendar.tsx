@@ -263,3 +263,11 @@ export function weekSummary(data: PracticeLogData, selected: string, today: stri
   return `${formatPracticed(total)}${goalDays > 0 ? ` · goal met ${hit} of ${goalDays} days` : ''}`;
 }
 
+
+/** The day's practice against its goal ("40 min · goal 1 hr", "1 hr 10 min · goal met"). */
+export function daySummary(data: PracticeLogData, key: string, today: string): string | null {
+  if (key > today) return null;
+  const mins = minutesOn(data, key);
+  const goal = goalOn(data, key);
+  return `${formatPracticed(mins)}${goal > 0 ? (mins >= goal ? ' · goal met' : ` · goal ${formatPracticed(goal)}`) : ''}`;
+}

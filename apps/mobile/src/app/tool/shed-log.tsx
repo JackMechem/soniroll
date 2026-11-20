@@ -17,7 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionSheet } from '@/components/ActionSheet';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, SpeakerIcon, TargetIcon } from '@/components/icons';
-import { MonthView, WeekList, weekSummary } from '@/components/shedLog/Calendar';
+import { MonthView, WeekList, daySummary, weekSummary } from '@/components/shedLog/Calendar';
+import { DayView } from '@/components/shedLog/DayView';
 import { DayPanel } from '@/components/shedLog/DayPanel';
 import { GhostIcon, RoutinesIcon, SoundOffIcon, StatsIcon } from '@/components/shedLog/parts';
 import { ShedLogGate } from '@/components/shedLog/ShedLogGate';
@@ -41,13 +42,16 @@ const VIEW_DEFAULTS = { view: 'month' };
  * port of the website's `/shed-log` (`apps/web/components/PracticeLog.tsx`): the header (Stats, and
  * ⋮ for your routines, the daily goal and sounds), today against the goal and the streak, then
  * two tabs — the day (routines to check off and run on the timer, tasks for the day, the day timer,
- * time in tools to log, logging time) and the calendar (month or week; a day opens it). Adding is
+ * time in tools to log, logging time) and the calendar (month, week or day). Adding is
  * done where it happens (Add routine, the task box), not from a header button. For account
  * holders: signed out, it shows what it is and Sign in.
  *
- * Left out from the website: the time-grid week and day views (drag to schedule) — the phone's
- * week is the website's phone list; recordings and clips on a day; Shed Notes and attaching
- * tunes / charts (shown when made on the website); progress cards and the day report; the tour.
+ * In the month and week a day opens it; the day view is the website's time grid (press and hold
+ * to drag a routine or task to another time); the week is the website's phone list.
+ *
+ * Left out from the website: the time-grid week (and dragging to another day); recordings and
+ * clips on a day; Shed Notes and attaching tunes / charts (shown when made on the website);
+ * progress cards and the day report; the tour.
  */
 function ShedLogScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -92,7 +96,9 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
     }
   }
   const [{ view: savedView }, setView] = useSyncedSettings(VIEW_KEY, VIEW_DEFAULTS);
-  const view: 'month' | 'week' = savedView === 'week' ? 'week' : 'month';
+  const view: 'month' | 'week' | 'day' = savedView === 'week' || savedView === 'day' ? savedView : 'month';
+  // While something is dragged on the day's time grid, the page holds still.
+  const [dragging, setDragging] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -117,9 +123,11 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   const calTitle =
     view === 'month'
       ? `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
-      : `${formatShortDate(weekFrom)} – ${fromDateKey(weekFrom).getMonth() === fromDateKey(weekTo).getMonth() ? fromDateKey(weekTo).getDate() : formatShortDate(weekTo)}${fromDateKey(weekTo).getFullYear() !== thisYear ? `, ${fromDateKey(weekTo).getFullYear()}` : ''}`;
-  const summary = view === 'week' ? weekSummary(data, selected, today) : null;
-  const step = (n: number) => setPicked(view === 'month' ? addMonths(selected, n) : addDays(selected, 7 * n));
+      : view === 'day'
+        ? `${formatShortDate(selected)}${d.getFullYear() !== thisYear ? `, ${d.getFullYear()}` : ''}`
+        : `${formatShortDate(weekFrom)} – ${fromDateKey(weekFrom).getMonth() === fromDateKey(weekTo).getMonth() ? fromDateKey(weekTo).getDate() : formatShortDate(weekTo)}${fromDateKey(weekTo).getFullYear() !== thisYear ? `, ${fromDateKey(weekTo).getFullYear()}` : ''}`;
+  const summary = view === 'week' ? weekSummary(data, selected, today) : view === 'day' ? daySummary(data, selected, today) : null;
+  const step = (n: number) => setPicked(view === 'month' ? addMonths(selected, n) : addDays(selected, (view === 'day' ? 1 : 7) * n));
   const dayLabel = selected === today ? 'Today' : `${WEEKDAY_SHORT[d.getDay()]}, ${formatShortDate(selected)}`;
 
   return (
@@ -134,6 +142,7 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
     >
       <ScrollView
         ref={scroll}
+        scrollEnabled={!dragging}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         onScroll={onScroll}
@@ -197,10 +206,13 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
               options={[
                 { value: 'month', label: 'Month' },
                 { value: 'week', label: 'Week' },
+                { value: 'day', label: 'Day' },
               ]}
             />
             {view === 'month' ? (
               <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} today={today} onSelect={openDay} />
+            ) : view === 'day' ? (
+              <DayView date={selected} log={log} today={today} onDragChange={setDragging} />
             ) : (
               <WeekList data={data} selected={selected} today={today} onSelect={openDay} />
             )}

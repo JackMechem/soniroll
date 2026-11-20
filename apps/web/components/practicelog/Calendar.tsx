@@ -6,8 +6,18 @@ import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { formatPracticed } from "@/components/practicelog/minutes";
 import { CheckIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
 import RoutineIcon, { routineIconElement } from "@/components/practicelog/RoutineIcon";
-import { hasFixedTimes } from "@/components/practicelog/RoutineTime";
 import WeekPopover, { type WeekTarget } from "@/components/practicelog/WeekPopover";
+import {
+  type DayInfo,
+  type DragItem,
+  SNAP,
+  TASK_COLOR,
+  dayInfo,
+  hasFixedTimes,
+  isSameDragItem,
+  routineDrag,
+  taskDrag,
+} from "@jam-practice/core/practiceLogDay";
 import {
   type DayRoutine,
   type PracticeLogData,
@@ -22,13 +32,10 @@ import {
   type DayStatus,
   minutesOn,
   monthGrid,
-  parseTime,
   progressOf,
   routineSpan,
   routinesOn,
-  scheduleTasks,
   startOfWeek,
-  tasksOf,
   timeString,
   todayKey,
   weekdayOf,
@@ -39,8 +46,6 @@ import type { usePracticeLog } from "@/lib/usePracticeLog";
 type Log = ReturnType<typeof usePracticeLog>;
 
 const colorOf = (i: number) => ROUTINE_COLORS[i % ROUTINE_COLORS.length];
-/** One-off tasks (not part of a routine) on the calendar. */
-const TASK_COLOR = "#64748b";
 
 /** A month, made to read at a glance: each day's routines as small marks in their colours (filled
     once done), the minutes practiced, and a green / yellow wash for days done / partly done. Today
@@ -291,89 +296,6 @@ function RoutineChip({ item }: { item: DayRoutine }) {
 }
 
 const HOUR_PX = 48;
-/** Dropping snaps to quarter hours. */
-const SNAP = 15;
-
-type BlockBase = {
-  id: string;
-  target: WeekTarget;
-  color: string;
-  icon?: string;
-  colorIdx?: number;
-  title: string;
-  tasks: string[];
-  start: number;
-  end: number;
-  done: number;
-  total: number;
-  skipped: boolean;
-  /** What dragging it moves (none for a routine whose tasks have clock times of their own). */
-  drag: DragItem | null;
-};
-type Block = BlockBase & { lane: number; lanes: number };
-
-/** A routine's timed tasks as blocks — tasks back to back are one block. */
-function blocksFor(item: DayRoutine, key: string): BlockBase[] {
-  const { routine, occurrence } = item;
-  const { done, total } = progressOf(routine, occurrence);
-  const drag = routineDrag(item, key);
-  const out: BlockBase[] = [];
-  let cur: BlockBase | null = null;
-  for (const s of scheduleTasks(routine, occurrence)) {
-    if (s.start === null || s.end === null) continue;
-    if (cur && Math.abs(cur.end - s.start) < 0.5) {
-      cur.end = s.end;
-      cur.tasks.push(s.task.title || "Task");
-    } else {
-      cur = {
-        id: `${routine.id}-${s.start}`,
-        target: { kind: "routine", date: key, routineId: routine.id },
-        color: colorOf(routine.color),
-        icon: routine.icon ?? "note",
-        colorIdx: routine.color,
-        title: routine.name || "Untitled routine",
-        tasks: [s.task.title || "Task"],
-        start: s.start,
-        end: Math.max(s.end, s.start + 10),
-        done,
-        total,
-        skipped: !!occurrence.skipped,
-        drag,
-      };
-      out.push(cur);
-    }
-  }
-  return out;
-}
-
-/** Side-by-side lanes for blocks that overlap. */
-function layoutLanes(blocks: BlockBase[]): Block[] {
-  const sorted = [...blocks].sort((a, b) => a.start - b.start || b.end - a.end);
-  const out: Block[] = [];
-  let cluster: Block[] = [];
-  let clusterEnd = -1;
-  let laneEnds: number[] = [];
-  const flush = () => {
-    for (const b of cluster) b.lanes = laneEnds.length;
-    cluster = [];
-    laneEnds = [];
-  };
-  for (const b of sorted) {
-    if (b.start >= clusterEnd) flush();
-    let lane = laneEnds.findIndex((end) => end <= b.start);
-    if (lane < 0) {
-      lane = laneEnds.length;
-      laneEnds.push(b.end);
-    } else laneEnds[lane] = b.end;
-    const block: Block = { ...b, lane, lanes: 1 };
-    cluster.push(block);
-    out.push(block);
-    clusterEnd = Math.max(clusterEnd, b.end);
-  }
-  flush();
-  return out;
-}
-
 /** Where a pointer is in a day's column, as minutes into the day (snapped to half hours). */
 function slotAt(e: React.MouseEvent, firstHour: number, hourPx: number): number {
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -381,71 +303,11 @@ function slotAt(e: React.MouseEvent, firstHour: number, hourPx: number): number 
   return Math.min(24 * 60 - 30, firstHour * 60 + Math.max(0, half) * 30);
 }
 
-/** One day on the time grid: its routines and tasks, timed and not, and how it went. */
-type DayInfo = ReturnType<typeof dayInfo>;
-
-function dayInfo(data: PracticeLogData, key: string, today: string) {
-  const items = routinesOn(data, key);
-  const tasks = data.days[key]?.tasks ?? [];
-  const taskBlocks: BlockBase[] = tasks
-    .filter((t) => parseTime(t.time) !== null)
-    .map((t) => {
-      const start = parseTime(t.time)!;
-      return {
-        id: `task-${t.id}`,
-        target: { kind: "tasks", date: key, ids: [t.id] },
-        color: TASK_COLOR,
-        title: t.title || "Task",
-        tasks: [],
-        start,
-        end: start + Math.max(10, t.minutes),
-        done: t.done ? 1 : 0,
-        total: 1,
-        skipped: false,
-        drag: { kind: "task", date: key, taskId: t.id, minutes: Math.max(10, t.minutes), title: t.title || "Task", color: TASK_COLOR },
-      };
-    });
-  const minutes = minutesOn(data, key);
-  const goal = goalOn(data, key);
-  return {
-    key,
-    items,
-    tasks,
-    untimed: items.filter((it) => !scheduleTasks(it.routine, it.occurrence).some((s) => s.start !== null)),
-    untimedTasks: tasks.filter((t) => parseTime(t.time) === null),
-    blocks: layoutLanes([...items.flatMap((it) => blocksFor(it, key)), ...taskBlocks]),
-    status: dayStatus(data, key, today),
-    minutes,
-    goal,
-    goalPct: goal > 0 ? Math.min(1, minutes / goal) : minutes > 0 ? 1 : 0,
-  };
-}
-
 // ---------------------------------------------------------------- dragging onto a time
 
-/** Something being dragged on the time grid: a routine on a day, or one of a day's own tasks. */
-type DragItem =
-  | { kind: "routine"; date: string; routineId: string; minutes: number; title: string; color: string; locked: boolean }
-  | { kind: "task"; date: string; taskId: string; minutes: number; title: string; color: string };
 /** Where it would land: a day, at a time (minutes into the day) or any time (null). */
 type Drop = { key: string; min: number | null };
 type Drag = { item: DragItem; drop: Drop | null };
-
-/** A routine can be dragged unless it's skipped or its tasks keep clock times of their own (moving
-    its start wouldn't move them). `locked`: something's been done on its day, so it stays there. */
-function routineDrag(item: DayRoutine, key: string): DragItem | null {
-  const { routine, occurrence } = item;
-  if (occurrence.skipped || hasFixedTimes(routine, occurrence)) return null;
-  return {
-    kind: "routine",
-    date: key,
-    routineId: routine.id,
-    minutes: Math.max(SNAP, tasksOf(routine, occurrence).reduce((s, t) => s + t.minutes, 0)),
-    title: routine.name || "Untitled routine",
-    color: colorOf(routine.color),
-    locked: (occurrence.done?.length ?? 0) > 0 || Object.keys(occurrence.spentMs ?? {}).length > 0,
-  };
-}
 
 // While a drag runs (and just after it ends), taps and swipes are ignored — the pointer-up that
 // ends a drag would otherwise also click what's under it.
@@ -613,16 +475,11 @@ function useTimeDrag({
     return {
       onPointerDown: (e: React.PointerEvent) => begin(e, item, offsetOf?.(e) ?? 0),
       onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-      "data-dragging": isSame(drag?.item, item) || undefined,
+      "data-dragging": isSameDragItem(drag?.item, item) || undefined,
     };
   }
 
   return { drag, handle };
-}
-
-function isSame(a: DragItem | undefined, b: DragItem): boolean {
-  if (!a || a.kind !== b.kind || a.date !== b.date) return false;
-  return a.kind === "routine" ? b.kind === "routine" && a.routineId === b.routineId : b.kind === "task" && a.taskId === b.taskId;
 }
 
 /** Classes for things you can drag: a grab cursor, no text selection or long-press menu, and faded
@@ -788,7 +645,7 @@ function TimeGrid({
                         dayKey={key}
                         onOpen={open}
                         className={`w-auto max-w-full ${DRAGGABLE}`}
-                        dragProps={handle({ kind: "task", date: key, taskId: t.id, minutes: Math.max(10, t.minutes), title: t.title || "Task", color: TASK_COLOR })}
+                        dragProps={handle(taskDrag(t, key))}
                       />
                     ))
                   : untimedTasks.length > 0 && (
@@ -797,7 +654,7 @@ function TimeGrid({
                         onClick={(e) => open(e, { kind: "tasks", date: key, ids: untimedTasks.map((t) => t.id) })}
                         title={untimedTasks.length === 1 ? "Click to open · drag onto a time to schedule it" : undefined}
                         {...(untimedTasks.length === 1
-                          ? handle({ kind: "task", date: key, taskId: untimedTasks[0].id, minutes: Math.max(10, untimedTasks[0].minutes), title: untimedTasks[0].title || "Task", color: TASK_COLOR })
+                          ? handle(taskDrag(untimedTasks[0], key))
                           : {})}
                         aria-label={`${untimedTasks.length === 1 ? untimedTasks[0].title || "Task" : `${untimedTasks.length} tasks`}, ${untimedTasks.filter((t) => t.done).length} of ${untimedTasks.length} done`}
                         className={`min-w-0 max-w-full rounded-full transition-shadow hover:ring-2 hover:ring-foreground/20 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent sm:w-full sm:rounded-sm ${untimedTasks.length === 1 ? DRAGGABLE : ""}`}
