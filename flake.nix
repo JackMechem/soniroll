@@ -144,7 +144,7 @@
           };
           pnpmWorkspaces = [ "@jam-practice/desktop..." ];
           fetcherVersion = 4;
-          hash = "sha256-qhlMvpJVdqB0YRgJR7emwSQzxVVKioW9QljUF4VP1f8=";
+          hash = "sha256-emJs+ieAgf1thX0jgqEYWEFOpG+c9LId6oQhJIgwdRE=";
         };
 
         # `nix build .#soniroll-desktop` / `nix run github:JackMechem/soniroll` — the desktop app,
