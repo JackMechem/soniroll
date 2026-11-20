@@ -54,7 +54,9 @@ type Drag =
   | { kind: "tap"; startX: number; lastX: number; lastY: number; moved: boolean }
   /** A loop edge: grabbed once the pointer moves past `threshold` px; a short tap seeks instead. */
   | { kind: "handle"; edge: "start" | "end"; startX: number; threshold: number; moved: boolean }
-  | { kind: "select"; anchorX: number; anchorTime: number; moved: boolean };
+  | { kind: "select"; anchorX: number; anchorTime: number; moved: boolean }
+  /** A marker: dragged once the pointer moves past `threshold` px; a short tap goes to it. */
+  | { kind: "marker"; id: string; time: number; startX: number; threshold: number; moved: boolean };
 
 /**
  * Waveform with a playhead. Drag to pan, click to seek, Shift+drag to select a loop,
@@ -78,6 +80,8 @@ export default function Waveform({
   fill,
   height: fixedHeight = DEFAULT_HEIGHT,
   showMarkerFlags = true,
+  numberMarkers = false,
+  onMarkerMove,
   grid,
   snap,
   snapEdit,
@@ -122,6 +126,12 @@ export default function Waveform({
   height?: number;
   /** Draw the marker name flags (turn off on all but one lane of a multitrack view). */
   showMarkerFlags?: boolean;
+  /** Put each marker's place in the list (1–10) on its flag, for number-key shortcuts. Shown
+      only with a mouse (touch screens have no number keys). */
+  numberMarkers?: boolean;
+  /** Dragging a marker: its new time, and `final` when the pointer is let go. Without it,
+      markers can only be clicked (to go to them). */
+  onMarkerMove?: (id: string, time: number, final: boolean) => void;
   /** Beat lines drawn behind the waveform. */
   grid?: GridShape;
   /** Rounds times picked with the mouse, e.g. to the nearest beat. */
@@ -408,8 +418,20 @@ export default function Waveform({
       return;
     }
     if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest("[data-marker]")) return;
+    const markerId = (e.target as HTMLElement).closest<HTMLElement>("[data-marker]")?.dataset.id;
+    const marker = markerId ? markers.find((m) => m.id === markerId) : undefined;
     e.currentTarget.setPointerCapture(e.pointerId);
+    if (marker) {
+      dragRef.current = {
+        kind: "marker",
+        id: marker.id,
+        time: marker.time,
+        startX: e.clientX,
+        threshold: e.pointerType === "touch" ? 10 : DRAG_THRESHOLD_PX,
+        moved: false,
+      };
+      return;
+    }
     const handle = (name: string) =>
       (e.target as HTMLElement).closest<HTMLElement>(`[${name}]`)?.dataset.clipId;
     const repeatId = handle("data-repeat-handle");
@@ -497,6 +519,13 @@ export default function Waveform({
       onSeek(timeAt(e.clientX));
       return;
     }
+    if (drag.kind === "marker") {
+      if (!onMarkerMove) return;
+      if (!drag.moved && Math.abs(e.clientX - drag.startX) < drag.threshold) return;
+      drag.moved = true;
+      onMarkerMove(drag.id, timeAt(e.clientX), false);
+      return;
+    }
     if (drag.kind === "move") {
       if (!drag.moved && Math.abs(e.clientX - drag.startX) < DRAG_THRESHOLD_PX) return;
       drag.moved = true;
@@ -557,6 +586,11 @@ export default function Waveform({
       return;
     }
     if (!drag || drag.kind === "scrub") return;
+    if (drag.kind === "marker") {
+      if (drag.moved) onMarkerMove?.(drag.id, timeAt(e.clientX), true);
+      else onSeek(drag.time);
+      return;
+    }
     if (drag.kind === "move") {
       if (drag.moved) {
         onMoveClip?.(drag.id, movedOffset(drag, e.clientX), true, e.clientY);
@@ -647,7 +681,7 @@ export default function Waveform({
             <div
               key={edge}
               data-edge={edge}
-              className={`absolute inset-y-0 w-4 cursor-ew-resize ${
+              className={`absolute inset-y-0 z-[11] w-4 cursor-ew-resize ${
                 edge === "start" ? "-left-2.5" : "-right-2.5"
               }`}
             />
@@ -655,23 +689,36 @@ export default function Waveform({
         </div>
       )}
 
-      {markers.map((marker) => {
+      {/* Each marker is a line and a name flag. Both drag the marker; a tap goes to it. The flag sits
+          above the loop's edges and the playhead, so a marker at a loop edge or under the playhead
+          (just after going to it) can still be grabbed by its flag. */}
+      {markers.map((marker, i) => {
         const left = toX(marker.time);
         if (left < -1 || left > 101) return null;
+        const title = `${marker.label}${marker.note ? `\n${marker.note}` : ""}${onMarkerMove ? "\nDrag to move" : ""}`;
         return (
-          <div
-            key={marker.id}
-            data-marker
-            data-id={marker.id}
-            className="absolute inset-y-0 z-10 w-3 -translate-x-1/2 cursor-pointer"
-            style={{ left: `${left}%` }}
-            onClick={() => onSeek(marker.time)}
-            title={marker.note ? `${marker.label}\n${marker.note}` : marker.label}
-          >
-            <div className="absolute inset-y-0 left-1/2 w-px bg-accent" />
+          <div key={marker.id}>
+            <div
+              data-marker
+              data-id={marker.id}
+              className={`absolute inset-y-0 z-10 w-3 -translate-x-1/2 pointer-coarse:w-6 ${onMarkerMove ? "cursor-ew-resize" : "cursor-pointer"}`}
+              style={{ left: `${left}%` }}
+              title={title}
+            >
+              <div className="absolute inset-y-0 left-1/2 w-px bg-accent" />
+            </div>
             {showMarkerFlags && (
-              <div className="absolute left-1/2 top-0 max-w-28 truncate rounded-br-md bg-accent px-1.5 py-0.5 text-[0.65rem] font-medium leading-none text-accent-foreground">
-                {marker.label}
+              <div
+                data-marker
+                data-id={marker.id}
+                title={title}
+                className={`absolute top-0 z-[21] flex max-w-28 items-center gap-1 rounded-br-md bg-accent px-1.5 py-0.5 text-[0.65rem] font-medium leading-none text-accent-foreground pointer-coarse:py-1.5 ${onMarkerMove ? "cursor-ew-resize" : "cursor-pointer"}`}
+                style={{ left: `${left}%` }}
+              >
+                {numberMarkers && i < 10 && (
+                  <span className="tabular-nums opacity-75 [@media(pointer:coarse)]:hidden">{(i + 1) % 10}</span>
+                )}
+                <span className="truncate">{marker.label}</span>
               </div>
             )}
           </div>

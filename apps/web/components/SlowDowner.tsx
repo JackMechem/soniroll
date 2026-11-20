@@ -7,6 +7,7 @@ import Hint from "@/components/Hint";
 import { AUDIO_OR_VIDEO, OpenFileButton, useFilePicker } from "@/components/files/FilePicker";
 import { OptionSection, OptionsCard } from "@/components/OptionsCard";
 import KeyHint from "@/components/KeyHint";
+import PromptDialog from "@/components/PromptDialog";
 import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
@@ -14,6 +15,8 @@ import { toolPresets } from "@/lib/toolPresets";
 import WaveScrollbar from "@/components/WaveScrollbar";
 import Waveform, { LoopRegion, View } from "@/components/Waveform";
 import {
+  CloseIcon,
+  DotsVerticalIcon,
   ExpandHeightIcon,
   FlagIcon,
   PauseIcon,
@@ -27,7 +30,7 @@ import {
 } from "@/components/tools";
 import { Peaks, analyzeAudio, formatTime } from "@/lib/audioFile";
 import { LibraryEntry, deleteFile, getFile, listFiles, saveFile } from "@/lib/fileLibrary";
-import { Marker, fileKeyOf, loadMarkers, saveMarkers } from "@/lib/markers";
+import { Marker, SavedLoop, fileKeyOf, loadLoops, loadMarkers, saveLoops, saveMarkers } from "@/lib/markers";
 import { makeId } from "@/lib/types";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
@@ -67,10 +70,21 @@ const CONTROL_HINTS: [string, string][] = [
   ["Shift + drag", "select loop"],
   ["Scroll", "zoom"],
   ["Shift + scroll", "pan"],
-  ["Right-click", "markers"],
+  ["Right-click", "markers and loops"],
+  ["Drag a marker", "move it"],
   ["Space", "play / pause"],
   ["B", "back to loop start"],
+  ["1–9, 0", "go to marker 1–10"],
 ];
+
+/** Two loops this close (in seconds) at both ends count as the same loop. */
+const SAME_LOOP = 0.01;
+function sameLoop(a: { start: number; end: number }, b: { start: number; end: number }) {
+  return Math.abs(a.start - b.start) < SAME_LOOP && Math.abs(a.end - b.end) < SAME_LOOP;
+}
+
+/** A marker counts as being at a loop's edge within this many seconds (for naming a saved loop). */
+const AT_MARKER = 0.05;
 
 function TransportButton({
   label,
@@ -118,6 +132,8 @@ export default function SlowDowner() {
   const [loopOn, setLoopOn] = useState(false);
   const [view, setView] = useState<View>({ start: 0, span: 1 });
   const [markers, setMarkers] = useState<Marker[]>([]);
+  const [loops, setLoops] = useState<SavedLoop[]>([]);
+  const [renaming, setRenaming] = useState<Marker | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [library, setLibrary] = useState<LibraryEntry[]>([]);
   const [loopNote, setLoopNote] = useState<string | null>(null);
@@ -127,6 +143,8 @@ export default function SlowDowner() {
   const loopRef = useRef({ loop, loopOn });
   const fileTokenRef = useRef(0);
   const fileKeyRef = useRef<string | null>(null);
+  /** The saved loop the current loop is, if it's one. */
+  const currentSaved = loop ? loops.find((l) => sameLoop(l, loop)) : undefined;
 
   useEffect(() => {
     loopRef.current = { loop, loopOn };
@@ -153,10 +171,13 @@ export default function SlowDowner() {
     };
   }, []);
 
-  // Remember markers per file.
+  // Remember markers and saved loops per file.
   useEffect(() => {
     if (fileKeyRef.current) saveMarkers(fileKeyRef.current, markers);
   }, [markers]);
+  useEffect(() => {
+    if (fileKeyRef.current) saveLoops(fileKeyRef.current, loops);
+  }, [loops]);
 
   // Release the object URL when the file changes or the page closes.
   useEffect(() => {
@@ -203,6 +224,7 @@ export default function SlowDowner() {
     setView({ start: 0, span: 1 });
     fileKeyRef.current = fileKeyOf(next);
     setMarkers(loadMarkers(fileKeyRef.current));
+    setLoops(loadLoops(fileKeyRef.current));
     setMenu(null);
     setFile({ name: next.name, type: next.type, url: URL.createObjectURL(next) });
 
@@ -236,16 +258,18 @@ export default function SlowDowner() {
     setLoop(null);
     setLoopOn(false);
     setMarkers([]);
+    setLoops([]);
     setMenu(null);
     setTime(0);
     setDuration(0);
     setError(null);
   }
 
-  /** Deletes a file kept in this browser (signed out), with its markers. */
+  /** Deletes a file kept in this browser (signed out), with its markers and saved loops. */
   async function confirmDelete(entry: LibraryEntry) {
     await deleteFile(entry.id);
     saveMarkers(entry.id, []);
+    saveLoops(entry.id, []);
     if (fileKeyRef.current === entry.id) closeFile();
     setLibrary(await listFiles());
   }
@@ -311,7 +335,7 @@ export default function SlowDowner() {
         const entry = library.find((e) => e.id === id);
         if (entry) void confirmDelete(entry);
       },
-      removeMessage: "It's removed from this browser, along with its markers and notes. You can add the file again later.",
+      removeMessage: "It's removed from this browser, along with its markers, notes and saved loops. You can add the file again later.",
     },
   });
 
@@ -320,19 +344,41 @@ export default function SlowDowner() {
     seek(loopOn && loop ? loop.start : 0);
   }
 
-  const toLoopStartRef = useRef(toLoopStart);
+  /** Scrolls a zoomed-in view so `t` is on screen (playing does this itself as it goes). */
+  function reveal(t: number) {
+    setView((v) => {
+      if (v.span >= duration || (t >= v.start && t <= v.start + v.span)) return v;
+      return { ...v, start: Math.max(0, Math.min(duration - v.span, t - v.span * 0.1)) };
+    });
+  }
+
+  /** Goes to a marker by its number in the list (1 is the first along the song); keeps playing if
+      it was. */
+  function goToMarker(n: number) {
+    const marker = markers[n - 1];
+    if (!marker) return;
+    seek(marker.time);
+    reveal(marker.time);
+  }
+
+  const keysRef = useRef({ toLoopStart, goToMarker });
   const forThisPane = usePaneKeyGuard();
   useEffect(() => {
-    toLoopStartRef.current = toLoopStart;
+    keysRef.current = { toLoopStart, goToMarker };
   });
   useEffect(() => {
     if (!file) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key.toLowerCase() !== "b" || e.repeat || e.metaKey || e.ctrlKey || e.altKey || !forThisPane(e)) return;
+      // B: back to the loop start. 1–9 and 0: markers 1–10 (Shift allowed: some keyboards need it
+      // for digits).
+      const key = e.key.toLowerCase();
+      const digit = /^[0-9]$/.test(key) ? (key === "0" ? 10 : Number(key)) : 0;
+      if ((key !== "b" && !digit) || e.repeat || e.metaKey || e.ctrlKey || e.altKey || !forThisPane(e)) return;
       const target = e.target as HTMLElement;
       if (target.closest("input, textarea, select, [contenteditable='true'], [role='dialog'], [role='alertdialog']")) return;
       e.preventDefault();
-      toLoopStartRef.current();
+      if (digit) keysRef.current.goToMarker(digit);
+      else keysRef.current.toLoopStart();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -423,6 +469,87 @@ export default function SlowDowner() {
     );
   }
 
+  /** Dragging a marker on the waveform; the list is put back in time order when it's let go. */
+  function moveMarker(id: string, t: number, final: boolean) {
+    setMarkers((prev) => {
+      const next = prev.map((m) => (m.id === id ? { ...m, time: Math.min(duration, Math.max(0, t)) } : m));
+      return final ? next.sort((a, b) => a.time - b.time) : next;
+    });
+  }
+
+  function deleteMarker(id: string) {
+    setMarkers((prev) => prev.filter((m) => m.id !== id));
+  }
+
+  /** Loops from `start` to `end` (both kept inside the file) and goes to the start. */
+  function loopBetween(start: number, end: number) {
+    const s = Math.max(0, start);
+    const e = Math.min(duration, end);
+    if (e - s < MIN_LOOP_SECONDS) return showLoopNote("Those markers are too close together to loop");
+    setLoopNote(null);
+    setLoop({ start: s, end: e });
+    setLoopOn(true);
+    seek(s);
+    reveal(s);
+  }
+
+  /** The markers either side of a time (the file's start or end where there's none). */
+  function markersAround(t: number) {
+    const before = [...markers].reverse().find((m) => m.time <= t);
+    const after = markers.find((m) => m.time > t);
+    return { start: before?.time ?? 0, end: after?.time ?? duration };
+  }
+
+  /** What the ⋮ menu (in the Markers list) and a right-click on a marker offer. */
+  function markerMenuItems(marker: Marker, withRename: boolean): MenuItem[] {
+    const index = markers.findIndex((m) => m.id === marker.id);
+    const next = markers[index + 1];
+    return [
+      { label: "Go to marker", hint: index >= 0 && index < 10 ? String((index + 1) % 10) : undefined, onSelect: () => goToMarker(index + 1) },
+      { label: "Play from here", onSelect: () => playFrom(marker.time) },
+      { label: "Loop from this marker", divider: true, onSelect: () => setEdge("start", marker.time) },
+      { label: "Loop to this marker", onSelect: () => setEdge("end", marker.time) },
+      {
+        label: next ? "Loop to the next marker" : "Loop to the end",
+        detail: next ? `To ${next.label || "the next marker"}` : undefined,
+        onSelect: () => loopBetween(marker.time, next ? next.time : duration),
+      },
+      ...(withRename ? [{ label: "Rename marker", divider: true, onSelect: () => setRenaming(marker) }] : []),
+      { label: "Delete marker", danger: true, divider: !withRename, onSelect: () => deleteMarker(marker.id) },
+    ];
+  }
+
+  /** A sensible name for a new saved loop: the marker names at its ends, or "Loop 3". */
+  function loopName(region: LoopRegion) {
+    const at = (t: number) => markers.find((m) => Math.abs(m.time - t) < AT_MARKER)?.label.trim();
+    const from = at(region.start);
+    const to = at(region.end);
+    if (from && to) return `${from} to ${to}`;
+    if (from) return from;
+    let n = 1;
+    while (loops.some((l) => l.name === `Loop ${n}`)) n++;
+    return `Loop ${n}`;
+  }
+
+  /** Saves the current loop to come back to (not twice). */
+  function saveLoop() {
+    if (!loop) return;
+    const existing = loops.find((l) => sameLoop(l, loop));
+    if (existing) return showLoopNote(`Already saved as ${existing.name}`);
+    const name = loopName(loop);
+    setLoops((prev) => [...prev, { id: makeId(), name, start: loop.start, end: loop.end }].sort((a, b) => a.start - b.start));
+    showLoopNote(`Saved as ${name}`);
+  }
+
+  function updateSavedLoop(id: string, patch: Partial<SavedLoop>) {
+    setLoops((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  }
+
+  /** Back to a saved loop: loop it and go to its start. */
+  function openSavedLoop(saved: SavedLoop) {
+    loopBetween(saved.start, saved.end);
+  }
+
   function playFrom(t: number) {
     seek(t);
     const el = mediaRef.current;
@@ -432,33 +559,30 @@ export default function SlowDowner() {
   function openMenu(info: { time: number; x: number; y: number; markerId: string | null }) {
     const marker = markers.find((m) => m.id === info.markerId);
     const t = marker ? marker.time : info.time;
-    const common: MenuItem[] = [
-      { label: "Set loop start here", onSelect: () => setEdge("start", t) },
-      { label: "Set loop end here", onSelect: () => setEdge("end", t) },
-      ...(loop
-        ? [
-            { label: "Zoom to loop", onSelect: zoomToLoop },
-            { label: "Clear loop", onSelect: clearLoop },
-          ]
-        : []),
-    ];
+    const around = markersAround(t);
+    // The current loop's own items, at the end of either menu.
+    const loopItems: MenuItem[] = loop
+      ? [
+          ...(currentSaved ? [] : [{ label: "Save loop", divider: true, onSelect: saveLoop }]),
+          { label: "Zoom to loop", divider: !!currentSaved, onSelect: zoomToLoop },
+          { label: "Clear loop", onSelect: clearLoop },
+        ]
+      : [];
     setMenu({
       x: info.x,
       y: info.y,
+      width: 232,
       items: marker
-        ? [
-            { label: "Go to marker", onSelect: () => seek(marker.time) },
-            ...common,
-            {
-              label: "Delete marker",
-              danger: true,
-              onSelect: () => setMarkers((prev) => prev.filter((m) => m.id !== marker.id)),
-            },
-          ]
+        ? [...markerMenuItems(marker, true), ...loopItems]
         : [
             { label: "Add marker here", onSelect: () => addMarker(t) },
             { label: "Play from here", onSelect: () => playFrom(t) },
-            ...common,
+            { label: "Set loop start here", divider: true, onSelect: () => setEdge("start", t) },
+            { label: "Set loop end here", onSelect: () => setEdge("end", t) },
+            ...(markers.length > 0
+              ? [{ label: "Loop between markers", detail: `${formatTime(around.start)}–${formatTime(around.end)}`, onSelect: () => loopBetween(around.start, around.end) }]
+              : []),
+            ...loopItems,
           ],
     });
   }
@@ -533,7 +657,7 @@ export default function SlowDowner() {
         <Hint>Playback volume for this file.</Hint>
       </OptionSection>
 
-      {/* Markers belong to a file, so the chip waits until one is open. */}
+      {/* Markers and loops belong to a file, so their chips wait until one is open. */}
       {file && (
       <OptionSection title="Markers" icon={FlagIcon} summary={markers.length ? `${markers.length}` : "None"}>
         {markers.length === 0 ? (
@@ -543,7 +667,7 @@ export default function SlowDowner() {
           </p>
         ) : (
           <ul className="flex max-h-96 flex-col divide-y divide-foreground/10 overflow-y-auto pr-1">
-            {markers.map((marker) => (
+            {markers.map((marker, i) => (
               <li
                 key={marker.id}
                 className="flex flex-col gap-1.5 py-2 text-sm first:pt-0"
@@ -551,11 +675,13 @@ export default function SlowDowner() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => seek(marker.time)}
-                    title="Jump to marker"
-                    className="h-8 w-16 shrink-0 rounded-md bg-foreground/[0.05] px-2 text-left tabular-nums transition-colors hover:bg-surface-hover"
+                    onClick={() => goToMarker(i + 1)}
+                    title={i < 10 ? `Go to marker (${(i + 1) % 10})` : "Go to marker"}
+                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-2 text-left tabular-nums transition-colors hover:bg-surface-hover"
                   >
-                    {formatTime(marker.time)}
+                    {/* The number key that goes to it (keyboards only). */}
+                    {i < 10 && <span className={`w-2 text-xs text-muted ${MOUSE_ONLY}`}>{(i + 1) % 10}</span>}
+                    <span className="w-12">{formatTime(marker.time)}</span>
                   </button>
                   <input
                     value={marker.label}
@@ -565,11 +691,15 @@ export default function SlowDowner() {
                   />
                   <button
                     type="button"
-                    onClick={() => setMarkers((prev) => prev.filter((m) => m.id !== marker.id))}
-                    aria-label={`Delete ${marker.label}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                    onClick={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setMenu({ x: r.right - 232, y: r.bottom + 4, width: 232, items: markerMenuItems(marker, false) });
+                    }}
+                    aria-label={`More for ${marker.label || "this marker"}`}
+                    title="Loop from it, to it, or delete it"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                   >
-                    ✕
+                    <DotsVerticalIcon className="h-4 w-4" />
                   </button>
                 </div>
                 <textarea
@@ -592,6 +722,66 @@ export default function SlowDowner() {
         >
           Add marker at playhead
         </button>
+        <Hint>
+          Named points to jump between. Drag one along the waveform to move it. Its ⋮ menu loops from it, to it or to the next marker.
+          With a keyboard, 1 to 9 go to the first nine markers and 0 to the tenth.
+        </Hint>
+      </OptionSection>
+      )}
+
+      {file && (
+      <OptionSection title="Loops" icon={RepeatIcon} summary={loops.length ? `${loops.length} saved` : "None saved"}>
+        {loops.length === 0 ? (
+          <p className="text-sm text-muted">No saved loops yet. Make a loop, then save it to come back to it any time.</p>
+        ) : (
+          <ul className="flex max-h-96 flex-col divide-y divide-foreground/10 overflow-y-auto pr-1">
+            {loops.map((saved) => {
+              const active = loopOn && currentSaved?.id === saved.id;
+              return (
+                <li key={saved.id} className="flex items-center gap-2 py-2 text-sm first:pt-0">
+                  <button
+                    type="button"
+                    onClick={() => openSavedLoop(saved)}
+                    aria-pressed={active}
+                    title="Loop this"
+                    className={`h-8 shrink-0 rounded-md px-2 tabular-nums transition-colors ${
+                      active ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.05] hover:bg-surface-hover"
+                    }`}
+                  >
+                    {formatTime(saved.start)}–{formatTime(saved.end)}
+                  </button>
+                  <input
+                    value={saved.name}
+                    onChange={(e) => updateSavedLoop(saved.id, { name: e.target.value })}
+                    aria-label="Loop name"
+                    className="h-8 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-2 outline-none focus:ring-2 focus:ring-accent/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLoops((prev) => prev.filter((l) => l.id !== saved.id))}
+                    aria-label={`Delete ${saved.name || "this loop"}`}
+                    title="Delete this saved loop"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                  >
+                    <CloseIcon className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <button
+          type="button"
+          onClick={saveLoop}
+          disabled={!loop || !!currentSaved}
+          className="inline-flex h-8 items-center justify-center self-start rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50"
+        >
+          {currentSaved ? `Saved as ${currentSaved.name || "a loop"}` : "Save current loop"}
+        </button>
+        <Hint>
+          Loops you want to come back to, kept with this file in this browser. Pick one to loop it again; a new one is named after the
+          markers at its ends, if it has any.
+        </Hint>
       </OptionSection>
       )}
     </OptionsCard>
@@ -687,6 +877,8 @@ export default function SlowDowner() {
                 if (playing) seek(region.start);
               }}
               markers={markers}
+              numberMarkers
+              onMarkerMove={moveMarker}
               fill={maximized}
               onContextMenu={openMenu}
               onZoomAt={zoomAt}
@@ -834,9 +1026,15 @@ export default function SlowDowner() {
               Loop end
             </button>
             {loop && (
-              <span className={`text-sm tabular-nums ${loopOn ? "text-foreground" : "text-muted"}`} title={loopOn ? "The loop" : "The loop (off)"}>
-                Loop {formatTime(loop.start)}–{formatTime(loop.end)}
+              <span className={`flex min-w-0 items-baseline gap-1 text-sm tabular-nums ${loopOn ? "text-foreground" : "text-muted"}`} title={loopOn ? "The loop" : "The loop (off)"}>
+                <span className="max-w-40 truncate">{currentSaved ? currentSaved.name || "Loop" : "Loop"}</span>
+                {formatTime(loop.start)}–{formatTime(loop.end)}
               </span>
+            )}
+            {loop && !currentSaved && (
+              <button type="button" onClick={saveLoop} title="Save this loop to come back to it" className={loopButton}>
+                Save loop
+              </button>
             )}
             <button type="button" onClick={clearLoop} disabled={!loop} className={loopButton}>
               Clear loop
@@ -869,6 +1067,17 @@ export default function SlowDowner() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {renaming && (
+        <PromptDialog
+          title="Rename marker"
+          initialValue={renaming.label}
+          onSubmit={(label) => {
+            updateMarker(renaming.id, { label });
+            setRenaming(null);
+          }}
+          onCancel={() => setRenaming(null)}
+        />
+      )}
     </ToolLayout>
   );
 }
