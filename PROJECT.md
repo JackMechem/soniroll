@@ -300,6 +300,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
+| Library as two tabs (Tunes, Files; FB-30, 2026-11-20): every chart on a tune (`tuneChartIds`, several per tune), the Library tune list, tags, linking on import and the one-time pass (`useAutoLinkCharts`), Open in Slow Downer/Tuner from Files | `library-two-tabs.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
 | Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
