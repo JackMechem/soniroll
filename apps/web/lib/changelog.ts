@@ -33,6 +33,19 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.15",
+    date: "2026-11-20",
+    title: "Library fixes",
+    changes: [
+      { kind: "improved", text: "Picking several tags now shows the tunes with **any** of them." },
+      {
+        kind: "improved",
+        text: "No separate Chord charts page: every chart lives on its tune. Deleting a tune deletes its charts too, and a tune's chart menu has **Delete this chart** instead of Unlink.",
+      },
+      { kind: "fixed", text: "The import page's options are laid out properly, and going back from it returns to your tunes." },
+    ],
+  },
+  {
     version: "0.10.14",
     date: "2026-11-20",
     title: "Mark up your PDFs, and a simpler Library",
