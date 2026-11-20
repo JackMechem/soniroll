@@ -67,8 +67,21 @@ export function BigButton({
   );
 }
 
-/** A round − / + button on the faint fill. */
-export function StepButton({ label, onPress, disabled, children }: { label: string; onPress: () => void; disabled?: boolean; children: ReactNode }) {
+/** A round − / + button on the faint fill, 48 across (a comfortable thumb target). */
+export function StepButton({
+  label,
+  onPress,
+  disabled,
+  compact,
+  children,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  /** 44 across, for a tight spot (the tuner's octave, inside its dial). */
+  compact?: boolean;
+  children: ReactNode;
+}) {
   const { colors, derived } = useAppTheme();
   return (
     <Pressable
@@ -76,12 +89,11 @@ export function StepButton({ label, onPress, disabled, children }: { label: stri
       disabled={disabled}
       accessibilityLabel={label}
       accessibilityRole="button"
-      hitSlop={4}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-10 w-10 items-center justify-center overflow-hidden rounded-full"
+      className={`${compact ? 'h-11 w-11' : 'h-12 w-12'} items-center justify-center overflow-hidden rounded-full`}
       style={{ backgroundColor: derived.fill, opacity: disabled ? 0.4 : 1 }}
     >
-      <Text className="font-ui text-xl" style={{ color: colors.foreground, lineHeight: 24 }}>
+      <Text className="font-ui text-2xl" style={{ color: colors.foreground, lineHeight: 28 }}>
         {children}
       </Text>
     </Pressable>
@@ -137,7 +149,7 @@ function JumpButton({ amount, onPress }: { amount: number; onPress: () => void }
       onPress={onPress}
       accessibilityLabel={`${amount > 0 ? 'Increase' : 'Decrease'} tempo by ${Math.abs(amount)}`}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-10 w-11 items-center justify-center overflow-hidden rounded-full"
+      className="h-11 w-11 items-center justify-center overflow-hidden rounded-full"
       style={{ backgroundColor: derived.fill }}
     >
       <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
@@ -179,7 +191,7 @@ export function TempoHero({
   return (
     <View className="w-full items-center gap-3">
       <View className="items-center">
-        <View className="flex-row items-center gap-4">
+        <View className="flex-row items-center gap-3">
           {!locked ? (
             <StepButton label="Decrease tempo" onPress={() => set(bpm - 1)} disabled={bpm <= MIN_BPM}>
               −
@@ -227,7 +239,7 @@ export function TempoHero({
               onPress={onTap}
               accessibilityLabel="Tap tempo"
               android_ripple={{ color: colors['surface-hover'] }}
-              className="mx-1 h-10 flex-row items-center gap-2 overflow-hidden rounded-full px-4"
+              className="mx-1 h-11 flex-row items-center gap-2 overflow-hidden rounded-full px-4"
               style={{ backgroundColor: derived.fill }}
             >
               <MetronomeIcon color={colors.muted} size={16} />
@@ -310,7 +322,7 @@ function Arrow({ dir, label, onPress, disabled }: { dir: 'left' | 'right'; label
       disabled={disabled}
       accessibilityLabel={label}
       accessibilityRole="button"
-      className="h-10 w-10 items-center justify-center rounded-md"
+      className="h-11 w-11 items-center justify-center rounded-md"
       style={{ opacity: disabled ? 0.3 : 1 }}
     >
       <Icon color={colors.muted} size={20} />
@@ -411,6 +423,7 @@ export function StepperPill({
   max,
   unit,
   label,
+  onPage,
 }: {
   value: number;
   onChange: (n: number) => void;
@@ -418,11 +431,13 @@ export function StepperPill({
   max: number;
   unit: [string, string];
   label: string;
+  /** On the page (a surface track); in a sheet it's the background colour. */
+  onPage?: boolean;
 }) {
   const { colors } = useAppTheme();
   return (
     <View className="flex-row items-center gap-3">
-      <View className="flex-row items-center rounded-md p-0.5" style={{ backgroundColor: colors.background }}>
+      <View className="flex-row items-center rounded-md p-0.5" style={{ backgroundColor: onPage ? colors.surface : colors.background }}>
         <Arrow dir="left" label={`Fewer ${unit[1]}`} onPress={() => onChange(Math.max(min, value - 1))} disabled={value <= min} />
         <NumberInput value={value} onChange={onChange} min={min} max={max} label={label} className="font-ui-semibold w-12 text-center text-xl font-semibold" />
         <Arrow dir="right" label={`More ${unit[1]}`} onPress={() => onChange(Math.min(max, value + 1))} disabled={value >= max} />

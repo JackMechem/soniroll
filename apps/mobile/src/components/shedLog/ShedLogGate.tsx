@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
+import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { CheckIcon } from '@/components/icons';
-import { CalendarIcon } from '@/components/shedLog/parts';
 import { Button } from '@/components/ui';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
@@ -15,18 +15,13 @@ const POINTS = [
 ];
 
 /** The Shed Log signed out (the website's `ShedLogGate`): what it is, and Sign in — it's for
-    account holders. Sign in opens the Account screen. */
+    account holders. Sign in opens the Account screen (Create an account, on its Sign up side). */
 export function ShedLogGate() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const bottom = useTabBarSpace();
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: 48, gap: 20 }} style={{ backgroundColor: colors.background }}>
-      <View className="flex-row items-center gap-2">
-        <CalendarIcon color={colors.muted} size={16} />
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
-          Shed Log
-        </Text>
-      </View>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: bottom, gap: 20 }} style={{ backgroundColor: colors.background }}>
       <Text className="font-ui-extrabold text-3xl font-extrabold leading-tight" style={{ color: colors.foreground }}>
         Your practice, every day, adding up.
       </Text>
@@ -49,7 +44,10 @@ export function ShedLogGate() {
         <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
           The Shed Log is free with an account.
         </Text>
-        <Button label="Sign in" pill onPress={() => router.push('/profile')} />
+        <View className="flex-row flex-wrap gap-2">
+          <Button label="Sign in" pill onPress={() => router.push('/profile')} />
+          <Button label="Create an account" kind="secondary" pill onPress={() => router.push({ pathname: '/profile', params: { flow: 'signUp' } })} />
+        </View>
       </View>
     </ScrollView>
   );

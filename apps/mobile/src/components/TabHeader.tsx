@@ -9,14 +9,32 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { ProfileIcon } from '@/components/icons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** Your account, from the top-right of every main screen: your picture once you're signed in and
-    have one, otherwise a person icon. Opens Account (profile, settings, theme, signing in). */
+/** Your account, from the top-right of every main screen. Signed in: your picture, or a person
+    icon. Signed out: a "Sign in" pill, so whether you're signed in shows at a glance. Either way it
+    opens Account (profile, settings, theme, signing in). */
 export function AccountButton() {
   const router = useRouter();
   const { colors, derived } = useAppTheme();
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const profile = useQuery(api.profiles.getMine, isAuthenticated ? {} : 'skip');
   const avatarUrl = isAuthenticated ? profile?.avatarUrl : null;
+  if (!isAuthenticated && !isLoading) {
+    return (
+      <Pressable
+        onPress={() => router.push('/profile')}
+        accessibilityRole="button"
+        accessibilityLabel="Sign in"
+        hitSlop={6}
+        android_ripple={{ color: colors['surface-hover'] }}
+        className="h-10 justify-center overflow-hidden rounded-full px-4"
+        style={{ backgroundColor: derived.fill }}
+      >
+        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+          Sign in
+        </Text>
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       onPress={() => router.push('/profile')}
@@ -35,11 +53,16 @@ export function AccountButton() {
   );
 }
 
-/** The top of a main (tab) screen: its name, any actions, and the account button. */
-export function TabHeader({ title, right }: { title: string; right?: ReactNode }) {
-  const { colors } = useAppTheme();
+/** The top of a main (tab) screen: its name, any actions, and the account button. `scrolled` draws
+    a hairline under it once the page has scrolled, so content doesn't slide under it unseen. */
+export function TabHeader({ title, right, scrolled }: { title: string; right?: ReactNode; scrolled?: boolean }) {
+  const { colors, derived } = useAppTheme();
   return (
-    <View className="h-14 flex-row items-center gap-2 px-4">
+    <View
+      className="h-14 flex-row items-center gap-2 px-4"
+      // Always 1px (transparent at the top), so the line appearing doesn't move anything.
+      style={{ borderBottomWidth: 1, borderBottomColor: scrolled ? derived.hairline : 'transparent' }}
+    >
       <Text numberOfLines={1} className="font-ui-extrabold flex-1 text-[28px] font-extrabold tracking-tight" style={{ color: colors.foreground }}>
         {title}
       </Text>
@@ -80,7 +103,7 @@ export function LibraryHeader({ right }: { right?: ReactNode }) {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 className="h-11 justify-center px-3"
-                style={{ borderBottomWidth: 2, borderBottomColor: active ? colors.foreground : 'transparent', marginBottom: -1 }}
+                style={{ borderBottomWidth: 3, borderBottomColor: active ? colors.accent : 'transparent', marginBottom: -1 }}
               >
                 <Text
                   className={`text-[15px] ${active ? 'font-ui-semibold font-semibold' : 'font-ui'}`}

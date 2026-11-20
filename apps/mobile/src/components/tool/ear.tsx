@@ -13,10 +13,10 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { CheckIcon, FlagIcon, HistoryIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
-import { GradientFill } from '@/components/tool/reward';
-import { SettingChip } from '@/components/tool/SettingChip';
+import { SettingChip, TOOL_CONTENT } from '@/components/tool/SettingChip';
 import { Slider } from '@/components/tool/Slider';
 import { Button } from '@/components/ui';
+import { EAR_TRAINING_TONES } from '@/lib/sampledTones';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
@@ -41,6 +41,11 @@ export function useGradeColors(): Record<Grade, string> {
     partial: dark ? '#eab308' : '#ca8a04',
     incorrect: colors.danger,
   };
+}
+
+/** A tone's name for a chip ("Piano"). */
+export function toneLabel(id: string): string {
+  return EAR_TRAINING_TONES.find((t) => t.id === id)?.label ?? 'Piano';
 }
 
 const SHORT_NAMES: Record<string, string> = { bass4: 'Bass', bass5: '5-string bass' };
@@ -69,9 +74,10 @@ export function noteGlyphs(text: string): string {
 // ── The page ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * A tool screen laid out like the website's tool pages on a phone (and the Metronome): everything
- * in one centred column (the History / Struggles chips, the main display, the big button, then the
- * mode switch and the setting chips) that only scrolls on a short screen. `footer` is pinned under
+ * A tool screen laid out like every tool on the phone (and the Metronome), top to bottom: the
+ * History / Struggles chips, the mode switch (Practice / Learn … — it decides what the screen is),
+ * the main display, the big button, then the setting chips. It starts a fixed step under the
+ * header (it doesn't float in the middle) and scrolls on a short screen. `footer` is pinned under
  * it (an answer keyboard).
  */
 export function ToolScreen({ title, footer, children }: { title: string; footer?: ReactNode; children: ReactNode }) {
@@ -83,7 +89,7 @@ export function ToolScreen({ title, footer, children }: { title: string; footer?
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 20 }}
+          contentContainerStyle={TOOL_SCROLL_CONTENT}
         >
           {children}
         </ScrollView>
@@ -93,11 +99,13 @@ export function ToolScreen({ title, footer, children }: { title: string; footer?
   );
 }
 
-/** The mode switch (when there is one) above the setting chips, under the main display. */
-export function OptionsArea({ mode, children }: { mode?: ReactNode; children: ReactNode }) {
+/** The scroll content of every tool screen: a 16dp gutter, starting 20dp under the header. */
+export const TOOL_SCROLL_CONTENT = { ...TOOL_CONTENT, alignItems: 'center', gap: 20 } as const;
+
+/** The setting chips under the big button. (The mode switch, if any, goes above the display.) */
+export function OptionsArea({ children }: { children: ReactNode }) {
   return (
-    <View className="w-full items-center gap-3 pt-1">
-      {mode}
+    <View className="w-full items-center pt-1">
       <View className="flex-row flex-wrap justify-center gap-2">{children}</View>
     </View>
   );
@@ -169,13 +177,35 @@ export function QuizRing({
   );
 }
 
-/** The muted "?" in an idle round display. */
+/** The muted "?" in an idle round display. Prefer `IdleSummary`, which says what's coming. */
 export function IdleMark() {
   const { colors } = useAppTheme();
   return (
     <Text className="font-ui-bold text-4xl font-bold" style={{ color: colors.muted }}>
       ?
     </Text>
+  );
+}
+
+/** What an idle round display holds before Start: what's about to be asked — a number or a short
+    name big ("12", "C major"), what it counts under it ("intervals"), and a detail line ("Piano ·
+    C3–C5"). */
+export function IdleSummary({ value, label, detail }: { value: string; label: string; detail?: string }) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="items-center">
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} className="font-ui-bold text-center text-4xl font-bold tabular-nums" style={{ color: colors.foreground }}>
+        {value}
+      </Text>
+      <Text numberOfLines={1} className="font-ui-semibold text-center text-sm font-semibold" style={{ color: colors.muted }}>
+        {label}
+      </Text>
+      {detail ? (
+        <Text numberOfLines={2} className="font-ui mt-1 text-center text-xs" style={{ color: colors.muted }}>
+          {detail}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -362,7 +392,11 @@ export function HistoryChip({ entries, bestMs, onClear }: { entries: HistoryItem
   const { colors, derived } = useAppTheme();
   const gradeColor = useGradeColors();
   return (
-    <SettingChip Icon={HistoryIcon} label="History" value={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}>
+    <SettingChip
+      Icon={HistoryIcon}
+      label="History"
+      value={bestMs !== null ? `Best ${formatDuration(bestMs)}` : entries.length ? `${entries.length} run${entries.length === 1 ? '' : 's'}` : 'None yet'}
+    >
       {entries.length === 0 ? (
         <SheetText>No attempts yet with these settings.</SheetText>
       ) : (
@@ -427,7 +461,7 @@ export function StrugglesChip({
   const [open, setOpen] = useState(false);
   const count = shedCount ?? entries.length;
   return (
-    <SettingChip Icon={FlagIcon} label="Struggles" value={entries.length ? `${entries.length} weak` : undefined} open={open} onOpenChange={setOpen}>
+    <SettingChip Icon={FlagIcon} label="Struggles" value={entries.length ? `${entries.length} weak` : 'None yet'} open={open} onOpenChange={setOpen}>
       {entries.length === 0 ? (
         <SheetText>{emptyText}</SheetText>
       ) : (
@@ -594,10 +628,10 @@ export function Pill({
       accessibilityRole={radio ? 'radio' : 'checkbox'}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ checked: on, disabled }}
-      className={`h-9 flex-row items-center gap-1 overflow-hidden rounded-full ${on && !radio ? 'pl-2.5 pr-3.5' : 'px-3.5'}`}
-      style={{ backgroundColor: on ? undefined : colors.background, opacity: disabled ? 0.6 : 1 }}
+      hitSlop={{ top: 2, bottom: 2 }}
+      className={`h-10 flex-row items-center gap-1 overflow-hidden rounded-full ${on && !radio ? 'pl-2.5 pr-3.5' : 'px-3.5'}`}
+      style={{ backgroundColor: on ? colors.accent : colors.background, opacity: disabled ? 0.6 : 1 }}
     >
-      {on ? <GradientFill /> : null}
       {on && !radio ? <CheckIcon color={colors['accent-foreground']} size={15} /> : null}
       <Text className="font-ui-semibold text-sm font-semibold" style={{ color: on ? colors['accent-foreground'] : colors.foreground }}>
         {label}
@@ -629,8 +663,9 @@ function PoolButton({ label, onPress, disabled }: { label: string; onPress: () =
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      hitSlop={{ top: 4, bottom: 4 }}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-8 items-center justify-center overflow-hidden rounded-full px-3"
+      className="h-9 items-center justify-center overflow-hidden rounded-full px-3.5"
       style={{ backgroundColor: colors.background, opacity: disabled ? 0.5 : 1 }}
     >
       <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.foreground }}>
@@ -687,7 +722,7 @@ export function SheetButton({ label, onPress, disabled }: { label: string; onPre
       disabled={disabled}
       accessibilityRole="button"
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-9 items-center justify-center self-start overflow-hidden rounded-lg px-3"
+      className="h-11 items-center justify-center self-start overflow-hidden rounded-lg px-3.5"
       style={{ backgroundColor: colors.background, opacity: disabled ? 0.5 : 1 }}
     >
       <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>

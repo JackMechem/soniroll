@@ -31,14 +31,14 @@ import { Text, View } from 'react-native';
 import { ElapsedTimer } from '@/components/CountdownLabel';
 import { ChoiceList, PoolButton, PoolCount, RunHistoryChip, RunResults, formatScore, type RunEntry } from '@/components/findTheRoot/parts';
 import { RootKeys } from '@/components/findTheRoot/RootKeys';
-import { ChordIcon, MicrophoneIcon, NoteIcon, PlayIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { ChordIcon, MicrophoneIcon, NoteIcon, PlayIcon, StopwatchIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
   Field,
   GroupLabel,
   IdleHint,
-  IdleMark,
+  IdleSummary,
   MutedText,
   OptionsArea,
   Pill,
@@ -53,6 +53,7 @@ import {
 import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { VoicingIcon } from '@/components/tool/toolIcons';
 import { Button } from '@/components/ui';
 import { SENSITIVITY, startAudioInput, type AudioInput } from '@/lib/audioInput';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNotesTogether } from '@/lib/sampledTones';
@@ -529,6 +530,22 @@ function FindTheRootScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Answer by"
+            value={answerMode}
+            onChange={(v) => updateSettings({ answerMode: v })}
+            options={[
+              { value: 'sing', label: 'Sing or play' },
+              { value: 'pick', label: 'Pick' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {showingSummary && summary ? (
         <RunResults
           score={scoreOf(summary.results)}
@@ -547,7 +564,7 @@ function FindTheRootScreen() {
             style={{ borderWidth: 3, borderColor: glow ?? withAlpha(colors.foreground, 0.1) }}
           >
             {!round ? (
-              <IdleMark />
+              <IdleSummary value={String(typeCount)} label={typeCount === 1 ? 'chord type' : 'chord types'} detail={`${roundCount} rounds · ${SHAPE_SHORT[shape]}`} />
             ) : (
               <Text
                 numberOfLines={1}
@@ -686,20 +703,7 @@ function FindTheRootScreen() {
 
       {/* Hidden while a run goes, so the round has the screen to itself. */}
       {!running ? (
-        <OptionsArea
-          mode={
-            <Segmented
-              onPage
-              label="Answer by"
-              value={answerMode}
-              onChange={(v) => updateSettings({ answerMode: v })}
-              options={[
-                { value: 'sing', label: 'Sing or play' },
-                { value: 'pick', label: 'Pick' },
-              ]}
-            />
-          }
-        >
+        <OptionsArea>
           <SettingChip Icon={ChordIcon} label="Chords" value={`${typeCount} of ${ROOTLESS_TYPES.length}`}>
             <PoolCount
               text={`${typeCount} of ${ROOTLESS_TYPES.length} in play`}
@@ -745,7 +749,7 @@ function FindTheRootScreen() {
             </Field>
           </SettingChip>
 
-          <SettingChip Icon={SlidersIcon} label="Voicing" value={SHAPE_SHORT[shape]}>
+          <SettingChip Icon={VoicingIcon} label="Voicing" value={SHAPE_SHORT[shape]}>
             <Field
               label="Shape"
               hint="How the notes are stacked. Root position plays the chord on top from its own root (E♭ G B♭ D). Any inversion starts on any of its notes. A and B are the left-hand voicings pianists use: from the 3rd (3 5 7 9) or from the 7th (7 9 3 5)."

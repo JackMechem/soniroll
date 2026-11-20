@@ -16,7 +16,7 @@ import { analyze, detectStrokes, takeOverview, type Analysis, type AnalysisParam
 import { HISTORY_LIMIT, type TakeSummary } from '@jam-practice/core/timeTestTiming';
 import { Stack } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
@@ -35,7 +35,7 @@ import {
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { Analytics } from '@/components/timeTest/Analytics';
 import { HistoryList, LiveFeedback, MicSheet } from '@/components/timeTest/parts';
-import { Field } from '@/components/tool/ear';
+import { Field, TextButton } from '@/components/tool/ear';
 import {
   BigButton,
   MeterQuickPicks,
@@ -49,7 +49,7 @@ import {
 } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { ChoiceCards, CountField } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
 import { useDeviceSettings } from '@/lib/useDeviceSettings';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { takeDetail, type Detail } from '@/lib/timeTestPeaks';
@@ -379,7 +379,7 @@ function TimeTestScreen() {
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          contentContainerStyle={TOOL_CONTENT}
         >
           {history.takes.length > 0 ? (
             <View className="items-center">
@@ -415,10 +415,30 @@ function TimeTestScreen() {
           {recording ? <LiveFeedback hits={liveHits} toleranceMs={settings.toleranceMs} countInLeft={countInLeft} /> : null}
 
           <View className="items-center gap-3">
+            {/* Until the phone's delay is measured, calibrating is the main button (once it's
+                done, Record is). Calibrating again lives in the Microphone sheet. */}
             {recording ? (
               <BigButton label="Stop and analyze" onPress={stopAndAnalyze} icon={<StopIcon color={colors['accent-foreground']} size={18} />} />
             ) : calibrating ? (
               <BigButton label="Calibrating… stay quiet" secondary disabled onPress={() => {}} />
+            ) : !calibrated && !analyzing ? (
+              <>
+                <Text className="font-ui max-w-xs text-center text-sm leading-5" style={{ color: colors.muted }}>
+                  First, calibrate: it plays 12 clicks through the speaker and measures your phone&apos;s delay. Stay quiet while it listens.
+                </Text>
+                <BigButton label="Calibrate" onPress={calibrate} icon={<MicrophoneIcon color={colors['accent-foreground']} size={18} />} />
+                {calibration && !calibration.ok ? (
+                  <Text className="font-ui px-4 text-center text-sm" style={{ color: colors.danger }}>
+                    {calibration.message}
+                  </Text>
+                ) : null}
+                {calibrateError ? (
+                  <Text className="font-ui px-4 text-center text-sm" style={{ color: colors.danger }}>
+                    {calibrateError}
+                  </Text>
+                ) : null}
+                <TextButton label="Record without calibrating" onPress={record} />
+              </>
             ) : (
               <BigButton label="Record" onPress={record} disabled={analyzing} icon={<RecordIcon color={colors['accent-foreground']} size={18} />} />
             )}
@@ -437,14 +457,6 @@ function TimeTestScreen() {
                 <Text className="font-ui text-sm" style={{ color: colors.muted }}>
                   Working out your timing…
                 </Text>
-              </View>
-            ) : null}
-            {!calibrated && phase === 'idle' && !analyzing ? (
-              <View className="items-center gap-2">
-                <Text className="font-ui px-4 text-center text-xs" style={{ color: colors.muted }}>
-                  Calibrate first so your phone&apos;s delay doesn&apos;t skew the results.
-                </Text>
-                <CalibrateButton onPress={() => setMicOpen(true)} />
               </View>
             ) : null}
             {error ? (
@@ -519,7 +531,7 @@ function TimeTestScreen() {
               title="Microphone and latency"
               open={micOpen}
               onOpenChange={setMicOpen}
-              value={calibrated ? `${latencyMs.toFixed(1)} ms` : 'Not calibrated'}
+              value={calibrated ? `${latencyMs.toFixed(1)} ms delay` : `${Math.round(micSettings.sensitivity * 100)}% sensitivity`}
             >
               <MicSheet
                 sensitivity={micSettings.sensitivity}
@@ -570,25 +582,6 @@ function TimeTestScreen() {
         </ScrollView>
       </SafeAreaView>
     </View>
-  );
-}
-
-/** "Calibrate…" under Record until the latency has been measured: opens the Microphone sheet. */
-function CalibrateButton({ onPress }: { onPress: () => void }) {
-  const { colors, derived } = useAppTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      android_ripple={{ color: colors['surface-hover'] }}
-      className="h-10 flex-row items-center gap-2 overflow-hidden rounded-full px-4"
-      style={{ backgroundColor: derived.fill }}
-    >
-      <MicrophoneIcon color={colors.muted} size={16} />
-      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-        Calibrate…
-      </Text>
-    </Pressable>
   );
 }
 

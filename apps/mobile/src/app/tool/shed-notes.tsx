@@ -22,8 +22,9 @@ import { ShareSheet } from '@/components/shedNotes/ShareSheet';
 import { ShedNotesGate } from '@/components/shedNotes/ShedNotesGate';
 import { TemplateFillSheet, useInstantiate } from '@/components/shedNotes/TemplateFill';
 import { formatShortDate } from '@/components/tool/ear';
-import { Segmented } from '@/components/tool/reward';
-import { Button, SearchField } from '@/components/ui';
+import { ToolHelpButton } from '@/components/tool/ToolIntro';
+import { NoteTextIcon } from '@/components/tool/toolIcons';
+import { EmptyState, IconButton, SearchField, SortControl } from '@/components/ui';
 import { errorText, useNoteList, useSharedWithMe, useTemplates, type NoteMeta, type NoteTemplate } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -299,34 +300,34 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
       <Stack.Screen
         options={{
           title: 'Shed Notes',
+          // ⋮ (templates, import, settings), the tool's ?, and New (a note, from a template, a folder).
           headerRight: () => (
-            <Pressable
-              onPress={() =>
-                setMenu({
-                  title: 'Shed Notes',
-                  actions: [
-                    { key: 'templates', icon: <TemplatesIcon color={colors.foreground} size={20} />, label: 'Templates', onPress: () => router.push('/tool/shed-notes-templates') },
-                    { key: 'import', icon: <ImportIcon color={colors.foreground} size={20} />, label: 'Import Markdown files…', onPress: () => void pickImport() },
-                    { key: 'settings', icon: <GearIcon color={colors.foreground} size={20} />, label: 'Settings', onPress: () => router.push('/tool/shed-notes-settings') },
-                  ],
-                })
-              }
-              hitSlop={8}
-              accessibilityLabel="More: templates, import, settings"
-              className="h-9 w-9 items-center justify-center rounded-full"
-            >
-              <DotsVerticalIcon color={colors.foreground} size={20} />
-            </Pressable>
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={() =>
+                  setMenu({
+                    title: 'Shed Notes',
+                    actions: [
+                      { key: 'templates', icon: <TemplatesIcon color={colors.foreground} size={20} />, label: 'Templates', onPress: () => router.push('/tool/shed-notes-templates') },
+                      { key: 'import', icon: <ImportIcon color={colors.foreground} size={20} />, label: 'Import Markdown files…', onPress: () => void pickImport() },
+                      { key: 'settings', icon: <GearIcon color={colors.foreground} size={20} />, label: 'Settings', onPress: () => router.push('/tool/shed-notes-settings') },
+                    ],
+                  })
+                }
+                hitSlop={8}
+                accessibilityLabel="More: templates, import, settings"
+                className="h-9 w-9 items-center justify-center rounded-full"
+              >
+                <DotsVerticalIcon color={colors.foreground} size={20} />
+              </Pressable>
+              <ToolHelpButton href="/shed-notes" />
+              <IconButton primary Icon={PlusIcon} label="New" onPress={() => newMenu()} />
+            </View>
           ),
         }}
       />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: bottom, gap: 14 }}>
-        <View className="flex-row items-center gap-2">
-          <View className="flex-1">
-            <SearchField value={q} onChangeText={setQ} placeholder="Search notes, folders, #tags" />
-          </View>
-          <Button label="New" Icon={PlusIcon} onPress={() => newMenu()} />
-        </View>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: bottom, gap: 14 }}>
+        <SearchField value={q} onChangeText={setQ} placeholder="Search notes, folders, #tags" />
 
         {notice ? (
           <Pressable onPress={() => setNotice(null)} className="rounded-lg px-3 py-2" style={{ backgroundColor: derived.fill }}>
@@ -350,28 +351,25 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
           </View>
         ) : (
           <>
-            <Segmented
-              label="Show notes"
-              onPage
-              value={sort}
-              onChange={setSort}
-              options={[
-                { value: 'folders', label: tree.folders.length ? 'Folders' : 'A–Z' },
-                { value: 'recent', label: 'Recent' },
-              ]}
-            />
+            {notes.length > 0 || tree.folders.length > 0 ? (
+              <SortControl
+                value={sort}
+                onChange={setSort}
+                options={[
+                  { value: 'recent', label: 'Recent' },
+                  { value: 'folders', label: tree.folders.length ? 'Folders' : 'A–Z' },
+                ]}
+              />
+            ) : null}
             <View className="gap-1.5">
               {sort === 'recent' ? recent.map((n) => noteRow(n, 0, `${formatShortDate(n.updatedAt)}${n.folder ? ` · ${n.folder}` : ''}`)) : [...folderRows(tree, 0), ...tree.notes.map((n) => noteRow(n))]}
               {notes.length === 0 && tree.folders.length === 0 ? (
-                <View className="items-center gap-3 rounded-xl px-5 py-6" style={{ backgroundColor: derived.fill }}>
-                  <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
-                    Your first note
-                  </Text>
-                  <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
-                    Notes are markdown. Link them with [[Title]], write notation, and attach them to your routines and tunes.
-                  </Text>
-                  <Button label="New note" Icon={PlusIcon} onPress={() => void newNote()} />
-                </View>
+                <EmptyState
+                  Icon={NoteTextIcon}
+                  title="Your first note"
+                  body="Notes are markdown. Link them with [[Title]], write notation, and attach them to your routines and tunes."
+                  action={{ label: 'New note', Icon: PlusIcon, onPress: () => void newNote() }}
+                />
               ) : null}
             </View>
 
@@ -402,7 +400,7 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
               </View>
             ) : null}
 
-            <Row icon={<TemplatesIcon color={colors.muted} size={18} />} title="Templates" detail={templates?.length ? `${templates.length} ${templates.length === 1 ? 'template' : 'templates'}` : 'Notes to start from'} onPress={() => router.push('/tool/shed-notes-templates')} />
+            <Row surface icon={<TemplatesIcon color={colors.muted} size={18} />} title="Templates" detail={templates?.length ? `${templates.length} ${templates.length === 1 ? 'template' : 'templates'}` : 'Notes to start from'} onPress={() => router.push('/tool/shed-notes-templates')} />
           </>
         )}
       </ScrollView>
@@ -496,6 +494,7 @@ function Row({
   depth = 0,
   bold,
   chevron,
+  surface,
 }: {
   icon: ReactNode;
   title: string;
@@ -505,6 +504,8 @@ function Row({
   depth?: number;
   bold?: boolean;
   chevron?: 'down' | 'right';
+  /** On the surface colour (a link to another page, like Templates) rather than the faint fill. */
+  surface?: boolean;
 }) {
   const { colors, derived } = useAppTheme();
   return (
@@ -513,7 +514,7 @@ function Row({
       onLongPress={onMore}
       android_ripple={{ color: colors['surface-hover'] }}
       className="min-h-[52px] flex-row items-center gap-3 overflow-hidden rounded-lg py-2 pl-3"
-      style={{ marginLeft: depth * 16, backgroundColor: derived.fill }}
+      style={{ marginLeft: depth * 16, backgroundColor: surface ? colors.surface : derived.fill }}
     >
       {chevron ? (chevron === 'down' ? <ChevronDownIcon color={colors.muted} size={16} /> : <ChevronRightIcon color={colors.muted} size={16} />) : null}
       {icon}

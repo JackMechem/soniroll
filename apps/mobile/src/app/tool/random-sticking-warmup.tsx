@@ -19,8 +19,8 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { NOTATION_ROW_GAP, StickNotation } from '@/components/StickNotation';
 import { SwitchRow } from '@/components/SwitchRow';
 import { BigButton, SoundPicker, TempoHero, soundSummary } from '@/components/tool/meter';
-import { ChipRow, ChoiceCards, CountField, ListIcon, OptionLabel, PillButton, PoolPills } from '@/components/tool/rhythm';
-import { SettingChip } from '@/components/tool/SettingChip';
+import { ChoiceCards, CountField, ListIcon, OptionLabel, PillButton, PoolPills } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Slider } from '@/components/tool/Slider';
 import { MAX_ROW_BARS, ROW_HEIGHT_ESTIMATE, measureLayout, renderPatternRows } from '@/lib/notation/stickNotation';
 import {
@@ -215,11 +215,12 @@ function RandomStickingWarmupScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Random Sticking Warmup' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <View className="flex-1 gap-3 px-4 pb-4 pt-3">
-          {/* The pattern and the next one, as big as the space left over allows. */}
+        <View className="flex-1 gap-3 px-4 pb-4 pt-5">
+          {/* The pattern and the next one, as big as the space left over allows, from the top (the
+              controls sit at the bottom, in reach of a thumb). */}
           <View className="flex-1" onLayout={onArea}>
             {pattern && layout ? (
-              <View style={{ gap: CARD_GAP, flex: 1, justifyContent: 'center' }}>
+              <View style={{ gap: CARD_GAP, flex: 1 }}>
                 <View className="rounded-xl" style={{ padding: CARD_PAD, backgroundColor: colors.surface }}>
                   <StickNotation rows={layout.current} width={layout.width} activeBarIndex={currentBarIndex} ink={ink} accent={colors.accent} />
                 </View>
@@ -246,13 +247,10 @@ function RandomStickingWarmupScreen() {
             {phaseLabel ?? ''}
           </Text>
 
-          {/* Start centred like every tool's; New pattern a smaller button beside it. */}
-          <View className="flex-row items-center">
-            <View className="flex-1 items-end pr-3">
-              <PillButton label="New" Icon={ShuffleIcon} onPress={advanceStickControlPattern} />
-            </View>
+          {/* New pattern and Start, centred together. */}
+          <View className="flex-row items-center justify-center gap-3">
+            <PillButton label="New" Icon={ShuffleIcon} onPress={advanceStickControlPattern} />
             <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stopStickControl : startStickControl} />
-            <View className="flex-1" />
           </View>
 
           {running ? (
@@ -275,8 +273,8 @@ function RandomStickingWarmupScreen() {
             </View>
           )}
 
-          {/* One sideways row, so the notation keeps the height. */}
-          <ChipRow>
+          {/* The chips wrap (never cut off); the notation takes what height is left. */}
+          <SettingsBar>
             <SettingChip Icon={ListIcon} label="Pattern" value={ROLL_TYPES.find((r) => r.value === rollType)?.label ?? ''}>
               <View className="gap-2.5">
                 <OptionLabel
@@ -362,7 +360,7 @@ function RandomStickingWarmupScreen() {
                 setVolume={(next) => updateSettings({ volume: next })}
               />
             </SettingChip>
-          </ChipRow>
+          </SettingsBar>
         </View>
       </SafeAreaView>
     </View>

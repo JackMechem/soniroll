@@ -8,14 +8,20 @@ import { ChordChartIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, Shar
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** "just now", "5m", "3h", "2d", then a date. */
-function timeAgo(ms: number) {
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** A post's date, short and plain: "just now", "5 min ago", "3 h ago", "2 days ago", then "Oct 18"
+    (with the year once it's not this year: "Oct 18, 2025"). Never the phone's numeric format. */
+export function postDate(ms: number) {
   const s = Math.max(0, (Date.now() - ms) / 1000);
   if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d`;
-  return new Date(ms).toLocaleDateString();
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  const days = Math.floor(s / 86400);
+  if (days < 7) return days === 1 ? 'yesterday' : `${days} days ago`;
+  const d = new Date(ms);
+  const label = `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
+  return d.getFullYear() === new Date().getFullYear() ? label : `${label}, ${d.getFullYear()}`;
 }
 
 export type TunePostSummary = {
@@ -105,7 +111,7 @@ export function PostListItem({
           ) : null}
           <Text className="font-ui text-sm" style={{ color: colors.muted }}>
             {post.authorUsername ? '· ' : ''}
-            {timeAgo(post.createdAt)}
+            {postDate(post.createdAt)}
           </Text>
           <View className="flex-1" />
           {post.unlisted ? <EyeOffIcon color={colors.muted} size={16} /> : null}

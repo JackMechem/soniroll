@@ -20,6 +20,7 @@ import {
   DotsVerticalIcon,
   DragIcon,
   LinkIcon,
+  MusicNoteIcon,
   PencilIcon,
   PlusIcon,
   ShareIcon,
@@ -33,6 +34,7 @@ import { SetlistTuneSheet } from '@/components/library/SetlistTuneSheet';
 import { TunePickerModal } from '@/components/library/TunePickerModal';
 import { NameDialog } from '@/components/NameDialog';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { EmptyState } from '@/components/ui';
 import { useShareSetlist } from '@/lib/shareSetlist';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useSetlists } from '@/lib/useSetlists';
@@ -275,12 +277,12 @@ function SetlistScreen() {
         ) : null}
 
         {found.length === 0 ? (
-          <Pressable onPress={() => setPicking(true)} className="items-center gap-2 rounded-2xl p-6" style={{ backgroundColor: colors.surface }}>
-            <PlusIcon color={colors.accent} size={26} />
-            <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
-              No tunes yet — tap to add some from your lists.
-            </Text>
-          </Pressable>
+          <EmptyState
+            Icon={MusicNoteIcon}
+            title="No tunes in this setlist yet"
+            body="Pick them from Tunes I Know and Tunes to Learn."
+            action={{ label: 'Add tunes', Icon: PlusIcon, onPress: () => setPicking(true) }}
+          />
         ) : (
           <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
             <DraggableList

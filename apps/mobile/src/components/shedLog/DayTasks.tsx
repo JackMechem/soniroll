@@ -21,8 +21,9 @@ import { useToday } from '@/lib/useClock';
 import { useRoutineTimer, type PracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
-/** The day's own tasks, outside routines (the website's "Extra tasks"): a quick-add box, a
-    checklist, the timer (one task or all), and ⋮ (edit, move to the next day, delete). */
+/** The day's own tasks, outside routines ("Tasks for today"; the website's "Extra tasks"): a
+    quick-add box, a checklist, the timer (one task or all), and ⋮ (edit, move to the next day,
+    delete). Home's Today's practice card adds to the same list ("Add a task for today"). */
 export function DayTasks({ date, log, icon }: { date: string; log: PracticeLog; icon?: React.ReactNode }) {
   const { colors } = useAppTheme();
   const tasks = log.data.days[date]?.tasks ?? [];
@@ -58,7 +59,7 @@ export function DayTasks({ date, log, icon }: { date: string; log: PracticeLog; 
   return (
     <Section
       icon={icon}
-      title="Extra tasks"
+      title={date === today ? 'Tasks for today' : `Tasks for ${formatShortDate(date)}`}
       count={tasks.length ? `${tasks.filter((t) => t.done).length}/${tasks.length}` : undefined}
       action={open.length > 1 && !running && !past ? <SmallButton label="Start all" Icon={PlayIcon} tint onPress={() => startDayTasks(date, tasks)} /> : undefined}
     >
@@ -112,7 +113,7 @@ export function DayTasks({ date, log, icon }: { date: string; log: PracticeLog; 
         })}
         <View className="flex-row items-center gap-2">
           <View className="flex-1">
-            <Field value={title} onChangeText={setTitle} placeholder="Add an extra task" onSubmit={quickAdd} />
+            <Field value={title} onChangeText={setTitle} placeholder={date === today ? 'Add a task for today' : 'Add a task for this day'} onSubmit={quickAdd} />
           </View>
           {title.trim() ? (
             <SmallButton label="Add" primary onPress={quickAdd} />

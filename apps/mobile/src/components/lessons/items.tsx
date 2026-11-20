@@ -312,8 +312,9 @@ function ItemForm({ lessonId, sessionId, edit, today, onClose }: { lessonId: Id<
         <Pressable
           onPress={() => void choose()}
           accessibilityRole="button"
-          className="items-center gap-1 rounded-xl p-4"
-          style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors['surface-hover'], backgroundColor: colors.background }}
+          android_ripple={{ color: colors['surface-hover'] }}
+          className="items-center gap-1 overflow-hidden rounded-xl p-4"
+          style={{ backgroundColor: colors.background }}
         >
           <FileIcon color={colors.muted} size={22} />
           <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>

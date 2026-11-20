@@ -31,7 +31,7 @@ import {
 } from '@/components/tool/meter';
 import { OptionGroup } from '@/components/tool/reward';
 import { AccentGroupingField, ClickSoundCards, CountField, OptionLabel, PlanText, PoolPills } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
 import {
   clearMetricModLog,
   getMetricModSnapshot,
@@ -213,7 +213,7 @@ function RandomMetricModulationScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          contentContainerStyle={TOOL_CONTENT}
         >
           {/* History sits above the display, like the website's side-panel chips. */}
           <SettingsBar>

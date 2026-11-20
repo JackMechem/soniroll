@@ -4,12 +4,13 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Dropdown } from '@/components/Dropdown';
-import { MicrophoneIcon, SlidersIcon, TunerIcon } from '@/components/icons';
+import { MicrophoneIcon, TunerIcon } from '@/components/icons';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { SwitchRow } from '@/components/SwitchRow';
 import { Field, OptionsArea, PillChoice, SheetButton, SheetText, SliderField, ToolScreen, noteGlyphs } from '@/components/tool/ear';
 import { BigButton, StepButton } from '@/components/tool/meter';
 import { SettingChip } from '@/components/tool/SettingChip';
-import { TunerDial } from '@/components/TunerDial';
+import { TunerDial, TunerMeter } from '@/components/TunerDial';
 import { SENSITIVITY } from '@/lib/audioInput';
 import { startTone, type ToneHandle } from '@/lib/toneGenerator';
 import {
@@ -21,7 +22,7 @@ import {
   updateTunerConfig,
 } from '@/lib/tunerEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
-import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
 
@@ -190,9 +191,15 @@ function TunerScreen() {
               </Text>
             </>
           ) : (
-            <Text className="font-ui px-2 text-center text-xs" style={{ color: colors.muted }}>
-              {listening ? 'Play a note…' : 'Press Start to listen, or tap a note to hear it'}
-            </Text>
+            // Idle: what it's set up for (what to do is said under the dial).
+            <>
+              <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-bold text-2xl font-bold" style={{ color: colors.foreground }}>
+                {instrument.label.split(' (')[0]}
+              </Text>
+              <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+                {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}
+              </Text>
+            </>
           )}
         </View>
 
@@ -200,51 +207,26 @@ function TunerScreen() {
           <Text className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted }}>
             Octave
           </Text>
-          <View className="flex-row items-center gap-3">
-            <StepButton label="Octave down" disabled={octave <= MIN_OCTAVE} onPress={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}>
+          <View className="flex-row items-center gap-2">
+            <StepButton compact label="Octave down" disabled={octave <= MIN_OCTAVE} onPress={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}>
               −
             </StepButton>
-            <Text className="font-ui-semibold w-4 text-center text-xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
+            <Text className="font-ui-semibold w-5 text-center text-xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
               {octave}
             </Text>
-            <StepButton label="Octave up" disabled={octave >= MAX_OCTAVE} onPress={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}>
+            <StepButton compact label="Octave up" disabled={octave >= MAX_OCTAVE} onPress={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}>
               +
             </StepButton>
           </View>
         </View>
       </TunerDial>
 
-      <View className="w-full gap-2" accessibilityRole="progressbar" accessibilityLabel="Tuning offset in cents" accessibilityValue={{ min: -50, max: 50, now: Math.round(cents) }}>
-        <View className="h-1.5 w-full rounded-full" style={{ backgroundColor: withAlpha(colors.foreground, 0.1) }}>
-          <View style={{ position: 'absolute', left: '50%', top: -4, width: 1, height: 14, backgroundColor: withAlpha(colors.muted, 0.6) }} />
-          {reading ? (
-            <View
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: `${50 + cents}%`,
-                width: 6,
-                height: 16,
-                marginLeft: -3,
-                marginTop: -8,
-                borderRadius: 3,
-                backgroundColor: color,
-              }}
-            />
-          ) : null}
-        </View>
-        <View className="w-full flex-row justify-between">
-          <Text className="font-ui text-[13px]" style={{ color: colors.muted }}>
-            Flat
-          </Text>
-          <Text className="font-ui-semibold text-[13px] font-semibold" style={{ color: reading ? color : colors.muted }}>
-            {verdict}
-          </Text>
-          <Text className="font-ui text-[13px]" style={{ color: colors.muted }}>
-            Sharp
-          </Text>
-        </View>
-      </View>
+      <TunerMeter
+        cents={reading ? cents : null}
+        color={color}
+        caption={reading ? verdict : playing ? 'Playing a tone' : listening ? 'Play a note…' : 'Press Start to listen, or tap a note to hear it'}
+        captionColor={reading ? color : colors.muted}
+      />
 
       {tuning.strings.length > 0 ? (
         <View accessibilityLabel="Tap a string to hear its pitch" className="w-full flex-row flex-wrap justify-center gap-1.5">
@@ -319,7 +301,7 @@ function TunerScreen() {
           </Field>
         </SettingChip>
 
-        <SettingChip Icon={SlidersIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
+        <SettingChip Icon={ToneIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
           <SliderField
             label="Reference pitch (A4)"
             value={refA}

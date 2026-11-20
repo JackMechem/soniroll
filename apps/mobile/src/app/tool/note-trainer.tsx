@@ -35,12 +35,13 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { MicrophoneIcon, NoteIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { MicrophoneIcon, NoteIcon, StopwatchIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
   Field,
   HistoryChip,
   IdleHint,
+  IdleSummary,
   MutedText,
   OptionsArea,
   PillChoice,
@@ -61,6 +62,7 @@ import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
@@ -747,6 +749,23 @@ function NoteTrainerScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Mode"
+            value={listenMode ? 'listen' : 'timed'}
+            onChange={(v) => updateSettings({ listenMode: v === 'listen' })}
+            disabled={running}
+            options={[
+              { value: 'timed', label: 'Timed' },
+              { value: 'listen', label: 'Listen' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {showingSummary && summary ? (
         <ResultsPanel
           score={score}
@@ -784,7 +803,13 @@ function NoteTrainerScreen() {
                 >
                   {noteGlyphs(mainLabel)}
                 </Text>
-              ) : null}
+              ) : (
+                <IdleSummary
+                  value={instrumentShortName(instrumentId)}
+                  label={ignoreOctave ? 'any octave' : noteGlyphs(rangeInput.replace('-', '–'))}
+                  detail={`${intervalSeconds} s a note`}
+                />
+              )}
             </QuizRing>
             {showNext && nextNote && running ? (
               <Text
@@ -828,21 +853,7 @@ function NoteTrainerScreen() {
       {/* While the results show, their own "Try again" is the one start button. */}
       {!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
 
-      <OptionsArea
-        mode={
-          <Segmented
-            onPage
-            label="Mode"
-            value={listenMode ? 'listen' : 'timed'}
-            onChange={(v) => updateSettings({ listenMode: v === 'listen' })}
-            disabled={running}
-            options={[
-              { value: 'timed', label: 'Timed' },
-              { value: 'listen', label: 'Listen' },
-            ]}
-          />
-        }
-      >
+      <OptionsArea>
         <SettingChip Icon={NoteIcon} label="Range" value={rangeSummary} open={rangeOpen} onOpenChange={setRangeOpen}>
           {locked}
           <SwitchRow
@@ -1029,7 +1040,11 @@ function NoteTrainerScreen() {
           </SettingChip>
         ) : null}
 
-        <SettingChip Icon={SlidersIcon} label="Sound & display">
+        <SettingChip
+          Icon={ToneIcon}
+          label="Sound & display"
+          value={`${playSound && !listenMode ? (TONES.find((t) => t.value === toneId)?.label ?? 'Played') : 'Silent'}${showNext ? ' · next shown' : ''}`}
+        >
           <SwitchRow
             label="Play note out loud"
             checked={playSound && !listenMode}

@@ -211,7 +211,7 @@ function LogTimeBody({ log, date, initial, initialMinutes = 15, onClose }: { log
     ...items.flatMap(({ routine, occurrence }) =>
       tasksOf(routine, occurrence).map((t) => ({ target: { kind: 'routine', routineId: routine.id, taskId: t.id } as LogTarget, label: t.title || 'Task', group: routine.name || 'Routine' })),
     ),
-    ...dayTasks.map((t) => ({ target: { kind: 'task', taskId: t.id } as LogTarget, label: t.title, group: 'Extra tasks' })),
+    ...dayTasks.map((t) => ({ target: { kind: 'task', taskId: t.id } as LogTarget, label: t.title, group: 'Tasks for the day' })),
   ];
 
   function save() {

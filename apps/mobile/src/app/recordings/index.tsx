@@ -4,10 +4,9 @@ import { Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
-import { SearchField } from '@/components/ChordChartList';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconButton } from '@/components/ui';
+import { EmptyState, IconButton, SearchField } from '@/components/ui';
 import { LibraryHeader } from '@/components/TabHeader';
 import { MicrophoneIcon } from '@/components/icons';
 import { RecordingRow, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
@@ -16,8 +15,8 @@ import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi } from '@/lib/recordings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** Every saved recording, newest first: search by name, notes or tune; play inline; tap one to
-    open it. */
+/** Every saved recording, newest first: search by name, notes or tune (once there are some); play
+    inline; tap one to open it. Empty, or signed out, it says so with the button that fixes it. */
 function RecordingsScreen() {
   const bottomSpace = useTabBarSpace();
   const { colors } = useAppTheme();
@@ -45,22 +44,36 @@ function RecordingsScreen() {
       <SafeAreaView edges={['top']}>
         <LibraryHeader right={<IconButton primary Icon={MicrophoneIcon} label="Record" onPress={() => router.push('/tool/recorder')} />} />
       </SafeAreaView>
-      <View className="px-4 pb-2 pt-3">
-        <SearchField value={query} onChange={setQuery} placeholder="Search recordings" />
-      </View>
+      {recordings?.length ? (
+        <View className="px-4 pb-2 pt-3">
+          <SearchField value={query} onChangeText={setQuery} placeholder="Search recordings" />
+        </View>
+      ) : null}
       <FlatList
         data={shown}
         keyExtractor={(r) => r._id}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomSpace, gap: 10 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: recordings?.length ? 0 : 16, paddingBottom: bottomSpace, gap: 10 }}
         ListEmptyComponent={
-          <Text className="font-ui py-12 text-center text-sm" style={{ color: colors.muted }}>
-            {!isAuthenticated
-              ? 'Sign in to see your recordings.'
-              : query
-                ? 'No recordings match.'
-                : 'No recordings yet — tap Record to make one.'}
-          </Text>
+          !isAuthenticated ? (
+            <EmptyState
+              Icon={MicrophoneIcon}
+              title="Your recordings"
+              body="Sign in to record takes, name them, keep notes and link them to your tunes."
+              action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
+            />
+          ) : query ? (
+            <Text className="font-ui py-12 text-center text-sm" style={{ color: colors.muted }}>
+              No recordings match “{query}”.
+            </Text>
+          ) : (
+            <EmptyState
+              Icon={MicrophoneIcon}
+              title="No recordings yet"
+              body="Record a take, with a click if you like, and it shows up here."
+              action={{ label: 'Record', Icon: MicrophoneIcon, onPress: () => router.push('/tool/recorder') }}
+            />
+          )
         }
         renderItem={({ item }) => (
           <RecordingRow

@@ -17,8 +17,7 @@ import { TemplatesIcon } from '@/components/shedNotes/icons';
 import { NoteEditor, type EditorHandle } from '@/components/shedNotes/NoteEditor';
 import { ScoreDialog } from '@/components/shedNotes/ScoreDialog';
 import { ShedNotesGate } from '@/components/shedNotes/ShedNotesGate';
-import { EmptyPanel } from '@/components/tool/rhythm';
-import { Button, ListRow } from '@/components/ui';
+import { EmptyState, IconButton, ListRow } from '@/components/ui';
 import { insertFileLine, insertScoreBlock } from '@/lib/shedNotes/format';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { errorText, useNoteList, useNotesConfig, useTemplates, type NoteTemplate } from '@/lib/useShedNotes';
@@ -100,7 +99,7 @@ function Templates({ templates }: { templates: NoteTemplate[] }) {
                   <TrashIcon color={colors.foreground} size={20} />
                 </Pressable>
               )
-            : () => null,
+            : () => <IconButton primary Icon={PlusIcon} label="New template" onPress={() => void newTemplate()} />,
         }}
       />
       {notice ? (
@@ -113,10 +112,14 @@ function Templates({ templates }: { templates: NoteTemplate[] }) {
       {open ? (
         <TemplateEditor key={open.id} template={open} onChange={(patch) => change(open.id, patch)} />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 12, paddingBottom: insets.bottom + 32 }}>
-          <Button label="New template" Icon={PlusIcon} onPress={() => void newTemplate()} />
+        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 8, gap: 12, paddingBottom: insets.bottom + 32 }}>
           {templates.length === 0 ? (
-            <EmptyPanel>A template is a note to start from. Put {'{{blanks}}'} in it, like {'{{tune}}'} or {'{{student}}'}, and you’ll fill them in when you make a note from it.</EmptyPanel>
+            <EmptyState
+              Icon={TemplatesIcon}
+              title="No templates yet"
+              body="A template is a note to start from. Put {{blanks}} in it, like {{tune}} or {{student}}, and you fill them in when you make a note from it."
+              action={{ label: 'New template', Icon: PlusIcon, onPress: () => void newTemplate() }}
+            />
           ) : (
             <View className="gap-2">
               {templates.map((t) => (

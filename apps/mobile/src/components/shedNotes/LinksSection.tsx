@@ -114,7 +114,8 @@ export function LinksSection({
                 key: a.target,
                 icon: <Icon color={colors.muted} size={18} />,
                 title: a.label,
-                onPress: route ? () => router.push(route) : undefined,
+                // The Shed Log is a tab: switch to it (with the day) rather than stacking a second one.
+                onPress: route ? () => (a.target.startsWith('day:') ? router.navigate(route) : router.push(route)) : undefined,
                 right: (
                   <Pressable
                     onPress={() => void detach({ noteId: note.id as Id<'shedNotes'>, target: a.target })}

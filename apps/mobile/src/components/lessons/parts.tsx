@@ -344,11 +344,12 @@ export function PersonHead({ url, name, title, detail, right }: { url: string | 
   );
 }
 
-/** A dashed "nothing here" box with an optional action. */
+/** A "nothing here" box with an optional action — on the surface colour like `EmptyState` (no
+    dashed border). For a whole empty screen with an icon, use `EmptyState` itself. */
 export function EmptyBox({ title, body, action }: { title?: string; body: string; action?: ReactNode }) {
   const { colors } = useAppTheme();
   return (
-    <View className="items-center gap-1.5 rounded-xl p-5" style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: withAlpha(colors.foreground, 0.15) }}>
+    <View className="items-center gap-1.5 rounded-xl p-5" style={{ backgroundColor: colors.surface }}>
       {title ? (
         <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
           {title}

@@ -27,12 +27,13 @@ import { Text, View } from 'react-native';
 
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { IntervalIcon, MicrophoneIcon, NoteIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { IntervalIcon, MicrophoneIcon, NoteIcon, StopwatchIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
   Field,
   HistoryChip,
   IdleHint,
+  IdleSummary,
   MutedText,
   OptionsArea,
   Pill,
@@ -55,6 +56,7 @@ import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { SENSITIVITY, startAudioInput } from '@/lib/audioInput';
 import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
@@ -830,6 +832,23 @@ function IntervalTrainerScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Mode"
+            value={listenMode ? 'listen' : 'timed'}
+            onChange={(v) => updateSettings({ listenMode: v === 'listen' })}
+            disabled={running}
+            options={[
+              { value: 'timed', label: 'Timed' },
+              { value: 'listen', label: 'Listen' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {showingSummary && summary ? (
         <ResultsPanel
           score={score}
@@ -867,7 +886,9 @@ function IntervalTrainerScreen() {
               >
                 {noteGlyphs(mainLabel)}
               </Text>
-            ) : null}
+            ) : (
+              <IdleSummary value={String(pool.length)} label={pool.length === 1 ? 'interval' : 'intervals'} detail={noteGlyphs(rangeSummary)} />
+            )}
           </QuizRing>
           {/* Before the first round, say what's about to happen. */}
           {!running ? (
@@ -932,21 +953,7 @@ function IntervalTrainerScreen() {
       {/* While the results show, their own "Try again" is the one start button. */}
       {!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
 
-      <OptionsArea
-        mode={
-          <Segmented
-            onPage
-            label="Mode"
-            value={listenMode ? 'listen' : 'timed'}
-            onChange={(v) => updateSettings({ listenMode: v === 'listen' })}
-            disabled={running}
-            options={[
-              { value: 'timed', label: 'Timed' },
-              { value: 'listen', label: 'Listen' },
-            ]}
-          />
-        }
-      >
+      <OptionsArea>
         <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
           {locked}
           <PoolHeader
@@ -1155,7 +1162,11 @@ function IntervalTrainerScreen() {
           </SettingChip>
         ) : null}
 
-        <SettingChip Icon={SlidersIcon} label="Sound & display">
+        <SettingChip
+          Icon={ToneIcon}
+          label="Sound & display"
+          value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showIntervalNotes ? ' · notes shown' : ''}`}
+        >
           <SwitchRow
             label="Play interval out loud"
             checked={playSound && !listenMode}

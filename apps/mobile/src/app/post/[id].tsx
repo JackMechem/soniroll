@@ -14,10 +14,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
-
-function formatDate(ms: number) {
-  return new Date(ms).toLocaleDateString();
-}
+import { postDate } from '@/components/community/CommunityTunes';
 
 function NotAvailable() {
   const { colors } = useAppTheme();
@@ -146,7 +143,7 @@ function PostScreenContent() {
                   ) : null}
                   <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                     {post.authorUsername ? '· ' : ''}
-                    {formatDate(post.createdAt)}
+                    {postDate(post.createdAt)}
                   </Text>
                   {post.unlisted ? (
                     <View className="flex-row items-center gap-1 rounded-full px-2 py-0.5" style={{ backgroundColor: colors.surface }}>

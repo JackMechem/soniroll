@@ -73,8 +73,8 @@ export function usePop(key: string | number | boolean | null | undefined) {
   return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 }
 
-/** Two or more choices as one pill (the web's `Segmented`, reward look): a chunky track with the
-    picked side lit. `onPage` puts it on the page (a surface track); inside a sheet it's the
+/** Two or more choices as one pill (the web's `Segmented`): a chunky track with the picked side
+    in the flat accent. `onPage` puts it on the page (a surface track); inside a sheet it's the
     background colour. */
 export function Segmented<T extends string | number>({
   value,
@@ -115,9 +115,9 @@ function Segment({ label, on, disabled, onPress }: { label: string; on: boolean;
       disabled={disabled}
       accessibilityRole="radio"
       accessibilityState={{ checked: on, disabled }}
-      className="flex-1 items-center justify-center overflow-hidden rounded-full px-5 py-2.5"
+      className="min-h-10 flex-1 items-center justify-center overflow-hidden rounded-full px-5 py-2.5"
+      style={on ? { backgroundColor: colors.accent } : undefined}
     >
-      {on ? <GradientFill /> : null}
       <Animated.View style={on ? pop : undefined}>
         <Text numberOfLines={1} className="font-ui-bold text-sm font-bold" style={{ color: on ? colors['accent-foreground'] : colors.muted }}>
           {label}

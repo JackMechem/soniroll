@@ -9,7 +9,7 @@ import {
   getPreset,
 } from '@jam-practice/core/themes';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 
 /**
  * The native side of `apps/web/lib/theme.ts` — same storage key (`jam-practice-theme`, though
@@ -27,10 +27,10 @@ import { View } from 'react-native';
  *   yet; `presetId`/`setPreset` cover every preset (including picking "custom" once something has
  *   already seeded it, which nothing does yet), matching the bulk of what `ThemeModal.tsx` is for
  *   (picking a preset) without yet porting its own color-editing UI.
- * - **No system-preference fallback** on first launch (web's own `read()` checks
- *   `matchMedia('(prefers-color-scheme: dark)')` when nothing's stored yet) — defaults straight to
- *   `"light"`, the same hardcoded default `lib/theme.ts`'s own `DEFAULT_STATE` uses before that
- *   check runs.
+ *
+ * **"Same as my phone"** (`SYSTEM_THEME_ID`, the default when nothing is stored): Light or Dark
+ * from the phone's colour scheme, following it when it changes (`useColorScheme`; `app.json`'s
+ * `userInterfaceStyle` is `automatic`). The website does the same check once, on first visit.
  *
  * Colors are applied via plain React Context + inline `style` props, not NativeWind's `vars()`/
  * CSS custom properties (what a first pass here used, to mirror the web app's own mechanism as
@@ -52,10 +52,14 @@ const STORAGE_KEY = 'jam-practice-theme';
 
 type StoredThemeState = { id: string; custom: ThemeColors | null };
 
-const DEFAULT_STATE: StoredThemeState = { id: 'light', custom: null };
+/** Follow the phone: Light or Dark from its colour scheme. */
+export const SYSTEM_THEME_ID = 'system';
 
-function resolveColors(state: StoredThemeState): ThemeColors {
+const DEFAULT_STATE: StoredThemeState = { id: SYSTEM_THEME_ID, custom: null };
+
+function resolveColors(state: StoredThemeState, scheme: 'light' | 'dark'): ThemeColors {
   if (state.id === CUSTOM_THEME_ID && state.custom) return state.custom;
+  if (state.id === SYSTEM_THEME_ID) return getPreset(scheme)!.colors;
   return (getPreset(state.id) ?? getPreset('light'))!.colors;
 }
 
@@ -102,6 +106,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<StoredThemeState>(DEFAULT_STATE);
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -128,7 +133,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [state],
   );
 
-  const colors = useMemo(() => resolveColors(state), [state]);
+  const colors = useMemo(() => resolveColors(state, scheme), [state, scheme]);
   const derived = useMemo(() => derive(colors), [colors]);
 
   const value = useMemo<ThemeContextValue>(

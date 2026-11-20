@@ -47,8 +47,8 @@ import { SwitchRow } from '@/components/SwitchRow';
 import { Field, GroupLabel, PillChoice, SheetButton, SheetDivider, SheetText, SliderField } from '@/components/tool/ear';
 import { BigButton, TempoHero } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
-import { ChipRow, EmptyPanel } from '@/components/tool/rhythm';
-import { SettingChip } from '@/components/tool/SettingChip';
+import { MoreOptionsChip, SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { EmptyState } from '@/components/ui';
 import { compReady, loadComp, setCompRoom, setCompVolume, type CompInstrument } from '@/lib/compSounds';
 import { ALL_VOICES, drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from '@/lib/drumSounds';
 import { previewChorus, previewDrums, startRhythmSection, type BassSwing, type RhythmSectionRun } from '@/lib/rhythmSectionEngine';
@@ -657,342 +657,347 @@ function RhythmSectionScreen() {
                 {status}
               </Text>
             </View>
-            <ChipRow>
-              <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${bpm} BPM`}>
-                <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={ts.top} beatUnit={ts.bottom} onTap={tap} />
-                {style.meter.bottom === 8 ? <SheetText>Dotted quarter = {bpm}</SheetText> : null}
-              </SettingChip>
+            <View className="px-4">
+              <SettingsBar>
+                <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${bpm} BPM`}>
+                  <TempoHero bpm={bpm} setBpm={setBpm} beatsPerBar={ts.top} beatUnit={ts.bottom} onTap={tap} />
+                  {style.meter.bottom === 8 ? <SheetText>Dotted quarter = {bpm}</SheetText> : null}
+                </SettingChip>
 
-              <SettingChip Icon={ChordChartIcon} label="Tune" value={short(chartName)} open={tuneOpen} onOpenChange={setTuneOpen}>
-                <Field label="Play over">
-                  <Segmented
-                    label="Play over"
-                    value={source}
-                    onChange={switchSource}
-                    options={[
-                      { value: 'none', label: 'No chart' },
-                      { value: 'chart', label: 'A chart' },
-                      { value: 'typed', label: 'Typed' },
-                    ]}
-                  />
-                </Field>
-                {typed ? (
-                  <>
-                    <Field label="Chords" hint="Chord names (Dm7 G7 | Cmaj7) or numerals (ii7 V7 | Imaj7), with | between bars and % to repeat a bar.">
-                      <TextInput
-                        value={typedText}
-                        onChangeText={(t) => update({ typedText: t })}
-                        multiline
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        spellCheck={false}
-                        placeholder="Dm7 G7 | Cmaj7 | %"
-                        placeholderTextColor={colors.muted}
-                        accessibilityLabel="Chord progression"
-                        className="font-ui min-h-20 rounded-lg px-3 py-2 text-base"
-                        style={{ backgroundColor: colors.background, color: colors.foreground, textAlignVertical: 'top' }}
-                      />
-                      {typedResult.unknown.length > 0 ? (
-                        <Text className="font-ui text-sm" style={{ color: colors.danger }}>
-                          Didn’t understand: {typedResult.unknown.map((t) => `“${t}”`).join(', ')}
-                        </Text>
-                      ) : null}
-                    </Field>
-                    <View className="flex-row flex-wrap gap-2">
-                      {PRESETS.map((p) => (
-                        <SheetButton key={p.label} label={p.label} onPress={() => update({ typedText: p.text })} />
-                      ))}
-                    </View>
-                    <Field label={typedResult.usesNumerals ? 'Key' : 'Key (for numerals)'}>
-                      <View className="flex-row">
-                        <Dropdown value={typedKey} onChange={(v) => update({ typedKey: v })} options={KEY_NAMES.map((k) => ({ value: k, label: k }))} />
-                      </View>
-                    </Field>
-                    <Field label="Time">
-                      <Segmented
-                        label="Time"
-                        value={typedMeter}
-                        onChange={(v) => {
-                          stop();
-                          update({ typedMeter: v });
-                        }}
-                        options={[
-                          { value: '4/4', label: '4/4' },
-                          { value: '3/4', label: '3/4' },
-                        ]}
-                      />
-                    </Field>
-                  </>
-                ) : source === 'chart' ? (
-                  <>
-                    <ChartButton title={meta?.title ?? (loading ? 'Loading your charts…' : 'Pick a chart')} detail={meta ? [meta.key, meta.style].filter(Boolean).join(' · ') : ''} action={meta ? 'Change' : 'Choose'} onPress={pickChart} />
-                    <Field label="Key">
-                      <View className="flex-row">
-                        <Dropdown
-                          value={transposeKey}
-                          onChange={(v) => {
-                            // A new key is a different bass line: stop rather than keep playing the old one.
-                            stop();
-                            update({ transposeKey: v });
-                          }}
-                          options={[{ value: '', label: `Original${selectedSong?.key ? ` (${selectedSong.key})` : ''}` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                <SettingChip Icon={ChordChartIcon} label="Tune" value={short(chartName)} open={tuneOpen} onOpenChange={setTuneOpen}>
+                  <Field label="Play over">
+                    <Segmented
+                      label="Play over"
+                      value={source}
+                      onChange={switchSource}
+                      options={[
+                        { value: 'none', label: 'No chart' },
+                        { value: 'chart', label: 'A chart' },
+                        { value: 'typed', label: 'Typed' },
+                      ]}
+                    />
+                  </Field>
+                  {typed ? (
+                    <>
+                      <Field label="Chords" hint="Chord names (Dm7 G7 | Cmaj7) or numerals (ii7 V7 | Imaj7), with | between bars and % to repeat a bar.">
+                        <TextInput
+                          value={typedText}
+                          onChangeText={(t) => update({ typedText: t })}
+                          multiline
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          spellCheck={false}
+                          placeholder="Dm7 G7 | Cmaj7 | %"
+                          placeholderTextColor={colors.muted}
+                          accessibilityLabel="Chord progression"
+                          className="font-ui min-h-20 rounded-lg px-3 py-2 text-base"
+                          style={{ backgroundColor: colors.background, color: colors.foreground, textAlignVertical: 'top' }}
                         />
+                        {typedResult.unknown.length > 0 ? (
+                          <Text className="font-ui text-sm" style={{ color: colors.danger }}>
+                            Didn’t understand: {typedResult.unknown.map((t) => `“${t}”`).join(', ')}
+                          </Text>
+                        ) : null}
+                      </Field>
+                      <View className="flex-row flex-wrap gap-2">
+                        {PRESETS.map((p) => (
+                          <SheetButton key={p.label} label={p.label} onPress={() => update({ typedText: p.text })} />
+                        ))}
                       </View>
-                    </Field>
-                  </>
-                ) : (
-                  <SheetText>The drums play on their own. Pick a chart or type chords to add a bass and a piano.</SheetText>
-                )}
-                {song ? (
-                  <Field label="How long">
-                    <View className="flex-row" pointerEvents={running ? 'none' : 'auto'} style={{ opacity: running ? 0.5 : 1 }}>
-                      <Dropdown value={choruses} onChange={(v) => update({ choruses: v })} options={CHORUS_OPTIONS} />
-                    </View>
-                  </Field>
-                ) : null}
-                <SwitchRow
-                  label="Count-in"
-                  hint="A bar of hi-hat (or a click, with the drums off) before the band comes in."
-                  checked={countIn}
-                  onChange={(v) => {
-                    update({ countIn: v });
-                    updateGroove({ countIn: v });
-                  }}
-                />
-              </SettingChip>
-
-              <SettingChip Icon={DrumIcon} label="Style" value={style.name}>
-                <View className="gap-1">
-                  <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
-                    {style.name}{' '}
-                    <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                      {countryOf(style.country)}
-                    </Text>
-                  </Text>
-                  <SheetText>{style.about}</SheetText>
-                </View>
-                {PICKER_COUNTRIES.map((c) => (
-                  <View key={c.id} className="gap-2">
-                    <GroupLabel>{c.label}</GroupLabel>
-                    <PillChoice label={c.label} value={style.id} onChange={setStyle} options={PICKABLE.filter((s) => s.country === c.id).map((s) => ({ value: s.id, label: s.name }))} />
-                  </View>
-                ))}
-                <SheetDivider title="Groove" />
-                {style.swing ? (
-                  <Field label="Swing" hint="How long the first eighth note of each pair is. By tempo swings harder at slow tempos and lighter as it gets fast.">
-                    <View className="flex-row">
-                      <Dropdown value={swing} onChange={(v) => update({ swing: v })} options={SWING_OPTIONS} />
-                    </View>
-                  </Field>
-                ) : null}
-                {meterMismatch ? (
-                  <SheetText>
-                    This groove is in {style.meter.top}/{style.meter.bottom}; the chart is in {song!.timeSignature.top}/{song!.timeSignature.bottom}.
-                  </SheetText>
-                ) : null}
-                {!style.swing ? (
-                  <GrooveOptionsFields
-                    style={style}
-                    hand={hand}
-                    crossStick={crossStick}
-                    blockChoice={blockChoice}
-                    clave={clave}
-                    showClave={showClave}
-                    grooveSettings={grooveSettings}
-                    updateGroove={updateGroove}
-                  />
-                ) : null}
-                {!running ? <SheetButton label="New groove" onPress={() => setGrooveSeed(newSeed())} /> : null}
-              </SettingChip>
-
-              <SettingChip
-                Icon={DrumIcon}
-                label="Drums"
-                value={!drumsOn ? (click ? 'Click' : 'Off') : style.swing ? (drumsComping ? 'Comping' : 'Time') : 'On'}
-                open={drumsOpen}
-                onOpenChange={setDrumsOpen}
-              >
-                {style.swing ? (
-                  <Segmented
-                    label="Drums"
-                    value={!drumsOn ? 'off' : drumsComping ? 'comp' : 'time'}
-                    onChange={(v) => {
-                      if (v === 'off') return update({ drums: 'off' });
-                      update({ drums: 'sticks' });
-                      setComping(v === 'comp');
-                    }}
-                    options={[...(song ? [{ value: 'off', label: 'Off' }] : []), { value: 'time', label: 'Time' }, { value: 'comp', label: 'Comping' }]}
-                  />
-                ) : song ? (
-                  <Segmented
-                    label="Drums"
-                    value={drumsOn ? 'on' : 'off'}
-                    onChange={(v) => update({ drums: v === 'off' ? 'off' : 'sticks' })}
-                    options={[
-                      { value: 'off', label: 'Off' },
-                      { value: 'on', label: 'On' },
-                    ]}
-                  />
-                ) : (
-                  <SheetText>With no chart the drums always play.</SheetText>
-                )}
-                {!drumsOn ? (
-                  <SwitchRow label="Hi-hat click on 2 & 4" checked={click} onChange={(v) => update({ click: v })} />
-                ) : style.swing ? (
-                  <SheetButton label="Drum settings" onPress={() => afterSheet(() => setDrumsOpen(false), () => setDrumSettingsOpen(true))} />
-                ) : null}
-                {drumsOn ? (
-                  <View className="gap-4">
-                    <Field
-                      label="Kit"
-                      hint="A fader for each part of the kit: the middle is the level it was recorded at."
-                      aside={Object.keys(grooveSettings.parts).length > 0 ? <SheetButton label="Reset kit" onPress={() => updateGroove({ parts: {} })} /> : null}
-                    />
-                    {KIT_PARTS.filter((p) => p.voices.some((v) => partInUse.has(v))).map((p) => (
-                      <PartFader
-                        key={p.id}
-                        label={p.label}
-                        value={grooveSettings.parts[p.id] ?? PART_DEFAULT}
-                        onChange={(v) => {
-                          const parts = { ...grooveSettings.parts, [p.id]: v };
-                          if (Math.abs(v - PART_DEFAULT) < 0.005) delete parts[p.id];
-                          updateGroove({ parts });
-                        }}
-                      />
-                    ))}
-                  </View>
-                ) : null}
-              </SettingChip>
-
-              <SettingChip
-                Icon={BassIcon}
-                label="Bass"
-                value={!song ? 'Needs a chart' : !settings.bass ? 'Off' : walking ? (customPlayer ? playerName : feel === 'two' ? 'Two feel' : 'Walking') : 'Style part'}
-                toggle={song ? { checked: settings.bass, onChange: (on) => update({ bass: on }) } : undefined}
-              >
-                {!song ? (
-                  needTune
-                ) : (
-                  <>
-                    <Segmented
-                      label="Bass"
-                      value={settings.bass ? 'on' : 'off'}
-                      onChange={(v) => update({ bass: v === 'on' })}
-                      options={[
-                        { value: 'off', label: 'Off' },
-                        { value: 'on', label: 'Upright bass' },
-                      ]}
-                    />
-                    {settings.bass && walking ? (
-                      <>
-                        <Field label="Player" hint="The Computer walks a line from scratch. A bass player (Ray Brown is built in; add your own on the website) plays from their transcriptions.">
-                          <View className="flex-row" pointerEvents={running ? 'none' : 'auto'} style={{ opacity: running ? 0.5 : 1 }}>
-                            <Dropdown
-                              value={customPlayer || playersLoading ? player : 'computer'}
-                              onChange={(v) => update({ player: v })}
-                              options={[...BASS_PLAYERS.map((p) => ({ value: p.id as string, label: p.label })), ...players.map((p) => ({ value: p.id, label: p.name }))]}
-                            />
-                          </View>
-                        </Field>
-                        {customPlayer ? (
-                          <Field label="How they play" hint="Their phrases reuses their lines, moved to fit this chart. Their style writes new lines the way they play.">
-                            <Segmented
-                              label="How they play"
-                              value={playerMode}
-                              onChange={(v) => update({ playerMode: v })}
-                              disabled={running}
-                              options={[
-                                { value: 'copy', label: 'Their phrases' },
-                                { value: 'learn', label: 'Their style' },
-                              ]}
-                            />
-                            {playerInfo ? <SheetText>{playerInfo}</SheetText> : null}
-                          </Field>
-                        ) : (
-                          <Field label="Feel">
-                            <Segmented
-                              label="Feel"
-                              value={feel}
-                              onChange={(v) => update({ feel: v })}
-                              disabled={running}
-                              options={[
-                                { value: 'walking', label: 'Walking in 4' },
-                                { value: 'two', label: 'Two feel' },
-                              ]}
-                            />
-                          </Field>
-                        )}
-                      </>
-                    ) : settings.bass ? (
-                      <Field label="Part">
-                        <SheetText>{BASS_FAMILY_ABOUT[family]}</SheetText>
+                      <Field label={typedResult.usesNumerals ? 'Key' : 'Key (for numerals)'}>
+                        <View className="flex-row">
+                          <Dropdown value={typedKey} onChange={(v) => update({ typedKey: v })} options={KEY_NAMES.map((k) => ({ value: k, label: k }))} />
+                        </View>
                       </Field>
-                    ) : null}
-                    {settings.bass ? (
-                      <Field label="Touch" hint="How hard the strings are plucked.">
-                        <Segmented label="Touch" value={touch} onChange={(v) => update({ touch: v })} disabled={running} options={TOUCH_OPTIONS} />
-                      </Field>
-                    ) : null}
-                  </>
-                )}
-              </SettingChip>
-
-              <SettingChip
-                Icon={ChordIcon}
-                label="Chords"
-                value={!song ? 'Needs a chart' : chords === 'off' ? 'Off' : `Piano · ${walking && chordStyle === 'comp' ? 'comping' : 'held'}`}
-                toggle={song ? { checked: chords !== 'off', onChange: (on) => update({ chords: on ? 'piano' : 'off' }) } : undefined}
-              >
-                {!song ? (
-                  needTune
-                ) : (
-                  <>
-                    <Segmented
-                      label="Chords"
-                      value={chords}
-                      onChange={(v) => update({ chords: v })}
-                      options={[
-                        { value: 'off', label: 'Off' },
-                        { value: 'piano', label: 'Piano' },
-                      ]}
-                    />
-                    {chords !== 'off' && walking ? (
-                      <Field label="Rhythm" hint="Comping plays varied rhythms; Held plays one chord per change. Styles other than swing hold the chords.">
+                      <Field label="Time">
                         <Segmented
-                          label="Chord rhythm"
-                          value={chordStyle}
-                          onChange={(v) => update({ chordStyle: v })}
+                          label="Time"
+                          value={typedMeter}
+                          onChange={(v) => {
+                            stop();
+                            update({ typedMeter: v });
+                          }}
                           options={[
-                            { value: 'comp', label: 'Comping' },
-                            { value: 'sustain', label: 'Held' },
+                            { value: '4/4', label: '4/4' },
+                            { value: '3/4', label: '3/4' },
                           ]}
                         />
                       </Field>
-                    ) : null}
-                  </>
-                )}
-              </SettingChip>
-
-              <SettingChip Icon={SpeakerIcon} label="Mix" value={song ? `Bass ${Math.round(volume * 100)}%` : `Drums ${Math.round(drumsVolume * 100)}%`}>
-                {song ? (
-                  <>
-                    <LevelRow label="Bass" value={bassOn ? volume : null} onChange={(v) => update({ volume: v })} onTurnOn={() => update({ bass: true })} />
-                    <LevelRow label="Chords" value={chords === 'off' ? null : chordVolume} onChange={(v) => update({ chordVolume: v })} onTurnOn={() => update({ chords: 'piano' })} />
-                  </>
-                ) : null}
-                <LevelRow label="Drums" value={drumsOn ? drumsVolume : null} onChange={(v) => update({ drumsVolume: v })} onTurnOn={() => update({ drums: 'sticks' })} />
-                {song ? (
-                  <LevelRow
-                    label="Click"
-                    value={click && !drumsOn ? clickVolume : null}
-                    onChange={(v) => update({ clickVolume: v })}
-                    offLabel={drumsOn ? 'Off with drums' : 'Turn on'}
-                    onTurnOn={drumsOn ? undefined : () => update({ click: true })}
+                    </>
+                  ) : source === 'chart' ? (
+                    <>
+                      <ChartButton title={meta?.title ?? (loading ? 'Loading your charts…' : 'Pick a chart')} detail={meta ? [meta.key, meta.style].filter(Boolean).join(' · ') : ''} action={meta ? 'Change' : 'Choose'} onPress={pickChart} />
+                      <Field label="Key">
+                        <View className="flex-row">
+                          <Dropdown
+                            value={transposeKey}
+                            onChange={(v) => {
+                              // A new key is a different bass line: stop rather than keep playing the old one.
+                              stop();
+                              update({ transposeKey: v });
+                            }}
+                            options={[{ value: '', label: `Original${selectedSong?.key ? ` (${selectedSong.key})` : ''}` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                          />
+                        </View>
+                      </Field>
+                    </>
+                  ) : (
+                    <SheetText>The drums play on their own. Pick a chart or type chords to add a bass and a piano.</SheetText>
+                  )}
+                  {song ? (
+                    <Field label="How long">
+                      <View className="flex-row" pointerEvents={running ? 'none' : 'auto'} style={{ opacity: running ? 0.5 : 1 }}>
+                        <Dropdown value={choruses} onChange={(v) => update({ choruses: v })} options={CHORUS_OPTIONS} />
+                      </View>
+                    </Field>
+                  ) : null}
+                  <SwitchRow
+                    label="Count-in"
+                    hint="A bar of hi-hat (or a click, with the drums off) before the band comes in."
+                    checked={countIn}
+                    onChange={(v) => {
+                      update({ countIn: v });
+                      updateGroove({ countIn: v });
+                    }}
                   />
-                ) : null}
-                <LevelRow label="Room" value={room ? roomAmount : 0} onChange={(v) => update({ roomAmount: v, room: v > 0 })} />
-              </SettingChip>
-            </ChipRow>
+                </SettingChip>
+
+                <SettingChip Icon={DrumIcon} label="Style" value={style.name}>
+                  <View className="gap-1">
+                    <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
+                      {style.name}{' '}
+                      <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+                        {countryOf(style.country)}
+                      </Text>
+                    </Text>
+                    <SheetText>{style.about}</SheetText>
+                  </View>
+                  {PICKER_COUNTRIES.map((c) => (
+                    <View key={c.id} className="gap-2">
+                      <GroupLabel>{c.label}</GroupLabel>
+                      <PillChoice label={c.label} value={style.id} onChange={setStyle} options={PICKABLE.filter((s) => s.country === c.id).map((s) => ({ value: s.id, label: s.name }))} />
+                    </View>
+                  ))}
+                  <SheetDivider title="Groove" />
+                  {style.swing ? (
+                    <Field label="Swing" hint="How long the first eighth note of each pair is. By tempo swings harder at slow tempos and lighter as it gets fast.">
+                      <View className="flex-row">
+                        <Dropdown value={swing} onChange={(v) => update({ swing: v })} options={SWING_OPTIONS} />
+                      </View>
+                    </Field>
+                  ) : null}
+                  {meterMismatch ? (
+                    <SheetText>
+                      This groove is in {style.meter.top}/{style.meter.bottom}; the chart is in {song!.timeSignature.top}/{song!.timeSignature.bottom}.
+                    </SheetText>
+                  ) : null}
+                  {!style.swing ? (
+                    <GrooveOptionsFields
+                      style={style}
+                      hand={hand}
+                      crossStick={crossStick}
+                      blockChoice={blockChoice}
+                      clave={clave}
+                      showClave={showClave}
+                      grooveSettings={grooveSettings}
+                      updateGroove={updateGroove}
+                    />
+                  ) : null}
+                  {!running ? <SheetButton label="New groove" onPress={() => setGrooveSeed(newSeed())} /> : null}
+                </SettingChip>
+
+                {/* The rest in one "More options" chip, so the chips stay a row or two and the music keeps its room. */}
+                <MoreOptionsChip>
+                  <SettingChip
+                    Icon={DrumIcon}
+                    label="Drums"
+                    value={!drumsOn ? (click ? 'Click' : 'Off') : style.swing ? (drumsComping ? 'Comping' : 'Time') : 'On'}
+                    open={drumsOpen}
+                    onOpenChange={setDrumsOpen}
+                  >
+                    {style.swing ? (
+                      <Segmented
+                        label="Drums"
+                        value={!drumsOn ? 'off' : drumsComping ? 'comp' : 'time'}
+                        onChange={(v) => {
+                          if (v === 'off') return update({ drums: 'off' });
+                          update({ drums: 'sticks' });
+                          setComping(v === 'comp');
+                        }}
+                        options={[...(song ? [{ value: 'off', label: 'Off' }] : []), { value: 'time', label: 'Time' }, { value: 'comp', label: 'Comping' }]}
+                      />
+                    ) : song ? (
+                      <Segmented
+                        label="Drums"
+                        value={drumsOn ? 'on' : 'off'}
+                        onChange={(v) => update({ drums: v === 'off' ? 'off' : 'sticks' })}
+                        options={[
+                          { value: 'off', label: 'Off' },
+                          { value: 'on', label: 'On' },
+                        ]}
+                      />
+                    ) : (
+                      <SheetText>With no chart the drums always play.</SheetText>
+                    )}
+                    {!drumsOn ? (
+                      <SwitchRow label="Hi-hat click on 2 & 4" checked={click} onChange={(v) => update({ click: v })} />
+                    ) : style.swing ? (
+                      <SheetButton label="Drum settings" onPress={() => afterSheet(() => setDrumsOpen(false), () => setDrumSettingsOpen(true))} />
+                    ) : null}
+                    {drumsOn ? (
+                      <View className="gap-4">
+                        <Field
+                          label="Kit"
+                          hint="A fader for each part of the kit: the middle is the level it was recorded at."
+                          aside={Object.keys(grooveSettings.parts).length > 0 ? <SheetButton label="Reset kit" onPress={() => updateGroove({ parts: {} })} /> : null}
+                        />
+                        {KIT_PARTS.filter((p) => p.voices.some((v) => partInUse.has(v))).map((p) => (
+                          <PartFader
+                            key={p.id}
+                            label={p.label}
+                            value={grooveSettings.parts[p.id] ?? PART_DEFAULT}
+                            onChange={(v) => {
+                              const parts = { ...grooveSettings.parts, [p.id]: v };
+                              if (Math.abs(v - PART_DEFAULT) < 0.005) delete parts[p.id];
+                              updateGroove({ parts });
+                            }}
+                          />
+                        ))}
+                      </View>
+                    ) : null}
+                  </SettingChip>
+
+                  <SettingChip
+                    Icon={BassIcon}
+                    label="Bass"
+                    value={!song ? 'Needs a chart' : !settings.bass ? 'Off' : walking ? (customPlayer ? playerName : feel === 'two' ? 'Two feel' : 'Walking') : 'Style part'}
+                    toggle={song ? { checked: settings.bass, onChange: (on) => update({ bass: on }) } : undefined}
+                  >
+                    {!song ? (
+                      needTune
+                    ) : (
+                      <>
+                        <Segmented
+                          label="Bass"
+                          value={settings.bass ? 'on' : 'off'}
+                          onChange={(v) => update({ bass: v === 'on' })}
+                          options={[
+                            { value: 'off', label: 'Off' },
+                            { value: 'on', label: 'Upright bass' },
+                          ]}
+                        />
+                        {settings.bass && walking ? (
+                          <>
+                            <Field label="Player" hint="The Computer walks a line from scratch. A bass player (Ray Brown is built in; add your own on the website) plays from their transcriptions.">
+                              <View className="flex-row" pointerEvents={running ? 'none' : 'auto'} style={{ opacity: running ? 0.5 : 1 }}>
+                                <Dropdown
+                                  value={customPlayer || playersLoading ? player : 'computer'}
+                                  onChange={(v) => update({ player: v })}
+                                  options={[...BASS_PLAYERS.map((p) => ({ value: p.id as string, label: p.label })), ...players.map((p) => ({ value: p.id, label: p.name }))]}
+                                />
+                              </View>
+                            </Field>
+                            {customPlayer ? (
+                              <Field label="How they play" hint="Their phrases reuses their lines, moved to fit this chart. Their style writes new lines the way they play.">
+                                <Segmented
+                                  label="How they play"
+                                  value={playerMode}
+                                  onChange={(v) => update({ playerMode: v })}
+                                  disabled={running}
+                                  options={[
+                                    { value: 'copy', label: 'Their phrases' },
+                                    { value: 'learn', label: 'Their style' },
+                                  ]}
+                                />
+                                {playerInfo ? <SheetText>{playerInfo}</SheetText> : null}
+                              </Field>
+                            ) : (
+                              <Field label="Feel">
+                                <Segmented
+                                  label="Feel"
+                                  value={feel}
+                                  onChange={(v) => update({ feel: v })}
+                                  disabled={running}
+                                  options={[
+                                    { value: 'walking', label: 'Walking in 4' },
+                                    { value: 'two', label: 'Two feel' },
+                                  ]}
+                                />
+                              </Field>
+                            )}
+                          </>
+                        ) : settings.bass ? (
+                          <Field label="Part">
+                            <SheetText>{BASS_FAMILY_ABOUT[family]}</SheetText>
+                          </Field>
+                        ) : null}
+                        {settings.bass ? (
+                          <Field label="Touch" hint="How hard the strings are plucked.">
+                            <Segmented label="Touch" value={touch} onChange={(v) => update({ touch: v })} disabled={running} options={TOUCH_OPTIONS} />
+                          </Field>
+                        ) : null}
+                      </>
+                    )}
+                  </SettingChip>
+
+                  <SettingChip
+                    Icon={ChordIcon}
+                    label="Chords"
+                    value={!song ? 'Needs a chart' : chords === 'off' ? 'Off' : `Piano · ${walking && chordStyle === 'comp' ? 'comping' : 'held'}`}
+                    toggle={song ? { checked: chords !== 'off', onChange: (on) => update({ chords: on ? 'piano' : 'off' }) } : undefined}
+                  >
+                    {!song ? (
+                      needTune
+                    ) : (
+                      <>
+                        <Segmented
+                          label="Chords"
+                          value={chords}
+                          onChange={(v) => update({ chords: v })}
+                          options={[
+                            { value: 'off', label: 'Off' },
+                            { value: 'piano', label: 'Piano' },
+                          ]}
+                        />
+                        {chords !== 'off' && walking ? (
+                          <Field label="Rhythm" hint="Comping plays varied rhythms; Held plays one chord per change. Styles other than swing hold the chords.">
+                            <Segmented
+                              label="Chord rhythm"
+                              value={chordStyle}
+                              onChange={(v) => update({ chordStyle: v })}
+                              options={[
+                                { value: 'comp', label: 'Comping' },
+                                { value: 'sustain', label: 'Held' },
+                              ]}
+                            />
+                          </Field>
+                        ) : null}
+                      </>
+                    )}
+                  </SettingChip>
+
+                  <SettingChip Icon={SpeakerIcon} label="Mix" value={song ? `Bass ${Math.round(volume * 100)}%` : `Drums ${Math.round(drumsVolume * 100)}%`}>
+                    {song ? (
+                      <>
+                        <LevelRow label="Bass" value={bassOn ? volume : null} onChange={(v) => update({ volume: v })} onTurnOn={() => update({ bass: true })} />
+                        <LevelRow label="Chords" value={chords === 'off' ? null : chordVolume} onChange={(v) => update({ chordVolume: v })} onTurnOn={() => update({ chords: 'piano' })} />
+                      </>
+                    ) : null}
+                    <LevelRow label="Drums" value={drumsOn ? drumsVolume : null} onChange={(v) => update({ drumsVolume: v })} onTurnOn={() => update({ drums: 'sticks' })} />
+                    {song ? (
+                      <LevelRow
+                        label="Click"
+                        value={click && !drumsOn ? clickVolume : null}
+                        onChange={(v) => update({ clickVolume: v })}
+                        offLabel={drumsOn ? 'Off with drums' : 'Turn on'}
+                        onTurnOn={drumsOn ? undefined : () => update({ click: true })}
+                      />
+                    ) : null}
+                    <LevelRow label="Room" value={room ? roomAmount : 0} onChange={(v) => update({ roomAmount: v, room: v > 0 })} />
+                  </SettingChip>
+                </MoreOptionsChip>
+              </SettingsBar>
+            </View>
           </View>
 
           <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
@@ -1052,22 +1057,22 @@ function RhythmSectionScreen() {
                     <RhythmChart song={song} activeBar={activeBar} />
                   </Card>
                 ) : (
-                  <EmptyPanel>Type some chords to play over (under Tune).</EmptyPanel>
+                  <EmptyState Icon={ChordChartIcon} title="No chords yet" body="Type some chords to play over, under Tune." action={{ label: 'Type chords', onPress: () => setTuneOpen(true) }} />
                 )
               ) : !loading && allSongs.length === 0 ? (
-                <EmptyPanel>
-                  <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
-                    You don’t have any chord charts yet. The drums play on their own until you pick one.
-                  </Text>
-                  <SmallButton label="Import or make one in Charts" Icon={ChordChartIcon} onPress={() => router.push('/charts')} />
-                </EmptyPanel>
+                <EmptyState
+                  Icon={ChordChartIcon}
+                  title="No chord charts yet"
+                  body="The drums play on their own until you pick one. Import or make a chart in Charts."
+                  action={{ label: 'Go to Charts', onPress: () => router.push('/charts') }}
+                />
               ) : !chartId ? (
-                <EmptyPanel>
-                  <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
-                    Pick one of your chord charts to play over. Until then, the drums play on their own.
-                  </Text>
-                  <SmallButton label="Pick a chart" Icon={ChordChartIcon} onPress={() => setPicking(true)} />
-                </EmptyPanel>
+                <EmptyState
+                  Icon={ChordChartIcon}
+                  title="No chart picked"
+                  body="Pick one of your chord charts to play over. Until then, the drums play on their own."
+                  action={{ label: 'Pick a chart', onPress: () => setPicking(true) }}
+                />
               ) : selectedSongLoading || (!song && loading) ? (
                 <LoadingSpinner showLabel label="Loading chart…" />
               ) : song ? (
@@ -1083,7 +1088,12 @@ function RhythmSectionScreen() {
                   <RhythmChart song={song} activeBar={activeBar} />
                 </Card>
               ) : (
-                <EmptyPanel>That chart isn’t in your library anymore.</EmptyPanel>
+                <EmptyState
+                  Icon={ChordChartIcon}
+                  title="That chart is gone"
+                  body="It isn’t in your library anymore."
+                  action={{ label: 'Pick another', onPress: () => setPicking(true) }}
+                />
               )
             ) : null}
 

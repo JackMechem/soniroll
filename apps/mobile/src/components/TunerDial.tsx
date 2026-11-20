@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
@@ -129,11 +129,82 @@ export function TunerDial({
           borderRadius: 9999,
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingVertical: '9%',
+          paddingVertical: '11%',
         }}
       >
         {children}
       </View>
+    </View>
+  );
+}
+
+/**
+ * The flat/sharp meter under the dial, read like a real meter: a track from −50 to +50 cents with
+ * a tick every 5 (taller at ±25 and ±50, tallest at 0), the in-tune zone (±8 cents) tinted, the
+ * numbers under it, and the needle in the reading's colour. `caption` is the line under it (the
+ * verdict, or what to do when nothing's heard).
+ */
+export function TunerMeter({ cents, color, caption, captionColor }: { cents: number | null; color: string; caption: string; captionColor: string }) {
+  const { colors } = useAppTheme();
+  const ticks = Array.from({ length: 21 }, (_, i) => i * 5 - 50);
+  return (
+    <View
+      className="w-full gap-1"
+      accessibilityRole="progressbar"
+      accessibilityLabel="Tuning offset in cents"
+      accessibilityValue={{ min: -50, max: 50, now: Math.round(cents ?? 0) }}
+    >
+      <View style={{ height: 26, marginHorizontal: 20 }}>
+        {/* The in-tune zone. */}
+        <View style={{ position: 'absolute', left: '42%', width: '16%', top: 3, bottom: 3, borderRadius: 4, backgroundColor: withAlpha(colors.foreground, 0.07) }} />
+        {/* The track. */}
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 12, height: 2, borderRadius: 1, backgroundColor: withAlpha(colors.foreground, 0.15) }} />
+        {ticks.map((t) => {
+          const h = t === 0 ? 22 : t % 25 === 0 ? 14 : 7;
+          return (
+            <View
+              key={t}
+              style={{
+                position: 'absolute',
+                left: `${50 + t}%`,
+                top: 13 - h / 2,
+                width: t === 0 ? 2 : 1,
+                height: h,
+                marginLeft: t === 0 ? -1 : -0.5,
+                backgroundColor: withAlpha(colors.foreground, t === 0 ? 0.5 : 0.3),
+              }}
+            />
+          );
+        })}
+        {cents !== null ? (
+          <View
+            style={{
+              position: 'absolute',
+              left: `${50 + cents}%`,
+              top: 0,
+              width: 6,
+              height: 26,
+              marginLeft: -3,
+              borderRadius: 3,
+              backgroundColor: color,
+            }}
+          />
+        ) : null}
+      </View>
+      <View style={{ height: 15, marginHorizontal: 20 }}>
+        {[-50, -25, 0, 25, 50].map((t) => (
+          <Text
+            key={t}
+            className="font-ui text-center text-[11px] tabular-nums"
+            style={{ position: 'absolute', left: `${50 + t}%`, width: 40, marginLeft: -20, color: colors.muted }}
+          >
+            {t === 0 ? '0' : t < 0 ? `−${-t}` : `+${t}`}
+          </Text>
+        ))}
+      </View>
+      <Text numberOfLines={1} className="font-ui-semibold mt-1 text-center text-sm font-semibold" style={{ color: captionColor }}>
+        {caption}
+      </Text>
     </View>
   );
 }

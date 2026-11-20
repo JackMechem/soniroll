@@ -32,7 +32,7 @@ export function TodayPracticeCard() {
   const router = useRouter();
   if (!isAuthenticated || !log.ready) return null;
   return (
-    <Card title="Today's practice" action={{ label: 'Shed Log', onPress: () => router.push('/tool/shed-log') }}>
+    <Card title="Today's practice" action={{ label: 'Shed Log', onPress: () => router.navigate('/tool/shed-log') }}>
       <TodayBody log={log} />
     </Card>
   );
@@ -55,7 +55,7 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   };
   return (
     <>
-      <TodaySummary data={data} today={today} onGoal={() => router.push('/tool/shed-log')} />
+      <TodaySummary data={data} today={today} onGoal={() => router.navigate('/tool/shed-log')} />
       <DayTimerCard data={data} date={today} compact />
       {items.length === 0 && tasks.length === 0 ? (
         <View className="gap-3 rounded-lg p-3" style={{ backgroundColor: derived.fill }}>
@@ -75,7 +75,7 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
         return (
           <View key={routine.id} className="flex-row items-center gap-3 rounded-lg p-3" style={{ backgroundColor: derived.fill }}>
             <RoutineIcon icon={routine.icon} color={routine.color} size={32} />
-            <Pressable onPress={() => router.push({ pathname: '/tool/shed-log', params: { date: today } })} className="flex-1 gap-1">
+            <Pressable onPress={() => router.navigate({ pathname: '/tool/shed-log', params: { date: today } })} className="flex-1 gap-1">
               <View className="flex-row items-center gap-1.5">
                 <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground, flexShrink: 1 }}>
                   {routine.name || 'Routine'}

@@ -57,7 +57,7 @@ export function ChartPickerModal({
           </Pressable>
         </View>
         <View className="px-4 pb-2">
-          <SearchField value={query} onChange={setQuery} placeholder={`Search ${totalSongs} charts…`} />
+          <SearchField value={query} onChange={setQuery} placeholder="Search charts" />
         </View>
         <FlatList
           data={rows}

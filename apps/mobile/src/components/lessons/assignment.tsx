@@ -226,7 +226,7 @@ function StudentActions({ itemId, s, onEdit }: { itemId: Id<'lessonItems'>; s: S
 }
 
 function HandInForm({ item, config, previous, onDone, onCancel }: { item: Item; config: SubmitConfig; previous: Submission | null; onDone: () => void; onCancel?: () => void }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   const submit = useMutation(api.lessons.submitWork);
   const generate = useMutation(api.lessons.generateSubmitUploadUrl);
   const [text, setText] = useState(previous?.text ?? '');
@@ -338,8 +338,9 @@ function HandInForm({ item, config, previous, onDone, onCancel }: { item: Item; 
             <Pressable
               onPress={() => void pick()}
               accessibilityRole="button"
-              className="items-center gap-1 rounded-xl p-4"
-              style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors['surface-hover'] }}
+              android_ripple={{ color: colors['surface-hover'] }}
+              className="items-center gap-1 overflow-hidden rounded-xl p-4"
+              style={{ backgroundColor: derived.fill }}
             >
               <FileIcon color={colors.muted} size={20} />
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>

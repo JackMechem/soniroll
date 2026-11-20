@@ -8,12 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BeatLevel } from '@jam-practice/core/clickSounds';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
-import { BookIcon, MetronomeIcon, PlusIcon } from '@/components/icons';
+import { BookIcon, MetronomeIcon, PlusIcon, ShuffleIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
 import { TuneListManager } from '@/components/account/TuneListManager';
 import { BigButton } from '@/components/tool/meter';
-import { ChoiceCards, EmptyPanel, ListIcon, OptionLabel, PillButton } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ChoiceCards, ListIcon, OptionLabel } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
+import { EmptyState } from '@/components/ui';
 import { type CountOff, parseBeatsPerBar, playCountOff } from '@/lib/jamPracticeCountOff';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useSyncedTunes } from '@/lib/useSyncedTunes';
@@ -132,7 +133,7 @@ function JamPracticeScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          contentContainerStyle={TOOL_CONTENT}
         >
           <View className="items-center gap-3">
             {pick ? (
@@ -162,23 +163,29 @@ function JamPracticeScreen() {
               </>
             ) : nothingToPick ? (
               // Nothing to pick from yet: offer both ways in, right here.
-              <EmptyPanel>
-                <Text className="font-ui text-center text-sm leading-5" style={muted}>
-                  Your tune list is empty. Add the tunes you know, or pick from {STANDARDS.length} jazz standards.
-                </Text>
-                <View className="flex-row flex-wrap justify-center gap-2">
-                  <PillButton label="Add a tune" Icon={PlusIcon} onPress={() => setTunesOpen(true)} />
-                  <PillButton
-                    label="Use the jazz standards"
-                    onPress={() => {
+              <View className="w-full">
+                <EmptyState
+                  Icon={BookIcon}
+                  title="Your tune list is empty"
+                  body={`Add the tunes you know, or pick from ${STANDARDS.length} jazz standards.`}
+                  action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => setTunesOpen(true) }}
+                  secondary={{
+                    label: 'Use the standards',
+                    onPress: () => {
                       updateSettings({ pickFromStandards: true });
                       setPickError(null);
-                    }}
-                  />
-                </View>
-              </EmptyPanel>
+                    },
+                  }}
+                />
+              </View>
             ) : (
-              <EmptyPanel>No tune picked yet.</EmptyPanel>
+              <View className="w-full">
+                <EmptyState
+                  Icon={ShuffleIcon}
+                  title="No tune picked yet"
+                  body="Pick a tune gives you a random one to play, with its key and tempo and a count-off."
+                />
+              </View>
             )}
 
             {/* The tempo shows once, big (the line above has the key and time signature). */}

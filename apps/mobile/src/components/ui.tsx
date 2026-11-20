@@ -1,6 +1,15 @@
 import type { NavLinkInfo } from '@jam-practice/core/navLinks';
-import type { ComponentType, ReactNode } from 'react';
-import { Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useState, type ComponentType, type ReactNode } from 'react';
+import {
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { ChevronRightIcon, ClearIcon, NAV_LINK_ICONS, SearchIcon, type IconProps } from '@/components/icons';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
@@ -333,6 +342,33 @@ export function SortControl<T extends string>({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** Whether a scrolling page has moved off its top — for a hairline (or the header's shadow) under a
+    header once content slides beneath it. Spread `onScroll` and `scrollEventThrottle` on the
+    `ScrollView`/`FlatList`. */
+export function useScrolled() {
+  const [scrolled, setScrolled] = useState(false);
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const now = e.nativeEvent.contentOffset.y > 2;
+    if (now !== scrolled) setScrolled(now);
+  };
+  return { scrolled, onScroll, scrollEventThrottle: 16 };
+}
+
+/** A section's heading inside a page or card: the name, an optional count after a dot ("Tunes I
+    Know · 12"), and something on the right (a link, a sort control). */
+export function SectionHeader({ title, count, right }: { title: string; count?: number; right?: ReactNode }) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="min-h-[36px] flex-row items-center gap-2 px-1">
+      <Text numberOfLines={1} className="font-ui-semibold flex-1 text-[15px] font-semibold" style={{ color: colors.foreground }}>
+        {title}
+        {count !== undefined ? <Text className="font-ui text-[15px]" style={{ color: colors.muted }}>{` · ${count}`}</Text> : null}
+      </Text>
+      {right}
     </View>
   );
 }

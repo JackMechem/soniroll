@@ -4,14 +4,14 @@ import { groupsFromAccents, parseGroups } from '@jam-practice/core/meterControls
 import { MAX_BEATS } from '@jam-practice/core/meters';
 import type { BeatLevel } from '@jam-practice/core/clickSounds';
 import { useState, type ComponentType, type ReactNode } from 'react';
-import { type DimensionValue, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { type DimensionValue, Pressable, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import type { IconProps } from '@/components/icons';
 import { PlayIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
 import { StepperPill, previewClick } from '@/components/tool/meter';
-import { GradientFill, OptionGroup, RewardCard, usePop } from '@/components/tool/reward';
+import { OptionGroup, RewardCard, usePop } from '@/components/tool/reward';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -104,10 +104,10 @@ function PoolPill({ label, on, disabled, onPress }: { label: string; on: boolean
       accessibilityRole="checkbox"
       accessibilityState={{ checked: on, disabled }}
       accessibilityLabel={label}
+      hitSlop={{ top: 2, bottom: 2 }}
       className="h-10 items-center justify-center overflow-hidden rounded-lg px-3.5"
-      style={on ? undefined : { backgroundColor: colors.background }}
+      style={{ backgroundColor: on ? colors.accent : colors.background }}
     >
-      {on ? <GradientFill /> : null}
       <Animated.View style={on ? pop : undefined}>
         <Text className="font-ui-semibold text-sm font-semibold" style={{ color: on ? colors['accent-foreground'] : colors.foreground }}>
           {label}
@@ -245,11 +245,13 @@ export function PillButton({
   );
 }
 
-/** A quiet panel on the page that stands in for a display with nothing to show yet. */
+/** Quiet text standing in for something with nothing to show yet, on the surface colour like
+    `EmptyState` (inside a sheet it reads as plain centred text). On a page, prefer `EmptyState`
+    from `components/ui.tsx`, with an icon, a title and the action that fills it. */
 export function EmptyPanel({ children }: { children: ReactNode }) {
-  const { colors, derived } = useAppTheme();
+  const { colors } = useAppTheme();
   return (
-    <View className="w-full items-center gap-3 rounded-xl px-5 py-4" style={{ backgroundColor: derived.fill }}>
+    <View className="w-full items-center gap-3 rounded-xl px-5 py-5" style={{ backgroundColor: colors.surface }}>
       {typeof children === 'string' ? (
         <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
           {children}
@@ -258,21 +260,5 @@ export function EmptyPanel({ children }: { children: ReactNode }) {
         children
       )}
     </View>
-  );
-}
-
-/** Setting chips in one sideways-scrolling row (centred when they fit), for a screen whose main
-    display needs every bit of height — the Random Sticking Warmup's notation. Bleeds to the
-    screen's edges from a 16px-gutter page. */
-export function ChipRow({ children }: { children: ReactNode }) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ marginHorizontal: -16, flexGrow: 0 }}
-      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 8, paddingHorizontal: 16 }}
-    >
-      {children}
-    </ScrollView>
   );
 }

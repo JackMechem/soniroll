@@ -43,7 +43,7 @@ const QUICK_LOG = [5, 10, 15, 30, 45, 60];
 
 /**
  * Everything on one day (the website's `DayPanel`): the day's progress and the day timer, its
- * routines, extra tasks, time in tools to log (today), timed practice, logging time by hand, and
+ * routines, tasks for the day, time in tools to log (today), timed practice, logging time by hand, and
  * notes: the day's Shed Notes (Add notes), plus older notes and attachments made on the website.
  * Arrows step a day.
  */

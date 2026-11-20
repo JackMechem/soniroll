@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dropdown } from '@/components/Dropdown';
 import { FileRow, useFileActions } from '@/components/files/FileParts';
 import { CloudIcon, PhoneIcon, UploadIcon } from '@/components/files/icons';
+import { FolderIcon } from '@/components/icons';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { InfoButton } from '@/components/InfoButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -17,7 +18,7 @@ import { useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { LibraryHeader } from '@/components/TabHeader';
 import { Segmented } from '@/components/tool/reward';
-import { Button, IconButton, SearchField } from '@/components/ui';
+import { EmptyState, IconButton, SearchField, SortControl } from '@/components/ui';
 import { tidyDeviceFiles, useDeviceUrls } from '@/lib/deviceFiles';
 import { type StoredEntry, type StoredKind, filesApi, pickFiles, useFileUploader, useSaveTarget } from '@/lib/files';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
@@ -51,13 +52,12 @@ const KIND_FILTER_LABEL: Record<FileKind, string> = {
   other: 'Other',
 };
 
-type SortId = 'new' | 'old' | 'name' | 'big' | 'small';
+/** The app's sort order (Recent, A–Z), plus Largest for freeing up space. */
+type SortId = 'new' | 'name' | 'big';
 const SORTS: { value: SortId; label: string }[] = [
-  { value: 'new', label: 'Newest first' },
-  { value: 'old', label: 'Oldest first' },
-  { value: 'name', label: 'Name' },
-  { value: 'big', label: 'Largest first' },
-  { value: 'small', label: 'Smallest first' },
+  { value: 'new', label: 'Recent' },
+  { value: 'name', label: 'A–Z' },
+  { value: 'big', label: 'Largest' },
 ];
 
 const keyOf = (item: { kind: string; id: string }) => `${item.kind}:${item.id}`;
@@ -142,10 +142,8 @@ function FilesScreen() {
     };
     const by: Record<SortId, (a: StoredEntry, b: StoredEntry) => number> = {
       new: (a, b) => b.createdAt - a.createdAt,
-      old: (a, b) => a.createdAt - b.createdAt,
       name: byName,
       big: (a, b) => b.size - a.size,
-      small: (a, b) => a.size - b.size,
     };
     return out.sort(by[sort]);
   }, [items, query, filter, sort, byId]);
@@ -177,14 +175,13 @@ function FilesScreen() {
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ headerShown: false }} />
         {header}
-        <View className="m-4 gap-3 rounded-xl p-5" style={{ backgroundColor: colors.surface }}>
-          <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
-            Keep your files with your account
-          </Text>
-          <Text className="font-ui text-sm leading-5" style={{ color: colors.muted }}>
-            Upload PDFs, lead sheets, pictures, audio and video — on their own or attached to a tune — and open them right here.
-          </Text>
-          <Button label="Sign in" pill onPress={() => router.push('/profile')} style={{ alignSelf: 'flex-start' }} />
+        <View className="p-4">
+          <EmptyState
+            Icon={FolderIcon}
+            title="Keep your files with your account"
+            body="PDFs, lead sheets, pictures, audio and video, on their own or on a tune, opened right here."
+            action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
+          />
         </View>
       </View>
     );
@@ -229,24 +226,32 @@ function FilesScreen() {
             {items.length > 0 ? (
               <>
                 <SearchField value={query} onChangeText={setQuery} placeholder="Search files" />
-                <View className="flex-row flex-wrap gap-2">
+                <View className="flex-row flex-wrap items-center gap-2">
                   <Dropdown value={filter} options={filterOptions} onChange={setFilter} />
-                  <Dropdown value={sort} options={SORTS} onChange={setSort} />
+                  <SortControl value={sort} options={SORTS} onChange={setSort} />
                 </View>
               </>
             ) : null}
           </View>
         }
         ListEmptyComponent={
-          <View className="items-center gap-3 px-6 py-12">
-            <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
-              {items.length ? 'Nothing matches' : 'No files yet'}
-            </Text>
-            <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
-              {items.length ? 'Try another word, or show everything.' : 'Upload a PDF, a lead sheet, a photo of a chart, a recording — anything you want with your tunes.'}
-            </Text>
-            {items.length ? null : <Button label="Upload" Icon={UploadIcon} onPress={() => void upload()} />}
-          </View>
+          items.length ? (
+            <View className="items-center gap-1 px-6 py-12">
+              <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                Nothing matches
+              </Text>
+              <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
+                Try another word, or show everything.
+              </Text>
+            </View>
+          ) : (
+            <EmptyState
+              Icon={FolderIcon}
+              title="No files yet"
+              body="A PDF, a lead sheet, a photo of a chart, a recording: anything you want with your tunes."
+              action={{ label: 'Upload', Icon: UploadIcon, onPress: () => void upload() }}
+            />
+          )
         }
         renderItem={({ item }) => (
           <FileRow item={item} paid={paid} detail={fileDetail(item, whereOf(item))} onOpen={() => actions.openFile(item)} onMenu={() => actions.openMenu(item)} />

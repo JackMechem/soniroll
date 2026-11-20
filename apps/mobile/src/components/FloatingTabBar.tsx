@@ -2,13 +2,13 @@ import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HomeIcon, LibraryIcon, ToolsIcon, UsersIcon, type IconProps } from '@/components/icons';
+import { HomeIcon, LibraryIcon, NAV_LINK_ICONS, ToolsIcon, UsersIcon, type IconProps } from '@/components/icons';
 import { LIBRARY_TABS } from '@/components/TabHeader';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
- * The bottom tab bar for the four main screens: Home, Tools, Library and Community. Your account is
- * the button at the top right of each of them (`AccountButton`), not a tab.
+ * The bottom tab bar for the five main screens: Home, Tools, the Shed Log, Library and Community.
+ * Your account is the button at the top right of each of them (`AccountButton`), not a tab.
  *
  * It shows only on those main screens (and the Library's other parts). Anything opened from them —
  * a tool, a tune, a chart, a post — covers the screen with a back button instead, so a tool gets
@@ -23,9 +23,10 @@ const LIBRARY_HREFS: string[] = LIBRARY_TABS.map((t) => t.href);
 const TABS = [
   { href: '/' as const, label: 'Home', Icon: HomeIcon, matches: ['/'] },
   { href: '/tools' as const, label: 'Tools', Icon: ToolsIcon, matches: ['/tools'] },
+  { href: '/tool/shed-log' as const, label: 'Shed Log', Icon: NAV_LINK_ICONS['/shed-log'], matches: ['/tool/shed-log'] },
   { href: '/library' as const, label: 'Library', Icon: LibraryIcon, matches: LIBRARY_HREFS },
   { href: '/tool/community' as const, label: 'Community', Icon: UsersIcon, matches: ['/tool/community'] },
-] satisfies { href: Href; label: string; Icon: (props: IconProps) => React.ReactElement; matches: string[] }[];
+] satisfies { href: Href; label: string; Icon: React.ComponentType<IconProps>; matches: string[] }[];
 
 const ROOTS = new Set(TABS.flatMap((t) => t.matches));
 

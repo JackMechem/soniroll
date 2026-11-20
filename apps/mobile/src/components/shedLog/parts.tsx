@@ -107,16 +107,18 @@ export function Section({
   const { colors } = useAppTheme();
   return (
     <View className="gap-2">
-      <View className="min-h-8 flex-row items-center gap-2 px-0.5">
+      {/* The app's one section heading (as `SectionHeader` in `components/ui.tsx`): the title at
+          15px, a count after a dot. */}
+      <View className="min-h-9 flex-row items-center gap-2 px-1">
         {icon}
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+        <Text numberOfLines={1} className="font-ui-semibold shrink text-[15px] font-semibold" style={{ color: colors.foreground }}>
           {title}
+          {count !== undefined ? (
+            <Text className="font-ui text-[15px]" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+              {` · ${count}`}
+            </Text>
+          ) : null}
         </Text>
-        {count !== undefined ? (
-          <Text className="font-ui text-xs" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
-            {count}
-          </Text>
-        ) : null}
         <View className="flex-1" />
         {action}
       </View>

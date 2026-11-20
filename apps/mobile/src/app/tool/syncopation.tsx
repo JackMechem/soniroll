@@ -18,14 +18,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DrumIcon, MetronomeIcon, NoteIcon, ShuffleIcon, SlidersIcon, SpeakerIcon } from '@/components/icons';
+import { DrumIcon, MetronomeIcon, NoteIcon, ShuffleIcon, SpeakerIcon } from '@/components/icons';
+import { PlaybackIcon } from '@/components/tool/toolIcons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
 import { SyncopationScore } from '@/components/SyncopationScore';
 import { BigButton, TempoHero } from '@/components/tool/meter';
 import { OptionGroup, Segmented } from '@/components/tool/reward';
-import { ChipRow, ChoiceCards, PoolPills } from '@/components/tool/rhythm';
-import { SettingChip } from '@/components/tool/SettingChip';
+import { ChoiceCards, PoolPills } from '@/components/tool/rhythm';
+import { MoreOptionsChip, SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Slider } from '@/components/tool/Slider';
 import { drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from '@/lib/drumSounds';
 import { startSyncopation, VOICES, type SyncopationPlayback, type SyncopationRun } from '@/lib/syncopationEngine';
@@ -227,67 +228,72 @@ function SyncopationScreen() {
               {status}
             </Text>
           </View>
-          <ChipRow>
-            <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${settings.bpm} BPM`}>
-              <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
-            </SettingChip>
-            <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(' · ')}>
-              <OptionGroup title="In the mix">
-                <PoolPills
-                  label="Rhythms in the mix"
-                  options={RHYTHM_FAMILIES.map((f) => ({ value: f.id, label: f.label }))}
-                  selected={families}
-                  onToggle={toggleFamily}
-                />
-              </OptionGroup>
-              <OptionGroup title="Played on">
-                <Segmented
-                  label="Played on"
-                  value={settings.split ? 'split' : 'snare'}
-                  onChange={(v) => update({ split: v === 'split' })}
-                  options={[
-                    { value: 'snare', label: 'Snare' },
-                    { value: 'split', label: 'Snare + bass' },
-                  ]}
-                />
-              </OptionGroup>
-              <SwitchRow label="Rests" checked={settings.rests} onChange={(v) => update({ rests: v })} />
-              <OptionGroup title="Lines">
+          <View className="px-4">
+            <SettingsBar>
+              <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${settings.bpm} BPM`}>
+                <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
+              </SettingChip>
+              <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(' · ')}>
+                <OptionGroup title="In the mix">
+                  <PoolPills
+                    label="Rhythms in the mix"
+                    options={RHYTHM_FAMILIES.map((f) => ({ value: f.id, label: f.label }))}
+                    selected={families}
+                    onToggle={toggleFamily}
+                  />
+                </OptionGroup>
+                <OptionGroup title="Played on">
+                  <Segmented
+                    label="Played on"
+                    value={settings.split ? 'split' : 'snare'}
+                    onChange={(v) => update({ split: v === 'split' })}
+                    options={[
+                      { value: 'snare', label: 'Snare' },
+                      { value: 'split', label: 'Snare + bass' },
+                    ]}
+                  />
+                </OptionGroup>
+                <SwitchRow label="Rests" checked={settings.rests} onChange={(v) => update({ rests: v })} />
+                <OptionGroup title="Lines">
+                  <ChoiceCards
+                    label="Lines"
+                    options={PHRASE_MODES.map((m) => ({ value: m.id, label: m.label }))}
+                    value={settings.phrase}
+                    onChange={(v) => update({ phrase: v })}
+                    cardWidth="100%"
+                  />
+                </OptionGroup>
+              </SettingChip>
+              <SettingChip Icon={DrumIcon} label="Underneath" value={ostinatoLabel}>
                 <ChoiceCards
-                  label="Lines"
-                  options={PHRASE_MODES.map((m) => ({ value: m.id, label: m.label }))}
-                  value={settings.phrase}
-                  onChange={(v) => update({ phrase: v })}
+                  label="Keep going underneath"
+                  options={OSTINATOS.filter((o) => !(settings.split && o.feet)).map((o) => ({ value: o.id, label: o.label }))}
+                  value={ostinato}
+                  onChange={(v) => update({ ostinato: v })}
                   cardWidth="100%"
                 />
-              </OptionGroup>
-            </SettingChip>
-            <SettingChip Icon={DrumIcon} label="Underneath" value={ostinatoLabel}>
-              <ChoiceCards
-                label="Keep going underneath"
-                options={OSTINATOS.filter((o) => !(settings.split && o.feet)).map((o) => ({ value: o.id, label: o.label }))}
-                value={ostinato}
-                onChange={(v) => update({ ostinato: v })}
-                cardWidth="100%"
-              />
-            </SettingChip>
-            <SettingChip Icon={SlidersIcon} label="Playback" value={AFTER_OPTIONS.find((o) => o.value === settings.after)?.label}>
-              <SwitchRow label="Hear the pattern" checked={settings.snare} onChange={(v) => update({ snare: v })} />
-              <SwitchRow label="Hi-hat click on every beat" checked={settings.click} onChange={(v) => update({ click: v })} />
-              <SwitchRow label="Count-in" checked={settings.countIn} onChange={(v) => update({ countIn: v })} />
-              <OptionGroup title={`After the ${EXERCISE_BARS} bars`}>
-                <ChoiceCards label="After the exercise" options={AFTER_OPTIONS} value={settings.after} onChange={(v) => update({ after: v })} cardWidth="100%" />
-              </OptionGroup>
-            </SettingChip>
-            <SettingChip Icon={SpeakerIcon} label="Mix" value={`${Math.round(settings.volume * 100)}%`}>
-              <OptionGroup title="Drums" aside={<Percent value={settings.volume} />}>
-                <Slider label="Drums" value={settings.volume} onChange={(v) => update({ volume: Math.round(v * 20) / 20 })} />
-              </OptionGroup>
-              <OptionGroup title="Room" aside={<Percent value={settings.room} />}>
-                <Slider label="Room" value={settings.room} onChange={(v) => update({ room: Math.round(v * 20) / 20 })} />
-              </OptionGroup>
-            </SettingChip>
-          </ChipRow>
+              </SettingChip>
+              {/* The rarer settings, so the chips stay one or two rows and the exercise keeps its room. */}
+              <MoreOptionsChip>
+                <SettingChip Icon={PlaybackIcon} label="Playback" value={AFTER_OPTIONS.find((o) => o.value === settings.after)?.label}>
+                  <SwitchRow label="Hear the pattern" checked={settings.snare} onChange={(v) => update({ snare: v })} />
+                  <SwitchRow label="Hi-hat click on every beat" checked={settings.click} onChange={(v) => update({ click: v })} />
+                  <SwitchRow label="Count-in" checked={settings.countIn} onChange={(v) => update({ countIn: v })} />
+                  <OptionGroup title={`After the ${EXERCISE_BARS} bars`}>
+                    <ChoiceCards label="After the exercise" options={AFTER_OPTIONS} value={settings.after} onChange={(v) => update({ after: v })} cardWidth="100%" />
+                  </OptionGroup>
+                </SettingChip>
+                <SettingChip Icon={SpeakerIcon} label="Mix" value={`${Math.round(settings.volume * 100)}%`}>
+                  <OptionGroup title="Drums" aside={<Percent value={settings.volume} />}>
+                    <Slider label="Drums" value={settings.volume} onChange={(v) => update({ volume: Math.round(v * 20) / 20 })} />
+                  </OptionGroup>
+                  <OptionGroup title="Room" aside={<Percent value={settings.room} />}>
+                    <Slider label="Room" value={settings.room} onChange={(v) => update({ room: Math.round(v * 20) / 20 })} />
+                  </OptionGroup>
+                </SettingChip>
+              </MoreOptionsChip>
+            </SettingsBar>
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>

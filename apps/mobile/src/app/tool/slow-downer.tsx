@@ -25,10 +25,8 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SlowDownerWaveform, type WaveView } from '@/components/SlowDownerWaveform';
 import { SwitchRow } from '@/components/SwitchRow';
 import { OptionsArea, SheetButton, SheetText, SliderField } from '@/components/tool/ear';
-import { BigButton } from '@/components/tool/meter';
-import { GradientFill } from '@/components/tool/reward';
-import { SettingChip, ToolSheet } from '@/components/tool/SettingChip';
-import { Button, Card } from '@/components/ui';
+import { SettingChip, TOOL_CONTENT, ToolSheet } from '@/components/tool/SettingChip';
+import { Button, Card, EmptyState } from '@/components/ui';
 import { SlowDownerPlayer, formatTime, type LoopRegion, type Peaks } from '@/lib/slowDownerEngine';
 import { deleteFile, formatSize, listFiles, loadMarkers, pickAndSaveFile, saveMarkers, type LibraryEntry, type Marker } from '@/lib/slowDownerFiles';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
@@ -310,10 +308,10 @@ function SlowDownerScreen() {
               onPress={() => updateSettings({ speed: p })}
               accessibilityRole="radio"
               accessibilityState={{ checked: speed === p }}
-              className="h-9 flex-1 items-center justify-center overflow-hidden rounded-full"
-              style={{ backgroundColor: speed === p ? undefined : colors.background }}
+              hitSlop={{ top: 2, bottom: 2 }}
+              className="h-10 flex-1 items-center justify-center overflow-hidden rounded-full"
+              style={{ backgroundColor: speed === p ? colors.accent : colors.background }}
             >
-              {speed === p ? <GradientFill /> : null}
               <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: speed === p ? colors['accent-foreground'] : colors.foreground }}>
                 {p}%
               </Text>
@@ -343,7 +341,7 @@ function SlowDownerScreen() {
 
       {/* Markers belong to a file, so the chip waits until one is open. */}
       {file ? (
-        <SettingChip Icon={FlagIcon} label="Markers" value={markers.length ? `${markers.length}` : 'None'}>
+        <SettingChip Icon={FlagIcon} label="Markers" value={markers.length ? `${markers.length} marker${markers.length === 1 ? '' : 's'}` : 'None yet'}>
           {markers.length === 0 ? (
             <SheetText>No markers yet. Long-press the waveform to add one at that spot, or add one at the playhead.</SheetText>
           ) : (
@@ -402,18 +400,13 @@ function SlowDownerScreen() {
       <Stack.Screen options={{ title: 'Slow Downer' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
         {!file ? (
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', gap: 20, paddingHorizontal: 16, paddingVertical: 16 }}>
-            <View className="items-center gap-3 rounded-xl px-6 py-12" style={{ backgroundColor: derived.fill }}>
-              <Text className="font-ui-semibold text-center text-base font-semibold" style={{ color: colors.foreground }}>
-                Open an audio or video file
-              </Text>
-              <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
-                MP3, WAV, M4A, FLAC and more. A copy is kept in the app, so it&apos;s here next time.
-              </Text>
-              <View className="mt-1">
-                <BigButton label="Open a file" icon={<PlusIcon color={colors['accent-foreground']} size={20} />} onPress={() => void addFile()} />
-              </View>
-            </View>
+          <ScrollView contentContainerStyle={TOOL_CONTENT}>
+            <EmptyState
+              Icon={FileMusicIcon}
+              title="Open an audio or video file"
+              body="Slow it down without changing the pitch, loop the hard part, and mark your place. MP3, WAV, M4A, FLAC and more; a copy is kept in the app."
+              action={{ label: 'Open a file', Icon: PlusIcon, onPress: () => void addFile() }}
+            />
             {library.length > 0 ? (
               <Card title="Saved files">
                 <FileList entries={library} onOpen={(e) => void openEntry(e)} onDelete={setPendingDelete} />
@@ -429,7 +422,7 @@ function SlowDownerScreen() {
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, gap: 16, paddingHorizontal: 16, paddingVertical: 16 }}
+            contentContainerStyle={{ ...TOOL_CONTENT, gap: 16 }}
           >
             <View className="items-center">
               <Pressable
@@ -487,7 +480,7 @@ function SlowDownerScreen() {
                   accessibilityRole="switch"
                   accessibilityState={{ checked: loopOn }}
                   accessibilityLabel={loopOn ? 'Looping — tap to turn off' : 'Loop off — tap to turn on'}
-                  className="absolute right-2 top-2 h-9 w-9 items-center justify-center overflow-hidden rounded-md"
+                  className="absolute right-2 top-2 h-10 w-10 items-center justify-center overflow-hidden rounded-md"
                   style={{ backgroundColor: loopOn ? colors.accent : colors.background }}
                 >
                   <RepeatIcon color={loopOn ? colors['accent-foreground'] : colors.muted} size={18} />
@@ -519,7 +512,8 @@ function SlowDownerScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ selected: maximized }}
                 accessibilityLabel={maximized ? 'Make the waveform shorter again' : 'Make the waveform as tall as the screen allows'}
-                className="h-9 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-md px-3"
+                hitSlop={{ top: 4, bottom: 4 }}
+                className="h-10 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-md px-3"
                 style={{ backgroundColor: maximized ? colors.accent : derived.fill }}
               >
                 {maximized ? <ShrinkHeightIcon color={colors['accent-foreground']} size={16} /> : <ExpandHeightIcon color={colors.foreground} size={16} />}
@@ -629,7 +623,8 @@ function SmallButton({ label, onPress, disabled, accessibilityLabel }: { label: 
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-9 min-w-9 items-center justify-center overflow-hidden rounded-md px-2.5"
+      hitSlop={{ top: 4, bottom: 4 }}
+      className="h-10 min-w-10 items-center justify-center overflow-hidden rounded-md px-2.5"
       style={{ backgroundColor: derived.fill, opacity: disabled ? 0.4 : 1 }}
     >
       <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
@@ -667,6 +662,7 @@ function LoopButton({ label, onPress, disabled, Icon }: { label: string; onPress
       disabled={disabled}
       accessibilityRole="button"
       android_ripple={{ color: colors['surface-hover'] }}
+      hitSlop={{ top: 2, bottom: 2 }}
       className="h-10 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-lg px-3"
       style={{ backgroundColor: derived.fill, opacity: disabled ? 0.5 : 1 }}
     >

@@ -1,7 +1,7 @@
 import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
 import { api } from '@jam-practice/convex/_generated/api';
 import { useQuery } from 'convex/react';
-import { useRouter, type Href } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState, type ComponentType } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,19 +14,14 @@ import {
   DangerIcon,
   LockIcon,
   LogoutIcon,
-  MusicNoteIcon,
   PostIcon,
-  StarOutlineIcon,
   ThemeIcon,
   type IconProps,
 } from '@/components/icons';
-import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
-import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
-import { summarizeLearning } from '@jam-practice/core/learningPath';
-import { useLearningProgress } from '@/lib/useLearnSession';
+import { useScrolled } from '@/components/ui';
 
 /**
  * The native side of `apps/web/components/AccountMenu.tsx`'s `AuthForm` (signed out) plus
@@ -50,19 +45,24 @@ function ProfileScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
+  // `?flow=signUp` (Home's "Create an account") opens the form on Sign up.
+  const { flow } = useLocalSearchParams<{ flow?: string }>();
+  const { scrolled, onScroll } = useScrolled();
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      {/* A shadow under the header once the page scrolls, so content doesn't slide under it unseen. */}
+      <Stack.Screen options={{ headerShadowVisible: scrolled }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <LoadingSpinner />
           </View>
         ) : isAuthenticated ? (
-          <SignedIn />
+          <SignedIn onScroll={onScroll} />
         ) : (
-          <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
-            <AuthForm />
+          <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" onScroll={onScroll} scrollEventThrottle={16}>
+            <AuthForm initialFlow={flow === 'signUp' ? 'signUp' : 'signIn'} />
             <View className="px-6">
               <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
                 <ListRow row={{ href: '/theme', label: 'Theme', Icon: ThemeIcon }} onPress={() => router.push('/theme')} />
@@ -84,21 +84,18 @@ type RowSpec = {
 };
 
 /**
- * Signed in: who you are at the top (tap it to edit your public profile), then a grouped list —
- * each row opens that section as its own full page (`app/account/*`), rather than the earlier
- * horizontal pill tabs that crammed every section onto this one screen.
+ * Signed in: about you and your settings. Who you are at the top (tap it to edit your public
+ * profile), then a grouped list — each row opens that section as its own page (`app/account/*`).
+ * Your tunes and the ear training path live on Home and in the Library, not here.
  */
-function SignedIn() {
+function SignedIn({ onScroll }: { onScroll: ReturnType<typeof useScrolled>['onScroll'] }) {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { signOut } = useAuthActions();
   const user = useQuery(api.users.current);
   const profile = useQuery(api.profiles.getMine);
   const posts = useQuery(api.communityTunes.mine);
-  const [tunes] = useSyncedTunes();
-  const [tunesToLearn] = useTunesToLearn();
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [learningProgress] = useLearningProgress();
 
   if (user === undefined || profile === undefined) {
     return (
@@ -113,8 +110,6 @@ function SignedIn() {
   const groups: RowSpec[][] = [
     [
       { href: '/account/public-profile', label: 'Public profile', Icon: AccountEditIcon, value: profile?.isPublic ? 'Public' : 'Private' },
-      { href: { pathname: '/library/tunes', params: { list: 'tunes' } }, label: 'Tunes I Know', Icon: MusicNoteIcon, value: String(tunes.length) },
-      { href: { pathname: '/library/tunes', params: { list: 'learn' } }, label: 'Tunes to Learn', Icon: StarOutlineIcon, value: String(tunesToLearn.length) },
       { href: '/account/posts', label: 'My posts', Icon: PostIcon, value: posts ? String(posts.length) : undefined },
     ],
     [
@@ -124,7 +119,7 @@ function SignedIn() {
   ];
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 18 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 18 }} onScroll={onScroll} scrollEventThrottle={16}>
       <Pressable
         onPress={() => router.push('/account/public-profile')}
         android_ripple={{ color: colors['surface-hover'] }}
@@ -144,13 +139,6 @@ function SignedIn() {
         </View>
         <ChevronRightIcon color={colors.muted} size={22} />
       </Pressable>
-
-      <View className="gap-2.5">
-        <Text className="font-ui-bold px-1 text-sm font-bold" style={{ color: colors.muted }}>
-          Ear training
-        </Text>
-        <EarTrainingProgress summaries={summarizeLearning(learningProgress)} links />
-      </View>
 
       {groups.map((rows, gi) => (
         <View key={gi} className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
@@ -225,10 +213,10 @@ function ListRow({
 type Flow = 'signIn' | 'signUp';
 type Step = 'credentials' | 'code';
 
-function AuthForm() {
+function AuthForm({ initialFlow }: { initialFlow: Flow }) {
   const { colors } = useAppTheme();
   const { signIn } = useAuthActions();
-  const [flow, setFlow] = useState<Flow>('signIn');
+  const [flow, setFlow] = useState<Flow>(initialFlow);
   // "code" means Convex Auth's Password provider emailed a confirmation code instead of completing
   // sign-in/sign-up directly — covers both a fresh sign-up and any pre-existing account that's
   // never verified its email. Same state shape as `AccountMenu.tsx`'s own `AuthForm` on web.

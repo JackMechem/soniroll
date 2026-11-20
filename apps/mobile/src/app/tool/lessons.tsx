@@ -7,12 +7,14 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ChevronRightIcon, LessonsIcon, PlusIcon, SlidersIcon } from '@/components/icons';
-import { EmptyBox, JoinIcon, dayLabel, LessonsGate, LessonsScroll, PersonBadge, plural } from '@/components/lessons/parts';
+import { EmptyBox, JoinIcon, dayLabel, inviteCodeFrom, LessonsGate, LessonsScroll, PersonBadge, plural } from '@/components/lessons/parts';
 import { ScheduleOverview } from '@/components/lessons/schedule';
 import { UpcomingLessons } from '@/components/lessons/sessions';
 import { AddStudentSheet, JoinCodeSheet } from '@/components/lessons/students';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { Section, SmallButton } from '@/components/shedLog/parts';
+import { AddStudentIcon } from '@/components/tool/toolIcons';
+import { Button, EmptyState } from '@/components/ui';
 import { useNowCoarse, useToday } from '@/lib/useClock';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -22,7 +24,9 @@ import { useAppTheme } from '@/theme/ThemeProvider';
  * since anyone can be either. "Needs you" (lesson requests, times you've been offered), Coming up,
  * Your teachers, Your students; Add a student, Settings, and Join with an invite (the app doesn't
  * open https links, so a student pastes the link their teacher sent). Account only, like the
- * website: signed out it explains itself and offers Sign in.
+ * website: signed out it explains itself and offers Sign in. With no students and no teachers yet
+ * it doesn't lead with teaching: it offers the two ways in side by side — join a teacher (the
+ * invite link is taken from the clipboard when it's there, else pasted), or add a student.
  *
  * The rest of Lessons is in the `lessons-*` screens beside this one: a student (`lessons-student`)
  * and a teacher (`lessons-teacher`), a lesson (`lessons-lesson`), its notes (`lessons-notes`,
@@ -38,6 +42,20 @@ function LessonsScreen() {
 
 export default withScreenLoader(LessonsScreen);
 
+/** An invite code from a lessons link on the clipboard, if there is one. Read only when Join is
+    tapped (reading it unasked makes Android show a "pasted" notice). `expo-clipboard` is imported
+    lazily so a build without its native module just falls back to pasting. */
+async function inviteFromClipboard(): Promise<string | null> {
+  try {
+    const Clipboard = await import('expo-clipboard');
+    if (!(await Clipboard.hasStringAsync())) return null;
+    const text = await Clipboard.getStringAsync();
+    return /\/lessons\/join\?/.test(text) ? inviteCodeFrom(text) : null;
+  } catch {
+    return null;
+  }
+}
+
 function Lessons() {
   const { colors } = useAppTheme();
   const router = useRouter();
@@ -48,23 +66,52 @@ function Lessons() {
   const [adding, setAdding] = useState(false);
   const [joining, setJoining] = useState(false);
 
+  async function join() {
+    const invite = await inviteFromClipboard();
+    if (invite) router.push({ pathname: '/tool/lessons-join', params: { invite } });
+    else setJoining(true);
+  }
+
   if (students === undefined || teachers === undefined) return <ScreenSpinner label="Loading your lessons" />;
 
   const openTotal = teachers.reduce((n, t) => n + t.items.filter((i) => i.kind === 'assignment' && !i.done).length, 0);
   const summary = [students.length ? plural(students.length, 'student') : null, teachers.length ? plural(teachers.length, 'teacher') : null].filter(Boolean).join(' · ') || 'Teach, or learn from a teacher';
 
+  const fresh = students.length === 0 && teachers.length === 0;
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: 'Lessons' }} />
       <LessonsScroll>
-        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-          {summary}
-        </Text>
-        <View className="flex-row gap-2">
-          <HeadButton Icon={SlidersIcon} label="Settings" onPress={() => router.push('/tool/lessons-settings')} />
-          <HeadButton Icon={JoinIcon} label="Join" onPress={() => setJoining(true)} />
-          <HeadButton Icon={PlusIcon} label="Add a student" primary onPress={() => setAdding(true)} />
-        </View>
+        {fresh ? (
+          // Nothing yet: the two ways in, neither first-class over the other.
+          <View className="gap-3 pt-4">
+            <EmptyState
+              Icon={JoinIcon}
+              title="Learning from a teacher?"
+              body="Join with the invite link they sent you. Their notes, assignments and routines show up here."
+              action={{ label: 'Join with their link', onPress: () => void join() }}
+            />
+            <EmptyState
+              Icon={AddStudentIcon}
+              title="Teaching?"
+              body="Add a student to get their invite link. Give them lesson notes, files, chord charts, assignments and Shed Log routines, and see how their practice goes."
+              action={{ label: 'Add a student', Icon: PlusIcon, onPress: () => setAdding(true) }}
+            />
+            <Button label="Lesson settings" kind="secondary" Icon={SlidersIcon} onPress={() => router.push('/tool/lessons-settings')} style={{ alignSelf: 'center' }} />
+          </View>
+        ) : (
+          <>
+            <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+              {summary}
+            </Text>
+            <View className="flex-row gap-2">
+              <HeadButton Icon={SlidersIcon} label="Settings" onPress={() => router.push('/tool/lessons-settings')} />
+              <HeadButton Icon={JoinIcon} label="Join" onPress={() => void join()} />
+              <HeadButton Icon={PlusIcon} label="Add a student" primary onPress={() => setAdding(true)} />
+            </View>
+          </>
+        )}
 
         <ScheduleOverview now={now} />
         <UpcomingLessons now={now} />
@@ -90,43 +137,43 @@ function Lessons() {
           </Section>
         ) : null}
 
-        <Section title="Your students" count={students.length || undefined}>
-          {students.length === 0 ? (
-            <EmptyBox
-              title="Teach with soniroll"
-              body={`Add a student to get their invite link. Give them lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — and see how their practice goes.${
-                teachers.length === 0 ? '\n\nLearning from a teacher? Tap Join and paste the link they sent you.' : ''
-              }`}
-              action={<SmallButton primary Icon={PlusIcon} label="Add your first student" onPress={() => setAdding(true)} />}
-            />
-          ) : (
-            <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
-              {students.map((s, i) => {
-                const facts = [
-                  s.counts.toReview > 0 ? `${s.counts.toReview} to review` : null,
-                  s.counts.assignmentsDue > 0 ? `${s.counts.assignmentsDue} overdue` : null,
-                  s.joined ? `${Math.round(s.hoursThisWeek * 10) / 10} h this week` : null,
-                  s.joined && s.streak > 0 ? `${plural(s.streak, 'day')} streak` : null,
-                  `last practiced ${s.lastPracticed ? (s.lastPracticed === today ? 'today' : formatShortDate(s.lastPracticed)) : '—'}`,
-                  `${s.counts.assignmentsOpen} to do`,
-                  `${plural(s.lessons, 'lesson')}${s.nextLesson ? ` · next ${dayLabel(s.nextLesson)}` : ''}`,
-                ].filter(Boolean);
-                return (
-                  <PersonRow
-                    key={s.id}
-                    first={i === 0}
-                    url={s.student?.avatarUrl}
-                    name={s.name}
-                    detail={s.joined ? s.student?.name : s.inviteEmail ? `Invited · ${s.inviteEmail}` : "Hasn't joined yet — send their invite link"}
-                    facts={facts.join(' · ')}
-                    alert={s.counts.toReview > 0 || s.counts.assignmentsDue > 0}
-                    onPress={() => router.push({ pathname: '/tool/lessons-student', params: { id: s.id } })}
-                  />
-                );
-              })}
-            </View>
-          )}
-        </Section>
+        {fresh ? null : (
+          <Section title="Your students" count={students.length || undefined}>
+            {students.length === 0 ? (
+              <EmptyBox
+                title="Teach with soniroll"
+                body="Add a student to get their invite link. Give them lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — and see how their practice goes."
+                action={<SmallButton primary Icon={PlusIcon} label="Add your first student" onPress={() => setAdding(true)} />}
+              />
+            ) : (
+              <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
+                {students.map((s, i) => {
+                  const facts = [
+                    s.counts.toReview > 0 ? `${s.counts.toReview} to review` : null,
+                    s.counts.assignmentsDue > 0 ? `${s.counts.assignmentsDue} overdue` : null,
+                    s.joined ? `${Math.round(s.hoursThisWeek * 10) / 10} h this week` : null,
+                    s.joined && s.streak > 0 ? `${plural(s.streak, 'day')} streak` : null,
+                    `last practiced ${s.lastPracticed ? (s.lastPracticed === today ? 'today' : formatShortDate(s.lastPracticed)) : '—'}`,
+                    `${s.counts.assignmentsOpen} to do`,
+                    `${plural(s.lessons, 'lesson')}${s.nextLesson ? ` · next ${dayLabel(s.nextLesson)}` : ''}`,
+                  ].filter(Boolean);
+                  return (
+                    <PersonRow
+                      key={s.id}
+                      first={i === 0}
+                      url={s.student?.avatarUrl}
+                      name={s.name}
+                      detail={s.joined ? s.student?.name : s.inviteEmail ? `Invited · ${s.inviteEmail}` : "Hasn't joined yet — send their invite link"}
+                      facts={facts.join(' · ')}
+                      alert={s.counts.toReview > 0 || s.counts.assignmentsDue > 0}
+                      onPress={() => router.push({ pathname: '/tool/lessons-student', params: { id: s.id } })}
+                    />
+                  );
+                })}
+              </View>
+            )}
+          </Section>
+        )}
       </LessonsScroll>
 
       <AddStudentSheet

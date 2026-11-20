@@ -29,7 +29,6 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { StructureEditor } from '@/components/StructureEditor';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
-  BigButton,
   SoundPicker,
   SubdivisionPicker,
   TempoHero,
@@ -39,8 +38,9 @@ import {
   soundSummary,
 } from '@/components/tool/meter';
 import { GradientFill, OptionGroup, Segmented } from '@/components/tool/reward';
-import { CountField, EmptyPanel } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { CountField } from '@/components/tool/rhythm';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
+import { EmptyState } from '@/components/ui';
 import { getMetronomeSnapshot, subscribeMetronome } from '@/lib/metronomeEngine';
 import {
   clearRecorderError,
@@ -194,15 +194,14 @@ function RecorderScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 items-center justify-center px-4" style={{ backgroundColor: colors.background }}>
+      <View className="flex-1 px-4 pt-5" style={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ title: 'Recorder' }} />
-        <EmptyPanel>
-          <MicrophoneIcon color={colors.muted} size={32} />
-          <Text className="font-ui text-center text-sm leading-5" style={muted}>
-            Sign in to record: your takes are saved with your account, so you can name them, keep notes and link them to your tunes.
-          </Text>
-          <BigButton label="Sign in" onPress={() => router.push('/profile')} />
-        </EmptyPanel>
+        <EmptyState
+          Icon={MicrophoneIcon}
+          title="Sign in to record"
+          body="Your takes are saved with your account, so you can name them, keep notes and link them to your tunes."
+          action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
+        />
       </View>
     );
   }
@@ -228,8 +227,30 @@ function RecorderScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          contentContainerStyle={TOOL_CONTENT}
         >
+          {/* Recent takes (like other tools' History) sit above the display, once there's a take. */}
+          {recordings && recordings.length > 0 ? (
+            <SettingsBar>
+              <SettingChip Icon={RecordIcon} label="Recent takes" value={`${recordings.length} take${recordings.length === 1 ? '' : 's'}`} open={takesOpen} onOpenChange={setTakesOpen}>
+                {/* The sheet is a Modal, which would stay on top of the next screen: close it first. */}
+                <RecentTakes
+                  recordings={recordings}
+                  tuneName={(id) => (id ? byId.get(id)?.tune.name : undefined)}
+                  onOpen={(id) => {
+                    setTakesOpen(false);
+                    router.push({ pathname: '/recordings/[id]', params: { id } });
+                  }}
+                  onAll={() => {
+                    setTakesOpen(false);
+                    router.push('/recordings');
+                  }}
+                  disabled={busy}
+                />
+              </SettingChip>
+            </SettingsBar>
+          ) : null}
+
           <View className="items-center gap-5">
             <View className="items-center gap-1">
               <View className="flex-row items-center gap-1.5">
@@ -376,25 +397,6 @@ function RecorderScreen() {
               </>
             ) : null}
 
-            {/* Recent takes: hidden until there's a take, so a fresh page doesn't lead with "0". */}
-            {recordings && recordings.length > 0 ? (
-              <SettingChip Icon={RecordIcon} label="Recent takes" value={String(recordings.length)} open={takesOpen} onOpenChange={setTakesOpen}>
-                {/* The sheet is a Modal, which would stay on top of the next screen: close it first. */}
-                <RecentTakes
-                  recordings={recordings}
-                  tuneName={(id) => (id ? byId.get(id)?.tune.name : undefined)}
-                  onOpen={(id) => {
-                    setTakesOpen(false);
-                    router.push({ pathname: '/recordings/[id]', params: { id } });
-                  }}
-                  onAll={() => {
-                    setTakesOpen(false);
-                    router.push('/recordings');
-                  }}
-                  disabled={busy}
-                />
-              </SettingChip>
-            ) : null}
           </SettingsBar>
         </ScrollView>
       </SafeAreaView>

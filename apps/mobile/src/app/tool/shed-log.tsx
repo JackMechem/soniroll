@@ -7,25 +7,26 @@ import {
   formatShortDate,
   fromDateKey,
   isDateKey,
-  newDayTask,
   startOfWeek,
-  type DayTask,
 } from '@jam-practice/core/practiceLog';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState, type ComponentType } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/ActionSheet';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, RepeatIcon, SlidersIcon, SpeakerIcon, TargetIcon, type IconProps } from '@/components/icons';
+import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, SpeakerIcon, TargetIcon } from '@/components/icons';
 import { MonthView, WeekList, weekSummary } from '@/components/shedLog/Calendar';
 import { DayPanel } from '@/components/shedLog/DayPanel';
-import { GhostIcon, RoutinesIcon, SoundOffIcon, StatsIcon } from '@/components/shedLog/parts';
+import { GhostIcon, RoutinesIcon, SmallButton, SoundOffIcon, StatsIcon } from '@/components/shedLog/parts';
 import { ShedLogGate } from '@/components/shedLog/ShedLogGate';
-import { GoalSheet, TaskSheet } from '@/components/shedLog/sheets';
+import { GoalSheet } from '@/components/shedLog/sheets';
 import { StatsSheet, TodaySummary } from '@/components/shedLog/Stats';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TabHeader } from '@/components/TabHeader';
 import { Segmented } from '@/components/tool/reward';
+import { IconButton, useScrolled } from '@/components/ui';
 import { useToday } from '@/lib/useClock';
 import { usePracticeLog } from '@/lib/usePracticeLog';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
@@ -36,11 +37,12 @@ const VIEW_KEY = 'jam-practice-practice-log-view';
 const VIEW_DEFAULTS = { view: 'month' };
 
 /**
- * The Shed Log on the phone — the native port of the website's `/shed-log`
- * (`apps/web/components/PracticeLog.tsx`), laid out like the website's phone layout: the title line
- * (today against the goal and the streak), labelled buttons (Stats, Routines, Settings, New), then
- * two tabs — the day (routines to check off and run on the timer, extra tasks, the day timer, time
- * in tools to log, logging time) and the calendar (month or week; a day opens it). For account
+ * The Shed Log on the phone — one of the five main screens (a tab, so no back button), the native
+ * port of the website's `/shed-log` (`apps/web/components/PracticeLog.tsx`): the header (⋮ for the
+ * daily goal and sounds), today against the goal and the streak, Stats and Routines buttons, then
+ * two tabs — the day (routines to check off and run on the timer, tasks for the day, the day timer,
+ * time in tools to log, logging time) and the calendar (month or week; a day opens it). Adding is
+ * done where it happens (Add routine, the task box), not from a header button. For account
  * holders: signed out, it shows what it is and Sign in.
  *
  * Left out from the website: the time-grid week and day views (drag to schedule) — the phone's
@@ -50,16 +52,30 @@ const VIEW_DEFAULTS = { view: 'month' };
 function ShedLogScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const log = usePracticeLog();
-  if (isLoading) return <ScreenSpinner />;
-  if (!isAuthenticated) return <ShedLogGate />;
-  if (!log.ready) return <ScreenSpinner label="Loading your Shed Log" />;
+  if (isLoading) return <Frame><ScreenSpinner /></Frame>;
+  if (!isAuthenticated) return <Frame><ShedLogGate /></Frame>;
+  if (!log.ready) return <Frame><ScreenSpinner label="Loading your Shed Log" /></Frame>;
   return <ShedLog log={log} />;
+}
+
+/** The main-screen frame: the safe area at the top and the tab header. */
+function Frame({ children, right, scrolled }: { children: ReactNode; right?: ReactNode; scrolled?: boolean }) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <TabHeader title="Shed Log" right={right} scrolled={scrolled} />
+        {children}
+      </SafeAreaView>
+    </View>
+  );
 }
 
 export default withScreenLoader(ShedLogScreen);
 
 function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
-  const { colors } = useAppTheme();
+  const { colors, derived } = useAppTheme();
   const router = useRouter();
   const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
   const today = useToday();
@@ -80,9 +96,8 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   const [statsOpen, setStatsOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [newOpen, setNewOpen] = useState(false);
-  const [newTask, setNewTask] = useState<DayTask | null>(null);
   const scroll = useRef<ScrollView>(null);
+  const { scrolled, onScroll, scrollEventThrottle } = useScrolled();
   const bottom = useTabBarSpace(96);
   const { data } = log;
 
@@ -108,24 +123,27 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   const dayLabel = selected === today ? 'Today' : `${WEEKDAY_SHORT[d.getDay()]}, ${formatShortDate(selected)}`;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Shed Log' }} />
+    <Frame scrolled={scrolled} right={<IconButton Icon={DotsVerticalIcon} label="Shed Log settings" onPress={() => setSettingsOpen(true)} />}>
       <ScrollView
         ref={scroll}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: bottom, gap: 16 }}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: bottom, gap: 16 }}
       >
         <TodaySummary data={data} today={today} onGoal={() => setGoalOpen(true)} />
 
-        <View className="flex-row gap-2">
-          <HeaderButton Icon={StatsIcon} label="Stats" onPress={() => setStatsOpen(true)} />
-          <HeaderButton Icon={RoutinesIcon} label={data.routines.length ? `Routines ${data.routines.length}` : 'Routines'} onPress={() => router.push('/tool/shed-log-routines')} />
-          <HeaderButton Icon={SlidersIcon} label="Settings" onPress={() => setSettingsOpen(true)} />
-          <HeaderButton Icon={PlusIcon} label="New" primary onPress={() => setNewOpen(true)} />
+        <View className="flex-row flex-wrap gap-2">
+          <SmallButton Icon={StatsIcon} label="Stats" onPress={() => setStatsOpen(true)} />
+          <SmallButton
+            Icon={RoutinesIcon}
+            label={data.routines.length ? `Routines · ${data.routines.length}` : 'Routines'}
+            onPress={() => router.push('/tool/shed-log-routines')}
+          />
         </View>
 
-        <View className="flex-row gap-5" style={{ borderBottomWidth: 1, borderColor: colors['surface-hover'] }} accessibilityRole="tablist">
+        <View className="flex-row gap-5" style={{ borderBottomWidth: 1, borderColor: derived.hairline }} accessibilityRole="tablist">
           {(
             [
               ['day', dayLabel],
@@ -138,7 +156,7 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
               accessibilityRole="tab"
               accessibilityState={{ selected: pane === id }}
               className="h-11 justify-center"
-              style={{ borderBottomWidth: 2, borderColor: pane === id ? colors.foreground : 'transparent', marginBottom: -1 }}
+              style={{ borderBottomWidth: 3, borderColor: pane === id ? colors.accent : 'transparent', marginBottom: -1 }}
             >
               <Text className={pane === id ? 'font-ui-semibold text-[15px] font-semibold' : 'font-ui text-[15px]'} style={{ color: pane === id ? colors.foreground : colors.muted }}>
                 {label}
@@ -220,48 +238,6 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
           },
         ]}
       />
-      <ActionSheet
-        visible={newOpen}
-        title="New"
-        onClose={() => setNewOpen(false)}
-        actions={[
-          { key: 'task', icon: <PlusIcon color={colors.muted} size={20} />, label: `Task on ${selected === today ? 'today' : formatShortDate(selected)}`, onPress: () => setNewTask(newDayTask()) },
-          { key: 'routine', icon: <RepeatIcon color={colors.muted} size={20} />, label: 'Routine', onPress: () => router.push({ pathname: '/tool/shed-log-routine-edit', params: { date: selected } }) },
-        ]}
-      />
-      <TaskSheet
-        initial={newTask}
-        date={selected}
-        isNew
-        visible={!!newTask}
-        onSave={(task, to) => {
-          log.saveDayTask(to, task);
-          setPicked(to);
-          showPane('day');
-        }}
-        onClose={() => setNewTask(null)}
-      />
-    </View>
-  );
-}
-
-/** A header button: an icon over a short label, sharing the row (the website's phone header). */
-function HeaderButton({ Icon, label, onPress, primary }: { Icon: ComponentType<IconProps>; label: string; onPress: () => void; primary?: boolean }) {
-  const { colors } = useAppTheme();
-  const fg = primary ? colors['accent-foreground'] : colors.foreground;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
-      className="h-14 flex-1 items-center justify-center gap-0.5 overflow-hidden rounded-xl"
-      style={{ backgroundColor: primary ? colors.accent : colors.surface }}
-    >
-      <Icon color={primary ? fg : colors.muted} size={20} />
-      <Text numberOfLines={1} className="font-ui-semibold text-[13px] font-semibold" style={{ color: fg }}>
-        {label}
-      </Text>
-    </Pressable>
+    </Frame>
   );
 }

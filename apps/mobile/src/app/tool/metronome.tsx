@@ -31,7 +31,7 @@ import {
   soundSummary,
 } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import {
   getMetronomeSnapshot,
@@ -61,10 +61,10 @@ const DEFAULT_SETTINGS = {
 };
 
 /**
- * The Metronome, laid out like the website's: the tempo (− / number / +, the note value it counts,
- * a slider, −10 −5 Tap tempo +5 +10), the beat strip (tap a beat to change its accent), the big
- * Start button, then One meter / Changing meters and the setting chips — Time, Subdivision (or
- * Sections) and Sound — each opening a sheet. It's centred and only scrolls on a short screen.
+ * The Metronome, laid out like every tool: One meter / Changing meters at the top, the tempo (− /
+ * number / +, the note value it counts, a slider, −10 −5 Tap tempo +5 +10), the beat strip (tap a
+ * beat to change its accent), the big Start button, then the setting chips — Time, Subdivision (or
+ * Sections) and Sound — each opening a sheet. Top-anchored; scrolls on a short screen.
  *
  * Settings sync to the signed-in account via `useSyncedSettings` (falling back to this device's
  * own `AsyncStorage` cache when the account isn't reachable).
@@ -154,8 +154,22 @@ function MetronomeScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          contentContainerStyle={TOOL_CONTENT}
         >
+          {/* The meter mode first: it decides what the display and the chips are. */}
+          <View className="items-center">
+            <Segmented
+              onPage
+              label="Meter"
+              value={useStructure ? 'structure' : 'single'}
+              onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+              options={[
+                { value: 'single', label: 'One meter' },
+                { value: 'structure', label: 'Changing meters' },
+              ]}
+            />
+          </View>
+
           <View className="items-center gap-4">
             <TempoHero
               bpm={bpm}
@@ -192,18 +206,7 @@ function MetronomeScreen() {
 
           <BigButton label={running ? 'Stop' : 'Start'} secondary={running} disabled={!running && !canStart} onPress={running ? stopMetronome : start} />
 
-          {/* Below Start: the meter mode (it decides which chips there are), then the chips. */}
           <View className="items-center gap-3">
-            <Segmented
-              onPage
-              label="Meter"
-              value={useStructure ? 'structure' : 'single'}
-              onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
-              options={[
-                { value: 'single', label: 'One meter' },
-                { value: 'structure', label: 'Changing meters' },
-              ]}
-            />
             <SettingsBar>
               {useStructure ? (
                 <SettingChip

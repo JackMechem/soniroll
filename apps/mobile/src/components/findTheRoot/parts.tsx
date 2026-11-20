@@ -37,7 +37,7 @@ export function RunHistoryChip({ entries, running, onClear }: { entries: RunEntr
   const gradeColor = useGradeColors();
   const best = entries.length ? Math.max(...entries.map((e) => percent(e.score, e.total))) : null;
   return (
-    <SettingChip Icon={HistoryIcon} label="History" value={best !== null ? `Best ${best}%` : undefined}>
+    <SettingChip Icon={HistoryIcon} label="History" value={best !== null ? `Best ${best}%` : 'None yet'}>
       {entries.length === 0 ? (
         <SheetText>No finished runs yet.</SheetText>
       ) : (

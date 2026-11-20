@@ -15,8 +15,9 @@ import { withScreenLoader } from '@/components/ScreenLoader';
 import { pickTextFile } from '@/components/scoreWriter/pickTextFile';
 import { useBackWithin } from '@/components/scoreWriter/useBackWithin';
 import { formatShortDate } from '@/components/tool/ear';
-import { EmptyPanel } from '@/components/tool/rhythm';
-import { Button, ListRow } from '@/components/ui';
+import { ToolHelpButton } from '@/components/tool/ToolIntro';
+import { ScoreIcon as EmptyScoreIcon } from '@/components/tool/toolIcons';
+import { Button, EmptyState, IconButton, ListRow } from '@/components/ui';
 import { newScore, useScore, useScoreActions, useScoreList, type ScoreMeta } from '@/lib/useScores';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -28,7 +29,8 @@ const ScoreIcon = NAV_LINK_ICONS['/score-writer'];
  * your scores (in your account, the same ones as on the website and in Shed Notes; or on this
  * device when signed out), each opened in the notation editor (`components/notation/ScoreEditor.tsx`)
  * with its clef, key, time and tempo, saved as you write. Import takes a score exported from Score
- * Writer or a bass transcription file. Back from a score returns to the list.
+ * Writer or a bass transcription file. Back from a score returns to the list. The list's header has
+ * the tool's ? and New score (the app's round create button); Import sits under the list.
  */
 function ScoreWriterScreen() {
   const { colors } = useAppTheme();
@@ -80,13 +82,19 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 32 }}>
-      {/* An open score's save state and ⋮ leave the header with it. */}
-      <Stack.Screen options={{ headerRight: () => null }} />
-      <View className="flex-row gap-2">
-        <Button label="Import" kind="secondary" onPress={() => void importFile()} style={{ flex: 1 }} />
-        <Button label="New score" Icon={PlusIcon} onPress={() => void make()} style={{ flex: 1 }} />
-      </View>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, gap: 12, paddingBottom: insets.bottom + 32 }}>
+      {/* The list's own header (an open score's save state and ⋮ leave with it): the tool's ? and
+          New score. */}
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <View className="flex-row items-center gap-2">
+              <ToolHelpButton href="/score-writer" />
+              <IconButton primary Icon={PlusIcon} label="New score" onPress={() => void make()} />
+            </View>
+          ),
+        }}
+      />
       {error ? (
         <Text className="font-ui text-sm" style={{ color: colors.danger }}>
           {error}
@@ -103,7 +111,13 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
           <LoadingSpinner />
         </View>
       ) : scores.length === 0 ? (
-        <EmptyPanel>No scores yet. Start one, then tap a length and a note name to add notes.</EmptyPanel>
+        <EmptyState
+          Icon={EmptyScoreIcon}
+          title="No scores yet"
+          body="Start one, then tap a length and a note name to add notes."
+          action={{ label: 'New score', Icon: PlusIcon, onPress: () => void make() }}
+          secondary={{ label: 'Import a file', onPress: () => void importFile() }}
+        />
       ) : (
         <View className="gap-2">
           {scores.map((s) => (
@@ -120,6 +134,7 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
               }
             />
           ))}
+          <Button label="Import a file" kind="secondary" onPress={() => void importFile()} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
         </View>
       )}
 

@@ -14,8 +14,7 @@ import { TranscriptionEditor } from '@/components/rhythmSection/TranscriptionEdi
 import { pickTextFile } from '@/components/scoreWriter/pickTextFile';
 import { useBackWithin } from '@/components/scoreWriter/useBackWithin';
 import { formatShortDate } from '@/components/tool/ear';
-import { EmptyPanel } from '@/components/tool/rhythm';
-import { Button, ListRow } from '@/components/ui';
+import { Button, EmptyState, ListRow } from '@/components/ui';
 import { useBassPlayers, useTranscription } from '@/lib/useBassPlayers';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -275,7 +274,7 @@ export function BassPlayersTab() {
           {!player.builtIn ? <Button label="New transcription" Icon={PlusIcon} onPress={() => void newTranscription(player.id)} /> : null}
         </View>
         {items.length === 0 ? (
-          <EmptyPanel>No transcriptions yet. Start one, or import a MusicXML (.musicxml) or a bass transcription .json file.</EmptyPanel>
+          <EmptyState Icon={BassIcon} title="No transcriptions yet" body="Start one with New transcription, or import a MusicXML (.musicxml) or a bass transcription .json file." />
         ) : (
           <View className="gap-2">
             {items.map((t) => (

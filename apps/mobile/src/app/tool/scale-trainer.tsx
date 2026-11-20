@@ -30,13 +30,14 @@ import { Text, View } from 'react-native';
 
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { MicrophoneIcon, NoteIcon, ScaleIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { MicrophoneIcon, NoteIcon, ScaleIcon, StopwatchIcon } from '@/components/icons';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
   Field,
   GroupLabel,
   HistoryChip,
   IdleHint,
+  IdleSummary,
   MutedText,
   OptionsArea,
   Pill,
@@ -59,6 +60,7 @@ import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { SENSITIVITY, type AudioInput, startAudioInput } from '@/lib/audioInput';
 import { getAudioContext } from '@/lib/audioContext';
 import { startTone } from '@/lib/toneGenerator';
@@ -827,6 +829,23 @@ function ScaleTrainerScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Mode"
+            value={listenMode ? 'listen' : 'timed'}
+            onChange={(v) => setListenMode(v === 'listen')}
+            disabled={running}
+            options={[
+              { value: 'timed', label: 'Timed' },
+              { value: 'listen', label: 'Listen' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {showingSummary && summary ? (
         <ResultsPanel
           score={score}
@@ -864,7 +883,9 @@ function ScaleTrainerScreen() {
               >
                 {noteGlyphs(mainLabel)}
               </Text>
-            ) : null}
+            ) : (
+              <IdleSummary value={String(pool.length)} label={pool.length === 1 ? 'scale' : 'scales'} detail={noteGlyphs(rangeSummary)} />
+            )}
           </QuizRing>
           {/* Before the first round, say what's about to happen. */}
           {!running ? (
@@ -929,21 +950,7 @@ function ScaleTrainerScreen() {
       {/* While the results show, their own "Try again" is the one start button. */}
       {!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
 
-      <OptionsArea
-        mode={
-          <Segmented
-            onPage
-            label="Mode"
-            value={listenMode ? 'listen' : 'timed'}
-            onChange={(v) => setListenMode(v === 'listen')}
-            disabled={running}
-            options={[
-              { value: 'timed', label: 'Timed' },
-              { value: 'listen', label: 'Listen' },
-            ]}
-          />
-        }
-      >
+      <OptionsArea>
         <SettingChip Icon={ScaleIcon} label="Scales" value={`${pool.length} of ${SCALE_MODES.length}`}>
           {locked}
           <PoolHeader
@@ -1132,7 +1139,11 @@ function ScaleTrainerScreen() {
           </SettingChip>
         ) : null}
 
-        <SettingChip Icon={SlidersIcon} label="Sound & display">
+        <SettingChip
+          Icon={ToneIcon}
+          label="Sound & display"
+          value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showScaleNotes ? ' · notes shown' : ''}`}
+        >
           <SwitchRow
             label="Play scale out loud"
             checked={playSound && !listenMode}

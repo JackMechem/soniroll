@@ -1,17 +1,19 @@
-import { describeSession, type PracticeSession } from '@jam-practice/core/practiceTimer';
+import { describeSession, newSegment, type PracticeSession } from '@jam-practice/core/practiceTimer';
 import { Stack } from 'expo-router';
 import { Fragment, useState, useSyncExternalStore } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { PauseIcon, PencilIcon, PlayIcon, PlusIcon, SpeakerIcon, StopIcon, TrashIcon, type IconProps } from '@/components/icons';
+import { PauseIcon, PencilIcon, PlayIcon, PlusIcon, SpeakerIcon, StopIcon, StopwatchIcon, TrashIcon, type IconProps } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { blankDraft, draftFromSession, PracticeSessionEditor, type Draft } from '@/components/PracticeSessionEditor';
 import { PracticeTimerRing } from '@/components/PracticeTimerRing';
 import { SwitchRow } from '@/components/SwitchRow';
+import { BigButton, StepperPill } from '@/components/tool/meter';
 import { PillButton } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
+import { Card, EmptyState } from '@/components/ui';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { getSnapshot, pause, resume, skip, start, stop, subscribe, type EngineState } from '@/lib/practiceTimerEngine';
 import { usePracticeSessions, type SessionInput } from '@/lib/usePracticeSessions';
@@ -24,8 +26,10 @@ const DEFAULT_SOUND_SETTINGS = { soundEnabled: true, alarmMode: false, fullScree
 /**
  * The Practice Timer, laid out like the website's (`apps/web/components/PracticeTimer.tsx`).
  * Running: what's playing ("Now running", the step's name, the ring, what's next) and round
- * Pause/Resume/Continue, Skip and Stop buttons. Stopped: your saved sessions in a card (start,
- * edit, delete each) and a New session button. The Sound chip sits under either. Saved sessions
+ * Pause/Resume/Continue, Skip and Stop buttons. Stopped: what it is (and that its time goes into
+ * the Shed Log), a quick timer (minutes and Start — a plain countdown, not saved, like the
+ * website's), the Sound chip, then your saved sessions in a card (start, edit, delete each, and
+ * New) or an empty state offering a new one. Saved sessions
  * sync to the same Convex `practiceSessions` table the website uses (`lib/usePracticeSessions.ts`,
  * with an offline `AsyncStorage` fallback); notifications and the alarm live in
  * `lib/practiceTimerEngine.ts`. The session editor takes the whole screen (the website opens it in
@@ -38,6 +42,8 @@ function PracticeTimerScreen() {
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SOUND_SETTINGS_KEY, DEFAULT_SOUND_SETTINGS);
   const { soundEnabled, alarmMode, fullScreenAlert } = settings;
   const [draft, setDraft] = useState<Draft | null>(null);
+  // The quick timer's length: a plain countdown, no session needed. Not saved (as on the website).
+  const [quickMinutes, setQuickMinutes] = useState(10);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -91,20 +97,22 @@ function PracticeTimerScreen() {
         {draft ? (
           <PracticeSessionEditor draft={draft} onChange={setDraft} onSave={saveDraft} onCancel={() => setDraft(null)} saving={saving} />
         ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
-          >
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={TOOL_CONTENT}>
             {engineState ? (
               <RunningView engineState={engineState} />
             ) : (
-              <LibraryView
-                sessions={sessions}
-                loading={loading}
-                onStart={startSession}
-                onEdit={(s) => setDraft(draftFromSession(s))}
-                onDelete={(id) => setDeletingId(id)}
-                onNew={() => setDraft(blankDraft())}
+              <QuickTimer
+                minutes={quickMinutes}
+                onChange={setQuickMinutes}
+                onStart={() =>
+                  startSession({
+                    id: 'quick-timer',
+                    name: '',
+                    type: 'custom',
+                    segments: [{ ...newSegment(), title: `${quickMinutes} min timer`, minutes: quickMinutes }],
+                    updatedAt: 0,
+                  })
+                }
               />
             )}
 
@@ -132,6 +140,17 @@ function PracticeTimerScreen() {
                 <ReliabilityHints />
               </SettingChip>
             </SettingsBar>
+
+            {!engineState ? (
+              <SavedSessions
+                sessions={sessions}
+                loading={loading}
+                onStart={startSession}
+                onEdit={(s) => setDraft(draftFromSession(s))}
+                onDelete={(id) => setDeletingId(id)}
+                onNew={() => setDraft(blankDraft())}
+              />
+            ) : null}
           </ScrollView>
         )}
       </SafeAreaView>
@@ -193,7 +212,27 @@ function RunningView({ engineState }: { engineState: EngineState }) {
   );
 }
 
-function LibraryView({
+/** Stopped: what the tool is, then the quick timer — minutes and the big Start. */
+function QuickTimer({ minutes, onChange, onStart }: { minutes: number; onChange: (n: number) => void; onStart: () => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="items-center gap-5">
+      <Text className="font-ui max-w-xs text-center text-sm leading-5" style={{ color: colors.muted }}>
+        Time your practice: one countdown, or a saved session of steps. Signed in, the time goes into your Shed Log.
+      </Text>
+      <View className="items-center gap-2">
+        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+          Quick timer
+        </Text>
+        <StepperPill value={minutes} onChange={(n) => onChange(Math.min(180, Math.max(1, n)))} min={1} max={180} unit={['minute', 'minutes']} label="Quick timer minutes" onPage />
+      </View>
+      <BigButton label="Start" onPress={onStart} icon={<PlayIcon color={colors['accent-foreground']} size={18} />} />
+    </View>
+  );
+}
+
+/** Stopped: the saved sessions in a card (start, edit, delete each; New), or an empty state. */
+function SavedSessions({
   sessions,
   loading,
   onStart,
@@ -209,46 +248,43 @@ function LibraryView({
   onNew: () => void;
 }) {
   const { colors, derived } = useAppTheme();
+  if (loading) return <LoadingSpinner />;
+  if (sessions.length === 0) {
+    return (
+      <EmptyState
+        Icon={StopwatchIcon}
+        title="No saved sessions yet"
+        body="Chain timers back to back, or run a Pomodoro."
+        action={{ label: 'New session', Icon: PlusIcon, onPress: onNew }}
+      />
+    );
+  }
   return (
-    <View className="items-center gap-4">
-      {loading ? (
-        <LoadingSpinner />
-      ) : sessions.length === 0 ? (
-        <Text className="font-ui max-w-xs text-center text-sm leading-5" style={{ color: colors.muted }}>
-          Make a session to chain timers back to back, or to run a Pomodoro.
-        </Text>
-      ) : (
-        <>
-          <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
-            Pick a saved session to start it, or make a new one.
-          </Text>
-          <View className="w-full overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
-            {sessions.map((session, i) => {
-              const name = session.name || 'Untitled session';
-              return (
-                <Fragment key={session.id}>
-                  {i > 0 ? <View className="mx-3 h-px" style={{ backgroundColor: derived.hairline }} /> : null}
-                  <View className="flex-row items-center gap-1 py-2 pl-4 pr-2">
-                    <Pressable onPress={() => onStart(session)} accessibilityRole="button" accessibilityLabel={`Start ${name}`} className="min-w-0 flex-1 py-1">
-                      <Text numberOfLines={1} className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
-                        {name}
-                      </Text>
-                      <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                        {describeSession(session)}
-                      </Text>
-                    </Pressable>
-                    <RowIconButton Icon={PlayIcon} color={colors.accent} label={`Start ${name}`} onPress={() => onStart(session)} />
-                    <RowIconButton Icon={PencilIcon} color={colors.muted} label={`Edit ${name}`} onPress={() => onEdit(session)} />
-                    <RowIconButton Icon={TrashIcon} color={colors.muted} label={`Delete ${name}`} onPress={() => onDelete(session.id)} />
-                  </View>
-                </Fragment>
-              );
-            })}
-          </View>
-        </>
-      )}
-      <PillButton label="New session" Icon={PlusIcon} onPress={onNew} />
-    </View>
+    <Card title="Saved sessions" action={{ label: 'New', onPress: onNew }}>
+      <View className="-mx-4 -mb-1">
+        {sessions.map((session, i) => {
+          const name = session.name || 'Untitled session';
+          return (
+            <Fragment key={session.id}>
+              {i > 0 ? <View className="mx-4 h-px" style={{ backgroundColor: derived.hairline }} /> : null}
+              <View className="flex-row items-center gap-1 py-1.5 pl-4 pr-2">
+                <Pressable onPress={() => onStart(session)} accessibilityRole="button" accessibilityLabel={`Start ${name}`} className="min-w-0 flex-1 py-1">
+                  <Text numberOfLines={1} className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
+                    {name}
+                  </Text>
+                  <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+                    {describeSession(session)}
+                  </Text>
+                </Pressable>
+                <RowIconButton Icon={PlayIcon} color={colors.accent} label={`Start ${name}`} onPress={() => onStart(session)} />
+                <RowIconButton Icon={PencilIcon} color={colors.muted} label={`Edit ${name}`} onPress={() => onEdit(session)} />
+                <RowIconButton Icon={TrashIcon} color={colors.muted} label={`Delete ${name}`} onPress={() => onDelete(session.id)} />
+              </View>
+            </Fragment>
+          );
+        })}
+      </View>
+    </Card>
   );
 }
 
@@ -261,9 +297,9 @@ function RowIconButton({ Icon, color, label, onPress }: { Icon: React.ComponentT
       accessibilityRole="button"
       accessibilityLabel={label}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+      className="h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg"
     >
-      <Icon color={color} size={18} />
+      <Icon color={color} size={19} />
     </Pressable>
   );
 }

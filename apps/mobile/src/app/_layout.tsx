@@ -23,6 +23,7 @@ import { LaunchSplash } from '@/components/LaunchSplash';
 import { FloatingTabBar } from '@/components/FloatingTabBar';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HeaderTitle } from '@/components/HeaderTitle';
+import { ToolHelpButton, toolIntroHref } from '@/components/tool/ToolIntro';
 import { PracticeTimerAlert } from '@/components/PracticeTimerAlert';
 import { PracticeTimerWidget } from '@/components/PracticeTimerWidget';
 import { ShedLogGlobal } from '@/components/shedLog/ShedLogGlobal';
@@ -39,8 +40,9 @@ SplashScreen.preventAutoHideAsync();
  */
 
 /**
- * Root navigation shell — one flat `Stack` plus the tab bar for the four main screens: Home (the
- * dashboard), Tools (every tool), Library (tunes, setlists, charts, recordings) and Community. The
+ * Root navigation shell — one flat `Stack` plus the tab bar for the five main screens: Home (the
+ * dashboard), Tools (every tool), the Shed Log, Library (tunes, setlists, charts, files,
+ * recordings) and Community. The
  * tab bar shows only on those; everything opened from them covers the screen with a back button.
  * Your account is the button at the top right of the main screens (`components/TabHeader.tsx`).
  */
@@ -56,6 +58,12 @@ function SignOutIfAccountGone() {
   return null;
 }
 
+/** The header's right side on a tool screen: its ? button (see `components/tool/ToolIntro.tsx`). */
+function toolHeaderRight(routeName: string) {
+  const href = toolIntroHref(routeName);
+  return href ? () => <ToolHelpButton href={href} /> : undefined;
+}
+
 function RootNavigator() {
   const { colors, derived } = useAppTheme();
   useRecordToolVisits();
@@ -66,7 +74,9 @@ function RootNavigator() {
       <StatusBar style={derived.isDark ? 'light' : 'dark'} />
       <SignOutIfAccountGone />
       <Stack
-        screenOptions={{
+        screenOptions={({ route }) => ({
+          // A tool's "?" (what it is and its options), on the tools' own screens.
+          headerRight: toolHeaderRight(route.name),
           headerTintColor: colors.accent,
           headerStyle: { backgroundColor: colors.background },
           headerShadowVisible: false,
@@ -74,9 +84,9 @@ function RootNavigator() {
           headerTitleAlign: 'left',
           headerLeft: () => <HeaderBackButton />,
           headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>,
-        }}
+        })}
       >
-        {/* The four main screens (and the Library's parts) fade in rather than slide, like tabs. */}
+        {/* The main screens (and the Library's parts) fade in rather than slide, like tabs. */}
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="tools" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="tool/[slug]" options={{ title: '' }} />
@@ -128,7 +138,8 @@ function RootNavigator() {
         <Stack.Screen name="tool/rhythm-section" options={{ title: 'Rhythm Section' }} />
         <Stack.Screen name="tool/score-writer" options={{ title: 'Score Writer' }} />
         <Stack.Screen name="tool/time-test" options={{ title: 'Time Test' }} />
-        <Stack.Screen name="tool/shed-log" options={{ title: 'Shed Log' }} />
+        {/* A main screen (a tab): its own header, no back button. */}
+        <Stack.Screen name="tool/shed-log" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="tool/shed-log-routines" options={{ title: 'Routines' }} />
         <Stack.Screen name="tool/shed-log-routine" options={{ title: '' }} />
         <Stack.Screen name="tool/shed-log-routine-edit" options={{ title: '' }} />

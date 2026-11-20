@@ -28,7 +28,7 @@ import { LevelComplete } from '@/components/learning/LevelComplete';
 import { cumulativeItems, levelQueue } from '@jam-practice/core/learningPath';
 import { useLearnSession } from '@/lib/useLearnSession';
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
-import { ChordIcon, PlayIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { ChordIcon, PlayIcon, StopwatchIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
@@ -37,6 +37,8 @@ import {
   GroupLabel,
   HistoryChip,
   IdleHint,
+  IdleSummary,
+  toneLabel,
   LevelLabel,
   MutedText,
   OptionsArea,
@@ -56,6 +58,7 @@ import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
+import { RegisterIcon, ToneIcon } from '@/components/tool/toolIcons';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNote, playNotesTogether } from '@/lib/sampledTones';
 import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
@@ -531,6 +534,22 @@ function GuessTheChordScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Mode"
+            value={learnMode ? 'learn' : 'practice'}
+            onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
+            options={[
+              { value: 'practice', label: 'Practice' },
+              { value: 'learn', label: 'Learn' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {learnMode && !running ? (
         <LearningPath track="chord" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
       ) : showingSummary && summary ? (
@@ -567,7 +586,13 @@ function GuessTheChordScreen() {
               >
                 {mainLabel}
               </Text>
-            ) : null}
+            ) : (
+              <IdleSummary
+                value={String(pool.length)}
+                label={pool.length === 1 ? 'chord type' : 'chord types'}
+                detail={`${drillMode ? 'Every key' : `${roundCount} rounds`} · ${register.label}`}
+              />
+            )}
           </QuizRing>
           {!running ? <IdleHint>Press Start, listen to the chord, then type its symbol: the root, the quality, then an optional /bass, e.g. F♯Δ7 or A♭-7/D.</IdleHint> : null}
 
@@ -627,20 +652,7 @@ function GuessTheChordScreen() {
 
       {/* Hidden while a session runs, so the round has the screen to itself. */}
       {!running ? (
-        <OptionsArea
-          mode={
-            <Segmented
-              onPage
-              label="Mode"
-              value={learnMode ? 'learn' : 'practice'}
-              onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
-              options={[
-                { value: 'practice', label: 'Practice' },
-                { value: 'learn', label: 'Learn' },
-              ]}
-            />
-          }
-        >
+        <OptionsArea>
           {!learnMode ? (
             <SettingChip Icon={ChordIcon} label="Chords" value={`${pool.length} of ${CHORD_QUALITIES.length}`}>
               <PoolHeader
@@ -696,7 +708,7 @@ function GuessTheChordScreen() {
             </SettingChip>
           ) : null}
 
-          <SettingChip Icon={SlidersIcon} label="Register" value={register.label}>
+          <SettingChip Icon={RegisterIcon} label="Register" value={register.label}>
             <Field label="Register" hint="Which octave range the chord's root is drawn from — just where it sits for listening.">
               <PillChoice label="Register" value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
             </Field>
@@ -736,7 +748,11 @@ function GuessTheChordScreen() {
             ) : null}
           </SettingChip>
 
-          <SettingChip Icon={SlidersIcon} label="Sound & display">
+          <SettingChip
+            Icon={ToneIcon}
+            label="Sound & display"
+            value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
+          >
             <Field label="Playback style" hint="Whether the chord's notes play all at once or as a quick rolled arpeggio.">
               <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
             </Field>

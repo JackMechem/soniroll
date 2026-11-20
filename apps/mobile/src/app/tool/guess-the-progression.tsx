@@ -24,7 +24,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
-import { NoteIcon, PlayIcon, ProgressionIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { NoteIcon, PencilIcon, PlayIcon, ProgressionIcon, StopwatchIcon } from '@/components/icons';
 import { LearningPath } from '@/components/learning/LearningPath';
 import { LevelComplete } from '@/components/learning/LevelComplete';
 import { ProgressionAnswerKeyboard } from '@/components/ProgressionAnswerKeyboard';
@@ -36,6 +36,7 @@ import {
   GroupLabel,
   HistoryChip,
   IdleHint,
+  IdleSummary,
   LevelLabel,
   MutedText,
   OptionsArea,
@@ -53,6 +54,7 @@ import {
 import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { InfoButton } from '@/components/InfoButton';
 import { Button } from '@/components/ui';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playChordSequence } from '@/lib/sampledTones';
 import { startTone } from '@/lib/toneGenerator';
@@ -576,6 +578,22 @@ function GuessTheProgressionScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Mode"
+            value={learnMode ? 'learn' : 'practice'}
+            onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
+            options={[
+              { value: 'practice', label: 'Practice' },
+              { value: 'learn', label: 'Learn' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {learnMode && !running ? (
         <LearningPath track="progression" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
       ) : showingSummary && summary ? (
@@ -607,15 +625,28 @@ function GuessTheProgressionScreen() {
               <Text className="font-ui-bold text-center text-3xl font-bold tabular-nums" style={{ color: glow ?? colors.foreground }}>
                 {centerLabel}
               </Text>
-            ) : null}
+            ) : (
+              <IdleSummary
+                value={String(pool.length)}
+                label={pool.length === 1 ? 'progression' : 'progressions'}
+                detail={`${drillMode ? 'Every key' : `${roundCount} rounds`} · ${register.label}`}
+              />
+            )}
           </QuizRing>
-          {!running ? <IdleHint>Press Start, listen to the chords, then write them down.</IdleHint> : null}
+          {/* How to write the answer is behind the ⓘ, not three lines on the page. */}
           {!running ? (
-            <IdleHint>
-              {answerMode === 'numerals'
-                ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
-                : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`}
-            </IdleHint>
+            <View className="flex-row items-center justify-center gap-1.5">
+              <IdleHint>Press Start, listen to the chords, then write them down.</IdleHint>
+              <InfoButton
+                title="How to write your answer"
+                size={18}
+                text={
+                  answerMode === 'numerals'
+                    ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
+                    : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`
+                }
+              />
+            </View>
           ) : null}
 
           {running && round ? (
@@ -699,20 +730,7 @@ function GuessTheProgressionScreen() {
 
       {/* Hidden while a session runs, so the round has the screen to itself. */}
       {!running ? (
-        <OptionsArea
-          mode={
-            <Segmented
-              onPage
-              label="Mode"
-              value={learnMode ? 'learn' : 'practice'}
-              onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
-              options={[
-                { value: 'practice', label: 'Practice' },
-                { value: 'learn', label: 'Learn' },
-              ]}
-            />
-          }
-        >
+        <OptionsArea>
           {!learnMode ? (
             <SettingChip Icon={ProgressionIcon} label="Progressions" value={`${pool.length} of ${PROGRESSIONS.length}`}>
               <PoolHeader
@@ -754,7 +772,7 @@ function GuessTheProgressionScreen() {
           ) : null}
 
           <SettingChip
-            Icon={SlidersIcon}
+            Icon={PencilIcon}
             label="Answer"
             value={
               answerMode === 'numerals'

@@ -24,7 +24,7 @@ import { cumulativeItems, intervalLevelOptions, levelQueue } from '@jam-practice
 import { useLearnSession } from '@/lib/useLearnSession';
 import { CountdownLabel, ElapsedTimer } from '@/components/CountdownLabel';
 import { Dropdown } from '@/components/Dropdown';
-import { IntervalIcon, NoteIcon, PlayIcon, SlidersIcon, StopwatchIcon } from '@/components/icons';
+import { IntervalIcon, NoteIcon, PlayIcon, StopwatchIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
 import {
@@ -32,6 +32,8 @@ import {
   FeedbackLine,
   Field,
   IdleHint,
+  IdleSummary,
+  toneLabel,
   LevelLabel,
   MutedText,
   OptionsArea,
@@ -54,6 +56,7 @@ import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
+import { ToneIcon } from '@/components/tool/toolIcons';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNote, playNotesTogether } from '@/lib/sampledTones';
 import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
@@ -506,6 +509,22 @@ function GuessTheIntervalScreen() {
         </SettingsBar>
       ) : null}
 
+      {/* The mode decides what the screen is, so it sits above the display. */}
+      {!running ? (
+        <View className="w-full items-center">
+          <Segmented
+            onPage
+            label="Mode"
+            value={learnMode ? 'learn' : 'practice'}
+            onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
+            options={[
+              { value: 'practice', label: 'Practice' },
+              { value: 'learn', label: 'Learn' },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {learnMode && !running ? (
         <LearningPath track="interval" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
       ) : showingSummary && summary ? (
@@ -538,7 +557,13 @@ function GuessTheIntervalScreen() {
               >
                 {mainLabel}
               </Text>
-            ) : null}
+            ) : (
+              <IdleSummary
+                value={String(pool.length)}
+                label={pool.length === 1 ? 'interval' : 'intervals'}
+                detail={`${drillMode ? 'Every key' : `${roundCount} rounds`} · ${instrumentLabel}`}
+              />
+            )}
           </QuizRing>
           {!running ? <IdleHint>Press Start, listen to two notes, then pick the interval.</IdleHint> : null}
 
@@ -613,20 +638,7 @@ function GuessTheIntervalScreen() {
 
       {/* Hidden while a session runs, so the round has the screen to itself. */}
       {!running ? (
-        <OptionsArea
-          mode={
-            <Segmented
-              onPage
-              label="Mode"
-              value={learnMode ? 'learn' : 'practice'}
-              onChange={(v) => updateSettings({ learnMode: v === 'learn' })}
-              options={[
-                { value: 'practice', label: 'Practice' },
-                { value: 'learn', label: 'Learn' },
-              ]}
-            />
-          }
-        >
+        <OptionsArea>
           {!learnMode ? (
             <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
               <PoolHeader
@@ -720,7 +732,11 @@ function GuessTheIntervalScreen() {
             ) : null}
           </SettingChip>
 
-          <SettingChip Icon={SlidersIcon} label="Sound & display">
+          <SettingChip
+            Icon={ToneIcon}
+            label="Sound & display"
+            value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
+          >
             <Field label="Playback style" hint="Whether the two notes play one after another or together.">
               <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
             </Field>

@@ -33,7 +33,7 @@ import {
 } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { CountField, PlanText } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
 import {
   getTempoTrainerSnapshot,
   startTempoTrainer,
@@ -182,8 +182,22 @@ function TempoTrainerScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, gap: 24 }}
+          contentContainerStyle={TOOL_CONTENT}
         >
+          {/* The meter mode first: it decides what the display and the chips are. */}
+          <View className="items-center">
+            <Segmented
+              onPage
+              label="Meter"
+              value={useStructure ? 'structure' : 'single'}
+              onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+              options={[
+                { value: 'single', label: 'One meter' },
+                { value: 'structure', label: 'Changing meters' },
+              ]}
+            />
+          </View>
+
           <View className="items-center gap-4">
             <TempoHero
               bpm={bpm}
@@ -255,16 +269,6 @@ function TempoTrainerScreen() {
           />
 
           <View className="items-center gap-3">
-            <Segmented
-              onPage
-              label="Meter"
-              value={useStructure ? 'structure' : 'single'}
-              onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
-              options={[
-                { value: 'single', label: 'One meter' },
-                { value: 'structure', label: 'Changing meters' },
-              ]}
-            />
             <SettingsBar>
               {useStructure ? (
                 <SettingChip
