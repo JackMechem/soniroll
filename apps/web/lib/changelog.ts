@@ -37,6 +37,7 @@ export const RELEASES: Release[] = [
     date: "2026-11-20",
     title: "Library fixes",
     changes: [
+      { kind: "new", text: "Library: show only the tunes **with charts**, or the ones **without charts** yet." },
       { kind: "improved", text: "Picking several tags now shows the tunes with **any** of them." },
       {
         kind: "improved",
