@@ -12,6 +12,7 @@ import {
   ChordChartIcon,
   CloseIcon,
   DownloadIcon,
+  PhoneIcon,
   DrumIcon,
   EarIcon,
   GraduationCapIcon,
@@ -21,6 +22,7 @@ import {
   NoteIcon,
   SetlistIcon,
 } from "@/components/tools";
+import { MOBILE_PATH } from "@/lib/androidRelease";
 import { DASHBOARD_PATH } from "@/lib/landing";
 import { PRESETS } from "@jam-practice/core/themes";
 import { ChartPreview, ChordRun, IntervalQuiz, LiveBeats, StickingPreview, TunerPreview } from "./previews";
@@ -166,6 +168,7 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
           <a href="#features" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Features</a>
           <a href="#free" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Why it&apos;s free</a>
           <Link href="/download" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Desktop app</Link>
+          <Link href={MOBILE_PATH} className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Phone app</Link>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           {signedIn ? (
@@ -214,13 +217,18 @@ function Ctas({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
   );
 }
 
-/** Under the calls to action: the desktop app. */
+/** Under the calls to action: the desktop app on computers, the phone app (Android, in alpha) on
+    phones and tablets. */
 function DesktopLink() {
   return (
-    // Not on phones and tablets (like the dashboard's desktop card): there's nothing for them to install.
-    <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground pointer-coarse:hidden" style={{ animationDelay: "240ms" }}>
-      <DownloadIcon className="h-4 w-4 text-accent" /> Get the desktop app for macOS, Windows and Linux <Arrow />
-    </Link>
+    <>
+      <Link href="/download" className="landing-rise mt-5 inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground pointer-coarse:hidden" style={{ animationDelay: "240ms" }}>
+        <DownloadIcon className="h-4 w-4 text-accent" /> Get the desktop app for macOS, Windows and Linux <Arrow />
+      </Link>
+      <Link href={MOBILE_PATH} className="landing-rise mt-5 hidden items-center gap-2 text-sm font-semibold text-muted transition hover:text-foreground pointer-coarse:inline-flex" style={{ animationDelay: "240ms" }}>
+        <PhoneIcon className="h-4 w-4 text-accent" /> Get the Android app (alpha) <Arrow />
+      </Link>
+    </>
   );
 }
 
@@ -776,6 +784,8 @@ function Footer() {
         {/* Touch screens: each link is a 36px-tall target, not just its line of text. */}
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pointer-coarse:gap-x-1 pointer-coarse:gap-y-0">
           <a href="https://github.com/JackMechem/soniroll" target="_blank" rel="noopener noreferrer" className={FOOTER_LINK}>GitHub</a>
+          <Link href="/download" className={FOOTER_LINK}>Desktop app</Link>
+          <Link href={MOBILE_PATH} className={FOOTER_LINK}>Phone app</Link>
           <Link href="/feedback" className={FOOTER_LINK}>Feedback</Link>
           <Link href="/changelog" className={FOOTER_LINK}>What&apos;s new</Link>
           <Link href="/privacy" className={FOOTER_LINK}>Privacy</Link>
