@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CheckIcon, DownloadIcon } from "@/components/tools";
 import { inDesktopApp } from "@/lib/deviceFiles";
+import { useAndroidRelease } from "@/lib/androidRelease";
 import { type Download, type Platform, PLATFORM_NAME, RELEASES_URL, detectPlatform, useDesktopRelease } from "@/lib/desktopRelease";
 import { formatBytes } from "@/lib/files";
 
@@ -11,6 +12,7 @@ import { formatBytes } from "@/lib/files";
  * `/download` — the desktop app: one big button for the computer you're on (picked from the
  * browser), every platform's files below with how to open them the first time (the builds aren't
  * signed yet), and NixOS. The files come from the newest GitHub release (`lib/desktopRelease.ts`).
+ * Below them, the Android app's alpha (`AndroidSection`, from the newest `android-v*` release).
  */
 
 const noSubscribe = () => () => {};
@@ -69,12 +71,15 @@ export default function DownloadPage() {
           // No computer detected (a phone or tablet): say so first; the list below is the quieter
           // second step (a link down the page rather than off to GitHub).
           <div className="flex flex-col items-start gap-3 sm:items-center">
-            <p className="max-w-xl text-sm">On a phone or tablet? The desktop app is for computers; soniroll.com works everywhere.</p>
+            <p className="max-w-xl text-sm">
+              On a phone or tablet? The desktop app is for computers. On Android you can try the phone app (an early alpha); soniroll.com works
+              everywhere.
+            </p>
             <a
-              href={release ? "#downloads" : RELEASES_URL}
+              href="#android"
               className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground hover:bg-surface-hover"
             >
-              <DownloadIcon className="h-4 w-4" /> See downloads
+              <DownloadIcon className="h-4 w-4" /> Android app (alpha)
             </a>
           </div>
         ) : (
@@ -128,6 +133,8 @@ export default function DownloadPage() {
       </section>
 
       <NixSection version={release?.version} />
+
+      <AndroidSection />
     </main>
   );
 }
@@ -159,6 +166,53 @@ function PlatformCard({ platform, downloads, yours }: { platform: Platform; down
       )}
       <p className="text-xs text-muted">{FIRST_RUN[platform]}</p>
     </div>
+  );
+}
+
+/** The phone app for Android, in alpha: the newest `android-v*` release's APK, with how to install it. */
+function AndroidSection() {
+  const android = useAndroidRelease();
+  return (
+    <section id="android" className="flex scroll-mt-20 flex-col gap-3 rounded-2xl bg-surface p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-bold">soniroll for Android</h2>
+        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">Alpha</span>
+      </div>
+      <p className="text-sm text-muted">
+        An early test of the phone app: every tool, the Shed Log, your Library and Community, with the same account. It&apos;s an alpha, so
+        expect rough edges, and tell us what breaks (the bug button, top right). Not on the Play Store yet, and not on iPhone yet.
+      </p>
+      {android === undefined ? (
+        <LoadingSpinner size="sm" />
+      ) : android?.apk ? (
+        <div className="flex flex-col items-start gap-1.5">
+          <a
+            href={android.apk.url}
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-bold text-accent-foreground hover:bg-accent-hover"
+          >
+            <DownloadIcon className="h-4 w-4" /> Download for Android
+          </a>
+          <p className="text-xs text-muted">
+            Version {android.version} · {formatBytes(android.apk.size)} ·{" "}
+            <a href={android.url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+              What&apos;s in it
+            </a>
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-muted">
+          The download couldn&apos;t be loaded just now.{" "}
+          <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+            Find it on GitHub
+          </a>
+          .
+        </p>
+      )}
+      <p className="text-xs text-muted">
+        Open the downloaded file on your phone. The first time, Android asks you to allow installing apps from your browser: allow it, then tap
+        Install.
+      </p>
+    </section>
   );
 }
 
