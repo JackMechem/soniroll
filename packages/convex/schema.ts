@@ -627,6 +627,20 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_tune", ["userId", "tuneId"]),
 
+  /** The markings on one of the owner's PDF files (`files`): ink, highlights, text, music symbols,
+      and the page list (reordered, rotated, deleted, blank or staff pages added). The PDF itself
+      is never changed; the web PDF editor (`apps/web/components/pdf/`) draws this layer over it.
+      `data` is the layer as JSON (`apps/web/components/pdf/markup.ts`), kept as one string so a
+      busy page can't hit the 1,024-fields limit. One row per file. */
+  pdfMarkups: defineTable({
+    userId: v.id("users"),
+    fileId: v.id("files"),
+    data: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_file", ["fileId"]),
+
   /** A tune shared by link (`/tune/<id>`): the link shows the tune as it is now (read from the
       owner's synced tune lists), its chord chart, attached files and recordings — never its notes.
       `snapshot` (a `PublicTune` without notes) is only shown if the tune has since been deleted.

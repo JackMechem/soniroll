@@ -38,6 +38,7 @@ import type * as lib_setlists from "../lib/setlists.js";
 import type * as lib_site from "../lib/site.js";
 import type * as lib_storage from "../lib/storage.js";
 import type * as lib_tunes from "../lib/tunes.js";
+import type * as pdfMarkups from "../pdfMarkups.js";
 import type * as practiceSessions from "../practiceSessions.js";
 import type * as previewSeed from "../previewSeed.js";
 import type * as profiles from "../profiles.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   "lib/site": typeof lib_site;
   "lib/storage": typeof lib_storage;
   "lib/tunes": typeof lib_tunes;
+  pdfMarkups: typeof pdfMarkups;
   practiceSessions: typeof practiceSessions;
   previewSeed: typeof previewSeed;
   profiles: typeof profiles;

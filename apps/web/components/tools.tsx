@@ -942,3 +942,114 @@ export function CommandIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+// ---- PDF editor tools (components/pdf/)
+
+export function CursorIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M5 3l14 7-6 2-2 6z" />
+    </svg>
+  );
+}
+
+export function HandIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M8 13V5.5a1.5 1.5 0 013 0V12M11 11.5v-8a1.5 1.5 0 013 0V12M14 11.5V6a1.5 1.5 0 013 0v7.5" />
+      <path d="M17 9.5a1.5 1.5 0 013 0V15a7 7 0 01-7 7h-1.5a7 7 0 01-5.6-2.8L3.6 16a1.6 1.6 0 012.6-1.9L8 16" />
+    </svg>
+  );
+}
+
+export function HighlighterIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M9 11l-5 5v3h6l5-5" />
+      <path d="M9 11l6-6 4 4-6 6z" />
+      <path d="M14 20h7" />
+    </svg>
+  );
+}
+
+export function EraserIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M7 20l-3.3-3.3a1.5 1.5 0 010-2.1L13.6 4.7a1.5 1.5 0 012.1 0l4.6 4.6a1.5 1.5 0 010 2.1L11 20z" />
+      <path d="M7 20h13M9 11l5 5" />
+    </svg>
+  );
+}
+
+export function TextIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M5 6V4h14v2M12 4v16M9 20h6" />
+    </svg>
+  );
+}
+
+export function ShapesIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="12" width="9" height="9" rx="1" />
+      <circle cx="16.5" cy="7.5" r="4.5" />
+    </svg>
+  );
+}
+
+export function UndoIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h11a5 5 0 010 10h-3" />
+    </svg>
+  );
+}
+
+export function RedoIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M15 14l5-5-5-5" />
+      <path d="M20 9H9a5 5 0 000 10h3" />
+    </svg>
+  );
+}
+
+export function RotateIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M20 11a8 8 0 10-2.3 5.7" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  );
+}
+
+export function PagesIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="3" width="7" height="9" rx="1" />
+      <rect x="14" y="3" width="7" height="9" rx="1" />
+      <rect x="3" y="15" width="7" height="6" rx="1" />
+      <rect x="14" y="15" width="7" height="6" rx="1" />
+    </svg>
+  );
+}
+
+export function ZoomInIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3M11 8v6M8 11h6" />
+    </svg>
+  );
+}
+
+export function ZoomOutIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3M8 11h6" />
+    </svg>
+  );
+}

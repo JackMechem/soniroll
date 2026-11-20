@@ -287,6 +287,11 @@ export const performDelete = internalMutation({
       if (row.storageId) await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);
     }
+    const markups = await ctx.db
+      .query("pdfMarkups")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of markups) await ctx.db.delete(row._id);
     const sharedTunes = await ctx.db
       .query("sharedTunes")
       .withIndex("by_user", (q) => q.eq("userId", userId))

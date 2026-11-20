@@ -635,6 +635,11 @@ export const remove = mutation({
     if (row.storageId) await ctx.storage.delete(row.storageId);
     await ctx.db.delete(id);
     await dropShares(ctx, userId, "file", id);
+    const markup = await ctx.db
+      .query("pdfMarkups")
+      .withIndex("by_file", (q) => q.eq("fileId", id))
+      .first();
+    if (markup) await ctx.db.delete(markup._id);
   },
 });
 

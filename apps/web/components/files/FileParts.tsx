@@ -36,6 +36,8 @@ import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
 import { KeptHereHint } from "@/components/files/StorageMove";
 import SaveWhere from "@/components/files/SaveWhere";
+import PdfEditor from "@/components/pdf/PdfEditor";
+import PdfInline from "@/components/pdf/PdfInline";
 
 // ---------------------------------------------------------------- icons
 
@@ -129,7 +131,7 @@ export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; auto
     );
   }
   if (!url) return <p className="p-8 text-sm text-muted">This file isn&apos;t available.</p>;
-  if (kind === "pdf") return <iframe src={url} title={file.name} className="h-full min-h-[60vh] w-full border-0" />;
+  if (kind === "pdf") return <PdfInline url={url} name={file.name} />;
   if (kind === "image") {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={url} alt={file.name} className="max-h-full max-w-full object-contain p-2" />;
@@ -464,7 +466,10 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
   const dialogs = (
     <>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
-      {open && (
+      {open && open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf" && (
+        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} />
+      )}
+      {open && !(open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf") && (
         <FilePreviewDialog
           file={open}
           onClose={() => setOpen(null)}
