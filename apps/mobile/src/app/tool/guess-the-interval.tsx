@@ -31,12 +31,12 @@ import {
   AnswerButton,
   FeedbackLine,
   Field,
+  IDLE_RING,
   IdleHint,
-  IdleSummary,
+  IdleStatus,
   toneLabel,
   LevelLabel,
   MutedText,
-  OptionsArea,
   Pill,
   PillChoice,
   PoolHeader,
@@ -62,6 +62,7 @@ import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/GuessTheInterval.tsx` — same features, same synced settings
@@ -189,6 +190,7 @@ function GuessTheIntervalScreen() {
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/guess-the-interval', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [guessedId, setGuessedId] = useState<string | null>(null);
@@ -485,33 +487,143 @@ function GuessTheIntervalScreen() {
   const showSide = !running && (history.length > 0 || weakEntries.length > 0);
   const instrumentLabel = isCustom ? 'Custom' : instrumentShortName(instrumentId);
 
-  return (
-    <ToolScreen title="Guess the Interval">
-      {/* Hidden until there's something in them, and while a session runs. */}
-      {showSide ? (
-        <SettingsBar>
-          <HistoryChip
-            entries={matchingHistory}
-            bestMs={bestMs}
-            onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+  const chipList = (
+    <>
+      {!learnMode ? (
+        <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
+          <PoolHeader
+            count={pool.length}
+            total={INTERVALS.length}
+            onAll={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}
+            onNone={() => updateSettings({ intervalIds: [] })}
+            hint="Which intervals can be played — and the choices offered for each round. At least one must stay selected."
           />
-          <StrugglesChip
-            entries={weakEntries.map((e) => ({ key: e.key, label: e.interval.label, counts: e.counts }))}
-            shedLabel="Shed weak intervals"
-            emptyText="No struggles tracked yet — a wrong guess adds it here."
-            running={running}
-            onShed={() => start('weak')}
-            onClear={() => {
-              intervalStatsRef.current = {};
-              updateSettings({ intervalStats: {} });
-            }}
+          <View className="flex-row flex-wrap gap-1.5">
+            {INTERVALS.map((interval) => {
+              const selected = settings.intervalIds.includes(interval.id);
+              return (
+                <Pill
+                  key={interval.id}
+                  on={selected}
+                  label={interval.label}
+                  onPress={() =>
+                    updateSettings({
+                      intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
+                    })
+                  }
+                />
+              );
+            })}
+          </View>
+          <SwitchRow
+            label="Include descending intervals"
+            checked={includeDescending}
+            onChange={(v) => updateSettings({ includeDescending: v })}
+            hint="Lets a round play the interval below the starting note, not just above it — the choices are still just the interval's name, not its direction."
           />
-        </SettingsBar>
+          <SwitchRow
+            label="Drill every interval"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
+          />
+        </SettingChip>
       ) : null}
 
-      {/* The mode decides what the screen is, so it sits above the display. */}
-      {!running ? (
-        <View className="w-full items-center">
+      <SettingChip Icon={NoteIcon} label="Range" value={`${instrumentLabel} · ${rangeInput.replace('-', '–')}`}>
+        <Field
+          label="Instrument"
+          hint="The register the starting note is drawn from — a comfortable range for your ear, not necessarily an instrument you're playing along with."
+        >
+          <Dropdown
+            value={instrumentId}
+            options={[...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })), { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' }]}
+            onChange={(v) => updateSettings({ instrumentId: v })}
+          />
+        </Field>
+        {isCustom ? (
+          <Field label="Custom range" hint="The lowest and highest notes to draw starting notes from, e.g. A1-A6.">
+            <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} placeholder="A1-A6" />
+          </Field>
+        ) : null}
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
+        <SliderField
+          label="Max time to answer"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={0.5}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint="How long you have to pick an answer before it's marked a miss and moves on."
+        />
+        <SliderField
+          label="Time between rounds"
+          value={advanceDelayMs / 1000}
+          unit=" s"
+          min={MIN_ADVANCE_DELAY_MS / 1000}
+          max={MAX_ADVANCE_DELAY_MS / 1000}
+          step={0.25}
+          onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+          hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays."
+        />
+        {!drillMode && !learnMode ? (
+          <SliderField
+            label="Number of rounds"
+            value={roundCount}
+            min={MIN_ROUND_COUNT}
+            max={MAX_ROUND_COUNT}
+            step={1}
+            onChange={(v) => updateSettings({ roundCount: v })}
+            hint="How many intervals make up one session."
+          />
+        ) : null}
+      </SettingChip>
+
+      <SettingChip
+        Icon={ToneIcon}
+        label="Sound & display"
+        value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
+      >
+        <Field label="Playback style" hint="Whether the two notes play one after another or together.">
+          <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
+        </Field>
+        <Field label="Tone" hint="Which sound plays the interval.">
+          <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+        <SwitchRow
+          label="Sound feedback"
+          checked={soundFeedback}
+          onChange={(v) => updateSettings({ soundFeedback: v })}
+          hint="A click each second of the countdown, plus a click the instant a round is graded."
+        />
+        <SwitchRow
+          label="Reveal notes after answering"
+          checked={revealNotes}
+          onChange={(v) => updateSettings({ revealNotes: v })}
+          hint="Shows the actual note names once a round is graded, e.g. C4 → E4."
+        />
+        {revealNotes ? (
+          <Field label="Accidentals" hint="How sharps and flats are spelled in the revealed notes, e.g. C# vs Db.">
+            <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+          </Field>
+        ) : null}
+      </SettingChip>
+    </>
+  );
+
+  // The mode switch first: it decides what the screen is.
+  // History and Struggles: hidden until there's something in them, and while a session runs.
+  // The answers sit low (`footer`), within reach of the thumb, over Stop.
+  // Start: while the results show, their own "Try again" is the one start button.
+  // The chips: hidden while a session runs, so the round has the screen to itself.
+  return (
+    <ToolScreen
+      title="Guess the Interval"
+      mode={
+        !running ? (
           <Segmented
             onPage
             label="Mode"
@@ -522,8 +634,72 @@ function GuessTheIntervalScreen() {
               { value: 'learn', label: 'Learn' },
             ]}
           />
-        </View>
-      ) : null}
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: e.interval.label, counts: e.counts }))}
+              shedLabel="Shed weak intervals"
+              emptyText="No struggles tracked yet — a wrong guess adds it here."
+              running={running}
+              onShed={() => start('weak')}
+              onClear={() => {
+                intervalStatsRef.current = {};
+                updateSettings({ intervalStats: {} });
+              }}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      footer={
+        running && round && answerChoices.length > 0 ? (
+          <View className="gap-1 px-4 pt-2">
+            <View className="w-full flex-row flex-wrap justify-center" style={{ gap: 6 }}>
+              {answerChoices.map((interval) => {
+                const answered = status !== null;
+                const color = !answered
+                  ? undefined
+                  : interval.id === round.interval.id
+                    ? GRADE_COLOR.correct
+                    : interval.id === guessedId
+                      ? GRADE_COLOR.incorrect
+                      : undefined;
+                return <AnswerButton key={interval.id} label={interval.label} width="32%" color={color} answered={answered} onPress={() => submitGuess(interval.id)} />;
+              })}
+            </View>
+            {/* "I don't know" until answered, then the countdown to the next one, in the same slot. */}
+            <View className="min-h-11 items-center justify-center">
+              {!status ? (
+                <TextButton label="I don't know" onPress={() => submitGuess(null)} />
+              ) : (
+                <View className="flex-row items-center">
+                  <MutedText>Next interval in </MutedText>
+                  <CountdownLabel active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} />
+                </View>
+              )}
+            </View>
+          </View>
+        ) : null
+      }
+      action={
+        !showingSummary || learnMode ? (
+          <BigButton
+            label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
+            secondary={running}
+            onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
+          />
+        ) : null
+      }
+      chips={!running ? chipList : null}
+    >
+
 
       {learnMode && !running ? (
         <LearningPath track="interval" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
@@ -546,7 +722,7 @@ function GuessTheIntervalScreen() {
               Level {activeLevel + 1} · {learn.levels[activeLevel].title}
             </LevelLabel>
           ) : null}
-          <QuizRing size={running ? 144 : 176} running={running} timer={noteTimer}>
+          <QuizRing size={running ? 144 : IDLE_RING} running={running} timer={noteTimer}>
             {running ? (
               <Text
                 numberOfLines={2}
@@ -558,14 +734,10 @@ function GuessTheIntervalScreen() {
                 {mainLabel}
               </Text>
             ) : (
-              <IdleSummary
-                value={String(pool.length)}
-                label={pool.length === 1 ? 'interval' : 'intervals'}
-                detail={`${drillMode ? 'Every key' : `${roundCount} rounds`} · ${instrumentLabel}`}
-              />
+              <IdleStatus history={history} />
             )}
           </QuizRing>
-          {!running ? <IdleHint>Press Start, listen to two notes, then pick the interval.</IdleHint> : null}
+          {!running && !history.length ? <IdleHint>You&apos;ll hear two notes, then pick the interval.</IdleHint> : null}
 
           {running && round ? (
             <>
@@ -580,35 +752,7 @@ function GuessTheIntervalScreen() {
             </>
           ) : null}
 
-          {running && round && answerChoices.length > 0 ? (
-            <View className="w-full flex-row flex-wrap justify-center" style={{ gap: 6 }}>
-              {answerChoices.map((interval) => {
-                const answered = status !== null;
-                const color = !answered
-                  ? undefined
-                  : interval.id === round.interval.id
-                    ? GRADE_COLOR.correct
-                    : interval.id === guessedId
-                      ? GRADE_COLOR.incorrect
-                      : undefined;
-                return <AnswerButton key={interval.id} label={interval.label} width="32%" color={color} answered={answered} onPress={() => submitGuess(interval.id)} />;
-              })}
-            </View>
-          ) : null}
 
-          {/* "I don't know" until answered, then the countdown to the next one, in the same slot. */}
-          {running && round ? (
-            <View className="min-h-11 items-center justify-center">
-              {!status ? (
-                <TextButton label="I don't know" onPress={() => submitGuess(null)} />
-              ) : (
-                <View className="flex-row items-center">
-                  <MutedText>Next interval in </MutedText>
-                  <CountdownLabel active={running} startedAt={noteTimer.startedAt} durationMs={noteTimer.durationMs} />
-                </View>
-              )}
-            </View>
-          ) : null}
 
           {running && progress ? (
             <View className="flex-row items-center">
@@ -627,142 +771,7 @@ function GuessTheIntervalScreen() {
         </Text>
       ) : null}
 
-      {/* While the results show, their own "Try again" is the one start button. */}
-      {!showingSummary || learnMode ? (
-        <BigButton
-          label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
-          secondary={running}
-          onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
-        />
-      ) : null}
 
-      {/* Hidden while a session runs, so the round has the screen to itself. */}
-      {!running ? (
-        <OptionsArea>
-          {!learnMode ? (
-            <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
-              <PoolHeader
-                count={pool.length}
-                total={INTERVALS.length}
-                onAll={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}
-                onNone={() => updateSettings({ intervalIds: [] })}
-                hint="Which intervals can be played — and the choices offered for each round. At least one must stay selected."
-              />
-              <View className="flex-row flex-wrap gap-1.5">
-                {INTERVALS.map((interval) => {
-                  const selected = settings.intervalIds.includes(interval.id);
-                  return (
-                    <Pill
-                      key={interval.id}
-                      on={selected}
-                      label={interval.label}
-                      onPress={() =>
-                        updateSettings({
-                          intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
-                        })
-                      }
-                    />
-                  );
-                })}
-              </View>
-              <SwitchRow
-                label="Include descending intervals"
-                checked={includeDescending}
-                onChange={(v) => updateSettings({ includeDescending: v })}
-                hint="Lets a round play the interval below the starting note, not just above it — the choices are still just the interval's name, not its direction."
-              />
-              <SwitchRow
-                label="Drill every interval"
-                checked={drillMode}
-                onChange={(v) => updateSettings({ drillMode: v })}
-                hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
-              />
-            </SettingChip>
-          ) : null}
-
-          <SettingChip Icon={NoteIcon} label="Range" value={`${instrumentLabel} · ${rangeInput.replace('-', '–')}`}>
-            <Field
-              label="Instrument"
-              hint="The register the starting note is drawn from — a comfortable range for your ear, not necessarily an instrument you're playing along with."
-            >
-              <Dropdown
-                value={instrumentId}
-                options={[...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })), { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' }]}
-                onChange={(v) => updateSettings({ instrumentId: v })}
-              />
-            </Field>
-            {isCustom ? (
-              <Field label="Custom range" hint="The lowest and highest notes to draw starting notes from, e.g. A1-A6.">
-                <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} placeholder="A1-A6" />
-              </Field>
-            ) : null}
-          </SettingChip>
-
-          <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
-            <SliderField
-              label="Max time to answer"
-              value={roundSeconds}
-              unit=" s"
-              min={MIN_ROUND_SECONDS}
-              max={MAX_ROUND_SECONDS}
-              step={0.5}
-              onChange={(v) => updateSettings({ roundSeconds: v })}
-              hint="How long you have to pick an answer before it's marked a miss and moves on."
-            />
-            <SliderField
-              label="Time between rounds"
-              value={advanceDelayMs / 1000}
-              unit=" s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-              hint="How long the revealed answer (with its countdown ring) stays on screen before the next interval plays."
-            />
-            {!drillMode && !learnMode ? (
-              <SliderField
-                label="Number of rounds"
-                value={roundCount}
-                min={MIN_ROUND_COUNT}
-                max={MAX_ROUND_COUNT}
-                step={1}
-                onChange={(v) => updateSettings({ roundCount: v })}
-                hint="How many intervals make up one session."
-              />
-            ) : null}
-          </SettingChip>
-
-          <SettingChip
-            Icon={ToneIcon}
-            label="Sound & display"
-            value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
-          >
-            <Field label="Playback style" hint="Whether the two notes play one after another or together.">
-              <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
-            </Field>
-            <Field label="Tone" hint="Which sound plays the interval.">
-              <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
-            </Field>
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={(v) => updateSettings({ soundFeedback: v })}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-            <SwitchRow
-              label="Reveal notes after answering"
-              checked={revealNotes}
-              onChange={(v) => updateSettings({ revealNotes: v })}
-              hint="Shows the actual note names once a round is graded, e.g. C4 → E4."
-            />
-            {revealNotes ? (
-              <Field label="Accidentals" hint="How sharps and flats are spelled in the revealed notes, e.g. C# vs Db.">
-                <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-              </Field>
-            ) : null}
-          </SettingChip>
-        </OptionsArea>
-      ) : null}
 
       {learn.result ? (
         <LevelComplete

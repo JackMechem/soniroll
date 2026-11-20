@@ -94,11 +94,7 @@ function Templates({ templates }: { templates: NoteTemplate[] }) {
         options={{
           title: open ? 'Template' : 'Templates',
           headerRight: open
-            ? () => (
-                <Pressable onPress={() => setDeleting(open)} hitSlop={8} accessibilityLabel="Delete this template" className="h-9 w-9 items-center justify-center rounded-full">
-                  <TrashIcon color={colors.foreground} size={20} />
-                </Pressable>
-              )
+            ? () => <IconButton Icon={TrashIcon} label="Delete this template" onPress={() => setDeleting(open)} />
             : () => <IconButton primary Icon={PlusIcon} label="New template" onPress={() => void newTemplate()} />,
         }}
       />

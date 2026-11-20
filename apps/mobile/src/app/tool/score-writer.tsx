@@ -213,9 +213,9 @@ function OpenScore({ id, loaded, onBack }: { id: string; loaded: Transcription; 
               <Text className="font-ui text-xs" style={{ color: colors.muted }} accessibilityLiveRegion="polite">
                 {SAVE_LABEL[saveState]}
               </Text>
-              <Pressable onPress={() => setMenu(true)} hitSlop={8} accessibilityLabel="Score options" className="h-9 w-9 items-center justify-center rounded-full">
-                <DotsVerticalIcon color={colors.foreground} size={20} />
-              </Pressable>
+              <View className="ml-1">
+                <IconButton Icon={DotsVerticalIcon} label="Score options" onPress={() => setMenu(true)} />
+              </View>
             </View>
           ),
         }}

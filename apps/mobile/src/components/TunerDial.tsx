@@ -55,15 +55,18 @@ function glyphs(name: string) {
   return name.replace('#', '♯').replace(/^([A-G])b/, '$1♭');
 }
 
-/** A ring of the 12 notes (C at the top) with the tuner readout in the middle; tap a note to hear
-    it. The heard note is lit in its tuning colour, the one playing filled with the accent. */
+/** A ring of the 12 notes (C at the top) with the tuner readout (the heard note, big) in the
+    middle; tap a note to hear it. The heard note is lit in its tuning colour, the one playing
+    filled with the accent. `size` is its width and height (the screen fits it to the space). */
 export function TunerDial({
   detectedPc,
   detectedColor,
   playingPc,
   onSelect,
+  size,
   children,
 }: {
+  size: number;
   /** Pitch class currently heard, lit up on the ring. */
   detectedPc: number | null;
   detectedColor: string;
@@ -74,7 +77,7 @@ export function TunerDial({
 }) {
   const { colors } = useAppTheme();
   return (
-    <View style={{ width: '100%', maxWidth: 340, aspectRatio: 1 }}>
+    <View style={{ width: size, height: size }}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${SIZE} ${SIZE}`}>
         {NOTES.map(({ pc, main, alt }) => {
           const degrees = pc * 30;
@@ -128,8 +131,7 @@ export function TunerDial({
           height: '58%',
           borderRadius: 9999,
           alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: '11%',
+          justifyContent: 'center',
         }}
       >
         {children}
@@ -139,14 +141,28 @@ export function TunerDial({
 }
 
 /**
- * The flat/sharp meter under the dial, read like a real meter: a track from −50 to +50 cents with
- * a tick every 5 (taller at ±25 and ±50, tallest at 0), the in-tune zone (±8 cents) tinted, the
- * numbers under it, and the needle in the reading's colour. `caption` is the line under it (the
- * verdict, or what to do when nothing's heard).
+ * The flat/sharp meter under the dial — the tuner's main feedback, read like a real meter: a thick
+ * track from −50 to +50 cents with a tick every 5 (taller at ±25 and ±50, tallest at 0), the
+ * in-tune zone (±8 cents) as a clear band in `zoneColor` (lit while the reading is in it), the
+ * numbers under it, and a thick needle in the reading's colour. `caption` is the line under it
+ * (the verdict, or what to do when nothing's heard).
  */
-export function TunerMeter({ cents, color, caption, captionColor }: { cents: number | null; color: string; caption: string; captionColor: string }) {
+export function TunerMeter({
+  cents,
+  color,
+  zoneColor,
+  caption,
+  captionColor,
+}: {
+  cents: number | null;
+  color: string;
+  zoneColor: string;
+  caption: string;
+  captionColor: string;
+}) {
   const { colors } = useAppTheme();
   const ticks = Array.from({ length: 21 }, (_, i) => i * 5 - 50);
+  const inZone = cents !== null && Math.abs(cents) <= 8;
   return (
     <View
       className="w-full gap-1"
@@ -154,24 +170,36 @@ export function TunerMeter({ cents, color, caption, captionColor }: { cents: num
       accessibilityLabel="Tuning offset in cents"
       accessibilityValue={{ min: -50, max: 50, now: Math.round(cents ?? 0) }}
     >
-      <View style={{ height: 26, marginHorizontal: 20 }}>
-        {/* The in-tune zone. */}
-        <View style={{ position: 'absolute', left: '42%', width: '16%', top: 3, bottom: 3, borderRadius: 4, backgroundColor: withAlpha(colors.foreground, 0.07) }} />
+      <View style={{ height: 40, marginHorizontal: 20 }}>
         {/* The track. */}
-        <View style={{ position: 'absolute', left: 0, right: 0, top: 12, height: 2, borderRadius: 1, backgroundColor: withAlpha(colors.foreground, 0.15) }} />
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 14, height: 12, borderRadius: 6, backgroundColor: withAlpha(colors.foreground, 0.08) }} />
+        {/* The in-tune zone. */}
+        <View
+          style={{
+            position: 'absolute',
+            left: '42%',
+            width: '16%',
+            top: 2,
+            bottom: 2,
+            borderRadius: 8,
+            backgroundColor: withAlpha(zoneColor, inZone ? 0.35 : 0.16),
+            borderWidth: 1.5,
+            borderColor: withAlpha(zoneColor, inZone ? 0.9 : 0.45),
+          }}
+        />
         {ticks.map((t) => {
-          const h = t === 0 ? 22 : t % 25 === 0 ? 14 : 7;
+          const h = t === 0 ? 30 : t % 25 === 0 ? 20 : 10;
           return (
             <View
               key={t}
               style={{
                 position: 'absolute',
                 left: `${50 + t}%`,
-                top: 13 - h / 2,
+                top: 20 - h / 2,
                 width: t === 0 ? 2 : 1,
                 height: h,
                 marginLeft: t === 0 ? -1 : -0.5,
-                backgroundColor: withAlpha(colors.foreground, t === 0 ? 0.5 : 0.3),
+                backgroundColor: withAlpha(colors.foreground, t === 0 ? 0.55 : 0.3),
               }}
             />
           );
@@ -182,10 +210,10 @@ export function TunerMeter({ cents, color, caption, captionColor }: { cents: num
               position: 'absolute',
               left: `${50 + cents}%`,
               top: 0,
-              width: 6,
-              height: 26,
-              marginLeft: -3,
-              borderRadius: 3,
+              width: 10,
+              height: 40,
+              marginLeft: -5,
+              borderRadius: 5,
               backgroundColor: color,
             }}
           />
@@ -202,7 +230,7 @@ export function TunerMeter({ cents, color, caption, captionColor }: { cents: num
           </Text>
         ))}
       </View>
-      <Text numberOfLines={1} className="font-ui-semibold mt-1 text-center text-sm font-semibold" style={{ color: captionColor }}>
+      <Text numberOfLines={1} className="font-ui-semibold mt-1 text-center text-base font-semibold" style={{ color: captionColor }}>
         {caption}
       </Text>
     </View>

@@ -31,7 +31,8 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
  * in total), the last 18 weeks as a grid of days (`HeatGrid`) and the Stats sheet with all of them.
  */
 
-/** Today's minutes against the goal (a thin bar; tap to change the goal) and the streak. */
+/** Today's minutes against the goal (a full-width bar; tap to change the goal) and the streak, worded
+    so a streak that's waiting on today doesn't read as a contradiction next to "0 of 30 min". */
 export function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; today: string; onGoal: () => void }) {
   const { colors } = useAppTheme();
   const success = useSuccess();
@@ -40,23 +41,23 @@ export function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; t
   const goal = goalOn(data, today);
   const met = goal > 0 && minutes >= goal;
   const s = streak(data, today);
+  const playedToday = minutes > 0;
+  const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+  const streakText =
+    s === 0 ? (playedToday ? 'Streak starts today' : 'No streak yet · play today to start one') : playedToday ? `Streak ${days(s)}` : `Streak ${days(s)} · play today to keep it`;
   return (
-    <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1">
-      <Pressable onPress={onGoal} accessibilityRole="button" accessibilityLabel="Today's goal — change it" hitSlop={6} className="flex-row items-center gap-2">
-        {goal > 0 ? (
-          <View style={{ width: 56 }}>
-            <Bar frac={minutes / goal} color={met ? success : undefined} height={4} />
-          </View>
-        ) : null}
-        <Text className="font-ui text-sm" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+    <View className="gap-2">
+      <Pressable onPress={onGoal} accessibilityRole="button" accessibilityLabel="Today's goal — change it" hitSlop={6} className="gap-1.5">
+        <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
           {goal > 0 ? `${practicedMinutes(minutes)} of ${goal} min today` : `${practicedMinutes(minutes)} min today`}
-          {met ? ' · goal met' : ''}
+          {met ? <Text style={{ color: success }}> · goal met</Text> : null}
         </Text>
+        {goal > 0 ? <Bar frac={minutes / goal} color={met ? success : undefined} height={8} /> : null}
       </Pressable>
-      <View className="flex-row items-center gap-1">
-        <FlameIcon color={minutes > 0 && s > 0 ? FLAME : colors.muted} size={15} />
+      <View className="flex-row items-center gap-1.5">
+        <FlameIcon color={playedToday && s > 0 ? FLAME : colors.muted} size={16} />
         <Text className="font-ui text-sm" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
-          {s}-day streak
+          {streakText}
         </Text>
       </View>
     </View>

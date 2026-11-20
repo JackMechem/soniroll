@@ -36,12 +36,12 @@ import {
   Field,
   GroupLabel,
   HistoryChip,
+  IDLE_RING,
   IdleHint,
-  IdleSummary,
+  IdleStatus,
   toneLabel,
   LevelLabel,
   MutedText,
-  OptionsArea,
   Pill,
   PillChoice,
   PoolHeader,
@@ -64,6 +64,7 @@ import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/GuessTheChord.tsx` — same features, same synced settings key:
@@ -196,6 +197,7 @@ function GuessTheChordScreen() {
   const [round, setRound] = useState<ChordRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/guess-the-chord', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [typed, setTyped] = useState('');
@@ -497,46 +499,141 @@ function GuessTheChordScreen() {
 
   const showSide = !running && (history.length > 0 || weakEntries.length > 0);
 
+  // The mode switch first, then History and Struggles (hidden until there's something in them, and
+  // while a session runs). While answering, the keyboard is pinned at the bottom (`footer`) with a
+  // quiet Stop above it; results bring their own Try again. The chips hide while a session runs.
+  const chipList = (
+    <>
+      {!learnMode ? (
+        <SettingChip Icon={ChordIcon} label="Chords" value={`${pool.length} of ${CHORD_QUALITIES.length}`}>
+          <PoolHeader
+            count={pool.length}
+            total={CHORD_QUALITIES.length}
+            onAll={() => updateSettings({ chordIds: CHORD_QUALITIES.map((q) => q.id) })}
+            onNone={() => updateSettings({ chordIds: [] })}
+            hint="Which chord qualities can be picked for a round. At least one must stay selected."
+          />
+          {CHORD_CATEGORIES.map((category) => (
+            <View key={category} className="gap-1.5">
+              <GroupLabel>{category}</GroupLabel>
+              <View className="flex-row flex-wrap gap-1.5">
+                {CHORD_QUALITIES.filter((q) => q.category === category).map((quality) => {
+                  const selected = settings.chordIds.includes(quality.id);
+                  return (
+                    <Pill
+                      key={quality.id}
+                      on={selected}
+                      label={`C${prettyQuality(quality.suffix)}`}
+                      accessibilityLabel={quality.name}
+                      onPress={() =>
+                        updateSettings({ chordIds: selected ? settings.chordIds.filter((x) => x !== quality.id) : [...settings.chordIds, quality.id] })
+                      }
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+          <SliderField
+            label="Chance of a slash (bass note) chord"
+            value={slashChance}
+            unit="%"
+            min={0}
+            max={100}
+            step={5}
+            onChange={(v) => updateSettings({ slashChance: v })}
+            hint="How often a round adds a bass note that isn't the root — anywhere from a normal inversion to a genuinely weird, unrelated bass note."
+          />
+          <SwitchRow
+            label="Give the root"
+            checked={giveRoot}
+            onChange={(v) => updateSettings({ giveRoot: v })}
+            hint="Pre-fills the answer with the chord's root, so it's about the quality and slash bass. Off makes the whole chord — root included — something you have to work out."
+          />
+          <SwitchRow
+            label="Drill every chord"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            hint="Plays every selected chord quality, starting on all 12 keys, each in a random octave (with an independent chance of a slash bass each time)."
+          />
+        </SettingChip>
+      ) : null}
+
+      <SettingChip Icon={RegisterIcon} label="Register" value={register.label}>
+        <Field label="Register" hint="Which octave range the chord's root is drawn from — just where it sits for listening.">
+          <PillChoice label="Register" value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
+        </Field>
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
+        <SliderField
+          label="Max time to answer"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={1}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint="How long you have to enter and submit an answer before it's graded as typed."
+        />
+        <SliderField
+          label="Time between rounds"
+          value={advanceDelayMs / 1000}
+          unit=" s"
+          min={MIN_ADVANCE_DELAY_MS / 1000}
+          max={MAX_ADVANCE_DELAY_MS / 1000}
+          step={0.25}
+          onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+          hint="How long the revealed answer (with its countdown ring) stays on screen before the next chord plays."
+        />
+        {!drillMode && !learnMode ? (
+          <SliderField
+            label="Number of rounds"
+            value={roundCount}
+            min={MIN_ROUND_COUNT}
+            max={MAX_ROUND_COUNT}
+            step={1}
+            onChange={(v) => updateSettings({ roundCount: v })}
+            hint="How many chords make up one session."
+          />
+        ) : null}
+      </SettingChip>
+
+      <SettingChip
+        Icon={ToneIcon}
+        label="Sound & display"
+        value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
+      >
+        <Field label="Playback style" hint="Whether the chord's notes play all at once or as a quick rolled arpeggio.">
+          <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
+        </Field>
+        <Field label="Tone" hint="Which sound plays the chord.">
+          <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+        <SwitchRow
+          label="Sound feedback"
+          checked={soundFeedback}
+          onChange={(v) => updateSettings({ soundFeedback: v })}
+          hint="A click each second of the countdown, plus a click the instant a round is graded."
+        />
+        <SwitchRow
+          label="Reveal notes after answering"
+          checked={revealNotes}
+          onChange={(v) => updateSettings({ revealNotes: v })}
+          hint="Shows the actual notes that were played once a round is graded."
+        />
+        <Field label="Accidentals" hint="How sharps and flats are spelled in the revealed answer, e.g. C# vs Db.">
+          <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+        </Field>
+      </SettingChip>
+    </>
+  );
+
   return (
     <ToolScreen
       title="Guess the Chord"
-      footer={
-        answering ? (
-          <ChordAnswerKeyboard
-            onInsert={(t) => setTypedValue(typedRef.current + t)}
-            onBackspace={() => setTypedValue(typedRef.current.slice(0, -1))}
-            onClear={() => setTypedValue('')}
-            onGiveUp={giveUp}
-            onSubmit={gradeAndReveal}
-          />
-        ) : null
-      }
-    >
-      {/* Hidden until there's something in them, and while a session runs. */}
-      {showSide ? (
-        <SettingsBar>
-          <HistoryChip
-            entries={matchingHistory}
-            bestMs={bestMs}
-            onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
-          />
-          <StrugglesChip
-            entries={weakEntries.map((e) => ({ key: e.key, label: e.quality.name, counts: e.counts }))}
-            shedLabel="Shed weak chords"
-            emptyText="No struggles tracked yet — a wrong answer adds it here."
-            running={running}
-            onShed={() => start('weak')}
-            onClear={() => {
-              chordStatsRef.current = {};
-              updateSettings({ chordStats: {} });
-            }}
-          />
-        </SettingsBar>
-      ) : null}
-
-      {/* The mode decides what the screen is, so it sits above the display. */}
-      {!running ? (
-        <View className="w-full items-center">
+      mode={
+        !running ? (
           <Segmented
             onPage
             label="Mode"
@@ -547,8 +644,61 @@ function GuessTheChordScreen() {
               { value: 'learn', label: 'Learn' },
             ]}
           />
-        </View>
-      ) : null}
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: e.quality.name, counts: e.counts }))}
+              shedLabel="Shed weak chords"
+              emptyText="No struggles tracked yet — a wrong answer adds it here."
+              running={running}
+              onShed={() => start('weak')}
+              onClear={() => {
+                chordStatsRef.current = {};
+                updateSettings({ chordStats: {} });
+              }}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      footer={
+        answering ? (
+          <View>
+            {/* How to type a symbol, beside the keyboard, in the first round only. */}
+            {progress?.index === 1 ? (
+              <Text className="font-ui px-4 pb-2 text-center text-xs leading-4" style={{ color: colors.muted }}>
+                Type the root, the quality, then an optional /bass, e.g. F♯Δ7 or A♭-7/D.
+              </Text>
+            ) : null}
+            <ChordAnswerKeyboard
+              onInsert={(t) => setTypedValue(typedRef.current + t)}
+              onBackspace={() => setTypedValue(typedRef.current.slice(0, -1))}
+              onClear={() => setTypedValue('')}
+              onGiveUp={giveUp}
+              onSubmit={gradeAndReveal}
+            />
+          </View>
+        ) : null
+      }
+      action={
+        !answering && (!showingSummary || learnMode) ? (
+          <BigButton
+            label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
+            secondary={running}
+            onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
+          />
+        ) : null
+      }
+      chips={!running ? chipList : null}
+    >
+
 
       {learnMode && !running ? (
         <LearningPath track="chord" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
@@ -575,7 +725,7 @@ function GuessTheChordScreen() {
               Level {activeLevel + 1} · {learn.levels[activeLevel].title} · {cumulativeItems('chord', activeLevel).length} chords in play
             </LevelLabel>
           ) : null}
-          <QuizRing size={running ? 144 : 176} running={running} timer={noteTimer}>
+          <QuizRing size={running ? 144 : IDLE_RING} running={running} timer={noteTimer}>
             {running ? (
               <Text
                 numberOfLines={1}
@@ -587,14 +737,10 @@ function GuessTheChordScreen() {
                 {mainLabel}
               </Text>
             ) : (
-              <IdleSummary
-                value={String(pool.length)}
-                label={pool.length === 1 ? 'chord type' : 'chord types'}
-                detail={`${drillMode ? 'Every key' : `${roundCount} rounds`} · ${register.label}`}
-              />
+              <IdleStatus history={history} />
             )}
           </QuizRing>
-          {!running ? <IdleHint>Press Start, listen to the chord, then type its symbol: the root, the quality, then an optional /bass, e.g. F♯Δ7 or A♭-7/D.</IdleHint> : null}
+          {!running && !history.length ? <IdleHint>You&apos;ll hear a chord, then type its symbol.</IdleHint> : null}
 
           {running && round ? (
             <>
@@ -630,6 +776,8 @@ function GuessTheChordScreen() {
               <ElapsedTimer active={running} startedAt={sessionStartedAt} />
             </View>
           ) : null}
+          {/* While answering, the keyboard's at the bottom: a quiet Stop. */}
+          {answering ? <TextButton label="Stop" onPress={endSession} /> : null}
         </View>
       )}
 
@@ -639,144 +787,7 @@ function GuessTheChordScreen() {
         </Text>
       ) : null}
 
-      {/* While answering, the keyboard's at the bottom: a quiet Stop. Results bring their own Try again. */}
-      {answering ? (
-        <TextButton label="Stop" onPress={endSession} />
-      ) : !showingSummary || learnMode ? (
-        <BigButton
-          label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
-          secondary={running}
-          onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
-        />
-      ) : null}
 
-      {/* Hidden while a session runs, so the round has the screen to itself. */}
-      {!running ? (
-        <OptionsArea>
-          {!learnMode ? (
-            <SettingChip Icon={ChordIcon} label="Chords" value={`${pool.length} of ${CHORD_QUALITIES.length}`}>
-              <PoolHeader
-                count={pool.length}
-                total={CHORD_QUALITIES.length}
-                onAll={() => updateSettings({ chordIds: CHORD_QUALITIES.map((q) => q.id) })}
-                onNone={() => updateSettings({ chordIds: [] })}
-                hint="Which chord qualities can be picked for a round. At least one must stay selected."
-              />
-              {CHORD_CATEGORIES.map((category) => (
-                <View key={category} className="gap-1.5">
-                  <GroupLabel>{category}</GroupLabel>
-                  <View className="flex-row flex-wrap gap-1.5">
-                    {CHORD_QUALITIES.filter((q) => q.category === category).map((quality) => {
-                      const selected = settings.chordIds.includes(quality.id);
-                      return (
-                        <Pill
-                          key={quality.id}
-                          on={selected}
-                          label={`C${prettyQuality(quality.suffix)}`}
-                          accessibilityLabel={quality.name}
-                          onPress={() =>
-                            updateSettings({ chordIds: selected ? settings.chordIds.filter((x) => x !== quality.id) : [...settings.chordIds, quality.id] })
-                          }
-                        />
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-              <SliderField
-                label="Chance of a slash (bass note) chord"
-                value={slashChance}
-                unit="%"
-                min={0}
-                max={100}
-                step={5}
-                onChange={(v) => updateSettings({ slashChance: v })}
-                hint="How often a round adds a bass note that isn't the root — anywhere from a normal inversion to a genuinely weird, unrelated bass note."
-              />
-              <SwitchRow
-                label="Give the root"
-                checked={giveRoot}
-                onChange={(v) => updateSettings({ giveRoot: v })}
-                hint="Pre-fills the answer with the chord's root, so it's about the quality and slash bass. Off makes the whole chord — root included — something you have to work out."
-              />
-              <SwitchRow
-                label="Drill every chord"
-                checked={drillMode}
-                onChange={(v) => updateSettings({ drillMode: v })}
-                hint="Plays every selected chord quality, starting on all 12 keys, each in a random octave (with an independent chance of a slash bass each time)."
-              />
-            </SettingChip>
-          ) : null}
-
-          <SettingChip Icon={RegisterIcon} label="Register" value={register.label}>
-            <Field label="Register" hint="Which octave range the chord's root is drawn from — just where it sits for listening.">
-              <PillChoice label="Register" value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
-            </Field>
-          </SettingChip>
-
-          <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
-            <SliderField
-              label="Max time to answer"
-              value={roundSeconds}
-              unit=" s"
-              min={MIN_ROUND_SECONDS}
-              max={MAX_ROUND_SECONDS}
-              step={1}
-              onChange={(v) => updateSettings({ roundSeconds: v })}
-              hint="How long you have to enter and submit an answer before it's graded as typed."
-            />
-            <SliderField
-              label="Time between rounds"
-              value={advanceDelayMs / 1000}
-              unit=" s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-              hint="How long the revealed answer (with its countdown ring) stays on screen before the next chord plays."
-            />
-            {!drillMode && !learnMode ? (
-              <SliderField
-                label="Number of rounds"
-                value={roundCount}
-                min={MIN_ROUND_COUNT}
-                max={MAX_ROUND_COUNT}
-                step={1}
-                onChange={(v) => updateSettings({ roundCount: v })}
-                hint="How many chords make up one session."
-              />
-            ) : null}
-          </SettingChip>
-
-          <SettingChip
-            Icon={ToneIcon}
-            label="Sound & display"
-            value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
-          >
-            <Field label="Playback style" hint="Whether the chord's notes play all at once or as a quick rolled arpeggio.">
-              <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
-            </Field>
-            <Field label="Tone" hint="Which sound plays the chord.">
-              <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
-            </Field>
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={(v) => updateSettings({ soundFeedback: v })}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-            <SwitchRow
-              label="Reveal notes after answering"
-              checked={revealNotes}
-              onChange={(v) => updateSettings({ revealNotes: v })}
-              hint="Shows the actual notes that were played once a round is graded."
-            />
-            <Field label="Accidentals" hint="How sharps and flats are spelled in the revealed answer, e.g. C# vs Db.">
-              <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-            </Field>
-          </SettingChip>
-        </OptionsArea>
-      ) : null}
 
       {learn.result ? (
         <LevelComplete

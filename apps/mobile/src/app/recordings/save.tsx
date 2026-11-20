@@ -115,7 +115,7 @@ function SaveRecordingScreen() {
             <Pressable
               onPress={() => void save()}
               disabled={saving}
-              className="rounded-full px-5 py-2"
+              className="min-h-10 justify-center rounded-lg px-4 py-2"
               style={{ backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
             >
               <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>

@@ -11,7 +11,7 @@ import { PostListItem } from '@/components/community/CommunityTunes';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { TabHeader } from '@/components/TabHeader';
-import { EmptyState, IconButton, SearchField, SectionHeader, useScrolled } from '@/components/ui';
+import { EmptyState, IconButton, SearchField, SectionHeader, SignInGate, useScrolled } from '@/components/ui';
 import { ActionSheet } from '@/components/ActionSheet';
 import { FollowersIcon, HeartIcon, MusicNoteIcon, PlusIcon, PostIcon, SetlistIcon, UsersIcon, type IconProps } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -62,12 +62,11 @@ function CommunityScreen() {
 
   if (isLoading) return <ScreenSpinner />;
 
-  const gated = (go: () => void) => (isAuthenticated ? go() : router.push('/profile'));
-
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <TabHeader title="Community" right={<IconButton primary Icon={PlusIcon} label="New post" onPress={() => gated(() => setNewOpen(true))} />} />
+        {/* Posting needs an account: no + until you're signed in (the gate below says why). */}
+        <TabHeader title="Community" right={isAuthenticated ? <IconButton primary Icon={PlusIcon} label="New post" onPress={() => setNewOpen(true)} /> : undefined} />
         <View className="px-4 pb-2" style={{ borderBottomWidth: 1, borderBottomColor: scrolled ? derived.hairline : 'transparent' }}>
           <SearchField value={query} onChangeText={setQuery} placeholder="Search people and posts" />
         </View>
@@ -145,12 +144,7 @@ function CommunityScreen() {
 
               <Section title="Latest posts">
                 {!isAuthenticated ? (
-                  <EmptyState
-                    Icon={UsersIcon}
-                    title="See what musicians are sharing"
-                    body="Tunes, setlists and the chord charts that come with them. Sign in to read and post."
-                    action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
-                  />
+                  <SignInGate Icon={UsersIcon} title="See what musicians are sharing" body="Tunes, setlists and the chord charts that come with them. Free with an account." />
                 ) : posts === undefined ? (
                   <View className="items-center py-6">
                     <LoadingSpinner />

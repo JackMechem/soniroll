@@ -4,7 +4,7 @@ import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View, Share } from 'react-native';
 
-import { ChordChartIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
+import { EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -53,11 +53,16 @@ export type TunePostSummary = {
   isMine?: boolean;
 };
 
+/** "1 tune", "4 charts". */
+function plural(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
 /**
  * One post in a list (Community's feed and search, My posts, Liked posts, a profile's posts) — a
  * card: author and how long ago on top; a "Setlist" tag for setlist posts; the title, description
- * and a preview of the first few tunes (numbered for a setlist); then a footer with tune/chart
- * counts, Share (copies the link) and the like button. Tap opens the post's page; the author opens
+ * and a preview of the first few tunes (numbered for a setlist); then a footer saying how many
+ * tunes and charts it has, Share (copies the link) and the like button. Tap opens the post's page; the author opens
  * their profile. Long-press deletes, when `onDelete` is given (your own posts).
  */
 export function PostListItem({
@@ -162,28 +167,18 @@ export function PostListItem({
       </View>
 
       <View className="flex-row items-center gap-4 px-4 pb-1.5">
-        <View className="flex-row items-center gap-1">
-          <MusicNoteIcon color={colors.muted} size={15} />
-          <Text className="font-ui-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
-            {post.tuneCount}
-          </Text>
-        </View>
-        {post.chartCount > 0 ? (
-          <View className="flex-row items-center gap-1">
-            <ChordChartIcon color={colors.muted} size={15} />
-            <Text className="font-ui-semibold text-xs font-semibold tabular-nums" style={{ color: colors.muted }}>
-              {post.chartCount}
-            </Text>
-          </View>
-        ) : null}
+        {/* What's in it, in words ("4 tunes · 2 charts"). */}
+        <Text className="font-ui text-xs" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+          {[plural(post.tuneCount, 'tune'), post.chartCount > 0 ? plural(post.chartCount, 'chart') : null].filter(Boolean).join(' · ')}
+        </Text>
         <View className="flex-1" />
-        <Pressable onPress={() => void handleShare()} accessibilityLabel="Share this post" className="h-10 w-10 items-center justify-center">
+        <Pressable onPress={() => void handleShare()} accessibilityLabel="Share this post" className="h-11 w-11 items-center justify-center">
           <ShareIcon color={colors.muted} size={19} />
         </Pressable>
         <Pressable
           onPress={() => void toggleLike({ id: post.id })}
           accessibilityLabel={liked ? 'Unlike this post' : 'Like this post'}
-          className="h-10 flex-row items-center gap-1.5 pl-1"
+          className="h-11 min-w-11 flex-row items-center gap-1.5 pl-1"
         >
           <HeartIcon color={liked ? colors.danger : colors.muted} size={21} filled={liked} />
           <Text className="font-ui-bold text-sm font-bold tabular-nums" style={{ color: liked ? colors.danger : colors.muted }}>

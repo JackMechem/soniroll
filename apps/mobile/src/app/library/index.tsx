@@ -121,7 +121,7 @@ function LibraryScreen() {
               title="No tunes yet"
               body="Add the tunes you know. Jam Practice and Tune of the day pick from them."
               action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => addTune('tunes') }}
-              secondary={{ label: 'Use the jazz standards', onPress: () => setAddingStandard('tunes') }}
+              secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('tunes') }}
             />
           ) : (
             <>
@@ -156,6 +156,7 @@ function LibraryScreen() {
                 <SectionHeader
                   title="Tunes I Know"
                   count={tunes.length}
+                  detail="Ready to play · Jam Practice picks from these"
                   right={<SectionLinks href={{ pathname: '/library/tunes', params: { list: 'tunes' } }} onAdd={() => setListAdd('tunes')} addLabel="Add to Tunes I Know" />}
                 />
                 {tunes.length === 0 ? (
@@ -163,7 +164,7 @@ function LibraryScreen() {
                     title="No tunes you know yet"
                     body="Jam Practice and Tune of the day pick from these."
                     action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => addTune('tunes') }}
-                    secondary={{ label: 'Use the jazz standards', onPress: () => setAddingStandard('tunes') }}
+                    secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('tunes') }}
                   />
                 ) : (
                   [...tunes].reverse().slice(0, PREVIEW).map(tuneRow('tunes'))
@@ -175,6 +176,7 @@ function LibraryScreen() {
                   <SectionHeader
                     title="Tunes to Learn"
                     count={learn.length}
+                    detail="Still learning · kept apart from your practice"
                     right={<SectionLinks href={{ pathname: '/library/tunes', params: { list: 'learn' } }} onAdd={() => setListAdd('learn')} addLabel="Add to Tunes to Learn" />}
                   />
                   {learn.length === 0 ? (
@@ -182,7 +184,7 @@ function LibraryScreen() {
                       title="Nothing to learn yet"
                       body="Tunes you want to learn, kept apart from your practice list."
                       action={{ label: 'Add a tune to learn', Icon: PlusIcon, onPress: () => addTune('learn') }}
-                      secondary={{ label: 'Use the jazz standards', onPress: () => setAddingStandard('learn') }}
+                      secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('learn') }}
                     />
                   ) : (
                     [...learn].reverse().slice(0, PREVIEW).map(tuneRow('learn'))

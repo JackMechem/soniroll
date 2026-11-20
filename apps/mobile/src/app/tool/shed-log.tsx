@@ -19,7 +19,7 @@ import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, SpeakerIcon, TargetIcon } from '@/components/icons';
 import { MonthView, WeekList, weekSummary } from '@/components/shedLog/Calendar';
 import { DayPanel } from '@/components/shedLog/DayPanel';
-import { GhostIcon, RoutinesIcon, SmallButton, SoundOffIcon, StatsIcon } from '@/components/shedLog/parts';
+import { GhostIcon, RoutinesIcon, SoundOffIcon, StatsIcon } from '@/components/shedLog/parts';
 import { ShedLogGate } from '@/components/shedLog/ShedLogGate';
 import { GoalSheet } from '@/components/shedLog/sheets';
 import { StatsSheet, TodaySummary } from '@/components/shedLog/Stats';
@@ -38,8 +38,8 @@ const VIEW_DEFAULTS = { view: 'month' };
 
 /**
  * The Shed Log on the phone — one of the five main screens (a tab, so no back button), the native
- * port of the website's `/shed-log` (`apps/web/components/PracticeLog.tsx`): the header (⋮ for the
- * daily goal and sounds), today against the goal and the streak, Stats and Routines buttons, then
+ * port of the website's `/shed-log` (`apps/web/components/PracticeLog.tsx`): the header (Stats, and
+ * ⋮ for your routines, the daily goal and sounds), today against the goal and the streak, then
  * two tabs — the day (routines to check off and run on the timer, tasks for the day, the day timer,
  * time in tools to log, logging time) and the calendar (month or week; a day opens it). Adding is
  * done where it happens (Add routine, the task box), not from a header button. For account
@@ -123,7 +123,15 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   const dayLabel = selected === today ? 'Today' : `${WEEKDAY_SHORT[d.getDay()]}, ${formatShortDate(selected)}`;
 
   return (
-    <Frame scrolled={scrolled} right={<IconButton Icon={DotsVerticalIcon} label="Shed Log settings" onPress={() => setSettingsOpen(true)} />}>
+    <Frame
+      scrolled={scrolled}
+      right={
+        <>
+          <IconButton Icon={StatsIcon} label="Stats" onPress={() => setStatsOpen(true)} />
+          <IconButton Icon={DotsVerticalIcon} label="More: routines, daily goal, sounds" onPress={() => setSettingsOpen(true)} />
+        </>
+      }
+    >
       <ScrollView
         ref={scroll}
         keyboardShouldPersistTaps="handled"
@@ -133,15 +141,6 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: bottom, gap: 16 }}
       >
         <TodaySummary data={data} today={today} onGoal={() => setGoalOpen(true)} />
-
-        <View className="flex-row flex-wrap gap-2">
-          <SmallButton Icon={StatsIcon} label="Stats" onPress={() => setStatsOpen(true)} />
-          <SmallButton
-            Icon={RoutinesIcon}
-            label={data.routines.length ? `Routines · ${data.routines.length}` : 'Routines'}
-            onPress={() => router.push('/tool/shed-log-routines')}
-          />
-        </View>
 
         <View className="flex-row gap-5" style={{ borderBottomWidth: 1, borderColor: derived.hairline }} accessibilityRole="tablist">
           {(
@@ -226,9 +225,15 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
       <GoalSheet log={log} visible={goalOpen} onClose={() => setGoalOpen(false)} />
       <ActionSheet
         visible={settingsOpen}
-        title="Shed Log settings"
+        title="Shed Log"
         onClose={() => setSettingsOpen(false)}
         actions={[
+          {
+            key: 'routines',
+            icon: <RoutinesIcon color={colors.muted} size={20} />,
+            label: data.routines.length ? `Your routines (${data.routines.length})` : 'Your routines',
+            onPress: () => router.push('/tool/shed-log-routines'),
+          },
           { key: 'goal', icon: <TargetIcon color={colors.muted} size={20} />, label: 'Daily goal…', onPress: () => setGoalOpen(true) },
           {
             key: 'sounds',

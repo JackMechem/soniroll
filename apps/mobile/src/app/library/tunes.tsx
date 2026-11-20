@@ -83,7 +83,7 @@ function TunesListScreen() {
                     title={list === 'learn' ? 'Nothing to learn yet' : 'No tunes yet'}
                     body={list === 'learn' ? 'Tunes you want to learn, kept apart from your practice list.' : 'Jam Practice and Tune of the day pick from these.'}
                     action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => router.push({ pathname: '/library/tune-edit', params: { list } }) }}
-                    secondary={{ label: 'Use the jazz standards', onPress: () => setAdding(true) }}
+                    secondary={{ label: 'Pick from the standards', onPress: () => setAdding(true) }}
                   />
                 </View>
               )

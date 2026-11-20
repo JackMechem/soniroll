@@ -6,20 +6,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { TabHeader } from '@/components/TabHeader';
-import { EVERYDAY_HREFS, TOOL_LINKS, ToolRow, ToolTile, chunk, searchTools, toolRoute } from '@/components/ToolGrid';
-import { Card, EmptyText, SearchField, useScrolled } from '@/components/ui';
+import { EVERYDAY_HREFS, TOOL_LINKS, ToolSection, ToolTiles, searchTools, toolRoute } from '@/components/ToolGrid';
+import { EmptyText, SearchField, SectionHeader, useScrolled } from '@/components/ui';
 import { useFavorites } from '@/lib/useFavorites';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 const EVERYDAY = EVERYDAY_HREFS.map((h) => TOOL_LINKS.find((l) => l.href === h)).filter((l): l is NavLinkInfo => !!l);
-/** The groups without the Everyday tools, so each tool is listed once. */
-const GROUPS = groupByCategory(TOOL_LINKS.filter((l) => !EVERYDAY_HREFS.includes(l.href)));
+/** The groups without the Everyday tools, so each tool is listed once. The Library, Chord Charts
+    and Community are tabs, which leaves Lessons alone in the Community group, so it's "Teaching". */
+const GROUPS = groupByCategory(TOOL_LINKS.filter((l) => !EVERYDAY_HREFS.includes(l.href))).map(({ category, items }) => ({
+  title: category === 'Community' && items.every((i) => i.href === '/lessons') ? 'Teaching' : category,
+  items,
+}));
 
 /**
  * Tools — every practice tool in one place: a search (which also finds the Library, Chord Charts,
- * Community and the Shed Log, as shortcuts to their tabs), your favorites as cards, the Everyday
- * tools, then the other groups in the website's order. Each row says what the tool does; a lock
- * marks the ones that need an account while you're signed out.
+ * Community and the Shed Log, as shortcuts to their tabs), your favorites as compact tiles, the
+ * Everyday tools, then the other groups in the website's order. Each group's name is a plain label
+ * over one surface section of rows (hairlines between them); each row says what the tool does in
+ * one line; a lock marks the ones that need an account while you're signed out.
  */
 export default function ToolsScreen() {
   const router = useRouter();
@@ -31,9 +36,6 @@ export default function ToolsScreen() {
 
   const q = query.trim();
   const open = (item: NavLinkInfo) => router.push(toolRoute(item.href));
-  const row = (item: NavLinkInfo) => (
-    <ToolRow key={item.href} item={item} favorited={favorites.includes(item.href)} onPress={() => open(item)} onToggleFavorite={() => toggleFavorite(item.href)} />
-  );
   const favoriteTools = TOOL_LINKS.filter((t) => favorites.includes(t.href));
   const results = q ? searchTools(q) : null;
 
@@ -48,44 +50,32 @@ export default function ToolsScreen() {
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: bottomSpace, gap: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: bottomSpace, gap: 20 }}
         >
           <SearchField value={query} onChangeText={setQuery} placeholder="Search tools" />
           {results ? (
             <>
-              <Card title="Tools">{results.tools.length ? results.tools.map(row) : <EmptyText>No tools match “{q}”.</EmptyText>}</Card>
+              {results.tools.length ? (
+                <ToolSection title="Tools" items={results.tools} favorites={favorites} onOpen={open} onToggleFavorite={toggleFavorite} />
+              ) : (
+                <EmptyText>No tools match “{q}”.</EmptyText>
+              )}
               {results.shortcuts.length ? (
-                <Card title="Go to">
-                  {/* Tabs: tapping one switches to it (no star; they're always in the tab bar). */}
-                  {results.shortcuts.map((item) => (
-                    <ToolRow key={item.href} item={item} onPress={() => router.navigate(toolRoute(item.href))} />
-                  ))}
-                </Card>
+                // Tabs: tapping one switches to it (no star; they're always in the tab bar).
+                <ToolSection title="Go to" items={results.shortcuts} onOpen={(item) => router.navigate(toolRoute(item.href))} />
               ) : null}
             </>
           ) : (
             <>
               {favoriteTools.length ? (
-                <Card plain title="Favorites">
-                  <View className="gap-3">
-                    {chunk(favoriteTools, 2).map((pair, i) => (
-                      <View key={i} className="flex-row gap-3">
-                        {pair.map((item) => (
-                          <ToolTile key={item.href} item={item} favorited onPress={() => open(item)} onToggleFavorite={() => toggleFavorite(item.href)} />
-                        ))}
-                        {pair.length === 1 ? <View className="flex-1" /> : null}
-                      </View>
-                    ))}
-                  </View>
-                </Card>
+                <View className="gap-1.5">
+                  <SectionHeader title="Favorites" />
+                  <ToolTiles items={favoriteTools} favorites={favorites} onOpen={open} onToggleFavorite={toggleFavorite} />
+                </View>
               ) : null}
-              <Card title="Everyday">
-                <View className="gap-2">{EVERYDAY.map(row)}</View>
-              </Card>
-              {GROUPS.map(({ category, items }) => (
-                <Card key={category} title={category}>
-                  <View className="gap-2">{items.map(row)}</View>
-                </Card>
+              <ToolSection title="Everyday" items={EVERYDAY} favorites={favorites} onOpen={open} onToggleFavorite={toggleFavorite} />
+              {GROUPS.map(({ title, items }) => (
+                <ToolSection key={title} title={title} items={items} favorites={favorites} onOpen={open} onToggleFavorite={toggleFavorite} />
               ))}
             </>
           )}

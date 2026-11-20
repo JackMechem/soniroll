@@ -14,10 +14,8 @@ import {
 import { MAX_BEATS } from '@jam-practice/core/meters';
 import { analyze, detectStrokes, takeOverview, type Analysis, type AnalysisParams, type Calibration, type Take } from '@jam-practice/core/timeTestAnalysis';
 import { HISTORY_LIMIT, type TakeSummary } from '@jam-practice/core/timeTestTiming';
-import { Stack } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
 import {
@@ -35,7 +33,7 @@ import {
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { Analytics } from '@/components/timeTest/Analytics';
 import { HistoryList, LiveFeedback, MicSheet } from '@/components/timeTest/parts';
-import { Field, TextButton } from '@/components/tool/ear';
+import { Field } from '@/components/tool/ear';
 import {
   BigButton,
   MeterQuickPicks,
@@ -49,7 +47,8 @@ import {
 } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { ChoiceCards, CountField } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { useDeviceSettings } from '@/lib/useDeviceSettings';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { takeDetail, type Detail } from '@/lib/timeTestPeaks';
@@ -69,6 +68,7 @@ import {
 } from '@/lib/timeTestSession';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /** The web's Time Test icon is a target. */
 function TargetIcon({ color, size = 18 }: IconProps) {
@@ -171,10 +171,11 @@ function detailFor(take: Take): Detail {
 
 /**
  * The Time Test, the website's tool for the phone: play along to the click on a practice pad, the
- * mic finds every stroke, and it shows how far off each one was. The tempo and beats, the big
- * Record button, the live readout while you play, then the setting chips (Time, Subdivision,
- * Sound, Count-in, You're playing, On time within, Microphone); a take's results open under them.
- * History is a chip above the tempo once there's a take.
+ * mic finds every stroke, and it shows how far off each one was. On `ToolFrame`: History (a chip,
+ * once there's a take) above; the tempo and beats in the middle, the live readout while you play
+ * and a take's results under them (that part scrolls once there are results); the footer holds a
+ * status line, Calibrate / Record and the chips (Time, You're playing, On time within,
+ * Microphone; Subdivision, Sound and Count-in under "3 more").
  *
  * Same settings keys and defaults as the website (the mic's sensitivity and latency stay on this
  * phone). The engine is `lib/timeTestSession.ts`; the detector and the grading are the website's
@@ -188,6 +189,7 @@ function TimeTestScreen() {
   const engine = useSyncExternalStore(subscribeTimeTest, getTimeTestSnapshot);
   const { phase, tick, liveHits, playing } = engine;
   useToolActivity('/time-test', phase !== 'idle');
+  useKeepAwakeWhile(phase !== 'idle' || playing);
 
   const bpm = clampBpm(settings.bpm);
   const beatsPerBar = Math.min(MAX_BEATS, Math.max(1, Math.round(settings.beatsPerBar)));
@@ -371,217 +373,223 @@ function TimeTestScreen() {
 
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+  // Until the phone's delay is measured, calibrating is the main button (once it's done, Record
+  // is); recording anyway is beside it. Calibrating again lives in the Microphone sheet.
+  const action = recording ? (
+    <BigButton label="Stop and analyze" onPress={stopAndAnalyze} icon={<StopIcon color={colors['accent-foreground']} size={18} />} />
+  ) : calibrating ? (
+    <BigButton label="Calibrating… stay quiet" secondary disabled onPress={() => {}} />
+  ) : !calibrated && !analyzing ? (
+    <View className="flex-row gap-2">
+      <View className="flex-1">
+        <BigButton label="Calibrate" onPress={calibrate} icon={<MicrophoneIcon color={colors['accent-foreground']} size={18} />} />
+      </View>
+      <View className="flex-1">
+        <BigButton label="Record anyway" secondary onPress={record} />
+      </View>
+    </View>
+  ) : (
+    <BigButton label="Record" onPress={record} disabled={analyzing} icon={<RecordIcon color={colors['accent-foreground']} size={18} />} />
+  );
+
+  // One line of status over the button: what to do first, the take's time, working it out, or a
+  // problem. (How calibrating works is in the intro, the header's ?.)
+  const problem = error ?? (!calibrated && calibration && !calibration.ok ? calibration.message : null) ?? (!calibrated ? calibrateError : null);
+  const status = problem ? (
+    <Text numberOfLines={2} className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+      {problem}
+    </Text>
+  ) : recording && countInLeft === null ? (
+    <View className="flex-row items-center justify-center gap-2">
+      <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.danger }} />
+      <Text className="font-ui text-sm" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+        Recording {mmss(elapsed)}
+        {elapsed > MAX_TAKE_SEC - 60 ? ` · stops at ${mmss(MAX_TAKE_SEC)}` : ''}
+      </Text>
+    </View>
+  ) : analyzing ? (
+    <View className="flex-row items-center justify-center gap-2">
+      <ActivityIndicator color={colors.muted} />
+      <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+        Working out your timing…
+      </Text>
+    </View>
+  ) : !calibrated && !calibrating && !recording ? (
+    <Text numberOfLines={1} className="font-ui text-center text-sm" style={{ color: colors.muted }}>
+      Calibrate first: it measures your phone&apos;s delay.
+    </Text>
+  ) : null;
+
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Time Test' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView
-          ref={scrollRef}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={TOOL_CONTENT}
-        >
-          {history.takes.length > 0 ? (
-            <View className="items-center">
-              <SettingChip Icon={HistoryIcon} label="History" value={`${history.takes.length} take${history.takes.length === 1 ? '' : 's'}`}>
-                <HistoryList takes={history.takes} onClear={() => updateHistory({ takes: [] })} />
-              </SettingChip>
-            </View>
-          ) : null}
-
-          <View className="items-center gap-4">
-            <TempoHero
-              bpm={bpm}
-              setBpm={(v) => update({ bpm: clampBpm(v) })}
-              beatsPerBar={beatsPerBar}
-              beatUnit={beatUnit}
-              onTap={tap}
-              locked={recording || calibrating}
-              tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => update({ tempoNoteValue: v })} />}
-            />
-            <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={beatUnit} />
-            <BeatIndicator
-              accents={accents}
-              currentBeat={recording && tick ? tick.beat : null}
-              onCycle={cycleBeat}
-              subdivision={subdivision}
-              subAccents={subAccents}
-              currentSub={tick?.sub ?? 0}
-              onCycleSub={cycleSub}
-              cycleHint
-            />
-          </View>
-
-          {recording ? <LiveFeedback hits={liveHits} toleranceMs={settings.toleranceMs} countInLeft={countInLeft} /> : null}
-
-          <View className="items-center gap-3">
-            {/* Until the phone's delay is measured, calibrating is the main button (once it's
-                done, Record is). Calibrating again lives in the Microphone sheet. */}
-            {recording ? (
-              <BigButton label="Stop and analyze" onPress={stopAndAnalyze} icon={<StopIcon color={colors['accent-foreground']} size={18} />} />
-            ) : calibrating ? (
-              <BigButton label="Calibrating… stay quiet" secondary disabled onPress={() => {}} />
-            ) : !calibrated && !analyzing ? (
-              <>
-                <Text className="font-ui max-w-xs text-center text-sm leading-5" style={{ color: colors.muted }}>
-                  First, calibrate: it plays 12 clicks through the speaker and measures your phone&apos;s delay. Stay quiet while it listens.
-                </Text>
-                <BigButton label="Calibrate" onPress={calibrate} icon={<MicrophoneIcon color={colors['accent-foreground']} size={18} />} />
-                {calibration && !calibration.ok ? (
-                  <Text className="font-ui px-4 text-center text-sm" style={{ color: colors.danger }}>
-                    {calibration.message}
-                  </Text>
-                ) : null}
-                {calibrateError ? (
-                  <Text className="font-ui px-4 text-center text-sm" style={{ color: colors.danger }}>
-                    {calibrateError}
-                  </Text>
-                ) : null}
-                <TextButton label="Record without calibrating" onPress={record} />
-              </>
-            ) : (
-              <BigButton label="Record" onPress={record} disabled={analyzing} icon={<RecordIcon color={colors['accent-foreground']} size={18} />} />
-            )}
-            {recording && countInLeft === null ? (
-              <View className="flex-row items-center gap-2">
-                <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.danger }} />
-                <Text className="font-ui text-sm" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
-                  Recording {mmss(elapsed)}
-                  {elapsed > MAX_TAKE_SEC - 60 ? ` · stops at ${mmss(MAX_TAKE_SEC)}` : ''}
-                </Text>
-              </View>
-            ) : null}
-            {analyzing ? (
-              <View className="flex-row items-center gap-2">
-                <ActivityIndicator color={colors.muted} />
-                <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                  Working out your timing…
-                </Text>
-              </View>
-            ) : null}
-            {error ? (
-              <Text className="font-ui px-4 text-center text-sm" style={{ color: colors.danger }}>
-                {error}
-              </Text>
-            ) : null}
-          </View>
-
+    <ToolFrame
+      title="Time Test"
+      side={
+        history.takes.length > 0 ? (
           <SettingsBar>
-            <SettingChip Icon={MeterIcon} label="Time" title="Time signature" value={`${beatsPerBar}/${beatUnit}`}>
-              <TimeSignatureControl
-                beatsPerBar={beatsPerBar}
-                beatUnit={beatUnit}
-                onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
-                onSetBeatUnit={(u) => update({ beatUnit: u })}
-              />
-              <MeterQuickPicks
-                meters={COMMON_METERS}
-                beatsPerBar={beatsPerBar}
-                beatUnit={beatUnit}
-                onPick={(b, u) => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
-              />
-            </SettingChip>
-            <SettingChip Icon={SubdivisionChipIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? String(subdivision)}>
-              <SubdivisionPicker value={subdivision} onChange={(n) => update({ subdivision: n })} />
-            </SettingChip>
-            <SettingChip Icon={SpeakerIcon} label="Sound" value={soundSummary(soundId, volume)}>
-              <SoundPicker soundId={soundId} setSoundId={(id) => update({ soundId: id })} volume={volume} setVolume={(v) => update({ volume: v })} />
-            </SettingChip>
-            <SettingChip Icon={StopwatchIcon} label="Count-in" value={countInBars === 0 ? 'Off' : `${countInBars} bar${countInBars === 1 ? '' : 's'}`}>
-              <CountField
-                title="Bars of click before grading starts"
-                value={countInBars}
-                onChange={(n) => update({ countInBars: n })}
-                min={0}
-                max={8}
-                unit={['bar', 'bars']}
-              />
-            </SettingChip>
-            <SettingChip Icon={DrumIcon} label="You're playing" title="What you're playing" value={notesValue}>
-              <Field
-                label="Grid"
-                hint={`Each stroke is graded against the nearest note of this grid. "Work it out" decides beat by beat, so you can move between quarters, 8ths, triplets and 16ths as you play. Choose one to hold every beat to it, so notes you leave out count as missed.`}
-              >
-                <Segmented
-                  label="Grid"
-                  value={settings.notesPerBeat === 0 ? 'auto' : 'choose'}
-                  onChange={(v) => update({ notesPerBeat: v === 'auto' ? 0 : subdivision === 1 ? 4 : subdivision })}
-                  options={[
-                    { value: 'auto', label: 'Work it out' },
-                    { value: 'choose', label: 'Choose' },
-                  ]}
-                />
-              </Field>
-              {settings.notesPerBeat !== 0 ? <SubdivisionPicker value={settings.notesPerBeat} onChange={(n) => update({ notesPerBeat: n })} /> : null}
-            </SettingChip>
-            <SettingChip Icon={TargetIcon} label="On time within" value={`±${settings.toleranceMs} ms`}>
-              <Field label="Strokes this close to the click count as on time" hint="±10 ms is tight; very steady players are often within ±5 ms.">
-                <ChoiceCards
-                  label="On time within"
-                  options={TOLERANCES.map((t) => ({ value: t, label: `±${t} ms` }))}
-                  value={settings.toleranceMs}
-                  onChange={(t) => update({ toleranceMs: t })}
-                  cardWidth="30%"
-                />
-              </Field>
-            </SettingChip>
-            <SettingChip
-              Icon={MicrophoneIcon}
-              label="Microphone"
-              title="Microphone and latency"
-              open={micOpen}
-              onOpenChange={setMicOpen}
-              value={calibrated ? `${latencyMs.toFixed(1)} ms delay` : `${Math.round(micSettings.sensitivity * 100)}% sensitivity`}
-            >
-              <MicSheet
-                sensitivity={micSettings.sensitivity}
-                setSensitivity={(v) => updateMic({ sensitivity: v })}
-                latencyMs={latencyMs}
-                setLatencyMs={(v) => updateMic({ latencyMs: v, calibrated: true })}
-                calibrated={calibrated}
-                rejectBleed={micSettings.rejectBleed}
-                setRejectBleed={(v) => updateMic({ rejectBleed: v })}
-                calibrating={calibrating}
-                onCalibrate={calibrate}
-                lastCalibration={calibration}
-                calibrateError={calibrateError}
-                micError={engine.micError}
-                busy={recording}
-              />
+            <SettingChip Icon={HistoryIcon} label="History" value={`${history.takes.length} take${history.takes.length === 1 ? '' : 's'}`}>
+              <HistoryList takes={history.takes} onClear={() => updateHistory({ takes: [] })} />
             </SettingChip>
           </SettingsBar>
-
-          {result && analysis ? (
-            <View
-              onLayout={(e) => {
-                resultsY.current = e.nativeEvent.layout.y;
-                if (scrollToResults.current) {
-                  scrollToResults.current = false;
-                  scrollRef.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 8), animated: true });
-                }
-              }}
+        ) : null
+      }
+      action={
+        <View className="gap-2">
+          {status}
+          {action}
+        </View>
+      }
+      chips={
+        <SettingsBar>
+          <SettingChip Icon={MeterIcon} label="Time" title="Time signature" value={`${beatsPerBar}/${beatUnit}`}>
+            <TimeSignatureControl
+              beatsPerBar={beatsPerBar}
+              beatUnit={beatUnit}
+              onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
+              onSetBeatUnit={(u) => update({ beatUnit: u })}
+            />
+            <MeterQuickPicks
+              meters={COMMON_METERS}
+              beatsPerBar={beatsPerBar}
+              beatUnit={beatUnit}
+              onPick={(b, u) => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
+            />
+          </SettingChip>
+          <SettingChip Icon={DrumIcon} label="You're playing" title="What you're playing" value={notesValue}>
+            <Field
+              label="Grid"
+              hint={`Each stroke is graded against the nearest note of this grid. "Work it out" decides beat by beat, so you can move between quarters, 8ths, triplets and 16ths as you play. Choose one to hold every beat to it, so notes you leave out count as missed.`}
             >
-              <Analytics
-                key={result.id}
-                take={result.take}
-                analysis={analysis}
-                detail={detailFor(result.take)}
-                bpm={result.bpm}
-                beatsPerBar={result.beatsPerBar}
-                playing={playing}
-                onPlay={play}
-                onStopPlayback={stopPlayback}
-                playClick={settings.playClick}
-                setPlayClick={(v) => update({ playClick: v })}
-                onTryAgain={record}
-                onOpenMic={() => setMicOpen(true)}
-                onReveal={(y) => scrollRef.current?.scrollTo({ y: Math.max(0, resultsY.current + y - 8), animated: true })}
+              <Segmented
+                label="Grid"
+                value={settings.notesPerBeat === 0 ? 'auto' : 'choose'}
+                onChange={(v) => update({ notesPerBeat: v === 'auto' ? 0 : subdivision === 1 ? 4 : subdivision })}
+                options={[
+                  { value: 'auto', label: 'Work it out' },
+                  { value: 'choose', label: 'Choose' },
+                ]}
               />
-            </View>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+            </Field>
+            {settings.notesPerBeat !== 0 ? <SubdivisionPicker value={settings.notesPerBeat} onChange={(n) => update({ notesPerBeat: n })} /> : null}
+          </SettingChip>
+          <SettingChip Icon={TargetIcon} label="On time within" value={`±${settings.toleranceMs} ms`}>
+            <Field label="Strokes this close to the click count as on time" hint="±10 ms is tight; very steady players are often within ±5 ms.">
+              <ChoiceCards
+                label="On time within"
+                options={TOLERANCES.map((t) => ({ value: t, label: `±${t} ms` }))}
+                value={settings.toleranceMs}
+                onChange={(t) => update({ toleranceMs: t })}
+                cardWidth="30%"
+              />
+            </Field>
+          </SettingChip>
+          <SettingChip
+            Icon={MicrophoneIcon}
+            label="Microphone"
+            title="Microphone and latency"
+            open={micOpen}
+            onOpenChange={setMicOpen}
+            value={calibrated ? `${latencyMs.toFixed(1)} ms delay` : `${Math.round(micSettings.sensitivity * 100)}% sensitivity`}
+          >
+            <MicSheet
+              sensitivity={micSettings.sensitivity}
+              setSensitivity={(v) => updateMic({ sensitivity: v })}
+              latencyMs={latencyMs}
+              setLatencyMs={(v) => updateMic({ latencyMs: v, calibrated: true })}
+              calibrated={calibrated}
+              rejectBleed={micSettings.rejectBleed}
+              setRejectBleed={(v) => updateMic({ rejectBleed: v })}
+              calibrating={calibrating}
+              onCalibrate={calibrate}
+              lastCalibration={calibration}
+              calibrateError={calibrateError}
+              micError={engine.micError}
+              busy={recording}
+            />
+          </SettingChip>
+          <SettingChip Icon={SubdivisionChipIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? String(subdivision)}>
+            <SubdivisionPicker value={subdivision} onChange={(n) => update({ subdivision: n })} />
+          </SettingChip>
+          <SettingChip Icon={SpeakerIcon} label="Sound" value={soundSummary(soundId, volume)}>
+            <SoundPicker soundId={soundId} setSoundId={(id) => update({ soundId: id })} volume={volume} setVolume={(v) => update({ volume: v })} />
+          </SettingChip>
+          <SettingChip Icon={StopwatchIcon} label="Count-in" value={countInBars === 0 ? 'Off' : `${countInBars} bar${countInBars === 1 ? '' : 's'}`}>
+            <CountField
+              title="Bars of click before grading starts"
+              value={countInBars}
+              onChange={(n) => update({ countInBars: n })}
+              min={0}
+              max={8}
+              unit={['bar', 'bars']}
+            />
+          </SettingChip>
+        </SettingsBar>
+      }
+      scroll={false}
+    >
+      {/* The tempo and beats sit in the middle of the space; a take's results open under them
+          (then this part scrolls, and jumps to them). */}
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 16 }}
+      >
+        <View className="items-center gap-4">
+          <TempoHero
+            bpm={bpm}
+            setBpm={(v) => update({ bpm: clampBpm(v) })}
+            beatsPerBar={beatsPerBar}
+            beatUnit={beatUnit}
+            onTap={tap}
+            locked={recording || calibrating}
+            tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(v) => update({ tempoNoteValue: v })} />}
+          />
+          <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={beatUnit} />
+          <BeatIndicator
+            accents={accents}
+            currentBeat={recording && tick ? tick.beat : null}
+            onCycle={cycleBeat}
+            subdivision={subdivision}
+            subAccents={subAccents}
+            currentSub={tick?.sub ?? 0}
+            onCycleSub={cycleSub}
+            cycleHint
+          />
+        </View>
+
+        {recording ? <LiveFeedback hits={liveHits} toleranceMs={settings.toleranceMs} countInLeft={countInLeft} /> : null}
+
+        {result && analysis ? (
+          <View
+            onLayout={(e) => {
+              resultsY.current = e.nativeEvent.layout.y;
+              if (scrollToResults.current) {
+                scrollToResults.current = false;
+                scrollRef.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 8), animated: true });
+              }
+            }}
+          >
+            <Analytics
+              key={result.id}
+              take={result.take}
+              analysis={analysis}
+              detail={detailFor(result.take)}
+              bpm={result.bpm}
+              beatsPerBar={result.beatsPerBar}
+              playing={playing}
+              onPlay={play}
+              onStopPlayback={stopPlayback}
+              playClick={settings.playClick}
+              setPlayClick={(v) => update({ playClick: v })}
+              onTryAgain={record}
+              onOpenMic={() => setMicOpen(true)}
+              onReveal={(y) => scrollRef.current?.scrollTo({ y: Math.max(0, resultsY.current + y - 8), animated: true })}
+            />
+          </View>
+        ) : null}
+      </ScrollView>
+    </ToolFrame>
   );
 }
 

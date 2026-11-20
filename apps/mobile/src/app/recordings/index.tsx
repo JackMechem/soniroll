@@ -6,7 +6,7 @@ import { FlatList, Text, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { EmptyState, IconButton, SearchField } from '@/components/ui';
+import { EmptyState, IconButton, SearchField, SignInGate } from '@/components/ui';
 import { LibraryHeader } from '@/components/TabHeader';
 import { MicrophoneIcon } from '@/components/icons';
 import { RecordingRow, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
@@ -21,7 +21,7 @@ function RecordingsScreen() {
   const bottomSpace = useTabBarSpace();
   const { colors } = useAppTheme();
   const router = useRouter();
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : 'skip'));
   const { byId } = useTuneIndex();
   const player = useRecordingPlayer();
@@ -42,7 +42,8 @@ function RecordingsScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView edges={['top']}>
-        <LibraryHeader right={<IconButton primary Icon={MicrophoneIcon} label="Record" onPress={() => router.push('/tool/recorder')} />} />
+        {/* Recording needs an account, so no Record button until you're signed in. */}
+        <LibraryHeader right={isAuthenticated ? <IconButton primary Icon={MicrophoneIcon} label="Record" onPress={() => router.push('/tool/recorder')} /> : undefined} />
       </SafeAreaView>
       {recordings?.length ? (
         <View className="px-4 pb-2 pt-3">
@@ -55,13 +56,8 @@ function RecordingsScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: recordings?.length ? 0 : 16, paddingBottom: bottomSpace, gap: 10 }}
         ListEmptyComponent={
-          !isAuthenticated ? (
-            <EmptyState
-              Icon={MicrophoneIcon}
-              title="Your recordings"
-              body="Sign in to record takes, name them, keep notes and link them to your tunes."
-              action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
-            />
+          isLoading ? null : !isAuthenticated ? (
+            <SignInGate Icon={MicrophoneIcon} title="Your recordings" body="Record takes, name them, keep notes and link them to your tunes. Free with an account." />
           ) : query ? (
             <Text className="font-ui py-12 text-center text-sm" style={{ color: colors.muted }}>
               No recordings match “{query}”.

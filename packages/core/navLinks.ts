@@ -27,6 +27,9 @@ export interface NavLinkInfo {
   /** A shorter name for the sidebar's tool list, where the section heading gives the context
       (e.g. "Intervals" under Ear training). Search, titles and everything else use `label`. */
   short?: string;
+  /** One short line (about 45 characters at most, plain words) saying what the tool does, for
+      the phone's tool lists, where `description` is cut off. The website doesn't use it. */
+  blurb?: string;
   /** Needs a desktop-sized screen on web (Recorder); not meaningful on mobile, kept for parity
       with the web list so both sides describe the exact same tools the exact same way. */
   desktopOnly?: boolean;
@@ -37,18 +40,21 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     href: "/jam-practice",
     label: "Jam Practice",
     description: "Build a tune list, pick one at random and get counted in at the right tempo.",
+    blurb: "Pick a tune at random and get counted in",
     category: "Play along",
   },
   {
     href: "/rhythm-section",
     label: "Rhythm Section",
     description: "Drums in over 30 styles to play along with. Add one of your chord charts and an upright bass and piano play it too.",
+    blurb: "A drummer, bassist and pianist to play with",
     category: "Play along",
   },
   {
     href: "/note-trainer",
     label: "Note Trainer",
     description: "Random notes in your instrument's range, with a listen mode that grades you.",
+    blurb: "Random notes to find on your instrument",
     category: "On your instrument",
   },
   {
@@ -56,12 +62,14 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Scale Trainer",
     description:
       "Random scales in your instrument's range, with a listen mode that grades you note by note.",
+    blurb: "Random scales to play, checked note by note",
     category: "On your instrument",
   },
   {
     href: "/interval-trainer",
     label: "Interval Trainer",
     description: "Random intervals in your instrument's range, with a listen mode that grades you.",
+    blurb: "Random intervals to play on your instrument",
     category: "On your instrument",
   },
   {
@@ -70,6 +78,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     short: "Intervals",
     description:
       "Hear an interval and pick which one it is, against the same countdown-timed rounds as Interval Trainer.",
+    blurb: "Hear an interval and name it",
     category: "Ear training",
   },
   {
@@ -78,6 +87,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     short: "Chords",
     description:
       "Hear a chord — including weird slash chords — and type its symbol, iReal-Pro style (F#^7, Ab-7/D, ...).",
+    blurb: "Hear a chord and name it",
     category: "Ear training",
   },
   {
@@ -86,6 +96,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     short: "Progressions",
     description:
       "Hear a chord progression and type it in Roman numerals (ii7 V7 I^7) or as chord names, from a pool of common jazz, pop and minor progressions.",
+    blurb: "Hear a chord progression and name it",
     category: "Ear training",
   },
   {
@@ -94,6 +105,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     short: "Rootless voicings",
     description:
       "Hear a rootless voicing (E♭ G B♭ D) and sing, play or pick the root that makes it the chord asked for (C for a C minor 9).",
+    blurb: "Hear a chord without its root, find the root",
     category: "Ear training",
   },
   {
@@ -101,6 +113,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Shed Log",
     description:
       "A practice calendar: repeating routines with tasks to check off and times for each, run on the Practice Timer, with notes, recordings and tunes, setlists and charts attached to each day.",
+    blurb: "Your practice calendar, routines and streak",
     category: "Practice tools",
   },
   {
@@ -108,6 +121,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Shed Notes",
     description:
       "Notes for your practice in markdown: link them together with [[ ]], write music notation in them, attach them to Shed Log routines and tunes, and use vim keys if you like.",
+    blurb: "Notes for your practice, linked together",
     category: "Practice tools",
   },
   {
@@ -115,6 +129,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Score Writer",
     description:
       "Write music in notation — notes, rests, ties, triplets and chord symbols in any key and time, typed or clicked onto the staff — and play it back. Your scores can go in Shed Notes too.",
+    blurb: "Write music on the staff and play it back",
     category: "Practice tools",
   },
   {
@@ -122,12 +137,14 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Practice Timer",
     description:
       "Chain named timers back to back — scales, a break, a tune — or run a configurable Pomodoro. Save sessions to replay later.",
+    blurb: "Timers in a row, one for each thing you play",
     category: "Practice tools",
   },
   {
     href: "/metronome",
     label: "Metronome",
     description: "Any time signature, custom accents, subdivisions and tap tempo.",
+    blurb: "Any time signature, accents and tap tempo",
     category: "Time & rhythm",
   },
   {
@@ -135,6 +152,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Polyrhythm Metric Modulation Metronome",
     short: "Metric Modulation",
     description: "A metronome that jumps to a new, mathematically related tempo every few bars.",
+    blurb: "A click that jumps to a related tempo",
     category: "Time & rhythm",
   },
   {
@@ -142,24 +160,28 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Tempo Trainer",
     description:
       "A metronome that cuts out for a few bars at a time, so you can practice holding the tempo on your own.",
+    blurb: "A click that drops out to test your time",
     category: "Time & rhythm",
   },
   {
     href: "/tuner",
     label: "Tuner",
     description: "Tune by ear or by mic with a tone generator, for strings, brass and reeds.",
+    blurb: "Tune by ear or with the mic",
     category: "On your instrument",
   },
   {
     href: "/slow-downer",
     label: "Slow Downer",
     description: "Load a song, slow it down without changing pitch and loop the tricky parts.",
+    blurb: "Slow a song down and loop the hard parts",
     category: "Play along",
   },
   {
     href: "/recorder",
     label: "Recorder",
     description: "Record a take with an optional metronome, save it to your account and link it to a tune.",
+    blurb: "Record a take and link it to a tune",
     category: "Practice tools",
   },
   {
@@ -168,6 +190,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     short: "Sticking Warmup",
     description:
       "A drummer's warmup: a random sticking pattern paired with a roll, written out and counted in by a metronome.",
+    blurb: "A random sticking and roll to warm up with",
     category: "Drums",
   },
   {
@@ -175,6 +198,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Time Test",
     description:
       "Play along to the click on a practice pad and see how far off it every stroke was: early or late, by how much, and where.",
+    blurb: "See how close to the click each stroke was",
     category: "Drums",
   },
   {
@@ -182,6 +206,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Syncopation",
     description:
       "Random 16-bar snare reading exercises — quarters, eighths, sixteenths and triplets — over a steady bass drum or hi-hat, written out and played.",
+    blurb: "Snare reading over a steady beat",
     category: "Drums",
   },
   {
@@ -189,6 +214,7 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Community",
     description:
       "Search public profiles for other musicians — see what they play and which tunes they know.",
+    blurb: "Find other musicians and what they play",
     category: "Community",
   },
   {
@@ -196,18 +222,21 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Library",
     description:
       "Your library: the tunes you know and the ones you're learning, setlists, chord charts and files.",
+    blurb: "Your tunes, setlists, charts and files",
     category: "Community",
   },
   {
     href: "/chord-charts",
     label: "Chord Charts",
     description: "Import, build, and read chord charts, styled to match the rest of the site.",
+    blurb: "Read, build and import chord charts",
     category: "Community",
   },
   {
     href: "/lessons",
     label: "Lessons",
     description: "Teach with soniroll: a page per lesson with notes, assignments, PDFs and charts, Shed Log routines, booking, and your students' practice. Or open your teacher's link.",
+    blurb: "Lesson pages for teachers and students",
     category: "Community",
   },
 ];

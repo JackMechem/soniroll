@@ -39,7 +39,7 @@ export function ToolTimeCard({ icon, sounds }: { icon?: React.ReactNode; sounds:
           const Icon = NAV_LINK_ICONS[href];
           const cat = CATEGORY_OF.get(href);
           return (
-            <View key={href} className="min-h-[48px] flex-row items-center gap-3 rounded-lg px-3 py-1.5" style={{ backgroundColor: derived.fill }}>
+            <View key={href} className="min-h-[48px] flex-row items-center gap-3 pt-3" style={{ borderTopWidth: 1, borderTopColor: derived.hairline }}>
               {Icon ? <Icon color={cat ? derived.category[cat] : colors.muted} size={20} /> : null}
               <View className="flex-1">
                 <Text numberOfLines={1} className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>

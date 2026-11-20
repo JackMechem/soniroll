@@ -21,10 +21,11 @@ export function HeaderBackButton() {
       accessibilityLabel="Go back"
       accessibilityRole="button"
       hitSlop={8}
-      className="h-9 w-9 items-center justify-center rounded-full"
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="h-10 w-10 items-center justify-center overflow-hidden rounded-full"
       style={{ backgroundColor: derived.fill, marginRight: 12 }}
     >
-      <ArrowLeftIcon color={colors.foreground} size={18} />
+      <ArrowLeftIcon color={colors.foreground} size={20} />
     </Pressable>
   );
 }

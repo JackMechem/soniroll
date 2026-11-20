@@ -32,10 +32,10 @@ import { SwitchRow } from '@/components/SwitchRow';
 import {
   Field,
   HistoryChip,
+  IDLE_RING,
   IdleHint,
-  IdleSummary,
+  IdleStatus,
   MutedText,
-  OptionsArea,
   Pill,
   PillChoice,
   PoolHeader,
@@ -63,6 +63,7 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/IntervalTrainer.tsx`. Same two-note-round grading loop as
@@ -263,6 +264,7 @@ function IntervalTrainerScreen() {
   const [nextRound, setNextRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/interval-trainer', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -808,33 +810,258 @@ function IntervalTrainerScreen() {
   const showSide = listenMode && !running && (history.length > 0 || weakEntries.length > 0);
   const locked = running ? <SheetText>Stop to change these.</SheetText> : null;
 
+  const chipList = (
+    <>
+      <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
+        {locked}
+        <PoolHeader
+          count={pool.length}
+          total={INTERVALS.length}
+          disabled={running}
+          onAll={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}
+          onNone={() => updateSettings({ intervalIds: [] })}
+          hint="Which intervals can be picked for a round. At least one must stay selected."
+        />
+        <View className="flex-row flex-wrap gap-1.5">
+          {INTERVALS.map((interval) => {
+            const selected = settings.intervalIds.includes(interval.id);
+            return (
+              <Pill
+                key={interval.id}
+                on={selected}
+                label={interval.label}
+                disabled={running}
+                onPress={() =>
+                  updateSettings({
+                    intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
+                  })
+                }
+              />
+            );
+          })}
+        </View>
+        <SwitchRow
+          label="Include descending intervals"
+          checked={includeDescending}
+          onChange={(v) => updateSettings({ includeDescending: v })}
+          disabled={running}
+          hint="Lets a round ask for the interval below the starting note, not just above it."
+        />
+      </SettingChip>
+
+      <SettingChip Icon={NoteIcon} label="Range" value={rangeSummary}>
+        {locked}
+        <SwitchRow
+          label="Ignore octave"
+          checked={ignoreOctave}
+          onChange={(v) => updateSettings({ ignoreOctave: v })}
+          disabled={running}
+          hint="Hides the octave number (e.g. Major 3rd instead of C4 Major 3rd) and accepts either note played in any octave."
+        />
+        <Field label="Accidentals" hint="How sharps and flats are spelled, e.g. C# vs Db.">
+          <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} disabled={running} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+        </Field>
+        <Field label="Instrument" hint="Sets the range starting notes are drawn from, to match what you're practicing on.">
+          <Dropdown
+            value={instrumentId}
+            options={[
+              ...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })),
+              { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' },
+            ]}
+            onChange={(v) => updateSettings({ instrumentId: v })}
+          />
+        </Field>
+        {isCustom ? (
+          <Field label="Custom range" hint="The lowest and highest notes to draw starting notes from, e.g. A1-A6.">
+            <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} editable={!running} placeholder="A1-A6" />
+          </Field>
+        ) : null}
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Time per interval" value={`${roundSeconds} s`}>
+        {locked}
+        <SliderField
+          label="Time per interval"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={0.5}
+          disabled={running}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint={
+            listenMode
+              ? "How long you have to finish playing each round before it's marked a miss and moves on."
+              : 'How long each round stays on screen before the next one shows.'
+          }
+        />
+        {listenMode ? (
+          <SliderField
+            label="Time between rounds"
+            value={advanceDelayMs / 1000}
+            unit=" s"
+            min={MIN_ADVANCE_DELAY_MS / 1000}
+            max={MAX_ADVANCE_DELAY_MS / 1000}
+            step={0.25}
+            disabled={running}
+            onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+            hint="How long the graded round stays on screen before the next one starts."
+          />
+        ) : null}
+      </SettingChip>
+
+      {listenMode ? (
+        <SettingChip Icon={MicrophoneIcon} label="Microphone" value={SENSITIVITY[sensitivity].label.split(' (')[0]}>
+          {locked}
+          <SwitchRow
+            label="Sound feedback"
+            checked={soundFeedback}
+            onChange={(v) => updateSettings({ soundFeedback: v })}
+            disabled={running}
+            hint="A click each second of the countdown, plus a click the instant a round is graded."
+          />
+          <SwitchRow
+            label="Continue from previous note"
+            checked={chainIntervals}
+            onChange={(v) => updateSettings({ chainIntervals: v })}
+            disabled={running || drillMode}
+            hint="After the first round, each one continues from where the last interval left off instead of a fresh starting note."
+          />
+          <SwitchRow
+            label="Drill every interval"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            disabled={running || chainIntervals}
+            hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
+          />
+          {!drillMode ? (
+            <SliderField
+              label="Number of rounds"
+              value={roundCount}
+              min={MIN_ROUND_COUNT}
+              max={MAX_ROUND_COUNT}
+              step={1}
+              disabled={running}
+              onChange={(v) => updateSettings({ roundCount: v })}
+              hint="How many intervals make up one session."
+            />
+          ) : null}
+          <SheetDivider title="Advanced" />
+          <SliderField
+            label="Tuning tolerance"
+            value={toleranceCents}
+            unit="¢"
+            min={10}
+            max={100}
+            step={5}
+            disabled={running}
+            onChange={(v) => updateSettings({ toleranceCents: v })}
+            hint="How many cents off pitch still counts as correct, so a slightly out-of-tune instrument still passes."
+          />
+          <SliderField
+            label="Note hold time"
+            value={holdMs}
+            unit=" ms"
+            min={30}
+            max={300}
+            step={30}
+            disabled={running}
+            onChange={(v) => updateSettings({ holdMs: v })}
+            hint="How long a pitch has to stay steady before it's graded, so a quick slide or slip isn't counted."
+          />
+          <SliderField
+            label="Reference pitch (A4)"
+            value={refA}
+            unit=" Hz"
+            min={MIN_REF}
+            max={MAX_REF}
+            step={1}
+            disabled={running}
+            onChange={(v) => updateSettings({ refA: v })}
+            hint="The frequency concert A is tuned to. 440 is standard."
+          />
+          <Field label="Input sensitivity" hint="How quiet a signal can be before it's treated as silence — raise it in a noisy room.">
+            <PillChoice
+              label="Input sensitivity"
+              value={sensitivity}
+              options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
+              disabled={running}
+              onChange={(v) => updateSettings({ sensitivity: v })}
+            />
+          </Field>
+          <SwitchRow
+            label="Partial credit"
+            checked={partialCredit}
+            onChange={(v) => updateSettings({ partialCredit: v })}
+            disabled={running}
+            hint="A wrong note gets one retry; missing it twice fails the round instead of failing on the first miss."
+          />
+          <SwitchRow
+            label="Ignore repeated notes"
+            checked={ignoreRepeatedNotes}
+            onChange={(v) => updateSettings({ ignoreRepeatedNotes: v })}
+            disabled={running}
+            hint="A fresh attack of the note you just played (e.g. a double pluck) is ignored instead of graded as wrong."
+          />
+          <SheetButton
+            label="Reset advanced settings"
+            disabled={running}
+            onPress={() =>
+              updateSettings({
+                toleranceCents: DEFAULT_SETTINGS.toleranceCents,
+                holdMs: DEFAULT_SETTINGS.holdMs,
+                refA: DEFAULT_SETTINGS.refA,
+                sensitivity: DEFAULT_SETTINGS.sensitivity,
+                partialCredit: DEFAULT_SETTINGS.partialCredit,
+                ignoreRepeatedNotes: DEFAULT_SETTINGS.ignoreRepeatedNotes,
+              })
+            }
+          />
+        </SettingChip>
+      ) : null}
+
+      <SettingChip
+        Icon={ToneIcon}
+        label="Sound & display"
+        value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showIntervalNotes ? ' · notes shown' : ''}`}
+      >
+        <SwitchRow
+          label="Play interval out loud"
+          checked={playSound && !listenMode}
+          onChange={(v) => updateSettings({ playSound: v })}
+          disabled={listenMode}
+          hint="Plays both notes of the interval in order as it appears. Not available in listen mode."
+        />
+        <SwitchRow
+          label="Show next interval"
+          checked={showNext}
+          onChange={(v) => updateSettings({ showNext: v })}
+          hint="Shows a preview of the upcoming interval under the current one."
+        />
+        <SwitchRow
+          label="Show interval notes"
+          checked={showIntervalNotes}
+          onChange={(v) => updateSettings({ showIntervalNotes: v })}
+          hint="The two notes under the ring in listen mode, showing your progress through the round."
+        />
+        <Field label="Tone" hint="Which oscillator sound plays an interval out loud.">
+          <PillChoice label="Tone" value={wave} options={WAVEFORMS} disabled={!playSound || listenMode} onChange={(v) => updateSettings({ wave: v })} />
+        </Field>
+      </SettingChip>
+    </>
+  );
+
   // Saved settings not read yet — a spinner rather than defaults that then jump to the real values.
   if (!settingsReady) return <ScreenSpinner />;
 
+  // The mode switch first: it decides what the screen is.
+  // History and Struggles (listen mode), once there's something in them.
+  // Start: while the results show, their own "Try again" is the one start button.
   return (
-    <ToolScreen title="Interval Trainer">
-      {/* Listen mode's History and Struggles, once there's something in them. */}
-      {showSide ? (
-        <SettingsBar>
-          <HistoryChip
-            entries={matchingHistory}
-            bestMs={bestMs}
-            onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
-          />
-          <StrugglesChip
-            entries={weakEntries.map((e) => ({ key: e.key, label: `${e.interval.label} ${e.direction === 1 ? '↑' : '↓'}`, counts: e.counts }))}
-            shedLabel="Shed weak intervals"
-            emptyText="No struggles tracked yet — a wrong or partial round in listen mode adds it here."
-            running={running}
-            onShed={() => void start('weak')}
-            onClear={clearIntervalStats}
-          />
-        </SettingsBar>
-      ) : null}
-
-      {/* The mode decides what the screen is, so it sits above the display. */}
-      {!running ? (
-        <View className="w-full items-center">
+    <ToolScreen
+      title="Interval Trainer"
+      mode={
+        !running ? (
           <Segmented
             onPage
             label="Mode"
@@ -846,9 +1073,30 @@ function IntervalTrainerScreen() {
               { value: 'listen', label: 'Listen' },
             ]}
           />
-        </View>
-      ) : null}
-
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: `${e.interval.label} ${e.direction === 1 ? '↑' : '↓'}`, counts: e.counts }))}
+              shedLabel="Shed weak intervals"
+              emptyText="No struggles tracked yet — a wrong or partial round in listen mode adds it here."
+              running={running}
+              onShed={() => void start('weak')}
+              onClear={clearIntervalStats}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      action={!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
+      chips={chipList}
+    >
       {showingSummary && summary ? (
         <ResultsPanel
           score={score}
@@ -875,7 +1123,7 @@ function IntervalTrainerScreen() {
               />
             </View>
           ) : null}
-          <QuizRing size={168} running={running} timer={noteTimer}>
+          <QuizRing size={running ? 168 : IDLE_RING} running={running} timer={noteTimer}>
             {running ? (
               <Text
                 numberOfLines={2}
@@ -887,12 +1135,12 @@ function IntervalTrainerScreen() {
                 {noteGlyphs(mainLabel)}
               </Text>
             ) : (
-              <IdleSummary value={String(pool.length)} label={pool.length === 1 ? 'interval' : 'intervals'} detail={noteGlyphs(rangeSummary)} />
+              <IdleStatus history={listenMode ? history : []} />
             )}
           </QuizRing>
-          {/* Before the first round, say what's about to happen. */}
-          {!running ? (
-            <IdleHint>{listenMode ? 'Press Start, then play each interval. The mic checks it.' : 'Press Start, then play each interval shown.'}</IdleHint>
+          {/* Until there's history, one line of what a round is. */}
+          {!running && !(listenMode && history.length) ? (
+            <IdleHint>{listenMode ? 'Play each interval shown; the mic checks it.' : 'An interval shows; play it before the next one.'}</IdleHint>
           ) : null}
 
           {showNext && nextRound && running ? <MutedText className="text-xs">Next: {noteGlyphs(roundLabel(nextRound, roundSeed + 1))}</MutedText> : null}
@@ -949,248 +1197,6 @@ function IntervalTrainerScreen() {
           {error}
         </Text>
       ) : null}
-
-      {/* While the results show, their own "Try again" is the one start button. */}
-      {!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
-
-      <OptionsArea>
-        <SettingChip Icon={IntervalIcon} label="Intervals" value={`${pool.length} of ${INTERVALS.length}`}>
-          {locked}
-          <PoolHeader
-            count={pool.length}
-            total={INTERVALS.length}
-            disabled={running}
-            onAll={() => updateSettings({ intervalIds: INTERVALS.map((i) => i.id) })}
-            onNone={() => updateSettings({ intervalIds: [] })}
-            hint="Which intervals can be picked for a round. At least one must stay selected."
-          />
-          <View className="flex-row flex-wrap gap-1.5">
-            {INTERVALS.map((interval) => {
-              const selected = settings.intervalIds.includes(interval.id);
-              return (
-                <Pill
-                  key={interval.id}
-                  on={selected}
-                  label={interval.label}
-                  disabled={running}
-                  onPress={() =>
-                    updateSettings({
-                      intervalIds: selected ? settings.intervalIds.filter((x) => x !== interval.id) : [...settings.intervalIds, interval.id],
-                    })
-                  }
-                />
-              );
-            })}
-          </View>
-          <SwitchRow
-            label="Include descending intervals"
-            checked={includeDescending}
-            onChange={(v) => updateSettings({ includeDescending: v })}
-            disabled={running}
-            hint="Lets a round ask for the interval below the starting note, not just above it."
-          />
-        </SettingChip>
-
-        <SettingChip Icon={NoteIcon} label="Range" value={rangeSummary}>
-          {locked}
-          <SwitchRow
-            label="Ignore octave"
-            checked={ignoreOctave}
-            onChange={(v) => updateSettings({ ignoreOctave: v })}
-            disabled={running}
-            hint="Hides the octave number (e.g. Major 3rd instead of C4 Major 3rd) and accepts either note played in any octave."
-          />
-          <Field label="Accidentals" hint="How sharps and flats are spelled, e.g. C# vs Db.">
-            <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} disabled={running} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-          </Field>
-          <Field label="Instrument" hint="Sets the range starting notes are drawn from, to match what you're practicing on.">
-            <Dropdown
-              value={instrumentId}
-              options={[
-                ...INSTRUMENTS.map((i) => ({ value: i.id, label: `${i.label} (${i.range.replace('-', '–')})` })),
-                { value: CUSTOM_INSTRUMENT_ID, label: 'Custom range…' },
-              ]}
-              onChange={(v) => updateSettings({ instrumentId: v })}
-            />
-          </Field>
-          {isCustom ? (
-            <Field label="Custom range" hint="The lowest and highest notes to draw starting notes from, e.g. A1-A6.">
-              <SheetInput value={customRange} onChangeText={(v) => updateSettings({ customRange: v })} editable={!running} placeholder="A1-A6" />
-            </Field>
-          ) : null}
-        </SettingChip>
-
-        <SettingChip Icon={StopwatchIcon} label="Time per interval" value={`${roundSeconds} s`}>
-          {locked}
-          <SliderField
-            label="Time per interval"
-            value={roundSeconds}
-            unit=" s"
-            min={MIN_ROUND_SECONDS}
-            max={MAX_ROUND_SECONDS}
-            step={0.5}
-            disabled={running}
-            onChange={(v) => updateSettings({ roundSeconds: v })}
-            hint={
-              listenMode
-                ? "How long you have to finish playing each round before it's marked a miss and moves on."
-                : 'How long each round stays on screen before the next one shows.'
-            }
-          />
-          {listenMode ? (
-            <SliderField
-              label="Time between rounds"
-              value={advanceDelayMs / 1000}
-              unit=" s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              disabled={running}
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-              hint="How long the graded round stays on screen before the next one starts."
-            />
-          ) : null}
-        </SettingChip>
-
-        {listenMode ? (
-          <SettingChip Icon={MicrophoneIcon} label="Microphone" value={SENSITIVITY[sensitivity].label.split(' (')[0]}>
-            {locked}
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={(v) => updateSettings({ soundFeedback: v })}
-              disabled={running}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-            <SwitchRow
-              label="Continue from previous note"
-              checked={chainIntervals}
-              onChange={(v) => updateSettings({ chainIntervals: v })}
-              disabled={running || drillMode}
-              hint="After the first round, each one continues from where the last interval left off instead of a fresh starting note."
-            />
-            <SwitchRow
-              label="Drill every interval"
-              checked={drillMode}
-              onChange={(v) => updateSettings({ drillMode: v })}
-              disabled={running || chainIntervals}
-              hint="Plays every selected interval, in every selected direction, starting on all 12 keys, each in a random octave."
-            />
-            {!drillMode ? (
-              <SliderField
-                label="Number of rounds"
-                value={roundCount}
-                min={MIN_ROUND_COUNT}
-                max={MAX_ROUND_COUNT}
-                step={1}
-                disabled={running}
-                onChange={(v) => updateSettings({ roundCount: v })}
-                hint="How many intervals make up one session."
-              />
-            ) : null}
-            <SheetDivider title="Advanced" />
-            <SliderField
-              label="Tuning tolerance"
-              value={toleranceCents}
-              unit="¢"
-              min={10}
-              max={100}
-              step={5}
-              disabled={running}
-              onChange={(v) => updateSettings({ toleranceCents: v })}
-              hint="How many cents off pitch still counts as correct, so a slightly out-of-tune instrument still passes."
-            />
-            <SliderField
-              label="Note hold time"
-              value={holdMs}
-              unit=" ms"
-              min={30}
-              max={300}
-              step={30}
-              disabled={running}
-              onChange={(v) => updateSettings({ holdMs: v })}
-              hint="How long a pitch has to stay steady before it's graded, so a quick slide or slip isn't counted."
-            />
-            <SliderField
-              label="Reference pitch (A4)"
-              value={refA}
-              unit=" Hz"
-              min={MIN_REF}
-              max={MAX_REF}
-              step={1}
-              disabled={running}
-              onChange={(v) => updateSettings({ refA: v })}
-              hint="The frequency concert A is tuned to. 440 is standard."
-            />
-            <Field label="Input sensitivity" hint="How quiet a signal can be before it's treated as silence — raise it in a noisy room.">
-              <PillChoice
-                label="Input sensitivity"
-                value={sensitivity}
-                options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
-                disabled={running}
-                onChange={(v) => updateSettings({ sensitivity: v })}
-              />
-            </Field>
-            <SwitchRow
-              label="Partial credit"
-              checked={partialCredit}
-              onChange={(v) => updateSettings({ partialCredit: v })}
-              disabled={running}
-              hint="A wrong note gets one retry; missing it twice fails the round instead of failing on the first miss."
-            />
-            <SwitchRow
-              label="Ignore repeated notes"
-              checked={ignoreRepeatedNotes}
-              onChange={(v) => updateSettings({ ignoreRepeatedNotes: v })}
-              disabled={running}
-              hint="A fresh attack of the note you just played (e.g. a double pluck) is ignored instead of graded as wrong."
-            />
-            <SheetButton
-              label="Reset advanced settings"
-              disabled={running}
-              onPress={() =>
-                updateSettings({
-                  toleranceCents: DEFAULT_SETTINGS.toleranceCents,
-                  holdMs: DEFAULT_SETTINGS.holdMs,
-                  refA: DEFAULT_SETTINGS.refA,
-                  sensitivity: DEFAULT_SETTINGS.sensitivity,
-                  partialCredit: DEFAULT_SETTINGS.partialCredit,
-                  ignoreRepeatedNotes: DEFAULT_SETTINGS.ignoreRepeatedNotes,
-                })
-              }
-            />
-          </SettingChip>
-        ) : null}
-
-        <SettingChip
-          Icon={ToneIcon}
-          label="Sound & display"
-          value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showIntervalNotes ? ' · notes shown' : ''}`}
-        >
-          <SwitchRow
-            label="Play interval out loud"
-            checked={playSound && !listenMode}
-            onChange={(v) => updateSettings({ playSound: v })}
-            disabled={listenMode}
-            hint="Plays both notes of the interval in order as it appears. Not available in listen mode."
-          />
-          <SwitchRow
-            label="Show next interval"
-            checked={showNext}
-            onChange={(v) => updateSettings({ showNext: v })}
-            hint="Shows a preview of the upcoming interval under the current one."
-          />
-          <SwitchRow
-            label="Show interval notes"
-            checked={showIntervalNotes}
-            onChange={(v) => updateSettings({ showIntervalNotes: v })}
-            hint="The two notes under the ring in listen mode, showing your progress through the round."
-          />
-          <Field label="Tone" hint="Which oscillator sound plays an interval out loud.">
-            <PillChoice label="Tone" value={wave} options={WAVEFORMS} disabled={!playSound || listenMode} onChange={(v) => updateSettings({ wave: v })} />
-          </Field>
-        </SettingChip>
-      </OptionsArea>
     </ToolScreen>
   );
 }

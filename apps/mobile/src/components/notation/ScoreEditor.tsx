@@ -49,6 +49,7 @@ import { playSampledMidi, prepareSampledMidi } from '@/lib/sampledTones';
 import { loadUprightBass, playUprightBassNote } from '@/lib/uprightBass';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 const VALUE_ICON: Record<NoteValue, number> = { w: 1, h: 2, q: 4, '8': 8, '16': 16 };
 const VALUES: NoteValue[] = ['w', 'h', 'q', '8', '16'];
@@ -111,6 +112,8 @@ export default function ScoreEditor({
   const [past, setPast] = useState<Transcription[]>([]);
   const [future, setFuture] = useState<Transcription[]>([]);
   const [playing, setPlaying] = useState<{ measure: number; note: number } | null>(null);
+  // The screen stays on while the score plays.
+  useKeepAwakeWhile(playing !== null);
   const [loadingSound, setLoadingSound] = useState(false);
   // Whether the selection was picked on purpose (tapped / moved to). Then the length, dot and
   // triplet buttons change that note; right after entering a note they set the next one instead.

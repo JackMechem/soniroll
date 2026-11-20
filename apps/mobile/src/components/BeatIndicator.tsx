@@ -136,7 +136,7 @@ export function BeatIndicator({
         ))}
       </View>
       {cycleHint && onCycle ? (
-        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+        <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
           Tap a beat to change its accent
         </Text>
       ) : null}

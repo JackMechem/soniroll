@@ -1,11 +1,12 @@
 import { topicForHref, type HelpTopic } from '@jam-practice/core/helpContent';
 import { NAV_LINKS_DATA } from '@jam-practice/core/navLinks';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { INTRO_NOTES } from '@/components/tool/introNotes';
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { HelpIcon } from '@/components/tool/toolIcons';
-import { Button, ToolIcon } from '@/components/ui';
+import { Button, IconButton, ToolIcon } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -55,24 +56,13 @@ export function toolIntroHref(routeName: string): string | undefined {
 /** The header's ? for a tool, with its intro sheet. It never opens by itself: Jack found that
     annoying on the website (FB-23), so it's there when you want it. */
 export function ToolHelpButton({ href }: { href: string }) {
-  const { colors, derived } = useAppTheme();
   const topic = topicForHref(href);
   const [open, setOpen] = useState(false);
 
   if (!topic) return null;
   return (
     <>
-      <Pressable
-        onPress={() => setOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel={`How ${topic.title} works`}
-        hitSlop={6}
-        android_ripple={{ color: colors['surface-hover'] }}
-        className="h-10 w-10 items-center justify-center overflow-hidden rounded-full"
-        style={{ backgroundColor: derived.fill }}
-      >
-        <HelpIcon color={colors.foreground} size={22} />
-      </Pressable>
+      <IconButton Icon={HelpIcon} label={`How ${topic.title} works`} onPress={() => setOpen(true)} />
       <ToolSheet visible={open} onClose={() => setOpen(false)} title={`How ${topic.title} works`}>
         <ToolIntroBody topic={topic} href={href} onDone={() => setOpen(false)} />
       </ToolSheet>
@@ -83,6 +73,7 @@ export function ToolHelpButton({ href }: { href: string }) {
 function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string; onDone: () => void }) {
   const { colors, derived } = useAppTheme();
   const tool = NAV_LINKS_DATA.find((l) => l.href === href);
+  const notes = INTRO_NOTES[href] ?? [];
   return (
     <>
       <View className="flex-row items-start gap-3">
@@ -133,6 +124,19 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
                 {option.text}
               </Text>
             </View>
+          ))}
+        </View>
+      ) : null}
+
+      {notes.length ? (
+        <View className="gap-2">
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+            On the phone
+          </Text>
+          {notes.map((line) => (
+            <Text key={line} className="font-ui text-sm leading-5" style={{ color: colors.foreground }}>
+              {line}
+            </Text>
           ))}
         </View>
       ) : null}

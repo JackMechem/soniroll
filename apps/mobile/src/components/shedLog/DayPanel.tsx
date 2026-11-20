@@ -39,12 +39,15 @@ import { useToday } from '@/lib/useClock';
 import type { PracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-const QUICK_LOG = [5, 10, 15, 30, 45, 60];
+/** The quick amounts for logging time by hand (Other… for anything else). */
+const QUICK_LOG = [10, 15, 30, 60];
 
 /**
- * Everything on one day (the website's `DayPanel`): the day's progress and the day timer, its
- * routines, tasks for the day, time in tools to log (today), timed practice, logging time by hand, and
- * notes: the day's Shed Notes (Add notes), plus older notes and attachments made on the website.
+ * Everything on one day (the website's `DayPanel`): first the day's time in one card — progress,
+ * the day timer and logging time by hand (+10, +30, Other…: the most common thing for someone
+ * who practiced without the timer, so it's at the top) — then its routines, tasks for the day,
+ * time in tools to log (today), timed practice, and notes: the day's Shed Notes (Add notes), plus
+ * older notes and attachments made on the website. Every section's heading sits above its card.
  * Arrows step a day.
  */
 export function DayPanel({ date, log, onDateChange }: { date: string; log: PracticeLog; onDateChange: (date: string) => void }) {
@@ -62,19 +65,15 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
   const past = date < today;
   const progressParts = items.filter((i) => !i.occurrence.skipped && progressOf(i.routine, i.occurrence).total > 0).length + ((day.tasks?.length ?? 0) > 0 ? 1 : 0);
   const showProgress = progress.total > 0 && progressParts > 1;
-  const hasProgress = showProgress || isToday || watch.ms > 0;
+  // Time can be logged today and on days gone by; a day to come only shows its progress.
+  const canLog = date <= today;
+  const hasTime = showProgress || canLog;
   const [addMenu, setAddMenu] = useState(false);
   const [logging, setLogging] = useState(false);
   const icon = (Icon: typeof CheckIcon) => <Icon color={colors.muted} size={16} />;
   const newRoutine = () => router.push({ pathname: '/tool/shed-log-routine-edit', params: { date } });
   const others = data.routines.filter((r) => !items.some((i) => i.routine.id === r.id));
   const openAdd = () => (others.length ? setAddMenu(true) : newRoutine());
-
-  const logTime = (
-    <Section icon={icon(StopwatchIcon)} title="Log time">
-      <LogTimeCard date={date} log={log} minutes={minutes} onMore={() => setLogging(true)} />
-    </Section>
-  );
 
   return (
     <View className="gap-5">
@@ -92,23 +91,24 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
         <GhostIcon Icon={ChevronRightIcon} label="Next day" onPress={() => onDateChange(addDays(date, 1))} color={colors.foreground} size={22} />
       </View>
 
-      {hasProgress ? (
-        <Section icon={icon(CheckIcon)} title="Progress">
-          {showProgress ? (
-            <View className="flex-row items-center gap-3 rounded-xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
-              <View className="flex-1">
-                <Bar frac={progress.done / progress.total} color={progress.done === progress.total ? success : undefined} />
+      {hasTime ? (
+        <Section icon={icon(StopwatchIcon)} title={isToday ? 'Today' : past ? 'Time practiced' : 'Progress'}>
+          <Panel>
+            {showProgress ? (
+              <View className="flex-row items-center gap-3">
+                <View className="flex-1">
+                  <Bar frac={progress.done / progress.total} color={progress.done === progress.total ? success : undefined} height={8} />
+                </View>
+                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+                  {progress.done === progress.total ? 'All done!' : `${progress.done} of ${progress.total} done`}
+                </Text>
               </View>
-              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
-                {progress.done === progress.total ? 'All done!' : `${progress.done} of ${progress.total} done`}
-              </Text>
-            </View>
-          ) : null}
-          <DayTimerCard data={data} date={date} onClear={() => log.updateDay(date, clearDayTime)} />
+            ) : null}
+            <DayTimerCard data={data} date={date} inset onClear={() => log.updateDay(date, clearDayTime)} />
+            {canLog ? <LogTimeRow date={date} log={log} divider={showProgress || isToday || watch.ms > 0} onMore={() => setLogging(true)} /> : null}
+          </Panel>
         </Section>
       ) : null}
-
-      {past ? logTime : null}
 
       <Section icon={icon(RepeatIcon)} title="Routines" count={items.length || undefined} action={<SmallButton label="Add routine" Icon={PlusIcon} onPress={openAdd} />}>
         {items.length === 0 ? (
@@ -153,8 +153,6 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
         </Section>
       ) : null}
 
-      {!past ? logTime : null}
-
       <Section icon={icon(PencilIcon)} title="Notes">
         <Panel>
           {day.notes ? (
@@ -190,30 +188,16 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
   );
 }
 
-/** Time practiced without the timer: one tap adds it to the day's total (with Undo); "Other…"
-    opens the sheet for any amount, or to put it on a particular task. */
-function LogTimeCard({ date, log, minutes, onMore }: { date: string; log: PracticeLog; minutes: number; onMore: () => void }) {
-  const { colors } = useAppTheme();
+/** Time practiced without the timer, inside the day's card: one tap adds it to the day's total
+    (with Undo); "Other…" opens the sheet for any amount, or to put it on a particular task. */
+function LogTimeRow({ date, log, divider, onMore }: { date: string; log: PracticeLog; divider: boolean; onMore: () => void }) {
+  const { colors, derived } = useAppTheme();
   const today = useToday();
   const [last, setLast] = useState<{ date: string; mins: number } | null>(null);
   const added = last?.date === date ? last.mins : 0;
-  if (date > today) {
-    return (
-      <Panel>
-        <Muted>You can log time once this day comes.</Muted>
-      </Panel>
-    );
-  }
   return (
-    <Panel>
-      <View className="flex-row items-baseline gap-3">
-        <View className="flex-1">
-          <Muted>{date < today ? `Practiced on ${formatShortDate(date)}? Add the time to that day.` : 'Practiced without the timer? Add it to the day.'}</Muted>
-        </View>
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
-          {formatPracticed(minutes)}
-        </Text>
-      </View>
+    <View className={`gap-2.5 ${divider ? 'pt-3' : ''}`} style={{ borderTopWidth: divider ? 1 : 0, borderTopColor: derived.hairline }}>
+      <Muted>{date < today ? `Practiced on ${formatShortDate(date)}? Log the time.` : 'Practiced without the timer? Log the time.'}</Muted>
       <View className="flex-row flex-wrap gap-2">
         {QUICK_LOG.map((m) => (
           <SmallButton
@@ -228,7 +212,7 @@ function LogTimeCard({ date, log, minutes, onMore }: { date: string; log: Practi
         <SmallButton label="Other…" onPress={onMore} />
       </View>
       {added > 0 ? (
-        <View className="flex-row items-center justify-between gap-2 rounded-lg px-3 py-1.5" style={{ backgroundColor: colors.background }}>
+        <View className="flex-row items-center justify-between gap-2">
           <View className="flex-row items-center gap-1.5">
             <CheckIcon color={colors.accent} size={16} />
             <Text className="font-ui text-sm" style={{ color: colors.foreground }}>
@@ -244,7 +228,7 @@ function LogTimeCard({ date, log, minutes, onMore }: { date: string; log: Practi
           />
         </View>
       ) : null}
-    </Panel>
+    </View>
   );
 }
 

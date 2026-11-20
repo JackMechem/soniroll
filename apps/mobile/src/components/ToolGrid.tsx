@@ -4,7 +4,7 @@ import type { Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { LockIcon, StarIcon } from '@/components/icons';
-import { ToolIcon } from '@/components/ui';
+import { SectionHeader, ToolIcon } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /** The Library (tunes), its Charts, the Shed Log and Community are main screens with their own tabs
@@ -56,7 +56,7 @@ export function chunk<T>(items: T[], size: number): T[][] {
 }
 
 /** Signed out and the tool needs an account. */
-function useLocked(href: string) {
+export function useLocked(href: string) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   return ACCOUNT_ONLY_HREFS.has(href) && !isAuthenticated && !isLoading;
 }
@@ -95,18 +95,27 @@ function ToolName({ item, lines, className }: { item: NavLinkInfo; lines: number
   );
 }
 
-/** A tool in a list: its icon in its category colour, its name, what it does in a muted line or
-    two, and the favorite star. Without `onToggleFavorite` (a shortcut to a tab) there's no star. */
+/** What a tool does in one short line (its `blurb`; the description when there isn't one). */
+export function toolBlurb(item: NavLinkInfo): string {
+  return item.blurb ?? item.description;
+}
+
+/** A tool in a list: its icon in its category colour, its name, what it does in one short muted
+    line, and the favorite star. Without `onToggleFavorite` (a shortcut to a tab) there's no star.
+    Rows sit directly on a surface section (`ToolSection`), a hairline between them — `divider`
+    draws the one above this row. */
 export function ToolRow({
   item,
   favorited = false,
   onPress,
   onToggleFavorite,
+  divider,
 }: {
   item: NavLinkInfo;
   favorited?: boolean;
   onPress: () => void;
   onToggleFavorite?: () => void;
+  divider?: boolean;
 }) {
   const { colors, derived } = useAppTheme();
   return (
@@ -114,15 +123,16 @@ export function ToolRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={item.label}
+      accessibilityHint={toolBlurb(item)}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="min-h-[60px] flex-row items-center gap-3 overflow-hidden rounded-lg py-2.5 pl-3"
-      style={{ backgroundColor: derived.fill, paddingRight: onToggleFavorite ? 0 : 12 }}
+      className="min-h-[60px] flex-row items-center gap-3 py-2.5 pl-3"
+      style={{ paddingRight: onToggleFavorite ? 0 : 12, borderTopWidth: divider ? 1 : 0, borderTopColor: derived.hairline }}
     >
       <ToolIcon tool={item} size={34} />
       <View className="flex-1 gap-0.5">
         <ToolName item={item} lines={1} className="font-ui-semibold text-[15px] font-semibold" />
-        <Text numberOfLines={2} className="font-ui text-xs leading-4" style={{ color: colors.muted }}>
-          {item.description}
+        <Text numberOfLines={1} className="font-ui text-[13px] leading-4" style={{ color: colors.muted }}>
+          {toolBlurb(item)}
         </Text>
       </View>
       {onToggleFavorite ? <FavoriteStar item={item} favorited={favorited} onToggle={onToggleFavorite} /> : null}
@@ -130,7 +140,44 @@ export function ToolRow({
   );
 }
 
-/** A tool as a card in the Favorites grid. */
+/** A group of tools: its name as a plain label, then the rows on one surface section with
+    hairlines between them (no filled rows inside a filled card). */
+export function ToolSection({
+  title,
+  items,
+  favorites,
+  onOpen,
+  onToggleFavorite,
+}: {
+  title: string;
+  items: NavLinkInfo[];
+  /** Starred hrefs; leave out for rows without a star (shortcuts to the tabs). */
+  favorites?: string[];
+  onOpen: (item: NavLinkInfo) => void;
+  onToggleFavorite?: (href: string) => void;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View className="gap-1.5">
+      <SectionHeader title={title} />
+      <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
+        {items.map((item, i) => (
+          <ToolRow
+            key={item.href}
+            item={item}
+            divider={i > 0}
+            favorited={favorites?.includes(item.href)}
+            onPress={() => onOpen(item)}
+            onToggleFavorite={favorites && onToggleFavorite ? () => onToggleFavorite(item.href) : undefined}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** A tool as a compact tile in the Favorites grid (two to a row): its icon, its name and the star
+    on one line, about half the height of the old cards. */
 export function ToolTile({
   item,
   favorited,
@@ -149,18 +196,42 @@ export function ToolTile({
       accessibilityRole="button"
       accessibilityLabel={item.label}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="min-h-[108px] flex-1 justify-between overflow-hidden rounded-xl p-3.5"
+      className="min-h-[56px] flex-1 flex-row items-center gap-2.5 overflow-hidden rounded-xl py-2 pl-3"
       style={{ backgroundColor: colors.surface }}
     >
-      <View className="flex-row items-start justify-between">
-        <ToolIcon tool={item} size={40} />
-        <View style={{ marginTop: -6, marginRight: -8 }}>
-          <FavoriteStar item={item} favorited={favorited} onToggle={onToggleFavorite} />
-        </View>
+      <ToolIcon tool={item} size={32} />
+      <View className="flex-1">
+        <ToolName item={item} lines={2} className="font-ui-semibold text-[14px] font-semibold leading-[18px]" />
       </View>
-      <View className="mt-3">
-        <ToolName item={item} lines={2} className="font-ui-semibold text-[15px] font-semibold leading-5" />
+      <View style={{ marginLeft: -6 }}>
+        <FavoriteStar item={item} favorited={favorited} onToggle={onToggleFavorite} />
       </View>
     </Pressable>
+  );
+}
+
+/** Tools as a grid of compact tiles, two to a row. */
+export function ToolTiles({
+  items,
+  favorites,
+  onOpen,
+  onToggleFavorite,
+}: {
+  items: NavLinkInfo[];
+  favorites: string[];
+  onOpen: (item: NavLinkInfo) => void;
+  onToggleFavorite: (href: string) => void;
+}) {
+  return (
+    <View className="gap-2.5">
+      {chunk(items, 2).map((row, i) => (
+        <View key={i} className="flex-row gap-2.5">
+          {row.map((item) => (
+            <ToolTile key={item.href} item={item} favorited={favorites.includes(item.href)} onPress={() => onOpen(item)} onToggleFavorite={() => onToggleFavorite(item.href)} />
+          ))}
+          {row.length === 1 ? <View className="flex-1" /> : null}
+        </View>
+      ))}
+    </View>
   );
 }

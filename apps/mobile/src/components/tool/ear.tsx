@@ -4,16 +4,15 @@ import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from '@jam-practice/core/instrument
 import { attempts, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { isDarkColors } from '@jam-practice/core/themes';
 import { formatDuration } from '@jam-practice/core/trainerUtils';
-import { Stack } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { CheckIcon, FlagIcon, HistoryIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
-import { SettingChip, TOOL_CONTENT } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { Slider } from '@/components/tool/Slider';
 import { Button } from '@/components/ui';
 import { EAR_TRAINING_TONES } from '@/lib/sampledTones';
@@ -74,41 +73,38 @@ export function noteGlyphs(text: string): string {
 // ── The page ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * A tool screen laid out like every tool on the phone (and the Metronome), top to bottom: the
- * History / Struggles chips, the mode switch (Practice / Learn … — it decides what the screen is),
- * the main display, the big button, then the setting chips. It starts a fixed step under the
- * header (it doesn't float in the middle) and scrolls on a short screen. `footer` is pinned under
- * it (an answer keyboard).
+ * A trainer's screen: `ToolFrame` (the same layout as every tool) with its title. Top to bottom:
+ * the mode switch (`mode`), the History / Struggles chips (`side`), the round display (children,
+ * in the middle), an answer keyboard (`footer`), then the fixed footer — Start (`action`) and the
+ * setting chips (`chips`, a `SettingsBar` is made for them).
  */
-export function ToolScreen({ title, footer, children }: { title: string; footer?: ReactNode; children: ReactNode }) {
-  const { colors } = useAppTheme();
+export function ToolScreen({
+  title,
+  mode,
+  side,
+  footer,
+  action,
+  chips,
+  children,
+}: {
+  title: string;
+  mode?: ReactNode;
+  side?: ReactNode;
+  footer?: ReactNode;
+  action?: ReactNode;
+  chips?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={TOOL_SCROLL_CONTENT}
-        >
-          {children}
-        </ScrollView>
-        {footer}
-      </SafeAreaView>
-    </View>
+    <ToolFrame title={title} mode={mode} side={side} below={footer} action={action} chips={chips ? <SettingsBar>{chips}</SettingsBar> : null}>
+      {children}
+    </ToolFrame>
   );
 }
 
-/** The scroll content of every tool screen: a 16dp gutter, starting 20dp under the header. */
-export const TOOL_SCROLL_CONTENT = { ...TOOL_CONTENT, alignItems: 'center', gap: 20 } as const;
-
-/** The setting chips under the big button. (The mode switch, if any, goes above the display.) */
+/** The setting chips (now `SettingsBar`'s grid; kept for screens that still use the name). */
 export function OptionsArea({ children }: { children: ReactNode }) {
-  return (
-    <View className="w-full items-center pt-1">
-      <View className="flex-row flex-wrap justify-center gap-2">{children}</View>
-    </View>
-  );
+  return <SettingsBar>{children}</SettingsBar>;
 }
 
 // ── The round display ─────────────────────────────────────────────────────────────────────────
@@ -187,9 +183,56 @@ export function IdleMark() {
   );
 }
 
-/** What an idle round display holds before Start: what's about to be asked — a number or a short
-    name big ("12", "C major"), what it counts under it ("intervals"), and a detail line ("Piano ·
-    C3–C5"). */
+/** The idle round display's size: smaller than a running round's, so the screen breathes. */
+export const IDLE_RING = 132;
+
+type ScoredRun = { at: number; score: number; total: number };
+
+function scoreText(run: ScoredRun) {
+  return `${run.score % 1 === 0 ? run.score : run.score.toFixed(1)}/${run.total}`;
+}
+
+/** The last run and the best one (by percentage) out of a trainer's history, or null. */
+export function lastAndBest(history: ScoredRun[]): { last: ScoredRun; best: ScoredRun } | null {
+  if (!history.length) return null;
+  const last = history.reduce((a, b) => (b.at > a.at ? b : a));
+  const ratio = (r: ScoredRun) => (r.total > 0 ? r.score / r.total : 0);
+  const best = history.reduce((a, b) => (ratio(b) > ratio(a) ? b : a));
+  return { last, best };
+}
+
+/**
+ * What an idle round display holds before Start — something the chips don't already say: the last
+ * score and the best ("8/10", "Last score", "Best 9/10") once there's history, otherwise "Ready".
+ * With no history, put an `IdleHint` (one line of what a round is) under the ring.
+ */
+export function IdleStatus({ history }: { history: ScoredRun[] }) {
+  const { colors } = useAppTheme();
+  const scores = lastAndBest(history);
+  if (!scores) {
+    return (
+      <Text className="font-ui-bold text-center text-2xl font-bold" style={{ color: colors.foreground }}>
+        Ready
+      </Text>
+    );
+  }
+  return (
+    <View className="items-center">
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className="font-ui-bold text-center text-3xl font-bold tabular-nums" style={{ color: colors.foreground }}>
+        {scoreText(scores.last)}
+      </Text>
+      <Text numberOfLines={1} className="font-ui-semibold text-center text-xs font-semibold" style={{ color: colors.muted }}>
+        Last score
+      </Text>
+      <Text numberOfLines={1} className="font-ui mt-0.5 text-center text-xs tabular-nums" style={{ color: colors.muted }}>
+        Best {scoreText(scores.best)}
+      </Text>
+    </View>
+  );
+}
+
+/** An older idle display: a number big ("12"), what it counts ("intervals"), a detail line. Prefer
+    `IdleStatus` (the chips already say these). */
 export function IdleSummary({ value, label, detail }: { value: string; label: string; detail?: string }) {
   const { colors } = useAppTheme();
   return (
@@ -209,7 +252,8 @@ export function IdleSummary({ value, label, detail }: { value: string; label: st
   );
 }
 
-/** "Press Start, …" under the idle display: what's about to happen. */
+/** One line under an idle display with no history yet: what a round is ("You'll hear two notes,
+    then pick the interval"). */
 export function IdleHint({ children }: { children: ReactNode }) {
   const { colors } = useAppTheme();
   return (

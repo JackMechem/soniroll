@@ -33,20 +33,23 @@ export function useDayTimerMs(data: PracticeLogData, date: string): { ms: number
 /**
  * The day timer card (the website's `DayTimer`): a stopwatch for the day's practice — start it when
  * you sit down to play; starting a routine starts it too, and it keeps going until you pause it.
- * Today's can be started; another day's just shows its time. ⋮ clears a day's time.
+ * Today's can be started; another day's just shows its time. ⋮ clears a day's time. `compact` is
+ * the smaller one inside Home's card; both `compact` and `inset` draw no fill of their own (they sit
+ * inside a card) except the accent tint while the timer runs.
  */
-export function DayTimerCard({ data, date, compact, onClear }: { data: PracticeLogData; date: string; compact?: boolean; onClear?: () => void }) {
-  const { colors, derived } = useAppTheme();
+export function DayTimerCard({ data, date, compact, inset, onClear }: { data: PracticeLogData; date: string; compact?: boolean; inset?: boolean; onClear?: () => void }) {
+  const { colors } = useAppTheme();
   const { ms, running } = useDayTimerMs(data, date);
   const today = useToday();
   const [menu, setMenu] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const isToday = date === today;
   if (!isToday && ms === 0) return null;
+  const inCard = compact || inset;
   return (
     <View
-      className={`flex-row items-center gap-3 ${compact ? 'rounded-lg px-3 py-2.5' : 'rounded-xl px-4 py-3'}`}
-      style={{ backgroundColor: running ? withAlpha(colors.accent, 0.12) : compact ? derived.fill : colors.surface }}
+      className={`flex-row items-center gap-3 ${inCard ? (running ? '-mx-2 rounded-lg px-2 py-2' : 'py-1') : 'rounded-xl px-4 py-3'}`}
+      style={{ backgroundColor: running ? withAlpha(colors.accent, 0.12) : inCard ? 'transparent' : colors.surface }}
     >
       <StopwatchIcon color={running ? colors.accent : colors.muted} size={20} />
       <View className="flex-1">

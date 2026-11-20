@@ -33,8 +33,9 @@ import { useAppTheme } from '@/theme/ThemeProvider';
  * every metronome-style tool so they look and behave the same.
  */
 
-/** The big Start/Stop (Play, Record) button under a tool's main display: a round pill, the accent
-    while stopped and the faint fill while running. */
+/** The big Start/Stop (Play, Record) button in a tool's footer (`ToolFrame`'s `action`): a wide
+    round pill across the footer, the accent while stopped and the faint fill while running. Two
+    side by side each go in a `flex-1` view. */
 export function BigButton({
   label,
   onPress,
@@ -56,7 +57,7 @@ export function BigButton({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       android_ripple={{ color: secondary ? colors['surface-hover'] : colors['accent-hover'] }}
-      className="h-12 min-w-36 flex-row items-center justify-center gap-2 self-center overflow-hidden rounded-full px-8"
+      className="h-14 flex-row items-center justify-center gap-2 self-stretch overflow-hidden rounded-full px-6"
       style={{ backgroundColor: secondary ? derived.fill : colors.accent, opacity: disabled ? 0.5 : 1 }}
     >
       {icon}

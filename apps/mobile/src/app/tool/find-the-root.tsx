@@ -37,10 +37,10 @@ import { SwitchRow } from '@/components/SwitchRow';
 import {
   Field,
   GroupLabel,
+  IDLE_RING,
   IdleHint,
-  IdleSummary,
+  IdleStatus,
   MutedText,
-  OptionsArea,
   Pill,
   PillChoice,
   SheetButton,
@@ -60,6 +60,7 @@ import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNotesTo
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/FindTheRoot.tsx`: a rootless voicing plays (E♭ G B♭ D) and you
@@ -185,6 +186,7 @@ function FindTheRootScreen() {
 
   const [running, setRunning] = useState(false);
   useToolActivity('/find-the-root', running);
+  useKeepAwakeWhile(running);
   const [round, setRound] = useState<RootlessRound | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
@@ -510,29 +512,156 @@ function FindTheRootScreen() {
   const typeCount = chosenTypes.length || ROOTLESS_TYPES.length;
   const rootsText = roots.length ? `${roots.length} of 12` : 'All 12';
 
-  return (
-    <ToolScreen title="Find the Root">
-      {/* Hidden until there's something in them, and while a run goes. */}
-      {showSide ? (
-        <SettingsBar>
-          <RunHistoryChip entries={history} running={running} onClear={() => updateSettings({ history: [] })} />
-          <StrugglesChip
-            entries={weakEntries.map((e) => ({ key: e.key, label: e.type.name, counts: e.counts }))}
-            shedLabel="Shed weak chords"
-            emptyText="No struggles yet. A wrong or missed answer adds the chord here."
-            running={running}
-            onShed={() => void start('weak')}
-            onClear={() => {
-              statsRef.current = {};
-              updateSettings({ typeStats: {} });
-            }}
-          />
-        </SettingsBar>
-      ) : null}
+  // The ring: smaller while idle, so the screen breathes.
+  const ringSize = round ? 168 : IDLE_RING;
 
-      {/* The mode decides what the screen is, so it sits above the display. */}
-      {!running ? (
-        <View className="w-full items-center">
+  // The mode switch first, then History and Struggles (hidden until there's something in them, and
+  // while a run goes). During a round the keys (Pick) and its buttons sit low (`footer`), within
+  // reach of the thumb, over Stop. While the results show, their own "Try again" is the one start
+  // button. The chips hide while a run goes, so the round has the screen to itself.
+  const chipList = (
+    <>
+      <SettingChip Icon={ChordIcon} label="Chords" value={`${typeCount} of ${ROOTLESS_TYPES.length}`}>
+        <PoolCount
+          text={`${typeCount} of ${ROOTLESS_TYPES.length} in play`}
+          hint="Which chords you can be asked to make. With none picked, all of them can come up. A triad or four-note chord on top is what the voicing makes on its own: a minor 7 without its root is a major triad on the ♭3, a minor 9 a major 7 on the ♭3. The left-hand ones have no name of their own."
+        >
+          <PoolButton label="All" onPress={() => updateSettings({ typeIds: ROOTLESS_TYPES.map((t) => t.id) })} />
+          <PoolButton label="Reset" onPress={() => updateSettings({ typeIds: [...DEFAULT_ROOTLESS_TYPE_IDS] })} />
+        </PoolCount>
+        {ROOTLESS_CATEGORIES.map((category) => (
+          <View key={category} className="gap-1.5">
+            <GroupLabel>{category}</GroupLabel>
+            <View className="flex-row flex-wrap gap-1.5">
+              {ROOTLESS_TYPES.filter((t) => t.category === category).map((type) => (
+                <Pill
+                  key={type.id}
+                  on={settings.typeIds.includes(type.id)}
+                  label={type.name}
+                  accessibilityLabel={`${type.name}: ${describeVoicing(type).toLowerCase()}`}
+                  onPress={() => toggleType(type.id)}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
+      </SettingChip>
+
+      <SettingChip Icon={NoteIcon} label="Roots" value={rootsText}>
+        <PoolCount text={rootsText} hint="Which roots can come up. With none picked, all 12 can.">
+          {roots.length > 0 ? <PoolButton label="All" onPress={() => updateSettings({ roots: [] })} /> : null}
+        </PoolCount>
+        <View className="flex-row flex-wrap gap-1.5">
+          {ROOT_NAMES.map((name, pc) => (
+            <Pill key={name} on={roots.includes(pc)} label={prettyNote(name)} onPress={() => toggleRoot(pc)} />
+          ))}
+        </View>
+        <Field label="Register" hint="Where the voicing's lowest note sits.">
+          <ChoiceList
+            label="Register"
+            value={register.id}
+            options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))}
+            onChange={(registerId) => updateSettings({ registerId })}
+          />
+        </Field>
+      </SettingChip>
+
+      <SettingChip Icon={VoicingIcon} label="Voicing" value={SHAPE_SHORT[shape]}>
+        <Field
+          label="Shape"
+          hint="How the notes are stacked. Root position plays the chord on top from its own root (E♭ G B♭ D). Any inversion starts on any of its notes. A and B are the left-hand voicings pianists use: from the 3rd (3 5 7 9) or from the 7th (7 9 3 5)."
+        >
+          <ChoiceList label="Shape" value={shape} options={VOICING_SHAPES} onChange={(value) => updateSettings({ shape: value })} />
+        </Field>
+        <SwitchRow
+          label="Show the voicing's name"
+          checked={showVoicingName}
+          onChange={(v) => updateSettings({ showVoicingName: v })}
+          hint="Shows the chord the notes make on their own (E♭Δ7) while you answer. Off, you have to hear what it is first. The 13 and altered voicings have no name of their own."
+        />
+        <Field label="Tone" hint="Which sound plays the voicing.">
+          <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Rounds" value={`${roundCount} rounds`}>
+        <SliderField
+          label="Number of rounds"
+          value={roundCount}
+          min={MIN_ROUNDS}
+          max={MAX_ROUNDS}
+          step={1}
+          onChange={(v) => updateSettings({ roundCount: v })}
+          hint="How many voicings make up one run."
+        />
+        <Field label="Next round" hint="Whether the next voicing waits for you to press Next, or starts by itself after the answer.">
+          <PillChoice label="Next round" value={advanceDelayMs} options={NEXT_OPTIONS} onChange={(v) => updateSettings({ advanceDelayMs: v })} />
+        </Field>
+        <SwitchRow
+          label="Half credit after a wrong note"
+          checked={partialCredit}
+          onChange={(v) => updateSettings({ partialCredit: v })}
+          hint="Finding the root after a wrong note still counts, for half a point. Off, it counts in full."
+        />
+      </SettingChip>
+
+      {answerMode === 'sing' ? (
+        <SettingChip Icon={MicrophoneIcon} label="Microphone" value={listenWhilePlaying ? 'While it plays' : 'After the chord'}>
+          <SwitchRow
+            label="Listen while it plays"
+            checked={listenWhilePlaying}
+            onChange={(v) => updateSettings({ listenWhilePlaying: v })}
+            hint="Lets you sing the root against the chord while it's still sounding. Use headphones, or the mic hears the piano and counts its notes as wrong ones. Off, the mic waits until the chord has finished."
+          />
+          <SheetDivider title="Advanced" />
+          <SliderField
+            label="Tuning tolerance"
+            value={toleranceCents}
+            unit="¢"
+            min={10}
+            max={100}
+            step={5}
+            onChange={(v) => updateSettings({ toleranceCents: v })}
+            hint="How far off pitch still counts as the right note."
+          />
+          <SliderField
+            label="Note hold time"
+            value={holdMs}
+            unit=" ms"
+            min={60}
+            max={600}
+            step={30}
+            onChange={(v) => updateSettings({ holdMs: v })}
+            hint="How long a pitch has to stay steady before it counts, so sliding into a note isn't graded on the way."
+          />
+          <Field label="Input sensitivity" hint="How quiet a sound can be before it's treated as silence. Lower it in a noisy room.">
+            <PillChoice
+              label="Input sensitivity"
+              value={sensitivity}
+              options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
+              onChange={(v) => updateSettings({ sensitivity: v })}
+            />
+          </Field>
+          <SheetButton
+            label="Reset advanced settings"
+            onPress={() =>
+              updateSettings({
+                toleranceCents: DEFAULT_SETTINGS.toleranceCents,
+                holdMs: DEFAULT_SETTINGS.holdMs,
+                sensitivity: DEFAULT_SETTINGS.sensitivity,
+              })
+            }
+          />
+        </SettingChip>
+      ) : null}
+    </>
+  );
+
+  return (
+    <ToolScreen
+      title="Find the Root"
+      mode={
+        !running ? (
           <Segmented
             onPage
             label="Answer by"
@@ -543,8 +672,45 @@ function FindTheRootScreen() {
               { value: 'pick', label: 'Pick' },
             ]}
           />
-        </View>
-      ) : null}
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <RunHistoryChip entries={history} running={running} onClear={() => updateSettings({ history: [] })} />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: e.type.name, counts: e.counts }))}
+              shedLabel="Shed weak chords"
+              emptyText="No struggles yet. A wrong or missed answer adds the chord here."
+              running={running}
+              onShed={() => void start('weak')}
+              onClear={() => {
+                statsRef.current = {};
+                updateSettings({ typeStats: {} });
+              }}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      footer={
+        running && round ? (
+          <View className="items-center gap-3 px-4 pt-2">
+            {answerMode === 'pick' ? <RootKeys keyState={keyState} keyLabel={keyLabel} disabled={!!status} onPick={pick} /> : null}
+            <View className="flex-row flex-wrap justify-center gap-2">
+              <Button label={status ? 'Play it with the root' : 'Replay'} kind="secondary" Icon={PlayIcon} onPress={() => void playRound(round, !!status)} />
+              {!status ? (
+                <Button label="I give up" kind="secondary" onPress={() => finishRound('incorrect')} />
+              ) : (
+                <Button label={lastRound ? 'See results' : 'Next'} onPress={next} />
+              )}
+            </View>
+          </View>
+        ) : null
+      }
+      action={!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
+      chips={!running ? chipList : null}
+    >
+
 
       {showingSummary && summary ? (
         <RunResults
@@ -560,11 +726,11 @@ function FindTheRootScreen() {
       ) : (
         <View className="w-full items-center gap-3">
           <View
-            className="h-[168px] w-[168px] items-center justify-center rounded-full px-4"
-            style={{ borderWidth: 3, borderColor: glow ?? withAlpha(colors.foreground, 0.1) }}
+            className="items-center justify-center rounded-full px-4"
+            style={{ width: ringSize, height: ringSize, borderWidth: 3, borderColor: glow ?? withAlpha(colors.foreground, 0.1) }}
           >
             {!round ? (
-              <IdleSummary value={String(typeCount)} label={typeCount === 1 ? 'chord type' : 'chord types'} detail={`${roundCount} rounds · ${SHAPE_SHORT[shape]}`} />
+              <IdleStatus history={history} />
             ) : (
               <Text
                 numberOfLines={1}
@@ -578,10 +744,10 @@ function FindTheRootScreen() {
             )}
           </View>
 
-          {/* Before the first round, say what's about to happen (like the other ear trainers). */}
-          {!round && !running ? (
+          {/* Until there's history, one line of what a round is (like the other ear trainers). */}
+          {!round && !running && !history.length ? (
             <IdleHint>
-              {answerMode === 'sing' ? 'Press Start, listen to the chord, then sing or play its root.' : 'Press Start, listen to the chord, then pick its root.'}
+              {answerMode === 'sing' ? "You'll hear a chord without its root; sing or play the root." : "You'll hear a chord without its root; pick the root."}
             </IdleHint>
           ) : null}
 
@@ -653,18 +819,7 @@ function FindTheRootScreen() {
             </View>
           ) : null}
 
-          {running && round && answerMode === 'pick' ? <RootKeys keyState={keyState} keyLabel={keyLabel} disabled={!!status} onPick={pick} /> : null}
 
-          {running && round ? (
-            <View className="flex-row flex-wrap justify-center gap-2">
-              <Button label={status ? 'Play it with the root' : 'Replay'} kind="secondary" Icon={PlayIcon} onPress={() => void playRound(round, !!status)} />
-              {!status ? (
-                <Button label="I give up" kind="secondary" onPress={() => finishRound('incorrect')} />
-              ) : (
-                <Button label={lastRound ? 'See results' : 'Next'} onPress={next} />
-              )}
-            </View>
-          ) : null}
 
           {running && progress ? (
             <View className="flex-row items-center">
@@ -698,147 +853,7 @@ function FindTheRootScreen() {
         </View>
       ) : null}
 
-      {/* While the results show, their own "Try again" is the one start button. */}
-      {!showingSummary ? <BigButton label={running ? 'Stop' : 'Start'} secondary={running} onPress={running ? stop : () => void start()} /> : null}
 
-      {/* Hidden while a run goes, so the round has the screen to itself. */}
-      {!running ? (
-        <OptionsArea>
-          <SettingChip Icon={ChordIcon} label="Chords" value={`${typeCount} of ${ROOTLESS_TYPES.length}`}>
-            <PoolCount
-              text={`${typeCount} of ${ROOTLESS_TYPES.length} in play`}
-              hint="Which chords you can be asked to make. With none picked, all of them can come up. A triad or four-note chord on top is what the voicing makes on its own: a minor 7 without its root is a major triad on the ♭3, a minor 9 a major 7 on the ♭3. The left-hand ones have no name of their own."
-            >
-              <PoolButton label="All" onPress={() => updateSettings({ typeIds: ROOTLESS_TYPES.map((t) => t.id) })} />
-              <PoolButton label="Reset" onPress={() => updateSettings({ typeIds: [...DEFAULT_ROOTLESS_TYPE_IDS] })} />
-            </PoolCount>
-            {ROOTLESS_CATEGORIES.map((category) => (
-              <View key={category} className="gap-1.5">
-                <GroupLabel>{category}</GroupLabel>
-                <View className="flex-row flex-wrap gap-1.5">
-                  {ROOTLESS_TYPES.filter((t) => t.category === category).map((type) => (
-                    <Pill
-                      key={type.id}
-                      on={settings.typeIds.includes(type.id)}
-                      label={type.name}
-                      accessibilityLabel={`${type.name}: ${describeVoicing(type).toLowerCase()}`}
-                      onPress={() => toggleType(type.id)}
-                    />
-                  ))}
-                </View>
-              </View>
-            ))}
-          </SettingChip>
-
-          <SettingChip Icon={NoteIcon} label="Roots" value={rootsText}>
-            <PoolCount text={rootsText} hint="Which roots can come up. With none picked, all 12 can.">
-              {roots.length > 0 ? <PoolButton label="All" onPress={() => updateSettings({ roots: [] })} /> : null}
-            </PoolCount>
-            <View className="flex-row flex-wrap gap-1.5">
-              {ROOT_NAMES.map((name, pc) => (
-                <Pill key={name} on={roots.includes(pc)} label={prettyNote(name)} onPress={() => toggleRoot(pc)} />
-              ))}
-            </View>
-            <Field label="Register" hint="Where the voicing's lowest note sits.">
-              <ChoiceList
-                label="Register"
-                value={register.id}
-                options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))}
-                onChange={(registerId) => updateSettings({ registerId })}
-              />
-            </Field>
-          </SettingChip>
-
-          <SettingChip Icon={VoicingIcon} label="Voicing" value={SHAPE_SHORT[shape]}>
-            <Field
-              label="Shape"
-              hint="How the notes are stacked. Root position plays the chord on top from its own root (E♭ G B♭ D). Any inversion starts on any of its notes. A and B are the left-hand voicings pianists use: from the 3rd (3 5 7 9) or from the 7th (7 9 3 5)."
-            >
-              <ChoiceList label="Shape" value={shape} options={VOICING_SHAPES} onChange={(value) => updateSettings({ shape: value })} />
-            </Field>
-            <SwitchRow
-              label="Show the voicing's name"
-              checked={showVoicingName}
-              onChange={(v) => updateSettings({ showVoicingName: v })}
-              hint="Shows the chord the notes make on their own (E♭Δ7) while you answer. Off, you have to hear what it is first. The 13 and altered voicings have no name of their own."
-            />
-            <Field label="Tone" hint="Which sound plays the voicing.">
-              <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
-            </Field>
-          </SettingChip>
-
-          <SettingChip Icon={StopwatchIcon} label="Rounds" value={`${roundCount} rounds`}>
-            <SliderField
-              label="Number of rounds"
-              value={roundCount}
-              min={MIN_ROUNDS}
-              max={MAX_ROUNDS}
-              step={1}
-              onChange={(v) => updateSettings({ roundCount: v })}
-              hint="How many voicings make up one run."
-            />
-            <Field label="Next round" hint="Whether the next voicing waits for you to press Next, or starts by itself after the answer.">
-              <PillChoice label="Next round" value={advanceDelayMs} options={NEXT_OPTIONS} onChange={(v) => updateSettings({ advanceDelayMs: v })} />
-            </Field>
-            <SwitchRow
-              label="Half credit after a wrong note"
-              checked={partialCredit}
-              onChange={(v) => updateSettings({ partialCredit: v })}
-              hint="Finding the root after a wrong note still counts, for half a point. Off, it counts in full."
-            />
-          </SettingChip>
-
-          {answerMode === 'sing' ? (
-            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={listenWhilePlaying ? 'While it plays' : 'After the chord'}>
-              <SwitchRow
-                label="Listen while it plays"
-                checked={listenWhilePlaying}
-                onChange={(v) => updateSettings({ listenWhilePlaying: v })}
-                hint="Lets you sing the root against the chord while it's still sounding. Use headphones, or the mic hears the piano and counts its notes as wrong ones. Off, the mic waits until the chord has finished."
-              />
-              <SheetDivider title="Advanced" />
-              <SliderField
-                label="Tuning tolerance"
-                value={toleranceCents}
-                unit="¢"
-                min={10}
-                max={100}
-                step={5}
-                onChange={(v) => updateSettings({ toleranceCents: v })}
-                hint="How far off pitch still counts as the right note."
-              />
-              <SliderField
-                label="Note hold time"
-                value={holdMs}
-                unit=" ms"
-                min={60}
-                max={600}
-                step={30}
-                onChange={(v) => updateSettings({ holdMs: v })}
-                hint="How long a pitch has to stay steady before it counts, so sliding into a note isn't graded on the way."
-              />
-              <Field label="Input sensitivity" hint="How quiet a sound can be before it's treated as silence. Lower it in a noisy room.">
-                <PillChoice
-                  label="Input sensitivity"
-                  value={sensitivity}
-                  options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
-                  onChange={(v) => updateSettings({ sensitivity: v })}
-                />
-              </Field>
-              <SheetButton
-                label="Reset advanced settings"
-                onPress={() =>
-                  updateSettings({
-                    toleranceCents: DEFAULT_SETTINGS.toleranceCents,
-                    holdMs: DEFAULT_SETTINGS.holdMs,
-                    sensitivity: DEFAULT_SETTINGS.sensitivity,
-                  })
-                }
-              />
-            </SettingChip>
-          ) : null}
-        </OptionsArea>
-      ) : null}
 
       <Text className="font-ui text-xs" style={{ color: colors.muted }}>
         Idea by Rob Moreno

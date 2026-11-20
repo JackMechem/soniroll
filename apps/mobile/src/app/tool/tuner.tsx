@@ -1,5 +1,6 @@
 import { midiToNote, parseNote } from '@jam-practice/core/noteRange';
 import { TUNER_INSTRUMENTS, getInstrument, getTuning } from '@jam-practice/core/tunings';
+import { getRecordingPermissionsAsync } from 'expo-audio';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -7,9 +8,10 @@ import { Dropdown } from '@/components/Dropdown';
 import { MicrophoneIcon, TunerIcon } from '@/components/icons';
 import { ToneIcon } from '@/components/tool/toolIcons';
 import { SwitchRow } from '@/components/SwitchRow';
-import { Field, OptionsArea, PillChoice, SheetButton, SheetText, SliderField, ToolScreen, noteGlyphs } from '@/components/tool/ear';
+import { Field, PillChoice, SheetButton, SheetText, SliderField, noteGlyphs } from '@/components/tool/ear';
 import { BigButton, StepButton } from '@/components/tool/meter';
-import { SettingChip } from '@/components/tool/SettingChip';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { TunerDial, TunerMeter } from '@/components/TunerDial';
 import { SENSITIVITY } from '@/lib/audioInput';
 import { startTone, type ToneHandle } from '@/lib/toneGenerator';
@@ -25,14 +27,17 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/Tuner.tsx`. Same mic-listening engine shape
  * (`lib/tunerEngine.ts`, a plain module like `metronomeEngine.ts`/`practiceTimerEngine.ts` — the
  * screen just pushes settings in and reads the live reading back out via `useSyncExternalStore`),
  * same `TunerDial` ring-of-12-notes concept (now `react-native-svg` instead of a DOM `<svg>`), laid
- * out like the website's: the dial (readout and octave inside), the cents meter, the strings, Start
- * listening, then the Instrument, Microphone and Reference & tone chips. The website's recorded
+ * out like every tool (`ToolFrame`): the dial (the heard note big inside it) fitted to the space,
+ * the cents meter (the main feedback), the strings, then the footer: Start listening and the
+ * Instrument, Microphone and Reference & tone chips (the octave of tapped notes is in that last
+ * sheet). It starts listening by itself when the microphone's already allowed. The website's recorded
  * takes (Record, the Takes chip) aren't on mobile. Deliberately **no input-
  * device picker** — `lib/audioInput.ts`'s own doc comment explains why there's no native
  * equivalent of web's `MediaDeviceInfo` enumeration to build one from.
@@ -95,6 +100,9 @@ function TunerScreen() {
   const { listening, error, reading } = tunerState;
   const [playing, setPlaying] = useState<Playing | null>(null);
   useToolActivity('/tuner', listening || playing !== null);
+  useKeepAwakeWhile(listening || playing !== null);
+  const [dialBox, setDialBox] = useState({ w: 0, h: 0 });
+  const dialSize = Math.floor(Math.max(0, Math.min(340, dialBox.w, dialBox.h)));
 
   const toneRef = useRef<ToneHandle | null>(null);
   const mountedRef = useRef(true);
@@ -107,6 +115,20 @@ function TunerScreen() {
     // render for no reason.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refA, sensitivity, tuning.id]);
+
+  // Start listening straight away when the microphone's already allowed (asking for it waits for
+  // Start listening, so the permission prompt never appears out of nowhere).
+  useEffect(() => {
+    let cancelled = false;
+    getRecordingPermissionsAsync()
+      .then(({ granted }) => {
+        if (granted && !cancelled && !getTunerSnapshot().listening) void startTunerListening();
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -160,171 +182,179 @@ function TunerScreen() {
   if (!settingsReady) return <ScreenSpinner />;
 
   return (
-    <ToolScreen title="Tuner">
-      <TunerDial detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass}>
-        <View className="items-center">
-          {noteLetter ? (
-            <>
-              <View className="flex-row items-start">
-                <Text className="font-ui-bold text-5xl font-bold" style={{ color }}>
-                  {noteGlyphs(noteLetter)}
+    <ToolFrame
+      title="Tuner"
+      scroll={false}
+      // While a tone plays (the tuner doesn't listen then anyway) the one button stops it.
+      action={
+        <BigButton
+          label={playing ? 'Stop tone' : listening ? 'Stop listening' : 'Start listening'}
+          secondary={listening || playing !== null}
+          onPress={playing ? stopTone : listening ? stopTunerListening : () => void startTunerListening()}
+        />
+      }
+      chips={
+        <SettingsBar>
+            <SettingChip Icon={TunerIcon} label="Instrument" value={instrument.label.split(' (')[0]}>
+              <Field label="Instrument" hint="Sets which strings the dial and the tap-to-hear buttons below are built from.">
+                <PillChoice
+                  label="Instrument"
+                  value={instrument.id}
+                  options={TUNER_INSTRUMENTS.map((i) => ({ value: i.id, label: i.label }))}
+                  onChange={(instrumentId) => {
+                    const next = getInstrument(instrumentId);
+                    updateSettings({ instrumentId, tuningId: next.tunings[0].id });
+                  }}
+                />
+              </Field>
+              {instrument.tunings.length > 1 ? (
+                <Field label="Tuning" hint="An alternate string tuning for this instrument, e.g. drop D or open G.">
+                  <Dropdown value={tuning.id} options={instrument.tunings.map((t) => ({ value: t.id, label: t.label }))} onChange={(tuningId) => updateSettings({ tuningId })} />
+                </Field>
+              ) : null}
+              {transpose !== 0 ? <SheetText>Notes are shown as written for this transposing instrument, not concert pitch.</SheetText> : null}
+            </SettingChip>
+
+            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
+              <Field label="Sensitivity" hint="How quiet a signal can be before it's ignored as silence — raise it in a noisy room.">
+                <PillChoice
+                  label="Sensitivity"
+                  value={sensitivity in SENSITIVITY ? sensitivity : 'normal'}
+                  options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
+                  onChange={(value) => updateSettings({ sensitivity: value })}
+                />
+              </Field>
+            </SettingChip>
+
+            <SettingChip Icon={ToneIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
+              <SliderField
+                label="Reference pitch (A4)"
+                value={refA}
+                unit=" Hz"
+                min={MIN_REF}
+                max={MAX_REF}
+                step={1}
+                onChange={(v) => updateSettings({ refA: v })}
+                hint="The frequency of concert A, in Hz. 440 is standard; some orchestras and older recordings tune a little sharp or flat of it."
+              />
+              {refA !== 440 ? <SheetButton label="Reset to 440" onPress={() => updateSettings({ refA: 440 })} /> : null}
+            <Field label="Octave of tapped notes" hint="Which octave a note you tap on the dial plays in.">
+              <View className="flex-row items-center gap-3">
+                <StepButton label="Octave down" disabled={octave <= MIN_OCTAVE} onPress={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}>
+                  −
+                </StepButton>
+                <Text className="font-ui-semibold w-6 text-center text-xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
+                  {octave}
                 </Text>
-                <Text className="font-ui-semibold mt-1 text-lg font-semibold" style={{ color: colors.muted }}>
-                  {noteOctave}
-                </Text>
+                <StepButton label="Octave up" disabled={octave >= MAX_OCTAVE} onPress={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}>
+                  +
+                </StepButton>
               </View>
-              <Text className="font-ui-semibold text-xs font-semibold tabular-nums" style={{ color }}>
-                {reading!.cents > 0 ? '+' : ''}
-                {reading!.cents.toFixed(1)} cents
-              </Text>
-              <Text className="font-ui text-[11px] tabular-nums" style={{ color: colors.muted }}>
-                {reading!.freq.toFixed(1)} Hz
-              </Text>
-            </>
-          ) : playing ? (
-            <>
-              <Text className="font-ui-bold text-4xl font-bold" style={{ color: colors.accent }}>
-                {noteGlyphs(midiToNote(playing.midi + transpose).replace(/-?\d+$/, ''))}
-              </Text>
-              <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
-                {freqOfMidi(playing.midi, refA).toFixed(1)} Hz
-              </Text>
-            </>
-          ) : (
-            // Idle: what it's set up for (what to do is said under the dial).
-            <>
-              <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-bold text-2xl font-bold" style={{ color: colors.foreground }}>
-                {instrument.label.split(' (')[0]}
-              </Text>
-              <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}
-              </Text>
-            </>
-          )}
-        </View>
-
-        <View className="items-center">
-          <Text className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted }}>
-            Octave
-          </Text>
-          <View className="flex-row items-center gap-2">
-            <StepButton compact label="Octave down" disabled={octave <= MIN_OCTAVE} onPress={() => updateSettings({ octave: Math.max(MIN_OCTAVE, octave - 1) })}>
-              −
-            </StepButton>
-            <Text className="font-ui-semibold w-5 text-center text-xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
-              {octave}
-            </Text>
-            <StepButton compact label="Octave up" disabled={octave >= MAX_OCTAVE} onPress={() => updateSettings({ octave: Math.min(MAX_OCTAVE, octave + 1) })}>
-              +
-            </StepButton>
-          </View>
-        </View>
-      </TunerDial>
-
-      <TunerMeter
-        cents={reading ? cents : null}
-        color={color}
-        caption={reading ? verdict : playing ? 'Playing a tone' : listening ? 'Play a note…' : 'Press Start to listen, or tap a note to hear it'}
-        captionColor={reading ? color : colors.muted}
-      />
-
-      {tuning.strings.length > 0 ? (
-        <View accessibilityLabel="Tap a string to hear its pitch" className="w-full flex-row flex-wrap justify-center gap-1.5">
-          {tuning.strings.map((s, i) => {
-            const midi = stringMidis[i];
-            const isHeard = reading?.target === midi;
-            const isPlaying = playing?.midi === midi;
-            return (
-              <Pressable
-                key={`${s}-${i}`}
-                onPress={() => playMidi(midi)}
-                accessibilityRole="button"
-                accessibilityLabel={`Hear ${s}`}
-                accessibilityState={{ selected: isPlaying }}
-                android_ripple={{ color: colors['surface-hover'] }}
-                className="h-10 min-w-12 items-center justify-center overflow-hidden rounded-lg px-3"
-                style={{ backgroundColor: isPlaying ? colors.accent : isHeard ? color : derived.fill }}
-              >
-                <Text
-                  className="font-ui-semibold text-sm font-semibold tabular-nums"
-                  style={{ color: isPlaying ? colors['accent-foreground'] : isHeard ? colors.background : colors.foreground }}
-                >
-                  {noteGlyphs(s)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
-
-      {/* While a tone plays (the tuner doesn't listen then anyway) the one button stops it. */}
-      <BigButton
-        label={playing ? 'Stop tone' : listening ? 'Stop' : 'Start listening'}
-        secondary={listening || playing !== null}
-        onPress={playing ? stopTone : listening ? stopTunerListening : () => void startTunerListening()}
-      />
-      {error ? (
-        <Text className="font-ui -mt-2 text-center text-sm" style={{ color: colors.danger }}>
-          {error}
-        </Text>
-      ) : null}
-
-      <OptionsArea>
-        <SettingChip Icon={TunerIcon} label="Instrument" value={instrument.label.split(' (')[0]}>
-          <Field label="Instrument" hint="Sets which strings the dial and the tap-to-hear buttons below are built from.">
-            <PillChoice
-              label="Instrument"
-              value={instrument.id}
-              options={TUNER_INSTRUMENTS.map((i) => ({ value: i.id, label: i.label }))}
-              onChange={(instrumentId) => {
-                const next = getInstrument(instrumentId);
-                updateSettings({ instrumentId, tuningId: next.tunings[0].id });
-              }}
-            />
-          </Field>
-          {instrument.tunings.length > 1 ? (
-            <Field label="Tuning" hint="An alternate string tuning for this instrument, e.g. drop D or open G.">
-              <Dropdown value={tuning.id} options={instrument.tunings.map((t) => ({ value: t.id, label: t.label }))} onChange={(tuningId) => updateSettings({ tuningId })} />
             </Field>
+              <Field label="Tone generator sound" hint="The waveform played when you tap a note on the dial or a string below to hear it.">
+                <PillChoice label="Tone generator sound" value={waveform} options={WAVEFORMS} onChange={(value) => updateSettings({ waveform: value })} />
+              </Field>
+              <SwitchRow
+                label="Hold tapped notes"
+                checked={sustain}
+                onChange={(v) => updateSettings({ sustain: v })}
+                hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
+              />
+            </SettingChip>
+        </SettingsBar>
+      }
+    >
+      <View className="flex-1 items-center gap-4 px-4 pb-2 pt-3">
+        {/* The dial takes what's left, square, up to 340 across. */}
+        <View className="w-full flex-1 items-center justify-center" style={{ minHeight: 0 }} onLayout={(e) => setDialBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+          {dialSize > 0 ? (
+            <TunerDial size={dialSize} detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass}>
+              {noteLetter ? (
+                <View className="items-center">
+                  <View className="flex-row items-start">
+                    <Text className="font-ui-bold font-bold" style={{ color, fontSize: Math.round(dialSize * 0.22), lineHeight: Math.round(dialSize * 0.26) }}>
+                      {noteGlyphs(noteLetter)}
+                    </Text>
+                    <Text className="font-ui-semibold mt-2 text-xl font-semibold" style={{ color: colors.muted }}>
+                      {noteOctave}
+                    </Text>
+                  </View>
+                  <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color }}>
+                    {reading!.cents > 0 ? '+' : ''}
+                    {reading!.cents.toFixed(1)} cents
+                  </Text>
+                  <Text className="font-ui text-[11px] tabular-nums" style={{ color: colors.muted }}>
+                    {reading!.freq.toFixed(1)} Hz
+                  </Text>
+                </View>
+              ) : playing ? (
+                <View className="items-center">
+                  <Text className="font-ui-bold font-bold" style={{ color: colors.accent, fontSize: Math.round(dialSize * 0.18), lineHeight: Math.round(dialSize * 0.22) }}>
+                    {noteGlyphs(midiToNote(playing.midi + transpose).replace(/-?\d+$/, ''))}
+                  </Text>
+                  <Text className="font-ui text-xs tabular-nums" style={{ color: colors.muted }}>
+                    {freqOfMidi(playing.midi, refA).toFixed(1)} Hz
+                  </Text>
+                </View>
+              ) : (
+                // Nothing heard: what it's set up for.
+                <View className="items-center px-2">
+                  <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-bold text-2xl font-bold" style={{ color: listening ? colors.muted : colors.foreground }}>
+                    {listening ? '–' : instrument.label.split(' (')[0]}
+                  </Text>
+                  <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+                    {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}
+                  </Text>
+                </View>
+              )}
+            </TunerDial>
           ) : null}
-          {transpose !== 0 ? <SheetText>Notes are shown as written for this transposing instrument, not concert pitch.</SheetText> : null}
-        </SettingChip>
+        </View>
 
-        <SettingChip Icon={MicrophoneIcon} label="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
-          <Field label="Sensitivity" hint="How quiet a signal can be before it's ignored as silence — raise it in a noisy room.">
-            <PillChoice
-              label="Sensitivity"
-              value={sensitivity in SENSITIVITY ? sensitivity : 'normal'}
-              options={Object.entries(SENSITIVITY).map(([value, { label }]) => ({ value, label }))}
-              onChange={(value) => updateSettings({ sensitivity: value })}
-            />
-          </Field>
-        </SettingChip>
+        <TunerMeter
+          cents={reading ? cents : null}
+          color={color}
+          zoneColor={IN_TUNE}
+          caption={reading ? verdict : playing ? 'Playing a tone' : listening ? 'Play a note…' : 'Start listening, or tap a note to hear it'}
+          captionColor={reading ? color : colors.muted}
+        />
 
-        <SettingChip Icon={ToneIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
-          <SliderField
-            label="Reference pitch (A4)"
-            value={refA}
-            unit=" Hz"
-            min={MIN_REF}
-            max={MAX_REF}
-            step={1}
-            onChange={(v) => updateSettings({ refA: v })}
-            hint="The frequency of concert A, in Hz. 440 is standard; some orchestras and older recordings tune a little sharp or flat of it."
-          />
-          {refA !== 440 ? <SheetButton label="Reset to 440" onPress={() => updateSettings({ refA: 440 })} /> : null}
-          <Field label="Tone generator sound" hint="The waveform played when you tap a note on the dial or a string below to hear it.">
-            <PillChoice label="Tone generator sound" value={waveform} options={WAVEFORMS} onChange={(value) => updateSettings({ waveform: value })} />
-          </Field>
-          <SwitchRow
-            label="Hold tapped notes"
-            checked={sustain}
-            onChange={(v) => updateSettings({ sustain: v })}
-            hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
-          />
-        </SettingChip>
-      </OptionsArea>
-    </ToolScreen>
+        {tuning.strings.length > 0 ? (
+          <View accessibilityLabel="Tap a string to hear its pitch" className="w-full flex-row flex-wrap justify-center gap-1.5">
+            {tuning.strings.map((s, i) => {
+              const midi = stringMidis[i];
+              const isHeard = reading?.target === midi;
+              const isPlaying = playing?.midi === midi;
+              return (
+                <Pressable
+                  key={`${s}-${i}`}
+                  onPress={() => playMidi(midi)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Hear ${s}`}
+                  accessibilityState={{ selected: isPlaying }}
+                  android_ripple={{ color: colors['surface-hover'] }}
+                  className="h-11 min-w-12 items-center justify-center overflow-hidden rounded-lg px-3"
+                  style={{ backgroundColor: isPlaying ? colors.accent : isHeard ? color : derived.fill }}
+                >
+                  <Text
+                    className="font-ui-semibold text-sm font-semibold tabular-nums"
+                    style={{ color: isPlaying ? colors['accent-foreground'] : isHeard ? colors.background : colors.foreground }}
+                  >
+                    {noteGlyphs(s)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {error ? (
+          <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+            {error}
+          </Text>
+        ) : null}
+      </View>
+    </ToolFrame>
   );
 }
 

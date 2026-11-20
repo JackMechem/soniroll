@@ -1,7 +1,9 @@
 import type { NavLinkInfo } from '@jam-practice/core/navLinks';
+import { useRouter } from 'expo-router';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import {
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -11,7 +13,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { ChevronRightIcon, ClearIcon, NAV_LINK_ICONS, SearchIcon, type IconProps } from '@/components/icons';
+import { CheckIcon, ChevronRightIcon, ClearIcon, NAV_LINK_ICONS, SearchIcon, type IconProps } from '@/components/icons';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
@@ -87,13 +89,15 @@ export function Card({
 }
 
 /** A tappable row inside a card: an icon tile, a title and an optional detail, and a chevron or
-    something of its own on the right. Rows sit on the faint fill, a little apart. */
+    something of its own on the right. Rows sit on the faint fill, a little apart. `plain` leaves
+    the fill off — for rows directly inside a card (no card-in-card), spaced rather than filled. */
 export function ListRow({
   icon,
   title,
   detail,
   right,
   onPress,
+  plain,
   style,
 }: {
   icon?: ReactNode;
@@ -101,6 +105,7 @@ export function ListRow({
   detail?: string;
   right?: ReactNode;
   onPress?: () => void;
+  plain?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { colors, derived } = useAppTheme();
@@ -108,8 +113,8 @@ export function ListRow({
     <Pressable
       onPress={onPress}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="min-h-[52px] flex-row items-center gap-3 overflow-hidden rounded-lg px-3 py-2"
-      style={[{ backgroundColor: derived.fill }, style]}
+      className={`min-h-[52px] flex-row items-center gap-3 overflow-hidden rounded-lg py-2 ${plain ? '-mx-2 px-2' : 'px-3'}`}
+      style={[{ backgroundColor: plain ? 'transparent' : derived.fill }, style]}
     >
       {icon}
       <View className="flex-1">
@@ -359,16 +364,90 @@ export function useScrolled() {
 }
 
 /** A section's heading inside a page or card: the name, an optional count after a dot ("Tunes I
-    Know · 12"), and something on the right (a link, a sort control). */
-export function SectionHeader({ title, count, right }: { title: string; count?: number; right?: ReactNode }) {
+    Know · 12"), an optional one-line `detail` under it (what the section is for), and something on
+    the right (a link, a sort control). */
+export function SectionHeader({ title, count, detail, right }: { title: string; count?: number; detail?: string; right?: ReactNode }) {
   const { colors } = useAppTheme();
   return (
     <View className="min-h-[36px] flex-row items-center gap-2 px-1">
-      <Text numberOfLines={1} className="font-ui-semibold flex-1 text-[15px] font-semibold" style={{ color: colors.foreground }}>
-        {title}
-        {count !== undefined ? <Text className="font-ui text-[15px]" style={{ color: colors.muted }}>{` · ${count}`}</Text> : null}
-      </Text>
+      <View className="flex-1">
+        <Text numberOfLines={1} className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
+          {title}
+          {count !== undefined ? <Text className="font-ui text-[15px]" style={{ color: colors.muted }}>{` · ${count}`}</Text> : null}
+        </Text>
+        {detail ? (
+          <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
+            {detail}
+          </Text>
+        ) : null}
+      </View>
       {right}
     </View>
+  );
+}
+
+/**
+ * The one sign-in gate, for anything that needs an account while you're signed out: `EmptyState`'s
+ * look (an icon tile, a title, one line) with an optional short checklist of what you get, then
+ * **Sign in** and **Create an account** (both open the Account screen, on the matching side). No
+ * second headline or label repeating the screen's title — the header already says where you are.
+ * Wrap it in `SignInGateScreen` when it's the whole screen.
+ */
+export function SignInGate({
+  Icon,
+  title,
+  body,
+  points,
+}: {
+  Icon?: ComponentType<IconProps>;
+  title: string;
+  body?: string;
+  points?: string[];
+}) {
+  const { colors } = useAppTheme();
+  const router = useRouter();
+  return (
+    <View className="items-center gap-4 rounded-xl px-5 py-7" style={{ backgroundColor: colors.surface }}>
+      {Icon ? <IconTile Icon={Icon} size={44} /> : null}
+      <View className="items-center gap-1">
+        <Text className="font-ui-semibold text-center text-base font-semibold" style={{ color: colors.foreground }}>
+          {title}
+        </Text>
+        {body ? (
+          <Text className="font-ui text-center text-sm leading-5" style={{ color: colors.muted }}>
+            {body}
+          </Text>
+        ) : null}
+      </View>
+      {points?.length ? (
+        <View className="gap-2 self-stretch">
+          {points.map((p) => (
+            <View key={p} className="flex-row items-center gap-2.5">
+              <View className="h-5 w-5 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
+                <CheckIcon color={colors.accent} size={13} />
+              </View>
+              <Text className="font-ui flex-1 text-sm leading-5" style={{ color: colors.foreground }}>
+                {p}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <View className="flex-row flex-wrap justify-center gap-2">
+        <Button label="Sign in" onPress={() => router.push('/profile')} />
+        <Button label="Create an account" kind="secondary" onPress={() => router.push({ pathname: '/profile', params: { flow: 'signUp' } })} />
+      </View>
+    </View>
+  );
+}
+
+/** `SignInGate` as a whole screen: on the page background, with the page's padding, scrolling if
+    the phone is small. `bottom` is the bottom padding (`useTabBarSpace()` on a main screen). */
+export function SignInGateScreen({ bottom = 48, ...gate }: Parameters<typeof SignInGate>[0] & { bottom?: number }) {
+  const { colors } = useAppTheme();
+  return (
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: bottom }}>
+      <SignInGate {...gate} />
+    </ScrollView>
   );
 }

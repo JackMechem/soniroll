@@ -9,8 +9,8 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** The three ear-training learning paths at a glance — levels passed, stars and what's next — for
     Home and profiles (native sibling of web's `EarTrainingProgress`). `links` opens each tool.
-    `compact` (Home): one slim row per trainer — icon, name, "3/13 levels" and a thin bar. Colours
-    come from the theme only. */
+    `compact` (Home): one slim row per trainer — icon, name, "3/13 levels" and a thin bar — straight
+    on Home's card, no fill of their own. Colours come from the theme only. */
 export function EarTrainingProgress({
   summaries,
   links = false,
@@ -22,11 +22,11 @@ export function EarTrainingProgress({
   card?: 'surface' | 'background';
   compact?: boolean;
 }) {
-  const { colors, derived } = useAppTheme();
+  const { colors } = useAppTheme();
   const router = useRouter();
   if (compact) {
     return (
-      <View className="gap-2">
+      <View className="gap-1">
         {LEARNING_TRACKS.map((track) => {
           const s = summaries[track.id];
           const tool = NAV_LINKS_DATA.find((l) => l.href === track.href);
@@ -38,8 +38,7 @@ export function EarTrainingProgress({
               accessibilityRole={links ? 'button' : undefined}
               accessibilityLabel={`${track.label}: ${s.passed} of ${s.total} levels`}
               android_ripple={{ color: colors['surface-hover'] }}
-              className="min-h-[52px] flex-row items-center gap-3 overflow-hidden rounded-lg px-3 py-2"
-              style={{ backgroundColor: derived.fill }}
+              className="-mx-2 min-h-[52px] flex-row items-center gap-3 overflow-hidden rounded-lg px-2 py-2"
             >
               {tool ? <ToolIcon tool={tool} size={32} /> : null}
               <View className="flex-1 gap-1.5">

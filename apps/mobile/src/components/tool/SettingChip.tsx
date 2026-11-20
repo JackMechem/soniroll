@@ -1,4 +1,4 @@
-import { Children, createContext, isValidElement, useContext, useState, type ComponentType, type ReactNode } from 'react';
+import { Children, Fragment, cloneElement, createContext, isValidElement, useContext, useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { Easing, SlideInDown } from 'react-native-reanimated';
@@ -17,14 +17,52 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
  */
 
 /** Every tool screen's scroll content, top-anchored: a 16dp gutter, starting 20dp under the
-    header (not floating in the middle of the screen), scrolling on a short screen. The order is
-    History/Struggles chips → the mode switch → the main display → the big button → the chips. */
+    header. Most tools use `ToolFrame` instead (the fixed footer with the chips); kept for screens
+    that only scroll. */
 export const TOOL_CONTENT = { flexGrow: 1, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24, gap: 24 } as const;
 
-/** A centred, wrapping row of chips. Chips always wrap — never a sideways row that cuts them off;
-    when a tool has many, the rarely used ones go in a `MoreOptionsChip`. */
-export function SettingsBar({ children }: { children: ReactNode }) {
-  return <View className="flex-row flex-wrap justify-center gap-2">{children}</View>;
+/** Its children with fragments opened up and empty slots (`null`, `false`) dropped, each with a
+    key of its own (they're rendered as a list). */
+function flattenChildren(children: ReactNode, prefix = ''): ReactElement[] {
+  const out: ReactElement[] = [];
+  Children.toArray(children).forEach((child, i) => {
+    if (!isValidElement(child)) return;
+    const key = `${prefix}${child.key ?? i}`;
+    if (child.type === Fragment) out.push(...flattenChildren((child.props as { children?: ReactNode }).children, `${key}/`));
+    else out.push(cloneElement(child, { key }));
+  });
+  return out;
+}
+
+/** Whether a chip sits in a `SettingsBar` cell (then it fills the cell). */
+const ChipGridContext = createContext(false);
+
+/**
+ * A tool's setting chips as a tidy grid: two equal columns filling the space between the 16dp
+ * gutters, each chip's content left-aligned; an odd last chip spans the whole row. At most `max`
+ * chips show (put the most-used first); when there are more, the rest go in one "N more" chip
+ * (`MoreOptionsChip`) — unless it would hold just one, which then simply shows. A tool that
+ * builds its own `MoreOptionsChip` keeps it as it is.
+ */
+export function SettingsBar({ children, max = 4 }: { children: ReactNode; max?: number }) {
+  let items = flattenChildren(children);
+  const hasMore = items.some((c) => c.type === MoreOptionsChip);
+  if (!hasMore && items.length > max + 1) {
+    items = [...items.slice(0, max), <MoreOptionsChip key="more">{items.slice(max)}</MoreOptionsChip>];
+  }
+  return (
+    <ChipGridContext.Provider value>
+      <View className="w-full flex-row flex-wrap gap-2">
+        {items.map((child, i) => (
+          // flexBasis under half with flexGrow: two to a row at equal widths, a lone last one grows
+          // to the full row.
+          <View key={child.key ?? i} style={{ flexGrow: 1, flexBasis: '40%', minWidth: 0 }}>
+            {child}
+          </View>
+        ))}
+      </View>
+    </ChipGridContext.Provider>
+  );
 }
 
 /** The bottom sheet a chip opens: the title and a close button, then its controls, which scroll on
@@ -121,9 +159,10 @@ const ChipModeContext = createContext<ChipMode>({ mode: 'chip' });
  * it opens its sheet. Give every chip a short value (even a summary like "Piano · in turn"), so
  * chips read alike.
  *
- * With `toggle`, it's a split chip for a setting that's switched on and off as a whole: a switch
- * (with the name and value) that toggles it straight away, and a sliders button that opens the
- * sheet. Dimmed while off.
+ * With `toggle`, it's a split chip for a setting that's switched on and off as a whole: the round
+ * disc on the left is the switch (a tick on the accent when on, an empty ring when off) and
+ * toggles it straight away; the rest of the chip (name, value, a sliders mark) opens the sheet.
+ * Dimmed while off.
  */
 export function SettingChip({
   Icon,
@@ -152,8 +191,9 @@ export function SettingChip({
   onOpenChange?: (open: boolean) => void;
   children: ReactNode;
 }) {
-  const { colors, derived } = useAppTheme();
+  const { colors } = useAppTheme();
   const chipMode = useContext(ChipModeContext);
+  const inGrid = useContext(ChipGridContext);
   const [openState, setOpenState] = useState(false);
   // Under "More options" a controlled chip (`open`) still follows its owner (who may close it to
   // open another sheet); otherwise it's open while it's the one picked from the list.
@@ -199,55 +239,43 @@ export function SettingChip({
     </Text>
   );
 
+  // In a grid cell the chip fills it (content on the left); on its own it hugs its content.
+  const fill = inGrid ? { alignSelf: 'stretch' as const } : { maxWidth: '100%' as const };
+
   const chip = toggle ? (
-    <View
-      className="h-14 flex-row items-stretch overflow-hidden rounded-full"
-      style={{
-        maxWidth: '100%',
-        backgroundColor: colors.surface,
-        opacity: toggle.checked ? 1 : 0.7,
-      }}
-    >
+    // A split chip: the round disc on the left is the switch (filled with a tick when on, an empty
+    // ring when off); the rest of the chip opens the sheet.
+    <View className="h-14 flex-row items-center overflow-hidden rounded-full" style={{ ...fill, backgroundColor: colors.surface, opacity: toggle.checked ? 1 : 0.75 }}>
       <Pressable
         onPress={() => toggle.onChange(!toggle.checked)}
         disabled={toggle.disabled}
         accessibilityRole="switch"
         accessibilityLabel={label}
-        accessibilityState={{
-          checked: toggle.checked,
-          disabled: toggle.disabled,
-        }}
-        android_ripple={{ color: colors['surface-hover'] }}
-        className="flex-row items-center gap-3 pl-2 pr-4"
-        style={{ flexShrink: 1 }}
+        accessibilityState={{ checked: toggle.checked, disabled: toggle.disabled }}
+        hitSlop={{ top: 6, bottom: 6, left: 6 }}
+        className="h-14 items-center justify-center pl-2.5 pr-1"
       >
         <View
-          className="h-9 w-[60px] overflow-hidden rounded-full"
-          style={{
-            backgroundColor: toggle.checked ? colors.accent : colors.background,
-          }}
+          className="h-9 w-9 items-center justify-center rounded-full"
+          style={
+            toggle.checked
+              ? { backgroundColor: colors.accent }
+              : { borderWidth: 2, borderColor: withAlpha(colors.foreground, 0.35) }
+          }
         >
-          <View
-            className="absolute top-1 h-7 w-7 items-center justify-center rounded-full"
-            style={{
-              left: toggle.checked ? 28 : 4,
-              backgroundColor: toggle.checked ? colors['accent-foreground'] : withAlpha(colors.foreground, 0.8),
-            }}
-          >
-            {toggle.checked ? <CheckIcon color={colors.accent} size={16} /> : null}
-          </View>
+          {toggle.checked ? <CheckIcon color={colors['accent-foreground']} size={18} /> : null}
         </View>
-        {text}
       </Pressable>
-      <View className="my-2 w-px" style={{ backgroundColor: derived.hairline }} />
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`${label} settings`}
+        accessibilityLabel={`${label} settings${hasValue ? `: ${value}` : ''}`}
         android_ripple={{ color: colors['surface-hover'] }}
-        className="items-center justify-center pl-3 pr-4"
+        className="h-14 flex-1 flex-row items-center gap-2 pl-1.5 pr-3"
       >
-        <SlidersIcon color={colors.muted} size={18} />
+        {text}
+        {inGrid ? <View className="flex-1" /> : null}
+        <SlidersIcon color={colors.muted} size={16} />
       </Pressable>
     </View>
   ) : (
@@ -256,11 +284,11 @@ export function SettingChip({
       accessibilityRole="button"
       accessibilityLabel={hasValue ? `${label}: ${value}` : label}
       android_ripple={{ color: colors['surface-hover'] }}
-      className="h-14 flex-row items-center gap-3 overflow-hidden rounded-full pl-1.5 pr-5"
-      style={{ maxWidth: '100%', backgroundColor: colors.surface }}
+      className="h-14 flex-row items-center gap-2.5 overflow-hidden rounded-full pl-2.5 pr-4"
+      style={{ ...fill, backgroundColor: colors.surface }}
     >
-      <View className="h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
-        <Icon color={colors.accent} size={20} />
+      <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
+        <Icon color={colors.accent} size={18} />
       </View>
       {text}
     </Pressable>
@@ -345,12 +373,15 @@ function ChipListRow({
  * For a tool with many settings (Rhythm Section): its `SettingChip`s as children become one "More
  * options" chip that opens a list of them; picking one closes the list and opens that setting's
  * own sheet, as its chip would. Put the three or four most-used chips beside it on the page.
+ * (`SettingsBar` makes one by itself when a tool has more than five chips.)
  */
 export function MoreOptionsChip({ children, label = 'More options' }: { children: ReactNode; label?: string }) {
   const { colors } = useAppTheme();
+  const inGrid = useContext(ChipGridContext);
   const [listOpen, setListOpen] = useState(false);
   const [active, setActive] = useState<string | null>(null);
-  const names = Children.toArray(children)
+  const count = flattenChildren(children).length;
+  const names = flattenChildren(children)
     .map((c) => (isValidElement<{ label?: unknown }>(c) && typeof c.props.label === 'string' ? c.props.label : null))
     .filter((n): n is string => n !== null);
   const pick = (name: string, onOpenChange?: (open: boolean) => void) => {
@@ -366,17 +397,17 @@ export function MoreOptionsChip({ children, label = 'More options' }: { children
       <Pressable
         onPress={() => setListOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={label}
+        accessibilityLabel={names.length ? `${label}: ${names.join(', ')}` : label}
         android_ripple={{ color: colors['surface-hover'] }}
-        className="h-14 flex-row items-center gap-3 overflow-hidden rounded-full pl-1.5 pr-5"
-        style={{ backgroundColor: colors.surface }}
+        className="h-14 flex-row items-center gap-2.5 overflow-hidden rounded-full pl-2.5 pr-4"
+        style={{ ...(inGrid ? { alignSelf: 'stretch' as const } : null), backgroundColor: colors.surface }}
       >
-        <View className="h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
-          <MoreIcon color={colors.accent} size={20} />
+        <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: withAlpha(colors.accent, 0.14) }}>
+          <MoreIcon color={colors.accent} size={18} />
         </View>
-        <View style={{ maxWidth: 180 }}>
+        <View style={{ flexShrink: 1 }}>
           <Text numberOfLines={1} className="font-ui-extrabold text-base font-extrabold" style={{ color: colors.foreground }}>
-            {names.length ? `${names.length} more` : 'More'}
+            {count ? `${count} more` : 'More'}
           </Text>
           <Text numberOfLines={1} className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted }}>
             {names.length ? names.join(', ') : label}

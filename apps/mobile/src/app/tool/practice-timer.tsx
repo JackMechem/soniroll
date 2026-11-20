@@ -1,7 +1,7 @@
 import { describeSession, newSegment, type PracticeSession } from '@jam-practice/core/practiceTimer';
 import { Stack } from 'expo-router';
 import { Fragment, useState, useSyncExternalStore } from 'react';
-import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -10,26 +10,28 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { blankDraft, draftFromSession, PracticeSessionEditor, type Draft } from '@/components/PracticeSessionEditor';
 import { PracticeTimerRing } from '@/components/PracticeTimerRing';
 import { SwitchRow } from '@/components/SwitchRow';
-import { BigButton, StepperPill } from '@/components/tool/meter';
-import { PillButton } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
+import { BigButton, StepButton } from '@/components/tool/meter';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { Card, EmptyState } from '@/components/ui';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { getSnapshot, pause, resume, skip, start, stop, subscribe, type EngineState } from '@/lib/practiceTimerEngine';
 import { usePracticeSessions, type SessionInput } from '@/lib/usePracticeSessions';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 const SOUND_SETTINGS_KEY = 'jam-practice-timer-sound-settings';
 const DEFAULT_SOUND_SETTINGS = { soundEnabled: true, alarmMode: false, fullScreenAlert: false };
 
 /**
  * The Practice Timer, laid out like the website's (`apps/web/components/PracticeTimer.tsx`).
- * Running: what's playing ("Now running", the step's name, the ring, what's next) and round
- * Pause/Resume/Continue, Skip and Stop buttons. Stopped: what it is (and that its time goes into
- * the Shed Log), a quick timer (minutes and Start — a plain countdown, not saved, like the
- * website's), the Sound chip, then your saved sessions in a card (start, edit, delete each, and
- * New) or an empty state offering a new one. Saved sessions
+ * On `ToolFrame`. Running: what's playing ("Now running", the step's name, the ring, what's next)
+ * in the middle; Pause/Resume/Continue, Skip and Stop in the footer over the Sound chip. Stopped:
+ * a quick timer (minutes between round − / +; Start in the footer — a plain countdown, not saved,
+ * like the website's), then your saved sessions in a card (start, edit, delete each, and New) or
+ * an empty state offering a new one. What the tool is (and that its time goes into the Shed Log)
+ * is in the intro (`introNotes.ts`). Saved sessions
  * sync to the same Convex `practiceSessions` table the website uses (`lib/usePracticeSessions.ts`,
  * with an offline `AsyncStorage` fallback); notifications and the alarm live in
  * `lib/practiceTimerEngine.ts`. The session editor takes the whole screen (the website opens it in
@@ -46,6 +48,8 @@ function PracticeTimerScreen() {
   const [quickMinutes, setQuickMinutes] = useState(10);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // The screen stays on while a timer counts (not while it's paused).
+  useKeepAwakeWhile(engineState !== null && !engineState.paused);
 
   function startSession(session: PracticeSession) {
     start(session, soundEnabled, alarmMode, fullScreenAlert);
@@ -90,88 +94,106 @@ function PracticeTimerScreen() {
   // Saved settings not read yet — a spinner rather than defaults that then jump to the real values.
   if (!settingsReady) return <ScreenSpinner />;
 
-  return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Practice Timer' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        {draft ? (
+  const startQuick = () =>
+    startSession({
+      id: 'quick-timer',
+      name: '',
+      type: 'custom',
+      segments: [{ ...newSegment(), title: `${quickMinutes} min timer`, minutes: quickMinutes }],
+      updatedAt: 0,
+    });
+
+  const dialogs = (
+    <ConfirmDialog
+      visible={deletingId !== null}
+      title="Delete session?"
+      message="This can't be undone."
+      confirmLabel="Delete"
+      onConfirm={confirmDelete}
+      onCancel={() => setDeletingId(null)}
+    />
+  );
+
+  // The session editor takes the whole screen (a long form with a keyboard).
+  if (draft) {
+    return (
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <Stack.Screen options={{ title: 'Practice Timer' }} />
+        <SafeAreaView className="flex-1" edges={['bottom']}>
           <PracticeSessionEditor draft={draft} onChange={setDraft} onSave={saveDraft} onCancel={() => setDraft(null)} saving={saving} />
+        </SafeAreaView>
+        {dialogs}
+      </View>
+    );
+  }
+
+  return (
+    <ToolFrame
+      title="Practice Timer"
+      action={
+        engineState ? (
+          <RunningControls engineState={engineState} />
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={TOOL_CONTENT}>
-            {engineState ? (
-              <RunningView engineState={engineState} />
-            ) : (
-              <QuickTimer
-                minutes={quickMinutes}
-                onChange={setQuickMinutes}
-                onStart={() =>
-                  startSession({
-                    id: 'quick-timer',
-                    name: '',
-                    type: 'custom',
-                    segments: [{ ...newSegment(), title: `${quickMinutes} min timer`, minutes: quickMinutes }],
-                    updatedAt: 0,
-                  })
-                }
-              />
-            )}
-
-            <SettingsBar>
-              <SettingChip Icon={SpeakerIcon} label="Sound" value={soundEnabled ? (alarmMode ? 'Alarm' : 'Chime') : 'Off'}>
-                <SwitchRow
-                  label="Sound feedback"
-                  checked={soundEnabled}
-                  onChange={(v) => updateSettings({ soundEnabled: v })}
-                  hint="Plays a chime and a quick vibration each time a segment ends, a notification sound, and a repeating chime + vibration while an alarm is holding."
-                />
-                <SwitchRow
-                  label="Alarm mode"
-                  checked={alarmMode}
-                  onChange={setAlarmMode}
-                  hint="Instead of moving on automatically, holds at the end of each segment and keeps chiming/vibrating until you dismiss it — from here, the running timer's own controls, or the widget while it's running."
-                />
-                <SwitchRow
-                  label="Full-screen alert"
-                  checked={fullScreenAlert}
-                  onChange={(v) => updateSettings({ fullScreenAlert: v })}
-                  disabled={!alarmMode}
-                  hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a chime. Only applies while alarm mode is on."
-                />
-                <ReliabilityHints />
-              </SettingChip>
-            </SettingsBar>
-
-            {!engineState ? (
-              <SavedSessions
-                sessions={sessions}
-                loading={loading}
-                onStart={startSession}
-                onEdit={(s) => setDraft(draftFromSession(s))}
-                onDelete={(id) => setDeletingId(id)}
-                onNew={() => setDraft(blankDraft())}
-              />
-            ) : null}
-          </ScrollView>
-        )}
-      </SafeAreaView>
-
-      <ConfirmDialog
-        visible={deletingId !== null}
-        title="Delete session?"
-        message="This can't be undone."
-        confirmLabel="Delete"
-        onConfirm={confirmDelete}
-        onCancel={() => setDeletingId(null)}
-      />
-    </View>
+          <BigButton label="Start" onPress={startQuick} icon={<PlayIcon color={colors['accent-foreground']} size={18} />} />
+        )
+      }
+      chips={
+        <SettingsBar>
+          <SettingChip Icon={SpeakerIcon} label="Sound" value={soundEnabled ? (alarmMode ? 'Alarm' : 'Chime') : 'Off'}>
+            <SwitchRow
+              label="Sound feedback"
+              checked={soundEnabled}
+              onChange={(v) => updateSettings({ soundEnabled: v })}
+              hint="Plays a chime and a quick vibration each time a segment ends, a notification sound, and a repeating chime + vibration while an alarm is holding."
+            />
+            <SwitchRow
+              label="Alarm mode"
+              checked={alarmMode}
+              onChange={setAlarmMode}
+              hint="Instead of moving on automatically, holds at the end of each segment and keeps chiming/vibrating until you dismiss it — from here, the running timer's own controls, or the widget while it's running."
+            />
+            <SwitchRow
+              label="Full-screen alert"
+              checked={fullScreenAlert}
+              onChange={(v) => updateSettings({ fullScreenAlert: v })}
+              disabled={!alarmMode}
+              hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a chime. Only applies while alarm mode is on."
+            />
+            <ReliabilityHints />
+          </SettingChip>
+        </SettingsBar>
+      }
+      gap={24}
+    >
+      {engineState ? (
+        <RunningView engineState={engineState} />
+      ) : (
+        <>
+          <QuickTimer minutes={quickMinutes} onChange={setQuickMinutes} />
+          <View className="w-full">
+            <SavedSessions
+              sessions={sessions}
+              loading={loading}
+              onStart={startSession}
+              onEdit={(s) => setDraft(draftFromSession(s))}
+              onDelete={(id) => setDeletingId(id)}
+              onNew={() => setDraft(blankDraft())}
+            />
+          </View>
+        </>
+      )}
+      {dialogs}
+    </ToolFrame>
   );
 }
 
+/** Running: what's playing ("Now running", the step's name, the ring, what's next). Its buttons
+    are in the footer (`RunningControls`). */
 function RunningView({ engineState }: { engineState: EngineState }) {
   const { colors } = useAppTheme();
   const { alarming, paused, next, index } = engineState;
   return (
-    <View className="items-center gap-5">
+    <View className="items-center gap-4">
       <Text className="font-ui-semibold text-sm font-semibold" style={{ color: alarming ? colors.danger : colors.muted }}>
         {alarming ? "Time's up" : paused ? 'Paused' : 'Now running'}
       </Text>
@@ -195,38 +217,79 @@ function RunningView({ engineState }: { engineState: EngineState }) {
           Last step of this session.
         </Text>
       ) : null}
-      {/* Round buttons like the Start that began the run: the main one (Pause, Resume or Continue)
-          is filled. Skip only shows when there's a next step. */}
-      <View className="flex-row flex-wrap items-center justify-center gap-3">
+    </View>
+  );
+}
+
+/** The running timer's buttons, in the footer: the main one (Pause, Resume or Continue) filled,
+    then Skip (only when there's a next step) and Stop. */
+function RunningControls({ engineState }: { engineState: EngineState }) {
+  const { colors } = useAppTheme();
+  const { alarming, paused, next } = engineState;
+  return (
+    <View className="flex-row gap-2">
+      <View className="flex-1">
         {alarming ? (
-          <PillButton primary label="Continue" Icon={PlayIcon} onPress={skip} />
+          <BigButton label="Continue" onPress={skip} icon={<PlayIcon color={colors['accent-foreground']} size={18} />} />
         ) : paused ? (
-          <PillButton primary label="Resume" Icon={PlayIcon} onPress={resume} />
+          <BigButton label="Resume" onPress={resume} icon={<PlayIcon color={colors['accent-foreground']} size={18} />} />
         ) : (
-          <PillButton primary label="Pause" Icon={PauseIcon} onPress={pause} />
+          <BigButton label="Pause" onPress={pause} icon={<PauseIcon color={colors['accent-foreground']} size={18} />} />
         )}
-        {!alarming && next ? <PillButton label="Skip" onPress={skip} /> : null}
-        <PillButton danger label="Stop" Icon={StopIcon} onPress={stop} />
+      </View>
+      {!alarming && next ? (
+        <View className="flex-1">
+          <BigButton label="Skip" secondary onPress={skip} />
+        </View>
+      ) : null}
+      <View className="flex-1">
+        <BigButton label="Stop" secondary onPress={stop} icon={<StopIcon color={colors.danger} size={18} />} />
       </View>
     </View>
   );
 }
 
-/** Stopped: what the tool is, then the quick timer — minutes and the big Start. */
-function QuickTimer({ minutes, onChange, onStart }: { minutes: number; onChange: (n: number) => void; onStart: () => void }) {
+/** Stopped: the quick timer's length — a plain countdown, not saved — as a big number between
+    round − / + buttons (Start is in the footer). The number can be typed. */
+function QuickTimer({ minutes, onChange }: { minutes: number; onChange: (n: number) => void }) {
   const { colors } = useAppTheme();
+  const [draft, setDraft] = useState<string | null>(null);
+  const set = (n: number) => onChange(Math.min(180, Math.max(1, Math.round(n))));
+  const commit = () => {
+    if (draft !== null && draft.trim() !== '') {
+      const n = Number(draft);
+      if (Number.isFinite(n)) set(n);
+    }
+    setDraft(null);
+  };
   return (
-    <View className="items-center gap-5">
-      <Text className="font-ui max-w-xs text-center text-sm leading-5" style={{ color: colors.muted }}>
-        Time your practice: one countdown, or a saved session of steps. Signed in, the time goes into your Shed Log.
+    <View className="items-center gap-1">
+      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+        Quick timer
       </Text>
-      <View className="items-center gap-2">
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-          Quick timer
-        </Text>
-        <StepperPill value={minutes} onChange={(n) => onChange(Math.min(180, Math.max(1, n)))} min={1} max={180} unit={['minute', 'minutes']} label="Quick timer minutes" onPage />
+      <View className="flex-row items-center gap-3">
+        <StepButton label="Fewer minutes" onPress={() => set(minutes - 1)} disabled={minutes <= 1}>
+          −
+        </StepButton>
+        <TextInput
+          value={draft ?? String(minutes)}
+          onChangeText={setDraft}
+          onBlur={commit}
+          onSubmitEditing={commit}
+          selectTextOnFocus
+          keyboardType="number-pad"
+          returnKeyType="done"
+          accessibilityLabel="Quick timer minutes"
+          className="font-ui-bold w-32 text-center text-6xl font-bold tracking-tight"
+          style={{ color: colors.foreground, padding: 0, fontVariant: ['tabular-nums'] }}
+        />
+        <StepButton label="More minutes" onPress={() => set(minutes + 1)} disabled={minutes >= 180}>
+          +
+        </StepButton>
       </View>
-      <BigButton label="Start" onPress={onStart} icon={<PlayIcon color={colors['accent-foreground']} size={18} />} />
+      <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+        {minutes === 1 ? 'minute' : 'minutes'}
+      </Text>
     </View>
   );
 }

@@ -19,8 +19,7 @@ import {
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, Text, View } from 'react-native';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
 import { MetronomeIcon, MicrophoneIcon, NoteIcon, RecordIcon, SpeakerIcon, StopIcon } from '@/components/icons';
@@ -39,8 +38,9 @@ import {
 } from '@/components/tool/meter';
 import { GradientFill, OptionGroup, Segmented } from '@/components/tool/reward';
 import { CountField } from '@/components/tool/rhythm';
-import { SettingChip, SettingsBar, TOOL_CONTENT } from '@/components/tool/SettingChip';
-import { EmptyState } from '@/components/ui';
+import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
+import { SignInGateScreen } from '@/components/ui';
 import { getMetronomeSnapshot, subscribeMetronome } from '@/lib/metronomeEngine';
 import {
   clearRecorderError,
@@ -56,6 +56,7 @@ import { formatDuration, recordingsApi, type Recording } from '@/lib/recordings'
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 // A new key — the web Recorder's own settings ("jam-practice-recorder") are its multitrack ones.
 // Everything from `bpm` through `tempoNoteValue` is the Metronome tool's own settings shape.
@@ -79,8 +80,9 @@ const DEFAULT_SETTINGS = {
 
 /**
  * The Recorder, laid out like the website's (`apps/web/components/Recorder.tsx`): what's
- * happening and the take's length, the input level, the beat strip while the metronome is on, the
- * big round record button, then the chips — Microphone, Metronome (its on/off switch is the first
+ * happening and the take's length, the input level, the beat strip while the metronome is on (in
+ * the middle, on `ToolFrame`); the footer holds the big round record button, then the chips —
+ * Microphone, Metronome (its on/off switch is the first
  * thing in its sheet, then the Metronome tool's own tempo and meter controls), Count-in and Click
  * sound while it's on, and Recent takes once there are some. Stopping goes straight to the save
  * page; saved takes live on the account (`convex/recordings.ts`). Opened from a tune's page
@@ -123,6 +125,7 @@ function RecorderScreen() {
   const rec = useSyncExternalStore(subscribeRecorder, getRecorderSnapshot);
   const busy = rec.phase !== 'idle';
   useToolActivity('/recorder', busy);
+  useKeepAwakeWhile(busy);
   const click = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot);
   const clicking = busy && settings.metronome && click.running;
 
@@ -194,15 +197,14 @@ function RecorderScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View className="flex-1 px-4 pt-5" style={{ backgroundColor: colors.background }}>
+      <>
         <Stack.Screen options={{ title: 'Recorder' }} />
-        <EmptyState
+        <SignInGateScreen
           Icon={MicrophoneIcon}
           title="Sign in to record"
           body="Your takes are saved with your account, so you can name them, keep notes and link them to your tunes."
-          action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
         />
-      </View>
+      </>
     );
   }
 
@@ -221,186 +223,179 @@ function RecorderScreen() {
   const meterValue = useStructure ? (structure.sections.length ? 'Changing meters' : 'No sections yet') : `${beatsPerBar}/${beatUnit}`;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Recorder' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={TOOL_CONTENT}
-        >
-          {/* Recent takes (like other tools' History) sit above the display, once there's a take. */}
-          {recordings && recordings.length > 0 ? (
-            <SettingsBar>
-              <SettingChip Icon={RecordIcon} label="Recent takes" value={`${recordings.length} take${recordings.length === 1 ? '' : 's'}`} open={takesOpen} onOpenChange={setTakesOpen}>
-                {/* The sheet is a Modal, which would stay on top of the next screen: close it first. */}
-                <RecentTakes
-                  recordings={recordings}
-                  tuneName={(id) => (id ? byId.get(id)?.tune.name : undefined)}
-                  onOpen={(id) => {
-                    setTakesOpen(false);
-                    router.push({ pathname: '/recordings/[id]', params: { id } });
-                  }}
-                  onAll={() => {
-                    setTakesOpen(false);
-                    router.push('/recordings');
-                  }}
-                  disabled={busy}
-                />
-              </SettingChip>
-            </SettingsBar>
-          ) : null}
-
-          <View className="items-center gap-5">
-            <View className="items-center gap-1">
-              <View className="flex-row items-center gap-1.5">
-                {recordingNow ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.danger }} /> : null}
-                <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: recordingNow ? colors.danger : colors.muted }}>
-                  {statusLabel}
-                </Text>
-              </View>
-              <Text className="font-ui-semibold text-6xl font-semibold tracking-tight" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
-                {formatDuration(elapsed)}
-              </Text>
-            </View>
-
-            <LevelMeter level={recordingNow ? rec.level : 0} />
-
-            {settings.metronome ? (
-              useStructure && !activeSection ? (
-                <Text className="font-ui text-center text-sm" style={muted}>
-                  Add sections under Metronome to arrange the form.
-                </Text>
-              ) : (
-                <BeatIndicator
-                  accents={displayAccents}
-                  currentBeat={clicking ? click.currentBeat : null}
-                  onCycle={handleCycleBeat}
-                  subdivision={displaySubdivision}
-                  subAccents={displaySubAccents}
-                  currentSub={clicking ? click.currentSub : 0}
-                  onCycleSub={handleCycleSub}
-                  cycleHint
-                />
-              )
-            ) : null}
-
-            <View className="items-center gap-2">
-              <RecordButton busy={busy} onPress={() => void onRecordPress()} />
-              <Text className="font-ui text-xs" style={[muted, { height: 16 }]}>
-                {settings.metronome && !busy && settings.countInBars > 0 ? `${settings.countInBars}-bar count-in` : ''}
-              </Text>
-            </View>
-
-            {rec.error ? (
-              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
-                {rec.error}
-              </Text>
-            ) : null}
-          </View>
-
+    <ToolFrame
+      title="Recorder"
+      side={
+        // Recent takes (like other tools' History) sit above the display, once there's a take.
+        recordings && recordings.length > 0 ? (
           <SettingsBar>
-            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={settings.autoGain ? 'Auto gain' : 'No processing'}>
-              <SwitchRow
-                label="Auto gain"
-                checked={settings.autoGain}
-                onChange={(value) => updateSettings({ autoGain: value })}
+            <SettingChip Icon={RecordIcon} label="Recent takes" value={`${recordings.length} take${recordings.length === 1 ? '' : 's'}`} open={takesOpen} onOpenChange={setTakesOpen}>
+              {/* The sheet is a Modal, which would stay on top of the next screen: close it first. */}
+              <RecentTakes
+                recordings={recordings}
+                tuneName={(id) => (id ? byId.get(id)?.tune.name : undefined)}
+                onOpen={(id) => {
+                  setTakesOpen(false);
+                  router.push({ pathname: '/recordings/[id]', params: { id } });
+                }}
+                onAll={() => {
+                  setTakesOpen(false);
+                  router.push('/recordings');
+                }}
                 disabled={busy}
-                hint="On: the phone sets the recording level automatically, so quiet playing still comes out at a good volume. Off: the raw microphone with no processing — truer dynamics, but much quieter."
               />
             </SettingChip>
+          </SettingsBar>
+        ) : null
+      }
+      action={
+        <View className="items-center gap-1">
+          <RecordButton busy={busy} onPress={() => void onRecordPress()} />
+          <Text className="font-ui text-xs" style={[muted, { height: 16 }]}>
+            {settings.metronome && !busy && settings.countInBars > 0 ? `${settings.countInBars}-bar count-in` : ''}
+          </Text>
+        </View>
+      }
+      chips={
+        <SettingsBar>
+          <SettingChip Icon={MicrophoneIcon} label="Microphone" value={settings.autoGain ? 'Auto gain' : 'No processing'}>
+            <SwitchRow
+              label="Auto gain"
+              checked={settings.autoGain}
+              onChange={(value) => updateSettings({ autoGain: value })}
+              disabled={busy}
+              hint="On: the phone sets the recording level automatically, so quiet playing still comes out at a good volume. Off: the raw microphone with no processing — truer dynamics, but much quieter."
+            />
+          </SettingChip>
 
-            <SettingChip Icon={MetronomeIcon} label="Metronome" value={settings.metronome ? `${bpm} BPM · ${meterValue}` : 'Off'}>
-              {/* Like every other chip, this one opens its settings; the on/off switch is the first. */}
-              <SwitchRow
-                label="Click while recording"
-                checked={settings.metronome}
-                onChange={(value) => updateSettings({ metronome: value })}
-                disabled={busy}
-                hint="Plays a metronome click (with a count-in) while you record. It isn't recorded unless your microphone picks it up."
-              />
-              {settings.metronome ? (
-                <>
-                  <View className="items-center gap-3">
-                    <TempoHero
-                      bpm={bpm}
-                      setBpm={setBpm}
-                      beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-                      beatUnit={activeSection?.beatUnit ?? beatUnit}
-                      onTap={tap}
-                      tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
-                    />
-                    <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
-                  </View>
-                  <Segmented
-                    label="Meter"
-                    value={useStructure ? 'structure' : 'single'}
-                    onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
-                    disabled={busy}
-                    options={[
-                      { value: 'single', label: 'One meter' },
-                      { value: 'structure', label: 'Changing meters' },
-                    ]}
-                  />
-                  {useStructure ? (
-                    <StructureEditor
-                      structure={structure}
-                      onChange={(next) => updateSettings({ structure: next })}
-                      activeFormIndex={clicking ? click.formIndex : null}
-                    />
-                  ) : (
-                    <>
-                      <TimeSignatureControl
-                        beatsPerBar={beatsPerBar}
-                        beatUnit={beatUnit}
-                        onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
-                        onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
-                      />
-                      <OptionGroup title="Subdivision">
-                        <SubdivisionPicker value={subdivision} onChange={(next) => updateSettings({ subdivision: next })} />
-                      </OptionGroup>
-                    </>
-                  )}
-                  <Text className="font-ui text-xs leading-4" style={muted}>
-                    The click plays through the speaker, so the microphone picks it up unless you wear headphones.
-                  </Text>
-                </>
-              ) : null}
-            </SettingChip>
-
+          <SettingChip Icon={MetronomeIcon} label="Metronome" value={settings.metronome ? `${bpm} BPM · ${meterValue}` : 'Off'}>
+            {/* Like every other chip, this one opens its settings; the on/off switch is the first. */}
+            <SwitchRow
+              label="Click while recording"
+              checked={settings.metronome}
+              onChange={(value) => updateSettings({ metronome: value })}
+              disabled={busy}
+              hint="Plays a metronome click (with a count-in) while you record. It isn't recorded unless your microphone picks it up."
+            />
             {settings.metronome ? (
               <>
-                <SettingChip
-                  Icon={NoteIcon}
-                  label="Count-in"
-                  value={settings.countInBars ? `${settings.countInBars} bar${settings.countInBars === 1 ? '' : 's'}` : 'Off'}
-                >
-                  <CountField
-                    title="Count-in bars"
-                    hint="This many bars click before the recording starts, so you come in on the downbeat."
-                    value={settings.countInBars}
-                    min={0}
-                    max={4}
-                    unit={['bar', 'bars']}
-                    disabled={busy}
-                    onChange={(n) => updateSettings({ countInBars: n })}
+                <View className="items-center gap-3">
+                  <TempoHero
+                    bpm={bpm}
+                    setBpm={setBpm}
+                    beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
+                    beatUnit={activeSection?.beatUnit ?? beatUnit}
+                    onTap={tap}
+                    tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
                   />
-                </SettingChip>
-                <SettingChip Icon={SpeakerIcon} label="Click sound" value={soundSummary(soundId, volume)}>
-                  <SoundPicker
-                    soundId={soundId}
-                    setSoundId={(id) => updateSettings({ soundId: id })}
-                    volume={volume}
-                    setVolume={(next) => updateSettings({ volume: next })}
+                  <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={activeSection?.beatUnit ?? beatUnit} />
+                </View>
+                <Segmented
+                  label="Meter"
+                  value={useStructure ? 'structure' : 'single'}
+                  onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+                  disabled={busy}
+                  options={[
+                    { value: 'single', label: 'One meter' },
+                    { value: 'structure', label: 'Changing meters' },
+                  ]}
+                />
+                {useStructure ? (
+                  <StructureEditor
+                    structure={structure}
+                    onChange={(next) => updateSettings({ structure: next })}
+                    activeFormIndex={clicking ? click.formIndex : null}
                   />
-                </SettingChip>
+                ) : (
+                  <>
+                    <TimeSignatureControl
+                      beatsPerBar={beatsPerBar}
+                      beatUnit={beatUnit}
+                      onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
+                      onSetBeatUnit={(unit) => updateSettings({ beatUnit: unit })}
+                    />
+                    <OptionGroup title="Subdivision">
+                      <SubdivisionPicker value={subdivision} onChange={(next) => updateSettings({ subdivision: next })} />
+                    </OptionGroup>
+                  </>
+                )}
+                <Text className="font-ui text-xs leading-4" style={muted}>
+                  The click plays through the speaker, so the microphone picks it up unless you wear headphones.
+                </Text>
               </>
             ) : null}
+          </SettingChip>
 
-          </SettingsBar>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+          {settings.metronome ? (
+            <>
+              <SettingChip
+                Icon={NoteIcon}
+                label="Count-in"
+                value={settings.countInBars ? `${settings.countInBars} bar${settings.countInBars === 1 ? '' : 's'}` : 'Off'}
+              >
+                <CountField
+                  title="Count-in bars"
+                  hint="This many bars click before the recording starts, so you come in on the downbeat."
+                  value={settings.countInBars}
+                  min={0}
+                  max={4}
+                  unit={['bar', 'bars']}
+                  disabled={busy}
+                  onChange={(n) => updateSettings({ countInBars: n })}
+                />
+              </SettingChip>
+              <SettingChip Icon={SpeakerIcon} label="Click sound" value={soundSummary(soundId, volume)}>
+                <SoundPicker
+                  soundId={soundId}
+                  setSoundId={(id) => updateSettings({ soundId: id })}
+                  volume={volume}
+                  setVolume={(next) => updateSettings({ volume: next })}
+                />
+              </SettingChip>
+            </>
+          ) : null}
+        </SettingsBar>
+      }
+    >
+        <View className="items-center gap-1">
+          <View className="flex-row items-center gap-1.5">
+            {recordingNow ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.danger }} /> : null}
+            <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: recordingNow ? colors.danger : colors.muted }}>
+              {statusLabel}
+            </Text>
+          </View>
+          <Text className="font-ui-semibold text-6xl font-semibold tracking-tight" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
+            {formatDuration(elapsed)}
+          </Text>
+        </View>
+
+        <LevelMeter level={recordingNow ? rec.level : 0} />
+
+        {settings.metronome ? (
+          useStructure && !activeSection ? (
+            <Text className="font-ui text-center text-sm" style={muted}>
+              Add sections under Metronome to arrange the form.
+            </Text>
+          ) : (
+            <BeatIndicator
+              accents={displayAccents}
+              currentBeat={clicking ? click.currentBeat : null}
+              onCycle={handleCycleBeat}
+              subdivision={displaySubdivision}
+              subAccents={displaySubAccents}
+              currentSub={clicking ? click.currentSub : 0}
+              onCycleSub={handleCycleSub}
+              cycleHint
+            />
+          )
+        ) : null}
+
+        {rec.error ? (
+          <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+            {rec.error}
+          </Text>
+        ) : null}
+    </ToolFrame>
   );
 }
 

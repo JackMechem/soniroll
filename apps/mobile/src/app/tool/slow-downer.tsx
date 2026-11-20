@@ -1,8 +1,6 @@
 import { makeId } from '@jam-practice/core/types';
-import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -24,14 +22,16 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { SlowDownerWaveform, type WaveView } from '@/components/SlowDownerWaveform';
 import { SwitchRow } from '@/components/SwitchRow';
-import { OptionsArea, SheetButton, SheetText, SliderField } from '@/components/tool/ear';
-import { SettingChip, TOOL_CONTENT, ToolSheet } from '@/components/tool/SettingChip';
+import { SheetButton, SheetText, SliderField } from '@/components/tool/ear';
+import { SettingChip, SettingsBar, ToolSheet } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { Button, Card, EmptyState } from '@/components/ui';
 import { SlowDownerPlayer, formatTime, type LoopRegion, type Peaks } from '@/lib/slowDownerEngine';
 import { deleteFile, formatSize, listFiles, loadMarkers, pickAndSaveFile, saveMarkers, type LibraryEntry, type Marker } from '@/lib/slowDownerFiles';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/SlowDowner.tsx` — same features: open an audio or video file
@@ -42,10 +42,10 @@ import { useToolActivity } from '@/lib/toolTime';
  *
  * Touch replaces web's mouse/keyboard: tap the waveform to seek, drag to pan, pinch to zoom, and
  * long-press for web's right-click menu (add marker, play from here, set loop start/end, zoom to /
- * clear the loop; on a marker: go to / delete). Laid out like the website's: the file button (it
- * opens the saved files), the time, the waveform with its loop switch, zoom, −5s / Play / +5s, Loop
- * start / Loop end / Clear loop / Add marker at the playhead, then the Speed, Volume and Markers
- * chips.
+ * clear the loop; on a marker: go to / delete). On `ToolFrame`: the file button (it opens the
+ * saved files), the time, the waveform with its loop switch, zoom, and Loop start / Loop end /
+ * Clear loop / Add marker at the playhead in the middle; −5s / Play / +5s and the Speed, Volume
+ * and Markers chips in the footer. (The gestures are listed in the intro.)
  */
 const SETTINGS_KEY = 'jam-practice-slow-downer';
 const DEFAULT_SETTINGS = { speed: 100, preservePitch: true, volume: 1, maximized: false };
@@ -73,6 +73,7 @@ function SlowDownerScreen() {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   useToolActivity('/slow-downer', playing);
+  useKeepAwakeWhile(playing);
   const [error, setError] = useState<string | null>(null);
   const [loop, setLoop] = useState<LoopRegion | null>(null);
   const [loopOn, setLoopOn] = useState(false);
@@ -288,7 +289,7 @@ function SlowDownerScreen() {
         ];
 
   const optionChips = (
-    <OptionsArea>
+    <SettingsBar>
       <SettingChip Icon={StopwatchIcon} label="Speed" value={`${speed}%`}>
         <SliderField
           label="Playback speed"
@@ -392,183 +393,168 @@ function SlowDownerScreen() {
           <SheetButton label="Add marker at playhead" onPress={() => addMarker(time)} />
         </SettingChip>
       ) : null}
-    </OptionsArea>
+    </SettingsBar>
   );
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Slow Downer' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        {!file ? (
-          <ScrollView contentContainerStyle={TOOL_CONTENT}>
-            <EmptyState
-              Icon={FileMusicIcon}
-              title="Open an audio or video file"
-              body="Slow it down without changing the pitch, loop the hard part, and mark your place. MP3, WAV, M4A, FLAC and more; a copy is kept in the app."
-              action={{ label: 'Open a file', Icon: PlusIcon, onPress: () => void addFile() }}
-            />
-            {library.length > 0 ? (
-              <Card title="Saved files">
-                <FileList entries={library} onOpen={(e) => void openEntry(e)} onDelete={setPendingDelete} />
-              </Card>
-            ) : null}
-            {optionChips}
-            {error ? (
-              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
-                {error}
+    <ToolFrame
+      title="Slow Downer"
+      action={
+        file ? (
+          <View className="flex-row items-center justify-center gap-3">
+            <TransportButton label={`Back ${SKIP_SECONDS} seconds`} onPress={() => seek(time - SKIP_SECONDS)}>
+              <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
+                −{SKIP_SECONDS}s
               </Text>
-            ) : null}
-          </ScrollView>
-        ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ ...TOOL_CONTENT, gap: 16 }}
-          >
-            <View className="items-center">
-              <Pressable
-                onPress={() => setFilesOpen(true)}
-                accessibilityRole="button"
-                accessibilityLabel={`${file.name} — change file`}
-                android_ripple={{ color: colors['surface-hover'] }}
-                className="h-10 max-w-full flex-row items-center gap-2 overflow-hidden rounded-full pl-3 pr-2.5"
-                style={{ backgroundColor: derived.fill }}
-              >
-                <FileMusicIcon color={colors.accent} size={18} />
-                <Text numberOfLines={1} className="font-ui-semibold shrink text-sm font-semibold" style={{ color: colors.foreground }}>
-                  {file.name}
-                </Text>
-                <ChevronDownIcon color={colors.muted} size={18} />
-              </Pressable>
-            </View>
+            </TransportButton>
+            <TransportButton label={playing ? 'Pause' : 'Play'} primary disabled={loading || !duration} onPress={togglePlay}>
+              {playing ? <PauseIcon color={colors['accent-foreground']} size={28} /> : <PlayIcon color={colors['accent-foreground']} size={28} />}
+            </TransportButton>
+            <TransportButton label={`Forward ${SKIP_SECONDS} seconds`} onPress={() => seek(time + SKIP_SECONDS)}>
+              <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
+                +{SKIP_SECONDS}s
+              </Text>
+            </TransportButton>
+          </View>
+        ) : null
+      }
+      chips={optionChips}
+    >
+      {!file ? (
+        <View className="w-full gap-4">
+          <EmptyState
+            Icon={FileMusicIcon}
+            title="Open an audio or video file"
+            body="Slow it down without changing the pitch, loop the hard part, and mark your place. MP3, WAV, M4A, FLAC and more; a copy is kept in the app."
+            action={{ label: 'Open a file', Icon: PlusIcon, onPress: () => void addFile() }}
+          />
+          {library.length > 0 ? (
+            <Card title="Saved files">
+              <FileList entries={library} onOpen={(e) => void openEntry(e)} onDelete={setPendingDelete} />
+            </Card>
+          ) : null}
+        </View>
+      ) : (
+        <>
+          <View className="items-center">
+            <Pressable
+              onPress={() => setFilesOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`${file.name} — change file`}
+              android_ripple={{ color: colors['surface-hover'] }}
+              className="h-10 max-w-full flex-row items-center gap-2 overflow-hidden rounded-full pl-3 pr-2.5"
+              style={{ backgroundColor: derived.fill }}
+            >
+              <FileMusicIcon color={colors.accent} size={18} />
+              <Text numberOfLines={1} className="font-ui-semibold shrink text-sm font-semibold" style={{ color: colors.foreground }}>
+                {file.name}
+              </Text>
+              <ChevronDownIcon color={colors.muted} size={18} />
+            </Pressable>
+          </View>
 
-            <Text className="font-ui-semibold text-center text-5xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
-              {formatTime(time)}
-              <Text className="font-ui text-xl" style={{ color: colors.muted }}>
-                {' '}/ {formatTime(duration)}
-              </Text>
+          <Text className="font-ui-semibold text-center text-5xl font-semibold tabular-nums" style={{ color: colors.foreground }}>
+            {formatTime(time)}
+            <Text className="font-ui text-xl" style={{ color: colors.muted }}>
+              {' '}/ {formatTime(duration)}
             </Text>
+          </Text>
 
-            <View style={maximized ? { flex: 1 } : undefined}>
-              {loading ? (
-                <View className="items-center justify-center rounded-lg" style={{ height: 150, backgroundColor: colors.surface }}>
-                  <LoadingSpinner showLabel label="Reading the file…" />
-                </View>
-              ) : (
-                <WaveformFill maximized={maximized}>
-                  {(height) => (
-                    <SlowDownerWaveform
-                      peaks={peaks}
-                      duration={duration}
-                      view={view}
-                      time={time}
-                      loop={loop}
-                      loopActive={loopOn}
-                      markers={markers}
-                      height={height}
-                      onSeek={seek}
-                      onPan={panBy}
-                      onZoomAt={zoomAt}
-                      onLongPress={(t, markerId) => setMenu({ t, markerId })}
-                    />
-                  )}
-                </WaveformFill>
-              )}
-              {/* The loop on/off switch, on the waveform once there's a loop. */}
-              {loop && !loading ? (
-                <Pressable
-                  onPress={() => setLoopOn((on) => !on)}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: loopOn }}
-                  accessibilityLabel={loopOn ? 'Looping — tap to turn off' : 'Loop off — tap to turn on'}
-                  className="absolute right-2 top-2 h-10 w-10 items-center justify-center overflow-hidden rounded-md"
-                  style={{ backgroundColor: loopOn ? colors.accent : colors.background }}
-                >
-                  <RepeatIcon color={loopOn ? colors['accent-foreground'] : colors.muted} size={18} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            {/* Zoom, pan and the waveform's size. Panning only means anything zoomed in. */}
-            <View className="flex-row flex-wrap items-center justify-center gap-1.5">
-              {zoomed ? (
-                <>
-                  <SmallButton label="◀" accessibilityLabel="Pan left" onPress={() => panBy(-view.span * 0.25)} />
-                  <SmallButton label="▶" accessibilityLabel="Pan right" onPress={() => panBy(view.span * 0.25)} />
-                  <View className="mx-1 h-5 w-px" style={{ backgroundColor: derived.hairline }} />
-                </>
-              ) : null}
-              <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-                Zoom
-              </Text>
-              <SmallButton label="−" accessibilityLabel="Zoom out" onPress={() => zoom(1.5)} />
-              <Text className="font-ui w-11 text-center text-xs tabular-nums" style={{ color: colors.foreground }}>
-                {duration > 0 ? `${(duration / view.span).toFixed(1)}×` : ''}
-              </Text>
-              <SmallButton label="+" accessibilityLabel="Zoom in" onPress={() => zoom(1 / 1.5)} />
-              <SmallButton label="Fit" disabled={!zoomed} onPress={() => setView({ start: 0, span: duration })} />
-              <View className="mx-1 h-5 w-px" style={{ backgroundColor: derived.hairline }} />
+          <View className="w-full" style={maximized ? { flex: 1 } : undefined}>
+            {loading ? (
+              <View className="items-center justify-center rounded-lg" style={{ height: 150, backgroundColor: colors.surface }}>
+                <LoadingSpinner showLabel label="Reading the file…" />
+              </View>
+            ) : (
+              <WaveformFill maximized={maximized}>
+                {(height) => (
+                  <SlowDownerWaveform
+                    peaks={peaks}
+                    duration={duration}
+                    view={view}
+                    time={time}
+                    loop={loop}
+                    loopActive={loopOn}
+                    markers={markers}
+                    height={height}
+                    onSeek={seek}
+                    onPan={panBy}
+                    onZoomAt={zoomAt}
+                    onLongPress={(t, markerId) => setMenu({ t, markerId })}
+                  />
+                )}
+              </WaveformFill>
+            )}
+            {/* The loop on/off switch, on the waveform once there's a loop. */}
+            {loop && !loading ? (
               <Pressable
-                onPress={() => updateSettings({ maximized: !maximized })}
-                accessibilityRole="button"
-                accessibilityState={{ selected: maximized }}
-                accessibilityLabel={maximized ? 'Make the waveform shorter again' : 'Make the waveform as tall as the screen allows'}
-                hitSlop={{ top: 4, bottom: 4 }}
-                className="h-10 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-md px-3"
-                style={{ backgroundColor: maximized ? colors.accent : derived.fill }}
+                onPress={() => setLoopOn((on) => !on)}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: loopOn }}
+                accessibilityLabel={loopOn ? 'Looping — tap to turn off' : 'Loop off — tap to turn on'}
+                className="absolute right-2 top-2 h-10 w-10 items-center justify-center overflow-hidden rounded-md"
+                style={{ backgroundColor: loopOn ? colors.accent : colors.background }}
               >
-                {maximized ? <ShrinkHeightIcon color={colors['accent-foreground']} size={16} /> : <ExpandHeightIcon color={colors.foreground} size={16} />}
-                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: maximized ? colors['accent-foreground'] : colors.foreground }}>
-                  {maximized ? 'Shorter' : 'Taller'}
-                </Text>
+                <RepeatIcon color={loopOn ? colors['accent-foreground'] : colors.muted} size={18} />
               </Pressable>
-            </View>
+            ) : null}
+          </View>
 
-            {/* Transport. */}
-            <View className="flex-row items-center justify-center gap-3">
-              <TransportButton label={`Back ${SKIP_SECONDS} seconds`} onPress={() => seek(time - SKIP_SECONDS)}>
-                <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
-                  −{SKIP_SECONDS}s
-                </Text>
-              </TransportButton>
-              <TransportButton label={playing ? 'Pause' : 'Play'} primary disabled={loading || !duration} onPress={togglePlay}>
-                {playing ? <PauseIcon color={colors['accent-foreground']} size={28} /> : <PlayIcon color={colors['accent-foreground']} size={28} />}
-              </TransportButton>
-              <TransportButton label={`Forward ${SKIP_SECONDS} seconds`} onPress={() => seek(time + SKIP_SECONDS)}>
-                <Text className="font-ui-semibold text-sm font-semibold tabular-nums" style={{ color: colors.foreground }}>
-                  +{SKIP_SECONDS}s
-                </Text>
-              </TransportButton>
-            </View>
+          {/* Zoom, pan and the waveform's size. Panning only means anything zoomed in. */}
+          <View className="w-full flex-row flex-wrap items-center justify-center gap-1.5">
+            {zoomed ? (
+              <>
+                <SmallButton label="◀" accessibilityLabel="Pan left" onPress={() => panBy(-view.span * 0.25)} />
+                <SmallButton label="▶" accessibilityLabel="Pan right" onPress={() => panBy(view.span * 0.25)} />
+                <View className="mx-1 h-5 w-px" style={{ backgroundColor: derived.hairline }} />
+              </>
+            ) : null}
+            <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+              Zoom
+            </Text>
+            <SmallButton label="−" accessibilityLabel="Zoom out" onPress={() => zoom(1.5)} />
+            <Text className="font-ui w-11 text-center text-xs tabular-nums" style={{ color: colors.foreground }}>
+              {duration > 0 ? `${(duration / view.span).toFixed(1)}×` : ''}
+            </Text>
+            <SmallButton label="+" accessibilityLabel="Zoom in" onPress={() => zoom(1 / 1.5)} />
+            <SmallButton label="Fit" disabled={!zoomed} onPress={() => setView({ start: 0, span: duration })} />
+            <View className="mx-1 h-5 w-px" style={{ backgroundColor: derived.hairline }} />
+            <Pressable
+              onPress={() => updateSettings({ maximized: !maximized })}
+              accessibilityRole="button"
+              accessibilityState={{ selected: maximized }}
+              accessibilityLabel={maximized ? 'Make the waveform shorter again' : 'Make the waveform as tall as the screen allows'}
+              hitSlop={{ top: 4, bottom: 4 }}
+              className="h-10 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-md px-3"
+              style={{ backgroundColor: maximized ? colors.accent : derived.fill }}
+            >
+              {maximized ? <ShrinkHeightIcon color={colors['accent-foreground']} size={16} /> : <ExpandHeightIcon color={colors.foreground} size={16} />}
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: maximized ? colors['accent-foreground'] : colors.foreground }}>
+                {maximized ? 'Shorter' : 'Taller'}
+              </Text>
+            </Pressable>
+          </View>
 
-            {/* Loops and markers at the playhead (the waveform's long-press menu does them too). */}
-            <View className="flex-row flex-wrap items-center justify-center gap-2">
-              <LoopButton label="Loop start" Icon={RepeatIcon} disabled={!duration} onPress={() => setEdge('start', time)} />
-              <LoopButton label="Loop end" disabled={!duration} onPress={() => setEdge('end', time)} />
-              {loop ? (
-                <Text className="font-ui text-sm tabular-nums" style={{ color: loopOn ? colors.foreground : colors.muted }}>
-                  Loop {formatTime(loop.start)}–{formatTime(loop.end)}
-                </Text>
-              ) : null}
-              <LoopButton label="Clear loop" disabled={!loop} onPress={() => (setLoop(null), setLoopOn(false))} />
-              <LoopButton label="Add marker" Icon={FlagIcon} disabled={!duration} onPress={() => addMarker(time)} />
-            </View>
-
-            {!maximized ? (
-              <Text className="font-ui text-center text-xs" style={{ color: colors.muted }}>
-                Tap to seek · drag to pan · pinch to zoom · long-press for markers & loop
+          {/* Loops and markers at the playhead (the waveform's long-press menu does them too). */}
+          <View className="w-full flex-row flex-wrap items-center justify-center gap-2">
+            <LoopButton label="Loop start" Icon={RepeatIcon} disabled={!duration} onPress={() => setEdge('start', time)} />
+            <LoopButton label="Loop end" disabled={!duration} onPress={() => setEdge('end', time)} />
+            {loop ? (
+              <Text className="font-ui text-sm tabular-nums" style={{ color: loopOn ? colors.foreground : colors.muted }}>
+                Loop {formatTime(loop.start)}–{formatTime(loop.end)}
               </Text>
             ) : null}
+            <LoopButton label="Clear loop" disabled={!loop} onPress={() => (setLoop(null), setLoopOn(false))} />
+            <LoopButton label="Add marker" Icon={FlagIcon} disabled={!duration} onPress={() => addMarker(time)} />
+          </View>
+        </>
+      )}
 
-            {optionChips}
-
-            {error ? (
-              <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
-                {error}
-              </Text>
-            ) : null}
-          </ScrollView>
-        )}
-      </SafeAreaView>
+      {error ? (
+        <Text className="font-ui text-center text-sm" style={{ color: colors.danger }}>
+          {error}
+        </Text>
+      ) : null}
 
       {/* The file button: every saved file (tap to open, the bin to remove it) and Add. */}
       <ToolSheet visible={filesOpen} onClose={() => setFilesOpen(false)} title="Files">
@@ -599,7 +585,7 @@ function SlowDownerScreen() {
         onConfirm={() => pendingDelete && void confirmDelete(pendingDelete)}
         onCancel={() => setPendingDelete(null)}
       />
-    </View>
+    </ToolFrame>
   );
 }
 

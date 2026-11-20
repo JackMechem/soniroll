@@ -152,7 +152,7 @@ export function TunePickerModal({
           <Pressable
             onPress={add}
             disabled={picked.length === 0}
-            className="rounded-full px-5 py-2"
+            className="min-h-10 justify-center rounded-lg px-4 py-2"
             style={{ backgroundColor: colors.accent, opacity: picked.length ? 1 : 0.4 }}
           >
             <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>

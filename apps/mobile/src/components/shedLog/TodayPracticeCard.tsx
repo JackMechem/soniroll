@@ -24,7 +24,8 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 /**
  * Home's "Today's practice" (the website's dashboard `TodayPractice`), signed in only: today against
  * the goal and the streak, the day timer, what's on today (routines with their progress and Start /
- * Continue on the timer, the day's own tasks to tick off) and a box to add a task for today.
+ * Continue on the timer, the day's own tasks to tick off) and a box to add a task for today. Rows
+ * sit straight on the card (no fill of their own).
  */
 export function TodayPracticeCard() {
   const { isAuthenticated } = useConvexAuth();
@@ -39,7 +40,7 @@ export function TodayPracticeCard() {
 }
 
 function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
-  const { colors, derived } = useAppTheme();
+  const { colors } = useAppTheme();
   const success = useSuccess();
   const router = useRouter();
   const today = useToday();
@@ -58,7 +59,7 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
       <TodaySummary data={data} today={today} onGoal={() => router.navigate('/tool/shed-log')} />
       <DayTimerCard data={data} date={today} compact />
       {items.length === 0 && tasks.length === 0 ? (
-        <View className="gap-3 rounded-lg p-3" style={{ backgroundColor: derived.fill }}>
+        <View className="gap-3">
           <Muted>Nothing planned yet. A routine repeats on the days you pick — or just add a task for today.</Muted>
           <View className="flex-row">
             <SmallButton label="Make a routine" Icon={PlusIcon} primary onPress={() => router.push({ pathname: '/tool/shed-log-routine-edit', params: { date: today } })} />
@@ -73,7 +74,7 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
         const next = tasksOf(routine, occurrence).find((t) => !doneSet.has(t.id) && t.minutes > 0);
         const running = runningTask(routine.id, today);
         return (
-          <View key={routine.id} className="flex-row items-center gap-3 rounded-lg p-3" style={{ backgroundColor: derived.fill }}>
+          <View key={routine.id} className="flex-row items-center gap-3 py-1">
             <RoutineIcon icon={routine.icon} color={routine.color} size={32} />
             <Pressable onPress={() => router.navigate({ pathname: '/tool/shed-log', params: { date: today } })} className="flex-1 gap-1">
               <View className="flex-row items-center gap-1.5">
@@ -102,8 +103,7 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
           accessibilityState={{ checked: t.done }}
           accessibilityLabel={t.title}
           android_ripple={{ color: colors['surface-hover'] }}
-          className="min-h-11 flex-row items-center gap-3 overflow-hidden rounded-lg px-3 py-2"
-          style={{ backgroundColor: derived.fill }}
+          className="-mx-2 min-h-11 flex-row items-center gap-3 overflow-hidden rounded-lg px-2 py-2"
         >
           <CheckBox checked={t.done} color={colors.accent} mark={colors['accent-foreground']} size={20} />
           <Text numberOfLines={1} className="font-ui flex-1 text-sm" style={{ color: t.done ? colors.muted : colors.foreground, textDecorationLine: t.done ? 'line-through' : 'none' }}>

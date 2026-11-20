@@ -8,7 +8,7 @@ import { Text, View } from 'react-native';
 import { CheckIcon } from '@/components/icons';
 import { EmptyBox, ErrorLine, LessonsScroll, PersonBadge, errorText, plural } from '@/components/lessons/parts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
-import { Button } from '@/components/ui';
+import { Button, SignInGate } from '@/components/ui';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
@@ -90,14 +90,9 @@ function JoinScreen() {
                   ))}
                 </View>
                 {isAuthenticated ? (
-                  <Button pill label={busy ? 'Joining…' : `Join ${invite.teacher.name}'s lessons`} disabled={busy} onPress={() => void doJoin()} />
+                  <Button label={busy ? 'Joining…' : `Join ${invite.teacher.name}'s lessons`} disabled={busy} onPress={() => void doJoin()} />
                 ) : (
-                  <View className="gap-2">
-                    <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
-                      Sign in (or sign up — it&apos;s free), then come back here to join.
-                    </Text>
-                    <Button pill label="Sign in" onPress={() => router.push('/profile')} />
-                  </View>
+                  <SignInGate title="Sign in to join" body="It's free. Sign in or create an account, then come back here to join." />
                 )}
                 <Text className="font-ui text-center text-xs" style={{ color: colors.muted }}>
                   You can leave any time.

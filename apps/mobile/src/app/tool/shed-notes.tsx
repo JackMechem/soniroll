@@ -168,6 +168,7 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
             ]
           : []),
         { key: 'folder', icon: <FolderPlusIcon color={colors.foreground} size={20} />, label: folder ? 'New folder inside' : 'New folder', onPress: () => setPrompt({ kind: 'new-folder', parent: folder }) },
+        ...(folder ? [] : [{ key: 'import', icon: <ImportIcon color={colors.foreground} size={20} />, label: 'Import Markdown files…', onPress: () => void pickImport() }]),
       ],
     });
   }
@@ -300,26 +301,11 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
       <Stack.Screen
         options={{
           title: 'Shed Notes',
-          // ⋮ (templates, import, settings), the tool's ?, and New (a note, from a template, a folder).
+          // Two header buttons in the one round style: the tool's ? and New (the page's main action,
+          // so it's the accent one). Import is under New; Templates and Settings are rows at the
+          // foot of the list.
           headerRight: () => (
             <View className="flex-row items-center gap-2">
-              <Pressable
-                onPress={() =>
-                  setMenu({
-                    title: 'Shed Notes',
-                    actions: [
-                      { key: 'templates', icon: <TemplatesIcon color={colors.foreground} size={20} />, label: 'Templates', onPress: () => router.push('/tool/shed-notes-templates') },
-                      { key: 'import', icon: <ImportIcon color={colors.foreground} size={20} />, label: 'Import Markdown files…', onPress: () => void pickImport() },
-                      { key: 'settings', icon: <GearIcon color={colors.foreground} size={20} />, label: 'Settings', onPress: () => router.push('/tool/shed-notes-settings') },
-                    ],
-                  })
-                }
-                hitSlop={8}
-                accessibilityLabel="More: templates, import, settings"
-                className="h-9 w-9 items-center justify-center rounded-full"
-              >
-                <DotsVerticalIcon color={colors.foreground} size={20} />
-              </Pressable>
               <ToolHelpButton href="/shed-notes" />
               <IconButton primary Icon={PlusIcon} label="New" onPress={() => newMenu()} />
             </View>
@@ -400,7 +386,10 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
               </View>
             ) : null}
 
-            <Row surface icon={<TemplatesIcon color={colors.muted} size={18} />} title="Templates" detail={templates?.length ? `${templates.length} ${templates.length === 1 ? 'template' : 'templates'}` : 'Notes to start from'} onPress={() => router.push('/tool/shed-notes-templates')} />
+            <View className="gap-1.5">
+              <Row surface icon={<TemplatesIcon color={colors.muted} size={18} />} title="Templates" detail={templates?.length ? `${templates.length} ${templates.length === 1 ? 'template' : 'templates'}` : 'Notes to start from'} onPress={() => router.push('/tool/shed-notes-templates')} />
+              <Row surface icon={<GearIcon color={colors.muted} size={18} />} title="Settings" detail="Text size, spellcheck, the settings file" onPress={() => router.push('/tool/shed-notes-settings')} />
+            </View>
           </>
         )}
       </ScrollView>

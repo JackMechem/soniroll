@@ -8,7 +8,7 @@ import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 
 import { CheckIcon, ChordChartIcon, LessonsIcon, type IconProps } from '@/components/icons';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import { Button } from '@/components/ui';
+import { Button, SignInGateScreen } from '@/components/ui';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { useGradeColors } from '@/components/tool/ear';
@@ -397,45 +397,14 @@ export function FieldLabel({ children, aside }: { children: ReactNode; aside?: s
   );
 }
 
-/** Lessons signed out (the website's): what it is for both sides, and Sign in. */
+/** Lessons signed out (the website's): what it is for both sides, as the app's one sign-in gate. */
 export function LessonsGate() {
-  const { colors } = useAppTheme();
-  const router = useRouter();
   return (
-    <LessonsScroll gap={20}>
-      <View className="flex-row items-center gap-2 pt-4">
-        <LessonsIcon color={colors.muted} size={16} />
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
-          Lessons
-        </Text>
-      </View>
-      <Text className="font-ui-extrabold text-3xl font-extrabold leading-tight" style={{ color: colors.foreground }}>
-        For teachers and their students.
-      </Text>
-      <View className="gap-4 rounded-xl p-4" style={{ backgroundColor: colors.surface }}>
-        <View className="gap-1">
-          <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
-            Teach
-          </Text>
-          <Text className="font-ui text-sm leading-5" style={{ color: colors.muted }}>
-            Give each student lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — then see how their practice goes, day by day.
-          </Text>
-        </View>
-        <View className="gap-1">
-          <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
-            Learn
-          </Text>
-          <Text className="font-ui text-sm leading-5" style={{ color: colors.muted }}>
-            Open the link your teacher sent you, and everything they&apos;ve given you is here — with their routines already in your Shed Log.
-          </Text>
-        </View>
-      </View>
-      <View className="gap-3">
-        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-          Lessons are free with an account.
-        </Text>
-        <Button label="Sign in" pill onPress={() => router.push('/profile')} />
-      </View>
-    </LessonsScroll>
+    <SignInGateScreen
+      Icon={LessonsIcon}
+      title="Lessons, for teachers and students"
+      body="A page for each student, with everything from their lessons. Free with an account."
+      points={["Teach: notes, files, charts, assignments and routines", "See each student's practice, day by day", "Learn: open your teacher's link and it's all here"]}
+    />
   );
 }

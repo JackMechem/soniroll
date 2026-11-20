@@ -2,7 +2,7 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { type FileKind, FILE_KIND_LABEL, fileDetail, fileKind, formatBytes } from '@jam-practice/core/files';
 import { sortKey } from '@jam-practice/core/sortText';
 import { useQuery } from 'convex/react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +18,7 @@ import { useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { LibraryHeader } from '@/components/TabHeader';
 import { Segmented } from '@/components/tool/reward';
-import { EmptyState, IconButton, SearchField, SortControl } from '@/components/ui';
+import { EmptyState, IconButton, SearchField, SignInGate, SortControl } from '@/components/ui';
 import { tidyDeviceFiles, useDeviceUrls } from '@/lib/deviceFiles';
 import { type StoredEntry, type StoredKind, filesApi, pickFiles, useFileUploader, useSaveTarget } from '@/lib/files';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
@@ -72,7 +72,6 @@ const keyOf = (item: { kind: string; id: string }) => `${item.kind}:${item.id}`;
  */
 function FilesScreen() {
   const { colors } = useAppTheme();
-  const router = useRouter();
   const bottomSpace = useTabBarSpace();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : 'skip');
@@ -176,12 +175,7 @@ function FilesScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         {header}
         <View className="p-4">
-          <EmptyState
-            Icon={FolderIcon}
-            title="Keep your files with your account"
-            body="PDFs, lead sheets, pictures, audio and video, on their own or on a tune, opened right here."
-            action={{ label: 'Sign in', onPress: () => router.push('/profile') }}
-          />
+          <SignInGate Icon={FolderIcon} title="Your files" body="PDFs, lead sheets, pictures, audio and video, on their own or on a tune, opened right here. Free with an account." />
         </View>
       </View>
     );

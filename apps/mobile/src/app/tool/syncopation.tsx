@@ -13,10 +13,8 @@ import {
   type SyncopationOptions,
 } from '@jam-practice/core/syncopation';
 import { useTapTempo } from '@jam-practice/core/meterControls';
-import { Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DrumIcon, MetronomeIcon, NoteIcon, ShuffleIcon, SpeakerIcon } from '@/components/icons';
 import { PlaybackIcon } from '@/components/tool/toolIcons';
@@ -27,12 +25,14 @@ import { BigButton, TempoHero } from '@/components/tool/meter';
 import { OptionGroup, Segmented } from '@/components/tool/reward';
 import { ChoiceCards, PoolPills } from '@/components/tool/rhythm';
 import { MoreOptionsChip, SettingChip, SettingsBar } from '@/components/tool/SettingChip';
+import { ToolFrame } from '@/components/tool/ToolFrame';
 import { Slider } from '@/components/tool/Slider';
 import { drumsReady, loadDrums, setDrumsRoom, setDrumsVolume } from '@/lib/drumSounds';
 import { startSyncopation, VOICES, type SyncopationPlayback, type SyncopationRun } from '@/lib/syncopationEngine';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 type AfterExercise = 'new' | 'repeat' | 'stop';
 
@@ -83,8 +83,8 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 /**
  * Syncopation: random 16-bar snare reading exercises (four 4-bar lines) from the rhythm families
  * switched on, over a steady part in the feet, written out and played on the real kit — the
- * website's tool (`apps/web/components/Syncopation.tsx`) for the phone. Play and the setting chips
- * stay at the top; the exercise scrolls under them, with the bar being heard lit.
+ * website's tool (`apps/web/components/Syncopation.tsx`) for the phone, on `ToolFrame`: the exercise
+ * scrolls in the middle (the bar being heard lit); Play and the setting chips stay in the footer.
  */
 function SyncopationScreen() {
   const { colors, derived } = useAppTheme();
@@ -105,6 +105,7 @@ function SyncopationScreen() {
 
   const [running, setRunning] = useState(false);
   useToolActivity('/syncopation', running);
+  useKeepAwakeWhile(running);
   const [starting, setStarting] = useState(false);
   const [loadError, setLoadError] = useState(false);
   // While playing: every exercise played so far (the engine asks for the next one at the end).
@@ -217,119 +218,120 @@ function SyncopationScreen() {
         : '';
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Syncopation' }} />
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        {/* Play and the settings stay put; the exercise scrolls under them. */}
-        <View className="gap-2 pb-2 pt-3" style={{ borderBottomWidth: 1, borderBottomColor: derived.hairline }}>
-          <View className="items-center gap-1 px-4">
-            <BigButton label={running || starting ? 'Stop' : 'Play'} secondary={running || starting} onPress={() => (running || starting ? stop() : void start())} />
-            <Text className="font-ui min-h-5 text-center text-sm" style={{ color: colors.muted }}>
+    <ToolFrame
+      title="Syncopation"
+      scroll={false}
+      action={
+        <View className="gap-1">
+          {status ? (
+            <Text numberOfLines={1} className="font-ui text-center text-sm" style={{ color: loadError ? colors.danger : colors.muted }}>
               {status}
             </Text>
-          </View>
-          <View className="px-4">
-            <SettingsBar>
-              <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${settings.bpm} BPM`}>
-                <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
-              </SettingChip>
-              <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(' · ')}>
-                <OptionGroup title="In the mix">
-                  <PoolPills
-                    label="Rhythms in the mix"
-                    options={RHYTHM_FAMILIES.map((f) => ({ value: f.id, label: f.label }))}
-                    selected={families}
-                    onToggle={toggleFamily}
-                  />
-                </OptionGroup>
-                <OptionGroup title="Played on">
-                  <Segmented
-                    label="Played on"
-                    value={settings.split ? 'split' : 'snare'}
-                    onChange={(v) => update({ split: v === 'split' })}
-                    options={[
-                      { value: 'snare', label: 'Snare' },
-                      { value: 'split', label: 'Snare + bass' },
-                    ]}
-                  />
-                </OptionGroup>
-                <SwitchRow label="Rests" checked={settings.rests} onChange={(v) => update({ rests: v })} />
-                <OptionGroup title="Lines">
-                  <ChoiceCards
-                    label="Lines"
-                    options={PHRASE_MODES.map((m) => ({ value: m.id, label: m.label }))}
-                    value={settings.phrase}
-                    onChange={(v) => update({ phrase: v })}
-                    cardWidth="100%"
-                  />
-                </OptionGroup>
-              </SettingChip>
-              <SettingChip Icon={DrumIcon} label="Underneath" value={ostinatoLabel}>
-                <ChoiceCards
-                  label="Keep going underneath"
-                  options={OSTINATOS.filter((o) => !(settings.split && o.feet)).map((o) => ({ value: o.id, label: o.label }))}
-                  value={ostinato}
-                  onChange={(v) => update({ ostinato: v })}
-                  cardWidth="100%"
-                />
-              </SettingChip>
-              {/* The rarer settings, so the chips stay one or two rows and the exercise keeps its room. */}
-              <MoreOptionsChip>
-                <SettingChip Icon={PlaybackIcon} label="Playback" value={AFTER_OPTIONS.find((o) => o.value === settings.after)?.label}>
-                  <SwitchRow label="Hear the pattern" checked={settings.snare} onChange={(v) => update({ snare: v })} />
-                  <SwitchRow label="Hi-hat click on every beat" checked={settings.click} onChange={(v) => update({ click: v })} />
-                  <SwitchRow label="Count-in" checked={settings.countIn} onChange={(v) => update({ countIn: v })} />
-                  <OptionGroup title={`After the ${EXERCISE_BARS} bars`}>
-                    <ChoiceCards label="After the exercise" options={AFTER_OPTIONS} value={settings.after} onChange={(v) => update({ after: v })} cardWidth="100%" />
-                  </OptionGroup>
-                </SettingChip>
-                <SettingChip Icon={SpeakerIcon} label="Mix" value={`${Math.round(settings.volume * 100)}%`}>
-                  <OptionGroup title="Drums" aside={<Percent value={settings.volume} />}>
-                    <Slider label="Drums" value={settings.volume} onChange={(v) => update({ volume: Math.round(v * 20) / 20 })} />
-                  </OptionGroup>
-                  <OptionGroup title="Room" aside={<Percent value={settings.room} />}>
-                    <Slider label="Room" value={settings.room} onChange={(v) => update({ room: Math.round(v * 20) / 20 })} />
-                  </OptionGroup>
-                </SettingChip>
-              </MoreOptionsChip>
-            </SettingsBar>
-          </View>
+          ) : null}
+          <BigButton label={running || starting ? 'Stop' : 'Play'} secondary={running || starting} onPress={() => (running || starting ? stop() : void start())} />
         </View>
-
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-          <View className="gap-3 overflow-hidden rounded-xl p-3" style={{ backgroundColor: colors.surface }}>
-            <View className="flex-row items-start gap-2 px-1">
-              <View className="flex-1">
-                <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
-                  Exercise{' '}
-                  <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                    {familyNames.join(' · ')}
-                  </Text>
-                </Text>
+      }
+      chips={
+        <SettingsBar>
+          <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${settings.bpm} BPM`}>
+            <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
+          </SettingChip>
+          <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(' · ')}>
+            <OptionGroup title="In the mix">
+              <PoolPills
+                label="Rhythms in the mix"
+                options={RHYTHM_FAMILIES.map((f) => ({ value: f.id, label: f.label }))}
+                selected={families}
+                onToggle={toggleFamily}
+              />
+            </OptionGroup>
+            <OptionGroup title="Played on">
+              <Segmented
+                label="Played on"
+                value={settings.split ? 'split' : 'snare'}
+                onChange={(v) => update({ split: v === 'split' })}
+                options={[
+                  { value: 'snare', label: 'Snare' },
+                  { value: 'split', label: 'Snare + bass' },
+                ]}
+              />
+            </OptionGroup>
+            <SwitchRow label="Rests" checked={settings.rests} onChange={(v) => update({ rests: v })} />
+            <OptionGroup title="Lines">
+              <ChoiceCards
+                label="Lines"
+                options={PHRASE_MODES.map((m) => ({ value: m.id, label: m.label }))}
+                value={settings.phrase}
+                onChange={(v) => update({ phrase: v })}
+                cardWidth="100%"
+              />
+            </OptionGroup>
+          </SettingChip>
+          <SettingChip Icon={DrumIcon} label="Underneath" value={ostinatoLabel}>
+            <ChoiceCards
+              label="Keep going underneath"
+              options={OSTINATOS.filter((o) => !(settings.split && o.feet)).map((o) => ({ value: o.id, label: o.label }))}
+              value={ostinato}
+              onChange={(v) => update({ ostinato: v })}
+              cardWidth="100%"
+            />
+          </SettingChip>
+          {/* The rarer settings, so the chips stay one or two rows and the exercise keeps its room. */}
+          <MoreOptionsChip>
+            <SettingChip Icon={PlaybackIcon} label="Playback" value={AFTER_OPTIONS.find((o) => o.value === settings.after)?.label}>
+              <SwitchRow label="Hear the pattern" checked={settings.snare} onChange={(v) => update({ snare: v })} />
+              <SwitchRow label="Hi-hat click on every beat" checked={settings.click} onChange={(v) => update({ click: v })} />
+              <SwitchRow label="Count-in" checked={settings.countIn} onChange={(v) => update({ countIn: v })} />
+              <OptionGroup title={`After the ${EXERCISE_BARS} bars`}>
+                <ChoiceCards label="After the exercise" options={AFTER_OPTIONS} value={settings.after} onChange={(v) => update({ after: v })} cardWidth="100%" />
+              </OptionGroup>
+            </SettingChip>
+            <SettingChip Icon={SpeakerIcon} label="Mix" value={`${Math.round(settings.volume * 100)}%`}>
+              <OptionGroup title="Drums" aside={<Percent value={settings.volume} />}>
+                <Slider label="Drums" value={settings.volume} onChange={(v) => update({ volume: Math.round(v * 20) / 20 })} />
+              </OptionGroup>
+              <OptionGroup title="Room" aside={<Percent value={settings.room} />}>
+                <Slider label="Room" value={settings.room} onChange={(v) => update({ room: Math.round(v * 20) / 20 })} />
+              </OptionGroup>
+            </SettingChip>
+          </MoreOptionsChip>
+        </SettingsBar>
+      }
+    >
+      {/* The exercise scrolls in the middle; Play and the settings stay put in the footer. */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
+        <View className="gap-3 overflow-hidden rounded-xl p-3" style={{ backgroundColor: colors.surface }}>
+          <View className="flex-row items-start gap-2 px-1">
+            <View className="flex-1">
+              <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+                Exercise{' '}
                 <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                  {EXERCISE_BARS} bars · {ostinatoLabel.toLowerCase()} underneath
+                  {familyNames.join(' · ')}
                 </Text>
-              </View>
-              {/* Stays in place while playing (disabled) so the notation doesn't jump. */}
-              <Pressable
-                onPress={() => setSeed(newSeed())}
-                disabled={running}
-                accessibilityLabel="New exercise"
-                android_ripple={{ color: colors['surface-hover'] }}
-                className="h-9 flex-row items-center gap-1.5 overflow-hidden rounded-lg px-3"
-                style={{ backgroundColor: derived.fill, opacity: running ? 0.4 : 1 }}
-              >
-                <ShuffleIcon color={colors.muted} size={16} />
-                <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-                  New
-                </Text>
-              </Pressable>
+              </Text>
+              <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+                {EXERCISE_BARS} bars · {ostinatoLabel.toLowerCase()} underneath
+              </Text>
             </View>
-            <SyncopationScore bars={bars} ostinato={ostinato} activeBar={live ? activeBar : null} />
+            {/* Stays in place while playing (disabled) so the notation doesn't jump. */}
+            <Pressable
+              onPress={() => setSeed(newSeed())}
+              disabled={running}
+              accessibilityLabel="New exercise"
+              android_ripple={{ color: colors['surface-hover'] }}
+              className="h-11 flex-row items-center gap-1.5 overflow-hidden rounded-full px-4"
+              style={{ backgroundColor: derived.fill, opacity: running ? 0.4 : 1 }}
+            >
+              <ShuffleIcon color={colors.muted} size={16} />
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+                New
+              </Text>
+            </Pressable>
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+          <SyncopationScore bars={bars} ostinato={ostinato} activeBar={live ? activeBar : null} />
+        </View>
+      </ScrollView>
+    </ToolFrame>
   );
 }
 

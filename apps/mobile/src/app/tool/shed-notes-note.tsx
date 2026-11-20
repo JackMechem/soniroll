@@ -26,7 +26,7 @@ import { ScoreDialog } from '@/components/shedNotes/ScoreDialog';
 import { ShareSheet } from '@/components/shedNotes/ShareSheet';
 import { ShedNotesGate } from '@/components/shedNotes/ShedNotesGate';
 import { TemplateFillSheet, useInstantiate } from '@/components/shedNotes/TemplateFill';
-import { Button } from '@/components/ui';
+import { Button, IconButton } from '@/components/ui';
 import { insertFileLine, insertScoreBlock, type Sel } from '@/lib/shedNotes/format';
 import { lineRange, toggleTaskLine } from '@/lib/shedNotes/markdown';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
@@ -322,7 +322,7 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
                 onPress={editing ? stopEdit : () => startEdit()}
                 accessibilityRole="button"
                 android_ripple={{ color: editing ? colors['accent-hover'] : colors['surface-hover'] }}
-                className="ml-1 h-9 flex-row items-center gap-1 overflow-hidden rounded-full px-3.5"
+                className="ml-1 h-10 flex-row items-center gap-1 overflow-hidden rounded-full px-3.5"
                 style={{ backgroundColor: editing ? colors.accent : derived.fill }}
               >
                 {editing ? null : <PencilIcon color={colors.foreground} size={16} />}
@@ -331,9 +331,9 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
                 </Text>
               </Pressable>
             ) : null}
-            <Pressable onPress={openMenu} hitSlop={8} accessibilityLabel="Note options" className="h-9 w-9 items-center justify-center rounded-full">
-              <DotsVerticalIcon color={colors.foreground} size={20} />
-            </Pressable>
+            <View className="ml-1">
+              <IconButton Icon={DotsVerticalIcon} label="Note options" onPress={openMenu} />
+            </View>
           </View>
         ),
       }}

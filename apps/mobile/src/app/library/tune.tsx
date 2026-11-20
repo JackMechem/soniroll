@@ -198,7 +198,7 @@ function Hub({
                 />
                 <Pressable
                   onPress={() => router.push({ pathname: '/tool/chord-charts-view', params: { id: tune.chordChartId! } })}
-                  className="rounded-full px-4 py-2"
+                  className="min-h-10 justify-center rounded-lg px-4 py-2"
                   style={{ backgroundColor: colors.surface }}
                 >
                   <Text className="font-ui-bold text-sm font-bold" style={{ color: colors.foreground }}>
@@ -234,7 +234,7 @@ function Hub({
                       {m.detail}
                     </Text>
                   </View>
-                  <Pressable onPress={() => patch({ chordChartId: m.id })} className="rounded-full px-4 py-2" style={{ backgroundColor: colors.accent }}>
+                  <Pressable onPress={() => patch({ chordChartId: m.id })} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
                     <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                       Link it
                     </Text>

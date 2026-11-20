@@ -35,16 +35,17 @@ import {
   Field,
   GroupLabel,
   HistoryChip,
+  IDLE_RING,
   IdleHint,
-  IdleSummary,
+  IdleStatus,
   LevelLabel,
   MutedText,
-  OptionsArea,
   Pill,
   PillChoice,
   PoolHeader,
   QuizRing,
   ResultsPanel,
+  SheetText,
   SliderField,
   StrugglesChip,
   TextButton,
@@ -54,7 +55,6 @@ import {
 import { BigButton } from '@/components/tool/meter';
 import { Segmented } from '@/components/tool/reward';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
-import { InfoButton } from '@/components/InfoButton';
 import { Button } from '@/components/ui';
 import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playChordSequence } from '@/lib/sampledTones';
 import { startTone } from '@/lib/toneGenerator';
@@ -62,6 +62,7 @@ import { useLearnSession } from '@/lib/useLearnSession';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
  * Native port of `apps/web/components/GuessTheProgression.tsx` — same features, same synced
@@ -221,6 +222,7 @@ function GuessTheProgressionScreen() {
   const [round, setRound] = useState<ProgressionRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/guess-the-progression', running);
+  useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [marks, setMarks] = useState<boolean[] | null>(null);
@@ -540,47 +542,171 @@ function GuessTheProgressionScreen() {
   const showSide = !running && (history.length > 0 || weakEntries.length > 0);
   const keyLabel = KEY_OPTIONS.find((k) => k.value === keyChoice)?.label ?? 'Random';
 
+  // How to write an answer, for the Answer chip's sheet and the first round's keyboard.
+  const answerHowTo =
+    answerMode === 'numerals'
+      ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
+      : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`;
+
+  // The mode switch first, then History and Struggles (hidden until there's something in them, and
+  // while a session runs). While answering, the keyboard is pinned at the bottom (`footer`) with a
+  // quiet Stop above it; results bring their own Try again. The chips hide while a session runs.
+  const chipList = (
+    <>
+      {!learnMode ? (
+        <SettingChip Icon={ProgressionIcon} label="Progressions" value={`${pool.length} of ${PROGRESSIONS.length}`}>
+          <PoolHeader
+            count={pool.length}
+            total={PROGRESSIONS.length}
+            onAll={() => updateSettings({ progressionIds: PROGRESSIONS.map((p) => p.id) })}
+            onNone={() => updateSettings({ progressionIds: [] })}
+            hint="Which progressions can be picked for a round. At least one must stay selected."
+          />
+          {PROGRESSION_CATEGORIES.map((category) => (
+            <View key={category} className="gap-1.5">
+              <GroupLabel>{category}</GroupLabel>
+              <View className="flex-row flex-wrap gap-1.5">
+                {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
+                  const selected = settings.progressionIds.includes(p.id);
+                  return (
+                    <Pill
+                      key={p.id}
+                      on={selected}
+                      label={p.name}
+                      onPress={() =>
+                        updateSettings({
+                          progressionIds: selected ? settings.progressionIds.filter((x) => x !== p.id) : [...settings.progressionIds, p.id],
+                        })
+                      }
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+          <SwitchRow
+            label="Drill every progression"
+            checked={drillMode}
+            onChange={(v) => updateSettings({ drillMode: v })}
+            hint="Plays each selected progression once, in shuffled order; any you don't get fully right come back later in a new key."
+          />
+        </SettingChip>
+      ) : null}
+
+      <SettingChip
+        Icon={PencilIcon}
+        label="Answer"
+        value={
+          answerMode === 'numerals'
+            ? typeQualities
+              ? 'Numerals + qualities'
+              : 'Numerals only'
+            : typeQualities
+              ? 'Chord symbols'
+              : 'Chord roots only'
+        }
+      >
+        <Field label="Answer with" hint="Type the progression as Roman numerals (ii V I), or as chord names in the key that was played (Dm G C).">
+          <Segmented label="Answer with" value={answerMode} options={ANSWER_MODES} onChange={(v) => updateSettings({ answerMode: v })} />
+        </Field>
+        <Field label="How to write it">
+          <SheetText>{answerHowTo}</SheetText>
+        </Field>
+        <SwitchRow
+          label="Type chord qualities"
+          checked={typeQualities}
+          onChange={(v) => updateSettings({ typeQualities: v })}
+          hint={
+            answerMode === 'numerals'
+              ? 'On: each numeral needs its quality too (ii7, V7, I^7, iiø7). Off: just the numerals — upper case for major, lower case for minor.'
+              : 'On: each chord needs its full symbol (D-7, G7, C^7). Off: just the roots, with a minor sign (D-) where the chord is minor.'
+          }
+        />
+        {answerMode === 'chords' ? (
+          <Field label="Accidentals" hint="How sharps and flats are spelled in the given root and revealed chords, e.g. F# vs Gb.">
+            <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
+          </Field>
+        ) : null}
+      </SettingChip>
+
+      <SettingChip Icon={NoteIcon} label="Key & sound" value={`${keyLabel} · ${register.label}`}>
+        <Field label="Key" hint="A new random key every round, or always the same one.">
+          <PillChoice label="Key" value={keyChoice} options={KEY_OPTIONS} onChange={(v) => updateSettings({ keyChoice: v })} />
+        </Field>
+        <Field label="Register" hint="How high or low the chords sit.">
+          <PillChoice label="Register" value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
+        </Field>
+        <SwitchRow
+          label="Play the key first"
+          checked={playKeyFirst}
+          onChange={(v) => updateSettings({ playKeyFirst: v })}
+          hint="Plays the key's tonic chord, then a beat of rest, before the progression — handy for one that doesn't start on I."
+        />
+        <SliderField
+          label="Chord length"
+          value={chordSeconds}
+          unit=" s"
+          min={MIN_CHORD_SECONDS}
+          max={MAX_CHORD_SECONDS}
+          step={0.1}
+          onChange={(v) => updateSettings({ chordSeconds: Math.round(v * 10) / 10 })}
+          hint="How long each chord lasts before the next — shorter is faster and harder."
+        />
+        <Field label="Playback style" hint="Whether each chord's notes play all at once or as a quick rolled arpeggio.">
+          <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
+        </Field>
+        <Field label="Tone" hint="Which sound plays the chords.">
+          <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
+        </Field>
+        <SwitchRow
+          label="Sound feedback"
+          checked={soundFeedback}
+          onChange={(v) => updateSettings({ soundFeedback: v })}
+          hint="A click each second of the countdown, plus a click the instant a round is graded."
+        />
+      </SettingChip>
+
+      <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
+        <SliderField
+          label="Max time to answer"
+          value={roundSeconds}
+          unit=" s"
+          min={MIN_ROUND_SECONDS}
+          max={MAX_ROUND_SECONDS}
+          step={1}
+          onChange={(v) => updateSettings({ roundSeconds: v })}
+          hint="How long you have to enter and submit an answer (counting while it plays) before it's graded as typed."
+        />
+        <SliderField
+          label="Time between rounds"
+          value={advanceDelayMs / 1000}
+          unit=" s"
+          min={MIN_ADVANCE_DELAY_MS / 1000}
+          max={MAX_ADVANCE_DELAY_MS / 1000}
+          step={0.25}
+          onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
+          hint="How long the revealed answer stays on screen before the next progression plays."
+        />
+        {!drillMode && !learnMode ? (
+          <SliderField
+            label="Number of rounds"
+            value={roundCount}
+            min={MIN_ROUND_COUNT}
+            max={MAX_ROUND_COUNT}
+            step={1}
+            onChange={(v) => updateSettings({ roundCount: v })}
+            hint="How many progressions make up one session."
+          />
+        ) : null}
+      </SettingChip>
+    </>
+  );
+
   return (
     <ToolScreen
       title="Guess the Progression"
-      footer={
-        answering ? (
-          <ProgressionAnswerKeyboard
-            mode={answerMode}
-            onInsert={insertText}
-            onBackspace={() => setTypedValue(typedRef.current.slice(0, -1))}
-            onClear={() => setTypedValue('')}
-            onGiveUp={gradeAndReveal}
-            onSubmit={gradeAndReveal}
-          />
-        ) : null
-      }
-    >
-      {/* Hidden until there's something in them, and while a session runs. */}
-      {showSide ? (
-        <SettingsBar>
-          <HistoryChip
-            entries={matchingHistory}
-            bestMs={bestMs}
-            onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
-          />
-          <StrugglesChip
-            entries={weakEntries.map((e) => ({ key: e.key, label: e.progression.name, counts: e.counts }))}
-            shedLabel="Shed weak progressions"
-            emptyText="No struggles tracked yet — a progression you don't get fully right adds it here."
-            running={running}
-            onShed={() => start('weak')}
-            onClear={() => {
-              statsRef.current = {};
-              updateSettings({ progressionStats: {} });
-            }}
-          />
-        </SettingsBar>
-      ) : null}
-
-      {/* The mode decides what the screen is, so it sits above the display. */}
-      {!running ? (
-        <View className="w-full items-center">
+      mode={
+        !running ? (
           <Segmented
             onPage
             label="Mode"
@@ -591,8 +717,62 @@ function GuessTheProgressionScreen() {
               { value: 'learn', label: 'Learn' },
             ]}
           />
-        </View>
-      ) : null}
+        ) : null
+      }
+      side={
+        showSide ? (
+          <SettingsBar>
+            <HistoryChip
+              entries={matchingHistory}
+              bestMs={bestMs}
+              onClear={() => updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })}
+            />
+            <StrugglesChip
+              entries={weakEntries.map((e) => ({ key: e.key, label: e.progression.name, counts: e.counts }))}
+              shedLabel="Shed weak progressions"
+              emptyText="No struggles tracked yet — a progression you don't get fully right adds it here."
+              running={running}
+              onShed={() => start('weak')}
+              onClear={() => {
+                statsRef.current = {};
+                updateSettings({ progressionStats: {} });
+              }}
+            />
+          </SettingsBar>
+        ) : null
+      }
+      footer={
+        answering ? (
+          <View>
+            {/* How to write the answer, beside the keyboard, in the first round only. */}
+            {progress?.index === 1 ? (
+              <Text className="font-ui px-4 pb-2 text-center text-xs leading-4" style={{ color: colors.muted }}>
+                {answerHowTo}
+              </Text>
+            ) : null}
+            <ProgressionAnswerKeyboard
+              mode={answerMode}
+              onInsert={insertText}
+              onBackspace={() => setTypedValue(typedRef.current.slice(0, -1))}
+              onClear={() => setTypedValue('')}
+              onGiveUp={gradeAndReveal}
+              onSubmit={gradeAndReveal}
+            />
+          </View>
+        ) : null
+      }
+      action={
+        !answering && (!showingSummary || learnMode) ? (
+          <BigButton
+            label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
+            secondary={running}
+            onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
+          />
+        ) : null
+      }
+      chips={!running ? chipList : null}
+    >
+
 
       {learnMode && !running ? (
         <LearningPath track="progression" progress={learn.progress} selected={learn.selected} onSelect={learn.select} onStart={() => start('learn')} />
@@ -620,34 +800,17 @@ function GuessTheProgressionScreen() {
               Level {activeLevel + 1} · {learn.levels[activeLevel].title}
             </LevelLabel>
           ) : null}
-          <QuizRing size={running ? 112 : 160} running={running} timer={noteTimer}>
+          <QuizRing size={running ? 112 : IDLE_RING} running={running} timer={noteTimer}>
             {running ? (
               <Text className="font-ui-bold text-center text-3xl font-bold tabular-nums" style={{ color: glow ?? colors.foreground }}>
                 {centerLabel}
               </Text>
             ) : (
-              <IdleSummary
-                value={String(pool.length)}
-                label={pool.length === 1 ? 'progression' : 'progressions'}
-                detail={`${drillMode ? 'Every key' : `${roundCount} rounds`} · ${register.label}`}
-              />
+              <IdleStatus history={history} />
             )}
           </QuizRing>
-          {/* How to write the answer is behind the ⓘ, not three lines on the page. */}
-          {!running ? (
-            <View className="flex-row items-center justify-center gap-1.5">
-              <IdleHint>Press Start, listen to the chords, then write them down.</IdleHint>
-              <InfoButton
-                title="How to write your answer"
-                size={18}
-                text={
-                  answerMode === 'numerals'
-                    ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
-                    : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`
-                }
-              />
-            </View>
-          ) : null}
+          {/* How to write the answer is in the Answer chip, and beside the keyboard in round 1. */}
+          {!running && !history.length ? <IdleHint>You&apos;ll hear a few chords, then write them down.</IdleHint> : null}
 
           {running && round ? (
             <>
@@ -708,6 +871,8 @@ function GuessTheProgressionScreen() {
               <ElapsedTimer active={running} startedAt={sessionStartedAt} />
             </View>
           ) : null}
+          {/* While answering, the keyboard's at the bottom: a quiet Stop. */}
+          {answering ? <TextButton label="Stop" onPress={endSession} /> : null}
         </View>
       )}
 
@@ -717,165 +882,7 @@ function GuessTheProgressionScreen() {
         </Text>
       ) : null}
 
-      {/* While answering, the keyboard's at the bottom: a quiet Stop. Results bring their own Try again. */}
-      {answering ? (
-        <TextButton label="Stop" onPress={endSession} />
-      ) : !showingSummary || learnMode ? (
-        <BigButton
-          label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
-          secondary={running}
-          onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
-        />
-      ) : null}
 
-      {/* Hidden while a session runs, so the round has the screen to itself. */}
-      {!running ? (
-        <OptionsArea>
-          {!learnMode ? (
-            <SettingChip Icon={ProgressionIcon} label="Progressions" value={`${pool.length} of ${PROGRESSIONS.length}`}>
-              <PoolHeader
-                count={pool.length}
-                total={PROGRESSIONS.length}
-                onAll={() => updateSettings({ progressionIds: PROGRESSIONS.map((p) => p.id) })}
-                onNone={() => updateSettings({ progressionIds: [] })}
-                hint="Which progressions can be picked for a round. At least one must stay selected."
-              />
-              {PROGRESSION_CATEGORIES.map((category) => (
-                <View key={category} className="gap-1.5">
-                  <GroupLabel>{category}</GroupLabel>
-                  <View className="flex-row flex-wrap gap-1.5">
-                    {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
-                      const selected = settings.progressionIds.includes(p.id);
-                      return (
-                        <Pill
-                          key={p.id}
-                          on={selected}
-                          label={p.name}
-                          onPress={() =>
-                            updateSettings({
-                              progressionIds: selected ? settings.progressionIds.filter((x) => x !== p.id) : [...settings.progressionIds, p.id],
-                            })
-                          }
-                        />
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-              <SwitchRow
-                label="Drill every progression"
-                checked={drillMode}
-                onChange={(v) => updateSettings({ drillMode: v })}
-                hint="Plays each selected progression once, in shuffled order; any you don't get fully right come back later in a new key."
-              />
-            </SettingChip>
-          ) : null}
-
-          <SettingChip
-            Icon={PencilIcon}
-            label="Answer"
-            value={
-              answerMode === 'numerals'
-                ? typeQualities
-                  ? 'Numerals + qualities'
-                  : 'Numerals only'
-                : typeQualities
-                  ? 'Chord symbols'
-                  : 'Chord roots only'
-            }
-          >
-            <Field label="Answer with" hint="Type the progression as Roman numerals (ii V I), or as chord names in the key that was played (Dm G C).">
-              <Segmented label="Answer with" value={answerMode} options={ANSWER_MODES} onChange={(v) => updateSettings({ answerMode: v })} />
-            </Field>
-            <SwitchRow
-              label="Type chord qualities"
-              checked={typeQualities}
-              onChange={(v) => updateSettings({ typeQualities: v })}
-              hint={
-                answerMode === 'numerals'
-                  ? 'On: each numeral needs its quality too (ii7, V7, I^7, iiø7). Off: just the numerals — upper case for major, lower case for minor.'
-                  : 'On: each chord needs its full symbol (D-7, G7, C^7). Off: just the roots, with a minor sign (D-) where the chord is minor.'
-              }
-            />
-            {answerMode === 'chords' ? (
-              <Field label="Accidentals" hint="How sharps and flats are spelled in the given root and revealed chords, e.g. F# vs Gb.">
-                <PillChoice label="Accidentals" value={accidentalStyle} options={ACCIDENTAL_STYLES} onChange={(v) => updateSettings({ accidentalStyle: v })} />
-              </Field>
-            ) : null}
-          </SettingChip>
-
-          <SettingChip Icon={NoteIcon} label="Key & sound" value={`${keyLabel} · ${register.label}`}>
-            <Field label="Key" hint="A new random key every round, or always the same one.">
-              <PillChoice label="Key" value={keyChoice} options={KEY_OPTIONS} onChange={(v) => updateSettings({ keyChoice: v })} />
-            </Field>
-            <Field label="Register" hint="How high or low the chords sit.">
-              <PillChoice label="Register" value={register.id} options={REGISTERS.map((r) => ({ value: r.id, label: r.label }))} onChange={(v) => updateSettings({ registerId: v })} />
-            </Field>
-            <SwitchRow
-              label="Play the key first"
-              checked={playKeyFirst}
-              onChange={(v) => updateSettings({ playKeyFirst: v })}
-              hint="Plays the key's tonic chord, then a beat of rest, before the progression — handy for one that doesn't start on I."
-            />
-            <SliderField
-              label="Chord length"
-              value={chordSeconds}
-              unit=" s"
-              min={MIN_CHORD_SECONDS}
-              max={MAX_CHORD_SECONDS}
-              step={0.1}
-              onChange={(v) => updateSettings({ chordSeconds: Math.round(v * 10) / 10 })}
-              hint="How long each chord lasts before the next — shorter is faster and harder."
-            />
-            <Field label="Playback style" hint="Whether each chord's notes play all at once or as a quick rolled arpeggio.">
-              <PillChoice label="Playback style" value={playbackStyle} options={PLAYBACK_STYLES} onChange={(v) => updateSettings({ playbackStyle: v })} />
-            </Field>
-            <Field label="Tone" hint="Which sound plays the chords.">
-              <PillChoice label="Tone" value={toneId} options={EAR_TRAINING_TONES.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => updateSettings({ toneId: v })} />
-            </Field>
-            <SwitchRow
-              label="Sound feedback"
-              checked={soundFeedback}
-              onChange={(v) => updateSettings({ soundFeedback: v })}
-              hint="A click each second of the countdown, plus a click the instant a round is graded."
-            />
-          </SettingChip>
-
-          <SettingChip Icon={StopwatchIcon} label="Timing" value={`${roundSeconds} s`}>
-            <SliderField
-              label="Max time to answer"
-              value={roundSeconds}
-              unit=" s"
-              min={MIN_ROUND_SECONDS}
-              max={MAX_ROUND_SECONDS}
-              step={1}
-              onChange={(v) => updateSettings({ roundSeconds: v })}
-              hint="How long you have to enter and submit an answer (counting while it plays) before it's graded as typed."
-            />
-            <SliderField
-              label="Time between rounds"
-              value={advanceDelayMs / 1000}
-              unit=" s"
-              min={MIN_ADVANCE_DELAY_MS / 1000}
-              max={MAX_ADVANCE_DELAY_MS / 1000}
-              step={0.25}
-              onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
-              hint="How long the revealed answer stays on screen before the next progression plays."
-            />
-            {!drillMode && !learnMode ? (
-              <SliderField
-                label="Number of rounds"
-                value={roundCount}
-                min={MIN_ROUND_COUNT}
-                max={MAX_ROUND_COUNT}
-                step={1}
-                onChange={(v) => updateSettings({ roundCount: v })}
-                hint="How many progressions make up one session."
-              />
-            ) : null}
-          </SettingChip>
-        </OptionsArea>
-      ) : null}
 
       {learn.result ? (
         <LevelComplete
