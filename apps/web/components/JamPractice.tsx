@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import Hint from "@/components/Hint";
@@ -19,6 +20,8 @@ import type { BeatLevel } from "@/lib/clickEngine";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
+import { useLibraryTunes } from "@/lib/useTuneLists";
+import { useTunesToLearn } from "@/lib/useTunesToLearn";
 import { Key, Tempo, Tune } from "@/lib/types";
 import { useToolActivity } from "@/lib/toolTime";
 
@@ -40,6 +43,10 @@ const DEFAULT_SETTINGS = {
 
 export default function JamPractice() {
   const [tunes, setTunes] = useSyncedTunes();
+  // Tunes in the Library's other lists, for the empty message (this picks from Tunes I Know only).
+  const [libraryTunes] = useLibraryTunes();
+  const [learnTunes] = useTunesToLearn();
+  const otherTunes = libraryTunes.length + learnTunes.length;
   const [pick, setPick] = useState<PickResult | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
   // The tune search, opened from the Picking from chip or the empty state below.
@@ -226,7 +233,17 @@ export default function JamPractice() {
         ) : tunes.length === 0 && !pickFromStandards ? (
           // Nothing to pick from yet: offer both ways in, right here.
           <div className="flex w-[min(24rem,calc(100cqw-2rem))] flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-5 text-sm text-muted">
-            <p>Your tune list is empty. Add the tunes you know, or pick from {STANDARDS.length} jazz standards.</p>
+            {otherTunes > 0 ? (
+              <p>
+                None of your tunes are in Tunes I Know yet. Move some there from your{" "}
+                <Link href="/tunes" className="font-medium text-foreground underline underline-offset-2 hover:text-accent">
+                  Library
+                </Link>
+                , or pick from {STANDARDS.length} jazz standards.
+              </p>
+            ) : (
+              <p>Your tune list is empty. Add the tunes you know, or pick from {STANDARDS.length} jazz standards.</p>
+            )}
             <div className="flex flex-wrap justify-center gap-2">
               <button
                 type="button"

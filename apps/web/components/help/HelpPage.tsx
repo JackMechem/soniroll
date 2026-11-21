@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ShedLogTour from "@/components/practicelog/ShedLogTour";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
 import PageBar from "@/components/PageBar";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, SearchIcon, SlidersIcon, StarIcon, findToolLink } from "@/components/tools";
 import { HELP_GROUPS, HELP_TOPICS, type HelpTopic, topicById } from "@/lib/helpContent";
 
 /**
@@ -16,6 +16,11 @@ import { HELP_GROUPS, HELP_TOPICS, type HelpTopic, topicById } from "@/lib/helpC
  * address bar (`history.replaceState`, so it doesn't reload or add history entries) so a link to
  * a topic can be shared.
  */
+
+/** A very long tool name's sidebar name ("Metric Modulation"), for phone-width buttons and crumbs. */
+function phoneName(topic: HelpTopic): string | undefined {
+  return topic.title.length > 24 && topic.href ? findToolLink(topic.href)?.short : undefined;
+}
 
 /** The topics in the order the list shows them (for Previous / Next). */
 const ORDERED = HELP_GROUPS.flatMap((g) => HELP_TOPICS.filter((t) => t.group === g));
@@ -77,7 +82,15 @@ function TopicDetail({ topic, onPick }: { topic: HelpTopic; onPick: (id: string)
           <div className="mt-4 flex flex-wrap gap-2">
             {topic.href && (
               <Link href={topic.href} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-                Open {topic.title} <ChevronRightIcon className="h-4 w-4" />
+                {phoneName(topic) ? (
+                  <>
+                    <span className="sm:hidden">Open {phoneName(topic)}</span>
+                    <span className="max-sm:hidden">Open {topic.title}</span>
+                  </>
+                ) : (
+                  <>Open {topic.title}</>
+                )}{" "}
+                <ChevronRightIcon className="h-4 w-4" />
               </Link>
             )}
             {topic.id === "shed-log" && (
@@ -188,22 +201,51 @@ function scrollParent(el: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
+/** Desktop `/help` before a topic is picked: what's here, and the Getting started topics. */
+function HelpStart({ onPick }: { onPick: (id: string) => void }) {
+  const starters = HELP_TOPICS.filter((t) => t.group === HELP_GROUPS[0]);
+  return (
+    <section className="settings-pop mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <header className="flex flex-col gap-1 border-b border-foreground/10 pb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">How soniroll works</h2>
+        <p className="text-sm text-muted">Pick a tool or page on the left to see what it&apos;s for, how to use it and a few tips. New here? Start with one of these.</p>
+      </header>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {starters.map((t) => (
+          <li key={t.id}>
+            <button type="button" onClick={() => onPick(t.id)} className="flex h-full w-full items-start gap-3 rounded-lg bg-surface p-4 text-left transition-colors hover:bg-surface-hover">
+              <TopicIcon topic={t} size="sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{t.title}</span>
+                <span className="block text-sm text-muted">{t.tagline}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
   const [selected, setSelected] = useState(() => topicById(initialTopic).id);
   // Phones show the list or a topic, not both; arriving with ?topic= opens it straight away.
   const [showDetail, setShowDetail] = useState(Boolean(initialTopic));
+  // Plain `/help` opens on a "pick a topic" panel (desktop; phones show the list), not a topic.
+  const [picked, setPicked] = useState(Boolean(initialTopic));
   const [query, setQuery] = useState("");
   const detailRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (url.pathname !== "/help") return;
+    if (url.pathname !== "/help" || !picked) return;
     url.searchParams.set("topic", selected);
     window.history.replaceState(window.history.state, "", url);
-  }, [selected]);
+  }, [selected, picked]);
 
   function pick(id: string) {
     setSelected(id);
+    setPicked(true);
     setShowDetail(true);
     // One scroll for the whole page: back to the top of it (the app's page box, not the window).
     scrollParent(detailRef.current)?.scrollTo({ top: 0 });
@@ -218,8 +260,8 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
       {/* "Help / <topic>": desktop always shows a topic beside the list; on phones the topic
           replaces the list once one is opened, and "Help" goes back to it. */}
       <PageBar
-        crumbs={[{ label: "Help" }, { label: topic.title }]}
-        phoneCrumbs={showDetail ? [{ label: "Help", onClick: () => setShowDetail(false) }, { label: topic.title }] : [{ label: "Help" }]}
+        crumbs={picked ? [{ label: "Help" }, { label: topic.title }] : [{ label: "Help" }]}
+        phoneCrumbs={showDetail ? [{ label: "Help", onClick: () => setShowDetail(false) }, { label: topic.title, short: phoneName(topic) }] : [{ label: "Help" }]}
         icon={HelpIcon}
       />
       <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
@@ -229,11 +271,11 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search help" aria-label="Search help" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
           </div>
           <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
-            <TopicList query={query} selected={selected} onPick={pick} />
+            <TopicList query={query} selected={picked ? selected : ""} onPick={pick} />
           </div>
         </aside>
         <div ref={detailRef} className={`min-w-0 lg:block ${showDetail ? "block" : "hidden"}`}>
-          <TopicDetail key={topic.id} topic={topic} onPick={pick} />
+          {picked ? <TopicDetail key={topic.id} topic={topic} onPick={pick} /> : <HelpStart onPick={pick} />}
         </div>
       </div>
     </main>

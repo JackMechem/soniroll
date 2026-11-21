@@ -154,12 +154,12 @@ export default function FeedbackForm({
               aria-pressed={kind === k.id}
               onClick={() => setKind(k.id)}
               className={`flex flex-col items-start gap-1.5 rounded-md p-3 text-left transition-colors ${
-                kind === k.id ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] hover:bg-surface-hover"
+                kind === k.id ? "bg-accent/10 ring-2 ring-inset ring-accent" : "bg-foreground/[0.05] hover:bg-surface-hover"
               }`}
             >
-              <k.Icon className="h-4 w-4" />
+              <k.Icon className={`h-4 w-4 ${kind === k.id ? "text-accent" : ""}`} />
               <span className="text-sm font-medium leading-tight">{k.label}</span>
-              {!compact && <span className={`text-xs ${kind === k.id ? "opacity-85" : "text-muted"}`}>{k.hint}</span>}
+              {!compact && <span className="text-xs text-muted">{k.hint}</span>}
             </button>
           ))}
         </div>
@@ -206,7 +206,7 @@ export default function FeedbackForm({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your email, if you'd like a reply (optional)"
+              placeholder="Email, if you'd like a reply"
               aria-label="Your email (optional)"
               className={`h-9 min-w-0 flex-1 basis-full ${compact ? "" : "sm:basis-auto"} rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40`}
             />

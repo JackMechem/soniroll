@@ -371,7 +371,7 @@ export default function NoteList({
             )}
           </li>
         )}
-        {!query && notes.length === 0 && folders.length === 0 && <li className="px-2 py-6 text-center text-sm text-muted">No notes yet. Make one with New.</li>}
+        {!query && notes.length === 0 && folders.length === 0 && <li className="px-2 py-6 text-center text-sm text-muted lg:hidden">No notes yet. Make one with New.</li>}
       </ul>
       <button
         type="button"

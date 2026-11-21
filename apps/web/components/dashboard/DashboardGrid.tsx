@@ -7,6 +7,7 @@ import { CloseIcon, DragIcon, PlusIcon } from "@/components/tools";
 import { HintsContext } from "@/lib/hints";
 import {
   DASHBOARD_CARDS,
+  LONE_SIZE_CLASSES,
   SIZE_CLASSES,
   SIZE_LABELS,
   cardDef,
@@ -176,20 +177,25 @@ export default function DashboardGrid({
   const update = (id: string, patch: Partial<DashboardItem> | null) =>
     onChange(patch ? items.map((i) => (i.id === id ? { ...i, ...patch } : i)) : items.filter((i) => i.id !== id));
 
+  // Cards with nothing to show are left out (except while editing).
+  const shownCards = visible.map((item) => ({ item, node: renderCard(item) })).filter(({ node }) => editing || node != null);
+  // In the two-column grid, half-width cards pair up in order (dense flow); with an odd number the
+  // last one would sit beside an empty half, so it takes the whole row instead.
+  const halves = editing ? [] : shownCards.filter(({ item }) => item.size === "small" || item.size === "medium");
+  const loneId = halves.length % 2 === 1 ? halves[halves.length - 1].item.id : null;
+
   return (
     // Outside edit mode, smaller cards fill gaps (a card that has nothing to show leaves one);
     // while editing, the grid follows the order exactly.
     <div ref={gridRef} className={`grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12 ${editing ? "" : "md:grid-flow-row-dense"}`}>
-      {visible.map((item) => {
-        const node = renderCard(item);
-        if (!editing && node == null) return null;
+      {shownCards.map(({ item, node }) => {
         const def = cardDef(item.id);
         const label = labelOf?.(item.id) ?? def?.label ?? item.id;
         const sizes = def?.sizes ?? [];
         const isDragging = dragging === item.id;
         const target = drop?.id === item.id ? drop : null;
         return (
-          <div key={item.id} data-dash-card={item.id} className={`@container relative min-w-0 ${SIZE_CLASSES[item.size]} ${isDragging ? "z-30" : ""}`}>
+          <div key={item.id} data-dash-card={item.id} className={`@container relative min-w-0 ${(item.id === loneId ? LONE_SIZE_CLASSES : SIZE_CLASSES)[item.size]} ${isDragging ? "z-30" : ""}`}>
             {!editing ? (
               node
             ) : (

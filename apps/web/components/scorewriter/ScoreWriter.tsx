@@ -6,6 +6,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton } from "@/components/library/shared";
+import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import ToolLayout from "@/components/ToolLayout";
 import { SAVE_LABEL, downloadJson, safeFilename, useAutosave } from "@/components/bassgenius/TranscriptionEditor";
 import ScoreEditor from "@/components/notation/ScoreEditor";
@@ -96,7 +97,12 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
         }}
       />
       {error && <p className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
-      {!isLoading && !isAuthenticated && <p className="text-sm text-muted">Signed out, your scores are kept in this browser. Sign in to keep them in your account and put them in Shed Notes.</p>}
+      {!isLoading && !isAuthenticated && (
+        <div className="flex flex-col gap-3 rounded-lg bg-foreground/[0.05] px-4 py-3 sm:flex-row sm:items-center">
+          <p className="flex-1 text-sm text-muted">Signed out, your scores are kept in this browser. Sign in to keep them in your account and put them in Shed Notes.</p>
+          <SignInButtons size="sm" />
+        </div>
+      )}
 
       {scores === undefined ? (
         <div className="flex justify-center py-16">

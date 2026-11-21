@@ -19,6 +19,14 @@ export const SIZE_CLASSES: Record<CardSize, string> = {
   full: "md:col-span-2 lg:col-span-12",
 };
 
+/** A half-width card left alone on its row in the two-column (`md`) grid spans both columns, so
+    it doesn't leave an empty half (`DashboardGrid`). `lg` keeps its own size. */
+export const LONE_SIZE_CLASSES: Record<CardSize, string> = {
+  ...SIZE_CLASSES,
+  small: "md:col-span-2 lg:col-span-4",
+  medium: "md:col-span-2 lg:col-span-6",
+};
+
 export const DASHBOARD_CARDS = [
   { id: "momentum", label: "Goal and streak", hint: "Today's goal ring, your streak, this week and your hours, from the Shed Log.", sizes: ["large", "full"], feature: "shedLog" },
   { id: "today", label: "Today's practice", hint: "What's on today in the Shed Log: routines to start, tasks to tick off, the day timer.", sizes: ["medium", "large", "full"], feature: "shedLog" },
