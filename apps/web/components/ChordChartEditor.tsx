@@ -17,8 +17,9 @@ import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import NumberField from "@/components/NumberField";
 import Select from "@/components/Select";
 import { PageHeader } from "@/components/library/shared";
+import type { Crumb } from "@/components/PageBar";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
-import { PlusIcon, TrashIcon } from "@/components/tools";
+import { LibraryIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import { encodeChartString } from "@/lib/chartString";
 import { parseBarSlots, slotsToText, type Bar, type ChordSlot, type IRealSong } from "@/lib/iRealPro";
 
@@ -209,7 +210,11 @@ export default function ChordChartEditor({
   defaultPlaylist,
   onSave,
   onClose,
+  crumbs,
 }: {
+  /** The pages above the editor in the header bar's trail (its own name, "Edit" or "New chart",
+      is added). Without them, one "Back" crumb that closes it. */
+  crumbs?: Crumb[];
   /** Edit this existing chart (saved back in place) instead of building a new one. */
   initial?: IRealSong;
   /** A new chart's starting title, key and time (written from a tune's page). */
@@ -406,7 +411,12 @@ export default function ChordChartEditor({
   return (
     // Left-aligned like the other library pages (not centred in the wide shell).
     <div className="flex w-full max-w-5xl flex-col gap-4">
-      <PageHeader title={editing ? `Edit "${initial?.title}"` : "Create a chord chart"} back={() => guard.requestLeave(onClose)} />
+      <PageHeader
+        title={editing ? "Edit" : "New chart"}
+        icon={crumbs ? LibraryIcon : undefined}
+        crumbs={crumbs}
+        back={() => guard.requestLeave(onClose)}
+      />
 
       <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
         {!editing && (

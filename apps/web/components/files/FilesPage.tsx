@@ -1,5 +1,6 @@
 "use client";
 
+import { LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
@@ -195,7 +196,8 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
     <LibraryPage>
       <div {...(isAuthenticated ? uploader.drop : {})} className="flex flex-col gap-6">
         <Hero
-          title="Library"
+          title="Files"
+          crumbs={[LIBRARY_CRUMB]}
           icon={LibraryIcon}
           titleExtra={<StoragePill />}
           helpTopic="files"

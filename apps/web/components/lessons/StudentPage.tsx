@@ -1,5 +1,6 @@
 "use client";
 
+import PageBar from "@/components/PageBar";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -48,6 +49,7 @@ export default function StudentPage({ id }: { id: string }) {
   if (data === undefined) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Student" }]} icon={CapIcon} />
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
@@ -57,6 +59,7 @@ export default function StudentPage({ id }: { id: string }) {
   if (!data) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Student" }]} icon={CapIcon} />
         <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Student not found" body="They may have been removed." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
@@ -89,8 +92,8 @@ export default function StudentPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={data.name}
-        backHref="/lessons"
-        backLabel="Lessons"
+        icon={CapIcon}
+        crumbs={[{ label: "Lessons", href: "/lessons" }]}
         leading={<PersonBadge url={data.student?.avatarUrl} name={data.name} size="lg" />}
         subtitle={
           data.joined

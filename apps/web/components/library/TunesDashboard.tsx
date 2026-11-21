@@ -1,5 +1,6 @@
 "use client";
 
+import { LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -165,7 +166,7 @@ export default function TunesDashboard() {
 
   return (
     <LibraryPage>
-      <Hero title="Library" icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="tunes" tabs={<LibraryTabs active="tunes" />}>
+      <Hero title="Tunes" crumbs={[LIBRARY_CRUMB]} icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="tunes" tabs={<LibraryTabs active="tunes" />}>
         <Toolbar>
           <HeroSearch value={query} onChange={(v) => { setQuery(v); setShown(PAGE); }} placeholder={total > 1 ? `Search ${total} tunes…` : "Search your tunes…"} />
           <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />

@@ -1,12 +1,13 @@
 "use client";
 
+import { UNDER_TUNES } from "@/components/library/hrefs";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { chartHref } from "@/components/library/hrefs";
-import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, Pill, Rows, Toolbar } from "@/components/library/ui";
+import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, Pill, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
-import { ChordChartIcon, DotsVerticalIcon, PlusIcon } from "@/components/tools";
+import { DotsVerticalIcon, LibraryIcon, PlusIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 
@@ -46,11 +47,9 @@ export default function PlaylistPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={playlist?.name ?? "Folder"}
-        icon={isAll ? ChordChartIcon : FolderIcon}
-        backHref="/tunes"
-        backLabel="Tunes"
+        icon={LibraryIcon}
+        crumbs={UNDER_TUNES}
         subtitle={playlist ? `${isAll ? "Every chart in your library" : "Folder"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
-        rule={false}
       >
         {/* Search, then a labelled New chart and the folder's ⋮ on the same row (phones too). */}
         {playlist && !loading && (

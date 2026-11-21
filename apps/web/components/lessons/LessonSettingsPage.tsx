@@ -1,5 +1,7 @@
 "use client";
 
+import { CapIcon } from "@/components/lessons/parts";
+import PageBar from "@/components/PageBar";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -10,7 +12,7 @@ import { Hero, LibraryPage } from "@/components/library/ui";
 import { btnPrimary, btnSecondary, errorText, field } from "@/components/lessons/parts";
 import { SlotGrid, localTz } from "@/components/lessons/schedule";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { CalendarIcon, CloseIcon, PlusIcon, SlidersIcon } from "@/components/tools";
+import { CalendarIcon, CloseIcon, PlusIcon } from "@/components/tools";
 import { FEATURE_INFO } from "@jam-practice/core/lessonFiles";
 import {
   DEFAULT_AVAILABILITY,
@@ -69,6 +71,7 @@ export default function LessonSettingsPage() {
   if (isLoading || (isAuthenticated && (!draft || !features))) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Lesson settings" }]} icon={CapIcon} />
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
@@ -78,7 +81,7 @@ export default function LessonSettingsPage() {
   if (!isAuthenticated || !draft || !features) {
     return (
       <LibraryPage>
-        <Hero title="Lesson settings" icon={SlidersIcon} backHref="/lessons" backLabel="Lessons" subtitle="Sign in to set up your lessons.">
+        <Hero title="Lesson settings" icon={CapIcon} crumbs={[{ label: "Lessons", href: "/lessons" }]} subtitle="Sign in to set up your lessons.">
           <SignInButtons />
         </Hero>
       </LibraryPage>
@@ -129,7 +132,7 @@ export default function LessonSettingsPage() {
 
   return (
     <LibraryPage>
-      <Hero title="Lesson settings" icon={SlidersIcon} backHref="/lessons" backLabel="Lessons" subtitle="What your students get, and when they can book." />
+      <Hero title="Lesson settings" icon={CapIcon} crumbs={[{ label: "Lessons", href: "/lessons" }]} subtitle="What your students get, and when they can book." />
 
       <Section
         title="Features"

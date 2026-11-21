@@ -1,5 +1,6 @@
 "use client";
 
+import PageBar from "@/components/PageBar";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
@@ -31,6 +32,7 @@ export default function LessonsPage() {
   if (isLoading) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons" }]} icon={CapIcon} helpTopic="lessons" />
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>

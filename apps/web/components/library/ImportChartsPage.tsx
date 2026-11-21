@@ -1,10 +1,11 @@
 "use client";
 
+import { UNDER_TUNES } from "@/components/library/hrefs";
 import { useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Hero, LibraryPage, Pill } from "@/components/library/ui";
 import SwitchRow from "@/components/SwitchRow";
-import { DownloadIcon, TrashIcon } from "@/components/tools";
+import { DownloadIcon, LibraryIcon, TrashIcon } from "@/components/tools";
 import { decodeChartString, looksLikeChartString } from "@/lib/chartString";
 import { parseIrealPlaylist } from "@/lib/iRealPro";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -70,9 +71,8 @@ export default function ImportChartsPage() {
     <LibraryPage>
       <Hero
         title="Import charts"
-        icon={DownloadIcon}
-        backHref="/tunes"
-        backLabel="Tunes"
+        icon={LibraryIcon}
+        crumbs={UNDER_TUNES}
         subtitle={`Add charts to your library — you have ${totalSongs} now.`}
       />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">

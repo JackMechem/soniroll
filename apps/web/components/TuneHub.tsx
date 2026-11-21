@@ -1,7 +1,9 @@
 "use client";
 
+import { UNDER_TUNES } from "@/components/library/hrefs";
+import PageBar from "@/components/PageBar";
 import { ChartPaper } from "@/components/library/chartView";
-import { gridKeyName, Hero, KeyBadge, keyColor, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
+import { gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
@@ -20,7 +22,7 @@ import { playAlongHref } from "@/components/library/usePlayAlong";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
 import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
-import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
+import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LibraryIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { goBackOr } from "@/lib/goBack";
 import { makeId, type Tune } from "@/lib/types";
@@ -69,12 +71,15 @@ export default function TuneHub({ id, list: listParam }: { id: string; list?: st
 
   if (!found) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-3 px-4 py-24 text-center">
-        <p className="text-sm text-muted">That tune isn&apos;t in your lists.</p>
-        <Link href="/tunes" className="text-sm font-semibold text-accent">
-          Go to your tunes
-        </Link>
-      </div>
+      <LibraryPage>
+        <PageBar crumbs={[...UNDER_TUNES, { label: "Tune" }]} icon={LibraryIcon} />
+        <div className="mx-auto flex max-w-xl flex-col items-center gap-3 py-16 text-center">
+          <p className="text-sm text-muted">That tune isn&apos;t in your lists.</p>
+          <Link href="/tunes" className="text-sm font-semibold text-accent">
+            Go to your tunes
+          </Link>
+        </div>
+      </LibraryPage>
     );
   }
   return (
@@ -240,8 +245,8 @@ function Hub({
     <LibraryPage>
       <Hero
         title={tune.name}
-        color={keyColor(firstKey)}
-        back={() => goBackOr(router, "/tunes")}
+        icon={LibraryIcon}
+        crumbs={UNDER_TUNES}
         leading={<KeyBadge label={firstKey} size="lg" />}
         subtitle={[
           LIST_LABEL[list],

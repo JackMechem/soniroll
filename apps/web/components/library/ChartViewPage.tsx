@@ -8,7 +8,9 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
 import { playlistHref } from "@/components/library/hrefs";
-import { BackButton } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
+import { chartCrumbs } from "@/components/library/chartCrumbs";
+import { UNDER_TUNES } from "@/components/library/hrefs";
 import { EmptyState, FolderIcon, gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { moveTune } from "@/lib/useTuneLists";
@@ -18,7 +20,7 @@ import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { BassIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon } from "@/components/tools";
+import { BassIcon, DotsVerticalIcon, LibraryIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon } from "@/components/tools";
 import { goBackOr } from "@/lib/goBack";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
@@ -32,7 +34,6 @@ export default function ChartViewPage({ id }: { id: string }) {
   const router = useRouter();
   const { selectedSong: chart, selectedSongLoading, loading, allSongs, playlists } = useChordChartsLibrary(id || null);
   const { openSongMenu, element } = useChartActions({ onSongDeleted: () => goBackOr(router, "/tunes") });
-  const back = () => goBackOr(router, "/tunes");
   const [transposeKey, setTransposeKey] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const lists = useTuneLists();
@@ -98,6 +99,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   if (loading || selectedSongLoading) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[...UNDER_TUNES, { label: "Chart" }]} icon={LibraryIcon} />
         <div className="flex justify-center py-24">
           <LoadingSpinner label="Loading chart…" showLabel />
         </div>
@@ -107,7 +109,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   if (!chart || !shown) {
     return (
       <LibraryPage>
-        <BackButton onClick={back} />
+        <PageBar crumbs={[...UNDER_TUNES, { label: "Chart" }]} icon={LibraryIcon} />
         <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Tunes" href="/tunes" />} />
       </LibraryPage>
     );
@@ -117,12 +119,14 @@ export default function ChartViewPage({ id }: { id: string }) {
   const minor = chart.key ? isMinorKey(chart.key) : false;
   const shownPc = shown.key ? keyPitchClass(shown.key) : -1;
 
+  const trail = chartCrumbs(linkedTunes[0], chart.title);
   return (
     <LibraryPage>
       <Hero
-        title={chart.title}
+        title={trail.title}
+        crumbs={trail.parents}
+        icon={LibraryIcon}
         subtitle={chart.composer ? formatComposer(chart.composer) : undefined}
-        back={back}
         leading={<KeyBadge label={shown.key} size="lg" />}
         actions={
           // On phones the key select gets its own full-width row under the buttons, so

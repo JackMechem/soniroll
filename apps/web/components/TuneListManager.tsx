@@ -8,7 +8,8 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import StandardsPicker from "@/components/StandardsPicker";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { Hero, HeroSearch, KeyBadge, Pill, Toolbar } from "@/components/library/ui";
-import { CheckIcon, ChordChartIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
+import { CheckIcon, ChordChartIcon, LibraryIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
+import { UNDER_TUNES } from "@/components/library/hrefs";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
 
@@ -287,9 +288,8 @@ export default function TuneListManager({
       <>
         <Hero
           title={title}
-          icon={Icon}
-          backHref="/tunes"
-          backLabel="Tunes"
+          icon={LibraryIcon}
+          crumbs={UNDER_TUNES}
           subtitle={`${tunes.length} tune${tunes.length === 1 ? "" : "s"} · ${chartCount} with a chord chart`}
         >
           <Toolbar>

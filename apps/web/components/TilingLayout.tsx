@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CloseIcon, GearIcon, HelpIcon, HomeIcon, findToolLink } from "@/components/tools";
 import { PaneContext, PaneTitleSlotContext } from "@/lib/paneContext";
+import { PaneCrumbStoreContext, createCrumbStore, useCurrentCrumbs } from "@/lib/pageCrumbs";
+import { CrumbTrail } from "@/components/PageBar";
+import { IntroButton } from "@/components/help/ToolIntro";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import {
   type PaneSplit,
@@ -71,6 +74,10 @@ function Pane({
   const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
   // Beside the page's name in the bar: where the page puts its intro "?" (`ToolLayout`).
   const [titleSlot, setTitleSlot] = useState<HTMLSpanElement | null>(null);
+  // The page's own trail (`PageBar`, e.g. "Library / Tunes / Setlists"), shown in place of the
+  // name once the page has set it.
+  const [crumbStore] = useState(createCrumbStore);
+  const page = useCurrentCrumbs(crumbStore);
 
   return (
     <div
@@ -86,11 +93,18 @@ function Pane({
           it, as on a phone, while the scrollbar runs the full height beside it. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
         <div className="sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:px-6">
-          <p className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
-            {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
-            <span className="truncate">{title?.label ?? ""}</span>
+          <div className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
+            {page && page.crumbs.length > 0 ? (
+              <CrumbTrail crumbs={page.crumbs} icon={page.icon} variant="compact" />
+            ) : (
+              <>
+                {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
+                <span className="truncate">{title?.label ?? ""}</span>
+              </>
+            )}
+            {page?.intro && <IntroButton onClick={page.intro.show} label={page.intro.label} />}
             <span ref={setTitleSlot} className="flex shrink-0 items-center empty:hidden" />
-          </p>
+          </div>
           {canClose && (
             <button
               type="button"
@@ -106,7 +120,9 @@ function Pane({
         {Component ? (
           <PaneContext.Provider value={paneEl}>
             <PaneTitleSlotContext.Provider value={titleSlot}>
-              <Component />
+              <PaneCrumbStoreContext.Provider value={crumbStore}>
+                <Component />
+              </PaneCrumbStoreContext.Provider>
             </PaneTitleSlotContext.Provider>
           </PaneContext.Provider>
         ) : (
