@@ -10,9 +10,8 @@ import {
   TempoNoteValuePicker,
 } from "@/components/MeterFields";
 import StructureEditor, { StructureEmptyHint } from "@/components/StructureEditor";
-import { RewardCard } from "@/components/reward/Reward";
 import {
-  OptionGroup,
+  MeterQuickPicks,
   SUB_LABELS,
   Segmented,
   SoundPicker,
@@ -33,7 +32,6 @@ import {
   nearestNoteValue,
   useTapTempo,
 } from "@/lib/meterControls";
-import { COMMON_METERS } from "@jam-practice/core/meterControls";
 import {
   EMPTY_STRUCTURE,
   type Structure,
@@ -316,29 +314,7 @@ export default function Metronome() {
                   onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
                   onSetBeatUnit={setBeatUnit}
                 />
-                <OptionGroup title="Quick picks">
-                  <div role="radiogroup" aria-label="Common time signatures" className="grid grid-cols-4 gap-2">
-                    {COMMON_METERS.map(([b, u]) => (
-                      <RewardCard
-                        key={`${b}/${u}`}
-                        id={`meter:${b}/${u}`}
-                        on={beatsPerBar === b && beatUnit === u}
-                        label={`${b}/${u}`}
-                        onPick={() => {
-                          setBeatUnit(u);
-                          changeBeats(b);
-                        }}
-                        className="h-14"
-                      >
-                        <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
-                          <span>{b}</span>
-                          <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
-                          <span>{u}</span>
-                        </span>
-                      </RewardCard>
-                    ))}
-                  </div>
-                </OptionGroup>
+                <MeterQuickPicks beatsPerBar={beatsPerBar} beatUnit={beatUnit} onPick={(b, u) => updateSettings({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })} />
               </SettingChip>
               <SettingChip icon={NoteIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? subdivision}>
                 <SubdivisionPicker value={subdivision} onChange={setSubdivision} showTitle={false} />

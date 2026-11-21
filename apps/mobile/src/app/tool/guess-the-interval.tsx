@@ -62,6 +62,7 @@ import { startTone } from '@/lib/toneGenerator';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useStopOnBlur } from '@/lib/useStopOnBlur';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
@@ -190,6 +191,8 @@ function GuessTheIntervalScreen() {
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/guess-the-interval', running);
+  // Leaving the screen stops the session (it would keep timing out questions as misses).
+  useStopOnBlur(running, endSession);
   useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
@@ -584,7 +587,8 @@ function GuessTheIntervalScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
       >
         <Field label="Playback style" hint="Whether the two notes play one after another or together.">
@@ -622,6 +626,8 @@ function GuessTheIntervalScreen() {
   return (
     <ToolScreen
       title="Guess the Interval"
+      // The Learn path scrolls by itself in the space it's given.
+      scroll={!(learnMode && !running)}
       mode={
         !running ? (
           <Segmented

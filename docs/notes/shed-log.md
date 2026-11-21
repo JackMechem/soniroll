@@ -488,3 +488,24 @@ Checked in a harness against the real engine and stopwatch. Not on a phone.
   edits asks first (`useLeaveGuard`), sticky Save/Cancel at every width. Bug fixed: a new routine
   made a fresh id (the editor's `key`) on every render, so any log sync remounted the editor.
 - Not verified: sounds, split-screen panes, other devices.
+
+## UI/UX pass 3 fixes (2026-11-20)
+
+- **Running routine on a phone:** the timer row in `RoutineCard` wraps (`flex-wrap`, text block
+  `min-w-[9rem] flex-1`, title `line-clamp-2`, buttons `ml-auto`). At 390 wide the task name gets
+  the width, and Pause/Skip/Stop drop to their own line. Before, it read "Scale…".
+- **Routine page:** says **"Continue today"** when today's run is part done, and starts from the
+  first open timed task, like the card's "Continue from …". Before, it said "Start today" and
+  restarted from task 1.
+- **Share cards** (`ProgressCard.tsx`, `hoursParts`): under an hour they show minutes ("10 min in
+  total", "10 min practiced"), not "0.2 hours". This is web only. The phone app has its own
+  `ProgressCard`, which wasn't changed.
+- **Small fixes:**
+  - The New menu has icons (a checklist for "Task on today", repeat for "Routine").
+  - The routine editor's colour swatches are named (Indigo, Green, Amber, Red, Pink, Cyan,
+    Violet, Lime) in `aria-label`/`title`.
+- **Checked** with a throwaway account (deleted afterwards) in headless Chromium:
+  - The running and paused card at 390 dark and 1440 light.
+  - The New menu, the Hours and Days share cards, the routine page with 1/3 done, and the
+    swatch labels.
+- **Not checked:** a narrow split pane.

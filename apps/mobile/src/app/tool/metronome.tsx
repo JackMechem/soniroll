@@ -157,7 +157,12 @@ function MetronomeScreen() {
           onPage
           label="Meter"
           value={useStructure ? 'structure' : 'single'}
-          onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+          onChange={(v) => {
+            // Changing meters with nothing in the form can't play: don't leave it clicking under
+            // "Add sections…" (the One meter click would carry on with no meter shown).
+            if (running && v === 'structure' && structure.form.length === 0) stopMetronome();
+            updateSettings({ useStructure: v === 'structure' });
+          }}
           options={[
             { value: 'single', label: 'One meter' },
             { value: 'structure', label: 'Changing meters' },
@@ -214,8 +219,9 @@ function MetronomeScreen() {
       <TempoHero
         bpm={bpm}
         setBpm={(next) => updateSettings({ bpm: clampBpm(next) })}
-        beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-        beatUnit={activeSection?.beatUnit ?? beatUnit}
+        // No meter to show in Changing meters until the form has a section.
+        beatsPerBar={useStructure && !activeSection ? undefined : (activeSection?.beatsPerBar ?? beatsPerBar)}
+        beatUnit={useStructure && !activeSection ? undefined : (activeSection?.beatUnit ?? beatUnit)}
         onTap={tap}
         tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
       />

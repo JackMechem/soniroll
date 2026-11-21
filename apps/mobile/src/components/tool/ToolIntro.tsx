@@ -3,7 +3,7 @@ import { NAV_LINKS_DATA } from '@jam-practice/core/navLinks';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { INTRO_NOTES } from '@/components/tool/introNotes';
+import { INTRO_NOTES, INTRO_OMIT } from '@/components/tool/introNotes';
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { HelpIcon } from '@/components/tool/toolIcons';
 import { Button, IconButton, ToolIcon } from '@/components/ui';
@@ -74,6 +74,10 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
   const { colors, derived } = useAppTheme();
   const tool = NAV_LINKS_DATA.find((l) => l.href === href);
   const notes = INTRO_NOTES[href] ?? [];
+  // Leave out what the phone doesn't have (Record on the Tuner, Export as PDF in Shed Notes…).
+  const omit = INTRO_OMIT[href];
+  const steps = topic.steps.filter((step) => !omit?.steps?.includes(step.title));
+  const options = topic.options?.filter((option) => !omit?.options?.includes(option.name));
   return (
     <>
       <View className="flex-row items-start gap-3">
@@ -89,7 +93,7 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
       </View>
 
       <View className="overflow-hidden rounded-lg" style={{ backgroundColor: colors.background }}>
-        {topic.steps.map((step, i) => (
+        {steps.map((step, i) => (
           <View
             key={step.title}
             className="flex-row gap-3 px-3 py-2.5"
@@ -110,12 +114,12 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
         ))}
       </View>
 
-      {topic.options?.length ? (
+      {options?.length ? (
         <View className="gap-2.5">
           <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
-            Its options
+            Options
           </Text>
-          {topic.options.map((option) => (
+          {options.map((option) => (
             <View key={option.name} className="gap-0.5">
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 {option.name}

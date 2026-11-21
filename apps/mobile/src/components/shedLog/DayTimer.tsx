@@ -57,7 +57,7 @@ export function DayTimerCard({ data, date, compact, inset, onClear }: { data: Pr
           {running ? formatStopwatch(ms) : ms ? formatPracticed(ms / 60000) : formatStopwatch(0)}
         </Text>
         <Text className="font-ui text-xs" style={{ color: colors.muted }}>
-          {running ? 'Practiced today · timer running' : isToday ? (ms ? 'Practiced today' : 'Day timer — start it when you sit down to play') : 'Practiced this day'}
+          {running ? 'Practiced today · running' : isToday ? (ms ? 'Practiced today' : 'Day timer — start it when you sit down to play') : 'Practiced this day'}
         </Text>
       </View>
       {isToday ? (

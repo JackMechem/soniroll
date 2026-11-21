@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DisclosureSummary } from "@/components/Disclosure";
 import SwitchRow from "@/components/SwitchRow";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import Hint from "@/components/Hint";
@@ -785,40 +786,49 @@ export default function GuessTheProgression() {
       sidePanel={
         (history.length > 0 || weakEntries.length > 0) && (
         <>
-          <CollapsiblePanel
-            id="history"
-            title="History"
-            icon={ListIcon}
-            summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
-          >
-            {bestMs !== null && (
-              <p className="text-sm font-medium tabular-nums">Best {formatDuration(bestMs)}</p>
-            )}
-            {matchingHistory.length === 0 ? (
-              <p className="text-sm text-muted">No attempts yet with these settings.</p>
-            ) : (
-              <div className={PANEL_LIST}>
-                {[...matchingHistory]
-                  .sort((a, b) => b.at - a.at)
-                  .map((entry, i) => (
-                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
-                      {entry.config.drillMode ? "Drill" : "Quiz"} · {formatFileDate(entry.at)}
-                    </HistoryRow>
-                  ))}
-              </div>
-            )}
-            {matchingHistory.length > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })
-                }
-                className={TEXT_BUTTON_DANGER}
-              >
-                Clear these times
-              </button>
-            )}
-          </CollapsiblePanel>
+          {/* Only finished rounds land here; a stopped round counts toward Struggles only. */}
+          {history.length > 0 && (
+            <CollapsiblePanel
+              id="history"
+              title="History"
+              icon={ListIcon}
+              summary={
+                bestMs !== null
+                  ? `Best ${formatDuration(bestMs)}`
+                  : matchingHistory.length > 0
+                    ? `${matchingHistory.length} ${matchingHistory.length === 1 ? "round" : "rounds"}`
+                    : "None yet"
+              }
+            >
+              {bestMs !== null && (
+                <p className="text-sm font-medium tabular-nums">Best {formatDuration(bestMs)}</p>
+              )}
+              {matchingHistory.length === 0 ? (
+                <p className="text-sm text-muted">Finish a round with these settings to see it here.</p>
+              ) : (
+                <div className={PANEL_LIST}>
+                  {[...matchingHistory]
+                    .sort((a, b) => b.at - a.at)
+                    .map((entry, i) => (
+                      <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                        {entry.config.drillMode ? "Drill" : "Quiz"} · {formatFileDate(entry.at)}
+                      </HistoryRow>
+                    ))}
+                </div>
+              )}
+              {matchingHistory.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateSettings({ history: history.filter((h) => !sameConfig(h.config, currentConfig)) })
+                  }
+                  className={TEXT_BUTTON_DANGER}
+                >
+                  Clear these times
+                </button>
+              )}
+            </CollapsiblePanel>
+          )}
 
           <CollapsiblePanel
             id="struggles"
@@ -1310,7 +1320,7 @@ export default function GuessTheProgression() {
 
         {!running && !learnMode && (
           <details className="max-w-xs text-xs text-muted">
-            <summary className="cursor-pointer select-none font-medium hover:text-foreground">How to type your answer</summary>
+            <DisclosureSummary>How to type your answer</DisclosureSummary>
             <p className="mt-2">
             {answerMode === "numerals" ? (
               <>

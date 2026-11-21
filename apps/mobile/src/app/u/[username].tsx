@@ -2,8 +2,9 @@ import { api } from '@jam-practice/convex/_generated/api';
 import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import type { PublicTune } from '@jam-practice/core/profileTunes';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PostListItem } from '@/components/community/CommunityTunes';
@@ -14,6 +15,32 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
+import { SectionHeader } from '@/components/ui';
+
+const TUNES_SHOWN = 5;
+
+/** A profile's tune list in its card: the first few, then "Show all N tunes" (a long list used to
+    bury the posts below it). */
+function TuneSection({ title, tunes, canAdd }: { title: string; tunes: PublicTune[]; canAdd: boolean }) {
+  const { colors } = useAppTheme();
+  const [all, setAll] = useState(false);
+  const shown = all ? tunes : tunes.slice(0, TUNES_SHOWN);
+  return (
+    <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
+      <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+        {title} · {tunes.length}
+      </Text>
+      <PublicTuneList tunes={shown} canAdd={canAdd} />
+      {tunes.length > TUNES_SHOWN ? (
+        <Pressable onPress={() => setAll((v) => !v)} accessibilityRole="button" className="items-center rounded-xl py-2.5" style={{ backgroundColor: colors.background }}>
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.accent }}>
+            {all ? 'Show fewer' : `Show all ${tunes.length} tunes`}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 /**
  * Native port of `apps/web/components/PublicProfilePage.tsx` — a public profile page, reachable
@@ -22,6 +49,9 @@ import { withScreenLoader } from '@/components/ScreenLoader';
  * [username]` URL exactly). `getPublicByUsername` returns `null` for both "no such username" and
  * "exists but isn't public," deliberately indistinguishable here — a visitor can't tell the
  * difference by probing usernames.
+ *
+ * Order: Instruments, then Posts (as feed cards on the page), ear training, and the tune lists
+ * (five each, then "Show all").
  *
  * "Posts" reuses the *exact* `PostListItem` component Community's own Feed renders with — tapping
  * a row navigates to the same `/post/[id]` full page either way. Gated on the *viewer* being
@@ -88,7 +118,7 @@ function PublicProfileScreen() {
       <SafeAreaView className="flex-1" edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}>
           <View className="items-center gap-3">
-            <UserAvatar url={profile.avatarUrl} size="xl" />
+            <UserAvatar url={profile.avatarUrl} name={profile.username} size="xl" />
             <Text className="text-2xl font-bold font-ui-bold" style={{ color: colors.accent }}>
               {profile.username}
             </Text>
@@ -117,6 +147,21 @@ function PublicProfileScreen() {
             </View>
           ) : null}
 
+          {viewer ? (
+            posts && posts.length > 0 ? (
+              <View className="gap-2">
+                <SectionHeader title="Posts" count={posts.length} />
+                {posts.map((post) => (
+                  <PostListItem key={post.id} post={post} liked={likedSet.has(post.id)} />
+                ))}
+              </View>
+            ) : null
+          ) : (
+            <Text className="text-center text-xs font-ui" style={{ color: colors.muted }}>
+              Sign in to see {profile.username}&apos;s Community posts.
+            </Text>
+          )}
+
           {earTraining && levelsPassed > 0 ? (
             <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
               <View className="flex-row items-baseline justify-between">
@@ -131,42 +176,9 @@ function PublicProfileScreen() {
             </View>
           ) : null}
 
-          {profile.tunes.length > 0 ? (
-            <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
-                Tunes I Know
-              </Text>
-              <PublicTuneList tunes={profile.tunes} canAdd={canAdd} />
-            </View>
-          ) : null}
+          {profile.tunes.length > 0 ? <TuneSection title="Tunes I Know" tunes={profile.tunes} canAdd={canAdd} /> : null}
 
-          {profile.tunesToLearn.length > 0 ? (
-            <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
-                Tunes to Learn
-              </Text>
-              <PublicTuneList tunes={profile.tunesToLearn} canAdd={canAdd} />
-            </View>
-          ) : null}
-
-          {viewer ? (
-            posts && posts.length > 0 ? (
-              <View className="gap-2 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-                <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
-                  Posts
-                </Text>
-                <View className="gap-2">
-                  {posts.map((post) => (
-                    <PostListItem key={post.id} post={post} liked={likedSet.has(post.id)} />
-                  ))}
-                </View>
-              </View>
-            ) : null
-          ) : (
-            <Text className="text-center text-xs font-ui" style={{ color: colors.muted }}>
-              Sign in to see {profile.username}&apos;s Community posts.
-            </Text>
-          )}
+          {profile.tunesToLearn.length > 0 ? <TuneSection title="Tunes to Learn" tunes={profile.tunesToLearn} canAdd={canAdd} /> : null}
 
           {hasNothing ? (
             <Text className="text-center text-sm font-ui" style={{ color: colors.muted }}>

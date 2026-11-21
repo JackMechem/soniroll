@@ -4,6 +4,7 @@
  * paragraphs (the screen keeps at most one short status line). Keyed by the tool's web href.
  */
 export const INTRO_NOTES: Partial<Record<string, string[]>> = {
+  '/metronome': ['Your time here shows in the Shed Log under Time in tools; log it from there.'],
   '/tempo-trainer': [
     'During the silent bars nothing on the screen moves: count them and keep the tempo going until the click comes back.',
   ],
@@ -42,8 +43,8 @@ export const INTRO_NOTES: Partial<Record<string, string[]>> = {
     "Before Start, the ring shows your last score and your best.",
   ],
   '/guess-the-progression': [
-    "Numerals: one per chord, upper case for major, lower case for minor; with qualities on, add the quality (ii7, V7, I^7, iiø7). ♭/♯ go before a numeral.",
-    "Chord names: the roots with - for minor (D- G C), or full symbols (D-7 G7 C^7) with qualities on. You're given the first chord's root.",
+    "Numerals: one per chord, upper case for major, lower case for minor; with qualities on, add the quality (ii7, V7, IΔ7, iiø7). ♭/♯ go before a numeral.",
+    "Chord names: the roots with - for minor (D- G C), or full symbols (D-7 G7 CΔ7) with qualities on. You're given the first chord's root.",
     "The Answer chip shows how to write it for your settings, and the first round shows it beside the keyboard.",
     "Before Start, the ring shows your last score and your best.",
   ],
@@ -51,4 +52,19 @@ export const INTRO_NOTES: Partial<Record<string, string[]>> = {
     "In Pick, the 12 keys sit at the bottom during a round, within reach of your thumb.",
     "Before Start, the ring shows your last score and your best.",
   ],
+};
+
+/**
+ * The website's Help steps and options (by title / name) that a tool's intro sheet leaves out,
+ * because the phone doesn't have them. Keyed by the tool's web href, like `INTRO_NOTES`.
+ */
+export const INTRO_OMIT: Partial<Record<string, { steps?: string[]; options?: string[] }>> = {
+  // No stats pills or Log button on the phone's tool screens (time is logged from the Shed Log).
+  '/metronome': { options: ['Your stats', 'Log to Shed Log'] },
+  // No recording or takes on the phone's Tuner (see `app/tool/tuner.tsx`).
+  '/tuner': { steps: ['Record and look back'], options: ['Takes'] },
+  // Loops can't be saved on the phone (set and clear only).
+  '/slow-downer': { options: ['Loops'] },
+  // Keyboard-only and website-only parts of Shed Notes (see `app/tool/shed-notes-note.tsx`).
+  '/shed-notes': { options: ['Command palette', 'Export as PDF', 'Export and import', 'Vim mappings', 'Word suggestions'] },
 };

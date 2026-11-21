@@ -7,6 +7,7 @@ import ContextMenu, { type MenuItem, type MenuState } from "@/components/Context
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import { menuPosition } from "@/components/library/shared";
 import { TagsDialog } from "@/components/library/TagEditor";
+import { ChevronRightIcon, ChordChartIcon, LinkIcon, PencilIcon, RepeatIcon, TagIcon, TrashIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import type { Tune } from "@/lib/types";
@@ -43,18 +44,18 @@ export function useTuneActions() {
   function openTuneMenu(e: React.MouseEvent, list: TuneListId, tune: Tune) {
     const chartId = mainChartId(tune);
     const items: MenuItem[] = [
-      { label: "Open", onSelect: () => router.push(tuneHref(list, tune.id)) },
-      { label: "Edit tune", onSelect: () => setEditing({ list, tune }) },
+      { label: "Open", icon: <ChevronRightIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(tuneHref(list, tune.id)) },
+      { label: "Edit tune", icon: <PencilIcon className="h-4 w-4 text-muted" />, onSelect: () => setEditing({ list, tune }) },
     ];
-    if (chartId) items.push({ label: "Open chord chart", onSelect: () => router.push(`/chord-charts/view?id=${encodeURIComponent(chartId)}`) });
-    items.push({ label: chartId ? "Link another chord chart" : "Link a chord chart", onSelect: () => setPicking({ list, tune }) });
-    items.push({ label: tuneTags(tune).length ? "Tags…" : "Add tags…", onSelect: () => setTagging({ list, tune }) });
+    if (chartId) items.push({ label: "Open chord chart", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/chord-charts/view?id=${encodeURIComponent(chartId)}`) });
+    items.push({ label: chartId ? "Link another chart" : "Link a chart", icon: <LinkIcon className="h-4 w-4 text-muted" />, onSelect: () => setPicking({ list, tune }) });
+    items.push({ label: tuneTags(tune).length ? "Tags…" : "Add tags…", icon: <TagIcon className="h-4 w-4 text-muted" />, onSelect: () => setTagging({ list, tune }) });
     // Tunes to Learn only exists in your account — signed out, moving a tune there would lose it.
     for (const other of TUNE_LIST_IDS) {
       if (other === list || (other === "learn" && !lists.canLearn)) continue;
-      items.push({ label: `Move to ${TUNE_LIST_LABEL[other]}`, onSelect: () => moveTune(lists, list, other, tune) });
+      items.push({ label: `Move to ${TUNE_LIST_LABEL[other]}`, icon: <RepeatIcon className="h-4 w-4 text-muted" />, onSelect: () => moveTune(lists, list, other, tune) });
     }
-    items.push({ label: "Delete tune", danger: true, onSelect: () => setDeleting({ list, tune }) });
+    items.push({ label: "Delete tune", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: () => setDeleting({ list, tune }) });
     setMenu({ ...menuPosition(e), items });
   }
 
@@ -76,7 +77,7 @@ export function useTuneActions() {
         <ChartLinkPicker
           songs={allSongs}
           exclude={tuneChartIds(picking.tune)}
-          initialQuery={picking.tune.name}
+          initialQuery={tuneChartIds(picking.tune).length ? "" : picking.tune.name}
           onPick={(songId) => {
             replace(picking.list, picking.tune.id, (t) => addChartsToTune(t, [songId]));
             setPicking(null);

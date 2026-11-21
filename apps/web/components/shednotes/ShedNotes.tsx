@@ -9,6 +9,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { titleKey } from "@jam-practice/core/shedNotes";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import PromptDialog from "@/components/PromptDialog";
 import { DocumentIcon, DotsVerticalIcon, DownloadIcon, GearIcon, PlusIcon, UploadIcon } from "@/components/tools";
 import { notesZip, saveBlob } from "@/lib/exportNotes";
@@ -429,43 +430,51 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   if (notes === undefined) {
     return (
       <main className="flex flex-1 items-center justify-center py-24">
+        <PageBar crumbs={[{ label: "Shed Notes" }]} icon={DocumentIcon} helpTopic="shed-notes" />
         <LoadingSpinner />
       </main>
     );
   }
 
+  // The header bar: "Shed Notes / <the open note>" (the first goes back to the list).
+  const openLabel = current === TEMPLATES_ID ? "Templates" : current === SETTINGS_ID ? "Settings file" : current ? currentMeta?.title || "Untitled" : null;
+  const crumbs = openLabel ? [{ label: "Shed Notes", onClick: () => open(null) }, { label: openLabel }] : [{ label: "Shed Notes" }];
+  // One ⋮ menu for the page: export, import and the JSON settings file.
+  const moreButton = (
+    <button
+      type="button"
+      onClick={(e) => {
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setMoreMenu({
+          x: Math.max(8, r.right - 240),
+          y: r.bottom + 4,
+          items: [
+            { label: "Export all as Markdown (.zip)", icon: <DownloadIcon className="h-4 w-4" />, onSelect: () => void exportAll() },
+            { label: "Import notes…", icon: <UploadIcon className="h-4 w-4" />, onSelect: () => setImporting(true) },
+            { label: "Settings file (JSON)", icon: <GearIcon className="h-4 w-4" />, onSelect: () => open(SETTINGS_ID) },
+          ],
+        });
+      }}
+      aria-label="More: export, import, settings"
+      title="Export, import and settings"
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors pointer-coarse:h-10 pointer-coarse:w-10 ${current === SETTINGS_ID ? "bg-surface-hover text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
+    >
+      <DotsVerticalIcon className="h-4 w-4" />
+    </button>
+  );
+
   return (
-    <main className="flex w-full flex-col gap-4 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:flex-row lg:gap-6 lg:px-6 lg:pb-4 lg:pt-6">
+    <main className="flex w-full flex-col gap-4 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:flex-row lg:gap-6 lg:px-6 lg:pb-4 lg:pt-20">
+      <PageBar crumbs={crumbs} icon={DocumentIcon} helpTopic="shed-notes" actions={moreButton} />
       <aside
         style={{ "--list-w": `${shownListWidth}px` } as React.CSSProperties}
         className={`relative min-h-0 flex-col gap-3 lg:w-[var(--list-w)] lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
-        <div className="flex items-center gap-2">
-          {/* The page title, as on other pages (the list's search box below is the one search;
-              / or Alt+F still opens the search menu). */}
-          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-semibold tracking-tight">
-            <DocumentIcon className="h-5 w-5 shrink-0 text-accent" /> <span className="truncate">Shed Notes</span>
-          </h1>
-          {/* One ⋮ menu for the page: export, import and the JSON settings file. */}
-          <button
-            type="button"
-            onClick={(e) => {
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              setMoreMenu({
-                x: Math.max(8, r.right - 240),
-                y: r.bottom + 4,
-                items: [
-                  { label: "Export all as Markdown (.zip)", icon: <DownloadIcon className="h-4 w-4" />, onSelect: () => void exportAll() },
-                  { label: "Import notes…", icon: <UploadIcon className="h-4 w-4" />, onSelect: () => setImporting(true) },
-                  { label: "Settings file (JSON)", icon: <GearIcon className="h-4 w-4" />, onSelect: () => open(SETTINGS_ID) },
-                ],
-              });
-            }}
-            aria-label="More: export, import, settings"
-            title="Export, import and settings"
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors pointer-coarse:h-10 pointer-coarse:w-10 ${current === SETTINGS_ID ? "bg-surface-hover text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
-          >
-            <DotsVerticalIcon className="h-4 w-4" />
-          </button>
+        {/* The page's name is in the header bar (with the ⋮ on desktop); phones keep the ⋮ here. */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <p className="min-w-0 flex-1 truncate text-sm text-muted">
+            {notes.length} note{notes.length === 1 ? "" : "s"}
+          </p>
+          {moreButton}
         </div>
         <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} shared={sharedWithMe ?? []} templateCount={templates?.length ?? 0} templatesOpen={current === TEMPLATES_ID} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
         <ListResizer width={shownListWidth} onPreview={setDragWidth} onCommit={(w) => setPanels({ listWidth: w })} />

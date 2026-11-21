@@ -12,6 +12,7 @@ import { ChevronRightIcon, DotsVerticalIcon, FolderIcon, TrashIcon } from '@/com
 import { forgetRecentChart } from '@/lib/chordChartRecents';
 import { useChordChartsLibrary, type LibrarySongMeta } from '@/lib/useChordChartsLibrary';
 import { SearchField as UiSearchField } from '@/components/ui';
+import { useForgetChart } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /** Shared building blocks for the Chord Charts library screens — the top level
@@ -46,6 +47,7 @@ export function useChordChartBrowser(options: { onPlaylistDeleted?: (id: string)
   const router = useRouter();
   const library = useChordChartsLibrary(null);
   const { playlists: raw, allSongs, addToPlaylist, removeFromPlaylist, deleteSong, deletePlaylist } = library;
+  const forgetChart = useForgetChart();
   const { colors } = useAppTheme();
 
   const playlists: SortedPlaylist[] = useMemo(
@@ -101,7 +103,7 @@ export function useChordChartBrowser(options: { onPlaylistDeleted?: (id: string)
     />
     <ConfirmDialog
       visible={!!deletingPlaylist}
-      title={`Delete "${deletingPlaylist?.name ?? ''}"?`}
+      title={`Delete “${deletingPlaylist?.name ?? ''}”?`}
       message={
         !deletingPlaylist
           ? ''
@@ -128,6 +130,7 @@ export function useChordChartBrowser(options: { onPlaylistDeleted?: (id: string)
       onRemoveFromPlaylist={(songId, playlistId) => void removeFromPlaylist(songId, playlistId)}
       onDelete={(songId) => {
         void deleteSong(songId);
+        forgetChart(songId);
         forgetRecentChart(songId);
       }}
     />

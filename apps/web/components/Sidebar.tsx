@@ -50,6 +50,9 @@ import { navIconButtonClass, navIconClass, navRowClass } from "@/components/navR
 import { isToolHidden, useSiteSettings } from "@/lib/siteSettings";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
+import { CrumbTrail } from "@/components/PageBar";
+import { IntroButton } from "@/components/help/ToolIntro";
+import { type PageCrumbs, useCurrentCrumbs } from "@/lib/pageCrumbs";
 import { FeedbackBarButton, showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { collectLeaves } from "@/lib/tilingLayout";
@@ -198,6 +201,16 @@ function SidebarCollapseButton({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+const noSubscribe = () => () => {};
+/** "⌘K" on a Mac, "Ctrl K" elsewhere; null on the server and while hydrating (shown after). */
+function usePaletteKey() {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K"),
+    () => null,
+  );
+}
+
 function SearchBox({
   query,
   onChange,
@@ -210,6 +223,7 @@ function SearchBox({
   large?: boolean;
 }) {
   const router = useRouter();
+  const paletteKey = usePaletteKey();
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
@@ -235,6 +249,7 @@ function SearchBox({
         <SearchIcon className="h-4 w-4 shrink-0" />
         <span className="flex-1 truncate">Search</span>
         <kbd className="rounded-sm bg-foreground/[0.05] px-1.5 font-sans text-[11px] leading-4 text-muted">/</kbd>
+        {paletteKey && <kbd className="rounded-sm bg-foreground/[0.05] px-1.5 font-sans text-[11px] leading-4 text-muted">{paletteKey}</kbd>}
       </button>
     );
   }
@@ -1246,6 +1261,35 @@ const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: str
 ];
 
 function MobileBarTitle({ path }: { path: string }) {
+  // The page's own trail (`PageBar`), once it's mounted; until then (and on the server) the name
+  // worked out from the address below.
+  const page = useCurrentCrumbs();
+  if (page && page.crumbs.length > 0 && path !== DASHBOARD_PATH) return <MobileBarCrumbs page={page} />;
+  return <MobileBarName path={path} />;
+}
+
+/** The phone top bar's middle from a page's crumbs: the logo, then "… / Tunes / Setlists" (the
+    page and the one above it; anything further up behind "…"), and the page's ? when it has one.
+    Tapping the page's own name scrolls back to the top. */
+function MobileBarCrumbs({ page }: { page: PageCrumbs }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="-mx-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-md">
+        <LogoMark size={22} />
+      </Link>
+      <span className="text-foreground/30">/</span>
+      <CrumbTrail
+        crumbs={page.crumbs}
+        icon={page.icon}
+        variant="compact"
+        onCurrentClick={() => document.querySelector("[data-page-scroll]")?.scrollTo({ top: 0, behavior: "smooth" })}
+      />
+      {page.intro && <IntroButton onClick={page.intro.show} label={page.intro.label} />}
+    </div>
+  );
+}
+
+function MobileBarName({ path }: { path: string }) {
   const link =
     findToolLink(isLibraryPath(path) || path.startsWith("/tunes/") ? "/tunes" : path) ??
     NAV_LINKS.find((l) => l.href !== "/" && (path.startsWith(`${l.href}/`) || (l.href === "/community" && path.startsWith("/post"))));
@@ -1256,11 +1300,13 @@ function MobileBarTitle({ path }: { path: string }) {
       ? { href: page.href, label: page.label, Icon: page.icon }
       : null;
   if (path === DASHBOARD_PATH || !item) {
-    return (
+    const logo = (
       <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex h-10 items-center rounded-md px-1">
         <Logo height={24} />
       </Link>
     );
+    // On the dashboard the logo stands in for the page's name, so it's the page's heading.
+    return path === DASHBOARD_PATH ? <h1 className="flex">{logo}</h1> : logo;
   }
   const { Icon } = item;
   const inner = (

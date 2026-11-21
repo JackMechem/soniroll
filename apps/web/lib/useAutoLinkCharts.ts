@@ -4,12 +4,11 @@ import type { LibrarySongMeta } from "./useChordChartsLibrary";
 import { useChartLinker } from "./useTuneLists";
 
 /**
- * Every chord chart belongs to a tune. Charts from before that rule (and ones added by an older
- * app build) are linked once, when the Library opens: each chart the linker hasn't handled yet
- * and that no tune has goes to the tune with its name, or a new tune in the Library list, tagged
- * with the folders it's in. Every chart seen is remembered (`CHARTS_LINKED_KEY`), so a chart you
- * unlink later, or whose tune you delete, stays as it is. Nothing is deleted, and running it again
- * does nothing.
+ * Every chord chart belongs to a tune. Whenever the Library opens, any chart no tune has (charts
+ * from before that rule, ones added by the phone app or an older build) goes to the tune with its
+ * name, or a new tune in the Library list. Charts it hasn't seen before (`CHARTS_LINKED_KEY`) are
+ * also tagged with the folders they're in, once. Nothing is deleted, and when every chart is on a
+ * tune it does nothing.
  */
 export function useAutoLinkCharts(allSongs: LibrarySongMeta[], loading: boolean) {
   const { link, ready, linkedIds, lists } = useChartLinker();
@@ -20,12 +19,12 @@ export function useAutoLinkCharts(allSongs: LibrarySongMeta[], loading: boolean)
     if (!ready || loading || allSongs.length === 0) return;
     const seen = new Set(linkedIds);
     const fresh = allSongs.filter((s) => !seen.has(s.id));
-    if (fresh.length === 0) return;
     const onTunes = linkedChartIds({ tunes: known, learn, library });
-    const orphans = fresh.filter((s) => !onTunes.has(s.id));
+    const orphans = allSongs.filter((s) => !onTunes.has(s.id));
+    if (fresh.length === 0 && orphans.length === 0) return;
     const run = () =>
       link(
-        orphans.map((s) => ({ id: s.id, title: s.title, timeSignature: s.timeSignature, playlistNames: s.playlistNameList })),
+        orphans.map((s) => ({ id: s.id, title: s.title, timeSignature: s.timeSignature, playlistNames: seen.has(s.id) ? [] : s.playlistNameList })),
         { tagWithPlaylists: true, alsoHandled: fresh.map((s) => s.id) },
       );
     // Only one tab links at a time (two tabs doing the first pass together would each make the

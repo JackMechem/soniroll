@@ -1,6 +1,6 @@
 import type { Transcription } from '@jam-practice/core/bassTranscription';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { PencilIcon, TrashIcon } from '@/components/icons';
 import { SAVE_LABEL, useAutosave } from '@/components/notation/autosave';
@@ -8,6 +8,7 @@ import ScoreEditor, { TempoInput } from '@/components/notation/ScoreEditor';
 import { Field } from '@/components/tool/ear';
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * A bass transcription in Rhythm Section's Bass players — the website's `TranscriptionEditor`

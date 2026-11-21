@@ -150,3 +150,45 @@ the sidebar's `isLibraryPath`. Split-screen panes for `/tunes` and `/chord-chart
 `LibraryPane` / `ChartsPane` (Chord Charts opens on the charts tab). Checked: redirects by curl,
 tab clicks in the browser (URL updates, no reload, history length unchanged, no console errors),
 `next build`, tsc, lint. Not checked: split-screen panes, signed in.
+
+## UI/UX pass 3 fixes: practice tools (2026-11-20)
+
+From the pass-3 web review (practice tools and the Shed Log).
+- **Trainers' History chip** (Guess the Interval/Chord/Progression, Note/Scale/Interval Trainer)
+  shows only once a round has *finished* (`history.length > 0`). A stopped round only feeds
+  Struggles, so before this the History chip opened to "No attempts yet" right after practising.
+  When it shows, its value is "Best …", "N rounds" or "None yet". The empty text is now "Finish a
+  round with these settings to see it here."
+- **Fills, not outlines:** the quiz answer grid (`answerButtonClass`/`answerButtonStyle` in
+  `components/learning/quizUi.ts`) is a `bg-foreground/[0.05]` fill. Right and wrong answers get a
+  tint plus a 2px inset ring (box-shadow) in the grade colour. `PoolPill`'s off state is also a fill
+  now (a transparent border keeps its size), and the Sticking Warmup's roll-type and triplet pills use
+  `PoolPill` instead of their own bordered buttons.
+- **`MeterQuickPicks`** (`components/metronome/MetronomeOptions.tsx`): the 4/4 … 12/8 grid. It's in
+  every Time popover: Metronome, Time Test, Tempo Trainer, and Metric Modulation through
+  `MeterOptions`' new `onPickMeter` prop. The quick picks show only when that prop is passed, so
+  StructureEditor's sections don't get them. `onPick` sets both numbers and the accents in one
+  update.
+- **`DisclosureSummary`** (`components/Disclosure.tsx`): the `<summary>` for native `<details>`
+  ("How to type a chord", "How to type your answer", Slow Downer's "Shortcuts", the chart editor's
+  "More tips"). It uses the same muted text and turning chevron as `Disclosure`, with no browser ▶
+  marker.
+- **Smaller fixes:**
+  - Time Test's "Recording 0:04" badge is an `inline-flex` pill. As `flex` it stretched across
+    the PageBar's `flex-1` slot.
+  - The tempo slider has `aria-valuetext="N BPM"`.
+  - Metric Modulation's Previous tempo click popover shows its sound grid and Mute only while
+    it's on. It stays a plain chip: an earlier pass moved it off the split `toggle` chip on
+    purpose.
+- **Skipped:** the review's "ASCII G# in the instrument trainers". They already go through
+  `noteGlyphs`, and the screenshots show G♯.
+- **Checked** in headless Chromium at 1440 light and 390 dark:
+  - Answered then stopped a Guess the Interval round. There's no History chip, and Struggles
+    still shows.
+  - The answer grid after answering.
+  - The Tempo Trainer and Metric Modulation Time popovers (picked 3/4).
+  - The Sticking Warmup pills, the Guess the Chord summary open and closed, and the Time Test
+    badge while recording.
+
+  Also tsc and lint. **Not checked:** a finished 15-question round (the "N rounds" / "Best"
+  values), hover styles, and audio.

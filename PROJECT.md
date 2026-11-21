@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.14 beta** (see versioning).
+**v0.10.15 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -221,6 +221,9 @@ Web (`apps/web`):
   become chips automatically. `optionsMode` holds a mode switch above the chips; `sidePanel`s
   (History, Struggles) are chips above the main display. The title must match the tool's
   `NAV_LINKS` label (icon and intro lookup).
+- `PageBar` (`components/PageBar.tsx`) — every page's slim top bar: icon, breadcrumbs (`crumbs`, each a link
+  back), `?`, buttons. `ToolLayout`, `Hero` and `PageHeader` render it; the phone top bar and split-screen
+  panes get the trail through `lib/pageCrumbs.ts`. Library trails: `components/library/hrefs.ts`.
 - Presets (`lib/toolPresets.ts`, `components/PresetsChip.tsx`) — every tool with options gets
   them: `presets={toolPresets("<href-slug>", settings, update, [non-option fields])}` on
   `ToolLayout`, or `<PresetsChip tool={…} />` in a tool's own `SettingsBar`, or
@@ -323,6 +326,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |
 | Feedback, reports, admin panel, Mayday switches, analytics, launch checklist | `launch-admin-analytics.md` |
+| Five UI/UX passes (2026-11-20): grades per pass, the bugs they found, what was left for Jack | `ui-passes-2026-11-20.md` |
 | UX refresh (2026-11-17): radius scale, borders vs fills, flat sidebar with coloured icons, phone top bar, tool header, decluttered dashboard/library/Shed Log | `ux-refresh.md` |
 | Desktop app (`apps/desktop`): Tauri, reusing web components via aliases, native audio (the Web Audio bridge to `web-audio-api`), Google sign-in through the system browser; CI, `desktop-v*` release tags, the Stable/Unstable channel branches and the Nix package (update its pnpm hash when the lock file changes) | `desktop-app.md` |
 

@@ -5,6 +5,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { SIGN_IN_PATH } from "@/lib/landing";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -14,7 +15,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, ExternalLinkIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
 import {
   type FileKind,
   type StoredEntry,
@@ -169,39 +170,50 @@ export function FilePreviewDialog({ file, actions, onClose }: { file: PreviewFil
   }, [onClose]);
   const kind = fileKind(file.mimeType, file.name);
   const url = file.url;
+  // Audio is just a player: a small dialog, not a full-screen one.
+  const compact = kind === "audio";
+  // Something the browser can show opens in a new tab (from the header); anything else downloads.
+  const preview = !!url && canPreview(kind);
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-stretch justify-center bg-overlay p-0 sm:p-6" onClick={onClose}>
+    <div className={`fixed inset-0 z-[70] flex justify-center bg-overlay ${compact ? "items-center p-4" : "items-stretch p-0 sm:p-6"}`} onClick={onClose}>
       <div
         role="dialog"
         aria-label={file.name}
-        className="flex w-full max-w-5xl flex-col overflow-hidden ring-1 ring-foreground/[0.06] bg-surface shadow-xl sm:rounded-xl sm:border sm:border-foreground/10"
+        className={`flex w-full flex-col overflow-hidden bg-surface shadow-xl ring-1 ring-foreground/[0.06] ${compact ? "max-w-lg rounded-xl" : "max-w-5xl sm:rounded-xl"}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 border-b border-foreground/10 px-4 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:pt-3">
+        <div className={`flex items-center gap-3 border-b border-foreground/10 px-4 py-3 ${compact ? "" : "pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:pt-3"}`}>
           <FileTypeIcon kind={kind} size="sm" />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-medium">{file.name}</h2>
             <p className="truncate text-xs text-muted">{fileDetail(file)}</p>
           </div>
+          {preview && (
+            <a href={url!} target="_blank" rel="noopener noreferrer" aria-label="Open in a new tab" title="Open in a new tab" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+              <ExternalLinkIcon className="h-4 w-4" />
+            </a>
+          )}
           <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-background">
-          <FileViewer file={file} autoPlay />
+        <div className={`flex min-h-0 items-center justify-center overflow-auto bg-background ${compact ? "" : "flex-1"}`}>
+          {/* Video starts by itself; audio waits for play (it was a surprise at full volume). */}
+          <FileViewer file={file} autoPlay={kind === "video"} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-foreground/10 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-3">
-          {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer" download={file.name} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-              <DownloadIcon className="h-4 w-4" />
-              {canPreview(kind) ? "Open in a new tab" : "Download"}
+        {(actions || (url && !preview)) && (
+        <div className={`flex flex-wrap items-center gap-2 border-t border-foreground/10 px-4 py-3 sm:pb-3 ${compact ? "" : "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"}`}>
+          {url && !preview && (
+            <a href={url} target="_blank" rel="noopener noreferrer" download={file.name} className={primaryBtn}>
+              <DownloadIcon className="h-4 w-4" /> Download
             </a>
           )}
           {actions}
         </div>
+        )}
       </div>
     </div>,
     document.body,
@@ -209,6 +221,9 @@ export function FilePreviewDialog({ file, actions, onClose }: { file: PreviewFil
 }
 
 const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
+const primaryBtn = "inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50";
+/** Audio or video: its first "Open in" tool (the Slow Downer) is the main button in the preview. */
+const isMedia = (f: { mimeType: string; name: string }) => ["audio", "video"].includes(fileKind(f.mimeType, f.name));
 
 // ---------------------------------------------------------------- uploading
 
@@ -479,8 +494,8 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
           onClose={() => setOpen(null)}
           actions={
             <>
-              {openIn.toolsFor(open).map((t) => (
-                <button key={t.href} type="button" className={actionBtn} onClick={t.open} disabled={!!openIn.busy}>
+              {openIn.toolsFor(open).map((t, i) => (
+                <button key={t.href} type="button" className={i === 0 && isMedia(open) ? primaryBtn : actionBtn} onClick={t.open} disabled={!!openIn.busy}>
                   <t.icon className="h-4 w-4" /> Open in {t.label}
                 </button>
               ))}
@@ -638,7 +653,12 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
         )}
       </div>
       {!isAuthenticated ? (
-        <p className="text-sm text-muted">Sign in to attach files to this tune — PDFs, lead sheets, images, audio, video.</p>
+        <p className="text-sm text-muted">
+          <Link href={SIGN_IN_PATH} className="font-medium text-accent hover:underline">
+            Sign in
+          </Link>{" "}
+          to attach files to this tune — PDFs, lead sheets, images, audio, video.
+        </p>
       ) : files === undefined ? (
         <LoadingSpinner />
       ) : files.length === 0 && !uploader.progress ? (

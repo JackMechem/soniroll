@@ -75,8 +75,6 @@ function Lessons() {
   if (students === undefined || teachers === undefined) return <ScreenSpinner label="Loading your lessons" />;
 
   const openTotal = teachers.reduce((n, t) => n + t.items.filter((i) => i.kind === 'assignment' && !i.done).length, 0);
-  const summary = [students.length ? plural(students.length, 'student') : null, teachers.length ? plural(teachers.length, 'teacher') : null].filter(Boolean).join(' · ') || 'Teach, or learn from a teacher';
-
   const fresh = students.length === 0 && teachers.length === 0;
 
   return (
@@ -101,16 +99,12 @@ function Lessons() {
             <Button label="Lesson settings" kind="secondary" Icon={SlidersIcon} onPress={() => router.push('/tool/lessons-settings')} style={{ alignSelf: 'center' }} />
           </View>
         ) : (
-          <>
-            <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-              {summary}
-            </Text>
-            <View className="flex-row gap-2">
-              <HeadButton Icon={SlidersIcon} label="Settings" onPress={() => router.push('/tool/lessons-settings')} />
-              <HeadButton Icon={JoinIcon} label="Join" onPress={() => void join()} />
-              <HeadButton Icon={PlusIcon} label="Add a student" primary onPress={() => setAdding(true)} />
-            </View>
-          </>
+          // (No "1 student · 1 teacher" line: the sections below say it with their counts.)
+          <View className="flex-row gap-2">
+            <HeadButton Icon={SlidersIcon} label="Settings" onPress={() => router.push('/tool/lessons-settings')} />
+            <HeadButton Icon={JoinIcon} label="Join" onPress={() => void join()} />
+            <HeadButton Icon={PlusIcon} label="Add a student" primary onPress={() => setAdding(true)} />
+          </View>
         )}
 
         <ScheduleOverview now={now} />
@@ -153,7 +147,7 @@ function Lessons() {
                     s.counts.assignmentsDue > 0 ? `${s.counts.assignmentsDue} overdue` : null,
                     s.joined ? `${Math.round(s.hoursThisWeek * 10) / 10} h this week` : null,
                     s.joined && s.streak > 0 ? `${plural(s.streak, 'day')} streak` : null,
-                    `last practiced ${s.lastPracticed ? (s.lastPracticed === today ? 'today' : formatShortDate(s.lastPracticed)) : '—'}`,
+                    s.lastPracticed ? `last practiced ${s.lastPracticed === today ? 'today' : formatShortDate(s.lastPracticed)}` : s.joined ? 'not practiced yet' : null,
                     `${s.counts.assignmentsOpen} to do`,
                     `${plural(s.lessons, 'lesson')}${s.nextLesson ? ` · next ${dayLabel(s.nextLesson)}` : ''}`,
                   ].filter(Boolean);
@@ -252,11 +246,12 @@ function HeadButton({ Icon, label, onPress, primary }: { Icon: typeof PlusIcon; 
       accessibilityRole="button"
       accessibilityLabel={label}
       android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
-      className="h-14 flex-1 items-center justify-center gap-0.5 overflow-hidden rounded-xl"
+      className="h-14 flex-1 items-center justify-center gap-0.5 overflow-hidden rounded-xl px-1.5"
       style={{ backgroundColor: primary ? colors.accent : colors.surface }}
     >
       <Icon color={primary ? fg : colors.muted} size={20} />
-      <Text numberOfLines={1} className="font-ui-semibold text-[13px] font-semibold" style={{ color: fg }}>
+      {/* Shrinks rather than running to the edges with large system text. */}
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className="font-ui-semibold text-[13px] font-semibold" style={{ color: fg }}>
         {label}
       </Text>
     </Pressable>

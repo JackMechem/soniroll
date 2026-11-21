@@ -14,7 +14,8 @@ import {
   releaseAnchor,
   type ShownRelease,
 } from "@/lib/changelog";
-import { LinkIcon } from "@/components/tools";
+import { LinkIcon, MegaphoneIcon } from "@/components/tools";
+import PageBar from "@/components/PageBar";
 import { siteOrigin } from "@/lib/siteOrigin";
 
 /** How each kind of change looks: its heading's colour and its bullet. Kept quiet: only New takes
@@ -60,19 +61,15 @@ export default function ChangelogPage() {
   }, [releases]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-20 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-20 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "What's new" }]} icon={MegaphoneIcon} />
       <header className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">What&apos;s new</h1>
-              <span className="rounded-md bg-foreground/[0.05] px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted">
-                v{APP_VERSION}
-                {CHANNEL === "beta" ? " beta" : ""}
-              </span>
-            </div>
-            <p className="mt-1 max-w-xl text-sm text-muted">Every update to soniroll: new things, improvements and fixes, newest first.</p>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-foreground/[0.05] px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted">
+            v{APP_VERSION}
+            {CHANNEL === "beta" ? " beta" : ""}
+          </span>
+          <p className="max-w-xl text-sm text-muted">Every update to soniroll: new things, improvements and fixes, newest first.</p>
         </div>
         <div>
           <div className="-mx-4 flex gap-5 overflow-x-auto border-b border-foreground/10 px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="radiogroup" aria-label="Show">

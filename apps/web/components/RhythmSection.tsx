@@ -1355,7 +1355,7 @@ export default function RhythmSection({
                     ) : !loading && allSongs.length === 0 ? (
                       <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-foreground/15 p-6 text-center text-sm text-muted">
                         <p>You don&apos;t have any chord charts yet — the drums play on their own until you pick one.</p>
-                        <Link href="/tunes?tab=charts" className="font-medium text-accent hover:underline">
+                        <Link href="/tunes" className="font-medium text-accent hover:underline">
                           Import or make one in Chord Charts
                         </Link>
                       </div>

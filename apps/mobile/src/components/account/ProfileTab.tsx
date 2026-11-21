@@ -3,14 +3,15 @@ import { COMMON_INSTRUMENTS } from '@jam-practice/core/profileInstruments';
 import { normalizeUsername, usernameError } from '@jam-practice/core/username';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { PlusIcon, TrashIcon } from '@/components/icons';
+import { CloseIcon, PlusIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { InfoButton } from '@/components/InfoButton';
 import { SwitchRow } from '@/components/SwitchRow';
 import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 import { AvatarUpload } from './AvatarUpload';
 
@@ -109,7 +110,7 @@ export function ProfileTab() {
 
   return (
     <View className="gap-5 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-      <AvatarUpload avatarUrl={profile?.avatarUrl ?? null} />
+      <AvatarUpload avatarUrl={profile?.avatarUrl ?? null} name={profile?.username} />
 
       <View className="gap-1">
         <View className="flex-row items-center gap-1.5">
@@ -166,8 +167,8 @@ export function ProfileTab() {
                 <Text className="text-xs font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
                   {name}
                 </Text>
-                <Pressable onPress={() => removeInstrument(name)} accessibilityLabel={`Remove ${name}`}>
-                  <TrashIcon color={colors.muted} size={12} />
+                <Pressable onPress={() => removeInstrument(name)} accessibilityLabel={`Remove ${name}`} hitSlop={8}>
+                  <CloseIcon color={colors.muted} size={14} />
                 </Pressable>
               </View>
             ))}
@@ -178,7 +179,7 @@ export function ProfileTab() {
             value={instrumentInput}
             onChangeText={setInstrumentInput}
             onSubmitEditing={() => addInstrument(instrumentInput)}
-            placeholder="Type an instrument and press Enter"
+            placeholder="Add an instrument"
             placeholderTextColor={colors.muted}
             className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-sm font-ui"
             style={{ backgroundColor: colors.background, color: colors.foreground }}

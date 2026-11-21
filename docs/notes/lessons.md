@@ -379,3 +379,33 @@ practice in `Home.tsx`. It renders nothing unless you have a student or a teache
   with Edit) and the student's (read-only, the same score, no Edit, ticking blocked); tsc, lint,
   build. **Not checked signed in:** the real notes page, the server's lesson check for scores,
   "Your own notes".
+
+## 2026-11-20 — UI pass 4 fixes (web)
+
+From a reviewer's pass over people, account and first impressions (7/10). Lessons fixes:
+- **Student page on phones** (`StudentPage.tsx`): the invite card's grid is
+  `grid-cols-[minmax(0,1fr)]` with `min-w-0` children. Before, the truncated invite URL set the
+  track's width and the page scrolled sideways (474px at 390). `SessionList`'s header text is
+  `flex-1` and its buttons `shrink-0`, so "…live in each lesson" no longer runs under New lesson.
+- **Dialogs keep their buttons in view** (`parts.tsx` `Dialog`): the title row is sticky at the top
+  and each dialog's action row uses `dialogFooter` (sticky at the bottom; ItemDialog, Add a
+  student, New/Edit lesson, the three booking dialogs). Gotcha: a sticky offset inside a padded
+  scroll box counts from inside the padding, so it's `-top-5` / `-bottom-5` to sit flush with the
+  dialog's edges (with `top-0` content peeked through a 20px band).
+- **Assignment pools** (`assignment.tsx` `Toggle`, and the custom file-type chips) are filled pills
+  like `PoolPill`: accent when picked, `bg-foreground/[0.05]` when not, no borders.
+- **Student-only Lessons page** (`LessonsPage.tsx`): with teachers and no students, the header's
+  Add a student is gone and the big "Teach with soniroll" block becomes one line, "Teach too? Add
+  a student". The header button only shows once loaded (it used to flash for students). "Your
+  students" no longer repeats the count from the subtitle.
+- **Lesson item cards** lost their thin border (an overdue one keeps a danger ring); lesson notes
+  use the document icon (Shed Notes') instead of the music note, in the item cards, the Notes
+  button, lesson rows and the notes page's empty state.
+- **Broken invite link** (`JoinPage.tsx`) has a way out: Go to Lessons (signed in) or Go to the
+  dashboard.
+- The phone crumb on a lesson is "… / Lesson — Nov 20" now (see `PageBar` in `ux-refresh.md`).
+Verified in headless Chromium with a throwaway teacher and student (both deleted, with their
+lesson and follow rows): the student page at 390 (no overflow), Add a student at 1440×500, New
+assignment at 1440×900 and 390 dark (scrolled: buttons stay, nothing peeks), adding an
+assignment and notes, the student's Lessons page at 1440 and 390 dark. Not verified: the booking
+dialogs (no bookings made), real phones.

@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
-import { ICON_BY_ID } from "@/components/help/helpParts";
-import { BackButton, MenuButton, tuneSummary } from "@/components/library/shared";
+import PageBar, { type Crumb } from "@/components/PageBar";
+import { MenuButton, tuneSummary } from "@/components/library/shared";
 import { ChevronRightIcon, ChordChartIcon, NoteIcon, PlusIcon, SearchIcon, ShareIcon } from "@/components/tools";
 import { formatComposer, keyPitchClass } from "@/lib/iRealPro";
-import { topicById } from "@/lib/helpContent";
 import type { Tune } from "@/lib/types";
 import type { LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 import type { Setlist } from "@/lib/useSetlists";
@@ -150,9 +148,16 @@ export function useEdgeFade<T extends HTMLElement>() {
     const observer = new ResizeObserver(update);
     observer.observe(el);
     for (const child of el.children) observer.observe(child);
+    // Buttons that come and go (a toolbar's extra tools) change what's off screen too.
+    const added = new MutationObserver(() => {
+      for (const child of el.children) observer.observe(child);
+      update();
+    });
+    added.observe(el, { childList: true });
     el.addEventListener("scroll", update, { passive: true });
     return () => {
       observer.disconnect();
+      added.disconnect();
       el.removeEventListener("scroll", update);
     };
   }, [el]);
@@ -206,91 +211,87 @@ export function LibraryTabs({ active }: { active: LibraryTab }) {
 
 export function LibraryPage({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-8">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-20">
       {children}
     </main>
   );
 }
 
 /**
- * The header every library page starts with: an optional back button, a muted icon (or any
- * `leading` element, e.g. a key badge), the title and a line under it, the page's buttons, then
- * `tabs` (Library's sub-pages) and `children` (usually a search toolbar) below. Without tabs it
- * ends with a hairline, like the dashboard's header. `color` colours the icon when given.
+ * The header every library page starts with. The page's name is in the header bar (`PageBar`: the
+ * icon, the trail of `crumbs` — the pages above this one — the title last, and the ? for
+ * `helpTopic`); under it, the page's own line: an optional `leading` element (a key badge, a
+ * person), the `subtitle`, `titleExtra` and the page's buttons (`actions`), then `tabs` (Library's
+ * sub-pages) and `children` (usually a search toolbar). `back`/`backHref`/`backLabel` are the old
+ * back button's target: used as the one crumb above the page when no `crumbs` are given.
  */
 export function Hero({
   title,
   subtitle,
   icon: Icon,
   leading,
-  color,
   tabs,
   back,
   backHref,
   backLabel,
+  crumbs,
   actions,
   helpTopic,
   titleExtra,
-  rule = true,
   children,
 }: {
   title: string;
   subtitle?: ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
   leading?: ReactNode;
+  /** Was the icon's colour; the bar's icon is always muted now. */
   color?: string;
   tabs?: ReactNode;
   back?: () => void;
   backHref?: string;
   backLabel?: string;
+  /** The pages above this one, top first ("Library", "Tunes"); the page's own `title` is added. */
+  crumbs?: Crumb[];
   actions?: ReactNode;
   helpTopic?: string;
-  /** Beside the title, e.g. Library's storage meter. */
+  /** On the page's line (or at the end of the tabs), e.g. Library's storage meter. */
   titleExtra?: ReactNode;
-  /** The hairline under a header without tabs; off when a search toolbar ends the header. */
+  /** No longer drawn (the header bar has the rule); kept so old callers still compile. */
   rule?: boolean;
   children?: ReactNode;
 }) {
-  const topic = helpTopic ? topicById(helpTopic) : undefined;
-  const intro = useIntro(topic);
-  const TopicIcon = topic ? ICON_BY_ID[topic.id] : undefined;
-  const ShownIcon = Icon ?? TopicIcon;
+  const parents = crumbs ?? (back || backHref ? [{ label: backLabel ?? "Back", href: backHref, onClick: back }] : []);
+  const hasLine = !!(leading || subtitle || actions || (titleExtra && !tabs));
   return (
-    <header className={`flex flex-col gap-4 ${tabs || !rule ? "" : "border-b border-foreground/10 pb-6"}`}>
-      {(back || backHref) && (
-        <div>
-          <BackButton onClick={back} href={backHref} label={backLabel} />
-        </div>
-      )}
-      {/* With tabs (Library), the buttons stay on the title's line on phones too, so the tabs don't
-          move between pages. */}
-      <div className={`flex items-center gap-x-4 gap-y-3 ${tabs ? "" : "flex-wrap"}`}>
-        <div className={`flex items-center gap-3 ${tabs ? "min-w-0 flex-1" : "min-w-[min(100%,16rem)] flex-1 basis-72"}`}>
-          {leading}
-          <div className={`min-w-0 ${titleExtra ? "max-sm:flex-1" : "flex-1"}`}>
-            <div className="flex min-w-0 items-center gap-1">
-              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
-                {!leading && ShownIcon && (
-                  <span className={`shrink-0 ${color ? "" : "text-accent"}`} style={color ? { color } : undefined}>
-                    <ShownIcon className="h-5 w-5" />
-                  </span>
-                )}
-                <span className="line-clamp-2 break-words">{title}</span>
-              </h1>
-              {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
+    <>
+      <PageBar crumbs={[...parents, { label: title }]} icon={Icon} helpTopic={helpTopic} />
+      {(hasLine || tabs || children) && (
+        <header className="flex flex-col gap-4">
+          {hasLine && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+              {(leading || subtitle || (titleExtra && !tabs)) && (
+                <div className="flex min-w-0 flex-1 basis-48 items-center gap-3">
+                  {leading}
+                  {subtitle && <div className="min-w-0 flex-1 text-sm text-muted">{subtitle}</div>}
+                  {titleExtra && !tabs && <div className="ml-auto shrink-0">{titleExtra}</div>}
+                </div>
+              )}
+              {/* Buttons here sit on the page background, so any "on a card" bg-background ones turn surface.
+                  min-w-0: on its own line it fits the page, and a select in it shrinks (a chart's key). */}
+              {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
             </div>
-            {subtitle && <div className={`mt-0.5 text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
-          </div>
-          {titleExtra && <div className="ml-auto shrink-0">{titleExtra}</div>}
-        </div>
-        {/* Buttons here sit on the page background, so any "on a card" bg-background ones turn surface.
-            min-w-0: on its own line it fits the page, and a select in it shrinks (a chart's key). */}
-        {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
-      </div>
-      {tabs}
-      {children && <div>{children}</div>}
-      {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
-    </header>
+          )}
+          {tabs && (titleExtra ? (
+            // The tabs' rule runs on under the extra (the tabs' own is turned off).
+            <div className="flex min-w-0 items-end gap-3 border-b border-foreground/10 [&>div>nav]:border-b-0">
+              <div className="min-w-0 flex-1">{tabs}</div>
+              <div className="shrink-0 pb-0.5">{titleExtra}</div>
+            </div>
+          ) : tabs)}
+          {children && <div>{children}</div>}
+        </header>
+      )}
+    </>
   );
 }
 

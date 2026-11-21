@@ -2,7 +2,7 @@ import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { fileDetail, fileKind } from '@jam-practice/core/files';
 import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
@@ -10,11 +10,12 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FileShareSheet } from '@/components/files/FileShareSheet';
 import { FileViewer, type ViewerFile } from '@/components/files/FileViewer';
 import { CloudIcon, FileTypeIcon, PhoneIcon, SendIcon } from '@/components/files/icons';
-import { ChevronRightIcon, DotsVerticalIcon, LinkIcon, MusicNoteIcon, PencilIcon, TrashIcon, UnlinkIcon } from '@/components/icons';
+import { ChevronRightIcon, DotsVerticalIcon, LinkIcon, MusicNoteIcon, PencilIcon, TrashIcon, UnlinkIcon, WaveIcon } from '@/components/icons';
 import { NameDialog } from '@/components/NameDialog';
 import { TuneSelectModal } from '@/components/recordings/RecordingParts';
 import { deleteOnDevice } from '@/lib/deviceFiles';
-import { type StoredEntry, errorText, filesApi, isMovable, shareFile, useStorageMoves, useStoragePlan } from '@/lib/files';
+import { type StoredEntry, errorText, filesApi, isMovable, localCopy, shareFile, useStorageMoves, useStoragePlan } from '@/lib/files';
+import { saveLocalFile } from '@/lib/slowDownerFiles';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -73,6 +74,13 @@ export function useFileActions({ tuneName }: { tuneName: (tuneId: string) => str
   const [deleting, setDeleting] = useState<StoredEntry | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A short "done" line after attaching a file to a tune (it otherwise happens out of sight).
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   const same = (a: StoredEntry | null, b: StoredEntry) => !!a && a.kind === b.kind && a.id === b.id;
 
@@ -109,6 +117,23 @@ export function useFileActions({ tuneName }: { tuneName: (tuneId: string) => str
     }
   }
 
+  /** Audio and video: a copy goes into the Slow Downer's files and opens there. */
+  async function openInSlowDowner(item: StoredEntry) {
+    if (!item.url) return;
+    setError(null);
+    setStatus(`Opening "${item.name}" in the Slow Downer…`);
+    try {
+      const uri = await localCopy({ url: item.url, name: item.name, mimeType: item.mimeType });
+      const entry = await saveLocalFile(uri, item.name, item.size);
+      setOpen(null);
+      router.push({ pathname: '/tool/slow-downer', params: { open: entry.id } });
+    } catch (e) {
+      setError(errorText(e, 'Couldn’t open it in the Slow Downer.'));
+    } finally {
+      setStatus(null);
+    }
+  }
+
   async function confirmDelete(item: StoredEntry) {
     setDeleting(null);
     if (same(open, item)) setOpen(null);
@@ -129,6 +154,13 @@ export function useFileActions({ tuneName }: { tuneName: (tuneId: string) => str
       !same(open, item) && { key: 'open', label: 'Open', icon: icon(ChevronRightIcon), onPress: () => afterSheet(() => setOpen(item)) },
       item.kind !== 'profile' && { key: 'rename', label: 'Rename', icon: icon(PencilIcon), onPress: () => afterSheet(() => setRenaming(item)) },
       item.kind !== 'profile' && { key: 'share', label: item.sharedId ? 'Shared — manage link' : 'Share a link', icon: icon(LinkIcon), onPress: () => afterSheet(() => setSharing(item)) },
+      !!item.url &&
+        ['audio', 'video'].includes(fileKind(item.mimeType, item.name)) && {
+          key: 'slow',
+          label: 'Open in Slow Downer',
+          icon: icon(WaveIcon),
+          onPress: () => afterSheet(() => void openInSlowDowner(item)),
+        },
       !!item.url && { key: 'send', label: 'Send or open in another app', icon: icon(SendIcon), onPress: () => afterSheet(() => void send(item)) },
       // Kept here: put it online (with a plan). Online on the free plan: keep it on this phone
       // instead (frees the online space).
@@ -180,10 +212,13 @@ export function useFileActions({ tuneName }: { tuneName: (tuneId: string) => str
       />
       <TuneSelectModal
         visible={!!linking}
+        title={linking?.tuneId ? 'Move to another tune' : 'Attach to a tune'}
         selectedId={linking?.tuneId}
         onPick={(tuneId) => {
           if (linking) {
-            update({ id: linking.id as Id<'files'>, tuneId }).catch((e) => setError(errorText(e, 'Couldn’t attach it.')));
+            update({ id: linking.id as Id<'files'>, tuneId })
+              .then(() => setNotice(`Attached “${linking.name}” to ${tuneName(tuneId) ?? 'the tune'}.`))
+              .catch((e) => setError(errorText(e, 'Couldn’t attach it.')));
             if (same(open, linking)) setOpen({ ...linking, tuneId });
           }
           setLinking(null);
@@ -192,7 +227,7 @@ export function useFileActions({ tuneName }: { tuneName: (tuneId: string) => str
       />
       <ConfirmDialog
         visible={!!deleting}
-        title={deleting ? `Delete "${deleting.name}"?` : ''}
+        title={deleting ? `Delete “${deleting.name}”?` : ''}
         message={deleting ? deleteMessage(deleting, deleting.tuneId ? tuneName(deleting.tuneId) : undefined) : ''}
         confirmLabel="Delete"
         onConfirm={() => deleting && void confirmDelete(deleting)}
@@ -202,7 +237,7 @@ export function useFileActions({ tuneName }: { tuneName: (tuneId: string) => str
     </>
   );
 
-  return { openFile: setOpen, openMenu: setMenu, elements, status, error, clearError: () => setError(null) };
+  return { openFile: setOpen, openMenu: setMenu, elements, status, error, notice, clearError: () => setError(null) };
 }
 
 /** Where an item's data is, beside its name: this phone, another device (it won't open here), or
@@ -231,7 +266,24 @@ export function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean })
 
 /** One stored item in a list: its type, name (with a Shared and a where-it-is badge), a detail
     line, and ⋮. Tapping it opens it. */
-export function FileRow({ item, detail, paid, onOpen, onMenu, right }: { item: StoredEntry; detail: string; paid: boolean; onOpen: () => void; onMenu: () => void; right?: ReactNode }) {
+export function FileRow({
+  item,
+  detail,
+  tune,
+  paid,
+  onOpen,
+  onMenu,
+  right,
+}: {
+  item: StoredEntry;
+  detail: string;
+  /** The tune it's on, on a line of its own (it was cut off at the end of the detail line). */
+  tune?: string;
+  paid: boolean;
+  onOpen: () => void;
+  onMenu: () => void;
+  right?: ReactNode;
+}) {
   const { colors } = useAppTheme();
   const elsewhere = !!item.device && !item.url;
   return (
@@ -265,6 +317,14 @@ export function FileRow({ item, detail, paid, onOpen, onMenu, right }: { item: S
               {detail}
             </Text>
           </View>
+          {tune ? (
+            <View className="flex-row items-center gap-1">
+              <MusicNoteIcon color={colors.muted} size={12} />
+              <Text numberOfLines={1} className="font-ui flex-1 text-xs" style={{ color: colors.muted }}>
+                {tune}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </Pressable>
       {right}

@@ -1,9 +1,8 @@
 import { KEY_NAMES } from '@jam-practice/core/iRealPro';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
-import { sheetEdge } from '@/components/sheetStyle';
+import { BottomSheet } from '@/components/BottomSheet';
 import type { SetlistOverride } from '@/lib/useSetlists';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -36,7 +35,6 @@ export function SetlistTuneSheet({
   onClose: () => void;
 }) {
   const { colors } = useAppTheme();
-  const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [key, setKey] = useState<string | undefined>(value?.key);
   const [tempo, setTempo] = useState<number | undefined>(value?.tempo);
@@ -65,9 +63,8 @@ export function SetlistTuneSheet({
   const pillText = (selected: boolean) => ({ color: selected ? colors['accent-foreground'] : colors.foreground });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <View style={{ ...sheetEdge(colors), backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: insets.bottom + 12, maxHeight: height * 0.85 }}>
+    <BottomSheet visible={visible} onClose={onClose} maxHeight={height * 0.85}>
+      <View style={{ paddingBottom: 12 }}>
         <View className="flex-row items-center gap-3 px-5 pb-2 pt-4">
           <View className="flex-1">
             <Text numberOfLines={1} className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
@@ -141,6 +138,6 @@ export function SetlistTuneSheet({
           </View>
         </ScrollView>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }

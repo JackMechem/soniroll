@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAction, useQuery } from "convex/react";
@@ -24,7 +24,8 @@ import {
   SidebarSettings,
   ToolSettings,
 } from "@/components/settings/SettingsSections";
-import { BackButton } from "@/components/library/shared";
+import DesktopUpdates from "@/components/settings/DesktopUpdates";
+import PageBar from "@/components/PageBar";
 import TunesTab from "@/components/TunesTab";
 import TunesToLearnTab from "@/components/TunesToLearnTab";
 import {
@@ -47,13 +48,13 @@ import {
 import { StoragePlans } from "@/components/plans/PlansPage";
 
 /** `wide` widens the page to fit the Profile/Security/Danger zone sidebar layout (the signed-in
-    view below); the loading and not-signed-in states stay at the original narrower width, since
-    neither has anything to put a sidebar next to. */
+    view below); the loading and not-signed-in states are narrower, since neither has anything to
+    put a sidebar next to (wide enough for the theme and font tiles). */
 function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <main
-      className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8 ${
-        wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-md"
+      className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20 ${
+        wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-2xl"
       }`}
     >
       {children}
@@ -648,6 +649,13 @@ const DANGER_ITEMS = NAV.flatMap((g) => g.items).filter((i) => i.danger);
 const ALL_VIEWS = NAV.flatMap((g) => g.items.map((i) => i.id));
 const isView = (v: string | null | undefined): v is AccountView => !!v && (ALL_VIEWS as string[]).includes(v);
 
+const NARROW = "(max-width: 767px)";
+function subscribeNarrow(cb: () => void) {
+  const mq = window.matchMedia(NARROW);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
 /** The account settings page (`/account[?tab=…]`). A header (picture, @username, email,
     public/private, sign-in methods, View profile, Sign out), then settings grouped in a left nav —
     You (profile), Library (Tunes I Know / to Learn), Community (posts, following), Settings
@@ -668,6 +676,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   // Phones: the list of sections, until one is picked (or a link asked for one). Wider screens
   // always show the nav and a section side by side, so this only changes what phones show.
   const [phoneList, setPhoneList] = useState(!isView(initialTab));
+  // Whether the list of sections is what a phone shows (below `md`; false on the server).
+  const narrow = useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW).matches, () => false);
   // A link to another section while you're here (the sidebar's Settings row and its palette
   // button) only changes `?tab=`, so follow the address. (Picking a section below writes the same
   // `?tab=` back, so that never fights it.)
@@ -685,14 +695,17 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
     const url = new URL(window.location.href);
     if (url.pathname !== "/account") return;
     // A phone showing the list keeps no tab, so reloading shows the list again.
-    if (phoneList && window.matchMedia("(max-width: 767px)").matches) url.searchParams.delete("tab");
+    if (phoneList && window.matchMedia(NARROW).matches) url.searchParams.delete("tab");
     else url.searchParams.set("tab", view);
     window.history.replaceState(window.history.state, "", url);
   }, [view, phoneList]);
 
+  const accountBar = <PageBar crumbs={[{ label: "Account" }]} icon={GearIcon} />;
+
   if (isLoading) {
     return (
       <PageShell>
+        {accountBar}
         <LoadingSpinner />
       </PageShell>
     );
@@ -701,17 +714,16 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   if (!isAuthenticated) {
     return (
       <PageShell>
-        {/* The title above the card, where every other page has its title. */}
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <GearIcon className="h-5 w-5 shrink-0 text-accent" />
-          Account
-        </h1>
+        {/* Signed out this page is the sidebar's "Theme and display". */}
+        <PageBar crumbs={[{ label: "Theme and display" }]} icon={GearIcon} />
         <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-5 text-left">
           <p className="text-sm text-muted">You&apos;re not signed in. Sign in to manage your profile, library and settings.</p>
           <SignInButtons />
         </div>
         {/* Theme, text size and the rest work on this device without an account. */}
         <AppearanceSettings />
+        {/* The desktop app's Updates section (nothing on the website). */}
+        <DesktopUpdates />
       </PageShell>
     );
   }
@@ -720,7 +732,6 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const hasGoogle = providers?.includes("google") ?? false;
   const username = profile?.username || null;
   const current = NAV.flatMap((g) => g.items).find((i) => i.id === view)!;
-  const currentGroup = NAV.find((g) => g.items.some((i) => i.id === view))!.group;
 
   function handleSignOut() {
     void signOut();
@@ -737,15 +748,31 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
 
   return (
     <PageShell wide>
+      {/* "Account / <section>"; a phone showing the list of sections is just "Account". The
+          Account crumb goes back to that list on a phone (the first section, wider). */}
+      <PageBar
+        crumbs={
+          phoneList && narrow
+            ? [{ label: "Account" }]
+            : [
+                {
+                  label: "Account",
+                  href: "/account",
+                  onClick: () => {
+                    if (window.matchMedia(NARROW).matches) {
+                      setPhoneList(true);
+                      window.scrollTo({ top: 0 });
+                    } else pick(NAV[0].items[0].id);
+                  },
+                },
+                { label: current.label },
+              ]
+        }
+        icon={GearIcon}
+      />
       {/* Who you are, like the dashboard's header: name and email on the left, View profile on the
           right. Phones show it over the list of sections only, not again on each section. Sign out
           is at the end of the sections, out of the way. */}
-      {phoneList && (
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight md:hidden">
-          <GearIcon className="h-5 w-5 shrink-0 text-accent" />
-          Account
-        </h1>
-      )}
       <header className={`flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between ${phoneList ? "" : "max-md:hidden"}`}>
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar url={profile?.avatarUrl ?? null} />
@@ -873,14 +900,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
         </nav>
 
         <div className={`min-w-0 flex-1 flex-col gap-6 ${phoneList ? "hidden md:flex" : "flex"}`}>
-          <div className="flex flex-col gap-3">
-            <BackButton onClick={() => { setPhoneList(true); window.scrollTo({ top: 0 }); }} label="All settings" className="md:hidden" />
-            {/* The page's heading: the section, under the name of its group ("Settings", "Account"…). */}
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-semibold text-muted">{currentGroup}</p>
-              <h1 className="text-2xl font-semibold tracking-tight">{current.label}</h1>
-            </div>
-          </div>
+          {/* The section's name is in the header bar ("Account / Appearance"); on a phone the
+              "Account" crumb goes back to the list of sections. */}
 
           {view === "profile" && <PublicProfileEditor />}
 

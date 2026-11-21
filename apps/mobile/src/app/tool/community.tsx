@@ -97,7 +97,7 @@ function CommunityScreen() {
                         className="flex-row items-center gap-3 px-3"
                         style={{ minHeight: 60, borderTopWidth: i ? 1 : 0, borderTopColor: colors.background }}
                       >
-                        <UserAvatar url={p.avatarUrl} />
+                        <UserAvatar url={p.avatarUrl} name={p.username} />
                         <View className="min-w-0 flex-1">
                           <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                             @{p.username}
@@ -133,8 +133,8 @@ function CommunityScreen() {
             </>
           ) : (
             <>
-              {/* Counts, once they've all arrived and one isn't zero (no "–" next to a "0"). */}
-              {likedIds && following && mine && likedIds.length + following.length + mine.length > 0 ? (
+              {/* Counts, once they've all arrived — always, so a new account can find Following. */}
+              {likedIds && following && mine ? (
                 <View className="flex-row flex-wrap gap-2">
                   <CountLink Icon={HeartIcon} count={likedIds.length} label="Liked" onPress={() => router.push('/liked-posts')} />
                   <CountLink Icon={FollowersIcon} count={following.length} label="Following" onPress={() => router.push('/community/following')} />
@@ -178,7 +178,7 @@ function CommunityScreen() {
           {
             key: 'setlist',
             icon: <SetlistIcon color={colors.accent} size={22} />,
-            label: setlists.length ? 'Post a setlist' : 'Post a setlist (make one in Tunes first)',
+            label: setlists.length ? 'Post a setlist' : 'Post a setlist (make one in Library first)',
             onPress: () => (setlists.length ? setPickSetlist(true) : router.push('/library')),
           },
         ]}

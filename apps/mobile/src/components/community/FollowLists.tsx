@@ -38,7 +38,7 @@ function PersonList({ people, emptyText }: { people: PersonRow[] | undefined; em
             className="flex-row items-center gap-3 border-b py-2.5"
             style={{ borderColor: `${colors.background}B3` }}
           >
-            <UserAvatar url={person.avatarUrl} size="sm" />
+            <UserAvatar url={person.avatarUrl} name={person.username} size="sm" />
             <Text numberOfLines={1} className="font-ui-semibold text-sm" style={{ color: colors.foreground }}>
               {person.username}
             </Text>
@@ -85,13 +85,13 @@ export function FollowLists() {
     <View className="gap-4">
       <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
         <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-          Following{following !== undefined ? ` (${following.length})` : ''}
+          Following{following !== undefined ? ` · ${following.length}` : ''}
         </Text>
         <PersonList people={following} emptyText="You're not following anyone yet." />
       </View>
       <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
         <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-          Followers{followers !== undefined ? ` (${followers.length})` : ''}
+          Followers{followers !== undefined ? ` · ${followers.length}` : ''}
         </Text>
         <PersonList people={followers} emptyText="No one follows you yet." />
       </View>

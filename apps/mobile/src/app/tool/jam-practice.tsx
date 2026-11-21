@@ -171,18 +171,20 @@ function JamPracticeScreen() {
             />
           </SettingChip>
 
-          {/* Its value says what the number means ("8-bar count-off", not a bare "8 bars"). */}
+          {/* Its value says what the number means ("8-bar count-off", not a bare "8 bars"); "keeps
+              going" sits in the label, where it doesn't cut the value off on a phone. */}
           <SettingChip
             Icon={MetronomeIcon}
-            label="Click"
-            value={`${countOffBars}-bar count-off${keepGoingIndefinitely ? ', keeps going' : ''}`}
+            label={keepGoingIndefinitely ? 'Click · keeps going' : 'Click'}
+            title="Click"
+            value={`${countOffBars}-bar count-off`}
           >
             <View className="gap-2.5">
               <OptionLabel
                 title="Count-off bars"
                 hint="How many bars click before the tune starts (or, with Keep metronome going on, before it hands off to the running metronome)."
               />
-              <ChoiceCards label="Count-off bars" cardWidth="18%" options={BAR_OPTIONS} value={countOffBars} onChange={(n) => updateSettings({ countOffBars: n })} />
+              <ChoiceCards label="Count-off bars" cardWidth="14%" options={BAR_OPTIONS} value={countOffBars} onChange={(n) => updateSettings({ countOffBars: n })} />
             </View>
             <SwitchRow
               label="Accent"
@@ -210,16 +212,9 @@ function JamPracticeScreen() {
               {pick.tune.name}
             </Text>
             {/* Only what the tune has: a tune with no key just shows its time signature. */}
-            <View className="flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              {pick.key ? (
-                <Text className="font-ui text-base" style={muted}>
-                  {pick.key.value}
-                </Text>
-              ) : null}
-              <Text className="font-ui text-base" style={muted}>
-                {pick.tune.timeSignature}
-              </Text>
-            </View>
+            <Text className="font-ui text-center text-base" style={muted}>
+              {[pick.key?.value, pick.tune.timeSignature].filter(Boolean).join(' · ')}
+            </Text>
             {pick.tune.notes ? (
               <Text className="font-ui max-w-xs text-center text-sm" style={muted}>
                 {pick.tune.notes}
@@ -248,7 +243,7 @@ function JamPracticeScreen() {
             <EmptyState
               Icon={ShuffleIcon}
               title="No tune picked yet"
-              body="Pick a tune gives you a random one to play, with its key and tempo and a count-off."
+              body="Tap Pick a tune for a random one, with its key, tempo and a count-off."
             />
           </View>
         )}

@@ -1,13 +1,15 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { useMutation, useQuery } from 'convex/react';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PostListItem } from '@/components/community/CommunityTunes';
+import { PlusIcon, PostIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { EmptyState } from '@/components/ui';
 
 /**
  * Profile's own "Posts" tab — every Community post the signed-in account has made
@@ -22,7 +24,7 @@ import { useAppTheme } from '@/theme/ThemeProvider';
  * server-side), so delete is always offered, no `isMine` check needed the way Community's own
  * shared Feed has to do. */
 export function MyPostsTab() {
-  const { colors } = useAppTheme();
+  const router = useRouter();
   const posts = useQuery(api.communityTunes.mine);
   const likedIds = useQuery(api.communityTunes.myLikes);
   const removePost = useMutation(api.communityTunes.remove);
@@ -31,16 +33,19 @@ export function MyPostsTab() {
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
 
   return (
-    <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
-
+    // The posts are cards of their own, straight on the page (not inside another card).
+    <View className="gap-3">
       {posts === undefined ? (
         <View className="items-center py-6">
           <LoadingSpinner />
         </View>
       ) : posts.length === 0 ? (
-        <Text className="text-sm font-ui" style={{ color: colors.muted }}>
-          You haven&apos;t posted anything yet.
-        </Text>
+        <EmptyState
+          Icon={PostIcon}
+          title="You haven't posted anything yet"
+          body="Share the tunes you play, a setlist or a routine."
+          action={{ label: 'New post', Icon: PlusIcon, onPress: () => router.push('/community/new') }}
+        />
       ) : (
         <View className="gap-2">
           {posts.map((post) => (

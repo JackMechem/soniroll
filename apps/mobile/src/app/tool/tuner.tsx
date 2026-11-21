@@ -300,7 +300,7 @@ function TunerScreen() {
                 // Nothing heard: what it's set up for.
                 <View className="items-center px-2">
                   <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-bold text-2xl font-bold" style={{ color: listening ? colors.muted : colors.foreground }}>
-                    {listening ? '–' : instrument.label.split(' (')[0]}
+                    {listening ? 'Listening…' : instrument.label.split(' (')[0]}
                   </Text>
                   <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                     {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}
@@ -315,7 +315,9 @@ function TunerScreen() {
           cents={reading ? cents : null}
           color={color}
           zoneColor={IN_TUNE}
-          caption={reading ? verdict : playing ? 'Playing a tone' : listening ? 'Play a note…' : 'Start listening, or tap a note to hear it'}
+          // Listening with nothing heard yet, the dial already says "Listening…" (a blank line keeps
+          // the layout still).
+          caption={reading ? verdict : playing ? 'Playing a tone' : listening ? '\u00a0' : 'Start listening, or tap a note to hear it'}
           captionColor={reading ? color : colors.muted}
         />
 

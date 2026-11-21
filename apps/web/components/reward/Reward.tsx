@@ -130,10 +130,11 @@ export function RewardCard({
         onPick();
         reward?.tried(id, e.currentTarget);
       }}
-      className={`relative flex flex-col items-center justify-center gap-1 rounded-md border transition-colors ${
-        on ? "text-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
+      // A fill like the rest of the site's choices; the picked one tinted and ringed in the colour.
+      className={`relative flex flex-col items-center justify-center gap-1 rounded-md transition-colors ${
+        on ? "text-foreground" : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
       } ${className}`}
-      style={on ? { borderColor: color, background: `color-mix(in srgb, ${color} 12%, var(--background))` } : undefined}
+      style={on ? { boxShadow: `inset 0 0 0 2px ${color}`, background: `color-mix(in srgb, ${color} 12%, var(--background))` } : undefined}
     >
       {on && <span key={id} className="reward-glow pointer-events-none absolute inset-0 rounded-md" style={{ "--reward": color } as React.CSSProperties} />}
       <span key={on ? "on" : "off"} className={`flex flex-col items-center gap-1 ${on ? "reward-pop" : ""}`}>
@@ -155,7 +156,7 @@ export function Sparkle({ show, at, color }: { show: boolean; at: string | numbe
 }
 
 /** One choice in a pool you pick several from (which intervals, which chords, which ratios): a
-    small bordered toggle, filled with the accent while it's on. With the reward look it fills
+    small toggle on a quiet fill (no outline), filled with the accent while it's on. With the reward look it fills
     with the tool's colour and a check pops in (`plainClassName` keeps each tool's own sizing). */
 export function PoolPill({
   on,
@@ -181,7 +182,7 @@ export function PoolPill({
         title={title}
         onClick={onClick}
         disabled={disabled}
-        className={`${plainClassName} border transition-colors disabled:opacity-60 ${on ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"}`}
+        className={`${plainClassName} border transition-colors disabled:opacity-60 ${on ? "border-accent bg-accent text-accent-foreground" : "border-transparent bg-foreground/[0.05] text-foreground hover:bg-surface-hover"}`}
       >
         {children}
       </button>
@@ -195,7 +196,7 @@ export function PoolPill({
       onClick={onClick}
       disabled={disabled}
       className={`relative flex items-center gap-1 rounded-full border py-1.5 text-sm font-medium tabular-nums transition-colors disabled:opacity-60 ${
-        on ? "pl-2 pr-3 text-accent-foreground" : "border-foreground/15 bg-background px-3 text-muted hover:bg-surface-hover hover:text-foreground"
+        on ? "pl-2 pr-3 text-accent-foreground" : "border-transparent bg-foreground/[0.05] px-3 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
       style={on ? { background: reward.color, borderColor: reward.color } : undefined}
     >

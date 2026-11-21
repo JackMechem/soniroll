@@ -1,6 +1,7 @@
 import type { PublicLinkedChart } from '@jam-practice/core/profileTunes';
 import type { IRealSong } from '@jam-practice/core/iRealPro';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ChordChartView from '@/components/ChordChartView';
@@ -20,7 +21,7 @@ export function LinkedChartModal({ chart, onClose }: { chart: PublicLinkedChart 
   const { colors } = useAppTheme();
   if (!chart) return null;
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose}>
+    <FullScreenModal visible animationType="slide" onRequestClose={onClose}>
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
           <View className="flex-row items-center justify-between px-4 pt-2">
@@ -41,6 +42,6 @@ export function LinkedChartModal({ chart, onClose }: { chart: PublicLinkedChart 
           </ScrollView>
         </SafeAreaView>
       </View>
-    </Modal>
+    </FullScreenModal>
   );
 }

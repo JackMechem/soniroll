@@ -45,7 +45,7 @@ import { DEFAULT_MIX, formatDuration, recordingsApi, useTuneIndex, useTuneSong }
 import { EMPTY_STRUCTURE, type Structure, cycleSectionAccent, cycleSectionSubAccent, sectionAt } from "@/lib/structure";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
-import { SIGN_IN_PATH } from "@/lib/landing";
+import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
@@ -574,9 +574,7 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
       <ToolLayout title="Recorder" options={null}>
         <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-lg border border-dashed border-foreground/15 p-6 text-center">
           <p className="text-sm text-muted">Sign in to record: your takes are listed on your account, linked to your tunes and your Shed Log.</p>
-          <Link href={SIGN_IN_PATH} className="flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
-            Sign in
-          </Link>
+          <SignInButtons />
         </div>
       </ToolLayout>
     );

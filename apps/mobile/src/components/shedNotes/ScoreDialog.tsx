@@ -1,6 +1,7 @@
 import type { Transcription } from '@jam-practice/core/bassTranscription';
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import ScoreEditor from '@/components/notation/ScoreEditor';
 import { Button } from '@/components/ui';
 import { newScore, useScore, useScoreActions } from '@/lib/useScores';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The notation editor over the whole screen, on a Score Writer score — how notation is written
@@ -22,7 +24,7 @@ export function ScoreDialog({ scoreId, onDone, onClose }: { scoreId: string | nu
   // Back closes it the way Done does (saving, and putting a new score in the note).
   const finishRef = useRef<(() => void) | null>(null);
   return (
-    <Modal visible animationType="slide" onRequestClose={() => (finishRef.current ? finishRef.current() : onClose())} statusBarTranslucent navigationBarTranslucent>
+    <FullScreenModal visible animationType="slide" onRequestClose={() => (finishRef.current ? finishRef.current() : onClose())} statusBarTranslucent navigationBarTranslucent>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
           {scoreId && loaded === undefined ? (
@@ -41,7 +43,7 @@ export function ScoreDialog({ scoreId, onDone, onClose }: { scoreId: string | nu
           )}
         </SafeAreaView>
       </GestureHandlerRootView>
-    </Modal>
+    </FullScreenModal>
   );
 }
 

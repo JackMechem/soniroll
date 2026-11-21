@@ -1,12 +1,13 @@
 "use client";
 
+import { UNDER_TUNES } from "@/components/library/hrefs";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import PromptDialog from "@/components/PromptDialog";
 import { EmptyState, Hero, HeroSearch, LibraryPage, Pill, Rows, SetlistItem } from "@/components/library/ui";
 import { setlistHref } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
-import { PlusIcon, SetlistIcon } from "@/components/tools";
+import { LibraryIcon, PlusIcon } from "@/components/tools";
 import { useSetlists } from "@/lib/useSetlists";
 import { sortByText } from "@jam-practice/core/sortText";
 
@@ -38,7 +39,7 @@ export default function SetlistsPage() {
 
   return (
     <LibraryPage>
-      <Hero title="Setlists" icon={SetlistIcon} helpTopic="tunes" backHref="/tunes" backLabel="Tunes" rule={false}>
+      <Hero title="Setlists" crumbs={UNDER_TUNES} icon={LibraryIcon} helpTopic="tunes">
         {/* Phones: the sort toggle gets its own row under search + New, so the search box keeps
             most of the width. Hidden until there are setlists to sort. */}
         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -81,6 +82,7 @@ export default function SetlistsPage() {
         <PromptDialog
           title="New setlist"
           initialValue=""
+          placeholder="e.g. Friday gig"
           confirmLabel="Create"
           onSubmit={(name) => {
             setNaming(false);

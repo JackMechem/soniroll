@@ -1,5 +1,6 @@
 "use client";
 
+import PageBar from "@/components/PageBar";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -48,6 +49,7 @@ export default function StudentPage({ id }: { id: string }) {
   if (data === undefined) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Student" }]} icon={CapIcon} />
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
@@ -57,6 +59,7 @@ export default function StudentPage({ id }: { id: string }) {
   if (!data) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Student" }]} icon={CapIcon} />
         <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Student not found" body="They may have been removed." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
@@ -89,8 +92,8 @@ export default function StudentPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={data.name}
-        backHref="/lessons"
-        backLabel="Lessons"
+        icon={CapIcon}
+        crumbs={[{ label: "Lessons", href: "/lessons" }]}
         leading={<PersonBadge url={data.student?.avatarUrl} name={data.name} size="lg" />}
         subtitle={
           data.joined
@@ -118,12 +121,12 @@ export default function StudentPage({ id }: { id: string }) {
         }
       >
         {!data.joined && (
-          <div className="grid gap-4 rounded-lg bg-surface p-4 lg:grid-cols-2 lg:gap-6">
-            <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-lg bg-surface p-4 lg:grid-cols-2 lg:gap-6">
+            <div className="flex min-w-0 flex-col gap-2">
               <p className="text-sm font-medium">Email {data.name} their invite</p>
               <EmailInviteForm lessonId={lessonId} name={data.name} initialEmail={data.inviteEmail ?? ""} sentTo={data.inviteEmail} sentAt={data.invitedAt} />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <p className="text-sm font-medium">…or send the link yourself</p>
               <p className="text-xs text-muted">
                 They sign in (or sign up, free) and join — everything you add here is waiting for them, and your routines go straight into their Shed Log.

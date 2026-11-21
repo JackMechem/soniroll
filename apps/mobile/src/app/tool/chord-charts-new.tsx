@@ -1,13 +1,14 @@
 import { sortByText } from '@jam-practice/core/sortText';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIcon, FolderIcon, FolderPlusIcon } from '@/components/icons';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * "New chord chart" details, as a full page rather than a bottom sheet — a sheet's text fields sat
@@ -21,7 +22,9 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 function NewChordChartScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ playlist?: string; title?: string }>();
+  // `tune` ("<list>:<id>"), `key` and `timeSignature` come from "Create one" on a tune: the chart
+  // is linked to that tune when it's saved.
+  const params = useLocalSearchParams<{ playlist?: string; title?: string; tune?: string; key?: string; timeSignature?: string }>();
   const { playlists: raw, loading } = useChordChartsLibrary(null);
   const playlists = sortByText(
     raw.map((p) => p.name),
@@ -31,7 +34,7 @@ function NewChordChartScreen() {
   const [title, setTitle] = useState(params.title ?? '');
   const [composer, setComposer] = useState('');
   const [style, setStyle] = useState('');
-  const [key, setKey] = useState('');
+  const [key, setKey] = useState(params.key ?? '');
   // A playlist's name; `''` = no playlist (All charts only); `null` = "New playlist…".
   const [picked, setPicked] = useState<string | null>(params.playlist ?? '');
   const [newPlaylist, setNewPlaylist] = useState('');
@@ -45,7 +48,15 @@ function NewChordChartScreen() {
     if (chosen === null && !playlist) return setError('Name the new playlist, or pick another option.');
     router.replace({
       pathname: '/tool/chord-charts-editor',
-      params: { playlist, title: title.trim(), composer: composer.trim(), style: style.trim(), key: key.trim() },
+      params: {
+        playlist,
+        title: title.trim(),
+        composer: composer.trim(),
+        style: style.trim(),
+        key: key.trim(),
+        ...(params.tune ? { tune: params.tune } : {}),
+        ...(params.timeSignature ? { timeSignature: params.timeSignature } : {}),
+      },
     });
   }
 

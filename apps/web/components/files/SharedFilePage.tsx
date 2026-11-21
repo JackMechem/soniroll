@@ -5,6 +5,7 @@ import { useAction, useQuery } from "convex/react";
 import Link from "next/link";
 import { useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { FileTypeIcon, FileViewer, fileDetail } from "@/components/files/FileParts";
 import { CheckIcon, DownloadIcon, FileIcon } from "@/components/tools";
 import { canPreview, downloadFile, errorText, fileKind, filesApi } from "@/lib/files";
@@ -32,7 +33,7 @@ export default function SharedFilePage({ id }: { id: string }) {
     return (
       <Shell>
         <div className="flex flex-col items-center gap-2 py-24 text-center">
-          <h1 className="text-xl font-semibold">This file isn&apos;t available</h1>
+          <h2 className="text-xl font-semibold">This file isn&apos;t available</h2>
           <p className="text-sm text-muted">It isn&apos;t shared anymore, or the link is wrong.</p>
         </div>
       </Shell>
@@ -41,8 +42,8 @@ export default function SharedFilePage({ id }: { id: string }) {
 
   const kind = fileKind(shared.mimeType, shared.name);
   return (
-    <Shell>
-      <header className="flex items-start gap-3">
+    <Shell title={shared.name}>
+      <header className="flex items-center gap-3">
         <FileTypeIcon kind={kind} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="text-sm text-muted">
@@ -56,7 +57,6 @@ export default function SharedFilePage({ id }: { id: string }) {
               </>
             )}
           </p>
-          <h1 className="break-words text-2xl font-semibold tracking-tight">{shared.name}</h1>
           <p className="text-sm text-muted">{fileDetail(shared)}</p>
         </div>
       </header>
@@ -141,6 +141,12 @@ function SaveCopy({ shareId, file }: { shareId: string; file: { url: string | nu
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">{children}</main>;
+/** The page, with the file's name in the header bar ("Shared file" until it's there). */
+function Shell({ title = "Shared file", children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: title }]} icon={FileIcon} />
+      {children}
+    </main>
+  );
 }

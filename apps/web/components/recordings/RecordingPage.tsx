@@ -11,17 +11,19 @@ import { EmptyCard, PageHeader, PageShell } from "@/components/library/shared";
 import { SavedMixPlayer } from "@/components/recordings/MixPlayer";
 import TakePlayer from "@/components/recordings/TakePlayer";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { LinkIcon, TrashIcon, TunerIcon, WaveIcon } from "@/components/tools";
+import { LibraryIcon, LinkIcon, TrashIcon, TunerIcon, WaveIcon } from "@/components/tools";
+import { FILES_CRUMB, LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
 import { copyRecordingToTuner } from "@/lib/tunerTakes";
 import { useDeviceUrl } from "@/lib/deviceFiles";
 import { OnOtherDevice } from "@/components/files/StorageMove";
 import { libraryHref } from "@/components/library/ui";
 import { openInToolHref } from "@/components/files/openInTool";
-import { goBackOr } from "@/lib/goBack";
 
 /** Where Back goes when there's no soniroll page behind this one, and where a delete lands. */
 const RECORDINGS_TAB = libraryHref("recordings");
+/** Above a recording in the header bar: Library / Files (showing recordings). */
+const RECORDING_CRUMBS = [LIBRARY_CRUMB, { ...FILES_CRUMB, href: RECORDINGS_TAB }];
 
 /** `/tunes/recording?id=…` (was `/recordings/view`) — one recording: play it, rename it, keep notes on it, link it to a tune
     (or change or unlink it), or delete it. Edits save with the Save button, or when you leave. */
@@ -67,7 +69,7 @@ export default function RecordingPage({ id }: { id: string }) {
   if (recording === null) {
     return (
       <PageShell>
-        <PageHeader title="Recording" back={() => goBackOr(router, RECORDINGS_TAB)} />
+        <PageHeader title="Recording" icon={LibraryIcon} crumbs={RECORDING_CRUMBS} />
         <EmptyCard>This recording doesn&apos;t exist anymore.</EmptyCard>
       </PageShell>
     );
@@ -102,8 +104,9 @@ export default function RecordingPage({ id }: { id: string }) {
     <PageShell>
       <PageHeader
         title={rec.name}
+        icon={LibraryIcon}
+        crumbs={RECORDING_CRUMBS}
         subtitle={`${formatRecordedAt(rec.createdAt)} · ${formatDuration(rec.durationSec)}`}
-        back={() => goBackOr(router, RECORDINGS_TAB)}
         actions={
           <>
             {dirty && (

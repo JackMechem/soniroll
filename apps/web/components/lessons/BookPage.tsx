@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { CapIcon, PersonBadge, btnPrimary, errorText, field } from "@/components/lessons/parts";
 import { AddToCalendar, SlotGrid, lessonEvent, localTz, slotLabel } from "@/components/lessons/schedule";
 import { CheckIcon } from "@/components/tools";
@@ -40,7 +41,12 @@ export default function BookPage({ token }: { token: string }) {
     }
   }
 
-  const shell = (children: React.ReactNode) => <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center gap-5 px-4 py-16">{children}</main>;
+  const shell = (children: React.ReactNode) => (
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center gap-5 px-4 py-16">
+      <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Book a lesson" }]} icon={CapIcon} />
+      {children}
+    </main>
+  );
 
   if (offer === undefined && token)
     return shell(
@@ -52,7 +58,7 @@ export default function BookPage({ token }: { token: string }) {
     return shell(
       <div className="flex flex-col items-center gap-2 rounded-lg bg-surface p-8 text-center">
         <CapIcon className="h-6 w-6 text-muted" />
-        <h1 className="text-xl font-semibold tracking-tight">This link doesn&apos;t work</h1>
+        <h2 className="text-xl font-semibold tracking-tight">This link doesn&apos;t work</h2>
         <p className="text-sm text-muted">Ask your teacher to send you new lesson times.</p>
       </div>,
     );
@@ -65,8 +71,8 @@ export default function BookPage({ token }: { token: string }) {
     return shell(
       <div className="flex flex-col gap-4 rounded-lg bg-surface p-6 sm:p-8">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <CheckIcon className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />{booked ? "You're booked!" : "This lesson is booked"}</h1>
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <CheckIcon className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />{booked ? "You're booked!" : "This lesson is booked"}</h2>
           <p className="text-sm text-muted">With {offer.teacher.name}</p>
         </div>
         <p className="rounded-md bg-background px-4 py-3 text-base font-medium">{slotLabel(done.slot)}</p>
@@ -94,7 +100,7 @@ export default function BookPage({ token }: { token: string }) {
         <PersonBadge url={offer.teacher.avatarUrl} name={offer.teacher.name} size="lg" />
         <div className="min-w-0">
           <p className="text-xs text-muted">Lessons on soniroll</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Pick a lesson time</h1>
+          <h2 className="text-2xl font-semibold tracking-tight">Pick a lesson time</h2>
           <p className="text-sm text-muted">
             {offer.teacher.name} offered {offer.studentName} {offer.slots.length === 1 ? "this time" : "these times"}
           </p>

@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { CheckIcon, CloseIcon, CloudIcon, DeviceIcon, DownloadIcon } from "@/components/tools";
 import { askToKeepFiles, filesKept, inDesktopApp, useDeviceUrls } from "@/lib/deviceFiles";
@@ -63,19 +64,15 @@ function PlansRoute() {
   if (isLoading || isAuthenticated) {
     return (
       <div className="flex justify-center py-24">
+        <PageBar crumbs={[{ label: "Storage plans" }]} icon={CloudIcon} />
         <LoadingSpinner />
       </div>
     );
   }
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">
-      <header className="flex flex-col gap-1.5 border-b border-foreground/10 pb-5">
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold sm:text-3xl">
-          <CloudIcon className="h-6 w-6 shrink-0 text-accent" />
-          Storage plans
-        </h1>
-        <Intro />
-      </header>
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "Storage plans" }]} icon={CloudIcon} />
+      <Intro />
       <StoragePlans />
     </main>
   );
@@ -277,16 +274,16 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
             <p className="text-sm">Make a free account, or sign in, to get a plan.</p>
             <div className="flex shrink-0 gap-2">
               <Link
-                href={SIGN_IN_PATH}
-                className="inline-flex h-9 items-center rounded-md bg-foreground/[0.06] px-4 text-sm font-medium hover:bg-surface-hover"
-              >
-                Sign in
-              </Link>
-              <Link
                 href={SIGN_UP_PATH}
                 className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
               >
                 Sign up free
+              </Link>
+              <Link
+                href={SIGN_IN_PATH}
+                className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
+              >
+                Sign in
               </Link>
             </div>
           </div>

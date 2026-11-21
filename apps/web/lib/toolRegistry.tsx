@@ -48,7 +48,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   "/tempo-trainer": dynamic(() => import("@/components/TempoTrainer"), { loading: PaneLoading }),
   "/tuner": dynamic(() => import("@/components/Tuner"), { loading: PaneLoading }),
   "/slow-downer": dynamic(() => import("@/components/SlowDowner"), { loading: PaneLoading }),
-  "/chord-charts": dynamic(() => import("@/components/library/LibraryHub").then((m) => m.ChartsPane), { loading: PaneLoading }),
+  "/chord-charts": dynamic(() => import("@/components/library/LibraryHub").then((m) => m.LibraryPane), { loading: PaneLoading }),
   "/tunes": dynamic(() => import("@/components/library/LibraryHub").then((m) => m.LibraryPane), { loading: PaneLoading }),
   "/rhythm-section": RhythmSectionPane,
   // Old panes saved with Bass Genius or the Drum Generator open show Rhythm Section.

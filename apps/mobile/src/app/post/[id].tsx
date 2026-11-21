@@ -8,6 +8,7 @@ import { Pressable, ScrollView, Text, View, Share, useWindowDimensions } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { AddRoutineButton, PublicRoutineView, asPublicRoutine } from '@/components/community/PublicRoutineView';
 import { PublicSetlist } from '@/components/community/PublicSetlist';
 import { PublicTuneList } from '@/components/community/PublicTuneList';
 import { EyeOffIcon, HeartIcon, ShareIcon, TrashIcon } from '@/components/icons';
@@ -87,6 +88,7 @@ function PostScreenContent() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const liked = post ? (likedIds ?? []).includes(post.id) : false;
+  const routine = post?.kind === 'routine' ? asPublicRoutine(post.payload) : null;
 
   async function handleShare() {
     if (!post) return;
@@ -123,7 +125,8 @@ function PostScreenContent() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: post.title }} />
+      {/* The big title below names the post; the header just says where you are. */}
+      <Stack.Screen options={{ title: 'Post' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}>
             <View className="flex-row items-start justify-between gap-3">
@@ -138,7 +141,7 @@ function PostScreenContent() {
                       className="flex-row items-center gap-1.5"
                       hitSlop={4}
                     >
-                      <UserAvatar url={post.authorAvatarUrl} size="sm" />
+                      <UserAvatar url={post.authorAvatarUrl} name={post.authorUsername} size="sm" />
                       <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                         {post.authorUsername}
                       </Text>
@@ -209,17 +212,23 @@ function PostScreenContent() {
               <View className="items-center">
                 <ProgressCardView card={post.payload as ProgressCard} username={post.authorUsername} width={Math.min(width - 32, 420)} />
               </View>
+            ) : routine ? (
+              // A Shed Log routine: its tasks, and a copy for your own Shed Log (not your own post).
+              <View className="gap-4">
+                <PublicRoutineView routine={routine} />
+                {!post.isMine ? <AddRoutineButton routine={routine} /> : null}
+              </View>
             ) : post.kind === 'setlist' ? (
               <PublicSetlist title={post.title} tunes={post.tunes} isMine={post.isMine} ownSetlistId={post.setlistId} chartsParams={{ post: post.id }} />
             ) : (
-              <PublicTuneList tunes={post.tunes} canAdd />
+              <PublicTuneList tunes={post.tunes} canAdd={!post.isMine} card />
             )}
           </ScrollView>
       </SafeAreaView>
 
       <ConfirmDialog
         visible={confirmDelete}
-        title={`Delete "${post.title}"?`}
+        title={`Delete “${post.title}”?`}
         message="This removes it from Community for everyone. It doesn't touch anyone who already added it."
         confirmLabel="Delete"
         onConfirm={() => void handleDelete()}

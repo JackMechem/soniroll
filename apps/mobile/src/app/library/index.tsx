@@ -8,23 +8,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionSheet } from '@/components/ActionSheet';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { LibraryHeader } from '@/components/TabHeader';
-import { EmptyState, IconButton, SearchField, SectionHeader } from '@/components/ui';
+import { EmptyState, IconButton, SearchField, SectionHeader, SortControl } from '@/components/ui';
 import { BookIcon, ChevronRightIcon, MusicNoteIcon, PlusIcon, StarOutlineIcon } from '@/components/icons';
 import { TuneRow } from '@/components/library/TuneRow';
 import { useTuneMenu } from '@/components/library/useTuneMenu';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { StandardsPicker } from '@/components/StandardsPicker';
 import { useRecentItems } from '@/lib/chordChartRecents';
-import { tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { useTuneOrder, TUNE_ORDERS } from '@/components/library/tuneOrder';
+import { TUNE_LIST_IDS, TUNE_LIST_SHORT, tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 const PREVIEW = 5;
 const SEARCH_LIMIT = 25;
 
 /**
- * The Tunes tab (route `/library`) — only about tunes: Tunes I Know and Tunes to Learn, each with
- * its count in its heading and "See all", the tunes you opened most recently, and the tunes you
- * added most recently in each list; one search box covers both (hidden while there are none).
+ * The Tunes tab (route `/library`) — only about tunes: Tunes I Know, Tunes to Learn and the
+ * Library list (tunes that came in with chord charts, shown once there are some), each with its
+ * count in its heading and "See all", the tunes you opened most recently, and a few tunes from
+ * each list (newest or A–Z); one search box covers all three (hidden while there are none).
  * Setlists have their own tab. The + adds a jazz standard, a new tune or a tune to learn; an empty
  * list says what it's for and offers the same. Every tune has the tune ⋮ menu (`useTuneMenu`: edit, link / open / edit
  * its chord chart, move between lists, delete). Chord charts have a tab of their own
@@ -43,16 +45,19 @@ function LibraryScreen() {
   const [addingStandard, setAddingStandard] = useState<TuneListId | null>(null);
   const [listAdd, setListAdd] = useState<TuneListId | null>(null);
 
+  const [order, setOrder, ordered] = useTuneOrder();
+
   const tunes = lists.tunes.tunes;
   const learn = lists.learn.tunes;
+  const library = lists.library.tunes;
 
   const q = query.trim().toLowerCase();
   const results = useMemo(() => {
     if (!q) return null;
     const words = q.split(/\s+/);
-    const matchTune = (t: Tune) => words.every((w) => `${t.name} ${tuneSummary(t)}`.toLowerCase().includes(w));
-    return { tunes: tunes.filter(matchTune), learn: learn.filter(matchTune) };
-  }, [q, tunes, learn]);
+    const matchTune = (t: Tune) => words.every((w) => `${t.name} ${tuneSummary(t)} ${t.keys.map((k) => k.value).join(' ')} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(w));
+    return { tunes: ordered(tunes.filter(matchTune)), learn: ordered(learn.filter(matchTune)), library: ordered(library.filter(matchTune)) };
+  }, [q, tunes, learn, library, ordered]);
 
   if (!ready) return <ScreenSpinner />;
 
@@ -61,32 +66,42 @@ function LibraryScreen() {
   for (const item of recent) {
     if (recentCards.length >= 10) break;
     if (item.kind === 'tune') {
-      const list = (['tunes', 'learn'] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === item.id));
+      const list = TUNE_LIST_IDS.find((l) => lists[l].tunes.some((t) => t.id === item.id));
       const tune = list ? lists[list].tunes.find((t) => t.id === item.id) : undefined;
       if (list && tune) {
         recentCards.push({
           key: `t:${tune.id}`,
           title: tune.name,
-          detail: `${list === 'learn' ? 'To learn' : 'I know'} · ${tune.keys.length} of 12 keys`,
+          detail: `${TUNE_LIST_SHORT[list]} · ${tune.keys.length} of 12 keys`,
           onPress: () => router.push({ pathname: '/library/tune', params: { list, id: tune.id } }),
         });
       }
     }
   }
-  function tuneRow(list: TuneListId) {
-    return function renderTune(tune: Tune) {
+  function tuneRow(list: TuneListId, count: number) {
+    return function renderTune(tune: Tune, i: number) {
       return (
-    <TuneRow
-      key={tune.id}
-      tune={tune}
-      onPress={() => router.push({ pathname: '/library/tune', params: { list, id: tune.id } })}
-      onMenu={() => openTuneMenu(list, tune)}
-    />
+        <TuneRow
+          key={tune.id}
+          tune={tune}
+          first={i === 0}
+          last={i === count - 1}
+          onPress={() => router.push({ pathname: '/library/tune', params: { list, id: tune.id } })}
+          onMenu={() => openTuneMenu(list, tune)}
+        />
       );
     };
   }
+  const preview = (list: TuneListId, items: Tune[]) => {
+    const shown = ordered(items).slice(0, PREVIEW);
+    return <View>{shown.map(tuneRow(list, shown.length))}</View>;
+  };
+  const found = (list: TuneListId, items: Tune[]) => {
+    const shown = items.slice(0, SEARCH_LIMIT);
+    return <View>{shown.map(tuneRow(list, shown.length))}</View>;
+  };
 
-  const empty = tunes.length === 0 && learn.length === 0;
+  const empty = tunes.length === 0 && learn.length === 0 && library.length === 0;
   const addTune = (list: TuneListId) => router.push({ pathname: '/library/tune-edit', params: { list } });
 
   return (
@@ -104,12 +119,15 @@ function LibraryScreen() {
           {results ? (
             <>
               <ResultSection title="Tunes I Know" count={results.tunes.length}>
-                {results.tunes.slice(0, SEARCH_LIMIT).map(tuneRow('tunes'))}
+                {found('tunes', results.tunes)}
               </ResultSection>
               <ResultSection title="Tunes to Learn" count={results.learn.length}>
-                {results.learn.slice(0, SEARCH_LIMIT).map(tuneRow('learn'))}
+                {found('learn', results.learn)}
               </ResultSection>
-              {results.tunes.length + results.learn.length === 0 ? (
+              <ResultSection title="Library" count={results.library.length}>
+                {found('library', results.library)}
+              </ResultSection>
+              {results.tunes.length + results.learn.length + results.library.length === 0 ? (
                 <Text className="font-ui py-6 text-center text-sm" style={{ color: colors.muted }}>
                   Nothing matches &ldquo;{query}&rdquo;.
                 </Text>
@@ -152,6 +170,8 @@ function LibraryScreen() {
                 </View>
               ) : null}
 
+              <SortControl value={order} options={TUNE_ORDERS} onChange={setOrder} />
+
               <View className="gap-1">
                 <SectionHeader
                   title="Tunes I Know"
@@ -167,7 +187,7 @@ function LibraryScreen() {
                     secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('tunes') }}
                   />
                 ) : (
-                  [...tunes].reverse().slice(0, PREVIEW).map(tuneRow('tunes'))
+                  preview('tunes', tunes)
                 )}
               </View>
 
@@ -182,13 +202,25 @@ function LibraryScreen() {
                   {learn.length === 0 ? (
                     <EmptyState
                       title="Nothing to learn yet"
-                      body="Tunes you want to learn, kept apart from your practice list."
+                      body="Add a tune you're working on."
                       action={{ label: 'Add a tune to learn', Icon: PlusIcon, onPress: () => addTune('learn') }}
                       secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('learn') }}
                     />
                   ) : (
-                    [...learn].reverse().slice(0, PREVIEW).map(tuneRow('learn'))
+                    preview('learn', learn)
                   )}
+                </View>
+              ) : null}
+
+              {library.length > 0 ? (
+                <View className="gap-1">
+                  <SectionHeader
+                    title="Library"
+                    count={library.length}
+                    detail="Came in with chord charts · not sorted yet"
+                    right={<SeeAll href={{ pathname: '/library/tunes', params: { list: 'library' } }} />}
+                  />
+                  {preview('library', library)}
                 </View>
               ) : null}
             </>
@@ -238,10 +270,23 @@ function LibraryScreen() {
   );
 }
 
+/** See all, on a list section's heading. */
+function SeeAll({ href }: { href: Href }) {
+  const { colors } = useAppTheme();
+  const router = useRouter();
+  return (
+    <Pressable onPress={() => router.push(href)} hitSlop={8} accessibilityRole="link" className="h-11 flex-row items-center pl-2">
+      <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+        See all
+      </Text>
+      <ChevronRightIcon color={colors.muted} size={18} />
+    </Pressable>
+  );
+}
+
 /** A list section's links: + (add to it) and See all. */
 function SectionLinks({ href, onAdd, addLabel }: { href: Href; onAdd: () => void; addLabel: string }) {
   const { colors, derived } = useAppTheme();
-  const router = useRouter();
   return (
     <View className="flex-row items-center gap-1">
       <Pressable
@@ -255,12 +300,7 @@ function SectionLinks({ href, onAdd, addLabel }: { href: Href; onAdd: () => void
       >
         <PlusIcon color={colors.foreground} size={18} />
       </Pressable>
-      <Pressable onPress={() => router.push(href)} hitSlop={8} accessibilityRole="link" className="h-11 flex-row items-center pl-2">
-        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-          See all
-        </Text>
-        <ChevronRightIcon color={colors.muted} size={18} />
-      </Pressable>
+      <SeeAll href={href} />
     </View>
   );
 }

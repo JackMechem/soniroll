@@ -27,6 +27,7 @@ import {
   SearchIcon,
   SetlistIcon,
   ShieldIcon,
+  TrashIcon,
   SlidersIcon,
   UserIcon,
   UsersIcon,
@@ -56,9 +57,9 @@ type Item = SearchItem;
     for them ("theme", "dark mode", "goal"). `account` ones only show signed in. */
 const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?: string; words: string; icon: Icon; account?: boolean }[] = [
   { group: "Pages", href: "/dashboard", label: "Dashboard", words: "home start today", icon: HomeIcon },
-  { group: "Pages", href: "/tunes/list?list=tunes", label: "Tunes I Know", detail: "Library", words: "library tunes repertoire songs list", icon: ListIcon },
-  { group: "Pages", href: "/tunes/list?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
-  { group: "Pages", href: "/tunes/list?list=library", label: "Library list", detail: "Tunes that came with charts", words: "library tunes unsorted imported charts list", icon: ListIcon },
+  { group: "Pages", href: "/tunes?list=tunes", label: "Tunes I Know", detail: "Library", words: "library tunes repertoire songs list", icon: ListIcon },
+  { group: "Pages", href: "/tunes?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
+  { group: "Pages", href: "/tunes?list=library", label: "Library list", detail: "Tunes that came with charts", words: "library tunes unsorted imported charts list", icon: ListIcon },
   { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library · Tunes", words: "library gig set list", icon: SetlistIcon },
   { group: "Pages", href: "/chord-charts/import", label: "Import chord charts", detail: "Library", words: "import ireal playlist link charts", icon: ChordChartIcon },
   { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents audio", icon: FileIcon, account: true },
@@ -82,7 +83,10 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Settings", href: "/account?tab=tools", label: "Tool settings", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
   { group: "Settings", href: "/account?tab=practice", label: "Shed Log settings", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
   { group: "Settings", href: "/account?tab=storage", label: "Storage plan", detail: "Account", words: "storage plan subscription subscribe cancel billing payment receipts card upgrade gb cloud", icon: CloudIcon, account: true },
-  { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password email google login sign in", icon: ShieldIcon, account: true },
+  { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password change email google login sign in", icon: ShieldIcon, account: true },
+  { group: "Settings", href: "/account?tab=danger", label: "Delete account", detail: "Account", words: "account delete remove close erase data", icon: TrashIcon, account: true },
+  // Signed out: the "forgot password" page (sends a reset link).
+  { group: "Pages", href: "/reset-password", label: "Forgot your password?", detail: "Reset it", words: "password forgot reset lost sign in login account", icon: ShieldIcon },
 ];
 
 /** Signed out, the theme and text size are on the account page too (no other settings). */
@@ -337,9 +341,17 @@ export default function CommandPalette() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (!window.matchMedia("(min-width: 1024px)").matches) return;
       const target = e.target as HTMLElement;
+      // ⌘K / Ctrl+K works from anywhere, text boxes too, except where the page already used it
+      // (the notation editor's "add a chord") and inside a Shed Notes editor (its own key).
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        if (e.defaultPrevented || target.closest(".cm-editor")) return;
+        e.preventDefault();
+        setOpen(true);
+        return;
+      }
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (target.closest("input, textarea, select, [contenteditable='true']")) return;
       e.preventDefault();
       setOpen(true);

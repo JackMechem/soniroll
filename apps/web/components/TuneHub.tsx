@@ -1,7 +1,9 @@
 "use client";
 
+import { UNDER_TUNES } from "@/components/library/hrefs";
+import PageBar from "@/components/PageBar";
 import { ChartPaper } from "@/components/library/chartView";
-import { gridKeyName, Hero, KeyBadge, keyColor, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
+import { gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
@@ -20,7 +22,7 @@ import { playAlongHref } from "@/components/library/usePlayAlong";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
 import { TuneFiles } from "@/components/files/FileParts";
 import TuneShareDialog from "@/components/files/TuneShareDialog";
-import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
+import { BassIcon, CheckIcon, ChordChartIcon, DotsVerticalIcon, DownloadIcon, LibraryIcon, LinkIcon, PencilIcon, RepeatIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { goBackOr } from "@/lib/goBack";
 import { makeId, type Tune } from "@/lib/types";
@@ -32,6 +34,7 @@ import { TagEditor } from "@/components/library/TagEditor";
 import {
   addChartsToTune,
   allTags,
+  linkedChartIds,
   makeMainChart,
   removeChartFromTune,
   tuneChartIds,
@@ -68,12 +71,15 @@ export default function TuneHub({ id, list: listParam }: { id: string; list?: st
 
   if (!found) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-3 px-4 py-24 text-center">
-        <p className="text-sm text-muted">That tune isn&apos;t in your lists.</p>
-        <Link href="/tunes" className="text-sm font-semibold text-accent">
-          Go to your tunes
-        </Link>
-      </div>
+      <LibraryPage>
+        <PageBar crumbs={[...UNDER_TUNES, { label: "Tune" }]} icon={LibraryIcon} />
+        <div className="mx-auto flex max-w-xl flex-col items-center gap-3 py-16 text-center">
+          <p className="text-sm text-muted">That tune isn&apos;t in your lists.</p>
+          <Link href="/tunes" className="text-sm font-semibold text-accent">
+            Go to your tunes
+          </Link>
+        </div>
+      </LibraryPage>
     );
   }
   return (
@@ -119,7 +125,14 @@ function Hub({
   const { allSongs: librarySongs, loading: libraryLoading } = useChordChartsLibrary(null);
   const chartIds = libraryLoading ? linkedIds : linkedIds.filter((cid) => librarySongs.some((s) => s.id === cid));
   const shownChartId = pickedChart && chartIds.includes(pickedChart) ? pickedChart : (chartIds[0] ?? null);
-  const { selectedSong: chart, selectedSongLoading, allSongs } = useChordChartsLibrary(shownChartId);
+  const { selectedSong: chart, selectedSongLoading, allSongs, deleteSong } = useChordChartsLibrary(shownChartId);
+  // Every chart belongs to a tune, so a chart goes when its tune does (unless another tune has it).
+  const onlyOnThisTune = (ids: string[]) => {
+    const others = (list: Tune[]) => list.filter((t) => t.id !== tune.id);
+    const elsewhere = linkedChartIds({ tunes: others(all.tunes.tunes), learn: others(all.learn.tunes), library: others(all.library.tunes) });
+    return ids.filter((cid) => !elsewhere.has(cid));
+  };
+  const [confirmDeleteChart, setConfirmDeleteChart] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState("");
   const [{ fit: chartFit }, setChartView] = usePersistedSettings(CHART_VIEW_KEY, CHART_VIEW_DEFAULTS);
   const [editing, setEditing] = useState(false);
@@ -232,8 +245,8 @@ function Hub({
     <LibraryPage>
       <Hero
         title={tune.name}
-        color={keyColor(firstKey)}
-        back={() => goBackOr(router, "/tunes")}
+        icon={LibraryIcon}
+        crumbs={UNDER_TUNES}
         leading={<KeyBadge label={firstKey} size="lg" />}
         subtitle={[
           LIST_LABEL[list],
@@ -336,13 +349,11 @@ function Hub({
                               { label: "Link another chart", icon: <LinkIcon className="h-4 w-4 text-muted" />, onSelect: () => setPicking(true) },
                               { label: "Write another chart", icon: <PencilIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(writeChartHref) },
                               {
-                                label: chartIds.length > 1 ? "Unlink this chart" : "Unlink the chart",
-                                icon: <ChordChartIcon className="h-4 w-4 text-muted" />,
-                                onSelect: () => {
-                                  if (!shownChartId) return;
-                                  change((t) => removeChartFromTune(t, shownChartId));
-                                  setPickedChart(null);
-                                },
+                                label: chartIds.length > 1 ? "Delete this chart" : "Delete the chart",
+                                icon: <TrashIcon className="h-4 w-4" />,
+                                danger: true,
+                                divider: true,
+                                onSelect: () => shownChartId && setConfirmDeleteChart(shownChartId),
                               },
                             ],
                           })
@@ -529,7 +540,7 @@ function Hub({
       {picking && (
         <ChartLinkPicker
           songs={allSongs}
-          initialQuery={tune.name}
+          initialQuery={chartIds.length ? "" : tune.name}
           exclude={chartIds}
           onPick={(songId) => {
             change((t) => addChartsToTune(removeMissing(t), [songId]));
@@ -539,12 +550,29 @@ function Hub({
           onClose={() => setPicking(false)}
         />
       )}
+      {confirmDeleteChart && (
+        <ConfirmDialog
+          title={`Delete ${chartIds.length > 1 ? `"${chartLabel(confirmDeleteChart)}"` : "this chart"}?`}
+          message={`It's taken off ${tune.name}${onlyOnThisTune([confirmDeleteChart]).length ? " and deleted for good" : " (another tune still has it)"}.`}
+          confirmLabel="Delete"
+          onConfirm={() => {
+            const cid = confirmDeleteChart;
+            setConfirmDeleteChart(null);
+            const gone = onlyOnThisTune([cid]).length > 0;
+            change((t) => removeChartFromTune(t, cid));
+            if (gone) void deleteSong(cid);
+            setPickedChart(null);
+          }}
+          onCancel={() => setConfirmDeleteChart(null)}
+        />
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={`Delete "${tune.name}"?`}
-          message={`This removes it from ${LIST_LABEL[list]}. Its chord charts are kept.`}
+          message={`This removes it from ${LIST_LABEL[list]}${chartIds.length ? `, along with its chord chart${chartIds.length > 1 ? "s" : ""}` : ""}.`}
           confirmLabel="Delete"
           onConfirm={() => {
+            for (const cid of onlyOnThisTune(chartIds)) void deleteSong(cid);
             setTunes((prev) => prev.filter((t) => t.id !== tune.id));
             setConfirmDelete(false);
             onDeleted();

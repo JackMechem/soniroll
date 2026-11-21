@@ -128,7 +128,7 @@ function Lesson() {
         />
         {teacher || hasNotes ? (
           <View className="flex-row gap-2">
-            {hasNotes ? <SmallButton Icon={NotesIcon} label="Notes" onPress={() => router.push(notesRoute(lessonId, sessionKey))} /> : null}
+            {hasNotes ? <SmallButton Icon={NotesIcon} label="Read all notes" onPress={() => router.push(notesRoute(lessonId, sessionKey))} /> : null}
             {teacher && addActions.length ? <SmallButton primary Icon={PlusIcon} label="Add" onPress={() => setMenu('add')} /> : null}
           </View>
         ) : null}
@@ -217,7 +217,7 @@ function Lesson() {
       ) : null}
       <ConfirmDialog
         visible={confirm?.kind === 'lesson'}
-        title={`Delete "${s?.title ?? ''}"?`}
+        title={`Delete “${s?.title ?? ''}”?`}
         message={`Its notes, assignments (and what ${data.studentName} handed in), files and charts are deleted too.${s?.booked && !s.cancelled ? " The booked time stays booked — cancel it from the Booking card if it's off." : ''}`}
         confirmLabel="Delete"
         onConfirm={() => {

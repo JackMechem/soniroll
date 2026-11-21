@@ -3,7 +3,7 @@ import { mainChartId, removeChartFromTune, replaceMainChart } from '@jam-practic
 import { useRouter } from 'expo-router';
 import type { ComponentType } from 'react';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
@@ -20,6 +20,7 @@ import { StandardsPicker } from '@/components/StandardsPicker';
 import { useChordChartsLibrary, type LibrarySongMeta } from '@/lib/useChordChartsLibrary';
 import { sheetEdge } from '@/components/sheetStyle';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 function blankTune(name = ''): Tune {
   return { id: makeId(), name, tempos: [], keys: [], timeSignature: DEFAULT_TIME_SIGNATURE, notes: '' };
@@ -226,7 +227,7 @@ export function TuneListManager({
 
       <ConfirmDialog
         visible={deleting !== null}
-        title={`Delete "${deleting?.name ?? ''}"?`}
+        title={`Delete “${deleting?.name ?? ''}”?`}
         message="This tune will be removed from this list. This can't be undone."
         confirmLabel="Delete"
         onConfirm={confirmDelete}

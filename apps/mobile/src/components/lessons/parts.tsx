@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { api } from '@jam-practice/convex/_generated/api';
 import { MONTH_NAMES, WEEKDAY_NAMES, WEEKDAY_SHORT, formatShortDate, formatTime, toDateKey } from '@jam-practice/core/practiceLog';
 import type { FunctionReturnType } from 'convex/server';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 
@@ -400,11 +400,15 @@ export function FieldLabel({ children, aside }: { children: ReactNode; aside?: s
 /** Lessons signed out (the website's): what it is for both sides, as the app's one sign-in gate. */
 export function LessonsGate() {
   return (
-    <SignInGateScreen
-      Icon={LessonsIcon}
-      title="Lessons, for teachers and students"
-      body="A page for each student, with everything from their lessons. Free with an account."
-      points={["Teach: notes, files, charts, assignments and routines", "See each student's practice, day by day", "Learn: open your teacher's link and it's all here"]}
-    />
+    <>
+      {/* Signed out on any Lessons screen (Lesson settings, a lesson…), the header says what this is. */}
+      <Stack.Screen options={{ title: 'Lessons' }} />
+      <SignInGateScreen
+        Icon={LessonsIcon}
+        title="Lessons, for teachers and students"
+        body="A page for each student, with everything from their lessons. Free with an account."
+        points={["Teach: notes, files, charts, assignments and routines", "See each student's practice, day by day", "Learn: open your teacher's link and it's all here"]}
+      />
+    </>
   );
 }

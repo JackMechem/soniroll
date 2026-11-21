@@ -112,3 +112,55 @@ uploaded WAV opened in the Slow Downer and the Tuner. 1440 and 390 wide, light a
 overflow or console errors. tsc in web, desktop, mobile, core, convex; `pnpm lint`; mobile eslint.
 **Not verified:** audio by ear, the desktop app, mobile on a device, a real ~1,300-chart account,
 recordings made in the Recorder (Files listed them before this), two tabs racing the first pass.
+
+## Follow-up (2026-11-20, Jack's feedback after the release)
+
+- **Tag filters are OR**: picking several tags shows tunes with *any* of them (they were AND).
+- **No Chord charts page or card.** Every chart belongs to a tune, so the page was confusing.
+  `ChartsDashboard` is deleted (its `chartHref`/`playlistHref` moved to
+  `components/library/hrefs.ts`); `?tab=charts`, `/chord-charts` (Next redirect, desktop router,
+  split-screen panes) and every back link open Tunes. The `/chord-charts` NAV_LINKS entry stays
+  (hidden from the sidebar already; old links and saved panes use it). The chart view, editor,
+  import and folder pages still exist under `/chord-charts/*`.
+- **A chart can't be left without a tune**: the tune page's "Unlink" is now "Delete this chart"
+  (deleted for good unless another tune has it); deleting a tune deletes its charts that no other
+  tune has (the confirm says so); and `useAutoLinkCharts` now links *every* orphan chart each time
+  the Library opens (not only unseen ones; folder tags still only on a chart's first pass).
+
+## UI pass 2 fixes (2026-11-20, web)
+
+- **Link another chart** (tune page, and the row ⋮'s "Link another chart") opens on the full list
+  when the tune already has a chart (searching the tune's own name only found the excluded
+  chart). `ChartLinkPicker` says "No other charts called …" / "You don't have any other chord
+  charts yet" when `exclude` is what emptied it.
+- **Folder wording gone from the chart page and import:** the chart page's Folders card is removed
+  (its "Your tunes" rows show the tune's tags instead); the import page explains tags, and its
+  result line no longer says "into <playlist>". Still left: the chart editor's Folder select and
+  the chart ⋮'s folder items (folders still exist in the backend; a bigger decision).
+- **Filters:** the With/Without charts pills show only when the tunes are a mix; Files hides its
+  source row and type row when there's only one choice in them.
+- **Phones:** the Tunes tab's Import pill is hidden below `sm` (it's in the Add menu); Files' Back
+  up uses a new `ArchiveIcon` (it was a second download arrow).
+- **Menus:** the Add menu and the tune row ⋮ have icons like the tune page's and Files' menus.
+- **Audio preview** (`FilePreviewDialog`): a small dialog for audio, doesn't autoplay (video
+  still does), "Open in Slow Downer" is the main button for audio/video, and "Open in a new tab"
+  is an icon (`ExternalLinkIcon`) in the header; the footer only shows when it has something.
+- Smaller: chart editor toggles are fills, not outlines, and its help is one line plus "More
+  tips"; the Setlists card says "1 setlist"; the New setlist prompt has a placeholder; the
+  signed-out Files pitch no longer promises "any device".
+- Verified in headless Chromium (1440 and 390, light and dark) with a throwaway account, deleted
+  afterwards. Not verified: the desktop app window (tsc only), audio by ear.
+
+## UI pass 5 fixes (2026-11-20, web)
+
+- **`/tunes?list=tunes|learn|library`** opens the Tunes tab on that list (other filters cleared;
+  `LibraryHub` passes it to `TunesDashboard`, which writes it into the saved view once per link,
+  then the pills take over). The ⌘K entries (Tunes I Know, Tunes to Learn, Library list) and the
+  dashboard's stat rows point there now, not at the old `/tunes/list` page.
+- **`/tunes/list`** is kept (it has CSV import/export and bulk delete, nothing else does) but
+  tidied: empty, its bar shows only Import CSV; Delete selected appears once something is ticked;
+  the empty text is "No tunes here yet. Add one, or pick a jazz standard."; the bar has the `?`.
+- **Files on phones**: the two selects are gone. The filter is an edge-faded pill row like Tunes'
+  (one at a time; a group with one choice is left out, as on wider screens), and the order is a
+  select in the list's header, like Tunes' A–Z. The header names the kind when one is picked.
+- **Tune page, phones**: the Recordings card's "Add the song" puts Upload song under its text.

@@ -8,7 +8,7 @@ import { CLICK_SOUNDS, scheduleClick } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
 import { getAudioContext } from "@/lib/metronome";
 import { NOTE_VALUES, NOTE_VALUE_NAMES, SUBDIVISIONS } from "@/lib/meterControls";
-import { SUB_LABELS } from "@jam-practice/core/meterControls";
+import { COMMON_METERS, SUB_LABELS } from "@jam-practice/core/meterControls";
 
 export { SUB_LABELS };
 
@@ -165,6 +165,43 @@ export function TimeSignatureControl({
   );
 }
 
+
+/** "Quick picks": a grid of common time signatures (4/4, 3/4 … 12/8) under a time-signature
+    stepper, drawn as little time signatures. Shared by every tool with a Time popover (Metronome,
+    Tempo Trainer, Time Test, Metric Modulation). `onPick` sets both numbers in one update. */
+export function MeterQuickPicks({
+  beatsPerBar,
+  beatUnit,
+  onPick,
+}: {
+  beatsPerBar: number;
+  beatUnit: number;
+  onPick: (beatsPerBar: number, beatUnit: number) => void;
+}) {
+  return (
+    <OptionGroup title="Quick picks">
+      <div role="radiogroup" aria-label="Common time signatures" className="grid grid-cols-4 gap-2">
+        {COMMON_METERS.map(([b, u]) => (
+          <RewardCard
+            key={`${b}/${u}`}
+            id={`meter:${b}/${u}`}
+            on={beatsPerBar === b && beatUnit === u}
+            label={`${b}/${u}`}
+            onPick={() => onPick(b, u)}
+            className="h-14"
+          >
+            <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
+              <span>{b}</span>
+              <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
+              <span>{u}</span>
+            </span>
+          </RewardCard>
+        ))}
+      </div>
+    </OptionGroup>
+  );
+}
+
 /** A number with arrows either side and a unit after it ("‹ 4 › bars"), styled like the time
     signature control. */
 export function StepperPill({
@@ -229,8 +266,8 @@ export function SubdivisionPicker({ value, onChange, showTitle = true }: { value
               title={s.label}
               aria-label={s.label}
               onClick={() => onChange(s.value)}
-              className={`flex h-[4.25rem] flex-col items-center justify-center gap-1 rounded-md border transition-colors ${
-                on ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
+              className={`flex h-[4.25rem] flex-col items-center justify-center gap-1 rounded-md transition-colors ${
+                on ? "bg-accent/10 text-foreground ring-2 ring-inset ring-accent" : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
               }`}
             >
               <span className="flex h-7 items-end">
@@ -328,8 +365,8 @@ export function ClickSoundCards({
               onChange(c.id);
               previewSound(c.id, volume);
             }}
-            className={`flex h-11 items-center gap-2.5 rounded-md border px-3 text-left text-sm font-medium transition-colors ${
-              on ? "border-accent bg-accent/10" : "border-foreground/15 bg-background hover:bg-surface-hover"
+            className={`flex h-11 items-center gap-2.5 rounded-md px-3 text-left text-sm font-medium transition-colors ${
+              on ? "bg-accent/10 ring-2 ring-inset ring-accent" : "bg-foreground/[0.05] hover:bg-surface-hover"
             }`}
           >
             <svg viewBox="0 0 16 16" className={`h-4 w-4 shrink-0 ${on ? "text-accent" : "text-muted"}`} fill="currentColor" aria-hidden>

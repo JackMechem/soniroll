@@ -6,7 +6,7 @@ import { NAV_LINKS } from "@/components/tools";
 import { RewardProvider } from "@/components/reward/Reward";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
 import { PresetsButton } from "@/components/PresetsChip";
-import { FeedbackHeaderButton } from "@/components/feedback/FeedbackFab";
+import PageBar from "@/components/PageBar";
 import type { ToolPresets } from "@/lib/toolPresets";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
@@ -87,23 +87,23 @@ export default function ToolLayout({
       <div className={`relative flex min-h-full flex-1 flex-col bg-background text-foreground ${rewardOn ? "reward-scope" : ""}`}>
         {/* The header bar (desktop). On phones the title is in the app's top bar, and the ? and the
             stats sit at the top of the page instead. */}
-        <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 px-8 lg:flex">
-          <h1 className="flex min-w-0 items-center gap-2 text-base font-semibold">
-            {TitleIcon && <TitleIcon className="h-[18px] w-[18px] shrink-0 text-muted" />}
-            <span className="truncate" title={title}>{title}</span>
-          </h1>
-          {topic && <IntroButton onClick={intro.show} label={`How ${title} works`} />}
-          {help && <div className="ml-1">{help}</div>}
-          {/* Only the room left over (`basis-0`), cut short with … when the header is tight, so
-              the title and the buttons on the right never get squeezed by it (FB-22). */}
-          {titleExtra && <div className="ml-3 min-w-0 flex-1 basis-0 truncate pr-4">{titleExtra}</div>}
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {presets && <PresetsButton tool={presets} />}
-            {statsHref && <ToolStats href={statsHref} />}
-            {actions}
-            <FeedbackHeaderButton />
-          </div>
-        </div>
+        <PageBar
+          crumbs={[{ label: title, short: link && link.label.length > 24 ? link.short : undefined }]}
+          icon={TitleIcon}
+          intro={topic ? { label: `How ${title} works`, show: intro.show } : undefined}
+          phoneIntro={false}
+          help={help}
+          titleExtra={titleExtra}
+          actions={
+            presets || statsHref || actions ? (
+              <>
+                {presets && <PresetsButton tool={presets} />}
+                {statsHref && <ToolStats href={statsHref} />}
+                {actions}
+              </>
+            ) : undefined
+          }
+        />
 
         {/* Phones: the same row, pinned just under the app's top bar. */}
         <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.25rem)] sm:inset-x-6 lg:hidden">

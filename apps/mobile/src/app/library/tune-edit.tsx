@@ -1,21 +1,21 @@
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tempo, type Tune } from '@jam-practice/core/types';
-import { mainChartId, removeChartFromTune, replaceMainChart } from '@jam-practice/core/tuneLibrary';
+import { addChartsToTune, tuneChartIds } from '@jam-practice/core/tuneLibrary';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useChordChartBrowser } from '@/components/ChordChartList';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
-import { ChordChartIcon, CloseIcon, LinkIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons';
+import { ChordChartIcon, CloseIcon, LinkIcon, PencilIcon, TrashIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
-import { forgetRecentTune } from '@/lib/chordChartRecents';
 import { ChartPickerModal } from '@/components/library/ChartPickerModal';
 import { TimeSignaturePicker } from '@/components/library/TimeSignaturePicker';
+import { useTuneDeletes } from '@/components/library/useTuneMenu';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
-import { asTuneListId, TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { asTuneListId, TUNE_LIST_IDS, TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 function parseTempos(raw: string, previous: Tempo[]): Tempo[] {
   return raw
@@ -30,8 +30,8 @@ function parseTempos(raw: string, previous: Tempo[]): Tempo[] {
 /**
  * Editing a tune's details, as a full page (keys are marked on the tune's hub page instead) (not a bottom sheet — the keyboard comes up from the bottom, so the
  * fields sit at the top of a page instead): name, time signature, tempos, which list
- * it's in, and its linked chord chart — open it, edit it, change or unlink it, or link / create
- * one. Reached from the Library (`app/library/*`). `id` edits an existing tune; without it this is
+ * it's in (Tunes I Know, Tunes to Learn or Library), and its main chord chart — open or edit it,
+ * or link one (other charts, and deleting them, are on the tune's page). Reached from the Library (`app/library/*`). `id` edits an existing tune; without it this is
  * a new tune (optionally pre-named via `name`), added to `list` on Save.
  */
 function TuneEditScreen() {
@@ -53,7 +53,7 @@ function TuneEditScreen() {
   const [temposText, setTemposText] = useState('');
   const [chordChartId, setChordChartId] = useState<string | undefined>(undefined);
   const [picking, setPicking] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { deleteTune, deleteDialogs } = useTuneDeletes(() => router.back());
   const [error, setError] = useState<string | null>(null);
 
   // Fill the form from the tune once the lists have loaded (render-time, so no blank flash).
@@ -83,8 +83,8 @@ function TuneEditScreen() {
       keys: existing?.keys ?? [],
       notes: existing?.notes ?? '',
     };
-    const main = mainChartId(base);
-    const tune: Tune = chordChartId ? replaceMainChart(base, chordChartId) : main ? removeChartFromTune(base, main) : base;
+    // A chart linked here is added; removing or deleting charts happens on the tune's page.
+    const tune: Tune = chordChartId && !tuneChartIds(base).includes(chordChartId) ? addChartsToTune(base, [chordChartId]) : base;
     if (existing && list === startList) {
       lists[list].setTunes((prev) => prev.map((t) => (t.id === tune.id ? tune : t)));
     } else {
@@ -135,7 +135,7 @@ function TuneEditScreen() {
 
         <Field label="List">
           <View className="flex-row gap-2">
-            {(['tunes', 'learn'] as const).map((id) => {
+            {TUNE_LIST_IDS.map((id) => {
               const on = list === id;
               const disabled = id === 'learn' && !canUseLearn;
               return (
@@ -176,19 +176,12 @@ function TuneEditScreen() {
                     <ChipButton label="Edit chart" icon={<PencilIcon color={colors.foreground} size={16} />} onPress={() => router.push({ pathname: '/tool/chord-charts-editor', params: { songId: chordChartId } })} />
                   </>
                 ) : null}
-                <ChipButton label="Change" icon={<LinkIcon color={colors.foreground} size={16} />} onPress={() => setPicking(true)} />
-                <ChipButton label="Unlink" icon={<CloseIcon color={colors.foreground} size={16} />} onPress={() => setChordChartId(undefined)} />
+                {chordChartId !== existing?.chordChartId ? <ChipButton label="Remove" icon={<CloseIcon color={colors.foreground} size={16} />} onPress={() => setChordChartId(undefined)} /> : null}
               </View>
             </View>
           ) : (
             <View className="flex-row gap-2">
               <ChipButton label="Link a chart" icon={<LinkIcon color={colors.foreground} size={16} />} onPress={() => setPicking(true)} grow />
-              <ChipButton
-                label="Create one"
-                icon={<PlusIcon color={colors.foreground} size={16} />}
-                onPress={() => router.push({ pathname: '/tool/chord-charts-new', params: { title: name.trim() } })}
-                grow
-              />
             </View>
           )}
         </Field>
@@ -200,7 +193,7 @@ function TuneEditScreen() {
         ) : null}
 
         {existing ? (
-          <Pressable onPress={() => setConfirmDelete(true)} className="mt-2 flex-row items-center justify-center gap-2 rounded-xl py-3" style={{ backgroundColor: colors.surface }}>
+          <Pressable onPress={() => deleteTune(startList, existing)} className="mt-2 flex-row items-center justify-center gap-2 rounded-xl py-3" style={{ backgroundColor: colors.surface }}>
             <TrashIcon color={colors.danger} size={18} />
             <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.danger }}>
               Delete tune
@@ -218,21 +211,7 @@ function TuneEditScreen() {
           setPicking(false);
         }}
       />
-      <ConfirmDialog
-        visible={confirmDelete}
-        title={`Delete "${existing?.name ?? ''}"?`}
-        message={`This removes it from ${TUNE_LIST_LABEL[startList]}. Its chord chart (if any) is kept.`}
-        confirmLabel="Delete"
-        onConfirm={() => {
-          if (existing) {
-            lists[startList].setTunes((prev) => prev.filter((t) => t.id !== existing.id));
-            forgetRecentTune(existing.id);
-          }
-          setConfirmDelete(false);
-          router.back();
-        }}
-        onCancel={() => setConfirmDelete(false)}
-      />
+      {deleteDialogs}
     </View>
   );
 }

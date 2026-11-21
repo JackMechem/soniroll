@@ -222,6 +222,9 @@ export function HeatGrid({ className = "", weeks: weekCount = 18, bare = false }
               key={key}
               href={`/shed-log?date=${key}`}
               title={m < 0 ? undefined : `${fromDateKey(key).toDateString()} · ${m > 0 ? formatPracticed(m) : "no practice"}`}
+              aria-label={m < 0 ? undefined : `${fromDateKey(key).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}: ${m > 0 ? formatPracticed(m) : "no practice"}`}
+              aria-hidden={m < 0 ? true : undefined}
+              tabIndex={m < 0 ? -1 : undefined}
               className={`aspect-square rounded-[3px] transition-transform hover:scale-125 ${key === today ? "ring-2 ring-accent" : ""}`}
               style={{ gridColumn: w + 1, gridRow: d + 2, background: m < 0 ? "transparent" : LEVEL_BG[dayLevel(m, goalOn(data, key))], pointerEvents: m < 0 ? "none" : undefined }}
             />

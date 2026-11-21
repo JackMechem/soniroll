@@ -28,7 +28,7 @@ import { parseTypedProgression } from '@jam-practice/core/typedProgression';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { router } from 'expo-router';
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Dropdown } from '@/components/Dropdown';
 import { BassIcon, ChevronRightIcon, ChordChartIcon, ChordIcon, DrumIcon, EyeOffIcon, MetronomeIcon, ShuffleIcon, SpeakerIcon } from '@/components/icons';
@@ -59,6 +59,8 @@ import { useToolActivity } from '@/lib/toolTime';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
+import { prettyKeyName } from '@/lib/keyNames';
 
 // The website's two settings keys and defaults (`apps/web/components/RhythmSection.tsx`), so
 // settings follow you between the two: the tune, bass, chords, swing drummer and mix under Bass
@@ -592,7 +594,8 @@ function RhythmSectionScreen() {
   const ts = song?.timeSignature ?? style.meter;
   const meterMismatch = !!song && !style.swing && beatsInMeter(song.timeSignature) !== style.beats;
   const playerName = customPlayer?.name ?? 'Computer';
-  const chartName = noTune ? 'No chart' : typed ? 'Typed chords' : (meta?.title ?? 'Pick a chart');
+  // Short, for the Tune chip ("Typed", not "Typed chords": four chips share a phone's width).
+  const chartName = noTune ? 'No chart' : typed ? 'Typed' : (meta?.title ?? 'Pick a chart');
   const showClave = claveDirectionMatters(style, grooveOpts);
 
   const status = loadError
@@ -726,7 +729,7 @@ function RhythmSectionScreen() {
                 </>
               ) : source === 'chart' ? (
                 <>
-                  <ChartButton title={meta?.title ?? (loading ? 'Loading your charts…' : 'Pick a chart')} detail={meta ? [meta.key, meta.style].filter(Boolean).join(' · ') : ''} action={meta ? 'Change' : 'Choose'} onPress={pickChart} />
+                  <ChartButton title={meta?.title ?? (loading ? 'Loading your charts…' : 'Pick a chart')} detail={meta ? [meta.key ? prettyKeyName(meta.key) : null, meta.style].filter(Boolean).join(' · ') : ''} action={meta ? 'Change' : 'Choose'} onPress={pickChart} />
                   <Field label="Key">
                     <View className="flex-row">
                       <Dropdown
@@ -736,7 +739,7 @@ function RhythmSectionScreen() {
                           stop();
                           update({ transposeKey: v });
                         }}
-                        options={[{ value: '', label: `Original${selectedSong?.key ? ` (${selectedSong.key})` : ''}` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                        options={[{ value: '', label: `Original${selectedSong?.key ? ` (${prettyKeyName(selectedSong.key)})` : ''}` }, ...KEY_NAMES.map((k) => ({ value: k, label: prettyKeyName(k) }))]}
                       />
                     </View>
                   </Field>
@@ -1083,7 +1086,7 @@ function RhythmSectionScreen() {
                       {song.title}
                     </Text>
                     <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
-                      {[song.composer ? formatComposer(song.composer) : null, song.style || null, song.key, `${song.timeSignature.top}/${song.timeSignature.bottom}`].filter(Boolean).join(' · ')}
+                      {[song.composer ? formatComposer(song.composer) : null, song.style || null, song.key ? prettyKeyName(song.key) : null, `${song.timeSignature.top}/${song.timeSignature.bottom}`].filter(Boolean).join(' · ')}
                     </Text>
                   </View>
                   <RhythmChart song={song} activeBar={activeBar} />

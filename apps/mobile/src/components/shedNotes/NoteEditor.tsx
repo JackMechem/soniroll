@@ -1,6 +1,6 @@
 import { titleKey } from '@jam-practice/core/shedNotes';
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, type ComponentType, type Ref } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { PlusIcon, type IconProps } from '@/components/icons';
 import {
@@ -43,6 +43,7 @@ import {
 } from '@/lib/shedNotes/format';
 import type { NoteTemplate } from '@/lib/useShedNotes';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 export type EditorHandle = {
   /** Runs an edit on the text at the cursor (inserting a score or a file from outside). */

@@ -3,38 +3,30 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import FilesPage from "@/components/files/FilesPage";
-import ChartsDashboard from "@/components/library/ChartsDashboard";
 import SetlistsPage from "@/components/library/SetlistsPage";
 import TunesDashboard from "@/components/library/TunesDashboard";
 import { LIBRARY_VIEWS, type LibraryView } from "@/components/library/ui";
 
 /** `/tunes` — the Library: two tabs, Tunes and Files, picked by `?tab=` (see `libraryHref`).
-    Setlists (`?tab=setlists`) and Chord Charts (`?tab=charts`) are pages inside Tunes, with a back
-    button to it; `?tab=recordings` (Recordings was a tab once) opens Files showing recordings.
-    `defaultTab` is for split-screen panes opened as Chord Charts. */
+    Setlists (`?tab=setlists`) is a page inside Tunes, with a back button to it. Every chord chart
+    belongs to a tune, so the old Chord Charts page (`?tab=charts`) opens Tunes; `?tab=recordings`
+    (Recordings was a tab once) opens Files showing recordings. `?list=tunes|learn|library` opens
+    Tunes on that list. */
 export default function LibraryHub({ defaultTab = "tunes" }: { defaultTab?: LibraryView }) {
-  const param = useSearchParams()?.get("tab");
+  const params = useSearchParams();
+  const param = params?.get("tab");
   const tab = LIBRARY_VIEWS.includes(param as LibraryView) ? (param as LibraryView) : defaultTab;
   if (tab === "setlists") return <SetlistsPage />;
-  if (tab === "charts") return <ChartsDashboard />;
   if (tab === "files") return <FilesPage />;
   if (tab === "recordings") return <FilesPage initialSource="recording" />;
-  return <TunesDashboard />;
+  return <TunesDashboard initialList={params?.get("list")} />;
 }
 
-/** Split-screen panes (lib/toolRegistry.tsx): Library, and Library opened on Chord Charts. */
+/** The split-screen pane (lib/toolRegistry.tsx; `/chord-charts` panes open it too). */
 export function LibraryPane() {
   return (
     <Suspense>
       <LibraryHub />
-    </Suspense>
-  );
-}
-
-export function ChartsPane() {
-  return (
-    <Suspense>
-      <LibraryHub defaultTab="charts" />
     </Suspense>
   );
 }

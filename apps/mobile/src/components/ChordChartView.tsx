@@ -6,6 +6,8 @@ import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { ChordQualityText } from '@/components/ChordQualityText';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 export { layoutRows, type PlacedBar };
 
@@ -108,7 +110,7 @@ export default function ChordChartView({
           <Text className="font-ui" style={{ fontSize: 13, color: colors.muted }}>
             {song.style}
             {song.style ? ' · ' : ''}
-            {song.key} · {song.timeSignature.top}/{song.timeSignature.bottom}
+            {withAccidentals(prettyKeyName(song.key))} · {song.timeSignature.top}/{song.timeSignature.bottom}
           </Text>
         </View>
         {headerActions || song.composer ? (
@@ -399,7 +401,13 @@ function BarCell({
         </Text>
       ) : null}
       {timeSignature ? <TimeSignatureGlyph timeSignature={timeSignature} offset={bar.startRepeat ? 12 : 7} /> : null}
-      {content ?? <BarContent bar={bar} />}
+      {/* The chords take the room left beside the time signature (the builder's bars do the same),
+          so the time signature isn't pushed back over the barline. */}
+      {content ?? (
+        <View style={{ flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' }}>
+          <BarContent bar={bar} />
+        </View>
+      )}
     </View>
   );
 }
@@ -511,13 +519,15 @@ function ChordLabel({ slot, scale = 1, muted = false }: { slot: ChordSlot; scale
   }
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-      <Text style={{ fontFamily: 'PetalumaScript', fontSize: ROOT_SIZE * k, fontWeight: '500', color: fg }}>
+      {/* Fixed line heights: Petaluma's chord-symbol glyphs (°, Δ) and the accidentals have taller
+          font metrics, which made B♭°7 sit higher than C-7 in the next bar. */}
+      <Text style={{ fontFamily: 'PetalumaScript', fontSize: ROOT_SIZE * k, lineHeight: ROOT_SIZE * k * 1.25, fontWeight: '500', color: fg }}>
         {slot.letter}
         {slot.accidental ? <Text style={{ fontSize: ROOT_ACCIDENTAL_SIZE * k }}>{ACCIDENTAL_GLYPH[slot.accidental]}</Text> : null}
       </Text>
       {slot.quality ? (
         <View style={{ marginLeft: 4 * k }}>
-          <ChordQualityText quality={slot.quality} style={{ fontSize: QUALITY_SIZE * k, fontWeight: '500', color: fg }} />
+          <ChordQualityText quality={slot.quality} style={{ fontSize: QUALITY_SIZE * k, lineHeight: QUALITY_SIZE * k * 1.3, fontWeight: '500', color: fg }} />
         </View>
       ) : null}
       {slot.bass ? (

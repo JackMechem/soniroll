@@ -33,6 +33,31 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.15",
+    date: "2026-11-21",
+    title: "Polish everywhere",
+    summary: "Every page has the same slim header with a trail of links back, and five rounds of fixes across the site, the desktop app and the phone app.",
+    changes: [
+      {
+        kind: "improved",
+        text: "**One header on every page**, like the tools': the page's icon, name and help, with the pages you came through as links (Library / Tunes / Setlists / your setlist). Phones show the same trail at the top.",
+      },
+      { kind: "improved", text: "Buttons, pills and tiles across the site use soft fills instead of outlines, and keys read D♭ and F♯ everywhere." },
+      { kind: "fixed", text: "PDF editor: Escape closes just the open menu, and keeps the text you were typing. All the tools fit on a phone." },
+      { kind: "fixed", text: "Lessons: a student's page no longer scrolls sideways on phones, and dialog buttons stay in view." },
+      { kind: "fixed", text: "Ear trainers: History only shows after a round you finished. ⌘K / Ctrl+K opens search." },
+      { kind: "improved", text: "Desktop app: a way out of the sign-in page, and clearer Google sign-in." },
+      { kind: "new", text: "Desktop app: **Check for updates** in Settings shows which version you have and finds a newer one." },
+      { kind: "new", text: "Library: show only the tunes **with charts**, or the ones **without charts** yet." },
+      { kind: "improved", text: "Picking several tags now shows the tunes with **any** of them." },
+      {
+        kind: "improved",
+        text: "No separate Chord charts page: every chart lives on its tune. Deleting a tune deletes its charts too, and a tune's chart menu has **Delete this chart** instead of Unlink.",
+      },
+      { kind: "fixed", text: "The import page's options are laid out properly, and going back from it returns to your tunes." },
+    ],
+  },
+  {
     version: "0.10.14",
     date: "2026-11-20",
     title: "Mark up your PDFs, and a simpler Library",

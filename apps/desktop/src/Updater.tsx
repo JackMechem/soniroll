@@ -1,78 +1,34 @@
 import { useEffect, useState } from "react";
-import { check, type Update } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { CloseIcon, DownloadIcon } from "@/components/tools";
+import { checkForUpdates, DOWNLOAD_URL, useUpdateState } from "./updates";
 
 /**
- * Updates, checked once a few seconds after launch (Tauri's updater: the manifest comes from
- * `www.soniroll.com/api/desktop-update`, which points at the newest release's `latest.json`; every
- * update is signed and checked against the public key in tauri.conf.json).
+ * The update card in the corner: checks once a few seconds after launch (the logic is in
+ * `updates.ts`), then shows the install's progress, the restart, a failure, or on Linux that a
+ * new version is out. "Check for updates" in Settings shows its own answers there, so a manual
+ * check only brings this card up once something is installing.
  *
- * - macOS and Windows: downloads and installs straight away, then restarts (on Windows the
- *   installer closes the app and opens the new one).
- * - Linux: only says a new version is out, with a link to the downloads — the .deb, .rpm and Nix
- *   package are updated by their own package managers.
- *
- * Nothing in development builds.
+ * No launch check in development builds.
  */
 
-type State =
-  | { kind: "idle" }
-  | { kind: "available"; version: string }
-  | { kind: "installing"; version: string; done: number; total: number | null }
-  | { kind: "restarting"; version: string }
-  | { kind: "failed"; version: string; message: string };
-
 const CHECK_AFTER_MS = 3000;
-const DOWNLOAD_URL = "https://www.soniroll.com/download";
-const isLinux = () => /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
 
 export default function Updater() {
-  const [state, setState] = useState<State>({ kind: "idle" });
+  const state = useUpdateState();
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     if (import.meta.env.DEV) return;
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      void (async () => {
-        let update: Update | null = null;
-        try {
-          update = await check();
-        } catch (e) {
-          console.warn("Update check failed", e);
-          return;
-        }
-        if (!update || cancelled) return;
-        const version = update.version;
-        if (isLinux()) {
-          setState({ kind: "available", version });
-          return;
-        }
-        setState({ kind: "installing", version, done: 0, total: null });
-        try {
-          let done = 0;
-          await update.downloadAndInstall((event) => {
-            if (event.event === "Started") setState({ kind: "installing", version, done: 0, total: event.data.contentLength ?? null });
-            else if (event.event === "Progress") {
-              done += event.data.chunkLength;
-              setState((s) => (s.kind === "installing" ? { ...s, done } : s));
-            }
-          });
-          setState({ kind: "restarting", version });
-          await relaunch();
-        } catch (e) {
-          setState({ kind: "failed", version, message: e instanceof Error ? e.message : String(e) });
-        }
-      })();
-    }, CHECK_AFTER_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => void checkForUpdates({ manual: false }), CHECK_AFTER_MS);
+    return () => clearTimeout(timer);
   }, []);
 
-  if (state.kind === "idle" || hidden) return null;
+  const shown =
+    (state.kind === "available" && !state.manual) ||
+    state.kind === "installing" ||
+    state.kind === "restarting" ||
+    state.kind === "failed";
+  if (!shown || hidden) return null;
   const closable = state.kind === "available" || state.kind === "failed";
   const frac = state.kind === "installing" && state.total ? Math.min(1, state.done / state.total) : null;
 
@@ -89,7 +45,7 @@ export default function Updater() {
                 <span className="font-semibold">soniroll {state.version} is out.</span> Update with your package manager, or get the new download.
               </p>
               <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 w-fit items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover">
-                Get it
+                Get the download
               </a>
             </>
           )}

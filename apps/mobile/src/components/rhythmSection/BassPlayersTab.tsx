@@ -2,7 +2,7 @@ import { BUILT_IN_PLAYERS, isBuiltInId } from '@jam-practice/core/bassBuiltIns';
 import { emptyTranscription, readImportFile, type Transcription } from '@jam-practice/core/bassTranscription';
 import { importMusicXml } from '@jam-practice/core/musicXml';
 import { useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { BassIcon, ChevronLeftIcon, PencilIcon, PlusIcon, TrashIcon, WaveIcon } from '@/components/icons';
@@ -17,6 +17,7 @@ import { formatShortDate } from '@/components/tool/ear';
 import { Button, EmptyState, ListRow } from '@/components/ui';
 import { useBassPlayers, useTranscription } from '@/lib/useBassPlayers';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 type View_ = { kind: 'players' } | { kind: 'player'; playerId: string } | { kind: 'transcription'; playerId: string; transcriptionId: string };
 type Prompt = { title: string; initial: string; confirm: string; placeholder?: string; onSubmit: (v: string) => void };

@@ -4,7 +4,8 @@ import { File } from 'expo-file-system';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Modal, Platform, Pressable, ScrollView, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View, type LayoutChangeEvent } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import PdfRendererView from 'react-native-pdf-renderer';
@@ -69,7 +70,7 @@ export function FileViewer({ file, onClose, onMore }: { file: ViewerFile | null;
   }
 
   return (
-    <Modal visible animationType="slide" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
+    <FullScreenModal visible animationType="slide" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
       {/* A Modal is outside the app's own gesture root; zooming in here needs one of its own. */}
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
         <View className="flex-row items-center gap-2 px-3 pb-2" style={{ paddingTop: insets.top + 8, backgroundColor: colors.surface }}>
@@ -94,7 +95,7 @@ export function FileViewer({ file, onClose, onMore }: { file: ViewerFile | null;
           <ViewerBody key={url ?? file.name} file={file} kind={kind} bottomInset={insets.bottom} onSend={() => void send()} />
         </View>
       </GestureHandlerRootView>
-    </Modal>
+    </FullScreenModal>
   );
 }
 

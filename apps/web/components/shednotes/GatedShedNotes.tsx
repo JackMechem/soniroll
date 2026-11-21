@@ -2,6 +2,7 @@
 
 import { useConvexAuth } from "@convex-dev/auth/react";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { DocumentIcon } from "@/components/tools";
 import ShedNotes from "./ShedNotes";
@@ -13,19 +14,17 @@ export default function GatedShedNotes({ initialId }: { initialId?: string }) {
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
+        <PageBar crumbs={[{ label: "Shed Notes" }]} icon={DocumentIcon} helpTopic="shed-notes" />
         <LoadingSpinner />
       </div>
     );
   }
   if (isAuthenticated) return <ShedNotes initialId={initialId} />;
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16">
-      <header className="flex flex-col gap-1 border-b border-foreground/10 pb-6">
-        <p className="flex items-center gap-2 text-sm text-muted">
-          <DocumentIcon className="h-4 w-4" /> Shed Notes
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Notes for your practice, linked together.</h1>
-      </header>
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-24">
+      {/* The page's name is in the header bar; the pitch's line is a heading of the page. */}
+      <PageBar crumbs={[{ label: "Shed Notes" }]} icon={DocumentIcon} helpTopic="shed-notes" />
+      <h2 className="text-2xl font-semibold tracking-tight">Notes for your practice, linked together.</h2>
       <p className="text-sm leading-relaxed text-muted">
         Write in markdown, link notes with [[double brackets]] and see what links back, write music notation right in a note, and attach notes to your Shed Log routines and your tunes. Vim keys if you want them.
       </p>

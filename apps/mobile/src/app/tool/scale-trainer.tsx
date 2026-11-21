@@ -68,6 +68,7 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
+import { useStopOnBlur } from '@/lib/useStopOnBlur';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
@@ -258,6 +259,8 @@ function ScaleTrainerScreen() {
   const [nextRound, setNextRound] = useState<ScaleRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/scale-trainer', running);
+  // Leaving the screen stops the session (it would keep timing out questions as misses).
+  useStopOnBlur(running, stop);
   useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
@@ -862,7 +865,7 @@ function ScaleTrainerScreen() {
         ) : null}
       </SettingChip>
 
-      <SettingChip Icon={StopwatchIcon} label="Time per scale" value={`${intervalSeconds} s`}>
+      <SettingChip Icon={StopwatchIcon} label="Timing" title="Time per scale" value={`${intervalSeconds} s`}>
         {locked}
         <SliderField
           label="Time per scale"
@@ -999,7 +1002,8 @@ function ScaleTrainerScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showScaleNotes ? ' · notes shown' : ''}`}
       >
         <SwitchRow

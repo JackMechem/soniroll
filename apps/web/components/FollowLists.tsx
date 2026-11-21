@@ -30,7 +30,7 @@ function PersonList({ people, emptyText }: { people: PersonRow[] | undefined; em
             className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-hover"
           >
             <UserAvatar url={person.avatarUrl} size="sm" />
-            <span className="truncate text-sm font-medium">{person.username}</span>
+            <span className="truncate text-sm font-medium">@{person.username}</span>
           </Link>
         ) : (
           <div

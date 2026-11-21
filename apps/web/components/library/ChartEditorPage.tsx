@@ -1,12 +1,16 @@
 "use client";
 
-import { addChartsToTune } from "@jam-practice/core/tuneLibrary";
+import PageBar, { type Crumb } from "@/components/PageBar";
+import { chartCrumbs } from "@/components/library/chartCrumbs";
+import { UNDER_TUNES } from "@/components/library/hrefs";
+import { LibraryIcon } from "@/components/tools";
+import { addChartsToTune, tuneChartIds } from "@jam-practice/core/tuneLibrary";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef } from "react";
 import ChordChartEditor from "@/components/ChordChartEditor";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PageShell } from "@/components/library/shared";
-import { chartHref } from "@/components/library/ChartsDashboard";
+import { chartHref } from "@/components/library/hrefs";
 import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { goBackOr } from "@/lib/goBack";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -50,9 +54,22 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
       }
     : undefined;
 
+  // The trail above the editor: the chart (and its tune) when editing, the tune when writing one
+  // for a tune, else just Library / Tunes.
+  const editedLinked = editId
+    ? (["tunes", "learn", "library"] as const).flatMap((l) => lists[l].tunes.filter((t) => tuneChartIds(t).includes(editId)).map((t) => ({ tune: t, list: l })))[0]
+    : undefined;
+  const editedTrail = editId && selectedSong ? chartCrumbs(editedLinked, selectedSong.title) : null;
+  const crumbs: Crumb[] = editedTrail
+    ? [...editedTrail.parents, { label: editedTrail.title, href: chartHref(editId!) }]
+    : forTune && tune
+      ? [...UNDER_TUNES, { label: tune.name, href: tuneHref(forTune.list, forTune.id) }]
+      : UNDER_TUNES;
+
   if (loading || (editId && (selectedSongLoading || !selectedSong))) {
     return (
       <PageShell>
+        <PageBar crumbs={[...UNDER_TUNES, { label: editId ? "Edit" : "New chart" }]} icon={LibraryIcon} />
         <div className="flex justify-center py-24">
           {editId && !loading && !selectedSongLoading ? (
             <p className="text-sm text-muted">That chart isn&apos;t in your library.</p>
@@ -67,12 +84,13 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
   return (
     <PageShell wide>
       {editId && selectedSong ? (
-        <ChordChartEditor key={editId} initial={selectedSong} onSave={async (song) => {
+        <ChordChartEditor key={editId} initial={selectedSong} crumbs={crumbs} onSave={async (song) => {
             await updateSong(editId, song);
             recordRecent(editId);
           }} onClose={() => goBackOr(router, chartHref(editId))} />
       ) : (
         <ChordChartEditor
+          crumbs={crumbs}
           playlists={names}
           prefill={prefill}
           defaultPlaylist={playlist && names.includes(playlist) ? playlist : undefined}
@@ -89,7 +107,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
             }
           }}
           onClose={() =>
-            goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : savedId.current ? chartHref(savedId.current) : "/tunes?tab=charts")
+            goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : savedId.current ? chartHref(savedId.current) : "/tunes")
           }
         />
       )}

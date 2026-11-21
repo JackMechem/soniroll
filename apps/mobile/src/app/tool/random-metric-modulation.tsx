@@ -193,7 +193,8 @@ function RandomMetricModulationScreen() {
     .join(', ')}${pool.length > 4 ? ` and ${pool.length - 3} more` : ''}${returnToOriginal ? ' · back to your tempo in between' : ''}`;
 
   const modulationSummary = `${
-    matchToRealignment ? 'When tempos realign' : `Every ${minBarsPerModulation} bar${minBarsPerModulation === 1 ? '' : 's'}`
+    // Short, for the chip: "4 bars" (the label says Modulation; the sheet spells it out).
+    matchToRealignment ? 'When tempos realign' : `${minBarsPerModulation} bar${minBarsPerModulation === 1 ? '' : 's'}`
   } · ${
     enabledRatios.length === 0 || enabledRatios.length === MODULATIONS.length
       ? 'all ratios'
@@ -343,7 +344,7 @@ function RandomMetricModulationScreen() {
             </View>
           </SettingChip>
 
-          <SettingChip Icon={MetronomeIcon} label="Previous tempo click" value={referenceSummary}>
+          <SettingChip Icon={MetronomeIcon} label="Previous tempo" title="Previous tempo click" value={referenceSummary}>
             <SwitchRow
               label="Play the previous tempo too"
               checked={playOriginalTempo}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DisclosureSummary } from "@/components/Disclosure";
 import SwitchRow from "@/components/SwitchRow";
 import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
 import Hint from "@/components/Hint";
@@ -885,49 +886,58 @@ export default function GuessTheChord() {
       sidePanel={
         (history.length > 0 || weakEntries.length > 0) && (
         <>
-          <CollapsiblePanel
-            id="history"
-            title="History"
-            icon={ListIcon}
-            summary={bestMs !== null ? `Best ${formatDuration(bestMs)}` : undefined}
-          >
-            {bestMs !== null && (
-              <p className="text-sm font-medium tabular-nums">
-                Best {formatDuration(bestMs)}
-              </p>
-            )}
-            {matchingHistory.length === 0 ? (
-              <p className="text-sm text-muted">
-                No attempts yet with these settings.
-              </p>
-            ) : (
-              <div className={PANEL_LIST}>
-                {[...matchingHistory]
-                  .sort((a, b) => b.at - a.at)
-                  .map((entry, i) => (
-                    <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
-                      {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
-                      {formatFileDate(entry.at)}
-                    </HistoryRow>
-                  ))}
-              </div>
-            )}
-            {matchingHistory.length > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  updateSettings({
-                    history: history.filter(
-                      (h) => !sameConfig(h.config, currentConfig),
-                    ),
-                  })
-                }
-                className={TEXT_BUTTON_DANGER}
-              >
-                Clear these times
-              </button>
-            )}
-          </CollapsiblePanel>
+          {/* Only finished rounds land here; a stopped round counts toward Struggles only. */}
+          {history.length > 0 && (
+            <CollapsiblePanel
+              id="history"
+              title="History"
+              icon={ListIcon}
+              summary={
+                bestMs !== null
+                  ? `Best ${formatDuration(bestMs)}`
+                  : matchingHistory.length > 0
+                    ? `${matchingHistory.length} ${matchingHistory.length === 1 ? "round" : "rounds"}`
+                    : "None yet"
+              }
+            >
+              {bestMs !== null && (
+                <p className="text-sm font-medium tabular-nums">
+                  Best {formatDuration(bestMs)}
+                </p>
+              )}
+              {matchingHistory.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Finish a round with these settings to see it here.
+                </p>
+              ) : (
+                <div className={PANEL_LIST}>
+                  {[...matchingHistory]
+                    .sort((a, b) => b.at - a.at)
+                    .map((entry, i) => (
+                      <HistoryRow key={i} score={entry.score} total={entry.total} elapsedMs={entry.elapsedMs}>
+                        {entry.config.drillMode ? "Drill" : "Quiz"} ·{" "}
+                        {formatFileDate(entry.at)}
+                      </HistoryRow>
+                    ))}
+                </div>
+              )}
+              {matchingHistory.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateSettings({
+                      history: history.filter(
+                        (h) => !sameConfig(h.config, currentConfig),
+                      ),
+                    })
+                  }
+                  className={TEXT_BUTTON_DANGER}
+                >
+                  Clear these times
+                </button>
+              )}
+            </CollapsiblePanel>
+          )}
 
           <CollapsiblePanel
             id="struggles"
@@ -1315,7 +1325,7 @@ export default function GuessTheChord() {
         // Keyed by the round, so it closes again for each new chord rather than staying open
         // and pushing the progress line off the screen.
         <details key={running ? roundSeed : "idle"} className="w-full max-w-xs text-left text-xs text-muted">
-          <summary className="cursor-pointer select-none text-center font-medium hover:text-foreground">How to type a chord</summary>
+          <DisclosureSummary className="mx-auto">How to type a chord</DisclosureSummary>
           <p className="mt-2">Root, then the quality, then an optional /bass note.</p>
           <ul className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
             <li className="contents"><code>^7</code> <span>or <code>maj7</code>, <code>M7</code>: major 7</span></li>

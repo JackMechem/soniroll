@@ -66,6 +66,7 @@ import { ToneIcon } from '@/components/tool/toolIcons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
+import { useStopOnBlur } from '@/lib/useStopOnBlur';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
@@ -275,6 +276,8 @@ function NoteTrainerScreen() {
   const [nextNote, setNextNote] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/note-trainer', running);
+  // Leaving the screen stops the session (it would keep timing out questions as misses).
+  useStopOnBlur(running, stop);
   useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
@@ -779,7 +782,7 @@ function NoteTrainerScreen() {
 
       {/* How long each note shows (Timed), or how long you have to play it and the pause after
           (Listen): the same setting either way, so one name. */}
-      <SettingChip Icon={StopwatchIcon} label="Time per note" value={`${intervalSeconds} s`}>
+      <SettingChip Icon={StopwatchIcon} label="Timing" title="Time per note" value={`${intervalSeconds} s`}>
         {locked}
         <SliderField
           label="Time per note"
@@ -916,7 +919,8 @@ function NoteTrainerScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${playSound && !listenMode ? (TONES.find((t) => t.value === toneId)?.label ?? 'Played') : 'Silent'}${showNext ? ' · next shown' : ''}`}
       >
         <SwitchRow

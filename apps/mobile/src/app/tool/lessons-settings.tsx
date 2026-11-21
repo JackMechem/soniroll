@@ -30,7 +30,7 @@ import { SwitchRow } from '@/components/SwitchRow';
 import { useGradeColors } from '@/components/tool/ear';
 import { Button } from '@/components/ui';
 import { useNowCoarse } from '@/lib/useClock';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** Monday first, the way most weeks are planned. */
 const WEEK = [1, 2, 3, 4, 5, 6, 0];
@@ -135,6 +135,9 @@ function Settings({ initial, features }: { initial: Availability; features: Less
   }, [draft, now]);
   const zones = useMemo(() => [...new Set([draft.timeZone, localTz(), ...ZONES])], [draft.timeZone]);
   const zoneLabel = useMemo(() => zoneName(draft.timeZone), [draft.timeZone]);
+  // The zone once: "Europe/London (GMT)", or just "GMT" when its name is the zone ("In GMT (GMT)").
+  const zonePlace = draft.timeZone.replace(/_/g, ' ');
+  const zoneText = zonePlace === zoneLabel ? zoneLabel : `${zonePlace} (${zoneLabel})`;
 
   function patch(p: Partial<Availability>) {
     setDraft((d) => ({ ...d, ...p }));
@@ -210,7 +213,7 @@ function Settings({ initial, features }: { initial: Availability; features: Less
                 </Text>
               ) : null}
               <Text className="font-ui -mt-1 px-0.5 text-xs" style={{ color: colors.muted }}>
-                When you usually teach — students request lessons from these times. In {draft.timeZone.replace(/_/g, ' ')} ({zoneLabel}).
+                When you usually teach — students request lessons from these times. In {zoneText}.
               </Text>
               <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
                 {WEEK.map((wd, idx) => {
@@ -230,8 +233,8 @@ function Settings({ initial, features }: { initial: Availability; features: Less
                           value={mine.length > 0}
                           onValueChange={(on) => (on ? addRange(wd) : setWindows(windows.filter((w) => w.weekday !== wd)))}
                           accessibilityLabel={`Teach on ${WEEKDAYS[wd]}`}
-                          trackColor={{ true: colors.accent, false: colors['surface-hover'] }}
-                          thumbColor="#ffffff"
+                          trackColor={{ true: withAlpha(colors.accent, 0.45), false: withAlpha(colors.foreground, 0.15) }}
+                          thumbColor={mine.length > 0 ? colors.accent : colors.muted}
                         />
                       </View>
                       {mine.map(({ w, i }) => (

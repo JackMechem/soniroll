@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { CheckIcon, DownloadIcon, PhoneIcon } from "@/components/tools";
 import { inDesktopApp } from "@/lib/deviceFiles";
 import { MOBILE_PATH } from "@/lib/androidRelease";
@@ -40,13 +41,14 @@ export default function DownloadPage() {
   const primary = platform && release ? release.downloads[platform][0] : undefined;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "Desktop app" }]} icon={DownloadIcon} />
       <section className="flex flex-col items-start gap-5 rounded-3xl bg-surface px-5 py-8 sm:items-center sm:px-8 sm:py-12 sm:text-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accent">
           <DownloadIcon className="h-6 w-6" />
         </span>
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">soniroll for your computer</h1>
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">soniroll for your computer</h2>
           <p className="max-w-xl text-sm text-muted sm:text-base">The same soniroll as an app of its own, for macOS, Windows and Linux. Free, like everything else.</p>
         </div>
         {desktop ? (

@@ -167,7 +167,8 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
           <Label>What it&apos;s for (optional)</Label>
           <Field value={r.description} onChangeText={(description) => set({ description })} multiline label="What it's for" />
           <Label>Colour</Label>
-          <View className="flex-row flex-wrap gap-2.5">
+          {/* All eight in one row, spread across the card (they wrapped 7 + 1 on a phone). */}
+          <View className="flex-row justify-between">
             {ROUTINE_COLORS.map((c, i) => (
               <Pressable
                 key={c}
@@ -175,10 +176,11 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
                 accessibilityRole="radio"
                 accessibilityLabel={`Colour ${i + 1}`}
                 accessibilityState={{ checked: r.color === i }}
-                className="h-9 w-9 items-center justify-center rounded-full"
+                hitSlop={3}
+                className="h-8 w-8 items-center justify-center rounded-full"
                 style={{ backgroundColor: c }}
               >
-                {r.color === i ? <CheckIcon color="#ffffff" size={18} /> : null}
+                {r.color === i ? <CheckIcon color="#ffffff" size={16} /> : null}
               </Pressable>
             ))}
           </View>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { HintsButton } from "@/components/CollapsiblePanel";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import DesktopUpdates from "@/components/settings/DesktopUpdates";
 import { hideFeedbackFab, showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { VIEW_DEFAULTS, VIEW_KEY } from "@/components/PracticeLog";
@@ -90,6 +91,7 @@ export function GeneralSettings() {
   const [resetting, setResetting] = useState(false);
   return (
     <>
+      <DesktopUpdates />
       <SettingsCard title="Times">
         <div className="flex flex-col gap-2">
           <FieldLabel>Clock</FieldLabel>

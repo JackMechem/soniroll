@@ -7,15 +7,16 @@ import {
   Geist_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/geist';
-import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
+import { useAuthActions } from '@convex-dev/auth/react';
 import { api } from '@jam-practice/convex/_generated/api';
-import { useQuery } from 'convex/react';
+import { useConvexAuth as useBackendAuth, useQuery } from 'convex/react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useAccountWritesGate } from '@/lib/accountScope';
 import { useRecordToolVisits } from '@/lib/toolRecents';
 import { View } from 'react-native';
 
@@ -26,7 +27,7 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { HeaderTitle } from '@/components/HeaderTitle';
 import { ToolHelpButton, toolIntroHref } from '@/components/tool/ToolIntro';
 import { PracticeTimerAlert } from '@/components/PracticeTimerAlert';
-import { PracticeTimerWidget } from '@/components/PracticeTimerWidget';
+import { PracticeTimerHeaderButton } from '@/components/PracticeTimerWidget';
 import { ShedLogGlobal } from '@/components/shedLog/ShedLogGlobal';
 import { ConvexClientProvider } from '@/convex/ConvexClientProvider';
 import { useAppTheme, ThemeProvider } from '@/theme/ThemeProvider';
@@ -48,9 +49,12 @@ SplashScreen.preventAutoHideAsync();
  * Your account is the button at the top right of the main screens (`components/TabHeader.tsx`).
  */
 /** A session whose account is gone (deleted, here or on the website) signs out, rather than
-    leaving a nameless account that can't do anything. */
+    leaving a nameless account that can't do anything. Only once the backend has accepted the
+    sign-in (`convex/react`'s `useConvexAuth`, not the token on the phone): reopening the app after
+    Back closed it, `users.current` could answer `null` for the moment before, and that signed you
+    out. */
 function SignOutIfAccountGone() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated } = useBackendAuth();
   const user = useQuery(api.users.current, isAuthenticated ? {} : 'skip');
   const { signOut } = useAuthActions();
   useEffect(() => {
@@ -59,13 +63,15 @@ function SignOutIfAccountGone() {
   return null;
 }
 
-/** A header's right side: a tool that's playing (`NowPlaying.tsx`; on every screen with a
-    header — the main screens show it on the tab bar), then on a tool's screen its ? button (see
+/** A header's right side: the running Practice Timer and a tool that's playing
+    (`PracticeTimerWidget.tsx`, `NowPlaying.tsx`; on every screen with a header — the main screens
+    show them on the tab bar), then on a tool's screen its ? button (see
     `components/tool/ToolIntro.tsx`). */
 function headerRight(routeName: string) {
   const href = toolIntroHref(routeName);
   const Right = () => (
     <View className="flex-row items-center gap-1">
+      <PracticeTimerHeaderButton routeName={routeName} />
       <NowPlayingHeaderButton routeName={routeName} />
       {href ? <ToolHelpButton href={href} /> : null}
     </View>
@@ -76,6 +82,7 @@ function headerRight(routeName: string) {
 function RootNavigator() {
   const { colors, derived } = useAppTheme();
   useRecordToolVisits();
+  useAccountWritesGate();
 
   return (
     <View style={{ flex: 1 }}>
@@ -104,7 +111,7 @@ function RootNavigator() {
         {/* Titles up front, so the header is right the instant a screen is pushed — each screen
             mounts its real content a frame later (see `components/ScreenLoader.tsx`), and its own
             <Stack.Screen options> only apply once it mounts. Dynamic titles ('') fill in then. */}
-        <Stack.Screen name="liked-posts" options={{ title: 'Liked Posts' }} />
+        <Stack.Screen name="liked-posts" options={{ title: 'Liked posts' }} />
         <Stack.Screen name="post/[id]" options={{ title: 'Post' }} />
         <Stack.Screen name="u/[username]" options={{ title: 'Profile' }} />
         <Stack.Screen name="tool/chord-charts" options={{ title: 'Chord Charts' }} />
@@ -179,10 +186,8 @@ function RootNavigator() {
       </Stack>
       {/* A sibling of Stack so it persists across navigation instead of remounting per screen. */}
       <FloatingTabBar />
-      {/* Both read the Practice Timer engine directly and render nothing while no session is
-          running — mounted app-wide (not inside the tool screen itself) so the widget stays
-          visible on every page and the full-screen alert can interrupt you anywhere. */}
-      <PracticeTimerWidget />
+      {/* The running Practice Timer shows on the tab bar and in headers (`PracticeTimerWidget.tsx`);
+          its full-screen alert is mounted app-wide so it can interrupt you anywhere. */}
       {/* The media notification that keeps a playing tool going in the background. */}
       <NowPlayingService />
       <PracticeTimerAlert />

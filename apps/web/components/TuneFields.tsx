@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import NumberField from "@/components/NumberField";
+import { gridKeyName, prettyKey } from "@/components/library/ui";
 import { MAX_BEATS, MAX_BEAT_UNIT, SIGNATURE_PRESETS, parseMeter } from "@/lib/meters";
 import { Key, Tempo, makeId } from "@/lib/types";
 
 const pill = (on: boolean) =>
-  `rounded-md border px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
-    on ? "border-transparent bg-accent text-accent-foreground" : "border-foreground/15 hover:bg-surface-hover"
+  `rounded-md px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
+    on ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] hover:bg-surface-hover"
   }`;
 
 function Chevron({ open }: { open: boolean }) {
@@ -261,7 +262,7 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
               onClick={() => toggle(value)}
               className={`${pill(chosen.has(value))} px-0 text-center`}
             >
-              {value}
+              {gridKeyName(root, minor)}
             </button>
           );
         })}
@@ -274,7 +275,7 @@ export function KeyPicker({ keys, onChange }: { keys: Key[]; onChange: (keys: Ke
               key={k.id}
               className="flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
             >
-              {k.value}
+              {prettyKey(k.value)}
               <button
                 type="button"
                 onClick={() => onChange(keys.filter((x) => x.id !== k.id))}

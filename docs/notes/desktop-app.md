@@ -754,3 +754,55 @@ with margins — nothing depends on the button. Looks the same in Chromium; not 
 until Jack checks 0.1.10. Lesson: inside a `<button>`, don't size children by percentage/flex/grid
 fractions of its height.
 
+
+## 2026-11-20 — UI pass 1 fixes
+
+- **Blank window under `vite` / `tauri dev`:** the pdf.js worker import went through `@web/node_modules/…?url`,
+  which Vite's dev pre-bundler treats as a package and loses the `?url` export. It's a relative path now
+  (details in `pdf-editor.md`). Release builds weren't affected.
+- **Sign-in had no way out:** `src/pages/SignIn.tsx` (the full-window `/?auth=login`) has a "Not now"
+  `BackButton` at the top left — back in history, or the dashboard when there's none. The window has no
+  browser Back button.
+- **Native audio chip:** sits in the corner now (`right-4 lg:right-6`; the floating feedback button it
+  made room for moved into the header bar) and says "Idle" instead of "Off" when the engine isn't running.
+- Checked with `npx vite --port 1420` in headless Chromium (Tauri internals stubbed); not in the real window.
+- **Pass 3 (2026-11-20):** while the engine is idle, the Native audio chip is just a round speaker
+  button (`SettingChip`'s `trigger`; "Native audio · Idle" as its tooltip). That way it doesn't
+  sit on Rhythm Section's legend or the Time Test chips in smaller windows. It becomes the full
+  chip with the delay once audio runs.
+  - Checked idle and open at 800 and 1280 under Vite.
+  - The running look wasn't seen: the stubbed engine never reports running.
+
+## 2026-11-20 — UI pass 4 fixes
+
+- **Continue with Google** (`AccountMenu.tsx`): in the desktop app, once Google's page has opened
+  in the system browser the form says "Finish signing in in your browser, then come back here.
+  Open it again" and the button is enabled again. Before, it sat disabled with no word, and stayed
+  that way if the tab was closed. `GoogleSignIn.tsx` shows a small toast, "Couldn't finish Google
+  sign-in. Try again from Sign in.", when the code exchange fails (it only logged).
+- The Linux updater toast's button says "Get the download" (was "Get it").
+- **Not verified at runtime**: both need the real Tauri window (read and type-checked only).
+
+## 2026-11-21 — Check for updates in Settings (0.1.12)
+
+Jack: a way in Settings to check for updates, so people can see whether their app is up to date.
+
+- **One update store:** `src/updates.ts` holds the update state (`useSyncExternalStore`) and
+  `checkForUpdates({ manual })` / `installUpdate()`. The launch check (`Updater.tsx`, 3 s after
+  opening, not in dev) and Settings both go through it, so they never disagree or check twice at
+  once. At launch an update on macOS/Windows still installs straight away; from Settings it waits
+  for **Update now**. A failed check is quiet at launch and says so in Settings.
+- **Settings → Updates** (`src/UpdatesSettings.tsx`): "You're on soniroll X for desktop", a status
+  line (newest version and when it was checked / X is out / updating / couldn't check) and the
+  button for the moment (Check for updates, Update now, or Get the download on Linux and after a
+  failed install). It's the website's `components/settings/DesktopUpdates.tsx` (renders nothing),
+  swapped by an exact alias in `vite.config.ts`, like `siteOrigin`. It shows at the top of
+  Account → General, and under Theme and display when signed out (that page is all a signed-out
+  person gets, and they need updates too).
+- The corner card no longer shows "X is out" for a check started from Settings (Settings says it);
+  it still shows the install's progress and the restart.
+- Checked under `npx vite --port 1420` in headless Chromium with `__TAURI_INTERNALS__` stubbed:
+  newest version, update out (Linux wording; Mac user agent → Update now → download → restart
+  calls in order), a failed check; light, dark, 390 wide. **Not checked in the real app** or
+  against the real update address — the first real test is 0.1.11 → 0.1.12 itself (0.1.11 updates
+  at launch as before; the new section is in 0.1.12 on).

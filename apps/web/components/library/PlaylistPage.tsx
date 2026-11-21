@@ -1,12 +1,13 @@
 "use client";
 
+import { UNDER_TUNES } from "@/components/library/hrefs";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { chartHref } from "@/components/library/ChartsDashboard";
-import { ChartItem, EmptyState, FolderIcon, Hero, HeroSearch, LibraryPage, Pill, Rows, Toolbar } from "@/components/library/ui";
+import { chartHref } from "@/components/library/hrefs";
+import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, Pill, Rows, Toolbar } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
-import { ChordChartIcon, DotsVerticalIcon, PlusIcon } from "@/components/tools";
+import { DotsVerticalIcon, LibraryIcon, PlusIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 
@@ -15,7 +16,7 @@ import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 export default function PlaylistPage({ id }: { id: string }) {
   const router = useRouter();
   const { playlists, allSongs, loading } = useChordChartsLibrary(null);
-  const { openSongMenu, openPlaylistMenu, element } = useChartActions({ onPlaylistDeleted: () => router.push("/tunes?tab=charts") });
+  const { openSongMenu, openPlaylistMenu, element } = useChartActions({ onPlaylistDeleted: () => router.push("/tunes") });
   const [query, setQuery] = useState("");
   const isAll = id === ALL_CHARTS_ID;
   const playlist = useMemo(
@@ -46,11 +47,9 @@ export default function PlaylistPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={playlist?.name ?? "Folder"}
-        icon={isAll ? ChordChartIcon : FolderIcon}
-        backHref="/tunes?tab=charts"
-        backLabel="Chord Charts"
+        icon={LibraryIcon}
+        crumbs={UNDER_TUNES}
         subtitle={playlist ? `${isAll ? "Every chart in your library" : "Folder"} · ${playlist.songs.length} chart${playlist.songs.length === 1 ? "" : "s"}` : undefined}
-        rule={false}
       >
         {/* Search, then a labelled New chart and the folder's ⋮ on the same row (phones too). */}
         {playlist && !loading && (
@@ -76,7 +75,7 @@ export default function PlaylistPage({ id }: { id: string }) {
           <LoadingSpinner />
         </div>
       ) : !playlist ? (
-        <EmptyState boxed title="Folder not found" body="This folder isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
+        <EmptyState boxed title="Folder not found" body="This folder isn't in your library anymore." action={<Pill label="Back to Tunes" href="/tunes" />} />
       ) : songs.length === 0 ? (
         <EmptyState
           boxed

@@ -1,12 +1,12 @@
-import { sortByText } from '@jam-practice/core/sortText';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { MusicNoteIcon, PlusIcon } from '@/components/icons';
-import { EmptyState, IconButton, SearchField } from '@/components/ui';
+import { EmptyState, IconButton, SearchField, SortControl } from '@/components/ui';
 import { TUNE_ROW_H, TuneRow } from '@/components/library/TuneRow';
+import { TUNE_ORDERS, useTuneOrder } from '@/components/library/tuneOrder';
 import { useTuneMenu } from '@/components/library/useTuneMenu';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { StandardsPicker } from '@/components/StandardsPicker';
@@ -14,7 +14,8 @@ import { asTuneListId, TUNE_LIST_LABEL, tuneSummary, useTuneLists } from '@/lib/
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
- * Every tune in one list (Tunes, or Tunes to Learn — `list` param), alphabetical and searchable.
+ * Every tune in one list (Tunes I Know, Tunes to Learn or Library — `list` param), newest first or
+ * A–Z (the same order as the Tunes tab), and searchable.
  * Tap a tune to edit it (full page, `library/tune.tsx`); ⋮ / long-press for the rest (chart
  * linking, moving between lists, deleting). The header's + opens the jazz-standards picker, which
  * also offers "create your own" for anything not in it.
@@ -29,14 +30,15 @@ function TunesListScreen() {
   const { openTuneMenu, tuneMenu } = useTuneMenu();
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState(false);
+  const [order, setOrder, ordered] = useTuneOrder();
 
   const shown = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const filtered = words.length
-      ? tunes.filter((t) => words.every((w) => `${t.name} ${tuneSummary(t)} ${t.notes}`.toLowerCase().includes(w)))
+      ? tunes.filter((t) => words.every((w) => `${t.name} ${tuneSummary(t)} ${t.keys.map((k) => k.value).join(' ')} ${t.notes} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(w)))
       : tunes;
-    return sortByText(filtered, (t) => t.name);
-  }, [tunes, query]);
+    return ordered(filtered);
+  }, [tunes, query, ordered]);
 
   const title = TUNE_LIST_LABEL[list];
 
@@ -53,8 +55,13 @@ function TunesListScreen() {
       ) : (
         <>
           {tunes.length ? (
-            <View className="px-4 pb-2 pt-2">
-              <SearchField value={query} onChangeText={setQuery} placeholder={list === 'learn' ? 'Search tunes to learn' : 'Search tunes you know'} />
+            <View className="gap-2 px-4 pb-3 pt-2">
+              <SearchField
+                value={query}
+                onChangeText={setQuery}
+                placeholder={list === 'learn' ? 'Search tunes to learn' : list === 'library' ? 'Search the Library list' : 'Search tunes you know'}
+              />
+              <SortControl value={order} options={TUNE_ORDERS} onChange={setOrder} />
             </View>
           ) : null}
           <FlatList
@@ -64,9 +71,11 @@ function TunesListScreen() {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: bottomSpace }}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <TuneRow
                 tune={item}
+                first={index === 0}
+                last={index === shown.length - 1}
                 onPress={() => router.push({ pathname: '/library/tune', params: { list, id: item.id } })}
                 onMenu={() => openTuneMenu(list, item)}
               />
@@ -80,8 +89,14 @@ function TunesListScreen() {
                 <View className="pt-2">
                   <EmptyState
                     Icon={MusicNoteIcon}
-                    title={list === 'learn' ? 'Nothing to learn yet' : 'No tunes yet'}
-                    body={list === 'learn' ? 'Tunes you want to learn, kept apart from your practice list.' : 'Jam Practice and Tune of the day pick from these.'}
+                    title={list === 'learn' ? 'Nothing to learn yet' : list === 'library' ? 'Nothing in the Library list' : 'No tunes yet'}
+                    body={
+                      list === 'learn'
+                        ? "Add a tune you're working on."
+                        : list === 'library'
+                          ? 'Tunes that come in with chord charts land here until you move them.'
+                          : 'Jam Practice and Tune of the day pick from these.'
+                    }
                     action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => router.push({ pathname: '/library/tune-edit', params: { list } }) }}
                     secondary={{ label: 'Pick from the standards', onPress: () => setAdding(true) }}
                   />

@@ -2,17 +2,19 @@ import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ChevronRightIcon, LinkIcon, TrashIcon, UnlinkIcon } from '@/components/icons';
 import { PlayButton, SeekBar, TuneSelectModal, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { deleteOnDevice, useDeviceUrl } from '@/lib/deviceFiles';
-import { formatDuration, formatRecordedAt, recordingsApi } from '@/lib/recordings';
+import { formatDuration, formatRecordedDay, recordingsApi } from '@/lib/recordings';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { IconButton } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** One saved recording: play it, rename it, keep notes on it, link it to a tune (or change or
     unlink it), or delete it. Edited name/notes show a Save button in the header; they also save
@@ -110,9 +112,7 @@ function RecordingScreen() {
                 </Text>
               </Pressable>
             ) : (
-              <Pressable onPress={() => setConfirmDelete(true)} accessibilityLabel="Delete recording" className="h-10 w-10 items-center justify-center">
-                <TrashIcon color={colors.danger} size={22} />
-              </Pressable>
+              <IconButton Icon={TrashIcon} color={colors.danger} label="Delete recording" onPress={() => setConfirmDelete(true)} />
             ),
         }}
       />
@@ -122,7 +122,7 @@ function RecordingScreen() {
             <PlayButton playing={active && player.playing} onPress={() => player.toggle(rec._id, rec.url)} size={52} />
             <View className="flex-1">
               <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                {formatRecordedAt(rec.createdAt)} · {formatDuration(rec.durationSec)}
+                {formatDuration(rec.durationSec)} · {formatRecordedDay(rec.createdAt)}
               </Text>
               {!rec.url && rec.device ? (
                 <Text className="font-ui text-xs" style={{ color: colors.muted }}>

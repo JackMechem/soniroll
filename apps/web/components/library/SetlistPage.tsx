@@ -1,5 +1,7 @@
 "use client";
 
+import { SETLISTS_CRUMB, UNDER_TUNES } from "@/components/library/hrefs";
+import PageBar from "@/components/PageBar";
 import { mainChartId } from "@jam-practice/core/tuneLibrary";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
@@ -10,11 +12,11 @@ import { api } from "@jam-practice/convex/_generated/api";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuItem, type MenuState } from "@/components/ContextMenu";
 import PromptDialog from "@/components/PromptDialog";
-import { BackButton, MenuButton, menuPosition } from "@/components/library/shared";
+import { MenuButton, menuPosition } from "@/components/library/shared";
 import { EmptyState, Hero, KeyBadge, LibraryPage, Pill } from "@/components/library/ui";
 import { DraggableList, PlayInfoLine, SetlistTuneDialog, TunePickerModal, playInfo } from "@/components/library/setlistParts";
 import { tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
-import { ChordChartIcon, DotsVerticalIcon, DragIcon, PlusIcon, SetlistIcon, ShareIcon, SlidesIcon, UsersIcon } from "@/components/tools";
+import { ChordChartIcon, DotsVerticalIcon, DragIcon, LibraryIcon, PlusIcon, ShareIcon, SlidesIcon, UsersIcon } from "@/components/tools";
 import { useShareSetlist } from "@/lib/shareSetlist";
 import type { Tune } from "@/lib/types";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -56,7 +58,7 @@ export default function SetlistPage({ id }: { id: string }) {
   if (!setlist) {
     return (
       <LibraryPage>
-        <BackButton href="/tunes?tab=setlists" label="Setlists" />
+        <PageBar crumbs={[...UNDER_TUNES, SETLISTS_CRUMB, { label: "Setlist" }]} icon={LibraryIcon} />
         <EmptyState boxed title="Setlist not found" body="It may have been deleted." action={<Pill label="All setlists" href="/tunes?tab=setlists" />} />
       </LibraryPage>
     );
@@ -148,9 +150,8 @@ export default function SetlistPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={setlist.name}
-        icon={SetlistIcon}
-        backHref="/tunes?tab=setlists"
-        backLabel="Setlists"
+        icon={LibraryIcon}
+        crumbs={[...UNDER_TUNES, SETLISTS_CRUMB]}
         subtitle={
           <span className="flex flex-col gap-1">
             {setlist.description && <span className="whitespace-pre-line text-foreground/80">{setlist.description}</span>}

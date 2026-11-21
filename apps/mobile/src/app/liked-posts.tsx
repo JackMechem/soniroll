@@ -29,7 +29,7 @@ function LikedPostsScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: 'Liked Posts' }} />
+      <Stack.Screen options={{ title: 'Liked posts' }} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}>
           {posts === undefined ? (

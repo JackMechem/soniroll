@@ -14,7 +14,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { ChartMeta, ChartPaper } from "@/components/library/chartView";
 import { Chip } from "@/components/library/ui";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
-import { CheckIcon, ChordChartIcon, CloseIcon, DotsVerticalIcon, GraduationCapIcon, MicIcon, NoteIcon, PencilIcon, TrashIcon } from "@/components/tools";
+import { CheckIcon, ChordChartIcon, CloseIcon, DocumentIcon, DotsVerticalIcon, GraduationCapIcon, MicIcon, PencilIcon, TrashIcon } from "@/components/tools";
 import type { IRealSong } from "@/lib/iRealPro";
 import { describeRepeat, formatMinutesShort, fromDateKey, lessonRoutineId, type Routine, type RoutineReport, todayKey, totalMinutes } from "@/lib/practiceLog";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -96,7 +96,7 @@ export const KIND_FILTERS: { id: LessonItem["kind"] | "all"; label: string }[] =
 ];
 
 const KIND_ICON: Record<LessonItem["kind"], (p: { className?: string }) => ReactNode> = {
-  note: NoteIcon,
+  note: DocumentIcon,
   file: FileIcon,
   chart: ChordChartIcon,
   assignment: ClipboardIcon,
@@ -316,7 +316,7 @@ export function ItemCard({
   /** Hand-in assignments show their hand-in status instead of "Done". */
   const shownDone = item.done && !item.submit;
   return (
-    <article className={`flex flex-col gap-3 rounded-lg border bg-surface p-4 ${overdue ? "border-danger/40" : "border-foreground/10"}`}>
+    <article className={`flex flex-col gap-3 rounded-lg bg-surface p-4 ${overdue ? "ring-1 ring-danger/40" : ""}`}>
       <header className="flex items-start gap-3">
         {item.kind === "assignment" && item.submit ? (
           <span
@@ -449,7 +449,7 @@ export function Dialog({ title, onClose, children, wide = false }: { title: stri
         className={`flex max-h-[92dvh] w-full ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"} flex-col gap-4 overflow-y-auto rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 shadow-2xl sm:rounded-xl`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="sticky -top-5 z-10 -mx-5 -mt-5 -mb-4 flex items-center justify-between gap-3 bg-surface px-5 pb-4 pt-5">
           <h2 className="text-base font-semibold">{title}</h2>
           <button
             type="button"
@@ -465,6 +465,10 @@ export function Dialog({ title, onClose, children, wide = false }: { title: stri
     </div>
   );
 }
+
+/** The action row at the bottom of a `Dialog`: stays in view while the rest scrolls under it. (A
+    sticky offset counts from inside the dialog's padding, hence -bottom-5, as the title's -top-5.) */
+export const dialogFooter = "sticky -bottom-5 z-10 -mx-5 -mb-5 -mt-4 bg-surface px-5 pb-5 pt-4";
 
 export const field = "w-full rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
 
@@ -584,7 +588,7 @@ export function ItemDialog({
       )}
       {kind === "assignment" && <SubmitSettings value={submit} onChange={setSubmit} />}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex justify-end gap-2">
+      <div className={`${dialogFooter} flex justify-end gap-2`}>
         <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
@@ -960,7 +964,7 @@ export function AddStudentDialog({ onClose, onAdded }: { onClose: () => void; on
             )}
           </div>
         )}
-        <div className="flex justify-end gap-2">
+        <div className={`${dialogFooter} flex justify-end gap-2`}>
           <button type="button" onClick={onClose} className={btnSecondary}>
             Cancel
           </button>

@@ -5,7 +5,7 @@ import Hint from "@/components/Hint";
 import NumberField from "@/components/NumberField";
 import Select from "@/components/Select";
 import { MetronomeIcon } from "@/components/tools";
-import { OptionGroup, SoundPicker, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
+import { MeterQuickPicks, OptionGroup, SoundPicker, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
 import type { BeatLevel } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
 import {
@@ -555,6 +555,7 @@ export function TempoHero({
             value={sliderFromBpm(bpm)}
             onChange={(e) => setBpm(bpmFromSlider(Number(e.target.value)))}
             aria-label="Tempo (drag to adjust quickly)"
+            aria-valuetext={`${bpm} BPM`}
             style={
               {
                 "--progress": `${(sliderFromBpm(bpm) / SLIDER_STEPS) * 100}%`,
@@ -609,6 +610,7 @@ export function MeterOptions({
   onChangeBeats,
   onSetBeatUnit,
   onSetSubdivision,
+  onPickMeter,
 }: {
   beatsPerBar: number;
   beatUnit: number;
@@ -618,6 +620,8 @@ export function MeterOptions({
   onSetBeatUnit: (unit: number) => void;
   onSetSubdivision: (n: number) => void;
   onApplyGroups?: (groups: number[]) => void;
+  /** Sets both numbers at once; when given, the common-meter "Quick picks" show too. */
+  onPickMeter?: (beatsPerBar: number, beatUnit: number) => void;
 }) {
   return (
     <>
@@ -629,6 +633,7 @@ export function MeterOptions({
           onSetBeatUnit={onSetBeatUnit}
         />
       </OptionGroup>
+      {onPickMeter && <MeterQuickPicks beatsPerBar={beatsPerBar} beatUnit={beatUnit} onPick={onPickMeter} />}
       <SubdivisionPicker value={subdivision} onChange={onSetSubdivision} />
     </>
   );

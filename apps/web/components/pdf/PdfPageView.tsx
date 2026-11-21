@@ -335,8 +335,8 @@ function SelectionBox({ m }: { m: Mark }) {
   );
 }
 
-/** Typing a text mark, in place on the page. Enter finishes (Shift+Enter for a new line), Escape
-    cancels. */
+/** Typing a text mark, in place on the page. Enter, Escape or clicking away finishes (Shift+Enter
+    for a new line); empty text is dropped, and undo takes back a mistake. */
 function TextInput({ mark, width, aspect, onDone }: { mark: TextMark; width: number; aspect: number; onDone: (text: string | null) => void }) {
   const [text, setText] = useState(mark.text);
   const px = width / UNITS;
@@ -358,7 +358,7 @@ function TextInput({ mark, width, aspect, onDone }: { mark: TextMark; width: num
       onBlur={() => finish(text)}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === "Escape") finish(mark.text || null);
+        if (e.key === "Escape") finish(text);
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
           finish(text);

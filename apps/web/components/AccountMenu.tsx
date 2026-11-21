@@ -10,6 +10,7 @@ import UserAvatar from "@/components/UserAvatar";
 import StreakBadge from "@/components/practicelog/StreakBadge";
 import { CloseIcon, GoogleIcon, UserIcon } from "@/components/tools";
 import { useSiteStatus } from "@/lib/useSiteStatus";
+import { inDesktopApp } from "@/lib/deviceFiles";
 
 
 
@@ -63,6 +64,8 @@ export function AuthForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  // Desktop: Google's page opened in the system browser, and the app waits for it to come back.
+  const [googleInBrowser, setGoogleInBrowser] = useState(false);
 
   async function onSubmitCredentials(e: FormEvent) {
     e.preventDefault();
@@ -129,6 +132,12 @@ export function AuthForm({
       // Redirects the page on success, so this only ever resolves-without-navigating on a real
       // failure (e.g. Google sign-in isn't configured yet on this deployment).
       await signIn("google", googleRedirectTo ? { redirectTo: googleRedirectTo } : undefined);
+      // The desktop app opens Google in the system browser and stays put, so say so (and let the
+      // button be pressed again if that tab got closed).
+      if (inDesktopApp()) {
+        setGoogleInBrowser(true);
+        setGoogleSubmitting(false);
+      }
     } catch {
       setError("Couldn't start Google sign-in.");
       setGoogleSubmitting(false);
@@ -325,6 +334,14 @@ export function AuthForm({
         <GoogleIcon className="h-4 w-4" />
         Continue with Google
       </button>
+      {googleInBrowser && (
+        <p role="status" className="-mt-1 text-center text-xs text-muted">
+          Finish signing in in your browser, then come back here.{" "}
+          <button type="button" onClick={() => void onGoogle()} className="font-medium text-accent hover:underline">
+            Open it again
+          </button>
+        </p>
+      )}
     </>
   );
 }

@@ -5,7 +5,7 @@ import type { Tune } from '@jam-practice/core/types';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CloseIcon, PlusIcon } from '@/components/icons';
@@ -16,6 +16,7 @@ import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useSetlists } from '@/lib/useSetlists';
 import { tuneSummary, useTuneLists } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Posting to Community, as a full page (reached from Community's + or a setlist's ⋮ → Post to
@@ -37,7 +38,7 @@ function NewPostScreen() {
   const { lists, ready: tunesReady } = useTuneLists();
 
   const byId = new Map<string, Tune>();
-  for (const t of [...lists.tunes.tunes, ...lists.learn.tunes]) byId.set(t.id, t);
+  for (const t of [...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes]) byId.set(t.id, t);
 
   const [seeded, setSeeded] = useState(false);
   // Posted from a setlist: the post *is* that setlist — it shows the setlist's current tunes
@@ -113,7 +114,8 @@ function NewPostScreen() {
             {!isAuthenticated ? 'Sign in to post to Community.' : 'Make your profile public before posting to Community.'}
           </Text>
           <Pressable
-            onPress={() => router.replace(isAuthenticated ? '/account/public-profile' : '/profile')}
+            // Pushed, not replaced: Back comes back here, and the form opens once the profile is public.
+            onPress={() => router.push(isAuthenticated ? '/account/public-profile' : '/profile')}
             className="rounded-xl px-4 py-2.5"
             style={{ backgroundColor: colors.accent }}
           >

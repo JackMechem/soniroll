@@ -482,7 +482,7 @@ function ToolMarquee() {
 
 const FEATURES: { id: string; title: string; body: string; icon: typeof MetronomeIcon; href: string; cta: string }[] = [
   { id: "metronome", title: "A metronome that keeps up", body: "Odd meters, subdivisions, accents per click, and structures that chain 11/8 into 12/8 and back.", icon: MetronomeIcon, href: "/metronome", cta: "Open the metronome" },
-  { id: "charts", title: "Chord charts", body: "Read, write, transpose and import charts. Build playlists and open them on any device.", icon: ChordChartIcon, href: "/tunes?tab=charts", cta: "Open chord charts" },
+  { id: "charts", title: "Chord charts", body: "Read, write, transpose and import charts. Build playlists and open them on any device.", icon: ChordChartIcon, href: "/tunes", cta: "Open chord charts" },
   { id: "ear", title: "Ear training", body: "Guess intervals and chords on real piano samples, and drill the ones you keep missing.", icon: EarIcon, href: "/guess-the-interval", cta: "Open Guess the Interval" },
   { id: "sticks", title: "Sticking warmups", body: "Random sticking patterns and rolls in real notation, counted in and looped for drummers.", icon: DrumIcon, href: "/random-sticking-warmup", cta: "Open the warmup" },
   { id: "library", title: "Tunes and setlists", body: "Keep the tunes you know, the keys you know them in, and setlists you can share with the band.", icon: SetlistIcon, href: "/tunes", cta: "Open your tunes" },

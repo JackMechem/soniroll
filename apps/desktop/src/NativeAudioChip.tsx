@@ -20,8 +20,7 @@ function ms(value: number) {
 }
 
 /** Desktop only: which output the native audio plays through, its buffer size, and how much
-    delay that adds. Sits in the bottom-right corner of every tool that makes a sound, next to the
-    feedback button. With `input` (the Recorder) it also picks what to record from. */
+    delay that adds. Sits in the bottom-right corner of every tool that makes a sound. With `input` (the Recorder) it also picks what to record from. */
 export default function NativeAudioChip({ input = false }: { input?: boolean }) {
   const [prefs, setPrefs] = usePersistedSettings("jam-practice-desktop-audio", DEFAULTS);
   const [devices, setDevices] = useState<AudioDevices | null>(null);
@@ -53,12 +52,25 @@ export default function NativeAudioChip({ input = false }: { input?: boolean }) 
   const inputId = inputs.some((d) => d.id === prefs.inputDeviceId) ? prefs.inputDeviceId : "";
 
   return (
-    <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[4.5rem] z-20">
+    // While nothing plays it's just a round speaker button, so it doesn't sit on top of the tool
+    // in a smaller window; it grows into the full chip (with the delay) once sound is running.
+    <div
+      className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-20 lg:right-6"
+      title={total === null ? "Native audio · Idle" : undefined}
+    >
       <SettingChip
         icon={SpeakerIcon}
         label="Native audio"
-        value={total === null ? "Off" : ms(total)}
+        value={total === null ? "Idle" : ms(total)}
         title="Native audio"
+        trigger={
+          total === null
+            ? {
+                className: `flex h-11 w-11 items-center justify-center rounded-full bg-surface text-muted shadow-sm transition hover:bg-surface-hover hover:text-foreground ${open ? "ring-2 ring-accent" : ""}`,
+                content: <SpeakerIcon className="h-5 w-5" />,
+              }
+            : undefined
+        }
         open={open}
         onOpenChange={setOpen}
         headerExtra={<HintsButton on={showHints} onToggle={() => setShowHints((on) => !on)} />}

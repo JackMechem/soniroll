@@ -1,7 +1,7 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { NAV_LINKS_DATA, filterNavLinks, hrefToSlug, type NavLinkInfo } from '@jam-practice/core/navLinks';
 import type { Href } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { LockIcon, StarIcon } from '@/components/icons';
 import { SectionHeader, ToolIcon } from '@/components/ui';
@@ -81,10 +81,22 @@ function FavoriteStar({ item, favorited, onToggle }: { item: NavLinkInfo; favori
 function ToolName({ item, lines, className }: { item: NavLinkInfo; lines: number; className: string }) {
   const { colors } = useAppTheme();
   const locked = useLocked(item.href);
+  const name = toolName(item);
+  // A one-word name shrinks to fit its line rather than breaking mid-word ("Metronom / e") when the
+  // phone's text is large; longer names wrap at their spaces. Only then: Android shrinks a fitted
+  // line even when it fits, so at the normal size "Metronome" came out smaller than "Practice Timer".
+  const { fontScale } = useWindowDimensions();
+  const shrink = !name.includes(' ') && fontScale > 1.1;
   return (
     <View className="flex-row items-center gap-1.5">
-      <Text numberOfLines={lines} className={className} style={{ color: colors.foreground, flexShrink: 1 }}>
-        {toolName(item)}
+      <Text
+        numberOfLines={shrink ? 1 : lines}
+        adjustsFontSizeToFit={shrink}
+        minimumFontScale={0.7}
+        className={className}
+        style={{ color: colors.foreground, flexShrink: 1 }}
+      >
+        {name}
       </Text>
       {locked ? (
         <View accessibilityLabel="Needs an account">

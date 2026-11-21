@@ -1,11 +1,12 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import { useAction, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { InfoButton } from '@/components/InfoButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 function friendlyError(err: unknown, fallback: string): string {
   return err instanceof Error && err.message && err.message.length < 150 ? err.message : fallback;

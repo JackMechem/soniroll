@@ -13,11 +13,13 @@ import { tuneSummary } from "@/components/library/shared";
 import { chartHref, searchCharts } from "@/components/library/useChartSearch";
 import { KeyBadge } from "@/components/library/ui";
 import PracticeTimerWidget from "@/components/PracticeTimerWidget";
+import PageBar from "@/components/PageBar";
 import {
   CATEGORY_COLORS,
   ChevronRightIcon,
   ChordChartIcon,
   CloseIcon,
+  HomeIcon,
   NAV_LINKS,
   NoteIcon,
   PencilIcon,
@@ -371,10 +373,10 @@ export default function Home() {
         return (
           <Card title="Your library">
             <div className="-mx-2 flex flex-col gap-px">
-              <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
-              <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
+              <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes?list=tunes" />
+              <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes?list=learn" />
               <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
-              <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes?tab=charts" detail={playlists.length ? `${playlists.length} folder${playlists.length === 1 ? "" : "s"}` : undefined} />
+              <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes" detail={playlists.length ? `${playlists.length} folder${playlists.length === 1 ? "" : "s"}` : undefined} />
             </div>
           </Card>
         );
@@ -499,13 +501,14 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-20">
+        <PageBar crumbs={[{ label: "Dashboard" }]} icon={HomeIcon} helpTopic="dashboard" />
         {editing ? (
           <div className="sticky top-[calc(env(safe-area-inset-top)+4.5rem)] z-40 flex flex-wrap items-center gap-3 rounded-lg ring-1 ring-foreground/[0.06] bg-surface p-3 pl-4 shadow-lg lg:top-4">
             <PencilIcon className="h-4 w-4 shrink-0 text-muted" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">Editing your dashboard</p>
-              <p className="text-xs text-muted">Drag a card to move it, change its size, or take it off. Add more at the bottom.</p>
+              <p className="text-xs text-muted max-sm:hidden">Drag a card to move it, change its size, or take it off. Add more at the bottom.</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <button type="button" onClick={() => setConfirmReset(true)} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">
@@ -518,11 +521,11 @@ export default function Home() {
           </div>
         ) : (
           <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-center md:justify-between">
-            {/* The title at the same height and size as every other page's; the date under it. */}
+            {/* The page's name is in the header bar; here the greeting, with the date under it. */}
             <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold tracking-tight">
+              <h2 className="truncate text-2xl font-semibold tracking-tight">
                 {isAuthenticated ? `${greeting(today)}${name ? `, ${name}` : ""}` : "Your practice space"}
-              </h1>
+              </h2>
               <p className="mt-0.5 text-sm text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
             </div>
             <div className="flex w-full items-center gap-2 md:w-auto">

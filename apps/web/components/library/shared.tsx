@@ -1,8 +1,6 @@
 "use client";
 
-import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
-import { ICON_BY_ID } from "@/components/help/helpParts";
-import { topicById } from "@/lib/helpContent";
+import PageBar, { type Crumb } from "@/components/PageBar";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChevronLeftIcon, DotsVerticalIcon, PlusIcon, SearchIcon } from "@/components/tools";
@@ -16,7 +14,7 @@ import type { Tune } from "@/lib/types";
 export function PageShell({ children, wide = false, fullWidth = true }: { children: ReactNode; wide?: boolean; fullWidth?: boolean }) {
   return (
     <main
-      className={`mx-auto flex w-full ${wide ? "max-w-5xl" : "max-w-4xl"} flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 ${fullWidth ? "lg:max-w-none lg:px-8" : ""} lg:pt-8`}
+      className={`mx-auto flex w-full ${wide ? "max-w-5xl" : "max-w-4xl"} flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 ${fullWidth ? "lg:max-w-none lg:px-8" : ""} lg:pt-20`}
     >
       {children}
     </main>
@@ -44,42 +42,43 @@ export function BackButton({ onClick, href, label = "Back", className = "" }: { 
   );
 }
 
+/** A page's header: its name in the header bar (`PageBar`, with `crumbs` — the pages above it —
+    and the ? for `helpTopic`), then a line with the `subtitle` and the page's buttons when there
+    are any. `back` is the old back button: used as the one crumb above the page ("Back") when no
+    `crumbs` are given. */
 export function PageHeader({
   title,
   subtitle,
   back,
+  crumbs,
+  icon,
   actions,
   helpTopic,
 }: {
   title: string;
   subtitle?: string;
   back?: () => void;
+  /** The pages above this one, top first; the page's own `title` is added. */
+  crumbs?: Crumb[];
+  icon?: React.ComponentType<{ className?: string }>;
   actions?: ReactNode;
-  /** A Help page topic id: shows the page's icon and a ? for its intro (which also opens by
-      itself on the first visit). */
+  /** A Help page topic id: shows the page's icon and a ? for its intro. */
   helpTopic?: string;
 }) {
-  const topic = helpTopic ? topicById(helpTopic) : undefined;
-  const intro = useIntro(topic);
-  const Icon = topic ? ICON_BY_ID[topic.id] : undefined;
+  const parents = crumbs ?? (back ? [{ label: "Back", onClick: back }] : []);
+  // Buttons with no subtitle beside them go up in the header bar on desktop, rather than alone on
+  // a row of their own (phones, and split-screen panes, keep the row).
+  const inBar = !!actions && !subtitle;
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="min-w-0">
-        {back && (
-          <BackButton onClick={back} className="mb-2" />
-        )}
-        <div className="flex min-w-0 items-center gap-1">
-          <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
-            {Icon && <Icon className="h-5 w-5 shrink-0 text-accent" />}
-            <span className="truncate">{title}</span>
-          </h1>
-          {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
+    <>
+      <PageBar crumbs={[...parents, { label: title }]} icon={icon} helpTopic={helpTopic} actions={inBar ? actions : undefined} />
+      {(subtitle || actions) && (
+        <div className={`flex flex-wrap items-center justify-between gap-3 ${inBar ? "lg:hidden" : ""}`}>
+          {subtitle && <p className="min-w-0 truncate text-sm text-muted">{subtitle}</p>}
+          {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
-        {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
-        {subtitle && <p className="mt-0.5 truncate text-sm text-muted">{subtitle}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
+      )}
+    </>
   );
 }
 

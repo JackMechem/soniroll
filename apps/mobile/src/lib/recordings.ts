@@ -35,7 +35,15 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 /** "Oct 8, 10:45" — plain string work (no `Intl`/`toLocaleString`, slow on Hermes). */
 export function formatRecordedAt(ms: number): string {
   const d = new Date(ms);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  // 12-hour with AM/PM: "0:38" read like a length, next to the take's real length.
+  const h = d.getHours() % 12 || 12;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${h}:${String(d.getMinutes()).padStart(2, '0')} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
+}
+
+/** "Nov 21": the day only, for detail lines that also show the take's length. */
+export function formatRecordedDay(ms: number): string {
+  const d = new Date(ms);
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
 /** Deletes a local take once it's uploaded or discarded. Never throws. */

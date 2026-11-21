@@ -3,7 +3,7 @@ import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import * as Clipboard from 'expo-clipboard';
 import { useMutation, useQuery } from 'convex/react';
 import { useDeferredValue, useEffect, useState } from 'react';
-import { Pressable, Share, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, Text, View } from 'react-native';
 
 import { Dropdown } from '@/components/Dropdown';
 import { CheckIcon, CloseIcon, LinkIcon, ShareIcon } from '@/components/icons';
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui';
 import { UserAvatar } from '@/components/UserAvatar';
 import { errorText, noteLinkUrl } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 type Role = 'read' | 'write';
 type LinkAccess = 'off' | 'invited' | 'anyone';
@@ -125,7 +126,7 @@ export function ShareSheet({ noteId, title, visible, onClose }: { noteId: string
                 className="flex-row items-center gap-2 overflow-hidden rounded-lg px-2 py-1.5"
                 style={{ backgroundColor: derived.fill }}
               >
-                <UserAvatar url={s.avatarUrl} size="sm" />
+                <UserAvatar url={s.avatarUrl} name={s.username} size="sm" />
                 <Text numberOfLines={1} className="font-ui-semibold flex-1 text-sm font-semibold" style={{ color: colors.foreground }}>
                   @{s.username}
                 </Text>
@@ -155,7 +156,7 @@ export function ShareSheet({ noteId, title, visible, onClose }: { noteId: string
                 const label = p.username ? `@${p.username}` : (p.name ?? 'Someone');
                 return (
                   <View key={p.userId} className="flex-row items-center gap-2 rounded-lg px-2 py-1.5" style={{ backgroundColor: derived.fill }}>
-                    <UserAvatar url={p.avatarUrl} size="sm" />
+                    <UserAvatar url={p.avatarUrl} name={p.username ?? p.name} size="sm" />
                     <Text numberOfLines={1} className="font-ui-semibold flex-1 text-sm font-semibold" style={{ color: colors.foreground }}>
                       {label}
                     </Text>

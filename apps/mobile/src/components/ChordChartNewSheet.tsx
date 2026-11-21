@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChordChartIcon, DownloadIcon, FolderPlusIcon } from '@/components/icons';
-import { sheetEdge } from '@/components/sheetStyle';
+import { BottomSheet } from '@/components/BottomSheet';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * What the Chord Charts "+" opens: a bottom sheet choosing **Chord chart** or **Playlist**. The
@@ -47,21 +48,9 @@ export function ChordChartNewSheet({
 
   return (
     <>
-      <Modal visible={visible && !naming} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={{ flex: 1 }} onPress={close} />
-        <View
-          style={{
-            ...sheetEdge(colors),
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingBottom: insets.bottom + 12,
-          }}
-        >
-          <View className="items-center pt-2.5">
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors['surface-hover'] }} />
-          </View>
-          <Text className="font-ui-bold px-5 pb-2 pt-3 text-lg font-bold" style={{ color: colors.foreground }}>
+      <BottomSheet visible={visible && !naming} onClose={close}>
+        <View style={{ paddingBottom: 12 }}>
+          <Text className="font-ui-semibold px-5 pb-2 pt-4 text-base font-semibold" style={{ color: colors.foreground }}>
             Create new
           </Text>
           <ChoiceRow
@@ -91,7 +80,7 @@ export function ChordChartNewSheet({
             />
           ) : null}
         </View>
-      </Modal>
+      </BottomSheet>
 
       <Modal visible={visible && naming} transparent animationType="fade" onRequestClose={close}>
         <Pressable

@@ -13,6 +13,8 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useRecentCharts } from '@/lib/chordChartRecents';
 import type { LibrarySongMeta } from '@/lib/useChordChartsLibrary';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 type Hit = { song: LibrarySongMeta; playlistName: string };
 
@@ -112,7 +114,7 @@ function ChartsScreen() {
                           {r.song.title}
                         </Text>
                         <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                          {[r.song.key, r.playlistName].filter(Boolean).join(' · ')}
+                          {withAccidentals([r.song.key ? prettyKeyName(r.song.key) : null, r.playlistName].filter(Boolean).join(' · '))}
                         </Text>
                       </View>
                     </Pressable>
@@ -123,7 +125,8 @@ function ChartsScreen() {
 
             {totalSongs > 0 || playlists.length > 0 ? (
               <View className="gap-1">
-                <SectionHeader title="Playlists" count={playlists.length} />
+                {/* With no playlists, the All charts row (with its count) is the whole section. */}
+                {playlists.length > 0 ? <SectionHeader title="Playlists" count={playlists.length} /> : null}
                 <FolderRow
                   name="All charts"
                   count={totalSongs}

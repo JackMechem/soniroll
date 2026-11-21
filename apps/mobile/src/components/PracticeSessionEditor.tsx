@@ -6,12 +6,13 @@ import {
   type Segment,
 } from '@jam-practice/core/practiceTimer';
 import { Fragment, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@/components/icons';
 import { OptionGroup, Segmented } from '@/components/tool/reward';
 import { OptionLabel } from '@/components/tool/rhythm';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** The session editor's own working copy — always keeps both `segments` and `pomodoro` around
     regardless of `type`, so switching the type toggle back and forth doesn't throw away whichever

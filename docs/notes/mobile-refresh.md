@@ -378,3 +378,286 @@ day report were on the Shed Log's "left out" list; now they're in.
   stubbed to plain SVG, rasterised with rsvg-convert and Geist) against seeded data — layout and
   text match the website's cards. **Not checked:** anything on a phone or the emulator —
   `toDataURL`'s PNG, the fonts inside it, the share sheet, posting signed in, the toasts' button.
+
+### UI pass 1 fixes (2026-11-20)
+
+A reviewer went over the app on the emulator and graded it 6.5/10; this fixes their list.
+
+- **Community feed:** routine and milestone posts said "0 tunes". `PostListItem` now does what
+  the website's card does: a Routine / Milestone pill, a routine's tasks as the numbered preview and
+  "3 tasks · 50 min" as its footer; a milestone shows no tune count (its card is on the post page).
+- **No more Android teal:** the app theme has no accent, so switches and text cursors were teal on
+  every theme. `components/ThemedTextInput.tsx` is `TextInput` with the accent for the cursor,
+  selection and handles; every screen imports `TextInput` from there now (it's also the ref type).
+  New text fields should too. `SwitchRow` (and Lessons settings' switch) colour the knob: accent on
+  a lighter accent track when on, muted on a faint track when off. A background-coloured knob like
+  the website's was tried first and disappeared on dark themes (Android's knob is bigger than its
+  track).
+- **One sheet look:** `components/BottomSheet.tsx` is the `ToolSheet` frame (inset card, 24 corners,
+  dimmed page, `SheetSlide`, now exported from `SettingChip.tsx`). `ActionSheet` (every ⋮ menu),
+  `SetlistTuneSheet`, `ChordChartSongMenu` and `ChordChartNewSheet` use it; they had no backdrop
+  and a grab handle. `TuneListManager`'s editor still uses the old `sheetEdge` look.
+- **Choice tiles** (`RewardCard`): a faint fill, no outline, `rounded-lg`; picked is an accent tint
+  with a 1.5 dp accent ring (the ring's width is always there, transparent when off, so nothing
+  shifts). Jam Practice's five count-off cards fit one row (`cardWidth="14%"`; the gaps are fixed
+  dp, so 18% wrapped).
+- **Stats sheet:** the four stat cards were surface on a surface sheet; now background, like the
+  cards below them.
+- **Tool intros:** `INTRO_OMIT` in `components/tool/introNotes.ts` drops the website's Help steps and
+  options the phone doesn't have — the Tuner's Record step and Takes, Slow Downer's saved Loops,
+  Shed Notes' command palette, PDF export, zip export/import, vim mappings and word suggestions.
+- **Tune page:** 16 dp padding like other screens, the key grid fills its row (`flexBasis` +
+  `flexGrow`), keys show ♭/♯, the title is in the text colour, and ⋮ is a round `IconButton` like the
+  pencil.
+- **Learn path:** each connector sits under its node (not the row's middle), moved halfway towards
+  the previous node and tilted at it, so the winding trail joins up.
+- **Smaller:** Jam Practice's Click chip value is "8-bar count-off" with "keeps going" in its label
+  (sheet title stays "Click"); the ear trainers' chip is "Sound" (sheet "Sound & display"); the
+  Shed Log's today section is "Time practiced" (it said Today three times); Home's date comes from
+  `useToday()` so it moves on at midnight; Slow Downer's volume sheet is "Playback"; the Tuner says
+  "Listening…" instead of "–"; Jam Practice's empty text reads properly; `EmptyState` always
+  stacks its two buttons.
+
+Checked: `tsc`, `eslint`; on the emulator (debug build, signed in as the throwaway
+`mobile-audit@soniroll.test`), light and dark: Home search cursor, Community feed, Shed Log today,
+Stats sheet, ⋮ menu, the charts' Create new sheet, Metronome's Subdivision / Sound / Time sheets, Jam Practice and its Click
+sheet (switches on and off), Guess the Interval chips and Learn path, the Tuner listening and its
+help, Slow Downer's volume sheet, Library empty states, and add tune → tune page → ⋮ → delete (the
+test tune was deleted; the theme was put back to "Same as my phone"). Not checked: the setlist tune sheet
+and a chart's ⋮ menu on `BottomSheet`, the Lessons settings switch, Home across a
+real midnight, iOS, a release build or a real phone.
+
+### UI pass 2 fixes: the Library catches up with the website (2026-11-20)
+
+A reviewer graded the phone's Library, files and chart reading 6/10; the main finding was that the
+phone's tune model had fallen behind the website's (`docs/notes/library-two-tabs.md`). Fixed:
+
+- **Three tune lists.** `lib/useTuneList.ts` now re-exports `TuneListId` / `TUNE_LIST_IDS` /
+  `TUNE_LIST_LABEL` from `@jam-practice/core/tuneLibrary` and adds the Library list
+  (`useLibraryTunes` in `useSyncedTunes.ts`, key `jam-practice-library-tunes`). Signed in, its
+  `ready` waits for the account's copy (`waitForAccount`), since the phone has usually never cached
+  it. Helpers: `findTune`, `allTunes`, `moveTune`, `chartsOnlyOn`, `useForgetChart`,
+  `useChartLinker`. Library tunes show on the Tunes tab (a third section, only when there are
+  some), its See all, search, Home search, setlist Add tunes / reader, "Link to a tune" /
+  "Attach to a tune", Community's new post. The tune ⋮ moves a tune to either other list.
+- **Every chart belongs to a tune**, as on the website. The tune ⋮ (`useTuneMenu`) has Open / Edit
+  chord chart, Make this the main chart, Link another chart, Write another chart and **Delete this
+  chart** (deleted for good unless another tune has it); "Unlink" and "Change linked chart" are
+  gone. Deleting a tune deletes its charts no other tune has, and the confirm says so
+  (`useTuneDeletes`, also used by the edit page). A chart deleted from its own ⋮ is taken off its
+  tunes. The edit page no longer unlinks or creates charts (it can still link one).
+- **New charts are linked.** "Create one" / "Write another chart" pass `tune=<list>:<id>`, the
+  tune's key and time signature through `chord-charts-new` to the editor, which adds the saved chart
+  to that tune (`addChartsToTune`) and goes back to it. A chart made anywhere else (Charts tab,
+  import, a lesson's "Save to my charts") goes through `useChartLinker` (`linkChartsToTunes`: the
+  tune with its name, else a new Library tune; imports are tagged with the playlist's name). The
+  linker reads the three lists at call time (`hook.read()`) and does nothing until all three are
+  the account's own copy — the phone's synced lists take the server's value only once per session,
+  so a write built from a stale phone copy would overwrite the account's.
+- **No automatic linking pass on the phone** (the website's `useAutoLinkCharts`): for the reason
+  just above, a phone left open while the website imports charts would see them as orphans and make
+  duplicate Library tunes. Older orphan charts still get linked the next time the website's Library
+  opens. That's also why the **Charts tab stays**: it's still the only place for chart playlists and
+  import, and the one way to reach a chart that isn't on a tune yet. Its "Playlists · 0" heading
+  over an "All charts" row is gone when there are no playlists.
+- **Tune page:** a "Chart 1 of 2" picker when a tune has several charts (main first; charts deleted
+  since are left out), the ⋮ acting on the chart shown; a **Files** card (uploads with this tune,
+  opened in the viewer, ⋮ menu, "Add a file" uploads onto the tune — `components/library/TuneFiles.tsx`);
+  ♭/♯ in the key tiles from PetalumaScript (Geist has none); keys shown as "Cm", not "C-".
+- **Recordings tab folded into Files:** four tabs (Tunes · Setlists · Charts · Files). `/recordings`
+  redirects to `/files?filter=source:recording`; Files reads `?filter=`, keeps that filter in its
+  menu even at 0, and says "No recordings yet" with Record. The Recorder's "All takes" opens it. The
+  tab labels reserve their bold width, so switching no longer nudges the row.
+- **Rows:** tune rows are a grouped card (the setlist page's look), with a chart count when there
+  are several and up to two tags. Recent / A–Z on the Tunes tab and See all (`tuneOrder.ts`,
+  remembered on the phone). A file's tune is on its own line in Files.
+- **Status bars:** `components/FullScreenModal.tsx` — a Modal is its own window on Android, so the
+  root `<StatusBar>` never reached it and the clock was white on light themes. It sets the bar style
+  inside the modal and again `onShow` (RN 0.86's StatusBar module applies styles to modal windows
+  too). Used by the standards picker, tune / chart pickers, Link / Attach to a tune, recording
+  picker, file viewer, linked chart, rhythm patterns and score dialog.
+- **Charts:** the time signature was pushed back over the opening barline (the chords' row was 100%
+  wide beside it); the chords now take the remaining width, as in the builder. Chords with ♭ or °
+  sat higher than their neighbours (Petaluma's glyphs have tall metrics): fixed line heights on the
+  root and quality. The transpose menu offers the chart's quality ("D♭m" for a minor chart), with
+  ♭/♯. The chart ⋮ sheet never shows an empty subtitle line.
+- **Smaller:** foreground titles and round ⋮ / trash buttons on the chart view, setlist, setlist
+  reader, tune notes and recording page (`IconButton` takes a `color`); Files → "Attach to a tune"
+  is titled that, and says "Attached … to Autumn Leaves." afterwards; **Open in Slow Downer** for
+  audio and video files (copies the file into the Slow Downer's own list, `saveLocalFile`, and opens
+  `/tool/slow-downer?open=<id>`); recording names use 12-hour time ("Nov 21, 12:38 AM") and detail
+  lines are "0:24 · Nov 21"; curly quotes in delete dialogs; the setlist reader's dots are visible
+  and a page without a chart has "Open the tune".
+- **Bug found on the way:** the Slow Downer couldn't open any file shorter than a few seconds —
+  building the waveform copied past the end of the audio (`copyFromChannel` with a full window at
+  the end; react-native-audio-api reads the whole underlying array even for a `subarray`). Fixed
+  with a right-sized array for the last window.
+- Skipped: naming iReal Pro in the Charts empty state is fine (only the Syncopation source and the
+  sticking book are never named).
+
+Checked: `tsc` and `eslint` in apps/mobile (packages/core unchanged). On the emulator (debug build,
+signed in as the throwaway `mobile-audit@soniroll.test`, data seeded with
+`npx convex run --identity '{"subject":"<userId>|x"}' …`): Tunes tab with all three lists, tags
+and chart counts; a Library tune with two charts (picker, menu, Write another chart → saved and
+linked as chart 3, Delete this chart → gone from the tune and the account); Autumn Leaves → Create
+one (key Gm filled in) → saved and shown on the tune; moving a tune to Tunes I Know; a chart made
+from the Charts tab became a new Library tune; Add a file on a tune; Files: attach to a Library
+tune with the notice, the tune line, Open in Slow Downer (waveform loads); old Recordings link →
+Files on Recordings; the transpose menu; status bars in pickers, light and dark. All test data
+removed afterwards (charts, files, lists, the files pushed to the emulator). **Not checked:** the
+setlist reader's dots and "Open the tune" button, import of a real chart link, signed out, a
+Recorder take's new name, audio by ear, a release build, a real phone.
+
+### UI pass 3 fixes: tools and the Shed Log (2026-11-20)
+
+A reviewer went over every tool and the Shed Log on the emulator (6.5/10). Fixed (commits 718ca85,
+66d4ae9, 7db99f6, b107092):
+
+- **The Practice Timer no longer floats over tools.** The pill sat at the tab bar's height, which on
+  a tool screen (no tab bar) is exactly where the setting chips are, so they couldn't be tapped. It
+  now works like now-playing: on the main screens a strip docked on top of the tab bar
+  (`PracticeTimerStrip`, counted in `useTabBarHeight`, so scrolling pages leave room), elsewhere a
+  small clock pill in the header (`PracticeTimerHeaderButton`), and nothing on the timer's own screen.
+- **Ear trainers stop when you leave their screen** (`lib/useStopOnBlur.ts`, `useFocusEffect`): one
+  left mid-round kept timing out questions and filing them as misses in Struggles. The Metronome
+  family and the Slow Downer still keep playing on purpose.
+- **Chip strip:** the "N more" cell has a set width (84 dp) so the real values get the row, and long
+  values/labels were shortened where they're made (a chip `title` keeps the full name for its sheet).
+  `adjustsFontSizeToFit` was tried and dropped: Android ignores `minimumFontScale`, so values shrank to
+  unreadable sizes.
+- **Learn path:** the trainers pass `scroll={false}` (new on `ToolScreen`) in Learn mode, so the
+  level card sits under the chips and the trail fills the rest and scrolls inside itself with fades.
+  A `flex: 1` ScrollView inside ToolFrame's own ScrollView isn't bounded — the outer one scrolled.
+- Smaller: Metronome / Tempo Trainer stop when switched to an empty Changing meters form; the
+  Metronome's help drops the website-only stats and Log options; History / Struggles clears ask
+  first; Guess the Chord shows ♯/♭ and "Time's up"; Rhythm Section's chart drops an opening 4/4;
+  routine editor (four "When" segments fit, colours in one row), calendar arrows flank the title,
+  share sheet opens on Hours at a 0-day streak.
+- Skipped: Metric Modulation's title on one line (`HeaderTitle` wraps long names on purpose rather
+  than shrinking them); the Sticking Warmup's serif L/R (drawn from VexFlow's Academico outlines, as
+  on the website — Geist would need its own glyph data); the day report's "1m" (matches the website's
+  card).
+
+Checked on the emulator (debug build, signed in as `mobile-audit@soniroll.test`); test data removed
+(the timer's 1 min via "Clear this day's time", Guess the Chord's struggles). Not checked: the Slow
+Downer loop line, the timer strip together with now-playing, audio by ear, a real phone.
+
+## UI/UX pass 4 fixes — accounts, people, About (2026-11-20)
+
+Fixes from pass 4's mobile review (people, account and first impressions). Commits d9bbbd3,
+0c6b13d, 87b8378 and the notes/review commit after them.
+
+- **Another account never sees the last one's data (privacy bug).** A new account signed in on the
+  phone showed the previous account's favorites, "Pick up where you left off", tune lists and
+  Metronome settings, and an edit would then write them into the new account: `useSyncedSettings`,
+  `useSyncedTunes` and the recents kept one AsyncStorage copy for everyone and only ever let the
+  account's value override it when it had one. Now `lib/accountScope.ts` gives every store a mode
+  (`loading` / `device` / `account`, from the token-level `useConvexAuth`, which is true offline
+  too): signed out reads `<key>` (the phone's own, unchanged), signed in reads `<key>:account` (the
+  scheme `liveSynced.ts` already used), and **every `:account` key is deleted whenever the app finds
+  itself signed out** (also at a signed-out cold start, so a killed app can't leak). On a switch the
+  stores drop what they hold (an edit still waiting is sent first) and load the other copy; for the
+  render before the switch they show defaults, and `update` is ignored mid-switch. Practice Timer
+  sessions are no longer mirrored into the signed-out copy. Data saved before this under the plain
+  keys while signed in stays as the phone's signed-out copy (no way to tell it apart). Checked by
+  reading `RKStorage` over `run-as`: account A's Metronome 130 / starred Tuner reached its
+  `syncedSettings` rows, sign-out left no `:account` keys, account B saw defaults.
+- **Routine posts** had a blank page (only milestone and setlist posts had a body):
+  `components/community/PublicRoutineView.tsx` draws the routine like the website's
+  `RoutinePreview` (schedule, tasks with times, subtasks, notes, tool chips that open the tool) with
+  "Add to my Shed Log" (`routineFromPublic`, then the routine's page). Feed milestone cards say their
+  numbers.
+- **Account → About** (signed in and out): What's new, Help, Send feedback, Privacy, Terms, Credits
+  open soniroll.com in the in-app browser (`expo-web-browser`); the app version from
+  `expo-constants` under it. Account also lists Following and Liked posts. Sign up shows the
+  8-character rule and the Terms/Privacy line; sign out's confirm is the accent (`ConfirmDialog`'s
+  new `safe`).
+- **Community/profiles:** `UserAvatar` takes a `name` and draws its first letter on the faint fill
+  (the old fallback sat on an invisible `surface` circle); profiles show Posts after Instruments as
+  feed cards, tune lists five at a time; the post header says "Post"; your own post doesn't offer
+  Add/Learn; the counts row always shows; My posts has an empty state with New post; the New post
+  gate pushes the profile editor so Back returns to the form.
+- **Keys** use `prettyKeyName` in `tuneSummary`, Tune of the day, post chips and setlist rows
+  (Library search also matches the raw "Db").
+- **Lessons wording:** invite link ellipsizes in the middle (Android never ellipsizes `selectable`
+  text), "not practiced yet", no summary line, "Read all notes", note previews joined with " · ",
+  the zone once, a chevron instead of "→"; head-button labels and one-word tool tile names use
+  `adjustsFontSizeToFit` (only one-line, one-word text, so it shrinks just enough — unlike the chip
+  strip, where it shrank values to unreadable sizes).
+- Skipped: hiding "Share their invite link" after a student joins (the website keeps "Copy their
+  invite link" too); the dev-only LogBox toasts for wrong-password errors (Convex's client logs
+  them; not in release builds); custom accent / text size on Theme (deliberately left out).
+
+Checked on the emulator (debug build) with throwaway accounts `uipass4fa`/`uipass4fb` (both
+deleted), light and dark, font scale 1.3 for the tiles and Lessons buttons. The reviewer's
+`uipass4m` was signed out to test sign-in (its password isn't known, so it can't be signed back in;
+the account still exists). Not checked: a real phone, an offline signed-in launch, the student side
+of a lesson page, iOS.
+
+## UI/UX pass 5 fixes — whole app (2026-11-20)
+
+Fixes from pass 5's mobile review (the final whole-app sweep). Commits 6117245, e94520e, 8bcce60
+and the notes commit after them.
+
+- **Old account data moves to the account, once.** Before d9bbbd3 a phone signed in wrote the
+  account's settings, tune lists and recents to the plain keys, which the per-account stores then
+  read as the phone's own signed-out data (the reviewer saw old accounts' tunes, recents and a
+  247 BPM Metronome signed out). `accountScope.ts` now runs `migrateOldCopies` the first time it
+  learns the sign-in state (flag `jam-practice-store-scope-v1`): signed in, each key in a fixed list
+  of what those stores had then (`OLD_SHARED_KEYS`) moves to `<key>:account` unless that already
+  exists, and the plain copies (plus the old Practice Timer session mirror) go; signed out, nothing
+  moves. Copies are written before the plain keys are removed and the flag is set last, so an
+  interrupted run finishes next launch; the stores stay in `loading` meanwhile. The list is fixed on
+  purpose: a key added later never held anyone else's data.
+- **Writes wait for the backend's sign-in.** Reopening the app after Back closed it (the JS stays
+  alive, the screens remount) cleared the old screens' sign-in before the new ones' was back: a
+  debounced write in that gap failed with "Not signed in" (lost in a release build), and
+  `users.current` could answer `null`, which made `SignOutIfAccountGone` **sign you out** (seen
+  on the emulator). Now every account write from the stores (`useSyncedSettings`, the tune lists,
+  `liveSynced`) goes through `sendToAccount`, which holds the newest value per key until
+  `convex/react`'s `useConvexAuth` (the backend's answer, not the token on the phone) says signed in
+  (`useAccountWritesGate`, mounted in the root layout), and drops them only on sign-out.
+  `loading` no longer counts as a switch: the stores keep what they hold (and an edit still waiting)
+  and reset only when the sign-in really changes. Sign out calls `flushAccountWrites()` first.
+  `SignOutIfAccountGone` waits for the backend's sign-in too.
+- **Keys:** `prettyKeyName` on the rest of the screens (setlist rows and reader, pickers, chart
+  editor/view/pager, Charts' Recently opened, Rhythm Section), and `withAccidentals()`
+  (`components/Accidentals.tsx`) draws ♭/♯ in PetalumaScript inside any `<Text>` (Geist has none;
+  the fallback looked like a subscript "b").
+- **Setting chips:** a cell's inner `Pressable` was `flex-1`, whose zero basis made every cell the
+  same width — the real cause of "Root posit…", "Progressio…", "Previous t…". Cells now grow from
+  their content; the "N more" cell says "Options" (no fixed width). All 21 tools' strips fit.
+- **Tabs:** Back from any tab goes to Home, Back on Home leaves (Home `dismissTo('/')`, other tabs
+  `dismissTo('/')` then `push`).
+- Smaller: one-word tool tile names shrink only at font scale > 1.1 (Android shrank them at 1.0);
+  the header account button shows your letter; the tune page's Files/Recordings/Shed Notes empties
+  read like Chord chart's; tune ⋮ deletes together at the bottom as "Delete chart"/"Delete tune";
+  "Following · 0"; standards picker titles semibold; setlist empty text; sign-in cards stack their
+  buttons like `EmptyState`; the Tuner doesn't say "Listening…" twice; a signed-out Lessons screen's
+  header says "Lessons".
+
+Checked on the emulator (debug build) with throwaway accounts `uipass5fix`/`uipass5fix2` (both
+deleted): signed out at first run the flag was set and nothing moved; with plain keys seeded and
+signed in at first run everything moved to `:account` and the Metronome opened at the seeded BPM;
+an edit followed by Back-to-exit within 250 ms reached the account after reopening, with no "Not
+signed in" and still signed in (before the `SignOutIfAccountGone` change a reopen signed the
+account out); sign-out left no `:account` keys. The emulator's own data was restored from a dump
+afterwards and it's left signed out. Not checked: sign-out within 600 ms of an edit, an offline
+signed-in launch, a release build, a real phone, iOS.
+
+## 2026-11-21 — Releasing an Android alpha (alpha 3)
+
+How the public alphas go out, written down with alpha 3 (the phone UI passes 2–5):
+
+1. Raise `versionCode` in `app.json` (and in `android/app/build.gradle`, prebuild output, if you
+   don't re-run prebuild) so phones with the last alpha treat the APK as an update.
+   `version` stays 1.0.0; the alpha number lives only in the tag and the file name.
+2. `APP_NAME=soniroll ARCHS=arm64-v8a,armeabi-v7a nix develop .#androidBuild --command
+   apps/mobile/scripts/build-android-prod.sh --no-install`. That's the prod app id and prod Convex,
+   named "soniroll", phones only.
+3. `gh release create android-v1.0.0-alpha.N --prerelease` with the APK attached as
+   `soniroll-android-1.0.0-alpha.N.apk`, with notes saying what's new since the last alpha and how to install.
+   The download page (`lib/androidRelease.ts`) picks up the newest `android-v*` release on its own.
+
+Alpha 3: versionCode 3, built from `preview` after 0.10.15's commits. Not installed on a phone
+before release (Jack tests it himself).

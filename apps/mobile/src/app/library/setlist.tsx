@@ -34,12 +34,14 @@ import { SetlistTuneSheet } from '@/components/library/SetlistTuneSheet';
 import { TunePickerModal } from '@/components/library/TunePickerModal';
 import { NameDialog } from '@/components/NameDialog';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
-import { EmptyState } from '@/components/ui';
+import { EmptyState, IconButton } from '@/components/ui';
 import { useShareSetlist } from '@/lib/shareSetlist';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useSetlists } from '@/lib/useSetlists';
-import { useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { TUNE_LIST_IDS, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 /**
  * One setlist: its tunes in order (numbered), each opening its tune page, with ⋮ per tune to move
@@ -101,7 +103,7 @@ function SetlistScreen() {
 
   const found: { tune: Tune; list: TuneListId }[] = [];
   for (const tuneId of setlist.tuneIds) {
-    for (const list of ['tunes', 'learn'] as TuneListId[]) {
+    for (const list of TUNE_LIST_IDS) {
       const tune = lists[list].tunes.find((t) => t.id === tuneId);
       if (tune) {
         found.push({ tune, list });
@@ -209,7 +211,7 @@ function SetlistScreen() {
           title: setlist.name,
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.foreground }}>
                 {setlist.name}
               </Text>
               <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
@@ -218,13 +220,9 @@ function SetlistScreen() {
             </View>
           ),
           headerRight: () => (
-            <View className="flex-row items-center gap-1">
-              <Pressable onPress={() => setPicking(true)} accessibilityLabel="Add tunes" className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.accent }}>
-                <PlusIcon color={colors['accent-foreground']} size={22} />
-              </Pressable>
-              <Pressable onPress={() => setMenuOpen(true)} accessibilityLabel="Setlist options" className="h-10 w-9 items-center justify-center">
-                <DotsVerticalIcon color={colors.foreground} size={22} />
-              </Pressable>
+            <View className="flex-row items-center gap-2">
+              <IconButton primary Icon={PlusIcon} label="Add tunes" onPress={() => setPicking(true)} />
+              <IconButton Icon={DotsVerticalIcon} label="Setlist options" onPress={() => setMenuOpen(true)} />
             </View>
           ),
         }}
@@ -280,7 +278,7 @@ function SetlistScreen() {
           <EmptyState
             Icon={MusicNoteIcon}
             title="No tunes in this setlist yet"
-            body="Pick them from Tunes I Know and Tunes to Learn."
+            body="Pick them from your tunes or the standards."
             action={{ label: 'Add tunes', Icon: PlusIcon, onPress: () => setPicking(true) }}
           />
         ) : (
@@ -370,7 +368,7 @@ function SetlistScreen() {
       />
       <ConfirmDialog
         visible={confirmDelete}
-        title={`Delete "${setlist.name}"?`}
+        title={`Delete “${setlist.name}”?`}
         message={`The setlist goes away; its tunes stay in your lists.${setlist.shareId ? ' Its shared link stops working.' : ''}`}
         confirmLabel="Delete"
         onConfirm={() => {
@@ -394,7 +392,7 @@ function PlayInfoLine({
 }) {
   const { colors } = useAppTheme();
   const parts: { text: string; changed: boolean }[] = [];
-  if (info.key) parts.push({ text: info.key, changed: info.keyChanged });
+  if (info.key) parts.push({ text: prettyKeyName(info.key), changed: info.keyChanged });
   if (info.tempo != null) parts.push({ text: `${info.tempo} BPM`, changed: info.tempoChanged });
   if (timeSignature) parts.push({ text: timeSignature, changed: false });
   return (
@@ -402,7 +400,7 @@ function PlayInfoLine({
       {parts.map((p, i) => (
         <Text key={i} className={p.changed ? 'font-ui-bold font-bold' : 'font-ui'} style={p.changed ? { color: colors.accent } : undefined}>
           {i ? ' · ' : ''}
-          {p.text}
+          {withAccidentals(p.text)}
         </Text>
       ))}
     </Text>

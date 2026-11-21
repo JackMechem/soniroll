@@ -1,10 +1,20 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import type { Tune } from '@jam-practice/core/types';
+import { LIBRARY_TUNES_KEY } from '@jam-practice/core/tuneLibrary';
 import { TUNES_TO_LEARN_KEY } from '@jam-practice/core/tunesToLearn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useConvexAuth } from '@convex-dev/auth/react';
 import { useMutation, useQuery } from 'convex/react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+
+import {
+  currentStoreMode,
+  onFlushAccountWrites,
+  onStoreModeChange,
+  scopedKey,
+  sendToAccount,
+  useAppliedStoreMode,
+  useStoreMode,
+} from './accountScope';
 
 /**
  * The tune-list sibling of `useSyncedSettings.ts` — same offline-first precedence (AsyncStorage's
@@ -15,6 +25,10 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
  * `"jam-practice-tunes-to-learn"` are the exact same fixed `syncedSettings` keys
  * `apps/web/lib/useSyncedTunes.ts`/`useTunesToLearn.ts` already use, so a tune added here shows up
  * in the web app's own lists too (and vice versa), not a second, mobile-only copy of either.
+ *
+ * Signed out the list is the phone's own (`<key>`); signed in it's the account's, kept on the phone
+ * as `<key>:account` and deleted on sign-out (`lib/accountScope.ts`), so another account signing in
+ * here never sees (or writes back) this one's tunes.
  */
 
 const DEBOUNCE_MS = 600;
@@ -27,6 +41,8 @@ type Entry = {
   serverApplied: boolean;
   timer: ReturnType<typeof setTimeout> | null;
   localLoaded: boolean;
+  localLoading: boolean;
+  send: ((value: string) => Promise<unknown>) | null;
   listeners: Set<() => void>;
 };
 
@@ -38,6 +54,8 @@ function makeEntry(): Entry {
     serverApplied: false,
     timer: null,
     localLoaded: false,
+    localLoading: false,
+    send: null,
     listeners: new Set(),
   };
 }
@@ -58,17 +76,85 @@ function parseTunes(raw: string): Tune[] | null {
  *   signed-out device shows an empty, read-only list rather than whatever a *previous* signed-in
  *   session happened to cache locally. `false` (the plain Tunes list) behaves like every other
  *   synced-settings hook here: AsyncStorage's own cache still shows signed out.
+ * @param waitForAccount Signed in, `ready` waits for the account's copy (like `accountOnly`), for a
+ *   list this phone may never have cached (the Library list is made on the website) — so a write
+ *   isn't built from an empty list and sent over the account's.
  */
-function createSyncedTuneListHook(key: string, accountOnly: boolean) {
+function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAccount = false) {
   const entry = makeEntry();
+
+  let generation = 0;
 
   function notify() {
     for (const listener of entry.listeners) listener();
   }
 
-  return function useHook(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
-    const { isAuthenticated } = useConvexAuth();
-    const wasAuthenticatedRef = useRef(isAuthenticated);
+  /** Reads this phone's copy for the current sign-in state, once. */
+  function loadLocal() {
+    const mode = currentStoreMode();
+    if (accountOnly || mode === 'loading' || entry.localLoaded || entry.localLoading) return;
+    entry.localLoading = true;
+    const gen = generation;
+    AsyncStorage.getItem(scopedKey(key, mode))
+      .then((raw) => {
+        if (gen !== generation || !raw || entry.hasValue) return;
+        const parsed = parseTunes(raw);
+        if (parsed) {
+          entry.value = parsed;
+          entry.hasValue = true;
+          notify();
+        }
+      })
+      .catch(() => {
+        // storage unavailable — the in-memory/server path still works this session
+      })
+      .finally(() => {
+        if (gen !== generation) return;
+        entry.localLoading = false;
+        entry.localLoaded = true;
+        notify();
+      });
+  }
+
+  /** Sends the list to the account now (`sendToAccount` holds it until the backend has the
+      sign-in). */
+  function sendNow() {
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
+    }
+    const send = entry.send;
+    if (!entry.hasValue || !send) return;
+    const value = JSON.stringify(entry.value);
+    void sendToAccount(key, () => send(value));
+  }
+
+  // Signing out sends an edit still waiting first, while the account still takes it.
+  onFlushAccountWrites(() => {
+    if (entry.timer) sendNow();
+  });
+
+  // Signed in or out: drop the other copy's list and load this one's.
+  onStoreModeChange(() => {
+    generation++;
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
+    }
+    entry.value = EMPTY;
+    entry.hasValue = false;
+    entry.localEdited = false;
+    entry.serverApplied = false;
+    entry.localLoaded = false;
+    entry.localLoading = false;
+    if (entry.listeners.size) loadLocal();
+    notify();
+  });
+
+  function useHook(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
+    const mode = useStoreMode();
+    const applied = useAppliedStoreMode();
+    const isAuthenticated = mode === 'account';
 
     // `useSyncExternalStore`, not `useState`+`forceRender` — see `useSyncedSettings.ts`'s own
     // comment on this exact pattern for why: `entry.value` lives outside React's state mechanism
@@ -82,36 +168,17 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean) {
           entry.listeners.delete(callback);
         };
       },
-      () => (accountOnly && !isAuthenticated ? EMPTY : entry.hasValue ? entry.value : EMPTY),
+      () =>
+        (accountOnly && !isAuthenticated) || mode === 'loading' || currentStoreMode() !== mode
+          ? EMPTY
+          : entry.hasValue
+            ? entry.value
+            : EMPTY,
     );
 
     useEffect(() => {
-      if (accountOnly) return; // nothing device-local to load — see the doc comment above.
-      if (entry.localLoaded) return;
-      let cancelled = false;
-      AsyncStorage.getItem(key)
-        .then((raw) => {
-          if (cancelled || !raw || entry.hasValue) return;
-          const parsed = parseTunes(raw);
-          if (parsed) {
-            entry.value = parsed;
-            entry.hasValue = true;
-            notify();
-          }
-        })
-        .catch(() => {
-          // storage unavailable — the in-memory/server path still works this session
-        })
-        .finally(() => {
-          if (!entry.localLoaded) {
-            entry.localLoaded = true;
-            notify();
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []);
+      if (mode === applied) loadLocal();
+    }, [mode, applied]);
 
     const remote = useQuery(api.syncedSettings.get, isAuthenticated ? { key } : 'skip');
 
@@ -126,42 +193,31 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean) {
           entry.listeners.delete(callback);
         };
       },
-      () => entry.localLoaded || entry.hasValue,
+      () => mode !== 'loading' && currentStoreMode() === mode && (entry.localLoaded || entry.hasValue),
     );
     const [gaveUp, setGaveUp] = useState(false);
     useEffect(() => {
-      if (!accountOnly) return;
+      if (!accountOnly && !waitForAccount) return;
       const t = setTimeout(() => setGaveUp(true), 2500);
       return () => clearTimeout(t);
     }, []);
-    const ready = accountOnly ? !isAuthenticated || remote !== undefined || entry.hasValue || gaveUp : localLoaded;
+    const ready = mode === 'loading'
+      ? false
+      : accountOnly
+      ? !isAuthenticated || remote !== undefined || entry.hasValue || gaveUp
+      : waitForAccount && isAuthenticated
+        ? localLoaded && (remote !== undefined || gaveUp)
+        : localLoaded;
     const setRemote = useMutation(api.syncedSettings.set);
 
     useEffect(() => {
-      if (!isAuthenticated) {
-        if (wasAuthenticatedRef.current) {
-          if (entry.timer) {
-            clearTimeout(entry.timer);
-            entry.timer = null;
-            if (entry.hasValue) {
-              setRemote({ key, value: JSON.stringify(entry.value) }).catch(() => {
-                // offline right at sign-out — the account's row just stays one edit behind
-              });
-            }
-          }
-          entry.localEdited = false;
-          entry.serverApplied = false;
-          if (accountOnly) {
-            entry.value = EMPTY;
-            entry.hasValue = false;
-            notify();
-          }
-        }
-        wasAuthenticatedRef.current = false;
-        return;
-      }
-      wasAuthenticatedRef.current = true;
+      entry.send = (value) => setRemote({ key, value });
+    }, [setRemote]);
 
+    // The one-time "apply the account's own value" step (the reset on sign-in/out is the
+    // `onStoreModeChange` handler above).
+    useEffect(() => {
+      if (!isAuthenticated || applied !== 'account') return;
       if (remote === undefined) return;
       if (entry.serverApplied) return;
       entry.serverApplied = true;
@@ -171,35 +227,40 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean) {
           entry.value = parsed;
           entry.hasValue = true;
           notify();
-          if (!accountOnly) void AsyncStorage.setItem(key, JSON.stringify(parsed));
+          if (!accountOnly) void AsyncStorage.setItem(scopedKey(key, 'account'), JSON.stringify(parsed));
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, remote]);
+    }, [isAuthenticated, applied, remote]);
 
     function setTunes(update: Tune[] | ((prev: Tune[]) => Tune[])) {
       if (accountOnly && !isAuthenticated) return; // nothing to write while signed out.
+      if (mode === 'loading' || currentStoreMode() !== mode) return; // the stores are mid-switch
       const prev = entry.hasValue ? entry.value : EMPTY;
       const next = typeof update === 'function' ? update(prev) : update;
       entry.value = next;
       entry.hasValue = true;
       entry.localEdited = true;
       notify();
-      if (!accountOnly) void AsyncStorage.setItem(key, JSON.stringify(next));
+      if (!accountOnly) void AsyncStorage.setItem(scopedKey(key, mode), JSON.stringify(next));
 
       if (isAuthenticated) {
         if (entry.timer) clearTimeout(entry.timer);
-        entry.timer = setTimeout(() => {
-          entry.timer = null;
-          setRemote({ key, value: JSON.stringify(entry.value) }).catch(() => {
-            // offline, or the write otherwise failed — already safe in AsyncStorage above
-          });
-        }, DEBOUNCE_MS);
+        // If it fails (offline), the list is already safe in AsyncStorage above.
+        entry.timer = setTimeout(sendNow, DEBOUNCE_MS);
       }
     }
 
     return [value, setTunes, ready];
-  };
+  }
+
+  /** The list right now, outside React (for writes that combine several lists, like linking
+      charts), and whether it's the account's copy yet (`synced`; always true signed out). */
+  function read(isAuthenticated: boolean): { tunes: Tune[]; synced: boolean } {
+    if (accountOnly && !isAuthenticated) return { tunes: EMPTY, synced: true };
+    return { tunes: entry.hasValue ? entry.value : EMPTY, synced: isAuthenticated ? entry.serverApplied : entry.localLoaded || accountOnly };
+  }
+
+  return Object.assign(useHook, { read });
 }
 
 /** Jam Practice's own tune list — the same `"tunes"` key, same data, as the web app's. */
@@ -208,3 +269,8 @@ export const useSyncedTunes = createSyncedTuneListHook('tunes', false);
 /** A personal "Tunes to Learn" bookmark list — see `createSyncedTuneListHook`'s own `accountOnly`
     doc comment for why this one has no signed-out local fallback. */
 export const useTunesToLearn = createSyncedTuneListHook(TUNES_TO_LEARN_KEY, true);
+
+/** The Library list: tunes that came in with chord charts and aren't sorted into Tunes I Know or
+    Tunes to Learn yet (the website makes most of them when it links charts to tunes). The same
+    `jam-practice-library-tunes` key the website uses; on this phone signed out too. */
+export const useLibraryTunes = createSyncedTuneListHook(LIBRARY_TUNES_KEY, false, true);

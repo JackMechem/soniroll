@@ -23,13 +23,8 @@ const STORAGE_KEY = 'jam-practice-timer-sessions';
  * Where this *does* deliberately diverge from the web hook, per this app's own established
  * "tools should work offline" principle: signed **out**, sessions persist to this device's own
  * `AsyncStorage` (web's signed-out fallback is a plain in-memory store with no native storage
- * concept at all) — and even while signed **in**, every Convex list result is mirrored into that
- * same local cache purely for *read* purposes, so a cold, offline launch while signed in still
- * shows the last-known list instead of an empty one while waiting on a network round-trip that
- * might never come. This is a read-only cache, never a source of truth once signed in — an
- * offline *edit* while signed in still just fails (the mutation call rejects, same as every other
- * signed-in mutation elsewhere in this app has no offline queue), it doesn't silently queue or
- * merge; only the *list itself* gets this one-way offline-read convenience.
+ * concept at all). That copy is only ever the phone's own: signed-in sessions are never copied into
+ * it (they once were, so signing out showed the last account's sessions as the phone's).
  */
 export function usePracticeSessions() {
   const { isAuthenticated } = useConvexAuth();
@@ -62,14 +57,6 @@ export function usePracticeSessions() {
       cancelled = true;
     };
   }, []);
-
-  // Mirror a successful signed-in read into the local cache — read-only, never consulted again
-  // while signed in except as this same mirroring target.
-  useEffect(() => {
-    if (isAuthenticated && convexSessions) {
-      void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(convexSessions));
-    }
-  }, [isAuthenticated, convexSessions]);
 
   function persistLocal(next: PracticeSession[]) {
     setLocalSessions(next);

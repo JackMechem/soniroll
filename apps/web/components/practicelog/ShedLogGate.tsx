@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SignInModal } from "@/components/AccountMenu";
 import { DemoProgressCard, RoutineDemo } from "@/components/landing/PracticeLogPreview";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { CalendarIcon } from "@/components/tools";
 
 /** Sign in / Sign up buttons that open the app's sign-in form in place. */
@@ -36,18 +37,18 @@ export default function ShedLogGate({ children }: { children: React.ReactNode })
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
+        <PageBar crumbs={[{ label: "Shed Log" }]} icon={CalendarIcon} />
         <LoadingSpinner />
       </div>
     );
   }
   if (isAuthenticated) return <>{children}</>;
   return (
-    <main className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:grid-cols-2 lg:pt-16">
+    <main className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:grid-cols-2 lg:pt-24">
+      {/* The page's name is in the header bar; the pitch's line is a heading of the page. */}
+      <PageBar crumbs={[{ label: "Shed Log" }]} icon={CalendarIcon} />
       <div className="flex flex-col gap-5">
-        <p className="flex items-center gap-2 text-sm font-medium text-muted">
-          <CalendarIcon className="h-4 w-4" /> Shed Log
-        </p>
-        <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Your practice, every day, adding up.</h1>
+        <h2 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Your practice, every day, adding up.</h2>
         <p className="leading-relaxed text-muted">
           Plan routines that repeat, check off tasks, run them on a timer, and watch your streak, your daily goal and a year of green squares fill in. Everything you do in soniroll&apos;s tools counts.
         </p>

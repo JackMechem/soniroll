@@ -1,4 +1,5 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
+import { fromDateKey } from '@jam-practice/core/practiceLog';
 import type { NavLinkInfo } from '@jam-practice/core/navLinks';
 import type { Tune } from '@jam-practice/core/types';
 import { Stack, useRouter } from 'expo-router';
@@ -14,16 +15,19 @@ import { Button, Card, Chip, EmptyText, IconTile, ListRow, PageTitle, SearchFiel
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { TodayPracticeCard } from '@/components/shedLog/TodayPracticeCard';
 import { Logo } from '@/components/Logo';
+import { useToday } from '@/lib/useClock';
 import { useRecentItems } from '@/lib/chordChartRecents';
 import { useRecentTools } from '@/lib/toolRecents';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useFavorites } from '@/lib/useFavorites';
 import { useSetlists } from '@/lib/useSetlists';
-import { tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { TUNE_LIST_IDS, tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
 import { summarizeLearning } from '@jam-practice/core/learningPath';
 import { useLearningProgress } from '@/lib/useLearnSession';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 /** Shown in place of Favorites until you've starred some tools, in this order. */
 const STARTER_HREFS = ['/metronome', '/tuner', '/practice-timer', '/jam-practice'];
@@ -62,7 +66,10 @@ function Home() {
   const { colors, derived } = useAppTheme();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [query, setQuery] = useState('');
-  const [today] = useState(() => new Date());
+  // Today, from the shared clock: it moves on at midnight (a date kept from when Home mounted
+  // stayed on yesterday until something re-rendered it).
+  const todayKey = useToday();
+  const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
   const { favorites, toggleFavorite, ready } = useFavorites();
   const recentTools = useRecentTools();
   const recentItems = useRecentItems();
@@ -87,7 +94,7 @@ function Home() {
 
   const tuneMatches: { tune: Tune; list: TuneListId }[] = [];
   if (words.length) {
-    for (const list of ['tunes', 'learn'] as TuneListId[]) {
+    for (const list of TUNE_LIST_IDS) {
       for (const tune of lists[list].tunes) if (tuneMatches.length < 8 && matchesWords(tune.name, words)) tuneMatches.push({ tune, list });
     }
   }
@@ -130,7 +137,7 @@ function Home() {
   for (const item of recentItems) {
     if (recents.length >= 5) break;
     if (item.kind === 'tune') {
-      const list = (['tunes', 'learn'] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === item.id));
+      const list = TUNE_LIST_IDS.find((l) => lists[l].tunes.some((t) => t.id === item.id));
       const tune = list ? lists[list].tunes.find((t) => t.id === item.id) : undefined;
       if (list && tune) {
         recents.push({ key: `t:${tune.id}`, kind: 'Tune', icon: <IconTile Icon={MusicNoteIcon} size={34} />, title: tune.name, onPress: () => openTune(list, tune.id) });
@@ -138,7 +145,7 @@ function Home() {
     } else {
       const meta = chartMeta.get(item.id);
       if (meta) {
-        recents.push({ key: `c:${item.id}`, kind: 'Chart', icon: <IconTile Icon={ChordChartIcon} size={34} />, title: meta.title, extra: meta.key || undefined, onPress: () => openChart(item.id) });
+        recents.push({ key: `c:${item.id}`, kind: 'Chart', icon: <IconTile Icon={ChordChartIcon} size={34} />, title: meta.title, extra: meta.key ? prettyKeyName(meta.key) : undefined, onPress: () => openChart(item.id) });
       }
     }
   }
@@ -247,7 +254,7 @@ function Home() {
                       {tuneOfDay.tune.name}
                     </Text>
                     <View className="flex-row flex-wrap gap-2">
-                      {tuneOfDay.key ? <Chip>in {tuneOfDay.key}</Chip> : null}
+                      {tuneOfDay.key ? <Chip>in {withAccidentals(prettyKeyName(tuneOfDay.key))}</Chip> : null}
                       {tuneOfDay.tempo ? <Chip>{tuneOfDay.tempo} BPM</Chip> : null}
                       <Chip muted>{tuneOfDay.tune.timeSignature}</Chip>
                     </View>

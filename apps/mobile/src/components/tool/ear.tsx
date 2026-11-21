@@ -5,10 +5,11 @@ import { attempts, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { isDarkColors } from '@jam-practice/core/themes';
 import { formatDuration } from '@jam-practice/core/trainerUtils';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CheckIcon, FlagIcon, HistoryIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
@@ -17,6 +18,7 @@ import { Slider } from '@/components/tool/Slider';
 import { Button } from '@/components/ui';
 import { EAR_TRAINING_TONES } from '@/lib/sampledTones';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The pitch and ear-training tools' shared pieces (Tuner, Slow Downer, the Note/Scale/Interval
@@ -85,6 +87,7 @@ export function ToolScreen({
   footer,
   action,
   chips,
+  scroll,
   children,
 }: {
   title: string;
@@ -93,10 +96,12 @@ export function ToolScreen({
   footer?: ReactNode;
   action?: ReactNode;
   chips?: ReactNode;
+  /** `false` when the display scrolls by itself (the Learn path), see `ToolFrame`. */
+  scroll?: boolean;
   children: ReactNode;
 }) {
   return (
-    <ToolFrame title={title} mode={mode} side={side} below={footer} action={action} chips={chips ? <SettingsBar>{chips}</SettingsBar> : null}>
+    <ToolFrame title={title} mode={mode} side={side} below={footer} action={action} chips={chips ? <SettingsBar>{chips}</SettingsBar> : null} scroll={scroll}>
       {children}
     </ToolFrame>
   );
@@ -435,6 +440,7 @@ type HistoryItem = { at: number; elapsedMs: number; score: number; total: number
 export function HistoryChip({ entries, bestMs, onClear }: { entries: HistoryItem[]; bestMs: number | null; onClear: () => void }) {
   const { colors, derived } = useAppTheme();
   const gradeColor = useGradeColors();
+  const [confirming, setConfirming] = useState(false);
   return (
     <SettingChip
       Icon={HistoryIcon}
@@ -472,9 +478,20 @@ export function HistoryChip({ entries, bestMs, onClear }: { entries: HistoryItem
       )}
       {entries.length > 0 ? (
         <View className="items-start">
-          <TextButton label="Clear these times" danger onPress={onClear} />
+          <TextButton label="Clear these times" danger onPress={() => setConfirming(true)} />
         </View>
       ) : null}
+      <ConfirmDialog
+        visible={confirming}
+        title="Clear these times?"
+        message="Your finished runs with these settings go, and the best time with them."
+        confirmLabel="Clear"
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false);
+          onClear();
+        }}
+      />
     </SettingChip>
   );
 }
@@ -503,6 +520,7 @@ export function StrugglesChip({
   const { colors, derived } = useAppTheme();
   const gradeColor = useGradeColors();
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const count = shedCount ?? entries.length;
   return (
     <SettingChip Icon={FlagIcon} label="Struggles" value={entries.length ? `${entries.length} weak` : 'None yet'} open={open} onOpenChange={setOpen}>
@@ -534,8 +552,19 @@ export function StrugglesChip({
             onShed();
           }}
         />
-        {entries.length > 0 ? <TextButton label="Clear stats" danger disabled={running} onPress={onClear} /> : null}
+        {entries.length > 0 ? <TextButton label="Clear stats" danger disabled={running} onPress={() => setConfirming(true)} /> : null}
       </View>
+      <ConfirmDialog
+        visible={confirming}
+        title="Clear your struggles?"
+        message="What you've got wrong here is forgotten, and the list starts again."
+        confirmLabel="Clear"
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false);
+          onClear();
+        }}
+      />
     </SettingChip>
   );
 }

@@ -7,18 +7,19 @@ import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
-import { playlistHref } from "@/components/library/ChartsDashboard";
-import { BackButton } from "@/components/library/shared";
-import { EmptyState, FolderIcon, gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
+import PageBar from "@/components/PageBar";
+import { chartCrumbs } from "@/components/library/chartCrumbs";
+import { UNDER_TUNES } from "@/components/library/hrefs";
+import { EmptyState, gridKeyName, Hero, KeyBadge, LibraryPage, Pill, prettyKey } from "@/components/library/ui";
 import { TUNE_LIST_LABEL, tuneHref, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { moveTune } from "@/lib/useTuneLists";
-import { addChartsToTune, tuneChartIds, tuneMatchKey } from "@jam-practice/core/tuneLibrary";
+import { addChartsToTune, tuneChartIds, tuneMatchKey, tuneTags } from "@jam-practice/core/tuneLibrary";
 import { tidyName } from "@jam-practice/core/standards";
 import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { BassIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon } from "@/components/tools";
+import { BassIcon, DotsVerticalIcon, LibraryIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon } from "@/components/tools";
 import { goBackOr } from "@/lib/goBack";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
@@ -30,9 +31,8 @@ import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
     "Recently opened". */
 export default function ChartViewPage({ id }: { id: string }) {
   const router = useRouter();
-  const { selectedSong: chart, selectedSongLoading, loading, allSongs, playlists } = useChordChartsLibrary(id || null);
-  const { openSongMenu, element } = useChartActions({ onSongDeleted: () => goBackOr(router, "/tunes?tab=charts") });
-  const back = () => goBackOr(router, "/tunes?tab=charts");
+  const { selectedSong: chart, selectedSongLoading, loading, allSongs } = useChordChartsLibrary(id || null);
+  const { openSongMenu, element } = useChartActions({ onSongDeleted: () => goBackOr(router, "/tunes") });
   const [transposeKey, setTransposeKey] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const lists = useTuneLists();
@@ -98,6 +98,7 @@ export default function ChartViewPage({ id }: { id: string }) {
   if (loading || selectedSongLoading) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[...UNDER_TUNES, { label: "Chart" }]} icon={LibraryIcon} />
         <div className="flex justify-center py-24">
           <LoadingSpinner label="Loading chart…" showLabel />
         </div>
@@ -107,8 +108,8 @@ export default function ChartViewPage({ id }: { id: string }) {
   if (!chart || !shown) {
     return (
       <LibraryPage>
-        <BackButton onClick={back} />
-        <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/tunes?tab=charts" />} />
+        <PageBar crumbs={[...UNDER_TUNES, { label: "Chart" }]} icon={LibraryIcon} />
+        <EmptyState boxed title="Chart not found" body="That chart isn't in your library." action={<Pill label="Tunes" href="/tunes" />} />
       </LibraryPage>
     );
   }
@@ -117,12 +118,14 @@ export default function ChartViewPage({ id }: { id: string }) {
   const minor = chart.key ? isMinorKey(chart.key) : false;
   const shownPc = shown.key ? keyPitchClass(shown.key) : -1;
 
+  const trail = chartCrumbs(linkedTunes[0], chart.title);
   return (
     <LibraryPage>
       <Hero
-        title={chart.title}
+        title={trail.title}
+        crumbs={trail.parents}
+        icon={LibraryIcon}
         subtitle={chart.composer ? formatComposer(chart.composer) : undefined}
-        back={back}
         leading={<KeyBadge label={shown.key} size="lg" />}
         actions={
           // On phones the key select gets its own full-width row under the buttons, so
@@ -185,22 +188,6 @@ export default function ChartViewPage({ id }: { id: string }) {
           </section>
 
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
-            <h2 className="text-sm font-medium">Folders</h2>
-            {meta && meta.playlistIds.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {meta.playlistIds.map((pid) => (
-                  <Link key={pid} href={playlistHref(pid)} className="inline-flex items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 py-1.5 text-xs font-medium hover:bg-surface-hover">
-                    <FolderIcon className="h-3.5 w-3.5 text-muted" />
-                    {playlists.find((p) => p.id === pid)?.name ?? "Folder"}
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted">Only in All charts.</p>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-2 rounded-lg bg-surface p-4">
             <h2 className="text-sm font-medium">Your tunes</h2>
             {linkedTunes.length ? (
               <div className="flex flex-col gap-1">
@@ -209,7 +196,7 @@ export default function ChartViewPage({ id }: { id: string }) {
                     <KeyBadge label={tune.keys.find((k) => k.enabled)?.value} size="sm" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">{tune.name}</span>
-                      <span className="block text-[11px] text-muted">{TUNE_LIST_LABEL[list]}</span>
+                      <span className="block truncate text-[11px] text-muted">{[TUNE_LIST_LABEL[list], ...tuneTags(tune)].join(" · ")}</span>
                     </span>
                   </Link>
                 ))}

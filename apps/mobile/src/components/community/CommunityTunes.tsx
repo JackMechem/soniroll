@@ -4,7 +4,9 @@ import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View, Share } from 'react-native';
 
-import { EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
+import { formatMinutesShort, type ProgressCard } from '@jam-practice/core/practiceLog';
+
+import { CalendarCheckIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -41,7 +43,8 @@ export type TunePostSummary = {
   likeCount: number;
   unlisted: boolean;
   /** "setlist" for a setlist post (shown numbered, savable, kept in sync with the poster's setlist). */
-  /** 'routine' / 'milestone' posts come from the website's Shed Log — shown here as plain posts for now. */
+  /** 'routine' / 'milestone' posts come from the Shed Log: a routine lists its tasks, a milestone
+      carries a progress card (shown on the post's page). */
   kind?: 'setlist' | 'routine' | 'milestone' | null;
   payload?: unknown;
   createdAt: number;
@@ -56,6 +59,19 @@ export type TunePostSummary = {
 /** "1 tune", "4 charts". */
 function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+/** A milestone's headline numbers in words ("1.4 h · 3 days · 3-day streak"; a day report: "45m
+    practiced"), from the progress card it carries. */
+function milestoneSummary(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const card = payload as Partial<ProgressCard>;
+  if (card.kind === 'day' && card.report) return `${formatMinutesShort(card.report.minutes)} practiced`;
+  const parts: string[] = [];
+  if (typeof card.rangeHours === 'number') parts.push(`${Math.round(card.rangeHours * 10) / 10} h`);
+  if (typeof card.rangeDays === 'number') parts.push(plural(card.rangeDays, 'day'));
+  if (card.streak) parts.push(`${card.streak}-day streak`);
+  return parts.length ? parts.join(' · ') : null;
 }
 
 /**
@@ -78,8 +94,20 @@ export function PostListItem({
   const router = useRouter();
   const toggleLike = useMutation(api.communityTunes.toggleLike);
   const isSetlist = post.kind === 'setlist';
-  const preview = post.tuneNames.slice(0, 3);
-  const more = post.tuneNames.length - preview.length;
+  // A routine's payload carries its tasks; a milestone's carries a progress card (no tunes).
+  const routineTasks =
+    post.kind === 'routine' && post.payload && typeof post.payload === 'object' && 'tasks' in post.payload
+      ? ((post.payload as { tasks?: { title?: string; minutes?: number }[] }).tasks ?? [])
+      : null;
+  const isMilestone = post.kind === 'milestone';
+  const names = routineTasks ? routineTasks.map((t) => t.title || 'Task') : post.tuneNames;
+  const preview = isMilestone ? [] : names.slice(0, 3);
+  const more = names.length - preview.length;
+  const footer = routineTasks
+    ? `${plural(routineTasks.length, 'task')} · ${formatMinutesShort(routineTasks.reduce((a, t) => a + (t.minutes ?? 0), 0))}`
+    : isMilestone
+      ? milestoneSummary(post.payload)
+      : [plural(post.tuneCount, 'tune'), post.chartCount > 0 ? plural(post.chartCount, 'chart') : null].filter(Boolean).join(' · ');
 
   async function handleShare() {
     if (!post) return;
@@ -108,7 +136,7 @@ export function PostListItem({
               className="flex-row items-center gap-2"
               hitSlop={6}
             >
-              <UserAvatar url={post.authorAvatarUrl ?? null} size="sm" />
+              <UserAvatar url={post.authorAvatarUrl ?? null} name={post.authorUsername} size="sm" />
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 {post.authorUsername}
               </Text>
@@ -125,6 +153,14 @@ export function PostListItem({
               <SetlistIcon color={colors.accent} size={14} />
               <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                 Setlist
+              </Text>
+            </View>
+          ) : null}
+          {routineTasks || isMilestone ? (
+            <View className="flex-row items-center gap-1 rounded-full px-2.5 py-1" style={{ backgroundColor: `${colors.accent}22` }}>
+              <CalendarCheckIcon color={colors.accent} size={14} />
+              <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
+                {routineTasks ? 'Routine' : 'Milestone'}
               </Text>
             </View>
           ) : null}
@@ -145,7 +181,7 @@ export function PostListItem({
           <View className="gap-1 rounded-xl px-3 py-2.5" style={{ backgroundColor: colors.background }}>
             {preview.map((name, i) => (
               <View key={`${name}-${i}`} className="flex-row items-center gap-2.5">
-                {isSetlist ? (
+                {isSetlist || routineTasks ? (
                   <Text className="font-ui-bold w-4 text-right text-sm font-bold tabular-nums" style={{ color: colors.accent }}>
                     {i + 1}
                   </Text>
@@ -167,10 +203,12 @@ export function PostListItem({
       </View>
 
       <View className="flex-row items-center gap-4 px-4 pb-1.5">
-        {/* What's in it, in words ("4 tunes · 2 charts"). */}
-        <Text className="font-ui text-xs" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
-          {[plural(post.tuneCount, 'tune'), post.chartCount > 0 ? plural(post.chartCount, 'chart') : null].filter(Boolean).join(' · ')}
-        </Text>
+        {/* What's in it, in words ("4 tunes · 2 charts", "5 tasks · 45m"). */}
+        {footer ? (
+          <Text className="font-ui text-xs" style={{ color: colors.muted, fontVariant: ['tabular-nums'] }}>
+            {footer}
+          </Text>
+        ) : null}
         <View className="flex-1" />
         <Pressable onPress={() => void handleShare()} accessibilityLabel="Share this post" className="h-11 w-11 items-center justify-center">
           <ShareIcon color={colors.muted} size={19} />

@@ -1,5 +1,6 @@
 "use client";
 
+import PageBar from "@/components/PageBar";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
@@ -31,6 +32,7 @@ export default function LessonsPage() {
   if (isLoading) {
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Lessons" }]} icon={CapIcon} helpTopic="lessons" />
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
@@ -65,6 +67,8 @@ export default function LessonsPage() {
   }
 
   const loading = students === undefined || teachers === undefined;
+  // Learning from a teacher but not teaching anyone: keep the teacher's calls to action quiet.
+  const studentOnly = !loading && teachers!.length > 0 && students!.length === 0;
   const openTotal = (teachers ?? []).reduce((n, t) => n + t.items.filter((i) => i.kind === "assignment" && !i.done).length, 0);
 
   return (
@@ -86,7 +90,7 @@ export default function LessonsPage() {
         actions={
           <>
             <Pill icon={SlidersIcon} label="Settings" href="/lessons/settings" />
-            <Pill primary icon={PlusIcon} label="Add a student" onClick={() => setAdding(true)} />
+            {!loading && !studentOnly && <Pill primary icon={PlusIcon} label="Add a student" onClick={() => setAdding(true)} />}
           </>
         }
       />
@@ -129,64 +133,71 @@ export default function LessonsPage() {
             </Panel>
           )}
 
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium">
-                Your students{students!.length > 0 && <span className="font-normal text-muted"> · {students!.length}</span>}
-              </h2>
-            </div>
-            {students!.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-foreground/15">
-                <EmptyState
-                  icon={CapIcon}
-                  title="Teach with soniroll"
-                  body="Add a student to get their invite link. Give them lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — and see how their practice goes."
-                  action={<Pill primary icon={PlusIcon} label="Add your first student" onClick={() => setAdding(true)} />}
-                />
-                {/* For a student who hasn't opened their invite yet: nothing above is for them. */}
-                {teachers!.length === 0 && (
-                  <p className="border-t border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
-                    <span className="font-medium text-foreground">Learning from a teacher?</span> Open the link they sent you, and everything they give you shows up here.
-                  </p>
-                )}
+          {studentOnly ? (
+            <p className="text-sm text-muted">
+              Teach too?{" "}
+              <button type="button" onClick={() => setAdding(true)} className="font-medium text-accent hover:underline">
+                Add a student
+              </button>
+            </p>
+          ) : (
+            <section className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium">Your students</h2>
               </div>
-            ) : (
-              <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
-                {students!.map((s) => (
-                  <Link
-                    key={s.id}
-                    href={`/lessons/student?id=${s.id}`}
-                    className="group flex flex-col gap-1.5 px-4 py-3 transition-colors hover:bg-surface-hover md:flex-row md:items-center md:gap-4"
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <PersonBadge url={s.student?.avatarUrl} name={s.name} size="sm" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{s.name}</span>
-                        <span className="block truncate text-xs text-muted">
-                          {s.joined ? s.student?.name : s.inviteEmail ? `Invited · ${s.inviteEmail}` : "Hasn't joined yet — send their invite link"}
+              {students!.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-foreground/15">
+                  <EmptyState
+                    icon={CapIcon}
+                    title="Teach with soniroll"
+                    body="Add a student to get their invite link. Give them lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — and see how their practice goes."
+                    action={<Pill primary icon={PlusIcon} label="Add your first student" onClick={() => setAdding(true)} />}
+                  />
+                  {/* For a student who hasn't opened their invite yet: nothing above is for them. */}
+                  {teachers!.length === 0 && (
+                    <p className="border-t border-dashed border-foreground/15 px-4 py-3 text-center text-sm text-muted">
+                      <span className="font-medium text-foreground">Learning from a teacher?</span> Open the link they sent you, and everything they give you shows up here.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
+                  {students!.map((s) => (
+                    <Link
+                      key={s.id}
+                      href={`/lessons/student?id=${s.id}`}
+                      className="group flex flex-col gap-1.5 px-4 py-3 transition-colors hover:bg-surface-hover md:flex-row md:items-center md:gap-4"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <PersonBadge url={s.student?.avatarUrl} name={s.name} size="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{s.name}</span>
+                          <span className="block truncate text-xs text-muted">
+                            {s.joined ? s.student?.name : s.inviteEmail ? `Invited · ${s.inviteEmail}` : "Hasn't joined yet — send their invite link"}
+                          </span>
                         </span>
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-11 text-xs text-muted md:shrink-0 md:justify-end md:pl-0">
-                      {s.counts.toReview > 0 && <span className="font-medium text-accent">{s.counts.toReview} to review</span>}
-                      {s.counts.assignmentsDue > 0 && <span className="font-medium text-danger">{s.counts.assignmentsDue} overdue</span>}
-                      {s.joined && <Fact label="This week" value={`${Math.round(s.hoursThisWeek * 10) / 10} h`} />}
-                      {s.joined && s.streak > 0 && <Fact label="Streak" value={`${s.streak} day${s.streak === 1 ? "" : "s"}`} />}
-                      <Fact
-                        label="Last practiced"
-                        value={s.lastPracticed ? (s.lastPracticed === today ? "Today" : dateLabel(s.lastPracticed, { month: "short", day: "numeric" })) : "—"}
-                      />
-                      <Fact label="To do" value={String(s.counts.assignmentsOpen)} />
-                      <span>
-                        {s.lessons} lesson{s.lessons === 1 ? "" : "s"}
-                        {s.nextLesson ? ` · next ${new Date(s.nextLesson).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}` : ""}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-11 text-xs text-muted md:shrink-0 md:justify-end md:pl-0">
+                        {s.counts.toReview > 0 && <span className="font-medium text-accent">{s.counts.toReview} to review</span>}
+                        {s.counts.assignmentsDue > 0 && <span className="font-medium text-danger">{s.counts.assignmentsDue} overdue</span>}
+                        {s.joined && <Fact label="This week" value={`${Math.round(s.hoursThisWeek * 10) / 10} h`} />}
+                        {s.joined && s.streak > 0 && <Fact label="Streak" value={`${s.streak} day${s.streak === 1 ? "" : "s"}`} />}
+                        <Fact
+                          label="Last practiced"
+                          value={s.lastPracticed ? (s.lastPracticed === today ? "Today" : dateLabel(s.lastPracticed, { month: "short", day: "numeric" })) : "—"}
+                        />
+                        <Fact label="To do" value={String(s.counts.assignmentsOpen)} />
+                        <span>
+                          {s.lessons} lesson{s.lessons === 1 ? "" : "s"}
+                          {s.nextLesson ? ` · next ${new Date(s.nextLesson).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}` : ""}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
 

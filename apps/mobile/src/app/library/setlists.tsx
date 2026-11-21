@@ -36,7 +36,7 @@ function SetlistsScreen() {
   const [naming, setNaming] = useState(false);
 
   const shown = useMemo(() => {
-    const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes].map((t) => [t.id, t.name]));
+    const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes].map((t) => [t.id, t.name]));
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const filtered = words.length
       ? setlists.filter((s) => {
@@ -45,7 +45,7 @@ function SetlistsScreen() {
         })
       : setlists;
     return sort === 'name' ? sortByText(filtered, (s) => s.name) : [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [setlists, lists.tunes.tunes, lists.learn.tunes, query, sort]);
+  }, [setlists, lists.tunes.tunes, lists.learn.tunes, lists.library.tunes, query, sort]);
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>

@@ -298,6 +298,7 @@ export default function RandomMetricModulation() {
               onChangeBeats={changeBeats}
               onSetBeatUnit={setBeatUnit}
               onSetSubdivision={setSubdivision}
+              onPickMeter={(b, u) => updateSettings({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
               onApplyGroups={(groups) =>
                 updateSettings({
                   beatsPerBar: groups.reduce((a, b) => a + b, 0),
@@ -416,20 +417,24 @@ export default function RandomMetricModulation() {
               disabled={running}
               hint="After a tempo change, a second click keeps playing the tempo you came from, so you can hear the two against each other. Turns on Play until tempos realign, so they stay in sync."
             />
-            <OptionGroup title="Click">
-              <ClickSoundCards label="Previous tempo click sound" soundId={referenceSoundId} onChange={setReferenceSoundId} volume={volume} />
-            </OptionGroup>
-            <Hint>
-              A different click sound than the main one, so the two are easy to tell apart.
-            </Hint>
+            {/* Its sound and Mute only while it's on, so the off state is just the switch. */}
+            {playOriginalTempo && (
+              <>
+                <OptionGroup title="Click">
+                  <ClickSoundCards label="Previous tempo click sound" soundId={referenceSoundId} onChange={setReferenceSoundId} volume={volume} />
+                </OptionGroup>
+                <Hint>
+                  A different click sound than the main one, so the two are easy to tell apart.
+                </Hint>
 
-            <SwitchRow
-              label="Mute"
-              checked={referenceMuted}
-              onChange={setReferenceMuted}
-              disabled={!playOriginalTempo}
-              hint="Keeps this second click running silently, still shown and counted, just not heard."
-            />
+                <SwitchRow
+                  label="Mute"
+                  checked={referenceMuted}
+                  onChange={setReferenceMuted}
+                  hint="Keeps this second click running silently, still shown and counted, just not heard."
+                />
+              </>
+            )}
           </CollapsiblePanel>
 
           <CollapsiblePanel

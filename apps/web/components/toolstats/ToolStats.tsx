@@ -156,7 +156,8 @@ export default function ToolStats({ href }: { href: string }) {
 
       {/* Log today's time into the Shed Log; "Logged" once it's all in. */}
       {/* Signed out there's no Shed Log to log into, so no button. */}
-      {!isAuthenticated ? null : unlogged >= 1000 ? (
+      {/* From a minute: the Shed Log rounds less to 0 min, and the chip already counts the seconds. */}
+      {!isAuthenticated ? null : unlogged >= 60_000 ? (
         <button
           ref={logRef}
           type="button"
@@ -177,7 +178,7 @@ export default function ToolStats({ href }: { href: string }) {
           </span>
         </button>
       ) : (
-        todayMs >= 1000 && (
+        todayMs >= 1000 && unlogged < 1000 && (
           <span className="flex h-8 shrink-0 items-center gap-1 px-1 text-sm text-muted" title="Today's time is in your Shed Log">
             <CheckIcon className="h-4 w-4 text-emerald-500" /> Logged
           </span>

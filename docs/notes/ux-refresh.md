@@ -117,3 +117,129 @@ sheets, the dashboard gap at two-column widths, the Shed Log header icon.
 Not verified across these rounds: anything that writes to a signed-in account (logging, linking,
 saving charts, week-view dragging), audio by ear, hover styles, real phones and Safari, the
 desktop app at runtime (tsc only).
+
+## Header bar with crumbs on every page (2026-11-20)
+
+Jack asked for every page's header to look like the tool pages' desktop bar, with the trail of
+pages you came through ("Library / Tunes / Setlists / Another test Setlist"), each one clickable.
+
+- **One component, `components/PageBar.tsx`.** The 56px bar (`absolute inset-x-0 top-0 hidden …
+  lg:flex`): the page's icon (muted), the crumbs (earlier ones muted links, "/" between, the page
+  itself last in an `h1`), the intro ? (`helpTopic`, or `intro` when the page runs its own),
+  `help`, `titleExtra`, `actions`, then Report a bug. `ToolLayout` renders it too, so the tools
+  look as before. Crumbs are `{ label, href?, onClick?, short? }`; they follow the page's
+  structure (where its back button went), not browser history. Past five on desktop the middle
+  ones fold into "…".
+- **Where it sits.** It's `absolute` at the top of the nearest positioned box: the page scroller
+  (`AppShell`'s `[data-page-scroll]`, now `relative`) or ToolLayout's page. Pages pad `lg:pt-20`
+  for it (`PageShell`, `LibraryPage` and the custom `main`s); phones keep the 4.5rem for the phone
+  bar. Don't put a narrower `relative` wrapper between a page's root and its `PageBar`.
+- **Phones and panes** (`lib/pageCrumbs.ts`): `PageBar` hands its trail, icon and ? to a small
+  store with `usePageCrumbs` (in an effect, so the server render and hydration see nothing and
+  the top bar falls back to its old path-based name). `Sidebar`'s `MobileBarTitle` shows the logo
+  then the trail: a short one whole (≤ 26 characters), else "… / parent / page"; "…" opens the
+  hidden crumbs as real links (so `useLeaveGuard` still asks); tapping the page's own name
+  scrolls to the top; the page's ? sits after it. Inside a split-screen pane the page writes to
+  the pane's own store (`PaneCrumbStoreContext`) and the pane's bar shows the trail instead of
+  the tool name. `phoneCrumbs` gives phones a different trail (Help: just "Help" until a topic is
+  open, since desktop always shows one).
+- **Gotcha:** the store's snapshot must only change when the trail does (labels, links, icon).
+  The first version handed out a new object on every page render; in a pane, whose bar is the
+  page's parent, React re-rendered the pane on the changed snapshot, which re-rendered the page,
+  which made a new snapshot — "Maximum update depth exceeded". Handlers are now copied onto the
+  same snapshot.
+- **Pages:** `Hero` and `PageHeader` take `crumbs` (the pages above; their old `back`/`backHref`
+  become one crumb) and render the bar, with the subtitle, `leading` badge, buttons, tabs and
+  search on a line under it (Library's storage meter sits at the end of the tabs). Library trails
+  come from `components/library/hrefs.ts` (`LIBRARY_CRUMB`, `UNDER_TUNES`, `SETLISTS_CRUMB`,
+  `FILES_CRUMB`) and `chartCrumbs.ts` (a chart under its tune; "Chart" when it has the tune's
+  name). Every other page with its own `h1` got the bar: dashboard, Shed Log and routines, Shed
+  Notes (/ the open note), Lessons and its pages, Community, posts, profiles, New post, Account /
+  section, Help / topic, What's new, Admin / tab, Storage plans, Support, Desktop app, Phone app,
+  Feedback, legal pages (`LegalPageBar`, since `LegalPage` is a server component) and shared links
+  (one crumb, the item's name). Titles that are content stay as headings (`h2`): the dashboard
+  greeting, a post's title, a profile's name, signed-out pitches, the download pages' headlines.
+- **Left as they were:** the landing page, not-found, the maintenance screens, reset password,
+  print views, dialogs, the chart reader's own title, and the setlist chart reader
+  (`/setlist-charts`, a full-screen reader with its own bar).
+
+Verified: tsc (web, desktop), `pnpm lint` (the old SettingsBar warning only); nix Chromium at
+1440 and 390, light and dark, signed out and signed in with a throwaway account (deleted after):
+about 45 pages' trails, no console errors or horizontal overflow; clicking crumbs, the phone "…"
+menu, the phone ?, a three-pane split screen. Not verified: hover styles, the desktop app at
+runtime, real phones, the admin page (owner only), a lesson's notes page with real data, shared
+links with real items.
+
+## 2026-11-20 — UI pass 1 fixes (web + desktop)
+
+From a reviewer's pass (6.5/10). Fixed:
+- **Phone crumbs** (`PageBar`'s compact `CrumbTrail`): crumbs of 7 letters or fewer take only their
+  own width (the 4rem minimum left a gap after "Help /"); the trail folds to "… / parent / page" past
+  ~20 characters so the page's own name isn't the part cut short; the current crumb is
+  `role="heading" aria-level=1` (phones had no h1), and the dashboard's phone-bar logo is in an h1.
+- **Own private profile**: `/u/<you>` says "Your profile is private" with a Make it public link
+  (`profiles.getMine`, asked only when the profile comes back hidden). Others still can't tell a
+  private profile from a missing one.
+- **Help**: Library and Chord Charts topics describe charts living on tunes; the Chord Charts topic
+  has no `href` (no Open button; its icon is in `EXTRA_ICONS`).
+- **`PageHeader`** with buttons but no subtitle puts them in `PageBar`'s actions from `lg` (Community's
+  New post); phones and panes keep the row.
+- **Fills, not outlines**: `TuneFields` pills, `RewardCard` tiles (every reward-look option popover)
+  and MetronomeOptions' tiles; picked = tint + 2px inset ring. Key grid shows D♭/F♯/C♯m. `PoolPill`
+  still has borders (not done).
+- Tune page signed out: "Sign in" in the Files and Recordings cards is a link.
+- Library filters: the Library list and With/Without charts are hidden when they'd show 0 (unless
+  picked, and never while charts load). The "Library" list name was left for Jack.
+- Desktop fixes are in `desktop-app.md`.
+Verified in headless Chromium (390/1440, light/dark; the profile signed in with a deleted `.test`
+account). Not verified: screen readers, hover styles, the real desktop window.
+
+## 2026-11-20 — UI pass 4 fixes (web + desktop)
+
+From a reviewer's pass over people, account and first impressions (7/10). Lessons, Community and
+desktop items are in `lessons.md`, `community-and-profiles.md` and `desktop-app.md`. Here:
+- **Phone crumbs** (`CrumbTrail`, compact): after folding to "… / parent / page", if parent + page
+  is still over 22 characters the parent folds too, so the page's name is whole.
+- **⌘K / Ctrl+K** opens the search palette as well as "/" (from text boxes too, desktop widths
+  only), except inside a Shed Notes editor (its own Mod-k) or when the page already used the key
+  (the notation editor's add-a-chord, via `defaultPrevented`). The sidebar's Search shows "⌘K" or
+  "Ctrl K" beside "/" (after hydrating, so nothing mismatches).
+- **Help and palette for account basics**: the "Account, sync & themes" topic has options for a
+  forgotten password, changing it and deleting the account (`packages/core/helpContent.ts`);
+  Help search also matches step titles. The palette has "Forgot your password?" (signed out,
+  `/reset-password`) and "Delete account" (`/account?tab=danger`).
+- Dashboard edit banner: its sentence is hidden on phones (two lines instead of five).
+- Feedback: the email box takes its own row on phones and in the compact form.
+- Streak and In total cards hide their share button at zero.
+- Signed-out `/account` (the sidebar's Theme and display) is titled that, and is `max-w-2xl` so
+  the font tiles don't truncate.
+- Storage plans signed out: Sign up free comes before Sign in, like everywhere else.
+- Days practiced squares have day names for screen readers; future days are hidden from them.
+Verified in headless Chromium (1440/390, light/dark; signed in with deleted throwaways). Not
+verified: hover, screen readers, real phones, the desktop window.
+
+## 2026-11-20 — UI pass 5 fixes (web + desktop, the last pass)
+
+From the final whole-app reviewer pass (7.5/10). Library items are in `library-two-tabs.md`. Here:
+- **Dialog order**: Edit tune / New tune (`TuneEditorModal`) is Cancel then the main button,
+  right-aligned, like every other dialog.
+- **Log button** (`ToolStats`): shows from a minute unlogged (it was 1 s); between 1 s and a minute
+  nothing shows (the time chip counts the seconds), and "Logged" only once nothing is left.
+- **Jam Practice** signed in with tunes only in the Library list / Tunes to Learn: "None of your
+  tunes are in Tunes I Know yet. Move some there from your Library…" (a link) instead of "Your tune
+  list is empty".
+- **Dashboard at `md`** (800 wide, a normal desktop window): half-width cards pair up in order under
+  the dense flow, so with an odd number the last one spans the row (`LONE_SIZE_CLASSES` in
+  `lib/dashboardLayout.ts`). `lg` keeps its sizes; edit mode isn't touched.
+- **Sign-in prompts**: Recorder (signed out) and Score Writer's signed-out note use `SignInButtons`
+  (Sign up free + Sign in), like the Files and Shed Log pitches.
+- **Help**: plain `/help` on desktop opens a "How soniroll works" panel with the Getting started
+  topics (crumb "Help", URL stays `/help`) instead of silently picking Dashboard. Long tool names
+  (over 24 characters — only Polyrhythm Metric Modulation Metronome) use the sidebar `short` name on
+  phones for the Open button and the crumb.
+- **Feedback**: the picked tile is tint + inset ring (it was a solid accent block); the email
+  placeholder is "Email, if you'd like a reply".
+- **Shed Notes**: the list's "No notes yet" line is `lg:hidden` (the main pane says it on desktop).
+Verified in headless Chromium (1440/390/800, light/dark; signed in with deleted `.test`
+throwaways), tsc in web and desktop, eslint on the changed files. Not verified: hover, the real
+desktop window, screen readers.

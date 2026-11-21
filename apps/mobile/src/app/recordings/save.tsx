@@ -3,7 +3,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { getInfoAsync } from 'expo-file-system/legacy';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { LinkIcon, UnlinkIcon } from '@/components/icons';
@@ -15,6 +15,7 @@ import { RECORDING_MIME, deleteLocalTake, formatRecordedAt, recordingsApi } from
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Where a finished take lands: listen back, name it, add notes, link it to a tune (pre-filled when

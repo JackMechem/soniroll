@@ -60,6 +60,7 @@ import { DEFAULT_EAR_TRAINING_TONE_ID, EAR_TRAINING_TONES, asToneId, playNotesTo
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
+import { useStopOnBlur } from '@/lib/useStopOnBlur';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
@@ -186,6 +187,8 @@ function FindTheRootScreen() {
 
   const [running, setRunning] = useState(false);
   useToolActivity('/find-the-root', running);
+  // Leaving the screen stops the session (it would keep timing out questions as misses).
+  useStopOnBlur(running, stop);
   useKeepAwakeWhile(running);
   const [round, setRound] = useState<RootlessRound | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
@@ -584,7 +587,7 @@ function FindTheRootScreen() {
         </Field>
       </SettingChip>
 
-      <SettingChip Icon={StopwatchIcon} label="Rounds" value={`${roundCount} rounds`}>
+      <SettingChip Icon={StopwatchIcon} label="Rounds" value={`${roundCount}`}>
         <SliderField
           label="Number of rounds"
           value={roundCount}

@@ -4,7 +4,7 @@ import { groupsFromAccents, parseGroups } from '@jam-practice/core/meterControls
 import { MAX_BEATS } from '@jam-practice/core/meters';
 import type { BeatLevel } from '@jam-practice/core/clickSounds';
 import { useState, type ComponentType, type ReactNode } from 'react';
-import { type DimensionValue, Pressable, Text, TextInput, View } from 'react-native';
+import { type DimensionValue, Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import type { IconProps } from '@/components/icons';
@@ -13,6 +13,7 @@ import { InfoButton } from '@/components/InfoButton';
 import { StepperPill, previewClick } from '@/components/tool/meter';
 import { OptionGroup, RewardCard, usePop } from '@/components/tool/reward';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Small pieces the rhythm and practice tools share on top of the tool kit (`SettingChip`,
@@ -129,7 +130,7 @@ export function ChoiceCards<T extends string | number>({
   value: T;
   onChange: (value: T) => void;
   label: string;
-  /** Each card's share of the row ('47%' is two to a row; '18%' fits five short ones). */
+  /** Each card's share of the row ('47%' is two to a row; '14%' fits five short ones — the gaps are fixed, so leave room). */
   cardWidth?: DimensionValue;
 }) {
   const { colors } = useAppTheme();

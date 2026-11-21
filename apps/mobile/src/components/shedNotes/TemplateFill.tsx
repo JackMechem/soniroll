@@ -2,12 +2,13 @@ import { api } from '@jam-practice/convex/_generated/api';
 import { fillTemplate, templateVars } from '@jam-practice/core/noteTemplates';
 import { useConvex, useMutation } from 'convex/react';
 import { useCallback, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
 import type { NoteTemplate } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** A template's text with its blanks filled, and every score in it copied (so editing the music in
     the note doesn't change the template's) — the website's `instantiate`. */

@@ -24,7 +24,7 @@ const JPEG_QUALITY = 0.85;
  * for the platform first" habit the web version's own doc comment already states, just a different
  * platform's own tools.
  */
-export function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }) {
+export function AvatarUpload({ avatarUrl, name }: { avatarUrl: string | null; name?: string | null }) {
   const { colors } = useAppTheme();
   const generateUploadUrl = useMutation(api.profiles.generateAvatarUploadUrl);
   const setAvatar = useMutation(api.profiles.setAvatar);
@@ -84,7 +84,7 @@ export function AvatarUpload({ avatarUrl }: { avatarUrl: string | null }) {
 
   return (
     <View className="flex-row items-center gap-4">
-      <UserAvatar url={avatarUrl} size="xl" />
+      <UserAvatar url={avatarUrl} name={name} size="lg" />
       <View className="gap-2">
         <View className="flex-row items-center gap-2">
           <Pressable

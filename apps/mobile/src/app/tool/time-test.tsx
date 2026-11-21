@@ -454,7 +454,7 @@ function TimeTestScreen() {
               onPick={(b, u) => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
             />
           </SettingChip>
-          <SettingChip Icon={DrumIcon} label="You're playing" title="What you're playing" value={notesValue}>
+          <SettingChip Icon={DrumIcon} label="Playing" title="What you're playing" value={notesValue}>
             <Field
               label="Grid"
               hint={`Each stroke is graded against the nearest note of this grid. "Work it out" decides beat by beat, so you can move between quarters, 8ths, triplets and 16ths as you play. Choose one to hold every beat to it, so notes you leave out count as missed.`}
@@ -471,7 +471,7 @@ function TimeTestScreen() {
             </Field>
             {settings.notesPerBeat !== 0 ? <SubdivisionPicker value={settings.notesPerBeat} onChange={(n) => update({ notesPerBeat: n })} /> : null}
           </SettingChip>
-          <SettingChip Icon={TargetIcon} label="On time within" value={`±${settings.toleranceMs} ms`}>
+          <SettingChip Icon={TargetIcon} label="On time" title="On time within" value={`±${settings.toleranceMs} ms`}>
             <Field label="Strokes this close to the click count as on time" hint="±10 ms is tight; very steady players are often within ±5 ms.">
               <ChoiceCards
                 label="On time within"

@@ -191,7 +191,8 @@ export function InviteCard({
           They sign in (or sign up, free) and join — everything you add here is waiting for them, and your routines go straight into their Shed Log.
         </Text>
         <View className="flex-row items-center gap-2 rounded-lg py-1 pl-3 pr-1" style={{ backgroundColor: colors.background }}>
-          <Text numberOfLines={1} selectable className="font-ui flex-1 text-xs" style={{ color: colors.foreground }}>
+          {/* Not selectable: Android doesn't ellipsize selectable text, so the cut-off link looked whole. Share copies it. */}
+          <Text numberOfLines={1} ellipsizeMode="middle" className="font-ui flex-1 text-xs" style={{ color: colors.foreground }}>
             {url}
           </Text>
           <SmallButton Icon={ShareIcon} label="Share" onPress={() => void shareLink('Lessons with me on soniroll', url)} />
@@ -217,7 +218,7 @@ function JoinCodeForm({ onClose, onCode }: { onClose: () => void; onCode: (code:
   return (
     <>
       <Text className="font-ui text-sm leading-5" style={{ color: colors.muted }}>
-        Paste the invite link your teacher sent you (it has /lessons/join in it), or just its code.
+        Paste the invite link your teacher sent, or its code.
       </Text>
       <Field value={text} onChangeText={setText} placeholder="https://www.soniroll.com/lessons/join?invite=…" autoFocus onSubmit={() => code && onCode(code)} label="Invite link" />
       {text.trim() && !code ? <ErrorLine>That doesn&apos;t look like an invite link.</ErrorLine> : null}

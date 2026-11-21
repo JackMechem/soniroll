@@ -5,7 +5,7 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { useMutation } from 'convex/react';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -22,6 +22,7 @@ import { insertFileLine, insertScoreBlock } from '@/lib/shedNotes/format';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { errorText, useNoteList, useNotesConfig, useTemplates, type NoteTemplate } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 type Patch = { name?: string; title?: string; body?: string };
 

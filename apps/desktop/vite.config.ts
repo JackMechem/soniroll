@@ -74,6 +74,8 @@ export default defineConfig({
       exact("next/font/local", "shims/next-font-local.ts"),
       // Share links point at soniroll.com, not the app's own origin.
       exact("@/lib/siteOrigin", "shims/siteOrigin.ts"),
+      // Settings gets an Updates section (check for a newer version).
+      exact("@/components/settings/DesktopUpdates", "UpdatesSettings.tsx"),
       { find: /^@web\//, replacement: `${web}/` },
       { find: /^@\//, replacement: `${web}/` },
     ],

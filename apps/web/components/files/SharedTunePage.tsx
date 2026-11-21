@@ -8,12 +8,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import Select from "@/components/Select";
 import { FilePreviewDialog, FileRow, fileDetail, type PreviewFile } from "@/components/files/FileParts";
 import { ChartPaper } from "@/components/library/chartView";
 import { Chip, KeyBadge } from "@/components/library/ui";
 import { toOwnTune } from "@/components/PublicTuneList";
-import { CheckIcon, ChordChartIcon, DownloadIcon, FileIcon, MicIcon } from "@/components/tools";
+import { CheckIcon, ChordChartIcon, DownloadIcon, FileIcon, MicIcon, NoteIcon } from "@/components/tools";
 import { errorText, filesApi } from "@/lib/files";
 import { KEY_NAMES, keyPitchClass, transposeSong, type IRealSong } from "@/lib/iRealPro";
 import { SIGN_IN_PATH } from "@/lib/landing";
@@ -58,7 +59,7 @@ export default function SharedTunePage({ id }: { id: string }) {
     return (
       <Shell>
         <div className="flex flex-col items-center gap-2 py-24 text-center">
-          <h1 className="text-xl font-semibold">This tune isn&apos;t available</h1>
+          <h2 className="text-xl font-semibold">This tune isn&apos;t available</h2>
           <p className="text-sm text-muted">It isn&apos;t shared anymore, or the link is wrong.</p>
         </div>
       </Shell>
@@ -69,23 +70,22 @@ export default function SharedTunePage({ id }: { id: string }) {
   const firstKey = tune.keys.find((k) => k.enabled)?.value ?? chart?.key ?? null;
 
   return (
-    <Shell>
+    <Shell title={tune.name}>
       <header className="flex flex-col gap-3">
-        <p className="flex items-center gap-2 text-sm text-muted">
-          Tune
-          {shared.ownerUsername && (
-            <>
-              {" · shared by "}
-              <Link href={`/u/${shared.ownerUsername}`} className="text-accent hover:underline">
-                @{shared.ownerUsername}
-              </Link>
-            </>
-          )}
-        </p>
         <div className="flex items-center gap-4">
           <KeyBadge label={firstKey} size="lg" />
           <div className="min-w-0 flex-1">
-            <h1 className="break-words text-2xl font-semibold tracking-tight">{tune.name}</h1>
+            <p className="text-sm text-muted">
+              Tune
+              {shared.ownerUsername && (
+                <>
+                  {" · shared by "}
+                  <Link href={`/u/${shared.ownerUsername}`} className="text-accent hover:underline">
+                    @{shared.ownerUsername}
+                  </Link>
+                </>
+              )}
+            </p>
             <div className="mt-1.5 flex flex-wrap gap-1">
               {tune.timeSignature && <Chip>{tune.timeSignature}</Chip>}
               {tune.tempos.filter((t) => t.enabled).map((t) => (
@@ -176,8 +176,14 @@ export default function SharedTunePage({ id }: { id: string }) {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">{children}</main>;
+/** The page, with the tune's name in the header bar ("Shared tune" until it's there). */
+function Shell({ title = "Shared tune", children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: title }]} icon={NoteIcon} />
+      {children}
+    </main>
+  );
 }
 
 type SharedTune = NonNullable<FunctionReturnType<typeof filesApi.getSharedTune>>["tune"];

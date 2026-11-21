@@ -1,6 +1,7 @@
 import { makeId } from '@jam-practice/core/types';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -32,6 +33,7 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Native port of `apps/web/components/SlowDowner.tsx` — same features: open an audio or video file
@@ -84,9 +86,21 @@ function SlowDownerScreen() {
   const [pendingDelete, setPendingDelete] = useState<LibraryEntry | null>(null);
   const fileTokenRef = useRef(0);
 
+  // `?open=<saved file id>`: "Open in Slow Downer" from Files opens that file straight away.
+  const { open: openId } = useLocalSearchParams<{ open?: string }>();
+  // Once per id: effects can run twice in development, and two loads at once fail.
+  const openedRef = useRef<string | null>(null);
   useEffect(() => {
-    void listFiles().then(setLibrary);
-  }, []);
+    void listFiles().then((entries) => {
+      setLibrary(entries);
+      const wanted = openId && openedRef.current !== openId ? entries.find((e) => e.id === openId) : undefined;
+      if (wanted) {
+        openedRef.current = openId ?? null;
+        void openEntry(wanted);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, [openId]);
 
   // Speed, pitch, volume and the loop go straight to the player.
   useEffect(() => player.setSpeed(speed / 100), [player, speed]);
@@ -327,7 +341,7 @@ function SlowDownerScreen() {
         />
       </SettingChip>
 
-      <SettingChip Icon={SpeakerIcon} label="Volume" value={`${Math.round(volume * 100)}%`}>
+      <SettingChip Icon={SpeakerIcon} label="Volume" title="Playback" value={`${Math.round(volume * 100)}%`}>
         <SliderField
           label="Volume"
           value={Math.round(volume * 100)}
@@ -539,13 +553,17 @@ function SlowDownerScreen() {
           <View className="w-full flex-row flex-wrap items-center justify-center gap-2">
             <LoopButton label="Loop start" Icon={RepeatIcon} disabled={!duration} onPress={() => setEdge('start', time)} />
             <LoopButton label="Loop end" disabled={!duration} onPress={() => setEdge('end', time)} />
+            <LoopButton label="Clear loop" disabled={!loop} onPress={() => (setLoop(null), setLoopOn(false))} />
+            <LoopButton label="Add marker" Icon={FlagIcon} disabled={!duration} onPress={() => addMarker(time)} />
+          </View>
+          {/* The loop's range on its own line, its room kept when there's none, so setting a loop
+              doesn't move the buttons. */}
+          <View className="h-5 items-center justify-center">
             {loop ? (
               <Text className="font-ui text-sm tabular-nums" style={{ color: loopOn ? colors.foreground : colors.muted }}>
                 Loop {formatTime(loop.start)}–{formatTime(loop.end)}
               </Text>
             ) : null}
-            <LoopButton label="Clear loop" disabled={!loop} onPress={() => (setLoop(null), setLoopOn(false))} />
-            <LoopButton label="Add marker" Icon={FlagIcon} disabled={!duration} onPress={() => addMarker(time)} />
           </View>
         </>
       )}

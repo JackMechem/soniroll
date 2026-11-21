@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
+import PageBar from "@/components/PageBar";
 import { DONATE_URL } from "@/components/support/SupportParts";
 import { CheckIcon, CloudIcon, FeedbackIcon, HeartIcon, ShareIcon, UsersIcon } from "@/components/tools";
 import { shareLink } from "@/lib/shareLink";
@@ -31,13 +32,8 @@ export default function SupportPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">
-      <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-        <span className="shrink-0" style={{ color: HEART }}>
-          <HeartIcon className="h-5 w-5" filled />
-        </span>
-        Support soniroll
-      </h1>
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "Support soniroll" }]} icon={HeartIcon} />
       <section
         className="relative flex flex-col items-start gap-4 overflow-hidden rounded-3xl px-5 py-6 text-left sm:items-center sm:px-6 sm:py-10 sm:text-center"
         style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${HEART} 16%, var(--surface)) 0%, var(--surface) 80%)` }}

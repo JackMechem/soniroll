@@ -1,9 +1,10 @@
 "use client";
 
+import { LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import StoragePill from "@/components/files/StoragePill";
 import { menuPosition, tuneSummary } from "@/components/library/shared";
@@ -14,7 +15,7 @@ import { useTuneActions } from "@/components/library/useTuneActions";
 import PromptDialog from "@/components/PromptDialog";
 import Select from "@/components/Select";
 import StandardsPicker from "@/components/StandardsPicker";
-import { ChevronRightIcon, ChordChartIcon, DownloadIcon, LibraryIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
+import { ChevronRightIcon, ChordChartIcon, DownloadIcon, LibraryIcon, PencilIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
@@ -34,7 +35,9 @@ type Sort = "name" | "added";
 
 /** This device remembers the filter and order (a per-viewer convenience). */
 const VIEW_KEY = "jam-practice-library-tunes-view";
-const VIEW_DEFAULTS: { list: ListFilter; tags: string[]; sort: Sort } = { list: "all", tags: [], sort: "name" };
+/** Tunes with a chord chart, without one, or either. */
+type ChartFilter = "any" | "with" | "without";
+const VIEW_DEFAULTS: { list: ListFilter; tags: string[]; sort: Sort; charts: ChartFilter } = { list: "all", tags: [], sort: "name", charts: "any" };
 
 function blankTune(name = ""): Tune {
   return { id: makeId(), name, tempos: [], keys: [], timeSignature: DEFAULT_TIME_SIGNATURE, notes: "" };
@@ -53,12 +56,12 @@ function addedAt(tune: Tune): number {
  * them. Setlists and Chord Charts are a tap away, as their own pages. Charts not yet linked to a
  * tune are linked here, once (`useAutoLinkCharts`).
  */
-export default function TunesDashboard() {
+export default function TunesDashboard({ initialList }: { initialList?: string | null }) {
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
   const lists = useTuneLists();
   const { setlists, create: createSetlist } = useSetlists();
-  const { allSongs, totalSongs, loading: chartsLoading } = useChordChartsLibrary(null);
+  const { allSongs, loading: chartsLoading } = useChordChartsLibrary(null);
   useAutoLinkCharts(allSongs, chartsLoading);
   const recent = useRecentTunes();
   const { openTuneMenu, element } = useTuneActions();
@@ -73,10 +76,15 @@ export default function TunesDashboard() {
   const { attach: listFadeRef, style: listFadeStyle } = useEdgeFade<HTMLDivElement>();
   const { attach: tagFadeRef, style: tagFadeStyle } = useEdgeFade<HTMLDivElement>();
 
+  // `?list=tunes|learn|library` (the dashboard's stat rows, ⌘K) opens on that list, with the other
+  // filters cleared so the whole list shows. It's applied once per link; the pills take over after.
+  useEffect(() => {
+    if (initialList && (TUNE_LIST_IDS as readonly string[]).includes(initialList)) setView({ list: initialList as TuneListId, tags: [], charts: "any" });
+  }, [initialList, setView]);
+
   const known = lists.tunes.tunes;
   const learn = lists.learn.tunes;
   const library = lists.library.tunes;
-  const visibleLists = TUNE_LIST_IDS.filter((l) => l !== "learn" || isAuthenticated);
   const listFilter: ListFilter = view.list === "learn" && !isAuthenticated ? "all" : view.list;
 
   // Every tune once, with its list (a tune is only ever in one).
@@ -91,12 +99,22 @@ export default function TunesDashboard() {
   const chartKey = useMemo(() => new Map(allSongs.map((s) => [s.id, s.key])), [allSongs]);
   const chartTitles = useMemo(() => new Map(allSongs.map((s) => [s.id, s.title])), [allSongs]);
 
+  // Has a chart that's really there (a deleted chart's id can linger until the library has loaded).
+  const hasChart = useMemo(() => (tune: Tune) => tuneChartIds(tune).some((id) => chartsLoading || chartTitles.has(id)), [chartsLoading, chartTitles]);
+  const chartCounts = useMemo(() => {
+    const inList = everything.filter(({ list }) => listFilter === "all" || list === listFilter);
+    const withCharts = inList.filter(({ tune }) => hasChart(tune)).length;
+    return { with: withCharts, without: inList.length - withCharts };
+  }, [everything, listFilter, hasChart]);
+  const chartFilter: ChartFilter = view.charts === "with" || view.charts === "without" ? view.charts : "any";
+
   const q = query.trim().toLowerCase();
   const rows = useMemo(() => {
     const words = q ? q.split(/\s+/) : [];
     const picked = everything.filter(({ tune, list }) => {
       if (listFilter !== "all" && list !== listFilter) return false;
-      if (pickedTags.some((t) => !hasTag(tune, t))) return false;
+      if (pickedTags.length && !pickedTags.some((t) => hasTag(tune, t))) return false;
+      if (chartFilter !== "any" && hasChart(tune) !== (chartFilter === "with")) return false;
       if (!words.length) return true;
       // Its charts' titles too (an iReal title can differ from the tune's name).
       const charts = tuneChartIds(tune).map((id) => chartTitles.get(id) ?? "");
@@ -105,10 +123,16 @@ export default function TunesDashboard() {
     });
     if (view.sort === "added") return [...picked].sort((a, b) => addedAt(b.tune) - addedAt(a.tune) || b.index - a.index);
     return sortByText(picked, (r) => r.tune.name);
-  }, [everything, listFilter, pickedTags, q, view.sort, chartTitles]);
+  }, [everything, listFilter, pickedTags, q, view.sort, chartFilter, hasChart, chartTitles]);
 
   const counts: Record<TuneListId, number> = { tunes: known.length, learn: learn.length, library: library.length };
   const total = known.length + (isAuthenticated ? learn.length : 0) + library.length;
+  // Filters that would show nothing are left out (unless picked): the Library list only fills up
+  // when charts come in, and a "With charts 0" just adds clutter. So does "With charts 4" when
+  // that's all of them: the chart filters show only when the tunes are a mix.
+  const visibleLists = TUNE_LIST_IDS.filter((l) => (l !== "learn" || isAuthenticated) && (l !== "library" || counts.library > 0 || listFilter === "library"));
+  const mixedCharts = chartCounts.with > 0 && chartCounts.without > 0;
+  const shownChartFilters = (["with", "without"] as const).filter((c) => chartsLoading || mixedCharts || chartFilter === c);
 
   const recentCards = recent.ids
     .map((id) => everything.find((e) => e.tune.id === id))
@@ -137,15 +161,15 @@ export default function TunesDashboard() {
     setAddMenu({
       ...menuPosition(e),
       items: [
-        { label: "Add a jazz standard", onSelect: () => setAddingStandard(listFilter === "learn" ? "learn" : "tunes") },
-        { label: "Add your own tune", onSelect: () => setCreating({ list: listFilter === "all" ? "tunes" : listFilter, tune: blankTune() }) },
-        { label: "New chord chart", onSelect: () => router.push("/chord-charts/new") },
-        { label: "Import chord charts", onSelect: () => router.push("/chord-charts/import") },
-        { label: "New setlist", onSelect: () => setNamingSetlist(true) },
+        { label: "Add a jazz standard", icon: <LibraryIcon className="h-4 w-4 text-muted" />, onSelect: () => setAddingStandard(listFilter === "learn" ? "learn" : "tunes") },
+        { label: "Add your own tune", icon: <PencilIcon className="h-4 w-4 text-muted" />, onSelect: () => setCreating({ list: listFilter === "all" ? "tunes" : listFilter, tune: blankTune() }) },
+        { label: "New chord chart", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/chord-charts/new") },
+        { label: "Import chord charts", icon: <DownloadIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/chord-charts/import") },
+        { label: "New setlist", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => setNamingSetlist(true) },
       ],
     });
 
-  const filtering = listFilter !== "all" || pickedTags.length > 0 || !!q;
+  const filtering = listFilter !== "all" || pickedTags.length > 0 || chartFilter !== "any" || !!q;
   const pill = (active: boolean) =>
     `inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors ${
       active ? "bg-accent/15 text-accent" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
@@ -153,19 +177,18 @@ export default function TunesDashboard() {
 
   return (
     <LibraryPage>
-      <Hero title="Library" icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="tunes" tabs={<LibraryTabs active="tunes" />}>
+      <Hero title="Tunes" crumbs={[LIBRARY_CRUMB]} icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="tunes" tabs={<LibraryTabs active="tunes" />}>
         <Toolbar>
           <HeroSearch value={query} onChange={(v) => { setQuery(v); setShown(PAGE); }} placeholder={total > 1 ? `Search ${total} tunes…` : "Search your tunes…"} />
-          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
+          <span className="hidden sm:contents">
+            <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
+          </span>
           <Pill primary icon={PlusIcon} label="Add" onClick={openAddMenu} />
         </Toolbar>
       </Hero>
 
-      {/* Setlists and chord charts have pages of their own, a tap away. */}
-      <div className="grid grid-cols-2 gap-3">
-        <ShelfLink href="/tunes?tab=setlists" icon={SetlistIcon} title="Setlists" detail={setlists.length ? `${setlists.length}` : "None yet"} />
-        <ShelfLink href="/tunes?tab=charts" icon={ChordChartIcon} title="Chord charts" detail={chartsLoading ? "" : totalSongs ? `${totalSongs}` : "None yet"} />
-      </div>
+      {/* Setlists have a page of their own, a tap away. (Chord charts live on their tunes.) */}
+      <ShelfLink href="/tunes?tab=setlists" icon={SetlistIcon} title="Setlists" detail={setlists.length ? `${setlists.length} setlist${setlists.length === 1 ? "" : "s"}` : "None yet"} />
 
       {total === 0 && lists.ready ? (
         <EmptyState
@@ -191,6 +214,20 @@ export default function TunesDashboard() {
                 {visibleLists.map((l) => (
                   <button key={l} type="button" aria-pressed={listFilter === l} onClick={() => setFilter({ list: l })} className={pill(listFilter === l)}>
                     {TUNE_LIST_LABEL[l]} <span className="text-xs tabular-nums opacity-80">{counts[l]}</span>
+                  </button>
+                ))}
+                {shownChartFilters.length > 0 && <span className="mx-0.5 w-px shrink-0 self-stretch bg-foreground/10" aria-hidden />}
+                {shownChartFilters.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-pressed={chartFilter === c}
+                    onClick={() => setFilter({ charts: chartFilter === c ? "any" : c })}
+                    className={pill(chartFilter === c)}
+                    title={c === "with" ? "Only tunes that have a chord chart" : "Only tunes with no chord chart yet"}
+                  >
+                    {c === "with" && <ChordChartIcon className="h-3.5 w-3.5" />}
+                    {c === "with" ? "With charts" : "Without charts"} <span className="text-xs tabular-nums opacity-80">{chartCounts[c]}</span>
                   </button>
                 ))}
               </div>
@@ -222,7 +259,7 @@ export default function TunesDashboard() {
           {!filtering && recentCards.length > 1 && <RecentStrip items={recentCards} />}
 
           <Panel
-            title={pickedTags.length ? `${listFilter === "all" ? "Tunes" : TUNE_LIST_LABEL[listFilter]} · ${pickedTags.join(", ")}` : listFilter === "all" ? "All tunes" : TUNE_LIST_LABEL[listFilter]}
+            title={`${pickedTags.length ? `${listFilter === "all" ? "Tunes" : TUNE_LIST_LABEL[listFilter]} · ${pickedTags.join(" or ")}` : listFilter === "all" ? "All tunes" : TUNE_LIST_LABEL[listFilter]}${chartFilter === "with" ? " · with charts" : chartFilter === "without" ? " · without charts" : ""}`}
             detail={rows.length}
             flush
             actions={
@@ -240,12 +277,16 @@ export default function TunesDashboard() {
             {rows.length === 0 ? (
               q ? (
                 <EmptyState title={`Nothing matches “${query}”`} body="Try a different name, key or tag." />
+              ) : chartFilter === "with" && !pickedTags.length ? (
+                <EmptyState title="No tunes with charts here" body="Import chord charts, or write one from a tune's page." action={<Pill icon={DownloadIcon} label="Import charts" href="/chord-charts/import" />} />
+              ) : chartFilter === "without" && !pickedTags.length ? (
+                <EmptyState title="Every tune here has a chart" body="Tunes without a chord chart show up here." />
               ) : listFilter === "library" ? (
                 <EmptyState title="Nothing in the Library list" body="Tunes that come in with imported chord charts land here until you move them to Tunes I Know or Tunes to Learn." />
               ) : (
                 <EmptyState
                   title="No tunes here yet"
-                  body={pickedTags.length ? "No tune has all of those tags." : "Add a jazz standard or your own tune."}
+                  body={pickedTags.length ? pickedTags.length > 1 ? "No tune has any of those tags." : "No tune has that tag." : "Add a jazz standard or your own tune."}
                   action={!pickedTags.length ? <Pill primary icon={PlusIcon} label="Add a tune" onClick={openAddMenu} /> : undefined}
                 />
               )

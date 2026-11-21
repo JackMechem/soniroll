@@ -240,7 +240,7 @@ function RecorderScreen() {
                 }}
                 onAll={() => {
                   setTakesOpen(false);
-                  router.push('/recordings');
+                  router.push({ pathname: '/files', params: { filter: 'source:recording' } });
                 }}
                 disabled={busy}
               />

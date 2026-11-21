@@ -20,7 +20,7 @@ export default function TuneListPage({ list }: { list: TuneListId }) {
         listId={list}
         variant="page"
         searchPlaceholder={list === "learn" ? "Search your tunes to learn…" : list === "library" ? "Search your Library list…" : "Search the tunes you know…"}
-        emptyMessage="Nothing here yet — press + to add a jazz standard or your own tune."
+        emptyMessage="No tunes here yet. Add one, or pick a jazz standard."
         exportFilenamePrefix={list === "learn" ? "jam-practice-tunes-to-learn" : list === "library" ? "jam-practice-library-tunes" : "jam-practice-tunes"}
       />
     </LibraryPage>

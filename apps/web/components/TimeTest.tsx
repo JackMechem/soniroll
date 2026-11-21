@@ -7,6 +7,7 @@ import Hint from "@/components/Hint";
 import KeyHint from "@/components/KeyHint";
 import { BIG_PRIMARY, BIG_SECONDARY, TempoHero, TempoNoteConversionHint, TempoNoteValuePicker } from "@/components/MeterFields";
 import {
+  MeterQuickPicks,
   OptionGroup,
   SUB_LABELS,
   Segmented,
@@ -29,7 +30,6 @@ import { DEFAULT_CLICK_SOUND_ID, type BeatLevel, type ClickSettings } from "@/li
 import { HintsContext } from "@/lib/hints";
 import { MAX_BEATS } from "@/lib/meters";
 import { NEXT_LEVEL, clampBpm, convertTempo, defaultAccents, defaultSubAccents, nearestNoteValue, useTapTempo } from "@/lib/meterControls";
-import { COMMON_METERS } from "@jam-practice/core/meterControls";
 import { analyze, type Analysis, type AnalysisParams, type Calibration, type Take } from "@/lib/timeTest/analysis";
 import {
   getTimeTestServerSnapshot,
@@ -330,7 +330,7 @@ export default function TimeTest() {
       presets={toolPresets("time-test", settings, update)}
       titleExtra={
         recording && countInLeft === null ? (
-          <span className="hidden h-8 items-center gap-2 rounded-md bg-foreground/[0.05] px-2.5 text-sm font-medium tabular-nums sm:flex">
+          <span className="hidden h-8 items-center gap-2 rounded-full bg-foreground/[0.05] px-3 align-middle text-sm font-medium tabular-nums sm:inline-flex">
             <span className="h-2 w-2 rounded-full bg-danger motion-safe:animate-pulse" aria-hidden />
             Recording {Math.floor(elapsed / 60)}:{String(Math.floor(elapsed % 60)).padStart(2, "0")}
           </span>
@@ -429,26 +429,7 @@ export default function TimeTest() {
                 onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
                 onSetBeatUnit={(u) => update({ beatUnit: u })}
               />
-              <OptionGroup title="Quick picks">
-                <div role="radiogroup" aria-label="Common time signatures" className="grid grid-cols-4 gap-2">
-                  {COMMON_METERS.map(([b, u]) => (
-                    <RewardCard
-                      key={`${b}/${u}`}
-                      id={`meter:${b}/${u}`}
-                      on={beatsPerBar === b && beatUnit === u}
-                      label={`${b}/${u}`}
-                      onPick={() => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })}
-                      className="h-14"
-                    >
-                      <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
-                        <span>{b}</span>
-                        <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
-                        <span>{u}</span>
-                      </span>
-                    </RewardCard>
-                  ))}
-                </div>
-              </OptionGroup>
+              <MeterQuickPicks beatsPerBar={beatsPerBar} beatUnit={beatUnit} onPick={(b, u) => update({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })} />
             </SettingChip>
             <SettingChip icon={NoteIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? subdivision}>
               <SubdivisionPicker value={subdivision} onChange={(n) => update({ subdivision: n })} showTitle={false} />

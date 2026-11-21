@@ -1,9 +1,10 @@
 import * as Clipboard from 'expo-clipboard';
 import { encodeChartString } from '@jam-practice/core/chartString';
+import { addChartsToTune } from '@jam-practice/core/tuneLibrary';
 import { parseBarSlots, slotsToText, type Bar, type ChordSlot, type IRealSong } from '@jam-practice/core/iRealPro';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChartEditorKeyboard, type BarTool } from '@/components/ChartEditorKeyboard';
@@ -12,8 +13,12 @@ import { ChevronLeftIcon, ChevronRightIcon, FolderIcon, PencilIcon, PlusIcon, Tr
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { NumberStepper } from '@/components/NumberStepper';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
+import { findTune, useChartLinker, useTuneLists } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
+import { TextInput } from '@/components/ThemedTextInput';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 const STARTING_BARS = 8;
 const BARS_PER_ROW = 4;
@@ -113,9 +118,22 @@ function ChordChartEditorScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const params = useLocalSearchParams<{ songId?: string; playlist?: string; title?: string; composer?: string; style?: string; key?: string }>();
+  const params = useLocalSearchParams<{
+    songId?: string;
+    playlist?: string;
+    title?: string;
+    composer?: string;
+    style?: string;
+    key?: string;
+    /** "<list>:<id>" — the tune a new chart is for ("Create one" on a tune page). */
+    tune?: string;
+    timeSignature?: string;
+  }>();
   const songId = params.songId ?? null;
   const { importSongs, updateSong, selectedSong, playlists } = useChordChartsLibrary(songId);
+  const { lists } = useTuneLists();
+  const linkToTunes = useChartLinker();
+  const startTs = /^(\d+)\/(\d+)$/.exec(params.timeSignature ?? '');
   // Shown in the details line: the chart's playlists (editing), or the one it'll go in (new — none
   // means All charts only).
   const playlist = songId
@@ -126,8 +144,8 @@ function ChordChartEditorScreen() {
   const [composer, setComposer] = useState(params.composer ?? '');
   const [style, setStyle] = useState(params.style ?? '');
   const [key, setKey] = useState(params.key ?? '');
-  const [top, setTop] = useState(4);
-  const [bottom, setBottom] = useState(4);
+  const [top, setTop] = useState(startTs ? Number(startTs[1]) : 4);
+  const [bottom, setBottom] = useState(startTs ? Number(startTs[2]) : 4);
   const [bars, setBars] = useState<EditableBar[]>(() => Array.from({ length: STARTING_BARS }, blankBar));
   const [activeIndex, setActiveIndex] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(!songId && !params.title);
@@ -229,12 +247,19 @@ function ChordChartEditorScreen() {
         router.back();
         return;
       }
-      const { added } = await importSongs([toSave], playlist || null);
+      const { added, ids } = await importSongs([toSave], playlist || null);
       if (added === 0) {
         setError('A chart with this title, composer and key is already in your library — change one of them to save it.');
         setDetailsOpen(true);
         return;
       }
+      // Every chart belongs to a tune: the one it was written for, else the tune with its name (or
+      // a new tune in the Library list), as on the website.
+      const newId = ids[0];
+      const [tuneList, tuneId] = (params.tune ?? '').split(':');
+      const forTune = tuneId ? findTune(lists, tuneId, tuneList) : null;
+      if (newId && forTune) lists[forTune.list].setTunes((prev) => prev.map((t) => (t.id === forTune.tune.id ? addChartsToTune(t, [newId]) : t)));
+      else if (newId) linkToTunes([{ id: newId, title: toSave.title, timeSignature: toSave.timeSignature }]);
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save that chord chart.");
@@ -276,7 +301,7 @@ function ChordChartEditorScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRow, chartWidth, viewportH, chartTop]);
 
-  const info = [composer.trim(), style.trim(), key.trim() && `Key of ${key.trim()}`, `${top}/${bottom}`, playlist]
+  const info = [composer.trim(), style.trim(), key.trim() && `Key of ${prettyKeyName(key.trim())}`, `${top}/${bottom}`, playlist]
     .filter(Boolean)
     .join(' · ');
 
@@ -322,7 +347,7 @@ function ChordChartEditorScreen() {
                   {title.trim() || 'Untitled — tap to add details'}
                 </Text>
                 <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                  {info}
+                  {withAccidentals(info)}
                 </Text>
               </View>
               <PencilIcon color={colors.muted} size={18} />

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import { Id } from "@jam-practice/convex/_generated/dataModel";
+import { CheckIcon } from "@/components/tools";
 
 /** The Follow/Unfollow toggle on a public profile — only ever rendered for a signed-in viewer
     looking at someone *else's* profile (`PublicProfilePage.tsx` handles both of those checks
@@ -30,12 +31,15 @@ export default function FollowButton({ targetUserId, size = "md" }: { targetUser
       type="button"
       onClick={() => void toggle()}
       disabled={isFollowing === undefined || pending}
-      className={`shrink-0 rounded-md ${size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm"} font-medium transition-colors disabled:opacity-50 ${
+      aria-pressed={!!isFollowing}
+      title={isFollowing ? "Unfollow" : undefined}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-md ${size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm"} font-medium transition-colors disabled:opacity-50 ${
         isFollowing
-          ? "hover:bg-surface-hover"
+          ? "bg-foreground/[0.05] hover:bg-surface-hover"
           : "bg-accent text-accent-foreground hover:bg-accent-hover"
       }`}
     >
+      {isFollowing && <CheckIcon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />}
       {isFollowing ? "Following" : "Follow"}
     </button>
   );

@@ -2,7 +2,7 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { type FileKind, FILE_KIND_LABEL, fileDetail, fileKind, formatBytes } from '@jam-practice/core/files';
 import { sortKey } from '@jam-practice/core/sortText';
 import { useQuery } from 'convex/react';
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dropdown } from '@/components/Dropdown';
 import { FileRow, useFileActions } from '@/components/files/FileParts';
 import { CloudIcon, PhoneIcon, UploadIcon } from '@/components/files/icons';
-import { FolderIcon } from '@/components/icons';
+import { FolderIcon, MicrophoneIcon } from '@/components/icons';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { InfoButton } from '@/components/InfoButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -82,7 +82,9 @@ function FilesScreen() {
   const actions = useFileActions({ tuneName });
 
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('source:all');
+  const router = useRouter();
+  // `?filter=source:recording` opens it on Recordings (the Recorder's "All takes", old links).
+  const [filter, setFilter] = useState(useLocalSearchParams<{ filter?: string }>().filter || 'source:all');
   const [sort, setSort] = useState<SortId>('new');
 
   const withUrls = useDeviceUrls(storage?.items);
@@ -110,17 +112,14 @@ function FilesScreen() {
   const filterOptions = useMemo(
     () => [
       { value: 'source:all', label: `Everything · ${items.length}` },
-      ...(Object.keys(SOURCE_LABEL) as StoredKind[]).filter((s) => counts.bySource.get(s)).map((s) => ({ value: `source:${s}`, label: `${SOURCE_LABEL[s]} · ${counts.bySource.get(s)}` })),
+      ...(Object.keys(SOURCE_LABEL) as StoredKind[]).filter((s) => counts.bySource.get(s) || filter === `source:${s}`).map((s) => ({ value: `source:${s}`, label: `${SOURCE_LABEL[s]} · ${counts.bySource.get(s) ?? 0}` })),
       ...(Object.keys(FILE_KIND_LABEL) as FileKind[]).filter((k) => counts.byKind.get(k)).map((k) => ({ value: `kind:${k}`, label: `${KIND_FILTER_LABEL[k]} · ${counts.byKind.get(k)}` })),
     ],
-    [items.length, counts],
+    [items.length, counts, filter],
   );
 
-  /** What it is and which tune it's on. */
-  const whereOf = (item: StoredEntry) => {
-    const tune = item.tuneId ? tuneName(item.tuneId) : undefined;
-    return [SOURCE_SHORT[item.kind], tune].filter(Boolean).join(' · ') || null;
-  };
+  /** What it is, when it isn't a plain upload (the tune it's on gets its own line). */
+  const whereOf = (item: StoredEntry) => SOURCE_SHORT[item.kind];
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -212,6 +211,11 @@ function FilesScreen() {
                 </Text>
               </View>
             ) : null}
+            {actions.notice ? (
+              <Text className="font-ui text-sm" style={{ color: colors.accent }}>
+                {actions.notice}
+              </Text>
+            ) : null}
             {[full ? 'Your online storage is full. Delete something to add more.' : null, uploader.error, actions.error].filter(Boolean).map((text) => (
               <Text key={text} className="font-ui text-sm" style={{ color: colors.danger }}>
                 {text}
@@ -229,7 +233,15 @@ function FilesScreen() {
           </View>
         }
         ListEmptyComponent={
-          items.length ? (
+          filter === 'source:recording' && !query.trim() ? (
+            <EmptyState
+              Icon={MicrophoneIcon}
+              title="No recordings yet"
+              body="Record a take in the Recorder; it's kept here, and on its tune."
+              action={{ label: 'Record', Icon: MicrophoneIcon, onPress: () => router.push('/tool/recorder') }}
+              secondary={items.length ? { label: 'Show everything', onPress: () => setFilter('source:all') } : undefined}
+            />
+          ) : items.length ? (
             <View className="items-center gap-1 px-6 py-12">
               <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                 Nothing matches
@@ -248,7 +260,7 @@ function FilesScreen() {
           )
         }
         renderItem={({ item }) => (
-          <FileRow item={item} paid={paid} detail={fileDetail(item, whereOf(item))} onOpen={() => actions.openFile(item)} onMenu={() => actions.openMenu(item)} />
+          <FileRow item={item} paid={paid} detail={fileDetail(item, whereOf(item))} tune={item.tuneId ? tuneName(item.tuneId) : undefined} onOpen={() => actions.openFile(item)} onMenu={() => actions.openMenu(item)} />
         )}
       />
       {actions.elements}
