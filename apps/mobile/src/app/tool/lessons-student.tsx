@@ -141,7 +141,7 @@ function Student() {
                 <Fact label="Days, last year" value={String(p.days)} />
                 <Fact label="Goal days, last 30" value={String(p.goalDays)} />
                 <Text className="font-ui py-2 text-xs" style={{ color: colors.muted }}>
-                  Last practiced {data.lastPracticed ? (data.lastPracticed === today ? 'today' : formatShortDate(data.lastPracticed)) : '—'}.
+                  {data.lastPracticed ? `Last practiced ${data.lastPracticed === today ? 'today' : formatShortDate(data.lastPracticed)}.` : 'Not practiced yet.'}
                 </Text>
               </>
             )}

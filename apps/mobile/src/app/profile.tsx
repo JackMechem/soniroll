@@ -182,7 +182,7 @@ function SignedIn({ onScroll }: { onScroll: ReturnType<typeof useScrolled>['onSc
         className="flex-row items-center gap-4 rounded-2xl p-4"
         style={{ backgroundColor: colors.surface }}
       >
-        <UserAvatar url={profile?.avatarUrl} size="lg" />
+        <UserAvatar url={profile?.avatarUrl} name={profile?.username ?? user?.name ?? user?.email} size="lg" />
         <View className="flex-1">
           <Text numberOfLines={1} className="font-ui-bold text-xl font-bold" style={{ color: colors.foreground }}>
             {name}
@@ -226,6 +226,7 @@ function SignedIn({ onScroll }: { onScroll: ReturnType<typeof useScrolled>['onSc
         title="Sign out?"
         message="Your tools keep working signed out, using what's saved on this phone."
         confirmLabel="Sign out"
+        safe
         onConfirm={() => {
           setConfirmSignOut(false);
           void signOut();

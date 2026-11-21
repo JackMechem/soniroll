@@ -38,7 +38,7 @@ function PersonList({ people, emptyText }: { people: PersonRow[] | undefined; em
             className="flex-row items-center gap-3 border-b py-2.5"
             style={{ borderColor: `${colors.background}B3` }}
           >
-            <UserAvatar url={person.avatarUrl} size="sm" />
+            <UserAvatar url={person.avatarUrl} name={person.username} size="sm" />
             <Text numberOfLines={1} className="font-ui-semibold text-sm" style={{ color: colors.foreground }}>
               {person.username}
             </Text>

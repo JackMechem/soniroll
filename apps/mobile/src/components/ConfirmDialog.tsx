@@ -4,7 +4,8 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 
 /** The native sibling of `apps/web/components/ConfirmDialog.tsx` — a real `Modal` instead of a
     `fixed inset-0` overlay div, same shape otherwise (title, message, Cancel/destructive-confirm
-    pair). Reused by the account page's own delete-account flow and tune deletion. */
+    pair). Reused by the account page's own delete-account flow and tune deletion. `safe`: the
+    confirm button is the accent, not red, for something that loses nothing (signing out). */
 export function ConfirmDialog({
   visible,
   title,
@@ -12,6 +13,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   onCancel,
+  safe,
 }: {
   visible: boolean;
   title: string;
@@ -19,6 +21,7 @@ export function ConfirmDialog({
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  safe?: boolean;
 }) {
   const { colors } = useAppTheme();
   return (
@@ -49,9 +52,9 @@ export function ConfirmDialog({
             <Pressable
               onPress={onConfirm}
               className="rounded-xl px-4 py-2"
-              style={{ backgroundColor: colors.danger }}
+              style={{ backgroundColor: safe ? colors.accent : colors.danger }}
             >
-              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.background }}>
+              <Text className="text-sm font-semibold font-ui-semibold" style={{ color: safe ? colors['accent-foreground'] : colors.background }}>
                 {confirmLabel}
               </Text>
             </Pressable>

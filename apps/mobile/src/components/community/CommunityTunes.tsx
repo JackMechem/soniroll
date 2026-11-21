@@ -136,7 +136,7 @@ export function PostListItem({
               className="flex-row items-center gap-2"
               hitSlop={6}
             >
-              <UserAvatar url={post.authorAvatarUrl ?? null} size="sm" />
+              <UserAvatar url={post.authorAvatarUrl ?? null} name={post.authorUsername} size="sm" />
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 {post.authorUsername}
               </Text>

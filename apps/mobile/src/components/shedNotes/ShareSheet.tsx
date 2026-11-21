@@ -126,7 +126,7 @@ export function ShareSheet({ noteId, title, visible, onClose }: { noteId: string
                 className="flex-row items-center gap-2 overflow-hidden rounded-lg px-2 py-1.5"
                 style={{ backgroundColor: derived.fill }}
               >
-                <UserAvatar url={s.avatarUrl} size="sm" />
+                <UserAvatar url={s.avatarUrl} name={s.username} size="sm" />
                 <Text numberOfLines={1} className="font-ui-semibold flex-1 text-sm font-semibold" style={{ color: colors.foreground }}>
                   @{s.username}
                 </Text>
@@ -156,7 +156,7 @@ export function ShareSheet({ noteId, title, visible, onClose }: { noteId: string
                 const label = p.username ? `@${p.username}` : (p.name ?? 'Someone');
                 return (
                   <View key={p.userId} className="flex-row items-center gap-2 rounded-lg px-2 py-1.5" style={{ backgroundColor: derived.fill }}>
-                    <UserAvatar url={p.avatarUrl} size="sm" />
+                    <UserAvatar url={p.avatarUrl} name={p.username ?? p.name} size="sm" />
                     <Text numberOfLines={1} className="font-ui-semibold flex-1 text-sm font-semibold" style={{ color: colors.foreground }}>
                       {label}
                     </Text>

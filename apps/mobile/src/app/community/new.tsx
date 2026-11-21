@@ -114,7 +114,8 @@ function NewPostScreen() {
             {!isAuthenticated ? 'Sign in to post to Community.' : 'Make your profile public before posting to Community.'}
           </Text>
           <Pressable
-            onPress={() => router.replace(isAuthenticated ? '/account/public-profile' : '/profile')}
+            // Pushed, not replaced: Back comes back here, and the form opens once the profile is public.
+            onPress={() => router.push(isAuthenticated ? '/account/public-profile' : '/profile')}
             className="rounded-xl px-4 py-2.5"
             style={{ backgroundColor: colors.accent }}
           >

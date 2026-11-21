@@ -128,7 +128,7 @@ function Lesson() {
         />
         {teacher || hasNotes ? (
           <View className="flex-row gap-2">
-            {hasNotes ? <SmallButton Icon={NotesIcon} label="Notes" onPress={() => router.push(notesRoute(lessonId, sessionKey))} /> : null}
+            {hasNotes ? <SmallButton Icon={NotesIcon} label="Read all notes" onPress={() => router.push(notesRoute(lessonId, sessionKey))} /> : null}
             {teacher && addActions.length ? <SmallButton primary Icon={PlusIcon} label="Add" onPress={() => setMenu('add')} /> : null}
           </View>
         ) : null}

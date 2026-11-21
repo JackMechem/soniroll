@@ -40,6 +40,27 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
  * and remove; the student ticks an assignment off (or hands it in), saves a chart to their own
  * charts, and opens a routine in their Shed Log.
  */
+
+/** A note as one line: each line of it (a list item, a paragraph) joined with " · " rather than run
+    together ("Slow the bridge down · Sing the melody"); a fenced block stays one piece. */
+function notePreview(body: string, max: number): string {
+  const chunks: string[] = [];
+  let fence: string[] | null = null;
+  for (const line of body.split('\n')) {
+    if (fence) {
+      fence.push(line);
+      if (/^(```|~~~)\s*$/.test(line.trim())) {
+        chunks.push(fence.join('\n'));
+        fence = null;
+      }
+    } else if (/^\s*(```|~~~)/.test(line)) fence = [line];
+    else if (line.trim()) chunks.push(line);
+  }
+  if (fence) chunks.push(fence.join('\n'));
+  const text = chunks.map((c) => noteSnippet(c, max)).filter(Boolean).join(' · ');
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
 export function ItemCard({
   item,
   teacher,
@@ -125,7 +146,7 @@ export function ItemCard({
         <>
           {item.body.trim() ? (
             <Text numberOfLines={3} className="font-ui text-sm leading-5" style={{ color: colors.foreground }}>
-              {noteSnippet(item.body, 320)}
+              {notePreview(item.body, 320)}
             </Text>
           ) : null}
           {onOpenNotes ? (
@@ -322,10 +343,10 @@ function ItemForm({ lessonId, sessionId, edit, today, onClose }: { lessonId: Id<
         >
           <FileIcon color={colors.muted} size={22} />
           <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-            {file ? file.name : kind === 'file' ? 'Choose a PDF, image or audio file' : 'Attach a sheet, an image or a recording (optional)'}
+            {file ? file.name : kind === 'file' ? 'Choose a PDF, image or audio file' : 'Attach a sheet, image or recording'}
           </Text>
           <Text className="font-ui text-xs" style={{ color: colors.muted }}>
-            Up to {MAX_FILE_MB} MB
+            {kind === 'file' ? '' : 'Optional · '}up to {MAX_FILE_MB} MB
           </Text>
         </Pressable>
       ) : null}

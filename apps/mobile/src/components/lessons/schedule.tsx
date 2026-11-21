@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { CheckIcon, CloseIcon, LinkIcon, PlusIcon } from '@/components/icons';
+import { CheckIcon, ChevronRightIcon, CloseIcon, LinkIcon, PlusIcon } from '@/components/icons';
 import { openUrl } from '@/components/lessons/files';
 import {
   Badge,
@@ -367,10 +367,11 @@ export function ScheduleCard({ lessonId, now }: { lessonId: Id<'lessonStudents'>
           </View>
         ) : null}
         {teacher && !data.hasAvailability ? (
-          <Pressable onPress={() => router.push('/tool/lessons-settings')} className="py-1">
-            <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.accent }}>
-              Set your teaching hours so students can request lessons →
+          <Pressable onPress={() => router.push('/tool/lessons-settings')} accessibilityRole="link" className="flex-row items-center gap-0.5 py-1">
+            <Text className="font-ui-semibold shrink text-xs font-semibold" style={{ color: colors.accent }}>
+              Set your teaching hours so students can request lessons
             </Text>
+            <ChevronRightIcon color={colors.accent} size={16} />
           </Pressable>
         ) : null}
       </View>

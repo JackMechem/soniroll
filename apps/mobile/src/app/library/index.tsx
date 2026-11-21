@@ -55,7 +55,7 @@ function LibraryScreen() {
   const results = useMemo(() => {
     if (!q) return null;
     const words = q.split(/\s+/);
-    const matchTune = (t: Tune) => words.every((w) => `${t.name} ${tuneSummary(t)} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(w));
+    const matchTune = (t: Tune) => words.every((w) => `${t.name} ${tuneSummary(t)} ${t.keys.map((k) => k.value).join(' ')} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(w));
     return { tunes: ordered(tunes.filter(matchTune)), learn: ordered(learn.filter(matchTune)), library: ordered(library.filter(matchTune)) };
   }, [q, tunes, learn, library, ordered]);
 

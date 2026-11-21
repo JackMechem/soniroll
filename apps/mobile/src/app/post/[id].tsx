@@ -141,7 +141,7 @@ function PostScreenContent() {
                       className="flex-row items-center gap-1.5"
                       hitSlop={4}
                     >
-                      <UserAvatar url={post.authorAvatarUrl} size="sm" />
+                      <UserAvatar url={post.authorAvatarUrl} name={post.authorUsername} size="sm" />
                       <Text className="text-xs font-ui" style={{ color: colors.muted }}>
                         {post.authorUsername}
                       </Text>

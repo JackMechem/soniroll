@@ -3,6 +3,7 @@ import { linkChartsToTunes, linkedChartIds, removeChartFromTune, tuneChartIds, T
 import { makeId, type Tune } from '@jam-practice/core/types';
 
 import { useLibraryTunes, useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
+import { prettyKeyName } from './keyNames';
 
 /** The three tune lists (`@jam-practice/core/tuneLibrary`, the same as the website): Tunes I Know
     ("tunes" — the one Jam Practice picks from), Tunes to Learn, and the Library list (tunes that
@@ -98,8 +99,9 @@ export function useChartLinker() {
   return link;
 }
 
+/** "D♭, F · 160 BPM · 4/4": a tune's keys (with the music symbols), tempos and meter. */
 export function tuneSummary(tune: Tune): string {
-  const keys = tune.keys.filter((k) => k.enabled).map((k) => k.value);
+  const keys = tune.keys.filter((k) => k.enabled).map((k) => prettyKeyName(k.value));
   const tempos = tune.tempos.filter((t) => t.enabled).map((t) => t.value);
   return [keys.join(', ') || null, tempos.length ? `${tempos.join(', ')} BPM` : null, tune.timeSignature]
     .filter(Boolean)

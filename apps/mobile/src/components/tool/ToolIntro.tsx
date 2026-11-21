@@ -117,7 +117,7 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
       {options?.length ? (
         <View className="gap-2.5">
           <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
-            Its options
+            Options
           </Text>
           {options.map((option) => (
             <View key={option.name} className="gap-0.5">

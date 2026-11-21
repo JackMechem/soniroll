@@ -35,7 +35,7 @@ function TunesListScreen() {
   const shown = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const filtered = words.length
-      ? tunes.filter((t) => words.every((w) => `${t.name} ${tuneSummary(t)} ${t.notes} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(w)))
+      ? tunes.filter((t) => words.every((w) => `${t.name} ${tuneSummary(t)} ${t.keys.map((k) => k.value).join(' ')} ${t.notes} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(w)))
       : tunes;
     return ordered(filtered);
   }, [tunes, query, ordered]);

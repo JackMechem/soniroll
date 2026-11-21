@@ -97,7 +97,7 @@ function CommunityScreen() {
                         className="flex-row items-center gap-3 px-3"
                         style={{ minHeight: 60, borderTopWidth: i ? 1 : 0, borderTopColor: colors.background }}
                       >
-                        <UserAvatar url={p.avatarUrl} />
+                        <UserAvatar url={p.avatarUrl} name={p.username} />
                         <View className="min-w-0 flex-1">
                           <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                             @{p.username}
@@ -178,7 +178,7 @@ function CommunityScreen() {
           {
             key: 'setlist',
             icon: <SetlistIcon color={colors.accent} size={22} />,
-            label: setlists.length ? 'Post a setlist' : 'Post a setlist (make one in Tunes first)',
+            label: setlists.length ? 'Post a setlist' : 'Post a setlist (make one in Library first)',
             onPress: () => (setlists.length ? setPickSetlist(true) : router.push('/library')),
           },
         ]}

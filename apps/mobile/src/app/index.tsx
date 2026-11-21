@@ -26,6 +26,7 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
 import { summarizeLearning } from '@jam-practice/core/learningPath';
 import { useLearningProgress } from '@/lib/useLearnSession';
+import { prettyKeyName } from '@/lib/keyNames';
 
 /** Shown in place of Favorites until you've starred some tools, in this order. */
 const STARTER_HREFS = ['/metronome', '/tuner', '/practice-timer', '/jam-practice'];
@@ -252,7 +253,7 @@ function Home() {
                       {tuneOfDay.tune.name}
                     </Text>
                     <View className="flex-row flex-wrap gap-2">
-                      {tuneOfDay.key ? <Chip>in {tuneOfDay.key}</Chip> : null}
+                      {tuneOfDay.key ? <Chip>in {prettyKeyName(tuneOfDay.key)}</Chip> : null}
                       {tuneOfDay.tempo ? <Chip>{tuneOfDay.tempo} BPM</Chip> : null}
                       <Chip muted>{tuneOfDay.tune.timeSignature}</Chip>
                     </View>

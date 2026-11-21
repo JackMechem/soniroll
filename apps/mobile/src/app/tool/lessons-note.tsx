@@ -59,7 +59,8 @@ function NoteView({ lessonId, note, teacher }: { lessonId: string; note: Note; t
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: teacher ? 'Lesson notes' : note.title || 'Lesson notes' }} />
+      {/* The note's own title is the big heading below; the header just says what this is. */}
+      <Stack.Screen options={{ title: 'Lesson note' }} />
       <LessonsScroll gap={12}>
         <View className="flex-row items-start gap-2">
           <View className="flex-1">
