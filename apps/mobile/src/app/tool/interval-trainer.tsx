@@ -63,6 +63,7 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
+import { useStopOnBlur } from '@/lib/useStopOnBlur';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
@@ -264,6 +265,8 @@ function IntervalTrainerScreen() {
   const [nextRound, setNextRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/interval-trainer', running);
+  // Leaving the screen stops the session (it would keep timing out questions as misses).
+  useStopOnBlur(running, stop);
   useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);

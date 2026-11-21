@@ -66,6 +66,7 @@ import { ToneIcon } from '@/components/tool/toolIcons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useToolActivity } from '@/lib/toolTime';
+import { useStopOnBlur } from '@/lib/useStopOnBlur';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 
 /**
@@ -275,6 +276,8 @@ function NoteTrainerScreen() {
   const [nextNote, setNextNote] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   useToolActivity('/note-trainer', running);
+  // Leaving the screen stops the session (it would keep timing out questions as misses).
+  useStopOnBlur(running, stop);
   useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
