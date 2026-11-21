@@ -117,3 +117,55 @@ sheets, the dashboard gap at two-column widths, the Shed Log header icon.
 Not verified across these rounds: anything that writes to a signed-in account (logging, linking,
 saving charts, week-view dragging), audio by ear, hover styles, real phones and Safari, the
 desktop app at runtime (tsc only).
+
+## Header bar with crumbs on every page (2026-11-20)
+
+Jack asked for every page's header to look like the tool pages' desktop bar, with the trail of
+pages you came through ("Library / Tunes / Setlists / Another test Setlist"), each one clickable.
+
+- **One component, `components/PageBar.tsx`.** The 56px bar (`absolute inset-x-0 top-0 hidden …
+  lg:flex`): the page's icon (muted), the crumbs (earlier ones muted links, "/" between, the page
+  itself last in an `h1`), the intro ? (`helpTopic`, or `intro` when the page runs its own),
+  `help`, `titleExtra`, `actions`, then Report a bug. `ToolLayout` renders it too, so the tools
+  look as before. Crumbs are `{ label, href?, onClick?, short? }`; they follow the page's
+  structure (where its back button went), not browser history. Past five on desktop the middle
+  ones fold into "…".
+- **Where it sits.** It's `absolute` at the top of the nearest positioned box: the page scroller
+  (`AppShell`'s `[data-page-scroll]`, now `relative`) or ToolLayout's page. Pages pad `lg:pt-20`
+  for it (`PageShell`, `LibraryPage` and the custom `main`s); phones keep the 4.5rem for the phone
+  bar. Don't put a narrower `relative` wrapper between a page's root and its `PageBar`.
+- **Phones and panes** (`lib/pageCrumbs.ts`): `PageBar` hands its trail, icon and ? to a small
+  store with `usePageCrumbs` (in an effect, so the server render and hydration see nothing and
+  the top bar falls back to its old path-based name). `Sidebar`'s `MobileBarTitle` shows the logo
+  then the trail: a short one whole (≤ 26 characters), else "… / parent / page"; "…" opens the
+  hidden crumbs as real links (so `useLeaveGuard` still asks); tapping the page's own name
+  scrolls to the top; the page's ? sits after it. Inside a split-screen pane the page writes to
+  the pane's own store (`PaneCrumbStoreContext`) and the pane's bar shows the trail instead of
+  the tool name. `phoneCrumbs` gives phones a different trail (Help: just "Help" until a topic is
+  open, since desktop always shows one).
+- **Gotcha:** the store's snapshot must only change when the trail does (labels, links, icon).
+  The first version handed out a new object on every page render; in a pane, whose bar is the
+  page's parent, React re-rendered the pane on the changed snapshot, which re-rendered the page,
+  which made a new snapshot — "Maximum update depth exceeded". Handlers are now copied onto the
+  same snapshot.
+- **Pages:** `Hero` and `PageHeader` take `crumbs` (the pages above; their old `back`/`backHref`
+  become one crumb) and render the bar, with the subtitle, `leading` badge, buttons, tabs and
+  search on a line under it (Library's storage meter sits at the end of the tabs). Library trails
+  come from `components/library/hrefs.ts` (`LIBRARY_CRUMB`, `UNDER_TUNES`, `SETLISTS_CRUMB`,
+  `FILES_CRUMB`) and `chartCrumbs.ts` (a chart under its tune; "Chart" when it has the tune's
+  name). Every other page with its own `h1` got the bar: dashboard, Shed Log and routines, Shed
+  Notes (/ the open note), Lessons and its pages, Community, posts, profiles, New post, Account /
+  section, Help / topic, What's new, Admin / tab, Storage plans, Support, Desktop app, Phone app,
+  Feedback, legal pages (`LegalPageBar`, since `LegalPage` is a server component) and shared links
+  (one crumb, the item's name). Titles that are content stay as headings (`h2`): the dashboard
+  greeting, a post's title, a profile's name, signed-out pitches, the download pages' headlines.
+- **Left as they were:** the landing page, not-found, the maintenance screens, reset password,
+  print views, dialogs, the chart reader's own title, and the setlist chart reader
+  (`/setlist-charts`, a full-screen reader with its own bar).
+
+Verified: tsc (web, desktop), `pnpm lint` (the old SettingsBar warning only); nix Chromium at
+1440 and 390, light and dark, signed out and signed in with a throwaway account (deleted after):
+about 45 pages' trails, no console errors or horizontal overflow; clicking crumbs, the phone "…"
+menu, the phone ?, a three-pane split screen. Not verified: hover styles, the desktop app at
+runtime, real phones, the admin page (owner only), a lesson's notes page with real data, shared
+links with real items.
