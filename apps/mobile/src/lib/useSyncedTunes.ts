@@ -3,9 +3,10 @@ import type { Tune } from '@jam-practice/core/types';
 import { LIBRARY_TUNES_KEY } from '@jam-practice/core/tuneLibrary';
 import { TUNES_TO_LEARN_KEY } from '@jam-practice/core/tunesToLearn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useConvexAuth } from '@convex-dev/auth/react';
 import { useMutation, useQuery } from 'convex/react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+
+import { currentStoreMode, onStoreModeChange, scopedKey, useStoreMode } from './accountScope';
 
 /**
  * The tune-list sibling of `useSyncedSettings.ts` — same offline-first precedence (AsyncStorage's
@@ -16,6 +17,10 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
  * `"jam-practice-tunes-to-learn"` are the exact same fixed `syncedSettings` keys
  * `apps/web/lib/useSyncedTunes.ts`/`useTunesToLearn.ts` already use, so a tune added here shows up
  * in the web app's own lists too (and vice versa), not a second, mobile-only copy of either.
+ *
+ * Signed out the list is the phone's own (`<key>`); signed in it's the account's, kept on the phone
+ * as `<key>:account` and deleted on sign-out (`lib/accountScope.ts`), so another account signing in
+ * here never sees (or writes back) this one's tunes.
  */
 
 const DEBOUNCE_MS = 600;
@@ -28,6 +33,8 @@ type Entry = {
   serverApplied: boolean;
   timer: ReturnType<typeof setTimeout> | null;
   localLoaded: boolean;
+  localLoading: boolean;
+  send: ((value: string) => Promise<unknown>) | null;
   listeners: Set<() => void>;
 };
 
@@ -39,6 +46,8 @@ function makeEntry(): Entry {
     serverApplied: false,
     timer: null,
     localLoaded: false,
+    localLoading: false,
+    send: null,
     listeners: new Set(),
   };
 }
@@ -66,13 +75,65 @@ function parseTunes(raw: string): Tune[] | null {
 function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAccount = false) {
   const entry = makeEntry();
 
+  let generation = 0;
+
   function notify() {
     for (const listener of entry.listeners) listener();
   }
 
+  /** Reads this phone's copy for the current sign-in state, once. */
+  function loadLocal() {
+    const mode = currentStoreMode();
+    if (accountOnly || mode === 'loading' || entry.localLoaded || entry.localLoading) return;
+    entry.localLoading = true;
+    const gen = generation;
+    AsyncStorage.getItem(scopedKey(key, mode))
+      .then((raw) => {
+        if (gen !== generation || !raw || entry.hasValue) return;
+        const parsed = parseTunes(raw);
+        if (parsed) {
+          entry.value = parsed;
+          entry.hasValue = true;
+          notify();
+        }
+      })
+      .catch(() => {
+        // storage unavailable — the in-memory/server path still works this session
+      })
+      .finally(() => {
+        if (gen !== generation) return;
+        entry.localLoading = false;
+        entry.localLoaded = true;
+        notify();
+      });
+  }
+
+  // Signed in or out: drop the other copy's list (sending an edit still on its way to the account
+  // first) and load this one's.
+  onStoreModeChange((_next, was) => {
+    generation++;
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
+      if (was === 'account' && entry.hasValue && entry.send) {
+        entry.send(JSON.stringify(entry.value)).catch(() => {
+          // offline right at sign-out — the account's row just stays one edit behind
+        });
+      }
+    }
+    entry.value = EMPTY;
+    entry.hasValue = false;
+    entry.localEdited = false;
+    entry.serverApplied = false;
+    entry.localLoaded = false;
+    entry.localLoading = false;
+    if (entry.listeners.size) loadLocal();
+    notify();
+  });
+
   function useHook(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
-    const { isAuthenticated } = useConvexAuth();
-    const wasAuthenticatedRef = useRef(isAuthenticated);
+    const mode = useStoreMode();
+    const isAuthenticated = mode === 'account';
 
     // `useSyncExternalStore`, not `useState`+`forceRender` — see `useSyncedSettings.ts`'s own
     // comment on this exact pattern for why: `entry.value` lives outside React's state mechanism
@@ -86,36 +147,13 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
           entry.listeners.delete(callback);
         };
       },
-      () => (accountOnly && !isAuthenticated ? EMPTY : entry.hasValue ? entry.value : EMPTY),
+      () =>
+        (accountOnly && !isAuthenticated) || currentStoreMode() !== mode ? EMPTY : entry.hasValue ? entry.value : EMPTY,
     );
 
     useEffect(() => {
-      if (accountOnly) return; // nothing device-local to load — see the doc comment above.
-      if (entry.localLoaded) return;
-      let cancelled = false;
-      AsyncStorage.getItem(key)
-        .then((raw) => {
-          if (cancelled || !raw || entry.hasValue) return;
-          const parsed = parseTunes(raw);
-          if (parsed) {
-            entry.value = parsed;
-            entry.hasValue = true;
-            notify();
-          }
-        })
-        .catch(() => {
-          // storage unavailable — the in-memory/server path still works this session
-        })
-        .finally(() => {
-          if (!entry.localLoaded) {
-            entry.localLoaded = true;
-            notify();
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, []);
+      if (mode === currentStoreMode()) loadLocal();
+    }, [mode]);
 
     const remote = useQuery(api.syncedSettings.get, isAuthenticated ? { key } : 'skip');
 
@@ -130,7 +168,7 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
           entry.listeners.delete(callback);
         };
       },
-      () => entry.localLoaded || entry.hasValue,
+      () => mode !== 'loading' && currentStoreMode() === mode && (entry.localLoaded || entry.hasValue),
     );
     const [gaveUp, setGaveUp] = useState(false);
     useEffect(() => {
@@ -138,7 +176,9 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
       const t = setTimeout(() => setGaveUp(true), 2500);
       return () => clearTimeout(t);
     }, []);
-    const ready = accountOnly
+    const ready = mode === 'loading'
+      ? false
+      : accountOnly
       ? !isAuthenticated || remote !== undefined || entry.hasValue || gaveUp
       : waitForAccount && isAuthenticated
         ? localLoaded && (remote !== undefined || gaveUp)
@@ -146,30 +186,13 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
     const setRemote = useMutation(api.syncedSettings.set);
 
     useEffect(() => {
-      if (!isAuthenticated) {
-        if (wasAuthenticatedRef.current) {
-          if (entry.timer) {
-            clearTimeout(entry.timer);
-            entry.timer = null;
-            if (entry.hasValue) {
-              setRemote({ key, value: JSON.stringify(entry.value) }).catch(() => {
-                // offline right at sign-out — the account's row just stays one edit behind
-              });
-            }
-          }
-          entry.localEdited = false;
-          entry.serverApplied = false;
-          if (accountOnly) {
-            entry.value = EMPTY;
-            entry.hasValue = false;
-            notify();
-          }
-        }
-        wasAuthenticatedRef.current = false;
-        return;
-      }
-      wasAuthenticatedRef.current = true;
+      entry.send = (value) => setRemote({ key, value });
+    }, [setRemote]);
 
+    // The one-time "apply the account's own value" step (the reset on sign-in/out is the
+    // `onStoreModeChange` handler above).
+    useEffect(() => {
+      if (!isAuthenticated || currentStoreMode() !== 'account') return;
       if (remote === undefined) return;
       if (entry.serverApplied) return;
       entry.serverApplied = true;
@@ -179,21 +202,21 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
           entry.value = parsed;
           entry.hasValue = true;
           notify();
-          if (!accountOnly) void AsyncStorage.setItem(key, JSON.stringify(parsed));
+          if (!accountOnly) void AsyncStorage.setItem(scopedKey(key, 'account'), JSON.stringify(parsed));
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, remote]);
 
     function setTunes(update: Tune[] | ((prev: Tune[]) => Tune[])) {
       if (accountOnly && !isAuthenticated) return; // nothing to write while signed out.
+      if (mode === 'loading' || currentStoreMode() !== mode) return; // the stores are mid-switch
       const prev = entry.hasValue ? entry.value : EMPTY;
       const next = typeof update === 'function' ? update(prev) : update;
       entry.value = next;
       entry.hasValue = true;
       entry.localEdited = true;
       notify();
-      if (!accountOnly) void AsyncStorage.setItem(key, JSON.stringify(next));
+      if (!accountOnly) void AsyncStorage.setItem(scopedKey(key, mode), JSON.stringify(next));
 
       if (isAuthenticated) {
         if (entry.timer) clearTimeout(entry.timer);

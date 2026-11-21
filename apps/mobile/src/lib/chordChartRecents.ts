@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { currentStoreMode, onStoreModeChange, scopedKey, useStoreMode } from './accountScope';
+
 /** The last few chord charts *and tunes* opened on this device, in one history — the Library's
     "Recently opened" row shows both, the Chord Charts screen's "Recent" section just the charts
     (in practice: tonight's set list). Stored as one list of strings: a chart is its plain id (the
@@ -8,7 +10,8 @@ import { useEffect, useSyncExternalStore } from 'react';
     `t:<id>`. A tiny module-level store rather than `useDeviceSettings`,
     since it's written from one screen (the chart viewer) and read from another (the library
     list), and `useDeviceSettings` keeps a separate copy per mounted hook. Device-local on purpose:
-    what you just played on this phone. */
+    what you just played on this phone — and kept apart per sign-in like every store here
+    (`accountScope.ts`), so another account signing in doesn't see yours. */
 const KEY = 'jam-practice-chord-charts-recent';
 const MAX = 16;
 const CHART_MAX = 8;
@@ -18,13 +21,22 @@ export type RecentItem = { kind: 'chart' | 'tune'; id: string };
 
 let value: string[] = [];
 let loaded = false;
+let generation = 0;
 const listeners = new Set<() => void>();
 
 function set(next: string[]) {
   value = next;
   for (const l of listeners) l();
-  AsyncStorage.setItem(KEY, JSON.stringify(next)).catch(() => {});
+  if (currentStoreMode() !== 'loading') AsyncStorage.setItem(scopedKey(KEY), JSON.stringify(next)).catch(() => {});
 }
+
+onStoreModeChange(() => {
+  generation++;
+  value = [];
+  loaded = false;
+  for (const l of listeners) l();
+  if (listeners.size) load();
+});
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
@@ -80,18 +92,25 @@ export function useRecentItems(): RecentItem[] {
   });
 }
 
+function load() {
+  if (loaded || currentStoreMode() === 'loading') return;
+  loaded = true;
+  const gen = generation;
+  AsyncStorage.getItem(scopedKey(KEY))
+    .then((raw) => {
+      if (gen !== generation) return;
+      const parsed = raw ? JSON.parse(raw) : null;
+      // A chart opened before storage finished loading stays at the front.
+      if (Array.isArray(parsed)) {
+        set([...value, ...parsed.filter((x): x is string => typeof x === 'string' && !value.includes(x))].slice(0, MAX));
+      }
+    })
+    .catch(() => {});
+}
+
 function useRecentLoad() {
+  const mode = useStoreMode();
   useEffect(() => {
-    if (loaded) return;
-    loaded = true;
-    AsyncStorage.getItem(KEY)
-      .then((raw) => {
-        const parsed = raw ? JSON.parse(raw) : null;
-        // A chart opened before storage finished loading stays at the front.
-        if (Array.isArray(parsed)) {
-          set([...value, ...parsed.filter((x): x is string => typeof x === 'string' && !value.includes(x))].slice(0, MAX));
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (mode === currentStoreMode()) load();
+  }, [mode]);
 }
