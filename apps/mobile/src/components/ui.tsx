@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -15,6 +14,7 @@ import {
 
 import { CheckIcon, ChevronRightIcon, ClearIcon, NAV_LINK_ICONS, SearchIcon, type IconProps } from '@/components/icons';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The app's basic pieces, styled like the website after its UX refresh: filled cards (no thin
@@ -306,7 +306,9 @@ export function EmptyState({
         ) : null}
       </View>
       {action || secondary ? (
-        <View className="flex-row flex-wrap justify-center gap-2">
+        // Stacked, the main action on top: two side by side only fit when their labels are short,
+        // so some empty states had them in a row and others wrapped.
+        <View className="items-center gap-2">
           {action ? <Button label={action.label} Icon={action.Icon} onPress={action.onPress} /> : null}
           {secondary ? <Button label={secondary.label} kind="secondary" onPress={secondary.onPress} /> : null}
         </View>

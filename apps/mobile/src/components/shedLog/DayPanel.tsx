@@ -105,7 +105,7 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
       </View>
 
       {hasTime ? (
-        <Section icon={icon(StopwatchIcon)} title={isToday ? 'Today' : past ? 'Time practiced' : 'Progress'}>
+        <Section icon={icon(StopwatchIcon)} title={isToday || past ? 'Time practiced' : 'Progress'}>
           <Panel>
             {showProgress ? (
               <View className="flex-row items-center gap-3">

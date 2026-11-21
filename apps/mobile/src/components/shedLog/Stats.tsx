@@ -66,10 +66,12 @@ export function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; t
   );
 }
 
+/** One stat on the Stats sheet — on the background colour, like the cards under it (the sheet
+    itself is the surface colour, so a surface card wouldn't show). */
 function StatCard({ label, action, value, aside, children }: { label: string; action?: ReactNode; value: ReactNode; aside?: ReactNode; children?: ReactNode }) {
   const { colors } = useAppTheme();
   return (
-    <View className="gap-2 rounded-xl p-4" style={{ backgroundColor: colors.surface }}>
+    <View className="gap-2 rounded-xl p-4" style={{ backgroundColor: colors.background }}>
       <View className="min-h-5 flex-row items-center justify-between gap-2">
         <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
           {label}

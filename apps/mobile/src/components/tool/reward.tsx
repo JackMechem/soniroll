@@ -127,8 +127,9 @@ function Segment({ label, on, disabled, onPress }: { label: string; on: boolean;
   );
 }
 
-/** A choice card in a picker (subdivision, click sound, a quick-pick meter): outlined, and lit in
-    the accent with a pop when picked. Lives in a sheet, so it sits on the background colour. */
+/** A choice card in a picker (subdivision, click sound, a quick-pick meter): a faint fill (no
+    outline, like the rest of the app), tinted and ringed in the accent with a pop when picked.
+    The ring's width is always there (transparent when off) so picking doesn't shift the layout. */
 export function RewardCard({
   on,
   onPick,
@@ -153,11 +154,12 @@ export function RewardCard({
       accessibilityRole="radio"
       accessibilityLabel={label}
       accessibilityState={{ checked: on }}
-      className={`rounded-md border ${row ? 'flex-row items-center justify-start px-3' : 'items-center justify-center'}`}
+      className={`rounded-lg ${row ? 'flex-row items-center justify-start px-3' : 'items-center justify-center'}`}
       style={[
+        { borderWidth: 1.5 },
         on
-          ? { borderColor: colors.accent, backgroundColor: mix(colors.accent, colors.background, 0.12) }
-          : { borderColor: withAlpha(colors.foreground, 0.15), backgroundColor: colors.background },
+          ? { borderColor: colors.accent, backgroundColor: mix(colors.accent, colors.background, 0.15) }
+          : { borderColor: 'transparent', backgroundColor: withAlpha(colors.foreground, 0.06) },
         style,
       ]}
     >

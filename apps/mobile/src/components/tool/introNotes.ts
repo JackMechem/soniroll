@@ -52,3 +52,16 @@ export const INTRO_NOTES: Partial<Record<string, string[]>> = {
     "Before Start, the ring shows your last score and your best.",
   ],
 };
+
+/**
+ * The website's Help steps and options (by title / name) that a tool's intro sheet leaves out,
+ * because the phone doesn't have them. Keyed by the tool's web href, like `INTRO_NOTES`.
+ */
+export const INTRO_OMIT: Partial<Record<string, { steps?: string[]; options?: string[] }>> = {
+  // No recording or takes on the phone's Tuner (see `app/tool/tuner.tsx`).
+  '/tuner': { steps: ['Record and look back'], options: ['Takes'] },
+  // Loops can't be saved on the phone (set and clear only).
+  '/slow-downer': { options: ['Loops'] },
+  // Keyboard-only and website-only parts of Shed Notes (see `app/tool/shed-notes-note.tsx`).
+  '/shed-notes': { options: ['Command palette', 'Export as PDF', 'Export and import', 'Vim mappings', 'Word suggestions'] },
+};

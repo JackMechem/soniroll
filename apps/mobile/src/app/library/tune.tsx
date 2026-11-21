@@ -24,7 +24,13 @@ import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi } from '@/lib/recordings';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { IconButton } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
+
+/** "Db" → "D♭", "F#" → "F♯": the music symbols, as the Tuner and charts show them. */
+function prettyKeyName(name: string) {
+  return name.replace('b', '♭').replace('#', '♯');
+}
 
 /** Loose title match for "is there already a chart for this tune": case, punctuation and a
     leading or trailing article are ignored (iReal titles are often "Man I Love, The"). Plain string
@@ -156,7 +162,7 @@ function Hub({
           title: tune.name,
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.foreground }}>
                 {tune.name}
               </Text>
               <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
@@ -165,23 +171,14 @@ function Hub({
             </View>
           ),
           headerRight: () => (
-            <View className="flex-row items-center gap-1">
-              <Pressable
-                onPress={() => router.push({ pathname: '/library/tune-edit', params: { list, id: tune.id } })}
-                accessibilityLabel="Edit tune"
-                className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.surface }}
-              >
-                <PencilIcon color={colors.foreground} size={20} />
-              </Pressable>
-              <Pressable onPress={openMenu} accessibilityLabel="More options" className="h-10 w-9 items-center justify-center">
-                <DotsVerticalIcon color={colors.foreground} size={22} />
-              </Pressable>
+            <View className="flex-row items-center gap-2">
+              <IconButton Icon={PencilIcon} label="Edit tune" onPress={() => router.push({ pathname: '/library/tune-edit', params: { list, id: tune.id } })} />
+              <IconButton Icon={DotsVerticalIcon} label="More options" onPress={openMenu} />
             </View>
           ),
         }}
       />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 12, gap: 20, paddingBottom: bottomSpace }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: bottomSpace }}>
         {/* Chord chart */}
         <View className="gap-2">
           <View className="flex-row items-center justify-between px-1">
@@ -282,7 +279,9 @@ function Hub({
                   accessibilityState={{ selected: known }}
                   className="items-center justify-center rounded-xl"
                   style={{
-                    width: '22.6%',
+                    // Four to a row that fill it exactly (a fixed width left a gap on the right).
+                    flexBasis: '22%',
+                    flexGrow: 1,
                     height: 48,
                     backgroundColor: known ? colors.accent : colors.surface,
                     borderWidth: previewing ? 2 : 0,
@@ -290,7 +289,7 @@ function Hub({
                   }}
                 >
                   <Text className="font-ui-bold text-base font-bold" style={{ color: known ? colors['accent-foreground'] : colors.muted }}>
-                    {name}
+                    {prettyKeyName(name)}
                     {suffix}
                   </Text>
                 </Pressable>

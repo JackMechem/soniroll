@@ -300,7 +300,7 @@ function TunerScreen() {
                 // Nothing heard: what it's set up for.
                 <View className="items-center px-2">
                   <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-bold text-2xl font-bold" style={{ color: listening ? colors.muted : colors.foreground }}>
-                    {listening ? '–' : instrument.label.split(' (')[0]}
+                    {listening ? 'Listening…' : instrument.label.split(' (')[0]}
                   </Text>
                   <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
                     {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}

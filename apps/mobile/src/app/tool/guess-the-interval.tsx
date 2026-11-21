@@ -584,7 +584,8 @@ function GuessTheIntervalScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
       >
         <Field label="Playback style" hint="Whether the two notes play one after another or together.">

@@ -1,13 +1,13 @@
 import { formatComposer } from '@jam-practice/core/iRealPro';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CheckIcon, CloseIcon, FolderIcon, FolderMoveIcon, FolderPlusIcon, PencilIcon, TrashIcon } from '@/components/icons';
 import type { LibrarySongMeta } from '@/lib/useChordChartsLibrary';
-import { sheetEdge } from '@/components/sheetStyle';
+import { BottomSheet } from '@/components/BottomSheet';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** `playlistId`: the playlist the chart was opened from (offers "Remove from <it>"), or null. */
 export type MenuTarget = { song: LibrarySongMeta; playlistId: string | null };
@@ -38,7 +38,6 @@ export function ChordChartSongMenu({
   onDelete: (songId: string) => void;
 }) {
   const { colors } = useAppTheme();
-  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<'actions' | 'move'>('actions');
   const [newName, setNewName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -79,23 +78,10 @@ export function ChordChartSongMenu({
 
   return (
     <>
-      <Modal visible={!!target && !confirmDelete} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={{ flex: 1 }} onPress={close} />
-        <View
-          style={{
-            ...sheetEdge(colors),
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingBottom: insets.bottom + 12,
-            maxHeight: '80%',
-          }}
-        >
-          <View className="items-center pt-2.5">
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors['surface-hover'] }} />
-          </View>
+      <BottomSheet visible={!!target && !confirmDelete} onClose={close}>
+        <View style={{ paddingBottom: 12, flexShrink: 1 }}>
           {song ? (
-            <View className="gap-0.5 px-5 pb-3 pt-3">
+            <View className="gap-0.5 px-5 pb-3 pt-4">
               <Text numberOfLines={1} className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
                 {song.title}
               </Text>
@@ -184,7 +170,7 @@ export function ChordChartSongMenu({
             </ScrollView>
           )}
         </View>
-      </Modal>
+      </BottomSheet>
 
       <ConfirmDialog
         visible={confirmDelete}

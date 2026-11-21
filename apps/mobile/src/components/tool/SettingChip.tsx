@@ -225,7 +225,7 @@ export function ToolSheet({ visible, onClose, title, children }: { visible: bool
 const MIN_KEYBOARD = 150;
 
 /** The sheet sliding up as it mounts (React Native's Animated, on the native thread). */
-function SheetSlide({ style, children }: { style: ViewStyle; children: ReactNode }) {
+export function SheetSlide({ style, children }: { style: ViewStyle; children: ReactNode }) {
   const [offset] = useState(() => new RNAnimated.Value(48));
   useEffect(() => {
     RNAnimated.timing(offset, { toValue: 0, duration: 220, easing: RNEasing.out(RNEasing.cubic), useNativeDriver: true }).start();

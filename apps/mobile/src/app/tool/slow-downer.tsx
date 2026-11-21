@@ -1,6 +1,6 @@
 import { makeId } from '@jam-practice/core/types';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -32,6 +32,7 @@ import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useToolActivity } from '@/lib/toolTime';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Native port of `apps/web/components/SlowDowner.tsx` — same features: open an audio or video file
@@ -327,7 +328,7 @@ function SlowDownerScreen() {
         />
       </SettingChip>
 
-      <SettingChip Icon={SpeakerIcon} label="Volume" value={`${Math.round(volume * 100)}%`}>
+      <SettingChip Icon={SpeakerIcon} label="Volume" title="Playback" value={`${Math.round(volume * 100)}%`}>
         <SliderField
           label="Volume"
           value={Math.round(volume * 100)}

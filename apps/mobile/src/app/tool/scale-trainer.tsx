@@ -999,7 +999,8 @@ function ScaleTrainerScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showScaleNotes ? ' · notes shown' : ''}`}
       >
         <SwitchRow

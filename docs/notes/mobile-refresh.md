@@ -378,3 +378,51 @@ day report were on the Shed Log's "left out" list; now they're in.
   stubbed to plain SVG, rasterised with rsvg-convert and Geist) against seeded data — layout and
   text match the website's cards. **Not checked:** anything on a phone or the emulator —
   `toDataURL`'s PNG, the fonts inside it, the share sheet, posting signed in, the toasts' button.
+
+### UI pass 1 fixes (2026-11-20)
+
+A reviewer went over the app on the emulator and graded it 6.5/10; this fixes their list.
+
+- **Community feed:** routine and milestone posts said "0 tunes". `PostListItem` now does what
+  the website's card does: a Routine / Milestone pill, a routine's tasks as the numbered preview and
+  "3 tasks · 50 min" as its footer; a milestone shows no tune count (its card is on the post page).
+- **No more Android teal:** the app theme has no accent, so switches and text cursors were teal on
+  every theme. `components/ThemedTextInput.tsx` is `TextInput` with the accent for the cursor,
+  selection and handles; every screen imports `TextInput` from there now (it's also the ref type).
+  New text fields should too. `SwitchRow` (and Lessons settings' switch) colour the knob: accent on
+  a lighter accent track when on, muted on a faint track when off. A background-coloured knob like
+  the website's was tried first and disappeared on dark themes (Android's knob is bigger than its
+  track).
+- **One sheet look:** `components/BottomSheet.tsx` is the `ToolSheet` frame (inset card, 24 corners,
+  dimmed page, `SheetSlide`, now exported from `SettingChip.tsx`). `ActionSheet` (every ⋮ menu),
+  `SetlistTuneSheet`, `ChordChartSongMenu` and `ChordChartNewSheet` use it; they had no backdrop
+  and a grab handle. `TuneListManager`'s editor still uses the old `sheetEdge` look.
+- **Choice tiles** (`RewardCard`): a faint fill, no outline, `rounded-lg`; picked is an accent tint
+  with a 1.5 dp accent ring (the ring's width is always there, transparent when off, so nothing
+  shifts). Jam Practice's five count-off cards fit one row (`cardWidth="14%"`; the gaps are fixed
+  dp, so 18% wrapped).
+- **Stats sheet:** the four stat cards were surface on a surface sheet; now background, like the
+  cards below them.
+- **Tool intros:** `INTRO_OMIT` in `components/tool/introNotes.ts` drops the website's Help steps and
+  options the phone doesn't have — the Tuner's Record step and Takes, Slow Downer's saved Loops,
+  Shed Notes' command palette, PDF export, zip export/import, vim mappings and word suggestions.
+- **Tune page:** 16 dp padding like other screens, the key grid fills its row (`flexBasis` +
+  `flexGrow`), keys show ♭/♯, the title is in the text colour, and ⋮ is a round `IconButton` like the
+  pencil.
+- **Learn path:** each connector sits under its node (not the row's middle), moved halfway towards
+  the previous node and tilted at it, so the winding trail joins up.
+- **Smaller:** Jam Practice's Click chip value is "8-bar count-off" with "keeps going" in its label
+  (sheet title stays "Click"); the ear trainers' chip is "Sound" (sheet "Sound & display"); the
+  Shed Log's today section is "Time practiced" (it said Today three times); Home's date comes from
+  `useToday()` so it moves on at midnight; Slow Downer's volume sheet is "Playback"; the Tuner says
+  "Listening…" instead of "–"; Jam Practice's empty text reads properly; `EmptyState` always
+  stacks its two buttons.
+
+Checked: `tsc`, `eslint`; on the emulator (debug build, signed in as the throwaway
+`mobile-audit@soniroll.test`), light and dark: Home search cursor, Community feed, Shed Log today,
+Stats sheet, ⋮ menu, the charts' Create new sheet, Metronome's Subdivision / Sound / Time sheets, Jam Practice and its Click
+sheet (switches on and off), Guess the Interval chips and Learn path, the Tuner listening and its
+help, Slow Downer's volume sheet, Library empty states, and add tune → tune page → ⋮ → delete (the
+test tune was deleted; the theme was put back to "Same as my phone"). Not checked: the setlist tune sheet
+and a chart's ⋮ menu on `BottomSheet`, the Lessons settings switch, Home across a
+real midnight, iOS, a release build or a real phone.

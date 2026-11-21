@@ -1022,7 +1022,8 @@ function IntervalTrainerScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${playSound && !listenMode ? 'Played' : 'Silent'}${showIntervalNotes ? ' · notes shown' : ''}`}
       >
         <SwitchRow

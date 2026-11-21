@@ -36,6 +36,22 @@ const WIND = [0, 1, 1.6, 1, 0, -1, -1.6, -1];
 const LEVEL_HEIGHT = 84;
 const TRAIL_HEIGHT = LEVEL_HEIGHT * 3 + 12;
 
+/**
+ * The short line from one level up to the one before it. It sits under this level's node (the
+ * left-hand 60-wide column of the row, not the row's middle), moved halfway towards the previous
+ * node and tilted to point at it, since the trail winds (`WIND`) from level to level.
+ */
+function Connector({ from, to, color }: { from: number; to: number; color: string }) {
+  const dx = (from - to) * 28;
+  const angle = (Math.atan2(dx, LEVEL_HEIGHT) * 180) / Math.PI;
+  return (
+    <View
+      className="mb-1 h-5 w-0.5 rounded-full"
+      style={{ alignSelf: 'flex-start', marginLeft: 29, backgroundColor: color, transform: [{ translateX: dx / 2 }, { rotate: `${angle}deg` }] }}
+    />
+  );
+}
+
 /** The pulsing ring behind the level you're on. */
 function Pulse({ color }: { color: string }) {
   const t = useState(() => new Animated.Value(0))[0];
@@ -141,7 +157,7 @@ export function LearningPath({
                 }
               }}
             >
-              {i > 0 ? <View className="mb-1 h-5 w-0.5 rounded-full" style={{ backgroundColor: unlocked ? withAlpha(colors.accent, 0.5) : withAlpha(colors.foreground, 0.1) }} /> : null}
+              {i > 0 ? <Connector from={WIND[(i - 1) % WIND.length]} to={WIND[i % WIND.length]} color={unlocked ? withAlpha(colors.accent, 0.5) : withAlpha(colors.foreground, 0.1)} /> : null}
               <View className="flex-row items-center gap-3">
                 <Pressable
                   disabled={!unlocked}

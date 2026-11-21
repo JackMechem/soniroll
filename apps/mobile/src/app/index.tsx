@@ -1,4 +1,5 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
+import { fromDateKey } from '@jam-practice/core/practiceLog';
 import type { NavLinkInfo } from '@jam-practice/core/navLinks';
 import type { Tune } from '@jam-practice/core/types';
 import { Stack, useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ import { Button, Card, Chip, EmptyText, IconTile, ListRow, PageTitle, SearchFiel
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { TodayPracticeCard } from '@/components/shedLog/TodayPracticeCard';
 import { Logo } from '@/components/Logo';
+import { useToday } from '@/lib/useClock';
 import { useRecentItems } from '@/lib/chordChartRecents';
 import { useRecentTools } from '@/lib/toolRecents';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
@@ -62,7 +64,10 @@ function Home() {
   const { colors, derived } = useAppTheme();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [query, setQuery] = useState('');
-  const [today] = useState(() => new Date());
+  // Today, from the shared clock: it moves on at midnight (a date kept from when Home mounted
+  // stayed on yesterday until something re-rendered it).
+  const todayKey = useToday();
+  const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
   const { favorites, toggleFavorite, ready } = useFavorites();
   const recentTools = useRecentTools();
   const recentItems = useRecentItems();

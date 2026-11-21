@@ -916,7 +916,8 @@ function NoteTrainerScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${playSound && !listenMode ? (TONES.find((t) => t.value === toneId)?.label ?? 'Played') : 'Silent'}${showNext ? ' · next shown' : ''}`}
       >
         <SwitchRow

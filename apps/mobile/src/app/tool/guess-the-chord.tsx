@@ -601,7 +601,8 @@ function GuessTheChordScreen() {
 
       <SettingChip
         Icon={ToneIcon}
-        label="Sound & display"
+        label="Sound"
+        title="Sound & display"
         value={`${toneLabel(toneId)} · ${PLAYBACK_STYLES.find((p) => p.value === playbackStyle)?.label.split(' (')[0] ?? ''}`}
       >
         <Field label="Playback style" hint="Whether the chord's notes play all at once or as a quick rolled arpeggio.">
