@@ -326,6 +326,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |
 | Feedback, reports, admin panel, Mayday switches, analytics, launch checklist | `launch-admin-analytics.md` |
+| Five UI/UX passes (2026-11-20): grades per pass, the bugs they found, what was left for Jack | `ui-passes-2026-11-20.md` |
 | UX refresh (2026-11-17): radius scale, borders vs fills, flat sidebar with coloured icons, phone top bar, tool header, decluttered dashboard/library/Shed Log | `ux-refresh.md` |
 | Desktop app (`apps/desktop`): Tauri, reusing web components via aliases, native audio (the Web Audio bridge to `web-audio-api`), Google sign-in through the system browser; CI, `desktop-v*` release tags, the Stable/Unstable channel branches and the Nix package (update its pnpm hash when the lock file changes) | `desktop-app.md` |
 
