@@ -772,3 +772,13 @@ fractions of its height.
   chip with the delay once audio runs.
   - Checked idle and open at 800 and 1280 under Vite.
   - The running look wasn't seen: the stubbed engine never reports running.
+
+## 2026-11-20 — UI pass 4 fixes
+
+- **Continue with Google** (`AccountMenu.tsx`): in the desktop app, once Google's page has opened
+  in the system browser the form says "Finish signing in in your browser, then come back here.
+  Open it again" and the button is enabled again. Before, it sat disabled with no word, and stayed
+  that way if the tab was closed. `GoogleSignIn.tsx` shows a small toast, "Couldn't finish Google
+  sign-in. Try again from Sign in.", when the code exchange fails (it only logged).
+- The Linux updater toast's button says "Get the download" (was "Get it").
+- **Not verified at runtime**: both need the real Tauri window (read and type-checked only).

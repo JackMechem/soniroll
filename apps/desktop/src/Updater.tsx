@@ -89,7 +89,7 @@ export default function Updater() {
                 <span className="font-semibold">soniroll {state.version} is out.</span> Update with your package manager, or get the new download.
               </p>
               <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 w-fit items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-foreground hover:bg-accent-hover">
-                Get it
+                Get the download
               </a>
             </>
           )}
