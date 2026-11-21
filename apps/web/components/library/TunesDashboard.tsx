@@ -4,7 +4,7 @@ import { LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import StoragePill from "@/components/files/StoragePill";
 import { menuPosition, tuneSummary } from "@/components/library/shared";
@@ -56,7 +56,7 @@ function addedAt(tune: Tune): number {
  * them. Setlists and Chord Charts are a tap away, as their own pages. Charts not yet linked to a
  * tune are linked here, once (`useAutoLinkCharts`).
  */
-export default function TunesDashboard() {
+export default function TunesDashboard({ initialList }: { initialList?: string | null }) {
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
   const lists = useTuneLists();
@@ -75,6 +75,12 @@ export default function TunesDashboard() {
   const [managingTags, setManagingTags] = useState(false);
   const { attach: listFadeRef, style: listFadeStyle } = useEdgeFade<HTMLDivElement>();
   const { attach: tagFadeRef, style: tagFadeStyle } = useEdgeFade<HTMLDivElement>();
+
+  // `?list=tunes|learn|library` (the dashboard's stat rows, ⌘K) opens on that list, with the other
+  // filters cleared so the whole list shows. It's applied once per link; the pills take over after.
+  useEffect(() => {
+    if (initialList && (TUNE_LIST_IDS as readonly string[]).includes(initialList)) setView({ list: initialList as TuneListId, tags: [], charts: "any" });
+  }, [initialList, setView]);
 
   const known = lists.tunes.tunes;
   const learn = lists.learn.tunes;

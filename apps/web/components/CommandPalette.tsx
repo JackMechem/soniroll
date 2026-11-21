@@ -57,9 +57,9 @@ type Item = SearchItem;
     for them ("theme", "dark mode", "goal"). `account` ones only show signed in. */
 const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?: string; words: string; icon: Icon; account?: boolean }[] = [
   { group: "Pages", href: "/dashboard", label: "Dashboard", words: "home start today", icon: HomeIcon },
-  { group: "Pages", href: "/tunes/list?list=tunes", label: "Tunes I Know", detail: "Library", words: "library tunes repertoire songs list", icon: ListIcon },
-  { group: "Pages", href: "/tunes/list?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
-  { group: "Pages", href: "/tunes/list?list=library", label: "Library list", detail: "Tunes that came with charts", words: "library tunes unsorted imported charts list", icon: ListIcon },
+  { group: "Pages", href: "/tunes?list=tunes", label: "Tunes I Know", detail: "Library", words: "library tunes repertoire songs list", icon: ListIcon },
+  { group: "Pages", href: "/tunes?list=learn", label: "Tunes to Learn", detail: "Library", words: "library tunes learning wishlist songs list", icon: BookIcon },
+  { group: "Pages", href: "/tunes?list=library", label: "Library list", detail: "Tunes that came with charts", words: "library tunes unsorted imported charts list", icon: ListIcon },
   { group: "Pages", href: "/tunes?tab=setlists", label: "Setlists", detail: "Library · Tunes", words: "library gig set list", icon: SetlistIcon },
   { group: "Pages", href: "/chord-charts/import", label: "Import chord charts", detail: "Library", words: "import ireal playlist link charts", icon: ChordChartIcon },
   { group: "Pages", href: "/tunes?tab=files", label: "Files", detail: "Library", words: "library uploads pdf storage images documents audio", icon: FileIcon, account: true },

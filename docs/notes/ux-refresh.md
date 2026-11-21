@@ -217,3 +217,29 @@ desktop items are in `lessons.md`, `community-and-profiles.md` and `desktop-app.
 - Days practiced squares have day names for screen readers; future days are hidden from them.
 Verified in headless Chromium (1440/390, light/dark; signed in with deleted throwaways). Not
 verified: hover, screen readers, real phones, the desktop window.
+
+## 2026-11-20 — UI pass 5 fixes (web + desktop, the last pass)
+
+From the final whole-app reviewer pass (7.5/10). Library items are in `library-two-tabs.md`. Here:
+- **Dialog order**: Edit tune / New tune (`TuneEditorModal`) is Cancel then the main button,
+  right-aligned, like every other dialog.
+- **Log button** (`ToolStats`): shows from a minute unlogged (it was 1 s); between 1 s and a minute
+  nothing shows (the time chip counts the seconds), and "Logged" only once nothing is left.
+- **Jam Practice** signed in with tunes only in the Library list / Tunes to Learn: "None of your
+  tunes are in Tunes I Know yet. Move some there from your Library…" (a link) instead of "Your tune
+  list is empty".
+- **Dashboard at `md`** (800 wide, a normal desktop window): half-width cards pair up in order under
+  the dense flow, so with an odd number the last one spans the row (`LONE_SIZE_CLASSES` in
+  `lib/dashboardLayout.ts`). `lg` keeps its sizes; edit mode isn't touched.
+- **Sign-in prompts**: Recorder (signed out) and Score Writer's signed-out note use `SignInButtons`
+  (Sign up free + Sign in), like the Files and Shed Log pitches.
+- **Help**: plain `/help` on desktop opens a "How soniroll works" panel with the Getting started
+  topics (crumb "Help", URL stays `/help`) instead of silently picking Dashboard. Long tool names
+  (over 24 characters — only Polyrhythm Metric Modulation Metronome) use the sidebar `short` name on
+  phones for the Open button and the crumb.
+- **Feedback**: the picked tile is tint + inset ring (it was a solid accent block); the email
+  placeholder is "Email, if you'd like a reply".
+- **Shed Notes**: the list's "No notes yet" line is `lg:hidden` (the main pane says it on desktop).
+Verified in headless Chromium (1440/390/800, light/dark; signed in with deleted `.test`
+throwaways), tsc in web and desktop, eslint on the changed files. Not verified: hover, the real
+desktop window, screen readers.

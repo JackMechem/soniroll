@@ -150,3 +150,17 @@ recordings made in the Recorder (Files listed them before this), two tabs racing
   signed-out Files pitch no longer promises "any device".
 - Verified in headless Chromium (1440 and 390, light and dark) with a throwaway account, deleted
   afterwards. Not verified: the desktop app window (tsc only), audio by ear.
+
+## UI pass 5 fixes (2026-11-20, web)
+
+- **`/tunes?list=tunes|learn|library`** opens the Tunes tab on that list (other filters cleared;
+  `LibraryHub` passes it to `TunesDashboard`, which writes it into the saved view once per link,
+  then the pills take over). The ⌘K entries (Tunes I Know, Tunes to Learn, Library list) and the
+  dashboard's stat rows point there now, not at the old `/tunes/list` page.
+- **`/tunes/list`** is kept (it has CSV import/export and bulk delete, nothing else does) but
+  tidied: empty, its bar shows only Import CSV; Delete selected appears once something is ticked;
+  the empty text is "No tunes here yet. Add one, or pick a jazz standard."; the bar has the `?`.
+- **Files on phones**: the two selects are gone. The filter is an edge-faded pill row like Tunes'
+  (one at a time; a group with one choice is left out, as on wider screens), and the order is a
+  select in the list's header, like Tunes' A–Z. The header names the kind when one is picked.
+- **Tune page, phones**: the Recordings card's "Add the song" puts Upload song under its text.

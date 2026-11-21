@@ -9,7 +9,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader } from "@/components/files/FileParts";
 import { MenuButton } from "@/components/library/shared";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar, useEdgeFade } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { ArchiveIcon, CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, MicIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
@@ -93,6 +93,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
   const [source, setSource] = useState<Source | "all">(initialSource);
   const [kind, setKind] = useState<FileKind | "all">("all");
   const [sort, setSort] = useState<Sort>({ key: "added", dir: "desc" });
+  const { attach: phoneFadeRef, style: phoneFadeStyle } = useEdgeFade<HTMLDivElement>();
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [selecting, setSelecting] = useState(false);
 
@@ -272,36 +273,39 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
               </div>
             )}
 
-            {/* Phones: one row — what to show (where it came from, or what kind) and the order. Hidden
-                until there's something to filter. */}
+            {/* Phones: one pill row that scrolls sideways (like the Tunes tab) — where it came from,
+                or what kind, one at a time; the order is in the list's header. Hidden until there's
+                something to filter. */}
             {items.length > 0 && (
             <>
-            <div className="flex items-center gap-2 sm:hidden">
-              <Select
-                value={phoneFilter}
-                onChange={(v) => {
-                  const [what, value] = v.split(":");
-                  setSource(what === "source" ? (value as Source | "all") : "all");
-                  setKind(what === "kind" ? (value as FileKind) : "all");
-                }}
-                options={[
-                  { value: "source:all", label: `Everything · ${items.length}` },
-                  ...(Object.keys(SOURCE_LABEL) as Source[])
-                    .filter((s) => counts.bySource.get(s) || s === source)
-                    .map((s) => ({ value: `source:${s}`, label: `${SOURCE_LABEL[s]} · ${counts.bySource.get(s)}` })),
-                  ...(Object.keys(FILE_KIND_LABEL) as FileKind[])
-                    .filter((k) => counts.byKind.get(k))
-                    .map((k) => ({ value: `kind:${k}`, label: `${kindLabel(k)} · ${counts.byKind.get(k)}` })),
-                ]}
-                className="min-w-0 flex-1"
-              />
-              <Select
-                value={phoneSort}
-                onChange={(v) => setSort(SORT_OPTIONS.find((o) => o.value === v)!.sort)}
-                options={SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-                className="min-w-0 flex-1"
-              />
-            </div>
+            {(showSources || showKinds) && (
+              <div ref={phoneFadeRef} style={phoneFadeStyle} className="min-w-0 overflow-x-auto [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+                <div className="flex w-max gap-1.5" role="group" aria-label="Which files">
+                  {[
+                    { value: "source:all", label: "Everything", count: items.length },
+                    // Like the wider rows: a group with only one choice in it is left out.
+                    ...(Object.keys(SOURCE_LABEL) as Source[])
+                      .filter((s) => showSources && (counts.bySource.get(s) || s === source))
+                      .map((s) => ({ value: `source:${s}`, label: SOURCE_LABEL[s], count: counts.bySource.get(s) ?? 0 })),
+                    ...(Object.keys(FILE_KIND_LABEL) as FileKind[])
+                      .filter((k) => showKinds && counts.byKind.get(k))
+                      .map((k) => ({ value: `kind:${k}`, label: kindLabel(k), count: counts.byKind.get(k) ?? 0 })),
+                  ].map((o) => (
+                    <FilterChip
+                      key={o.value}
+                      active={phoneFilter === o.value}
+                      onClick={() => {
+                        const [what, value] = o.value.split(":");
+                        setSource(what === "source" ? (value as Source | "all") : "all");
+                        setKind(what === "kind" ? (value as FileKind) : "all");
+                      }}
+                      label={o.label}
+                      count={o.count}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <div className={`hidden flex-col gap-3 ${showSources || showKinds ? "sm:flex" : ""}`}>
               {showSources && (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -384,18 +388,27 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                 ) : (
                   <>
                     {/* No count here: the filter above already shows it. */}
-                    <h2 className="text-sm font-medium">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
+                    <h2 className="text-sm font-medium">{source === "all" ? (kind === "all" ? "Everything" : kindLabel(kind)) : SOURCE_LABEL[source]}</h2>
                     {/* Showing recordings: make another one. */}
                     {source === "recording" && (
                       <Link href="/recorder" className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
                         <MicIcon className="h-4 w-4" /> Record
                       </Link>
                     )}
+                    {/* Phones sort here (the columns sort on wider screens), like Tunes' A–Z. */}
+                    {shown.length > 1 && (
+                      <Select
+                        value={phoneSort}
+                        onChange={(v) => setSort(SORT_OPTIONS.find((o) => o.value === v)!.sort)}
+                        options={SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+                        className={`${source === "recording" ? "" : "ml-auto"} w-36 sm:hidden`}
+                      />
+                    )}
                     {shown.length > 0 && (
                       <button
                         type="button"
                         onClick={() => (selecting ? clearSelection() : setSelecting(true))}
-                        className={`${source === "recording" ? "" : "ml-auto"} inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden`}
+                        className={`${source === "recording" || shown.length > 1 ? "" : "ml-auto"} inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden`}
                       >
                         {selecting ? "Done" : "Select"}
                       </button>

@@ -488,9 +488,11 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
           if (file) void upload(file);
         }}
       />
-      <div className="flex items-center gap-3">
+      {/* Phones, before there's a song: the button goes under the text (the text was squeezed into
+          a narrow column beside it). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <NoteIcon className="h-4 w-4 shrink-0 text-muted" />
-        <div className="min-w-0 flex-1">
+        <div className={`min-w-0 flex-1 ${song === null ? "max-sm:basis-[calc(100%-1.75rem)]" : ""}`}>
           {song === undefined ? (
             <LoadingSpinner size="sm" inline />
           ) : song ? (
@@ -508,7 +510,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
         {uploading ? (
           <LoadingSpinner size="sm" label="Uploading the song" />
         ) : (
-          <>
+          <div className={`flex shrink-0 items-center gap-3 ${song === null ? "max-sm:pl-7" : ""}`}>
             <SaveWhere target={saveTarget} />
             <button type="button" onClick={() => input.current?.click()} className="inline-flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
               {song ? "Replace" : "Upload song"}
@@ -524,7 +526,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
                 <TrashIcon className="h-4 w-4" />
               </button>
             )}
-          </>
+          </div>
         )}
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}

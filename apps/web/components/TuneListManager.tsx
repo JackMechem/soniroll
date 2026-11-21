@@ -219,37 +219,47 @@ export default function TuneListManager({
       )}
     </>
   );
+  // On the page, an empty list shows only Import CSV, and Delete only once something is picked.
+  const compact = variant === "page";
   const footer = (
     <div className={`flex flex-wrap items-center gap-2 border-t border-foreground/10 text-sm ${variant === "page" ? "px-3 py-2.5" : "pt-3"}`}>
-      <button
-        type="button"
-        onClick={toggleAllShown}
-        disabled={shown.length === 0}
-        className="h-8 rounded-md px-2 font-medium text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
-      >
-        {allShownSelected ? "Deselect all" : "Select all"}
-      </button>
-      <span className="text-muted">{chosen.length} selected</span>
+      {(!compact || tunes.length > 0) && (
+        <>
+          <button
+            type="button"
+            onClick={toggleAllShown}
+            disabled={shown.length === 0}
+            className="h-8 rounded-md px-2 font-medium text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-50"
+          >
+            {allShownSelected ? "Deselect all" : "Select all"}
+          </button>
+          <span className="text-muted">{chosen.length} selected</span>
+        </>
+      )}
       <div className="ml-auto flex flex-wrap gap-2 [&>button]:whitespace-nowrap">
-        <button
-          type="button"
-          onClick={() => downloadTunesCsv(chosen.length > 0 ? chosen : tunes, `${exportFilenamePrefix}${chosen.length > 0 ? "-selected" : ""}.csv`)}
-          disabled={tunes.length === 0}
-          className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium hover:bg-surface-hover disabled:opacity-50"
-        >
-          {chosen.length > 0 ? `Export ${chosen.length}` : "Export all"}
-        </button>
+        {(!compact || tunes.length > 0) && (
+          <button
+            type="button"
+            onClick={() => downloadTunesCsv(chosen.length > 0 ? chosen : tunes, `${exportFilenamePrefix}${chosen.length > 0 ? "-selected" : ""}.csv`)}
+            disabled={tunes.length === 0}
+            className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium hover:bg-surface-hover disabled:opacity-50"
+          >
+            {chosen.length > 0 ? `Export ${chosen.length}` : "Export all"}
+          </button>
+        )}
         <button type="button" onClick={() => fileInputRef.current?.click()} className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium hover:bg-surface-hover">
           Import CSV
         </button>
-        <button
-          type="button"
-          onClick={() => setConfirmingDelete(true)}
-          disabled={chosen.length === 0}
-          className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
-        >
-          Delete selected
-        </button>
+        {(!compact || chosen.length > 0) && (
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            disabled={chosen.length === 0}
+            className="h-8 rounded-md bg-foreground/[0.05] px-3 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
+          >
+            Delete selected
+          </button>
+        )}
       </div>
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={importCsv} className="hidden" />
     </div>
@@ -290,6 +300,7 @@ export default function TuneListManager({
           title={title}
           icon={LibraryIcon}
           crumbs={UNDER_TUNES}
+          helpTopic="tunes"
           subtitle={`${tunes.length} tune${tunes.length === 1 ? "" : "s"} · ${chartCount} with a chord chart`}
         >
           <Toolbar>

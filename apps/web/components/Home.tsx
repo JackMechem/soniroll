@@ -373,8 +373,8 @@ export default function Home() {
         return (
           <Card title="Your library">
             <div className="-mx-2 flex flex-col gap-px">
-              <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
-              <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
+              <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes?list=tunes" />
+              <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes?list=learn" />
               <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
               <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes" detail={playlists.length ? `${playlists.length} folder${playlists.length === 1 ? "" : "s"}` : undefined} />
             </div>
