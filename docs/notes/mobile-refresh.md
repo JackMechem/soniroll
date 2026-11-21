@@ -593,3 +593,54 @@ deleted), light and dark, font scale 1.3 for the tiles and Lessons buttons. The 
 `uipass4m` was signed out to test sign-in (its password isn't known, so it can't be signed back in;
 the account still exists). Not checked: a real phone, an offline signed-in launch, the student side
 of a lesson page, iOS.
+
+## UI/UX pass 5 fixes — whole app (2026-11-20)
+
+Fixes from pass 5's mobile review (the final whole-app sweep). Commits 6117245, e94520e, 8bcce60
+and the notes commit after them.
+
+- **Old account data moves to the account, once.** Before d9bbbd3 a phone signed in wrote the
+  account's settings, tune lists and recents to the plain keys, which the per-account stores then
+  read as the phone's own signed-out data (the reviewer saw old accounts' tunes, recents and a
+  247 BPM Metronome signed out). `accountScope.ts` now runs `migrateOldCopies` the first time it
+  learns the sign-in state (flag `jam-practice-store-scope-v1`): signed in, each key in a fixed list
+  of what those stores had then (`OLD_SHARED_KEYS`) moves to `<key>:account` unless that already
+  exists, and the plain copies (plus the old Practice Timer session mirror) go; signed out, nothing
+  moves. Copies are written before the plain keys are removed and the flag is set last, so an
+  interrupted run finishes next launch; the stores stay in `loading` meanwhile. The list is fixed on
+  purpose: a key added later never held anyone else's data.
+- **Writes wait for the backend's sign-in.** Reopening the app after Back closed it (the JS stays
+  alive, the screens remount) cleared the old screens' sign-in before the new ones' was back: a
+  debounced write in that gap failed with "Not signed in" (lost in a release build), and
+  `users.current` could answer `null`, which made `SignOutIfAccountGone` **sign you out** (seen
+  on the emulator). Now every account write from the stores (`useSyncedSettings`, the tune lists,
+  `liveSynced`) goes through `sendToAccount`, which holds the newest value per key until
+  `convex/react`'s `useConvexAuth` (the backend's answer, not the token on the phone) says signed in
+  (`useAccountWritesGate`, mounted in the root layout), and drops them only on sign-out.
+  `loading` no longer counts as a switch: the stores keep what they hold (and an edit still waiting)
+  and reset only when the sign-in really changes. Sign out calls `flushAccountWrites()` first.
+  `SignOutIfAccountGone` waits for the backend's sign-in too.
+- **Keys:** `prettyKeyName` on the rest of the screens (setlist rows and reader, pickers, chart
+  editor/view/pager, Charts' Recently opened, Rhythm Section), and `withAccidentals()`
+  (`components/Accidentals.tsx`) draws ♭/♯ in PetalumaScript inside any `<Text>` (Geist has none;
+  the fallback looked like a subscript "b").
+- **Setting chips:** a cell's inner `Pressable` was `flex-1`, whose zero basis made every cell the
+  same width — the real cause of "Root posit…", "Progressio…", "Previous t…". Cells now grow from
+  their content; the "N more" cell says "Options" (no fixed width). All 21 tools' strips fit.
+- **Tabs:** Back from any tab goes to Home, Back on Home leaves (Home `dismissTo('/')`, other tabs
+  `dismissTo('/')` then `push`).
+- Smaller: one-word tool tile names shrink only at font scale > 1.1 (Android shrank them at 1.0);
+  the header account button shows your letter; the tune page's Files/Recordings/Shed Notes empties
+  read like Chord chart's; tune ⋮ deletes together at the bottom as "Delete chart"/"Delete tune";
+  "Following · 0"; standards picker titles semibold; setlist empty text; sign-in cards stack their
+  buttons like `EmptyState`; the Tuner doesn't say "Listening…" twice; a signed-out Lessons screen's
+  header says "Lessons".
+
+Checked on the emulator (debug build) with throwaway accounts `uipass5fix`/`uipass5fix2` (both
+deleted): signed out at first run the flag was set and nothing moved; with plain keys seeded and
+signed in at first run everything moved to `:account` and the Metronome opened at the seeded BPM;
+an edit followed by Back-to-exit within 250 ms reached the account after reopening, with no "Not
+signed in" and still signed in (before the `SignOutIfAccountGone` change a reopen signed the
+account out); sign-out left no `:account` keys. The emulator's own data was restored from a dump
+afterwards and it's left signed out. Not checked: sign-out within 600 ms of an edit, an offline
+signed-in launch, a release build, a real phone, iOS.
