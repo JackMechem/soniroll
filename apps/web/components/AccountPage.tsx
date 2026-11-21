@@ -47,13 +47,13 @@ import {
 import { StoragePlans } from "@/components/plans/PlansPage";
 
 /** `wide` widens the page to fit the Profile/Security/Danger zone sidebar layout (the signed-in
-    view below); the loading and not-signed-in states stay at the original narrower width, since
-    neither has anything to put a sidebar next to. */
+    view below); the loading and not-signed-in states are narrower, since neither has anything to
+    put a sidebar next to (wide enough for the theme and font tiles). */
 function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <main
       className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20 ${
-        wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-md"
+        wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-2xl"
       }`}
     >
       {children}
@@ -713,7 +713,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   if (!isAuthenticated) {
     return (
       <PageShell>
-        {accountBar}
+        {/* Signed out this page is the sidebar's "Theme and display". */}
+        <PageBar crumbs={[{ label: "Theme and display" }]} icon={GearIcon} />
         <div className="flex flex-col items-start gap-3 rounded-lg bg-surface p-5 text-left">
           <p className="text-sm text-muted">You&apos;re not signed in. Sign in to manage your profile, library and settings.</p>
           <SignInButtons />

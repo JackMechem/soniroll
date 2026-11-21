@@ -114,6 +114,13 @@ export function CrumbTrail({
     before = [];
     folded = earlier.slice(0, -1);
     after = earlier.slice(-1);
+    // Still too long for both ("… / Sam St… / Lesson — Nov…"): fold the parent too, so the page's
+    // own name is whole ("… / Lesson — Nov 20").
+    const tail = [after[0], last].reduce((n, c) => n + (c.short ?? c.label).length + 3, -3);
+    if (tail > 22) {
+      folded = earlier;
+      after = [];
+    }
   } else if (!compact && earlier.length > 4) {
     before = earlier.slice(0, 1);
     folded = earlier.slice(1, -2);

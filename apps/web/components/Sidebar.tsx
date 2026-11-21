@@ -201,6 +201,16 @@ function SidebarCollapseButton({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+const noSubscribe = () => () => {};
+/** "⌘K" on a Mac, "Ctrl K" elsewhere; null on the server and while hydrating (shown after). */
+function usePaletteKey() {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K"),
+    () => null,
+  );
+}
+
 function SearchBox({
   query,
   onChange,
@@ -213,6 +223,7 @@ function SearchBox({
   large?: boolean;
 }) {
   const router = useRouter();
+  const paletteKey = usePaletteKey();
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
@@ -238,6 +249,7 @@ function SearchBox({
         <SearchIcon className="h-4 w-4 shrink-0" />
         <span className="flex-1 truncate">Search</span>
         <kbd className="rounded-sm bg-foreground/[0.05] px-1.5 font-sans text-[11px] leading-4 text-muted">/</kbd>
+        {paletteKey && <kbd className="rounded-sm bg-foreground/[0.05] px-1.5 font-sans text-[11px] leading-4 text-muted">{paletteKey}</kbd>}
       </button>
     );
   }

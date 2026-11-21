@@ -97,7 +97,8 @@ export default function Momentum({
 
       <Card
         label="Streak"
-        action={<ShareButton onClick={() => onShare("streak")} />}
+        // Nothing to share at zero.
+        action={best > 0 ? <ShareButton onClick={() => onShare("streak")} /> : undefined}
         value={
           <span className="flex items-baseline gap-2">
             <Value value={s} unit={s === 1 ? "day" : "days"} />
@@ -146,7 +147,7 @@ export default function Momentum({
         <Note>{goalDays > 0 ? `Goal hit ${daysHit} of ${goalDays} days` : "Set a daily goal to track your week"}</Note>
       </Card>
 
-      <Card wide label="In total" action={<ShareButton onClick={() => onShare("hours")} />} value={
+      <Card wide label="In total" action={hours > 0 ? <ShareButton onClick={() => onShare("hours")} /> : undefined} value={
           // Under an hour in minutes ("1 min", not "0.0 h"), like the week beside it.
           hours < 1 ? <Value value={formatPracticed(hours * 60)} /> : <Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />
         }>

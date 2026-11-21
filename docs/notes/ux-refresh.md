@@ -193,3 +193,27 @@ From a reviewer's pass (6.5/10). Fixed:
 - Desktop fixes are in `desktop-app.md`.
 Verified in headless Chromium (390/1440, light/dark; the profile signed in with a deleted `.test`
 account). Not verified: screen readers, hover styles, the real desktop window.
+
+## 2026-11-20 — UI pass 4 fixes (web + desktop)
+
+From a reviewer's pass over people, account and first impressions (7/10). Lessons, Community and
+desktop items are in `lessons.md`, `community-and-profiles.md` and `desktop-app.md`. Here:
+- **Phone crumbs** (`CrumbTrail`, compact): after folding to "… / parent / page", if parent + page
+  is still over 22 characters the parent folds too, so the page's name is whole.
+- **⌘K / Ctrl+K** opens the search palette as well as "/" (from text boxes too, desktop widths
+  only), except inside a Shed Notes editor (its own Mod-k) or when the page already used the key
+  (the notation editor's add-a-chord, via `defaultPrevented`). The sidebar's Search shows "⌘K" or
+  "Ctrl K" beside "/" (after hydrating, so nothing mismatches).
+- **Help and palette for account basics**: the "Account, sync & themes" topic has options for a
+  forgotten password, changing it and deleting the account (`packages/core/helpContent.ts`);
+  Help search also matches step titles. The palette has "Forgot your password?" (signed out,
+  `/reset-password`) and "Delete account" (`/account?tab=danger`).
+- Dashboard edit banner: its sentence is hidden on phones (two lines instead of five).
+- Feedback: the email box takes its own row on phones and in the compact form.
+- Streak and In total cards hide their share button at zero.
+- Signed-out `/account` (the sidebar's Theme and display) is titled that, and is `max-w-2xl` so
+  the font tiles don't truncate.
+- Storage plans signed out: Sign up free comes before Sign in, like everywhere else.
+- Days practiced squares have day names for screen readers; future days are hidden from them.
+Verified in headless Chromium (1440/390, light/dark; signed in with deleted throwaways). Not
+verified: hover, screen readers, real phones, the desktop window.

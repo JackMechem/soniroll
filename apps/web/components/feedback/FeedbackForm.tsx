@@ -208,7 +208,7 @@ export default function FeedbackForm({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email, if you'd like a reply (optional)"
               aria-label="Your email (optional)"
-              className="h-9 min-w-0 flex-1 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40"
+              className={`h-9 min-w-0 flex-1 basis-full ${compact ? "" : "sm:basis-auto"} rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40`}
             />
           )}
           <span className="text-xs text-muted">The page you&apos;re on is included.</span>

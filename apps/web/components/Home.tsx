@@ -508,7 +508,7 @@ export default function Home() {
             <PencilIcon className="h-4 w-4 shrink-0 text-muted" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">Editing your dashboard</p>
-              <p className="text-xs text-muted">Drag a card to move it, change its size, or take it off. Add more at the bottom.</p>
+              <p className="text-xs text-muted max-sm:hidden">Drag a card to move it, change its size, or take it off. Add more at the bottom.</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <button type="button" onClick={() => setConfirmReset(true)} className="h-9 rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover">

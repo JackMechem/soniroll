@@ -274,16 +274,16 @@ function PlansBody({ inAccount }: { inAccount: boolean }) {
             <p className="text-sm">Make a free account, or sign in, to get a plan.</p>
             <div className="flex shrink-0 gap-2">
               <Link
-                href={SIGN_IN_PATH}
-                className="inline-flex h-9 items-center rounded-md bg-foreground/[0.06] px-4 text-sm font-medium hover:bg-surface-hover"
-              >
-                Sign in
-              </Link>
-              <Link
                 href={SIGN_UP_PATH}
                 className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover"
               >
                 Sign up free
+              </Link>
+              <Link
+                href={SIGN_IN_PATH}
+                className="inline-flex h-9 items-center rounded-md bg-foreground/[0.05] px-4 text-sm font-medium hover:bg-surface-hover"
+              >
+                Sign in
               </Link>
             </div>
           </div>

@@ -240,6 +240,11 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Pick a username", text: "It's how others find you in Community." },
       { title: "Make it yours", text: "Settings is at the bottom of the sidebar; the palette button beside it goes straight to the theme, text size and Classic look (signed out, it's Theme and display)." },
     ],
+    options: [
+      { name: "Forgot your password?", text: "Use \"Forgot your password?\" on the sign-in form. We email you a link to choose a new one." },
+      { name: "Change your password", text: "In Account → Sign-in & security, where you can also connect Google." },
+      { name: "Delete your account", text: "At the end of Account. It deletes your account for good and signs you out everywhere." },
+    ],
     features: ["Sync across devices", "A public profile (optional)", "Recordings saved to your account", "30 color themes"],
   },
 

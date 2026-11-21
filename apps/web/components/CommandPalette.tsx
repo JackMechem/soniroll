@@ -27,6 +27,7 @@ import {
   SearchIcon,
   SetlistIcon,
   ShieldIcon,
+  TrashIcon,
   SlidersIcon,
   UserIcon,
   UsersIcon,
@@ -82,7 +83,10 @@ const PAGES: { group: "Pages" | "Settings"; href: string; label: string; detail?
   { group: "Settings", href: "/account?tab=tools", label: "Tool settings", detail: "Settings", words: "settings tool pages stats option descriptions intros chips", icon: SlidersIcon, account: true },
   { group: "Settings", href: "/account?tab=practice", label: "Shed Log settings", detail: "Settings", words: "settings daily goal minutes practice sounds week", icon: CalendarIcon, account: true },
   { group: "Settings", href: "/account?tab=storage", label: "Storage plan", detail: "Account", words: "storage plan subscription subscribe cancel billing payment receipts card upgrade gb cloud", icon: CloudIcon, account: true },
-  { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password email google login sign in", icon: ShieldIcon, account: true },
+  { group: "Settings", href: "/account?tab=security", label: "Sign-in & security", detail: "Account", words: "account settings password change email google login sign in", icon: ShieldIcon, account: true },
+  { group: "Settings", href: "/account?tab=danger", label: "Delete account", detail: "Account", words: "account delete remove close erase data", icon: TrashIcon, account: true },
+  // Signed out: the "forgot password" page (sends a reset link).
+  { group: "Pages", href: "/reset-password", label: "Forgot your password?", detail: "Reset it", words: "password forgot reset lost sign in login account", icon: ShieldIcon },
 ];
 
 /** Signed out, the theme and text size are on the account page too (no other settings). */
@@ -337,9 +341,17 @@ export default function CommandPalette() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (!window.matchMedia("(min-width: 1024px)").matches) return;
       const target = e.target as HTMLElement;
+      // ⌘K / Ctrl+K works from anywhere, text boxes too, except where the page already used it
+      // (the notation editor's "add a chord") and inside a Shed Notes editor (its own key).
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        if (e.defaultPrevented || target.closest(".cm-editor")) return;
+        e.preventDefault();
+        setOpen(true);
+        return;
+      }
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (target.closest("input, textarea, select, [contenteditable='true']")) return;
       e.preventDefault();
       setOpen(true);

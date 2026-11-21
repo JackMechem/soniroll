@@ -23,7 +23,7 @@ const ORDERED = HELP_GROUPS.flatMap((g) => HELP_TOPICS.filter((t) => t.group ===
 function TopicList({ query, selected, onPick }: { query: string; selected: string; onPick: (id: string) => void }) {
   const q = query.trim().toLowerCase();
   const groups = useMemo(() => {
-    const match = (t: HelpTopic) => !q || `${t.title} ${t.tagline} ${t.features.join(" ")} ${(t.options ?? []).map((o) => o.name).join(" ")}`.toLowerCase().includes(q);
+    const match = (t: HelpTopic) => !q || `${t.title} ${t.tagline} ${t.features.join(" ")} ${t.steps.map((st) => st.title).join(" ")} ${(t.options ?? []).map((o) => o.name).join(" ")}`.toLowerCase().includes(q);
     return HELP_GROUPS.map((g) => ({ group: g, topics: HELP_TOPICS.filter((t) => t.group === g && match(t)) })).filter((g) => g.topics.length);
   }, [q]);
   if (!groups.length) return <p className="px-2 py-6 text-center text-sm text-muted">Nothing matches.</p>;
