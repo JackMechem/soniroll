@@ -6,6 +6,8 @@ import { Text, View, type LayoutChangeEvent } from 'react-native';
 
 import { ChordQualityText } from '@/components/ChordQualityText';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 export { layoutRows, type PlacedBar };
 
@@ -108,7 +110,7 @@ export default function ChordChartView({
           <Text className="font-ui" style={{ fontSize: 13, color: colors.muted }}>
             {song.style}
             {song.style ? ' · ' : ''}
-            {song.key} · {song.timeSignature.top}/{song.timeSignature.bottom}
+            {withAccidentals(prettyKeyName(song.key))} · {song.timeSignature.top}/{song.timeSignature.bottom}
           </Text>
         </View>
         {headerActions || song.composer ? (

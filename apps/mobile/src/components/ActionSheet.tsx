@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-na
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { withAccidentals } from '@/components/Accidentals';
 
 export type SheetAction = { key: string; icon: ReactNode; label: string; onPress: () => void; danger?: boolean };
 
@@ -34,7 +35,7 @@ export function ActionSheet({
             </Text>
             {subtitle ? (
               <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
-                {subtitle}
+                {withAccidentals(subtitle)}
               </Text>
             ) : null}
           </View>

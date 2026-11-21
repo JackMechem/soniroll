@@ -10,6 +10,8 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { Button } from '@/components/ui';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 /** One page: a tune, with either its chart's library id (your own charts, loaded on demand) or the
     chart itself (someone else's setlist), or neither. */
@@ -132,7 +134,7 @@ function ChartBody({ song: original, toKey, tempo }: { song: IRealSong; toKey?: 
   const info = [
     song.composer ? formatComposer(song.composer) : null,
     song.style || null,
-    song.key || null,
+    song.key ? prettyKeyName(song.key) : null,
     `${song.timeSignature.top}/${song.timeSignature.bottom}`,
     tempo ? `${tempo} BPM` : null,
   ]
@@ -142,7 +144,7 @@ function ChartBody({ song: original, toKey, tempo }: { song: IRealSong; toKey?: 
     <ScrollView contentContainerStyle={{ paddingHorizontal: 6, paddingTop: 2, paddingBottom: 16 }}>
       {info ? (
         <Text numberOfLines={1} className="font-ui px-2 pb-1 text-xs" style={{ color: colors.muted }}>
-          {info}
+          {withAccidentals(info)}
         </Text>
       ) : null}
       <ChordChartView song={song} barsPerRow={4} hideHeader />

@@ -27,6 +27,7 @@ import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
 import { summarizeLearning } from '@jam-practice/core/learningPath';
 import { useLearningProgress } from '@/lib/useLearnSession';
 import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 /** Shown in place of Favorites until you've starred some tools, in this order. */
 const STARTER_HREFS = ['/metronome', '/tuner', '/practice-timer', '/jam-practice'];
@@ -144,7 +145,7 @@ function Home() {
     } else {
       const meta = chartMeta.get(item.id);
       if (meta) {
-        recents.push({ key: `c:${item.id}`, kind: 'Chart', icon: <IconTile Icon={ChordChartIcon} size={34} />, title: meta.title, extra: meta.key || undefined, onPress: () => openChart(item.id) });
+        recents.push({ key: `c:${item.id}`, kind: 'Chart', icon: <IconTile Icon={ChordChartIcon} size={34} />, title: meta.title, extra: meta.key ? prettyKeyName(meta.key) : undefined, onPress: () => openChart(item.id) });
       }
     }
   }
@@ -253,7 +254,7 @@ function Home() {
                       {tuneOfDay.tune.name}
                     </Text>
                     <View className="flex-row flex-wrap gap-2">
-                      {tuneOfDay.key ? <Chip>in {prettyKeyName(tuneOfDay.key)}</Chip> : null}
+                      {tuneOfDay.key ? <Chip>in {withAccidentals(prettyKeyName(tuneOfDay.key))}</Chip> : null}
                       {tuneOfDay.tempo ? <Chip>{tuneOfDay.tempo} BPM</Chip> : null}
                       <Chip muted>{tuneOfDay.tune.timeSignature}</Chip>
                     </View>

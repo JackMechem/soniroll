@@ -11,6 +11,8 @@ import { CheckIcon, CloseIcon, PlusIcon } from '@/components/icons';
 import { NameDialog } from '@/components/NameDialog';
 import { TUNE_LIST_IDS, TUNE_LIST_LABEL, tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 const ROW_H = 60;
 const HEADER_H = 44;
@@ -212,7 +214,7 @@ export function TunePickerModal({
                 ? [TUNE_LIST_LABEL[item.list], tuneSummary(item.tune)].filter(Boolean).join(' · ')
                 : item.kind === 'new'
                   ? 'New tune · added to Tunes I Know'
-                  : [item.standard.composer, item.standard.key, `${item.standard.bpm} BPM`, item.standard.timeSignature].filter(Boolean).join(' · ');
+                  : [item.standard.composer, prettyKeyName(item.standard.key), `${item.standard.bpm} BPM`, item.standard.timeSignature].filter(Boolean).join(' · ');
             return (
               <Pressable
                 onPress={() => (item.kind === 'new' ? untickNew(item.name) : toggle(item.key))}
@@ -231,7 +233,7 @@ export function TunePickerModal({
                     {title}
                   </Text>
                   <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
-                    {subtitle}
+                    {withAccidentals(subtitle)}
                   </Text>
                 </View>
               </Pressable>

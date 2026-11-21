@@ -9,6 +9,7 @@ import { LinkedChartModal } from '@/components/LinkedChartModal';
 import { prettyKeyName } from '@/lib/keyNames';
 import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { withAccidentals } from '@/components/Accidentals';
 
 /** Turns a `PublicTune` (someone else's data) into a fresh, independent `Tune` for the viewer's
     own list — new ids throughout, `notes` always empty since a public profile never exposes it in
@@ -137,7 +138,7 @@ function Chip({ enabled, label }: { enabled: boolean; label: string }) {
           textDecorationLine: enabled ? 'none' : 'line-through',
         }}
       >
-        {label}
+        {withAccidentals(label)}
       </Text>
     </View>
   );

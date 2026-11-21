@@ -15,6 +15,7 @@ import {
 import { CheckIcon, ChevronRightIcon, ClearIcon, NAV_LINK_ICONS, SearchIcon, type IconProps } from '@/components/icons';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { TextInput } from '@/components/ThemedTextInput';
+import { withAccidentals } from '@/components/Accidentals';
 
 /**
  * The app's basic pieces, styled like the website after its UX refresh: filled cards (no thin
@@ -68,7 +69,7 @@ export function Card({
           </Text>
           {detail ? (
             <Text numberOfLines={1} className="font-ui flex-1 text-xs" style={{ color: colors.muted }}>
-              {detail}
+              {withAccidentals(detail)}
             </Text>
           ) : (
             <View className="flex-1" />
@@ -123,7 +124,7 @@ export function ListRow({
         </Text>
         {detail ? (
           <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-            {detail}
+            {withAccidentals(detail)}
           </Text>
         ) : null}
       </View>
@@ -382,7 +383,7 @@ export function SectionHeader({ title, count, detail, right }: { title: string; 
         </Text>
         {detail ? (
           <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-            {detail}
+            {withAccidentals(detail)}
           </Text>
         ) : null}
       </View>
@@ -438,7 +439,8 @@ export function SignInGate({
           ))}
         </View>
       ) : null}
-      <View className="flex-row flex-wrap justify-center gap-2">
+      {/* Stacked like `EmptyState`'s two buttons, so every empty card reads the same. */}
+      <View className="items-center gap-2">
         <Button label="Sign in" onPress={() => router.push('/profile')} />
         <Button label="Create an account" kind="secondary" onPress={() => router.push({ pathname: '/profile', params: { flow: 'signUp' } })} />
       </View>

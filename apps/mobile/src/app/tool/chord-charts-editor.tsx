@@ -17,6 +17,8 @@ import { findTune, useChartLinker, useTuneLists } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 import { TextInput } from '@/components/ThemedTextInput';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 const STARTING_BARS = 8;
 const BARS_PER_ROW = 4;
@@ -299,7 +301,7 @@ function ChordChartEditorScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRow, chartWidth, viewportH, chartTop]);
 
-  const info = [composer.trim(), style.trim(), key.trim() && `Key of ${key.trim()}`, `${top}/${bottom}`, playlist]
+  const info = [composer.trim(), style.trim(), key.trim() && `Key of ${prettyKeyName(key.trim())}`, `${top}/${bottom}`, playlist]
     .filter(Boolean)
     .join(' · ');
 
@@ -345,7 +347,7 @@ function ChordChartEditorScreen() {
                   {title.trim() || 'Untitled — tap to add details'}
                 </Text>
                 <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                  {info}
+                  {withAccidentals(info)}
                 </Text>
               </View>
               <PencilIcon color={colors.muted} size={18} />

@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 import { ChordChartIcon, DotsVerticalIcon } from '@/components/icons';
 import { tuneSummary } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { withAccidentals } from '@/components/Accidentals';
 
 export const TUNE_ROW_H = 64;
 
@@ -71,7 +72,7 @@ export const TuneRow = memo(function TuneRow({
           ))}
           {summary ? (
             <Text numberOfLines={1} className="font-ui flex-shrink text-sm" style={{ color: colors.muted }}>
-              {summary}
+              {withAccidentals(summary)}
             </Text>
           ) : null}
         </View>

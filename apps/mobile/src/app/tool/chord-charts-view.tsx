@@ -16,6 +16,7 @@ import { IconButton } from '@/components/ui';
 import { useForgetChart } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
+import { withAccidentals } from '@/components/Accidentals';
 
 const BARS_PER_ROW = 4;
 
@@ -75,7 +76,7 @@ function ChordChartsViewScreen() {
               </Text>
               {subtitle ? (
                 <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                  {subtitle}
+                  {withAccidentals(subtitle)}
                 </Text>
               ) : null}
             </View>

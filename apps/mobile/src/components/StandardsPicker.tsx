@@ -9,6 +9,8 @@ import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from '@/components/icons';
 import { useSyncedTunes } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { TextInput } from '@/components/ThemedTextInput';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 const MAX_ROWS = 60;
 
@@ -118,11 +120,11 @@ export function StandardsPicker({
                   className="flex-row items-center gap-3 rounded-xl px-4 py-3"
                 >
                   <View className="min-w-0 flex-1">
-                    <Text numberOfLines={1} className="text-base font-ui" style={{ color: colors.foreground }}>
+                    <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                       {standard.name}
                     </Text>
                     <Text numberOfLines={1} className="text-xs font-ui" style={{ color: colors.muted }}>
-                      {standard.composer} · {standard.key} · {standard.bpm} BPM
+                      {standard.composer} · {withAccidentals(prettyKeyName(standard.key))} · {standard.bpm} BPM
                       {standard.timeSignature !== '4/4' ? ` · ${standard.timeSignature}` : ''}
                     </Text>
                   </View>

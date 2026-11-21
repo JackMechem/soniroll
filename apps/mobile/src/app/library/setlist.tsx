@@ -40,6 +40,8 @@ import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useSetlists } from '@/lib/useSetlists';
 import { TUNE_LIST_IDS, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 /**
  * One setlist: its tunes in order (numbered), each opening its tune page, with ⋮ per tune to move
@@ -276,7 +278,7 @@ function SetlistScreen() {
           <EmptyState
             Icon={MusicNoteIcon}
             title="No tunes in this setlist yet"
-            body="Pick them from Tunes I Know and Tunes to Learn."
+            body="Pick them from your tunes or the standards."
             action={{ label: 'Add tunes', Icon: PlusIcon, onPress: () => setPicking(true) }}
           />
         ) : (
@@ -390,7 +392,7 @@ function PlayInfoLine({
 }) {
   const { colors } = useAppTheme();
   const parts: { text: string; changed: boolean }[] = [];
-  if (info.key) parts.push({ text: info.key, changed: info.keyChanged });
+  if (info.key) parts.push({ text: prettyKeyName(info.key), changed: info.keyChanged });
   if (info.tempo != null) parts.push({ text: `${info.tempo} BPM`, changed: info.tempoChanged });
   if (timeSignature) parts.push({ text: timeSignature, changed: false });
   return (
@@ -398,7 +400,7 @@ function PlayInfoLine({
       {parts.map((p, i) => (
         <Text key={i} className={p.changed ? 'font-ui-bold font-bold' : 'font-ui'} style={p.changed ? { color: colors.accent } : undefined}>
           {i ? ' · ' : ''}
-          {p.text}
+          {withAccidentals(p.text)}
         </Text>
       ))}
     </Text>

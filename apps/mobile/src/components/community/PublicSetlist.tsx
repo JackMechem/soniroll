@@ -10,6 +10,7 @@ import { RecordingRow, useRecordingPlayer } from '@/components/recordings/Record
 import { useSaveSetlist } from '@/lib/useSaveSetlist';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { prettyKeyName } from '@/lib/keyNames';
+import { withAccidentals } from '@/components/Accidentals';
 
 /**
  * Someone's setlist as a reader sees it — on a setlist post and on a shared link. Two actions up
@@ -116,13 +117,13 @@ export function PublicSetlist({
                   {t.name}
                 </Text>
                 <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
-                  {[
+                  {withAccidentals([
                     prettyKeyName(setlistKey({ overrideRoot: t.setKey, chartKey: t.linkedChart?.key, tuneKeys: t.keys.filter((k) => k.enabled).map((k) => k.value) }) ?? ''),
                     (t.setTempo ?? t.tempos.find((x) => x.enabled)?.value) ? `${t.setTempo ?? t.tempos.find((x) => x.enabled)?.value} BPM` : null,
                     t.timeSignature || null,
                   ]
                     .filter(Boolean)
-                    .join(' · ')}
+                    .join(' · '))}
                 </Text>
               </View>
               {t.recordings?.length ? (
