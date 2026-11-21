@@ -14,7 +14,7 @@ import LikedPosts from "@/components/LikedPosts";
 import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
-import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, UserIcon } from "@/components/tools";
+import { CalendarIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, UserIcon, findToolLink } from "@/components/tools";
 import { useEdgeFade } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useSetlists } from "@/lib/useSetlists";
@@ -470,14 +470,13 @@ function Spinner() {
   );
 }
 
-/** A Community sub-page (Liked, Following, My posts): back to Community, a title, and — signed
+/** A Community sub-page (Liked, Following, My posts): "Community / <title>" in the header bar, and — signed
     out — a sign-in prompt instead of the content (every one of them needs an account). */
 export function CommunitySubPage({ title, children }: { title: string; children: ReactNode }) {
-  const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
   return (
     <PageShell fullWidth={false}>
-      <PageHeader title={title} back={() => router.push("/community")} />
+      <PageHeader title={title} crumbs={[{ label: "Community", href: "/community" }]} icon={findToolLink("/community")?.icon} />
       {isLoading ? (
         <Spinner />
       ) : isAuthenticated ? (

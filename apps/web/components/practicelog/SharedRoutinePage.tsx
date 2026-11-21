@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { AddRoutineButton, RoutinePreview } from "@/components/practicelog/PublicRoutineView";
 import { CalendarIcon } from "@/components/tools";
 
@@ -12,21 +13,21 @@ import { CalendarIcon } from "@/components/tools";
 export default function SharedRoutinePage({ id }: { id: string }) {
   const shared = useQuery(api.routines.getShared, { id });
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: shared ? shared.routine.name : "Shared routine" }]} icon={CalendarIcon} />
       {shared === undefined ? (
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
       ) : shared === null ? (
         <div className="flex flex-col items-center gap-2 py-24 text-center">
-          <h1 className="text-xl font-semibold">This routine isn&apos;t available</h1>
+          <h2 className="text-xl font-semibold">This routine isn&apos;t available</h2>
           <p className="text-sm text-muted">It isn&apos;t shared anymore, or the link is wrong.</p>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-1">
             <p className="flex items-center gap-1.5 text-sm text-muted">
-              <CalendarIcon className="h-4 w-4" />
               Practice routine
               {shared.ownerUsername && (
                 <>
@@ -37,7 +38,6 @@ export default function SharedRoutinePage({ id }: { id: string }) {
                 </>
               )}
             </p>
-            <h1 className="text-2xl font-semibold tracking-tight">{shared.routine.name}</h1>
           </div>
           <RoutinePreview routine={shared.routine} />
           {shared.isMine && shared.routineId ? (

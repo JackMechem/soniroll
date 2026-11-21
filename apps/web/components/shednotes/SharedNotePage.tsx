@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { titleKey } from "@jam-practice/core/shedNotes";
-import { BackButton } from "@/components/library/shared";
+import PageBar, { type Crumb } from "@/components/PageBar";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
@@ -14,15 +14,22 @@ import { getFont } from "@/lib/fonts";
 import NoteDocument from "./NoteDocument";
 import NotePrint from "./NotePrint";
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">{children}</main>;
+/** The page, with the note's trail in the header bar: its title, after the note the link is for
+    when it's one of the notes that one shares ("Shared note" until it's there). */
+function Shell({ crumbs = [{ label: "Shared note" }], children }: { crumbs?: Crumb[]; children: React.ReactNode }) {
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={crumbs} icon={DocumentIcon} />
+      {children}
+    </main>
+  );
 }
 
 function Message({ title, text, children }: { title: string; text: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 py-24 text-center">
       <DocumentIcon className="h-5 w-5 text-muted" />
-      <h1 className="text-lg font-semibold">{title}</h1>
+      <h2 className="text-lg font-semibold">{title}</h2>
       <p className="max-w-sm text-sm text-muted">{text}</p>
       {children}
     </div>
@@ -52,10 +59,8 @@ export default function SharedNotePage({ token, note }: { token: string; note?: 
   }
   if (shared.status === "gone") {
     return (
-      <Shell>
-        <Message title="This note isn't available" text={note ? "It isn't shared through this link, or it was renamed or deleted." : "It isn't shared by link anymore, or the link is wrong."}>
-          {note && <BackButton href={`/note/${token}`} label="The shared note" className="ml-0" />}
-        </Message>
+      <Shell crumbs={note ? [{ label: "Shared note", href: `/note/${token}` }, { label: note }] : undefined}>
+        <Message title="This note isn't available" text={note ? "It isn't shared through this link, or it was renamed or deleted." : "It isn't shared by link anymore, or the link is wrong."} />
       </Shell>
     );
   }
@@ -89,9 +94,8 @@ export default function SharedNotePage({ token, note }: { token: string; note?: 
   const context = shared.parent ? { token, noteId: shared.id } : { token };
   const updated = new Date(shared.updatedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   return (
-    <Shell>
+    <Shell crumbs={[...(shared.parent ? [{ label: shared.parent.title, href: base }] : []), { label: shared.title }]}>
       <header className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
-        {shared.parent && <BackButton href={base} label={shared.parent.title} />}
         <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
           <DocumentIcon className="h-4 w-4 text-muted" /> Shed Note · shared by
           {shared.owner ? (
@@ -103,9 +107,10 @@ export default function SharedNotePage({ token, note }: { token: string; note?: 
           )}
           <span>· edited {updated}</span>
         </p>
-        <h1 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl" style={font ? { fontFamily: font } : undefined}>
+        {/* The note's own title, in its font: part of the document (its name is in the bar too). */}
+        <h2 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl" style={font ? { fontFamily: font } : undefined}>
           {shared.title}
-        </h1>
+        </h2>
         <div className="flex flex-wrap gap-2">
           {shared.role && (
             <Link href={`/shed-notes?id=${encodeURIComponent(shared.id)}`} className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">

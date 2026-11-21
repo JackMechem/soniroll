@@ -7,12 +7,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
-import { BackButton, PageShell, tuneSummary } from "@/components/library/shared";
+import { PageShell, tuneSummary } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
 import { TunePickerModal } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SwitchRow from "@/components/SwitchRow";
-import { CloseIcon, PlusIcon } from "@/components/tools";
+import { CloseIcon, PlusIcon, findToolLink } from "@/components/tools";
 import { toPublicTune } from "@/lib/profileTunes";
 import type { Tune } from "@/lib/types";
 import { useSetlists } from "@/lib/useSetlists";
@@ -84,18 +85,20 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
 
   return (
     <PageShell fullWidth={false}>
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-foreground/10 pb-6">
-        <div>
-          <BackButton onClick={() => router.back()} className="mb-2" />
-          <h1 className="text-2xl font-semibold tracking-tight">{fromSetlist ? "Post a setlist" : "New post"}</h1>
+      <PageBar
+        crumbs={[{ label: "Community", href: "/community" }, { label: fromSetlist ? "Post a setlist" : "New post" }]}
+        icon={findToolLink("/community")?.icon}
+      />
+      {(paused || (!loading && !blocked)) && (
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {paused && <p className="w-full rounded-lg bg-surface px-4 py-3 text-sm">New posts are paused for a bit. Try again later.</p>}
+          {!loading && !blocked && (
+            <button type="button" onClick={() => void post()} disabled={posting} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
+              {posting ? "Posting…" : "Post"}
+            </button>
+          )}
         </div>
-        {paused && <p className="w-full rounded-lg bg-surface px-4 py-3 text-sm">New posts are paused for a bit. Try again later.</p>}
-        {!loading && !blocked && (
-          <button type="button" onClick={() => void post()} disabled={posting} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
-            {posting ? "Posting…" : "Post"}
-          </button>
-        )}
-      </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16">

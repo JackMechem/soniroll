@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { CheckIcon, DownloadIcon, PhoneIcon } from "@/components/tools";
 import { useAndroidRelease } from "@/lib/androidRelease";
 import { DOWNLOAD_PATH, RELEASES_URL } from "@/lib/desktopRelease";
@@ -29,14 +30,15 @@ const STEPS = [
 export default function MobilePage() {
   const android = useAndroidRelease();
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-8">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "Phone app" }]} icon={PhoneIcon} />
       <section className="flex flex-col items-start gap-5 rounded-3xl bg-surface px-5 py-8 sm:items-center sm:px-8 sm:py-12 sm:text-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accent">
           <PhoneIcon className="h-6 w-6" />
         </span>
         <div className="flex flex-col items-start gap-2 sm:items-center">
           <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent">Alpha</span>
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">soniroll for your phone</h1>
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">soniroll for your phone</h2>
           <p className="max-w-xl text-sm text-muted sm:text-base">
             The phone app for Android is in alpha: an early test, so expect rough edges, and tell us what breaks (the bug button, top
             right). Not on the Play Store yet, and not on iPhone yet.

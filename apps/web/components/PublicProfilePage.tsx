@@ -14,12 +14,11 @@ import UserAvatar from "@/components/UserAvatar";
 import ProfileBanner from "@/components/ProfileBanner";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { shareLink } from "@/lib/shareLink";
-import { CheckIcon, FlagIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
+import { CheckIcon, FlagIcon, ShareIcon, StopwatchIcon, findToolLink } from "@/components/tools";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
-import { BackButton } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
 import { useEdgeFade } from "@/components/library/ui";
-import { useRouter } from "next/navigation";
 import { type PublicPracticeStats, todayKey } from "@/lib/practiceLog";
 
 /** A public profile page (`app/u/[username]/page.tsx`) — reachable by anyone, signed in or not;
@@ -43,7 +42,6 @@ import { type PublicPracticeStats, todayKey } from "@/lib/practiceLog";
 type ProfileTab = "posts" | "tunes" | "learn" | "ear";
 
 export default function PublicProfilePage({ username }: { username: string }) {
-  const router = useRouter();
   const [today] = useState(() => todayKey());
   const profile = useQuery(api.profiles.getPublicByUsername, { username, today });
   const viewer = useQuery(api.users.current);
@@ -61,7 +59,8 @@ export default function PublicProfilePage({ username }: { username: string }) {
 
   if (profile === undefined || viewer === undefined) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16">
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+        <PageBar crumbs={[{ label: "Community", href: "/community" }, { label: `@${username}` }]} icon={findToolLink("/community")?.icon} />
         <LoadingSpinner />
       </main>
     );
@@ -69,8 +68,9 @@ export default function PublicProfilePage({ username }: { username: string }) {
 
   if (profile === null) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-2 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-16">
-        <h1 className="text-xl font-semibold">This profile isn&apos;t available</h1>
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-2 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-20">
+        <PageBar crumbs={[{ label: "Community", href: "/community" }, { label: `@${username}` }]} icon={findToolLink("/community")?.icon} />
+        <h2 className="text-xl font-semibold">This profile isn&apos;t available</h2>
         <p className="text-sm text-muted">It might not exist, or its owner hasn&apos;t made it public.</p>
       </main>
     );
@@ -101,8 +101,8 @@ export default function PublicProfilePage({ username }: { username: string }) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
-      <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/community"))} className="self-start" />
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "Community", href: "/community" }, { label: `@${profile.username}` }]} icon={findToolLink("/community")?.icon} />
       <section className="overflow-hidden rounded-lg bg-surface">
         <ProfileBanner banner={profile.banner} className="h-24 sm:h-32" />
         <div className="-mt-10 flex flex-col gap-3 px-4 pb-4 sm:px-6 sm:pb-5">
@@ -139,7 +139,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
             </div>
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">@{profile.username}</h1>
+            <h2 className="truncate text-2xl font-semibold tracking-tight">@{profile.username}</h2>
             <p className="mt-0.5 text-sm text-muted">{profile.instruments.length > 0 ? profile.instruments.join(" · ") : "Musician on soniroll"}</p>
             <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
               {stats.map(([label, n]) => (

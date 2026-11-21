@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import LegalPageBar from "@/components/LegalPageBar";
 
 /** Shared shell for /privacy and /terms — plain prose pages, not a "tool" (no ToolLayout, no
     options column), styled to match the rest of the site's typography/color tokens. Both pages
@@ -14,11 +15,9 @@ export function LegalPage({
   children: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
-      <div className="flex flex-col gap-1 border-b border-foreground/10 pb-6 text-left">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-sm text-muted">Last updated {updated}</p>
-      </div>
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+      <LegalPageBar title={title} />
+      <p className="text-left text-sm text-muted">Last updated {updated}</p>
       <div className="flex flex-col gap-6 text-left">{children}</div>
     </main>
   );

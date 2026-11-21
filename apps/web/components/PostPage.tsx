@@ -13,13 +13,13 @@ import { ProgressCardView } from "@/components/practicelog/ProgressCard";
 import { AddRoutineButton, RoutinePreview } from "@/components/practicelog/PublicRoutineView";
 import PublicTuneList from "@/components/PublicTuneList";
 import UserAvatar from "@/components/UserAvatar";
-import { CalendarIcon, CheckIcon, EyeOffIcon, FlagIcon, HeartIcon, NoteIcon, SetlistIcon, ShareIcon, TrashIcon, UsersIcon } from "@/components/tools";
+import { CalendarIcon, CheckIcon, EyeOffIcon, FlagIcon, HeartIcon, NoteIcon, SetlistIcon, ShareIcon, TrashIcon, UsersIcon, findToolLink } from "@/components/tools";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import FollowButton from "@/components/FollowButton";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
-import { BackButton } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
 import { ROUTINE_COLORS, describePublicRepeat, formatMinutesShort } from "@/lib/practiceLog";
 import { shareLink } from "@/lib/shareLink";
 
@@ -27,21 +27,28 @@ function formatDate(ms: number) {
   return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+/** The header bar: "Community / <post title>" ("Post" until it's loaded or when it isn't there). */
+function PostBar({ title = "Post" }: { title?: string }) {
+  return <PageBar crumbs={[{ label: "Community", href: "/community" }, { label: title }]} icon={findToolLink("/community")?.icon} />;
+}
+
 function NotAvailable() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   if (!isLoading && !isAuthenticated) {
     return (
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-16">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-20">
+        <PostBar />
         <UsersIcon className="h-6 w-6 text-muted" />
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in to see this post</h1>
+        <h2 className="text-2xl font-semibold tracking-tight">Sign in to see this post</h2>
         <p className="text-sm text-muted">Community posts — tunes, setlists, routines and milestones — are for soniroll members. It&apos;s free.</p>
         <SignInButtons />
       </main>
     );
   }
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-2 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-16">
-      <h1 className="text-xl font-semibold">This post isn&apos;t available</h1>
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-2 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-20">
+      <PostBar />
+      <h2 className="text-xl font-semibold">This post isn&apos;t available</h2>
       <p className="text-sm text-muted">
         It may have been removed, or its author&apos;s profile is no longer public.
       </p>
@@ -121,7 +128,8 @@ function PostPageContent({ id }: { id: string }) {
 
   if (post === undefined) {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
+        <PostBar />
         <LoadingSpinner />
       </main>
     );
@@ -144,8 +152,8 @@ function PostPageContent({ id }: { id: string }) {
   const TagIcon = tag.icon;
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-12">
-      <BackButton href="/community" label="Community" className="self-start" />
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-20">
+      <PostBar title={post.title} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0 overflow-hidden rounded-lg bg-surface">
           {routine && <div className="h-1" style={{ background: ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length] }} />}
@@ -170,7 +178,7 @@ function PostPageContent({ id }: { id: string }) {
             <div className="flex items-start gap-3">
               {routine && <RoutineIcon icon={routine.icon} color={routine.color} size="lg" />}
               <div className="min-w-0">
-                <h1 className="text-2xl font-semibold leading-tight tracking-tight">{post.title}</h1>
+                <h2 className="text-2xl font-semibold leading-tight tracking-tight">{post.title}</h2>
                 {post.description && <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{post.description}</p>}
               </div>
             </div>
