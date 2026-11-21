@@ -520,7 +520,7 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
         <TextInput
           value={password}
           onChangeText={setPassword}
-          placeholder={flow === 'signUp' ? 'At least 8 characters' : 'Your password'}
+          placeholder={flow === 'signUp' ? 'Choose a password' : 'Your password'}
           placeholderTextColor={colors.muted}
           secureTextEntry={!showPassword}
           autoCapitalize="none"

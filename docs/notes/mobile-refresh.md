@@ -541,3 +541,55 @@ A reviewer went over every tool and the Shed Log on the emulator (6.5/10). Fixed
 Checked on the emulator (debug build, signed in as `mobile-audit@soniroll.test`); test data removed
 (the timer's 1 min via "Clear this day's time", Guess the Chord's struggles). Not checked: the Slow
 Downer loop line, the timer strip together with now-playing, audio by ear, a real phone.
+
+## UI/UX pass 4 fixes — accounts, people, About (2026-11-20)
+
+Fixes from pass 4's mobile review (people, account and first impressions). Commits d9bbbd3,
+0c6b13d, 87b8378 and the notes/review commit after them.
+
+- **Another account never sees the last one's data (privacy bug).** A new account signed in on the
+  phone showed the previous account's favorites, "Pick up where you left off", tune lists and
+  Metronome settings, and an edit would then write them into the new account: `useSyncedSettings`,
+  `useSyncedTunes` and the recents kept one AsyncStorage copy for everyone and only ever let the
+  account's value override it when it had one. Now `lib/accountScope.ts` gives every store a mode
+  (`loading` / `device` / `account`, from the token-level `useConvexAuth`, which is true offline
+  too): signed out reads `<key>` (the phone's own, unchanged), signed in reads `<key>:account` (the
+  scheme `liveSynced.ts` already used), and **every `:account` key is deleted whenever the app finds
+  itself signed out** (also at a signed-out cold start, so a killed app can't leak). On a switch the
+  stores drop what they hold (an edit still waiting is sent first) and load the other copy; for the
+  render before the switch they show defaults, and `update` is ignored mid-switch. Practice Timer
+  sessions are no longer mirrored into the signed-out copy. Data saved before this under the plain
+  keys while signed in stays as the phone's signed-out copy (no way to tell it apart). Checked by
+  reading `RKStorage` over `run-as`: account A's Metronome 130 / starred Tuner reached its
+  `syncedSettings` rows, sign-out left no `:account` keys, account B saw defaults.
+- **Routine posts** had a blank page (only milestone and setlist posts had a body):
+  `components/community/PublicRoutineView.tsx` draws the routine like the website's
+  `RoutinePreview` (schedule, tasks with times, subtasks, notes, tool chips that open the tool) with
+  "Add to my Shed Log" (`routineFromPublic`, then the routine's page). Feed milestone cards say their
+  numbers.
+- **Account → About** (signed in and out): What's new, Help, Send feedback, Privacy, Terms, Credits
+  open soniroll.com in the in-app browser (`expo-web-browser`); the app version from
+  `expo-constants` under it. Account also lists Following and Liked posts. Sign up shows the
+  8-character rule and the Terms/Privacy line; sign out's confirm is the accent (`ConfirmDialog`'s
+  new `safe`).
+- **Community/profiles:** `UserAvatar` takes a `name` and draws its first letter on the faint fill
+  (the old fallback sat on an invisible `surface` circle); profiles show Posts after Instruments as
+  feed cards, tune lists five at a time; the post header says "Post"; your own post doesn't offer
+  Add/Learn; the counts row always shows; My posts has an empty state with New post; the New post
+  gate pushes the profile editor so Back returns to the form.
+- **Keys** use `prettyKeyName` in `tuneSummary`, Tune of the day, post chips and setlist rows
+  (Library search also matches the raw "Db").
+- **Lessons wording:** invite link ellipsizes in the middle (Android never ellipsizes `selectable`
+  text), "not practiced yet", no summary line, "Read all notes", note previews joined with " · ",
+  the zone once, a chevron instead of "→"; head-button labels and one-word tool tile names use
+  `adjustsFontSizeToFit` (only one-line, one-word text, so it shrinks just enough — unlike the chip
+  strip, where it shrank values to unreadable sizes).
+- Skipped: hiding "Share their invite link" after a student joins (the website keeps "Copy their
+  invite link" too); the dev-only LogBox toasts for wrong-password errors (Convex's client logs
+  them; not in release builds); custom accent / text size on Theme (deliberately left out).
+
+Checked on the emulator (debug build) with throwaway accounts `uipass4fa`/`uipass4fb` (both
+deleted), light and dark, font scale 1.3 for the tiles and Lessons buttons. The reviewer's
+`uipass4m` was signed out to test sign-in (its password isn't known, so it can't be signed back in;
+the account still exists). Not checked: a real phone, an offline signed-in launch, the student side
+of a lesson page, iOS.
