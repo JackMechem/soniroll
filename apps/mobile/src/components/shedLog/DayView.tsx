@@ -285,7 +285,7 @@ export function DayView({ date, log, today, onDragChange }: { date: string; log:
       {/* Its own line above the hours (kept while dragging, so the grid doesn't jump). */}
       {day.blocks.length === 0 ? (
         <Text className="font-ui px-3 py-1.5 text-center text-xs" style={{ color: colors.muted, borderBottomWidth: 1, borderColor: derived.hairline }}>
-          {draggableUntimed ? 'Nothing at a set time. Hold one above and drag it onto a time.' : 'Nothing at a set time.'}
+          {draggableUntimed ? 'Nothing planned at a set time. Hold one above and drag it onto a time.' : 'Nothing planned at a set time.'}
         </Text>
       ) : null}
 

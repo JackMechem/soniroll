@@ -100,13 +100,14 @@ export function Segmented<T extends string | number>({
       style={{ backgroundColor: onPage ? colors.surface : colors.background, opacity: disabled ? 0.6 : 1 }}
     >
       {options.map((o) => (
-        <Segment key={String(o.value)} label={o.label} on={o.value === value} disabled={disabled} onPress={() => onChange(o.value)} />
+        <Segment key={String(o.value)} label={o.label} on={o.value === value} disabled={disabled} tight={options.length > 3} onPress={() => onChange(o.value)} />
       ))}
     </View>
   );
 }
 
-function Segment({ label, on, disabled, onPress }: { label: string; on: boolean; disabled?: boolean; onPress: () => void }) {
+/** `tight`: four or more segments, less padding so labels like "Monthly" fit a phone. */
+function Segment({ label, on, disabled, tight, onPress }: { label: string; on: boolean; disabled?: boolean; tight?: boolean; onPress: () => void }) {
   const { colors } = useAppTheme();
   const pop = usePop(on);
   return (
@@ -115,7 +116,7 @@ function Segment({ label, on, disabled, onPress }: { label: string; on: boolean;
       disabled={disabled}
       accessibilityRole="radio"
       accessibilityState={{ checked: on, disabled }}
-      className="min-h-10 flex-1 items-center justify-center overflow-hidden rounded-full px-5 py-2"
+      className={`min-h-10 flex-1 items-center justify-center overflow-hidden rounded-full py-2 ${tight ? 'px-1.5' : 'px-5'}`}
       style={on ? { backgroundColor: colors.accent } : undefined}
     >
       <Animated.View style={on ? pop : undefined}>

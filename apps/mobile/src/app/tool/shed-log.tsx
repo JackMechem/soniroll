@@ -180,10 +180,10 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
           <DayPanel date={selected} log={log} onDateChange={setPicked} />
         ) : (
           <View className="gap-3">
+            {/* ‹ title ›, like the Today tab's date. */}
             <View className="flex-row items-center gap-1">
               <GhostIcon Icon={ChevronLeftIcon} label={`Previous ${view}`} onPress={() => step(-1)} color={colors.foreground} size={22} />
-              <GhostIcon Icon={ChevronRightIcon} label={`Next ${view}`} onPress={() => step(1)} color={colors.foreground} size={22} />
-              <View className="flex-1">
+              <View className="flex-1 items-center">
                 <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
                   {calTitle}
                 </Text>
@@ -193,6 +193,7 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
                   </Text>
                 ) : null}
               </View>
+              <GhostIcon Icon={ChevronRightIcon} label={`Next ${view}`} onPress={() => step(1)} color={colors.foreground} size={22} />
               {selected !== today ? (
                 <Pressable onPress={() => setPicked(today)} accessibilityRole="button" hitSlop={6} className="rounded-lg px-3 py-1.5" style={{ backgroundColor: colors.surface }}>
                   <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>

@@ -72,7 +72,10 @@ function ShareBody({ data, request, onClose }: { data: PracticeLogData; request:
   const canPost = isAuthenticated && !!profile?.isPublic && !!profile.username;
 
   const today = todayKey();
-  const [kind, setKind] = useState<ProgressCardKind>(request.kind);
+  // A 0-day streak card isn't much to share: open on Hours instead.
+  const [kind, setKind] = useState<ProgressCardKind>(() =>
+    request.kind === 'streak' && progressCard(data, today, 'streak').streak === 0 ? 'hours' : request.kind,
+  );
   const [range, setRange] = useState<ProgressCardRange>('year');
   const [date, setDate] = useState(request.date && request.date <= today ? request.date : today);
   const card = useMemo(() => (kind === 'day' ? dayReportCard(data, date) : progressCard(data, today, kind, range)), [data, kind, range, date, today]);
@@ -139,7 +142,8 @@ function ShareBody({ data, request, onClose }: { data: PracticeLogData; request:
               <View className="h-9 w-9" />
             )}
           </View>
-        ) : (
+        ) : kind === 'streak' ? null : (
+          // A streak has no period (it's today's run of days).
           <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup" accessibilityLabel="Range">
             {RANGE_OPTIONS.map((o) => (
               <ChoicePill key={o.value} label={o.label} on={range === o.value} onPress={() => change(() => setRange(o.value))} />
