@@ -79,7 +79,6 @@ export default function TunesDashboard() {
   const known = lists.tunes.tunes;
   const learn = lists.learn.tunes;
   const library = lists.library.tunes;
-  const visibleLists = TUNE_LIST_IDS.filter((l) => l !== "learn" || isAuthenticated);
   const listFilter: ListFilter = view.list === "learn" && !isAuthenticated ? "all" : view.list;
 
   // Every tune once, with its list (a tune is only ever in one).
@@ -122,6 +121,10 @@ export default function TunesDashboard() {
 
   const counts: Record<TuneListId, number> = { tunes: known.length, learn: learn.length, library: library.length };
   const total = known.length + (isAuthenticated ? learn.length : 0) + library.length;
+  // Filters that would show nothing are left out (unless picked): the Library list only fills up
+  // when charts come in, and a "With charts 0" just adds clutter.
+  const visibleLists = TUNE_LIST_IDS.filter((l) => (l !== "learn" || isAuthenticated) && (l !== "library" || counts.library > 0 || listFilter === "library"));
+  const shownChartFilters = (["with", "without"] as const).filter((c) => chartsLoading || chartCounts[c] > 0 || chartFilter === c);
 
   const recentCards = recent.ids
     .map((id) => everything.find((e) => e.tune.id === id))
@@ -203,8 +206,8 @@ export default function TunesDashboard() {
                     {TUNE_LIST_LABEL[l]} <span className="text-xs tabular-nums opacity-80">{counts[l]}</span>
                   </button>
                 ))}
-                <span className="mx-0.5 w-px shrink-0 self-stretch bg-foreground/10" aria-hidden />
-                {(["with", "without"] as const).map((c) => (
+                {shownChartFilters.length > 0 && <span className="mx-0.5 w-px shrink-0 self-stretch bg-foreground/10" aria-hidden />}
+                {shownChartFilters.map((c) => (
                   <button
                     key={c}
                     type="button"

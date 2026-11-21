@@ -3,6 +3,7 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
+import { SIGN_IN_PATH } from "@/lib/landing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { MenuButton } from "@/components/library/shared";
@@ -382,7 +383,12 @@ export function TuneRecordings({ tuneId }: { tuneId: string }) {
         {recordings && recordings.length > 0 && <span className="text-xs tabular-nums text-muted">{recordings.length}</span>}
       </div>
       {!isAuthenticated ? (
-        <p className="text-sm text-muted">Sign in to record takes of this tune — recordings are saved to your account.</p>
+        <p className="text-sm text-muted">
+          <Link href={SIGN_IN_PATH} className="font-medium text-accent hover:underline">
+            Sign in
+          </Link>{" "}
+          to record takes of this tune — recordings are saved to your account.
+        </p>
       ) : (
         <>
           <TuneSongPanel tuneId={tuneId} />

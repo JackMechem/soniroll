@@ -169,3 +169,27 @@ about 45 pages' trails, no console errors or horizontal overflow; clicking crumb
 menu, the phone ?, a three-pane split screen. Not verified: hover styles, the desktop app at
 runtime, real phones, the admin page (owner only), a lesson's notes page with real data, shared
 links with real items.
+
+## 2026-11-20 — UI pass 1 fixes (web + desktop)
+
+From a reviewer's pass (6.5/10). Fixed:
+- **Phone crumbs** (`PageBar`'s compact `CrumbTrail`): crumbs of 7 letters or fewer take only their
+  own width (the 4rem minimum left a gap after "Help /"); the trail folds to "… / parent / page" past
+  ~20 characters so the page's own name isn't the part cut short; the current crumb is
+  `role="heading" aria-level=1` (phones had no h1), and the dashboard's phone-bar logo is in an h1.
+- **Own private profile**: `/u/<you>` says "Your profile is private" with a Make it public link
+  (`profiles.getMine`, asked only when the profile comes back hidden). Others still can't tell a
+  private profile from a missing one.
+- **Help**: Library and Chord Charts topics describe charts living on tunes; the Chord Charts topic
+  has no `href` (no Open button; its icon is in `EXTRA_ICONS`).
+- **`PageHeader`** with buttons but no subtitle puts them in `PageBar`'s actions from `lg` (Community's
+  New post); phones and panes keep the row.
+- **Fills, not outlines**: `TuneFields` pills, `RewardCard` tiles (every reward-look option popover)
+  and MetronomeOptions' tiles; picked = tint + 2px inset ring. Key grid shows D♭/F♯/C♯m. `PoolPill`
+  still has borders (not done).
+- Tune page signed out: "Sign in" in the Files and Recordings cards is a link.
+- Library filters: the Library list and With/Without charts are hidden when they'd show 0 (unless
+  picked, and never while charts load). The "Library" list name was left for Jack.
+- Desktop fixes are in `desktop-app.md`.
+Verified in headless Chromium (390/1440, light/dark; the profile signed in with a deleted `.test`
+account). Not verified: screen readers, hover styles, the real desktop window.

@@ -5,6 +5,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { SIGN_IN_PATH } from "@/lib/landing";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -638,7 +639,12 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
         )}
       </div>
       {!isAuthenticated ? (
-        <p className="text-sm text-muted">Sign in to attach files to this tune — PDFs, lead sheets, images, audio, video.</p>
+        <p className="text-sm text-muted">
+          <Link href={SIGN_IN_PATH} className="font-medium text-accent hover:underline">
+            Sign in
+          </Link>{" "}
+          to attach files to this tune — PDFs, lead sheets, images, audio, video.
+        </p>
       ) : files === undefined ? (
         <LoadingSpinner />
       ) : files.length === 0 && !uploader.progress ? (
