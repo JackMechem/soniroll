@@ -47,6 +47,7 @@ export const RELEASES: Release[] = [
       { kind: "fixed", text: "Lessons: a student's page no longer scrolls sideways on phones, and dialog buttons stay in view." },
       { kind: "fixed", text: "Ear trainers: History only shows after a round you finished. ⌘K / Ctrl+K opens search." },
       { kind: "improved", text: "Desktop app: a way out of the sign-in page, and clearer Google sign-in." },
+      { kind: "new", text: "Desktop app: **Check for updates** in Settings shows which version you have and finds a newer one." },
       { kind: "new", text: "Library: show only the tunes **with charts**, or the ones **without charts** yet." },
       { kind: "improved", text: "Picking several tags now shows the tunes with **any** of them." },
       {

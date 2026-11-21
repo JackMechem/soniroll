@@ -4,6 +4,18 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.12] - 2026-11-21
+
+- **Check for updates** in Settings: see which version you're on and look for a newer one any
+  time, not only when the app opens. On macOS and Windows, Update now installs it and restarts.
+- The PDF viewer and editor: mark up PDFs from Files, edit their pages, and play from them full
+  screen. The Library is down to two tabs, Tunes and Files, and a tune can have several charts.
+- Every page has the same slim header with a trail of links back.
+- A way out of the sign-in page, and clearer Google sign-in: it says when to finish in your
+  browser, and when it didn't work.
+- The Native audio chip is a small round button while nothing is playing.
+- Everything else in the website's 0.10.12 to 0.10.15: five rounds of fixes across the site.
+
 ## [0.1.11] - 2026-11-18
 
 - Split screen: each pane lays out for its own width, with its own bar and close button, and the

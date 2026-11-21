@@ -644,3 +644,20 @@ signed in" and still signed in (before the `SignOutIfAccountGone` change a reope
 account out); sign-out left no `:account` keys. The emulator's own data was restored from a dump
 afterwards and it's left signed out. Not checked: sign-out within 600 ms of an edit, an offline
 signed-in launch, a release build, a real phone, iOS.
+
+## 2026-11-21 — Releasing an Android alpha (alpha 3)
+
+How the public alphas go out, written down with alpha 3 (the phone UI passes 2–5):
+
+1. Raise `versionCode` in `app.json` (and in `android/app/build.gradle`, prebuild output, if you
+   don't re-run prebuild) so phones with the last alpha treat the APK as an update.
+   `version` stays 1.0.0; the alpha number lives only in the tag and the file name.
+2. `APP_NAME=soniroll ARCHS=arm64-v8a,armeabi-v7a nix develop .#androidBuild --command
+   apps/mobile/scripts/build-android-prod.sh --no-install`. That's the prod app id and prod Convex,
+   named "soniroll", phones only.
+3. `gh release create android-v1.0.0-alpha.N --prerelease` with the APK attached as
+   `soniroll-android-1.0.0-alpha.N.apk`, with notes saying what's new since the last alpha and how to install.
+   The download page (`lib/androidRelease.ts`) picks up the newest `android-v*` release on its own.
+
+Alpha 3: versionCode 3, built from `preview` after 0.10.15's commits. Not installed on a phone
+before release (Jack tests it himself).
