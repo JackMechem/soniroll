@@ -18,6 +18,10 @@ acrobat but not that advanced". Web first, then desktop; the phone's viewer is f
   Turbopack and `next build`). The desktop app aliases that module to
   `apps/desktop/src/native/pdfWorker.ts` (`?url` import) and aliases `pdfjs-dist` to the **legacy
   build**, since WebKitGTK / older macOS WebKit lack things the modern build uses.
+  (2026-11-20, UI pass 1: the `?url` import must use a **relative path**
+  (`../../../web/node_modules/pdfjs-dist/legacy/…`), not `@web/node_modules/…`. Through the alias
+  it looked like a package import, so Vite dev pre-bundled it, lost the default export and the whole
+  desktop window was blank under `vite`/`tauri dev`. `vite build` was fine either way.)
 - **pdf-lib** builds downloads (`exportPdf.ts`): original pages are copied as vectors (`copyPages`),
   rotation applied, blank/staff pages drawn, and each page's markings laid over it as a 3000 px-wide
   transparent PNG (drawn with Canvas 2D by `drawMarks`, then turned back to the page's unrotated
