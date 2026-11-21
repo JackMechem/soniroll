@@ -15,7 +15,7 @@ import { useTuneActions } from "@/components/library/useTuneActions";
 import PromptDialog from "@/components/PromptDialog";
 import Select from "@/components/Select";
 import StandardsPicker from "@/components/StandardsPicker";
-import { ChevronRightIcon, ChordChartIcon, DownloadIcon, LibraryIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
+import { ChevronRightIcon, ChordChartIcon, DownloadIcon, LibraryIcon, PencilIcon, PlusIcon, SetlistIcon, TagIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
@@ -122,9 +122,11 @@ export default function TunesDashboard() {
   const counts: Record<TuneListId, number> = { tunes: known.length, learn: learn.length, library: library.length };
   const total = known.length + (isAuthenticated ? learn.length : 0) + library.length;
   // Filters that would show nothing are left out (unless picked): the Library list only fills up
-  // when charts come in, and a "With charts 0" just adds clutter.
+  // when charts come in, and a "With charts 0" just adds clutter. So does "With charts 4" when
+  // that's all of them: the chart filters show only when the tunes are a mix.
   const visibleLists = TUNE_LIST_IDS.filter((l) => (l !== "learn" || isAuthenticated) && (l !== "library" || counts.library > 0 || listFilter === "library"));
-  const shownChartFilters = (["with", "without"] as const).filter((c) => chartsLoading || chartCounts[c] > 0 || chartFilter === c);
+  const mixedCharts = chartCounts.with > 0 && chartCounts.without > 0;
+  const shownChartFilters = (["with", "without"] as const).filter((c) => chartsLoading || mixedCharts || chartFilter === c);
 
   const recentCards = recent.ids
     .map((id) => everything.find((e) => e.tune.id === id))
@@ -153,11 +155,11 @@ export default function TunesDashboard() {
     setAddMenu({
       ...menuPosition(e),
       items: [
-        { label: "Add a jazz standard", onSelect: () => setAddingStandard(listFilter === "learn" ? "learn" : "tunes") },
-        { label: "Add your own tune", onSelect: () => setCreating({ list: listFilter === "all" ? "tunes" : listFilter, tune: blankTune() }) },
-        { label: "New chord chart", onSelect: () => router.push("/chord-charts/new") },
-        { label: "Import chord charts", onSelect: () => router.push("/chord-charts/import") },
-        { label: "New setlist", onSelect: () => setNamingSetlist(true) },
+        { label: "Add a jazz standard", icon: <LibraryIcon className="h-4 w-4 text-muted" />, onSelect: () => setAddingStandard(listFilter === "learn" ? "learn" : "tunes") },
+        { label: "Add your own tune", icon: <PencilIcon className="h-4 w-4 text-muted" />, onSelect: () => setCreating({ list: listFilter === "all" ? "tunes" : listFilter, tune: blankTune() }) },
+        { label: "New chord chart", icon: <ChordChartIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/chord-charts/new") },
+        { label: "Import chord charts", icon: <DownloadIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/chord-charts/import") },
+        { label: "New setlist", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => setNamingSetlist(true) },
       ],
     });
 
@@ -172,13 +174,15 @@ export default function TunesDashboard() {
       <Hero title="Tunes" crumbs={[LIBRARY_CRUMB]} icon={LibraryIcon} titleExtra={<StoragePill />} helpTopic="tunes" tabs={<LibraryTabs active="tunes" />}>
         <Toolbar>
           <HeroSearch value={query} onChange={(v) => { setQuery(v); setShown(PAGE); }} placeholder={total > 1 ? `Search ${total} tunes…` : "Search your tunes…"} />
-          <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" iconOnlyOnPhone />
+          <span className="hidden sm:contents">
+            <Pill icon={DownloadIcon} label="Import" href="/chord-charts/import" />
+          </span>
           <Pill primary icon={PlusIcon} label="Add" onClick={openAddMenu} />
         </Toolbar>
       </Hero>
 
       {/* Setlists have a page of their own, a tap away. (Chord charts live on their tunes.) */}
-      <ShelfLink href="/tunes?tab=setlists" icon={SetlistIcon} title="Setlists" detail={setlists.length ? `${setlists.length}` : "None yet"} />
+      <ShelfLink href="/tunes?tab=setlists" icon={SetlistIcon} title="Setlists" detail={setlists.length ? `${setlists.length} setlist${setlists.length === 1 ? "" : "s"}` : "None yet"} />
 
       {total === 0 && lists.ready ? (
         <EmptyState

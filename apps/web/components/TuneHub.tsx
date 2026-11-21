@@ -540,7 +540,7 @@ function Hub({
       {picking && (
         <ChartLinkPicker
           songs={allSongs}
-          initialQuery={tune.name}
+          initialQuery={chartIds.length ? "" : tune.name}
           exclude={chartIds}
           onPick={(songId) => {
             change((t) => addChartsToTune(removeMissing(t), [songId]));

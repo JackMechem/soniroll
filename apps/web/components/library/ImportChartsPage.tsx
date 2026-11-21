@@ -51,7 +51,7 @@ export default function ImportChartsPage() {
       setStatus({
         kind: "ok",
         message:
-          `Imported ${plural(added)} into "${playlist.name}".` +
+          `Imported ${plural(added)}.` +
           (updated ? ` Updated ${plural(updated)} you already had.` : "") +
           (skipped > 0 ? ` (${skipped} already in your library, left as they were.)` : "") +
           (linked && linked.linked ? ` ${plural(linked.linked)} joined tunes you have.` : "") +
@@ -115,7 +115,7 @@ export default function ImportChartsPage() {
               label="Update charts you already have"
               checked={replaceExisting}
               onChange={setReplaceExisting}
-              hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same folder. Turn this off to only add charts you don't have yet."
+              hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays on the same tune. Turn this off to only add charts you don't have yet."
             />
             <div className="flex flex-col gap-2">
               <SwitchRow
@@ -161,13 +161,13 @@ export default function ImportChartsPage() {
         <aside className="flex flex-col gap-4">
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-sm">
             <h2 className="text-sm font-medium">What happens</h2>
-            <p className="text-muted">An iReal Pro playlist comes in as a folder of the same name. Charts you already have are updated or left alone, never doubled up.</p>
-            <p className="text-muted">Every chart joins the tune with the same name. A chart with no tune yet gets a new one in your Library list; move it to Tunes I Know or Tunes to Learn whenever you like.</p>
+            <p className="text-muted">Each chart joins the tune with the same name, tagged with the playlist&apos;s name. A chart with no tune yet gets a new one in your Library list; move it to Tunes I Know or Tunes to Learn whenever you like.</p>
+            <p className="text-muted">Charts you already have are updated or left alone, never doubled up.</p>
             <p className="text-muted">The chart builder can turn a chart you make into a link to share.</p>
           </section>
           <section className="flex flex-col gap-2 rounded-lg bg-surface p-4 text-sm">
             <h2 className="text-sm font-medium text-danger">Start over</h2>
-            <p className="text-muted">Remove every chart and folder in your library.</p>
+            <p className="text-muted">Remove every chart in your library.</p>
             <button
               type="button"
               onClick={() => setConfirmClear(true)}
@@ -182,7 +182,7 @@ export default function ImportChartsPage() {
       {confirmClear && (
         <ConfirmDialog
           title="Delete all chord charts?"
-          message="This removes every imported or created chart and every folder. You can import them again any time."
+          message="This removes every imported or created chart. You can import them again any time."
           confirmLabel="Delete all"
           onConfirm={() => {
             void clearAll();

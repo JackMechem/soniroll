@@ -82,6 +82,7 @@ export default function SetlistsPage() {
         <PromptDialog
           title="New setlist"
           initialValue=""
+          placeholder="e.g. Friday gig"
           confirmLabel="Create"
           onSubmit={(name) => {
             setNaming(false);

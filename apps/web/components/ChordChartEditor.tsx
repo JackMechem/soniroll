@@ -522,18 +522,25 @@ export default function ChordChartEditor({
         </div>
       </div>
 
-      <ul className="flex flex-col gap-0.5 text-xs text-muted">
-        <li>
+      {/* One line of help; the rest behind "More tips" (descriptions aren't always on show). */}
+      <div className="flex flex-col gap-0.5 text-xs text-muted">
+        <p>
           <span className="pointer-coarse:hidden">Click</span>
           <span className="hidden pointer-coarse:inline">Tap</span> a bar and type its chords: <code>C^7</code>, <code>F-7</code>,{" "}
-          <code>Bb7#5/D</code>, or <code>NC</code> for no chord. Two chords in a bar: put a space between them.
-        </li>
-        <li>
-          <span className="pointer-coarse:hidden">Enter</span>
-          <span className="hidden pointer-coarse:inline">The keyboard&apos;s Next key</span> moves to the next bar.
-        </li>
-        <li>The row under the chart adds a section, repeat signs or a coda to the selected bar.</li>
-      </ul>
+          <code>Bb7#5/D</code>, or <code>NC</code> for no chord.
+        </p>
+        <details className="group">
+          <summary className="w-fit cursor-pointer select-none font-medium hover:text-foreground">More tips</summary>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            <li>Two chords in a bar: put a space between them.</li>
+            <li>
+              <span className="pointer-coarse:hidden">Enter</span>
+              <span className="hidden pointer-coarse:inline">The keyboard&apos;s Next key</span> moves to the next bar.
+            </li>
+            <li>The row under the chart adds a section, repeat signs or a coda to the selected bar.</li>
+          </ul>
+        </details>
+      </div>
 
       <PageFit fitHeight={false}>
         {rowsWithOffsets.map(({ placed, start }, rowIdx) => {
@@ -806,8 +813,8 @@ function BarToggle({
         onClick={onClick}
         aria-pressed={active}
         title={label}
-        className={`flex flex-col items-center gap-0.5 rounded-md border px-2 py-1.5 transition-colors ${
-          active ? "border-transparent bg-accent text-accent-foreground" : "border-foreground/15 hover:bg-surface-hover"
+        className={`flex flex-col items-center gap-0.5 rounded-md px-2 py-1.5 transition-colors ${
+          active ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] hover:bg-surface-hover"
         }`}
       >
         <span className="flex h-4 items-center justify-center">
@@ -828,10 +835,8 @@ function BarToggle({
       onClick={onClick}
       aria-pressed={active}
       title={label}
-      className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-        active
-          ? "border-transparent bg-accent text-accent-foreground"
-          : "border-foreground/15 text-muted hover:bg-surface-hover hover:text-foreground"
+      className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+        active ? "bg-accent text-accent-foreground" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {label}

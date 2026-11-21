@@ -449,6 +449,25 @@ export function DownloadIcon({ className }: { className?: string }) {
   );
 }
 
+/** A box with an arrow out of it: open in a new tab. */
+export function ExternalLinkIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+    </svg>
+  );
+}
+
+/** A box with a lid: a backup / archive (.zip). */
+export function ArchiveIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="4" width="18" height="5" rx="1" />
+      <path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4" />
+    </svg>
+  );
+}
+
 export function UploadIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>

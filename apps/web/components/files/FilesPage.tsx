@@ -11,7 +11,7 @@ import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUpload
 import { MenuButton } from "@/components/library/shared";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, MicIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { ArchiveIcon, CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, MicIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
@@ -119,6 +119,9 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
     }
     return { bySource, byKind };
   }, [items]);
+  // A filter row of one choice ("Everything 3 · Uploads 3") says nothing: hidden until there's a mix.
+  const showSources = counts.bySource.size > 1 || source !== "all";
+  const showKinds = counts.byKind.size > 1 || kind !== "all";
 
   /** The Where column: what it is and which tune it's on. */
   const whereOf = (item: StoredEntry) => {
@@ -216,7 +219,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                   aria-label="Back up as a .zip"
                   className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium transition-colors hover:bg-surface-hover disabled:opacity-50 sm:h-9"
                 >
-                  <DownloadIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
+                  <ArchiveIcon className="h-4 w-4" /> <span className="hidden sm:inline">Back up</span>
                 </button>
               )}
               <SaveWhere target={saveTarget} className="h-10 sm:h-9" />
@@ -241,7 +244,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
           <EmptyState
             boxed
             title="Keep your files with your account"
-            body="Upload PDFs, lead sheets, images, audio and video — on their own or attached to a tune — and open them on any device."
+            body="Upload PDFs, lead sheets, images, audio and video, on their own or attached to a tune."
             action={<SignInButtons />}
           />
         ) : (
@@ -299,7 +302,8 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                 className="min-w-0 flex-1"
               />
             </div>
-            <div className="hidden flex-col gap-3 sm:flex">
+            <div className={`hidden flex-col gap-3 ${showSources || showKinds ? "sm:flex" : ""}`}>
+              {showSources && (
               <div className="flex flex-wrap items-center gap-1.5">
                 <FilterChip active={source === "all"} onClick={() => setSource("all")} label="Everything" count={items.length} />
                 {(Object.keys(SOURCE_LABEL) as Source[])
@@ -308,6 +312,8 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                     <FilterChip key={s} active={source === s} onClick={() => setSource(s)} label={SOURCE_LABEL[s]} count={counts.bySource.get(s) ?? 0} />
                   ))}
               </div>
+              )}
+              {showKinds && (
               <div className="flex flex-wrap items-center gap-1.5">
                 <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" />
                 {(Object.keys(FILE_KIND_LABEL) as FileKind[])
@@ -316,6 +322,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                     <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={kindLabel(k)} />
                   ))}
               </div>
+              )}
             </div>
             </>
             )}

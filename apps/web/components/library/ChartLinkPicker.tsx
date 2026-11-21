@@ -36,6 +36,8 @@ export default function ChartLinkPicker({
     for (const s of songs) if (!skip.has(s.id) && (!q || `${s.title} ${s.composer}`.toLowerCase().includes(q))) out.push({ song: s, playlist: s.playlistNames });
     return out;
   }, [songs, q, exclude]);
+  const excluded = new Set(exclude ?? []);
+  const others = songs.filter((s) => !excluded.has(s.id)).length;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[10vh]" onClick={onClose}>
@@ -49,10 +51,14 @@ export default function ChartLinkPicker({
             // Never a dead end: show everything, or write / import a chart.
             <li className="flex flex-col items-start gap-3 p-3">
               <p className="text-sm text-muted">
-                {songs.length === 0 ? "You don't have any chord charts yet." : `No charts called “${query.trim()}”.`}
+                {songs.length === 0
+                  ? "You don't have any chord charts yet."
+                  : others === 0
+                    ? "You don't have any other chord charts yet."
+                    : `No ${excluded.size ? "other " : ""}charts called “${query.trim()}”.`}
               </p>
               <div className="flex flex-wrap gap-2">
-                {songs.length > 0 && (
+                {others > 0 && q && (
                   <button type="button" onClick={() => setQuery("")} className={BUTTON}>
                     Show all charts
                   </button>
