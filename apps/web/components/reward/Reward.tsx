@@ -156,7 +156,7 @@ export function Sparkle({ show, at, color }: { show: boolean; at: string | numbe
 }
 
 /** One choice in a pool you pick several from (which intervals, which chords, which ratios): a
-    small bordered toggle, filled with the accent while it's on. With the reward look it fills
+    small toggle on a quiet fill (no outline), filled with the accent while it's on. With the reward look it fills
     with the tool's colour and a check pops in (`plainClassName` keeps each tool's own sizing). */
 export function PoolPill({
   on,
@@ -182,7 +182,7 @@ export function PoolPill({
         title={title}
         onClick={onClick}
         disabled={disabled}
-        className={`${plainClassName} border transition-colors disabled:opacity-60 ${on ? "border-accent bg-accent text-accent-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"}`}
+        className={`${plainClassName} border transition-colors disabled:opacity-60 ${on ? "border-accent bg-accent text-accent-foreground" : "border-transparent bg-foreground/[0.05] text-foreground hover:bg-surface-hover"}`}
       >
         {children}
       </button>
@@ -196,7 +196,7 @@ export function PoolPill({
       onClick={onClick}
       disabled={disabled}
       className={`relative flex items-center gap-1 rounded-full border py-1.5 text-sm font-medium tabular-nums transition-colors disabled:opacity-60 ${
-        on ? "pl-2 pr-3 text-accent-foreground" : "border-foreground/15 bg-background px-3 text-muted hover:bg-surface-hover hover:text-foreground"
+        on ? "pl-2 pr-3 text-accent-foreground" : "border-transparent bg-foreground/[0.05] px-3 text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
       style={on ? { background: reward.color, borderColor: reward.color } : undefined}
     >

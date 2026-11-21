@@ -8,7 +8,7 @@ import { CLICK_SOUNDS, scheduleClick } from "@/lib/clickEngine";
 import { MAX_BEATS } from "@/lib/meters";
 import { getAudioContext } from "@/lib/metronome";
 import { NOTE_VALUES, NOTE_VALUE_NAMES, SUBDIVISIONS } from "@/lib/meterControls";
-import { SUB_LABELS } from "@jam-practice/core/meterControls";
+import { COMMON_METERS, SUB_LABELS } from "@jam-practice/core/meterControls";
 
 export { SUB_LABELS };
 
@@ -162,6 +162,43 @@ export function TimeSignatureControl({
         per bar
       </p>
     </div>
+  );
+}
+
+
+/** "Quick picks": a grid of common time signatures (4/4, 3/4 … 12/8) under a time-signature
+    stepper, drawn as little time signatures. Shared by every tool with a Time popover (Metronome,
+    Tempo Trainer, Time Test, Metric Modulation). `onPick` sets both numbers in one update. */
+export function MeterQuickPicks({
+  beatsPerBar,
+  beatUnit,
+  onPick,
+}: {
+  beatsPerBar: number;
+  beatUnit: number;
+  onPick: (beatsPerBar: number, beatUnit: number) => void;
+}) {
+  return (
+    <OptionGroup title="Quick picks">
+      <div role="radiogroup" aria-label="Common time signatures" className="grid grid-cols-4 gap-2">
+        {COMMON_METERS.map(([b, u]) => (
+          <RewardCard
+            key={`${b}/${u}`}
+            id={`meter:${b}/${u}`}
+            on={beatsPerBar === b && beatUnit === u}
+            label={`${b}/${u}`}
+            onPick={() => onPick(b, u)}
+            className="h-14"
+          >
+            <span className="flex flex-col items-center text-base font-semibold leading-[0.95] tabular-nums">
+              <span>{b}</span>
+              <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
+              <span>{u}</span>
+            </span>
+          </RewardCard>
+        ))}
+      </div>
+    </OptionGroup>
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useEffect, useRef, useState } from "react";
+import { DisclosureSummary } from "@/components/Disclosure";
 import ContextMenu, { MenuItem, MenuState } from "@/components/ContextMenu";
 import Hint from "@/components/Hint";
 import { AUDIO_OR_VIDEO, OpenFileButton, useFilePicker } from "@/components/files/FilePicker";
@@ -1053,7 +1054,7 @@ export default function SlowDowner({ openStored }: { openStored?: string }) {
 
           {/* Keyboard and mouse shortcuts, folded away (and not shown on touch screens). */}
           <details className={`w-full text-xs text-muted ${MOUSE_ONLY}`}>
-            <summary className="mx-auto w-max cursor-pointer select-none font-medium hover:text-foreground">Shortcuts</summary>
+            <DisclosureSummary className="mx-auto">Shortcuts</DisclosureSummary>
             <ul aria-label="Controls" className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
               {CONTROL_HINTS.map(([keys, action]) => (
                 <li key={keys}>

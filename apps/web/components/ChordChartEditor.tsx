@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DisclosureSummary } from "@/components/Disclosure";
 import {
   BADGE_SIZE,
   BAR_HEIGHT,
@@ -530,7 +531,7 @@ export default function ChordChartEditor({
           <code>Bb7#5/D</code>, or <code>NC</code> for no chord.
         </p>
         <details className="group">
-          <summary className="w-fit cursor-pointer select-none font-medium hover:text-foreground">More tips</summary>
+          <DisclosureSummary>More tips</DisclosureSummary>
           <ul className="mt-1 flex flex-col gap-0.5">
             <li>Two chords in a bar: put a space between them.</li>
             <li>

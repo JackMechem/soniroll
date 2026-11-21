@@ -59,16 +59,17 @@ export const POOL_BUTTON =
 export const TEXT_BUTTON = "inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50";
 export const TEXT_BUTTON_DANGER = "self-start text-sm font-medium text-muted transition-colors hover:text-danger disabled:opacity-50";
 
-/** One answer in a quiz's grid of choices. `color` is set once the round is answered (right or
-    wrong); unanswered choices are plain bordered buttons. */
+/** One answer in a quiz's grid of choices: a quiet fill like the site's other buttons, no
+    border. `color` is set once the round is answered (right or wrong): a tint plus an inset ring
+    in that colour; the other choices dim. */
 export function answerButtonClass(color: string | undefined, answered: boolean) {
-  return `min-h-11 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-    color ? "" : answered ? "border-foreground/15 opacity-60" : "border-foreground/15 bg-background hover:bg-surface-hover"
+  return `min-h-11 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+    color ? "" : answered ? "bg-foreground/[0.05] opacity-60" : "bg-foreground/[0.05] hover:bg-surface-hover"
   }`;
 }
 export function answerButtonStyle(color: string | undefined): CSSProperties | undefined {
   return color
-    ? { color, borderColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` }
+    ? { color, boxShadow: `inset 0 0 0 2px ${color}`, background: `color-mix(in srgb, ${color} 10%, transparent)` }
     : undefined;
 }
 

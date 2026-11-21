@@ -16,7 +16,7 @@ import {
 import StructureEditor, { StructureEmptyHint } from "@/components/StructureEditor";
 import { EyeOffIcon, MeterIcon, NoteIcon, SpeakerIcon } from "@/components/tools";
 import { soundSummary } from "@/components/metronome/MetronomeOptions";
-import { SUB_LABELS, Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
+import { MeterQuickPicks, SUB_LABELS, Segmented, SubdivisionPicker, TimeSignatureControl } from "@/components/metronome/MetronomeOptions";
 import { SettingChip } from "@/components/SettingsBar";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -289,6 +289,7 @@ export default function TempoTrainer() {
                   onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
                   onSetBeatUnit={setBeatUnit}
                 />
+                <MeterQuickPicks beatsPerBar={beatsPerBar} beatUnit={beatUnit} onPick={(b, u) => updateSettings({ beatUnit: u, beatsPerBar: b, accents: defaultAccents(b, accents) })} />
               </SettingChip>
               <SettingChip icon={NoteIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? subdivision}>
                 <SubdivisionPicker value={subdivision} onChange={setSubdivision} showTitle={false} />

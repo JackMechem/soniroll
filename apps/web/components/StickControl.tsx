@@ -14,6 +14,7 @@ import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
 import KeyHint from "@/components/KeyHint";
 import Hint from "@/components/Hint";
+import { PoolPill } from "@/components/reward/Reward";
 import { type BeatLevel, DEFAULT_CLICK_SOUND_ID } from "@/lib/clickEngine";
 import { NEXT_LEVEL, clampBpm, useTapTempo } from "@/lib/meterControls";
 import {
@@ -215,19 +216,9 @@ export default function StickControl() {
                   {ROLL_TYPE_PICKER_OPTIONS.map((opt) => {
                     const selected = enabledRollTypes.includes(opt.value);
                     return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleRollType(opt.value)}
-                        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                          selected
-                            ? "border-accent bg-accent text-accent-foreground"
-                            : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
-                        }`}
-                      >
+                      <PoolPill key={opt.value} on={selected} onClick={() => toggleRollType(opt.value)} plainClassName="rounded-md px-2.5 py-1.5 text-xs font-medium">
                         {opt.label}
-                      </button>
+                      </PoolPill>
                     );
                   })}
                 </div>
@@ -247,19 +238,9 @@ export default function StickControl() {
                   {TRIPLET_STICKING_OPTIONS.map((opt) => {
                     const selected = enabledTripletStickings.includes(opt.value);
                     return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleTripletSticking(opt.value)}
-                        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                          selected
-                            ? "border-accent bg-accent text-accent-foreground"
-                            : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
-                        }`}
-                      >
+                      <PoolPill key={opt.value} on={selected} onClick={() => toggleTripletSticking(opt.value)} plainClassName="rounded-md px-2.5 py-1.5 text-xs font-medium">
                         {opt.label}
-                      </button>
+                      </PoolPill>
                     );
                   })}
                 </div>
