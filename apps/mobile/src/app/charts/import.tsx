@@ -10,6 +10,7 @@ import { TrashIcon } from '@/components/icons';
 import { withScreenLoader } from '@/components/ScreenLoader';
 import { SwitchRow } from '@/components/SwitchRow';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
+import { useChartLinker } from '@/lib/useTuneList';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { TextInput } from '@/components/ThemedTextInput';
@@ -37,6 +38,7 @@ function ImportChartsScreen() {
   const insets = useSafeAreaInsets();
   const keyboard = useKeyboardHeight();
   const { importSongs, clearAll, totalSongs } = useChordChartsLibrary(null);
+  const linkToTunes = useChartLinker();
   const [linkText, setLinkText] = useState('');
   const [replaceExisting, setReplaceExisting] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -54,7 +56,13 @@ function ImportChartsScreen() {
     setImporting(true);
     setStatus(null);
     try {
-      const { added, skipped, updated } = await importSongs(playlist.songs, playlist.name, { replaceExisting });
+      const { added, skipped, updated, ids } = await importSongs(playlist.songs, playlist.name, { replaceExisting });
+      // Every chart belongs to a tune (as on the website): each joins the tune with its name, or a
+      // new tune in the Library list, tagged with the playlist's name.
+      linkToTunes(
+        ids.flatMap((id, i) => (id ? [{ id, title: playlist.songs[i].title, timeSignature: playlist.songs[i].timeSignature }] : [])),
+        { tags: playlist.name ? [playlist.name] : [] },
+      );
       const plural = (n: number) => `${n} chart${n === 1 ? '' : 's'}`;
       setStatus({
         kind: 'ok',

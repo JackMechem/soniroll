@@ -50,6 +50,19 @@ export async function pickAndSaveFile(): Promise<LibraryEntry | null> {
   return entry;
 }
 
+/** Saves a copy of a file already on the phone (one of your Files, downloaded) into the list —
+    or returns the saved copy when one with the same name and size is there already. */
+export async function saveLocalFile(uri: string, name: string, size: number): Promise<LibraryEntry> {
+  const existing = (await listFiles()).find((e) => e.name === name && e.size === size);
+  if (existing) return existing;
+  const id = makeId();
+  const destination = new File(folder(), `${id}-${name.replace(/[^\w.\- ]+/g, '_')}`);
+  await new File(uri).copy(destination);
+  const entry: LibraryEntry = { id, name, size: size || destination.size || 0, file: destination.uri, addedAt: Date.now() };
+  await writeLibrary([entry, ...(await listFiles())]);
+  return entry;
+}
+
 export async function deleteFile(entry: LibraryEntry) {
   try {
     const f = new File(entry.file);

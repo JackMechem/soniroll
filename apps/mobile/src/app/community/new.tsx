@@ -38,7 +38,7 @@ function NewPostScreen() {
   const { lists, ready: tunesReady } = useTuneLists();
 
   const byId = new Map<string, Tune>();
-  for (const t of [...lists.tunes.tunes, ...lists.learn.tunes]) byId.set(t.id, t);
+  for (const t of [...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes]) byId.set(t.id, t);
 
   const [seeded, setSeeded] = useState(false);
   // Posted from a setlist: the post *is* that setlist — it shows the setlist's current tunes

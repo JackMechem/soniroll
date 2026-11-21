@@ -2,13 +2,14 @@ import { nameId, searchStandards, standardToTune, type Standard } from '@jam-pra
 import { sortByText } from '@jam-practice/core/sortText';
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from '@jam-practice/core/types';
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SearchField } from '@/components/ChordChartList';
 import { CheckIcon, CloseIcon, PlusIcon } from '@/components/icons';
 import { NameDialog } from '@/components/NameDialog';
-import { TUNE_LIST_LABEL, tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { TUNE_LIST_IDS, TUNE_LIST_LABEL, tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 const ROW_H = 60;
@@ -63,7 +64,7 @@ export function TunePickerModal({
     const skip = new Set(exclude);
     const mine: { tune: Tune; list: TuneListId }[] = [];
     const have = new Set<string>();
-    for (const list of ['tunes', 'learn'] as TuneListId[])
+    for (const list of TUNE_LIST_IDS)
       for (const tune of lists[list].tunes) {
         have.add(nameId(tune.name));
         if (!skip.has(tune.id)) mine.push({ tune, list });
@@ -140,7 +141,7 @@ export function TunePickerModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <FullScreenModal visible={visible} onRequestClose={onClose}>
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center gap-2 px-4 pb-2 pt-3">
           <Pressable onPress={onClose} accessibilityLabel="Close" className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.surface }}>
@@ -246,6 +247,6 @@ export function TunePickerModal({
           onClose={() => setNaming(false)}
         />
       </SafeAreaView>
-    </Modal>
+    </FullScreenModal>
   );
 }

@@ -32,6 +32,7 @@ import { ChoicePill, Field, GhostIcon, RoutineIcon, SmallButton } from '@/compon
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { useGradeColors } from '@/components/tool/ear';
 import { Button } from '@/components/ui';
+import { useChartLinker } from '@/lib/useTuneList';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
@@ -158,6 +159,7 @@ function ChartView({ chart, saveAs }: { chart: IRealSong; saveAs?: string }) {
   // Lessons are signed in, so straight to the account's charts (not the whole library hook, which
   // loads every chart).
   const importSongs = useMutation(api.chordCharts.importSongs);
+  const linkToTunes = useChartLinker();
   const [saved, setSaved] = useState<string | null>(null);
   return (
     <View className="gap-2">
@@ -170,7 +172,9 @@ function ChartView({ chart, saveAs }: { chart: IRealSong; saveAs?: string }) {
             disabled={!!saved}
             onPress={async () => {
               try {
-                const { added } = await importSongs({ playlistName: saveAs, songs: [chart] });
+                const { added, ids } = await importSongs({ playlistName: saveAs, songs: [chart] });
+                // On the tune with its name (or a new one in the Library list), as on the website.
+                if (added && ids[0]) linkToTunes([{ id: ids[0], title: chart.title, timeSignature: chart.timeSignature }]);
                 setSaved(added ? `Saved to your charts, in "${saveAs}".` : "It's already in your charts.");
               } catch (e) {
                 setSaved(errorText(e, "Couldn't save it."));

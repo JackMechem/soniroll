@@ -1,7 +1,7 @@
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from '@jam-practice/core/iRealPro';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ChordChartView from '@/components/ChordChartView';
@@ -11,6 +11,9 @@ import { DotsVerticalIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { forgetRecentChart, recordRecentChart } from '@/lib/chordChartRecents';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
+import { isMinorKey, prettyKeyName } from '@/lib/keyNames';
+import { IconButton } from '@/components/ui';
+import { useForgetChart } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 
@@ -31,6 +34,7 @@ function ChordChartsViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { selectedSong: selected, selectedSongLoading, deleteSong, addToPlaylist, removeFromPlaylist, playlists, allSongs } = useChordChartsLibrary(id ?? null);
+  const forgetChart = useForgetChart();
   const [transposeKey, setTransposeKey] = useState('');
   const [menuTarget, setMenuTarget] = useState<MenuTarget | null>(null);
 
@@ -46,12 +50,13 @@ function ChordChartsViewScreen() {
   );
 
   const meta = allSongs.find((s) => s.id === id);
+  const minor = !!selected && isMinorKey(selected.key);
 
   const subtitle = displayed
     ? [
         displayed.composer ? formatComposer(displayed.composer) : null,
         displayed.style || null,
-        displayed.key || null,
+        displayed.key ? prettyKeyName(displayed.key) : null,
         `${displayed.timeSignature.top}/${displayed.timeSignature.bottom}`,
       ]
         .filter(Boolean)
@@ -65,7 +70,7 @@ function ChordChartsViewScreen() {
           title: selected?.title ?? 'Chart',
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.foreground }}>
                 {selected?.title || 'Chart'}
               </Text>
               {subtitle ? (
@@ -81,22 +86,15 @@ function ChordChartsViewScreen() {
                 <Dropdown
                   value={transposeKey}
                   onChange={setTransposeKey}
-                  triggerLabel={transposeKey || selected.key || 'Key'}
+                  triggerLabel={transposeKey ? `${prettyKeyName(transposeKey)}${minor ? 'm' : ''}` : selected.key ? prettyKeyName(selected.key) : 'Key'}
                   highlighted={!!transposeKey}
                   options={[
-                    { value: '', label: `Original (${selected.key || '—'})` },
-                    ...KEY_NAMES.map((k) => ({ value: k, label: k })),
+                    { value: '', label: `Original (${selected.key ? prettyKeyName(selected.key) : '—'})` },
+                    // In the chart's own quality: a minor chart offers C♯m, Dm, … (not major keys).
+                    ...KEY_NAMES.map((k) => ({ value: k, label: `${prettyKeyName(k)}${minor ? 'm' : ''}` })),
                   ]}
                 />
-                {meta ? (
-                  <Pressable
-                    onPress={() => setMenuTarget({ song: meta, playlistId: null })}
-                    accessibilityLabel="Chart options"
-                    className="h-10 w-9 items-center justify-center"
-                  >
-                    <DotsVerticalIcon color={colors.foreground} size={22} />
-                  </Pressable>
-                ) : null}
+                {meta ? <IconButton Icon={DotsVerticalIcon} label="Chart options" onPress={() => setMenuTarget({ song: meta, playlistId: null })} /> : null}
               </View>
             ) : null,
         }}
@@ -128,6 +126,7 @@ function ChordChartsViewScreen() {
         onRemoveFromPlaylist={(songId, playlistId) => void removeFromPlaylist(songId, playlistId)}
         onDelete={(songId) => {
           void deleteSong(songId);
+          forgetChart(songId);
           forgetRecentChart(songId);
           router.back();
         }}

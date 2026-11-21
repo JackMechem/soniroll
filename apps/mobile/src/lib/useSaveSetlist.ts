@@ -6,11 +6,11 @@ import type { Tune } from '@jam-practice/core/types';
 import { toOwnTune } from '@/components/community/PublicTuneList';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useSetlists, type SetlistOverride } from '@/lib/useSetlists';
-import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
+import { useLibraryTunes, useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 
 /**
  * Saves someone else's setlist (a shared link or a setlist post) as your own — a copy, yours to
- * change from then on. Tunes you already have (in either list, matched by name) are reused;
+ * change from then on. Tunes you already have (in any list, matched by name) are reused;
  * the rest are added to Tunes I Know. Their chord charts come along too: imported into a playlist
  * named after the setlist and linked to the tunes (a tune that already has a chart keeps it).
  * Returns the new setlist's id.
@@ -18,12 +18,13 @@ import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 export function useSaveSetlist() {
   const [myTunes, setMyTunes] = useSyncedTunes();
   const [learn] = useTunesToLearn();
+  const [library] = useLibraryTunes();
   const { create } = useSetlists();
   const { importSongs } = useChordChartsLibrary(null);
 
   return async function save(title: string, tunes: PublicTune[]): Promise<string> {
     const byName = new Map<string, Tune>();
-    for (const t of [...learn, ...myTunes]) byName.set(nameId(t.name), t);
+    for (const t of [...library, ...learn, ...myTunes]) byName.set(nameId(t.name), t);
     const myIds = new Set(myTunes.map((t) => t.id));
 
     const ids: string[] = [];

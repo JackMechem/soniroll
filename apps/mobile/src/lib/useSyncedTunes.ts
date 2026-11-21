@@ -1,5 +1,6 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import type { Tune } from '@jam-practice/core/types';
+import { LIBRARY_TUNES_KEY } from '@jam-practice/core/tuneLibrary';
 import { TUNES_TO_LEARN_KEY } from '@jam-practice/core/tunesToLearn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useConvexAuth } from '@convex-dev/auth/react';
@@ -58,15 +59,18 @@ function parseTunes(raw: string): Tune[] | null {
  *   signed-out device shows an empty, read-only list rather than whatever a *previous* signed-in
  *   session happened to cache locally. `false` (the plain Tunes list) behaves like every other
  *   synced-settings hook here: AsyncStorage's own cache still shows signed out.
+ * @param waitForAccount Signed in, `ready` waits for the account's copy (like `accountOnly`), for a
+ *   list this phone may never have cached (the Library list is made on the website) — so a write
+ *   isn't built from an empty list and sent over the account's.
  */
-function createSyncedTuneListHook(key: string, accountOnly: boolean) {
+function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAccount = false) {
   const entry = makeEntry();
 
   function notify() {
     for (const listener of entry.listeners) listener();
   }
 
-  return function useHook(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
+  function useHook(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
     const { isAuthenticated } = useConvexAuth();
     const wasAuthenticatedRef = useRef(isAuthenticated);
 
@@ -130,11 +134,15 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean) {
     );
     const [gaveUp, setGaveUp] = useState(false);
     useEffect(() => {
-      if (!accountOnly) return;
+      if (!accountOnly && !waitForAccount) return;
       const t = setTimeout(() => setGaveUp(true), 2500);
       return () => clearTimeout(t);
     }, []);
-    const ready = accountOnly ? !isAuthenticated || remote !== undefined || entry.hasValue || gaveUp : localLoaded;
+    const ready = accountOnly
+      ? !isAuthenticated || remote !== undefined || entry.hasValue || gaveUp
+      : waitForAccount && isAuthenticated
+        ? localLoaded && (remote !== undefined || gaveUp)
+        : localLoaded;
     const setRemote = useMutation(api.syncedSettings.set);
 
     useEffect(() => {
@@ -199,7 +207,16 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean) {
     }
 
     return [value, setTunes, ready];
-  };
+  }
+
+  /** The list right now, outside React (for writes that combine several lists, like linking
+      charts), and whether it's the account's copy yet (`synced`; always true signed out). */
+  function read(isAuthenticated: boolean): { tunes: Tune[]; synced: boolean } {
+    if (accountOnly && !isAuthenticated) return { tunes: EMPTY, synced: true };
+    return { tunes: entry.hasValue ? entry.value : EMPTY, synced: isAuthenticated ? entry.serverApplied : entry.localLoaded || accountOnly };
+  }
+
+  return Object.assign(useHook, { read });
 }
 
 /** Jam Practice's own tune list — the same `"tunes"` key, same data, as the web app's. */
@@ -208,3 +225,8 @@ export const useSyncedTunes = createSyncedTuneListHook('tunes', false);
 /** A personal "Tunes to Learn" bookmark list — see `createSyncedTuneListHook`'s own `accountOnly`
     doc comment for why this one has no signed-out local fallback. */
 export const useTunesToLearn = createSyncedTuneListHook(TUNES_TO_LEARN_KEY, true);
+
+/** The Library list: tunes that came in with chord charts and aren't sorted into Tunes I Know or
+    Tunes to Learn yet (the website makes most of them when it links charts to tunes). The same
+    `jam-practice-library-tunes` key the website uses; on this phone signed out too. */
+export const useLibraryTunes = createSyncedTuneListHook(LIBRARY_TUNES_KEY, false, true);

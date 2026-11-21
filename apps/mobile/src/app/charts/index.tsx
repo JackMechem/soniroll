@@ -123,7 +123,8 @@ function ChartsScreen() {
 
             {totalSongs > 0 || playlists.length > 0 ? (
               <View className="gap-1">
-                <SectionHeader title="Playlists" count={playlists.length} />
+                {/* With no playlists, the All charts row (with its count) is the whole section. */}
+                {playlists.length > 0 ? <SectionHeader title="Playlists" count={playlists.length} /> : null}
                 <FolderRow
                   name="All charts"
                   count={totalSongs}

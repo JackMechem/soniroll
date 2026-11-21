@@ -1,5 +1,6 @@
 import { makeId } from '@jam-practice/core/types';
 import { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
@@ -85,9 +86,21 @@ function SlowDownerScreen() {
   const [pendingDelete, setPendingDelete] = useState<LibraryEntry | null>(null);
   const fileTokenRef = useRef(0);
 
+  // `?open=<saved file id>`: "Open in Slow Downer" from Files opens that file straight away.
+  const { open: openId } = useLocalSearchParams<{ open?: string }>();
+  // Once per id: effects can run twice in development, and two loads at once fail.
+  const openedRef = useRef<string | null>(null);
   useEffect(() => {
-    void listFiles().then(setLibrary);
-  }, []);
+    void listFiles().then((entries) => {
+      setLibrary(entries);
+      const wanted = openId && openedRef.current !== openId ? entries.find((e) => e.id === openId) : undefined;
+      if (wanted) {
+        openedRef.current = openId ?? null;
+        void openEntry(wanted);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, [openId]);
 
   // Speed, pitch, volume and the loop go straight to the player.
   useEffect(() => player.setSpeed(speed / 100), [player, speed]);

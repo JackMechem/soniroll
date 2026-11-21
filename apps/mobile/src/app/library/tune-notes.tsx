@@ -1,4 +1,3 @@
-import type { Tune } from '@jam-practice/core/types';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -6,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
-import { useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { findTune, useTuneLists } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { TextInput } from '@/components/ThemedTextInput';
 
@@ -26,11 +25,7 @@ function TuneNotesScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { lists, ready } = useTuneLists();
 
-  let found: { list: TuneListId; tune: Tune } | null = null;
-  for (const list of ['tunes', 'learn'] as TuneListId[]) {
-    const tune = lists[list].tunes.find((t) => t.id === id);
-    if (tune) found = { list, tune };
-  }
+  const found = findTune(lists, id);
 
   const [text, setText] = useState<string | null>(null);
   if (found && text === null) setText(found.tune.notes);
@@ -71,7 +66,7 @@ function TuneNotesScreen() {
           title: 'Notes',
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.foreground }}>
                 Notes
               </Text>
               {found ? (

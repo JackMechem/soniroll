@@ -2,13 +2,14 @@ import { sortByText } from '@jam-practice/core/sortText';
 import type { Tune } from '@jam-practice/core/types';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useMemo, useState } from 'react';
-import { FlatList, type LayoutChangeEvent, Modal, Pressable, Text, View } from 'react-native';
+import { FlatList, type LayoutChangeEvent, Pressable, Text, View } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SearchField } from '@/components/ChordChartList';
 import { CheckIcon, CloseIcon, LinkIcon, PauseIcon, PlayIcon } from '@/components/icons';
-import { formatDuration, formatRecordedAt, type Recording } from '@/lib/recordings';
-import { TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { formatDuration, formatRecordedDay, type Recording } from '@/lib/recordings';
+import { allTunes, TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { GradientFill } from '@/components/tool/reward';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
@@ -135,7 +136,7 @@ export function RecordingRow({
   // Kept on another device (a free account's take saved on the website or another phone): it
   // plays only there.
   const elsewhere = !recording.url && recording.device ? recording.device.label : null;
-  const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec), tuneName, elsewhere ? `On ${elsewhere}` : null].filter(Boolean).join(' · ');
+  const detail = [formatDuration(recording.durationSec), formatRecordedDay(recording.createdAt), tuneName, elsewhere ? `On ${elsewhere}` : null].filter(Boolean).join(' · ');
   return (
     <View className="gap-2 rounded-xl p-3" style={{ backgroundColor: background ?? colors.surface }}>
       <View className="flex-row items-center gap-3">
@@ -162,25 +163,27 @@ export function RecordingRow({
   );
 }
 
-/** Every tune of yours by id, from both lists — for showing a recording's linked tune. */
+/** Every tune of yours by id, from all three lists — for showing a recording's linked tune. */
 export function useTuneIndex() {
   const { lists, ready } = useTuneLists();
   const byId = useMemo(() => {
     const map = new Map<string, { tune: Tune; list: TuneListId }>();
-    for (const list of ['tunes', 'learn'] as TuneListId[]) for (const tune of lists[list].tunes) map.set(tune.id, { tune, list });
+    for (const { tune, list } of allTunes(lists)) map.set(tune.id, { tune, list });
     return map;
   }, [lists]);
   return { byId, ready };
 }
 
-/** Pick one tune (from both lists) to link a recording to. */
+/** Pick one tune (from any list) to link a recording to, or attach a file to. */
 export function TuneSelectModal({
   visible,
+  title = 'Link to a tune',
   selectedId,
   onPick,
   onClose,
 }: {
   visible: boolean;
+  title?: string;
   selectedId?: string | null;
   onPick: (tuneId: string) => void;
   onClose: () => void;
@@ -190,7 +193,7 @@ export function TuneSelectModal({
   const [query, setQuery] = useState('');
 
   const rows = useMemo(() => {
-    const all = (['tunes', 'learn'] as TuneListId[]).flatMap((list) => lists[list].tunes.map((tune) => ({ tune, list })));
+    const all = allTunes(lists);
     const q = query.trim().toLowerCase();
     return sortByText(
       q ? all.filter((r) => r.tune.name.toLowerCase().includes(q)) : all,
@@ -199,11 +202,11 @@ export function TuneSelectModal({
   }, [lists, query]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <FullScreenModal visible={visible} onRequestClose={onClose}>
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
           <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
-            Link to a tune
+            {title}
           </Text>
           <Pressable
             onPress={onClose}
@@ -250,7 +253,7 @@ export function TuneSelectModal({
           )}
         />
       </SafeAreaView>
-    </Modal>
+    </FullScreenModal>
   );
 }
 
@@ -278,7 +281,7 @@ export function RecordingSelectModal({
   }, [recordings, excludeTuneId, query]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <FullScreenModal visible={visible} onRequestClose={onClose}>
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
           <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
@@ -321,7 +324,7 @@ export function RecordingSelectModal({
                   {item.name}
                 </Text>
                 <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-                  {[formatRecordedAt(item.createdAt), formatDuration(item.durationSec), other ? `linked to ${other}` : null]
+                  {[formatDuration(item.durationSec), formatRecordedDay(item.createdAt), other ? `linked to ${other}` : null]
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
@@ -330,6 +333,6 @@ export function RecordingSelectModal({
           }}
         />
       </SafeAreaView>
-    </Modal>
+    </FullScreenModal>
   );
 }

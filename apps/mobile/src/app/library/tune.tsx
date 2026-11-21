@@ -1,5 +1,5 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
-import { replaceMainChart } from '@jam-practice/core/tuneLibrary';
+import { addChartsToTune, tuneChartIds } from '@jam-practice/core/tuneLibrary';
 import { KEY_NAMES, keyPitchClass, transposeSong } from '@jam-practice/core/iRealPro';
 import { makeId, type Tune } from '@jam-practice/core/types';
 import { useMutation, useQuery } from 'convex/react';
@@ -14,7 +14,8 @@ import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { ChordChartIcon, DotsVerticalIcon, LinkIcon, MicrophoneIcon, PencilIcon, PlusIcon } from '@/components/icons';
 import { InfoButton } from '@/components/InfoButton';
 import { ChartPickerModal } from '@/components/library/ChartPickerModal';
-import { useTuneMenu } from '@/components/library/useTuneMenu';
+import { TuneFiles } from '@/components/library/TuneFiles';
+import { newChartParams, useTuneMenu } from '@/components/library/useTuneMenu';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RecordingRow, RecordingSelectModal, useRecordingPlayer } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
@@ -23,14 +24,10 @@ import { recordRecentTune } from '@/lib/chordChartRecents';
 import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi } from '@/lib/recordings';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
-import { TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { findTune, TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { IconButton } from '@/components/ui';
+import { isMinorKey, prettyKeyName } from '@/lib/keyNames';
 import { useAppTheme } from '@/theme/ThemeProvider';
-
-/** "Db" → "D♭", "F#" → "F♯": the music symbols, as the Tuner and charts show them. */
-function prettyKeyName(name: string) {
-  return name.replace('b', '♭').replace('#', '♯');
-}
 
 /** Loose title match for "is there already a chart for this tune": case, punctuation and a
     leading or trailing article are ignored (iReal titles are often "Man I Love, The"). Plain string
@@ -44,11 +41,6 @@ function titleKey(title: string) {
     .replace(/ (the|a|an)$/, '');
 }
 
-/** Minor if the tune's own keys are written as minor ("Dm", "D-", "Dmin"). */
-function isMinorKey(value: string) {
-  return /^[A-Ga-g][#b]?(m(?!aj)|-|min)/.test(value.trim());
-}
-
 /**
  * A tune's hub — what opens when you tap a tune in the Library: a place for *learning* it rather
  * than a form. Shows its chord chart right on the page (transposable, and tapping a key you know
@@ -60,16 +52,14 @@ function isMinorKey(value: string) {
 function TuneHubScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string; list?: string }>();
+  const { id, list: preferList } = useLocalSearchParams<{ id?: string; list?: string }>();
   const { lists, ready } = useTuneLists();
-  const { openTuneMenu, tuneMenu } = useTuneMenu();
+  // The chart shown, when the tune has several (main first by default).
+  const [pickedChart, setPickedChart] = useState<string | null>(null);
+  const { openTuneMenu, tuneMenu } = useTuneMenu({ onChartLinked: setPickedChart });
 
-  // Look in both lists — editing can move a tune from one to the other.
-  let found: { list: TuneListId; tune: Tune } | null = null;
-  for (const list of ['tunes', 'learn'] as TuneListId[]) {
-    const tune = lists[list].tunes.find((t) => t.id === id);
-    if (tune) found = { list, tune };
-  }
+  // Look in every list — moving a tune changes which one it's in.
+  const found = findTune(lists, id, preferList);
 
   // Opening a tune's page puts it in the Library's "Recently opened".
   useEffect(() => {
@@ -93,26 +83,45 @@ function TuneHubScreen() {
       </View>
     );
   }
-  return <Hub list={found.list} tune={found.tune} setTunes={lists[found.list].setTunes} openMenu={() => openTuneMenu(found.list, found.tune)} menu={tuneMenu} />;
+  return (
+    <Hub
+      list={found.list}
+      tune={found.tune}
+      setTunes={lists[found.list].setTunes}
+      pickedChart={pickedChart}
+      onPickChart={setPickedChart}
+      openMenu={(chartId) => openTuneMenu(found.list, found.tune, chartId)}
+      menu={tuneMenu}
+    />
+  );
 }
 
 function Hub({
   list,
   tune,
   setTunes,
+  pickedChart,
+  onPickChart,
   openMenu,
   menu,
 }: {
   list: TuneListId;
   tune: Tune;
   setTunes: (update: Tune[] | ((prev: Tune[]) => Tune[])) => void;
-  openMenu: () => void;
+  pickedChart: string | null;
+  onPickChart: (id: string | null) => void;
+  openMenu: (chartId?: string) => void;
   menu: React.ReactNode;
 }) {
   const bottomSpace = useTabBarSpace();
   const { colors } = useAppTheme();
   const router = useRouter();
-  const { selectedSong: chart, selectedSongLoading, loading: libraryLoading } = useChordChartsLibrary(tune.chordChartId ?? null);
+  // The tune's charts, main first; charts deleted since are left out once the library has loaded.
+  const { allSongs, loading: allLoading } = useChordChartsLibrary(null);
+  const linkedIds = tuneChartIds(tune);
+  const chartIds = allLoading ? linkedIds : linkedIds.filter((cid) => allSongs.some((s) => s.id === cid));
+  const shownChartId = pickedChart && chartIds.includes(pickedChart) ? pickedChart : (chartIds[0] ?? linkedIds[0] ?? null);
+  const { selectedSong: chart, selectedSongLoading, loading: libraryLoading } = useChordChartsLibrary(shownChartId);
   const [previewKey, setPreviewKey] = useState('');
   const [picking, setPicking] = useState(false);
 
@@ -122,6 +131,7 @@ function Hub({
 
   // --- keys you know it in ---
   const minor = tune.keys.length > 0 ? tune.keys.every((k) => isMinorKey(k.value)) : !!chart && isMinorKey(chart.key);
+  const chartMinor = !!chart && isMinorKey(chart.key);
   const suffix = minor ? 'm' : '';
   const knownPcs = new Set(tune.keys.map((k) => keyPitchClass(k.value)));
   function toggleKey(pc: number) {
@@ -135,8 +145,9 @@ function Hub({
 
   // Charts whose title matches the tune's name — offered as a one-tap link when none is linked.
   const { allCharts } = useChordChartBrowser();
+  const hasChart = tune.chordChartId !== undefined;
   const matches = useMemo(() => {
-    if (tune.chordChartId) return [];
+    if (hasChart) return [];
     const want = titleKey(tune.name);
     if (!want) return [];
     const out: { id: string; title: string; detail: string }[] = [];
@@ -144,7 +155,15 @@ function Hub({
       if (titleKey(s.title) === want) out.push({ id: s.id, title: s.title, detail: [s.key, s.playlistNames].filter(Boolean).join(' · ') });
     }
     return out.slice(0, 3);
-  }, [tune.chordChartId, tune.name, allCharts]);
+  }, [hasChart, tune.name, allCharts]);
+  const linkChart = (chartId: string) => {
+    setTunes((prev) => prev.map((t) => (t.id === tune.id ? addChartsToTune(t, [chartId]) : t)));
+    onPickChart(chartId);
+  };
+  const chartLabel = (cid: string, i: number) => {
+    const s = allSongs.find((x) => x.id === cid);
+    return [s?.title ?? 'Chart', s?.key ? prettyKeyName(s.key) : null, i === 0 ? 'main' : null].filter(Boolean).join(' · ');
+  };
 
   const shownChart = useMemo(() => {
     if (!chart || !previewKey) return chart;
@@ -173,7 +192,7 @@ function Hub({
           headerRight: () => (
             <View className="flex-row items-center gap-2">
               <IconButton Icon={PencilIcon} label="Edit tune" onPress={() => router.push({ pathname: '/library/tune-edit', params: { list, id: tune.id } })} />
-              <IconButton Icon={DotsVerticalIcon} label="More options" onPress={openMenu} />
+              <IconButton Icon={DotsVerticalIcon} label="More options" onPress={() => openMenu(shownChartId ?? undefined)} />
             </View>
           ),
         }}
@@ -190,12 +209,15 @@ function Hub({
                 <Dropdown
                   value={previewKey}
                   onChange={setPreviewKey}
-                  triggerLabel={previewKey || chart.key || 'Key'}
+                  triggerLabel={previewKey ? `${prettyKeyName(previewKey)}${chartMinor ? 'm' : ''}` : chart.key ? prettyKeyName(chart.key) : 'Key'}
                   highlighted={!!previewKey}
-                  options={[{ value: '', label: `Original (${chart.key || '—'})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                  options={[
+                    { value: '', label: `Original (${chart.key ? prettyKeyName(chart.key) : '—'})` },
+                    ...KEY_NAMES.map((k) => ({ value: k, label: `${prettyKeyName(k)}${chartMinor ? 'm' : ''}` })),
+                  ]}
                 />
                 <Pressable
-                  onPress={() => router.push({ pathname: '/tool/chord-charts-view', params: { id: tune.chordChartId! } })}
+                  onPress={() => router.push({ pathname: '/tool/chord-charts-view', params: { id: shownChartId! } })}
                   className="min-h-10 justify-center rounded-lg px-4 py-2"
                   style={{ backgroundColor: colors.surface }}
                 >
@@ -206,12 +228,30 @@ function Hub({
               </View>
             ) : null}
           </View>
-          {tune.chordChartId && (selectedSongLoading || libraryLoading) ? (
+          {chartIds.length > 1 ? (
+            <View className="flex-row items-center gap-2 px-1">
+              <Dropdown
+                value={shownChartId ?? ''}
+                onChange={(v) => {
+                  onPickChart(v);
+                  setPreviewKey('');
+                }}
+                triggerLabel={`Chart ${Math.max(1, chartIds.indexOf(shownChartId ?? '') + 1)} of ${chartIds.length}`}
+                options={chartIds.map((cid, i) => ({ value: cid, label: chartLabel(cid, i) }))}
+              />
+              {shownChartId === chartIds[0] ? (
+                <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+                  The main chart
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+          {shownChartId && (selectedSongLoading || libraryLoading) ? (
             <View className="items-center py-10">
               <LoadingSpinner />
             </View>
           ) : shownChart ? (
-            <Pressable onPress={() => router.push({ pathname: '/tool/chord-charts-view', params: { id: tune.chordChartId! } })}>
+            <Pressable onPress={() => router.push({ pathname: '/tool/chord-charts-view', params: { id: shownChartId! } })}>
               <View className="rounded-2xl px-1 py-2" style={{ backgroundColor: colors.surface }}>
                 <ChordChartView song={shownChart} hideHeader />
               </View>
@@ -219,7 +259,7 @@ function Hub({
           ) : (
             <View className="gap-3 rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
               <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : 'No chord chart linked yet.'}
+                {shownChartId ? "The linked chart isn't in your chord charts anymore." : 'No chord chart yet.'}
               </Text>
               {matches.map((m) => (
                 <View key={m.id} className="flex-row items-center gap-3 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
@@ -232,7 +272,7 @@ function Hub({
                       {m.detail}
                     </Text>
                   </View>
-                  <Pressable onPress={() => setTunes((prev) => prev.map((t) => (t.id === tune.id ? replaceMainChart(t, m.id) : t)))} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
+                  <Pressable onPress={() => linkChart(m.id)} className="min-h-10 justify-center rounded-lg px-4 py-2" style={{ backgroundColor: colors.accent }}>
                     <Text className="font-ui-bold text-sm font-bold" style={{ color: colors['accent-foreground'] }}>
                       Link it
                     </Text>
@@ -244,7 +284,7 @@ function Hub({
                 <HubButton
                   label="Create one"
                   icon={<PlusIcon color={colors.foreground} size={16} />}
-                  onPress={() => router.push({ pathname: '/tool/chord-charts-new', params: { title: tune.name } })}
+                  onPress={() => router.push({ pathname: '/tool/chord-charts-new', params: newChartParams(list, tune) })}
                 />
               </View>
             </View>
@@ -288,8 +328,12 @@ function Hub({
                     borderColor: colors.foreground,
                   }}
                 >
-                  <Text className="font-ui-bold text-base font-bold" style={{ color: known ? colors['accent-foreground'] : colors.muted }}>
-                    {prettyKeyName(name)}
+                  {/* The ♭/♯ from the charts' font (Geist has none, and the fallback sat low). */}
+                  <Text className="font-ui-bold text-base font-bold" style={{ color: known ? colors['accent-foreground'] : colors.muted, lineHeight: 22 }}>
+                    {name[0]}
+                    {name.length > 1 ? (
+                      <Text style={{ fontFamily: 'PetalumaScript', fontWeight: 'normal', fontSize: 17 }}>{name[1] === 'b' ? '♭' : '♯'}</Text>
+                    ) : null}
                     {suffix}
                   </Text>
                 </Pressable>
@@ -297,6 +341,8 @@ function Hub({
             })}
           </View>
         </View>
+
+        <TuneFiles tuneId={tune.id} />
 
         <TuneRecordings tuneId={tune.id} />
 
@@ -329,9 +375,10 @@ function Hub({
       <ChartPickerModal
         visible={picking}
         initialQuery={tune.name}
+        exclude={chartIds}
         onClose={() => setPicking(false)}
         onPick={(song) => {
-          setTunes((prev) => prev.map((t) => (t.id === tune.id ? replaceMainChart(t, song.id) : t)));
+          linkChart(song.id);
           setPicking(false);
         }}
       />

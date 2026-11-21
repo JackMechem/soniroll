@@ -21,7 +21,7 @@ import { useRecentTools } from '@/lib/toolRecents';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useFavorites } from '@/lib/useFavorites';
 import { useSetlists } from '@/lib/useSetlists';
-import { tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
+import { TUNE_LIST_IDS, tuneSummary, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { EarTrainingProgress } from '@/components/learning/EarTrainingProgress';
 import { summarizeLearning } from '@jam-practice/core/learningPath';
@@ -92,7 +92,7 @@ function Home() {
 
   const tuneMatches: { tune: Tune; list: TuneListId }[] = [];
   if (words.length) {
-    for (const list of ['tunes', 'learn'] as TuneListId[]) {
+    for (const list of TUNE_LIST_IDS) {
       for (const tune of lists[list].tunes) if (tuneMatches.length < 8 && matchesWords(tune.name, words)) tuneMatches.push({ tune, list });
     }
   }
@@ -135,7 +135,7 @@ function Home() {
   for (const item of recentItems) {
     if (recents.length >= 5) break;
     if (item.kind === 'tune') {
-      const list = (['tunes', 'learn'] as TuneListId[]).find((l) => lists[l].tunes.some((t) => t.id === item.id));
+      const list = TUNE_LIST_IDS.find((l) => lists[l].tunes.some((t) => t.id === item.id));
       const tune = list ? lists[list].tunes.find((t) => t.id === item.id) : undefined;
       if (list && tune) {
         recents.push({ key: `t:${tune.id}`, kind: 'Tune', icon: <IconTile Icon={MusicNoteIcon} size={34} />, title: tune.name, onPress: () => openTune(list, tune.id) });
