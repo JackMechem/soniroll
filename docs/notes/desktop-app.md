@@ -766,3 +766,9 @@ fractions of its height.
 - **Native audio chip:** sits in the corner now (`right-4 lg:right-6`; the floating feedback button it
   made room for moved into the header bar) and says "Idle" instead of "Off" when the engine isn't running.
 - Checked with `npx vite --port 1420` in headless Chromium (Tauri internals stubbed); not in the real window.
+- **Pass 3 (2026-11-20):** while the engine is idle, the Native audio chip is just a round speaker
+  button (`SettingChip`'s `trigger`; "Native audio · Idle" as its tooltip). That way it doesn't
+  sit on Rhythm Section's legend or the Time Test chips in smaller windows. It becomes the full
+  chip with the delay once audio runs.
+  - Checked idle and open at 800 and 1280 under Vite.
+  - The running look wasn't seen: the stubbed engine never reports running.
