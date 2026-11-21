@@ -13,12 +13,13 @@ import GoalDialog from "@/components/practicelog/GoalDialog";
 import ShedLogTour, { tourSeen } from "@/components/practicelog/ShedLogTour";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { RewardProvider } from "@/components/reward/Reward";
 import { DayView, MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
 import { formatPracticed, practicedMinutes } from "@/components/practicelog/minutes";
-import { HelpIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
+import { findToolLink, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
 import { ChartIcon } from "@/components/practicelog/RoutineIcon";
 import {
   type DayTask,
@@ -227,23 +228,12 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   );
 
   return (
-    <Shell>
-      {/* The title with today's goal and streak in one line under it, and the actions on the right
-          (on phones they wrap under the title). The full stats are behind Stats. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 lg:border-b lg:border-foreground/10 lg:pb-5">
+    <Shell intro={{ label: "How the Shed Log works", show: () => setTourChoice(true) }}>
+      {/* The name is in the header bar (with the tour's ?); here today's goal and streak in one
+          line, and the actions on the right (on phones they wrap under it). The full stats are
+          behind Stats. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 lg:border-b lg:border-foreground/10 lg:pb-5">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-1.5 text-2xl font-semibold tracking-tight">
-            <span className="truncate">Shed Log</span>
-            <button
-              type="button"
-              onClick={() => setTourChoice(true)}
-              aria-label="How the Shed Log works"
-              title="How the Shed Log works"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
-            >
-              <HelpIcon className="h-4 w-4" />
-            </button>
-          </h1>
           <TodaySummary data={data} today={today} onGoal={() => setGoalOpen(true)} />
         </div>
         {/* Phones: one row under the title — the secondary actions as an icon over a short label,
@@ -520,9 +510,12 @@ function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; today: s
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ intro, children }: { intro?: { label: string; show: () => void }; children: React.ReactNode }) {
   return (
-    <main className="flex w-full flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:px-8 lg:pb-6 lg:pt-8">{children}</main>
+    <main className="flex w-full flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:px-8 lg:pb-6 lg:pt-20">
+      <PageBar crumbs={[{ label: "Shed Log" }]} icon={findToolLink("/shed-log")?.icon} intro={intro} />
+      {children}
+    </main>
   );
 }
 

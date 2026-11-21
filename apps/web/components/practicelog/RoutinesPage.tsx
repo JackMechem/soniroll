@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
-import { PlusIcon } from "@/components/tools";
+import { EmptyCard, PageHeader, PageShell } from "@/components/library/shared";
+import { PlusIcon, findToolLink } from "@/components/tools";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import {
   describeRepeat,
@@ -20,6 +20,9 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noopSubscribe = () => () => {};
 
+/** The pages above a routine page in the header bar's trail. */
+export const SHED_LOG_CRUMBS = [{ label: "Shed Log", href: "/shed-log" }];
+
 /** `/shed-log/routines` — every routine, with when it's next on. */
 export default function RoutinesPage() {
   const { data, ready } = usePracticeLog();
@@ -27,6 +30,7 @@ export default function RoutinesPage() {
   if (!ready || !mounted) {
     return (
       <PageShell>
+        <PageHeader title="Routines" crumbs={SHED_LOG_CRUMBS} icon={findToolLink("/shed-log")?.icon} />
         <LoadingSpinner />
       </PageShell>
     );
@@ -38,15 +42,17 @@ export default function RoutinesPage() {
 
   return (
     <PageShell>
-      <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
-        <BackButton href="/shed-log" label="Shed Log" />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Routines</h1>
+      <PageHeader
+        title="Routines"
+        crumbs={SHED_LOG_CRUMBS}
+        icon={findToolLink("/shed-log")?.icon}
+        subtitle={rows.length ? `${rows.length} routine${rows.length === 1 ? "" : "s"}` : undefined}
+        actions={
           <Link href="/shed-log/routine/edit" className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             <PlusIcon className="h-4 w-4" /> New routine
           </Link>
-        </div>
-      </div>
+        }
+      />
       {rows.length === 0 ? (
         <EmptyCard>No routines yet. A routine is a list of tasks — with minutes for each, and times if you like — that repeats on the days you pick.</EmptyCard>
       ) : (

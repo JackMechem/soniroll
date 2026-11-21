@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { CapIcon, PersonBadge, btnPrimary } from "@/components/lessons/parts";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { CheckIcon } from "@/components/tools";
@@ -38,12 +39,13 @@ export default function JoinPage({ code }: { code: string }) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col items-center justify-center gap-6 px-4 py-16">
+      <PageBar crumbs={[{ label: "Lessons", href: "/lessons" }, { label: "Join" }]} icon={CapIcon} />
       {invite === undefined || isLoading ? (
         <LoadingSpinner />
       ) : !invite ? (
         <div className="flex flex-col items-center gap-3 text-center">
           <CapIcon className="h-6 w-6 text-muted" />
-          <h1 className="text-2xl font-semibold tracking-tight">This link doesn&apos;t work anymore</h1>
+          <h2 className="text-2xl font-semibold tracking-tight">This link doesn&apos;t work anymore</h2>
           <p className="text-sm text-muted">Ask your teacher to send you a new one.</p>
         </div>
       ) : (
@@ -52,7 +54,7 @@ export default function JoinPage({ code }: { code: string }) {
             <PersonBadge url={invite.teacher.avatarUrl} name={invite.teacher.name} size="lg" />
             <div>
               <p className="text-sm text-muted">Lessons on soniroll</p>
-              <h1 className="text-xl font-semibold tracking-tight">{invite.teacher.name} invited you to their lessons</h1>
+              <h2 className="text-xl font-semibold tracking-tight">{invite.teacher.name} invited you to their lessons</h2>
               <p className="mt-1 text-sm text-muted">
                 For {invite.studentName}
                 {invite.itemCount ? ` · ${invite.itemCount} thing${invite.itemCount === 1 ? "" : "s"} waiting for you` : ""}

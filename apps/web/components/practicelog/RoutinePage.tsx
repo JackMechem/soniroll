@@ -6,12 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
+import { EmptyCard, PageShell } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
-import { CheckIcon, PencilIcon, PlayIcon, ShareIcon } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlayIcon, ShareIcon, findToolLink } from "@/components/tools";
 import {
   type Occurrence,
   type Routine,
@@ -33,6 +34,13 @@ import { type Recording, recordingsApi } from "@/lib/recordings";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
 const noopSubscribe = () => () => {};
+
+/** The pages above a routine in the header bar's trail. */
+const SHED_LOG_ICON = findToolLink("/shed-log")?.icon;
+const ROUTINES_CRUMBS = [
+  { label: "Shed Log", href: "/shed-log" },
+  { label: "Routines", href: "/shed-log/routines" },
+];
 
 /** Minutes logged for a routine on a day: timer time, or a checked task's planned minutes. */
 function minutesFor(routine: Routine, occ: Occurrence): number {
@@ -80,6 +88,7 @@ export default function RoutinePage({ id }: { id: string }) {
   if (!log.ready || !mounted) {
     return (
       <PageShell>
+        <PageBar crumbs={[...ROUTINES_CRUMBS, { label: "Routine" }]} icon={SHED_LOG_ICON} />
         <LoadingSpinner />
       </PageShell>
     );
@@ -87,7 +96,7 @@ export default function RoutinePage({ id }: { id: string }) {
   if (!routine) {
     return (
       <PageShell>
-        <BackButton href="/shed-log" label="Shed Log" />
+        <PageBar crumbs={[...ROUTINES_CRUMBS, { label: "Routine" }]} icon={SHED_LOG_ICON} />
         <EmptyCard>That routine doesn&apos;t exist anymore.</EmptyCard>
       </PageShell>
     );
@@ -116,24 +125,23 @@ export default function RoutinePage({ id }: { id: string }) {
 
   return (
     <PageShell>
+      <PageBar crumbs={[...ROUTINES_CRUMBS, { label: routine.name || "Untitled routine" }]} icon={SHED_LOG_ICON} />
       <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
-        <BackButton href="/shed-log" label="Shed Log" />
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="flex min-w-0 items-center gap-2.5 text-2xl font-semibold tracking-tight">
-              <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
-              <span className="truncate">{routine.name || "Untitled routine"}</span>
-            </h1>
-            <p className="text-sm text-muted">
-              {describeRepeat(routine.repeat)}
-              {start !== null ? ` · ${formatTime(start)}` : ""} · {formatMinutesShort(totalMinutes(routine))}
-            </p>
-            {/* What's been done with it, as one quiet line. */}
-            <p className="text-xs tabular-nums text-muted">
-              {completed} day{completed === 1 ? "" : "s"} completed · {formatMinutesShort(Math.round(minutes))} practiced
-              {isAuthenticated && recordings !== undefined ? ` · ${recCount} recording${recCount === 1 ? "" : "s"}` : ""}
-            </p>
-            {routine.assigned && <p className="text-xs text-muted">From {routine.assigned.teacher} · they see how it goes</p>}
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="text-sm text-muted">
+                {describeRepeat(routine.repeat)}
+                {start !== null ? ` · ${formatTime(start)}` : ""} · {formatMinutesShort(totalMinutes(routine))}
+              </p>
+              {/* What's been done with it, as one quiet line. */}
+              <p className="text-xs tabular-nums text-muted">
+                {completed} day{completed === 1 ? "" : "s"} completed · {formatMinutesShort(Math.round(minutes))} practiced
+                {isAuthenticated && recordings !== undefined ? ` · ${recCount} recording${recCount === 1 ? "" : "s"}` : ""}
+              </p>
+              {routine.assigned && <p className="text-xs text-muted">From {routine.assigned.teacher} · they see how it goes</p>}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setSharing(true)} className={SECONDARY}>

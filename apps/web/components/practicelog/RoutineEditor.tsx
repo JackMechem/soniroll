@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { BackButton, PageShell } from "@/components/library/shared";
+import { PageShell } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import { RoutineIconButton } from "@/components/practicelog/RoutineIcon";
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from "@/components/tools";
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon, findToolLink } from "@/components/tools";
 import {
   type Repeat,
   type RepeatFreq,
@@ -37,6 +38,12 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noopSubscribe = () => () => {};
 const LABEL = "text-xs font-medium text-muted";
+const SHED_LOG_ICON = findToolLink("/shed-log")?.icon;
+/** The pages above the editor in the header bar's trail. */
+const ROUTINES_CRUMBS = [
+  { label: "Shed Log", href: "/shed-log" },
+  { label: "Routines", href: "/shed-log/routines" },
+];
 const INPUT = "h-9 min-w-0 rounded-md bg-foreground/[0.05] px-3 text-sm outline-none focus:ring-2 focus:ring-accent/40";
 /** A task's small "+ Subtask" / "+ Notes" buttons, filled like the Attach button beside them. */
 const SMALL_ADD = "flex h-6 items-center gap-1 rounded-md bg-foreground/[0.05] px-2 text-xs font-medium transition-colors hover:bg-surface-hover pointer-coarse:h-8";
@@ -53,6 +60,7 @@ export default function RoutineEditorPage({ id, date }: { id?: string; date?: st
   if (!log.ready || !mounted) {
     return (
       <PageShell>
+        <PageBar crumbs={[...ROUTINES_CRUMBS, { label: id ? "Edit routine" : "New routine" }]} icon={SHED_LOG_ICON} />
         <LoadingSpinner />
       </PageShell>
     );
@@ -61,7 +69,7 @@ export default function RoutineEditorPage({ id, date }: { id?: string; date?: st
   if (id && !existing) {
     return (
       <PageShell>
-        <BackButton href="/shed-log" label="Shed Log" />
+        <PageBar crumbs={[...ROUTINES_CRUMBS, { label: "Edit routine" }]} icon={SHED_LOG_ICON} />
         <p className="rounded-lg border border-dashed border-foreground/15 p-6 text-sm text-muted">That routine doesn&apos;t exist anymore.</p>
       </PageShell>
     );
@@ -137,12 +145,17 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
   return (
     <PageShell>
-      <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
-        <BackButton onClick={cancel} />
-        {/* Cancel and Save are in the bar stuck to the bottom (below), in reach however far down
-            the form you are. */}
-        <h1 className="text-2xl font-semibold tracking-tight">{isNew ? "New routine" : "Edit routine"}</h1>
-      </div>
+      {/* The trail's links ask first when there are unsaved changes (`useLeaveGuard`). Cancel and
+          Save are in the bar stuck to the bottom (below), in reach however far down the form you
+          are. */}
+      <PageBar
+        crumbs={
+          isNew
+            ? [...ROUTINES_CRUMBS, { label: "New routine" }]
+            : [...ROUTINES_CRUMBS, { label: start.name || "Untitled routine", href: `/shed-log/routine?id=${encodeURIComponent(start.id)}` }, { label: "Edit" }]
+        }
+        icon={SHED_LOG_ICON}
+      />
       {error && <p ref={errorRef} className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <Card title="Routine">

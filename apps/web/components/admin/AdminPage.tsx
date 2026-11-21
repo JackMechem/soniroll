@@ -9,6 +9,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import Select from "@/components/Select";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar from "@/components/PageBar";
 import { type GitHubIssue, type GitHubItem, issueByRef, recentCommits, recentIssues, recentPulls, repoBranches } from "@/lib/githubWork";
 import { type InboxRow, useInbox } from "@/components/admin/useInbox";
 import { LibraryPage } from "@/components/library/ui";
@@ -63,6 +64,7 @@ export default function AdminPage() {
   if (isLoading || (isAuthenticated && isAdmin === undefined))
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Admin" }]} icon={ShieldIcon} />
         <div className="flex justify-center py-24">
           <LoadingSpinner />
         </div>
@@ -71,6 +73,7 @@ export default function AdminPage() {
   if (!isAdmin)
     return (
       <LibraryPage>
+        <PageBar crumbs={[{ label: "Admin" }]} icon={ShieldIcon} />
         <div className="mx-auto flex w-full max-w-md flex-col items-center gap-1 rounded-lg border border-dashed border-foreground/15 p-8 text-center">
           <p className="text-sm font-medium">Nothing here</p>
           <p className="text-sm text-muted">This page isn&apos;t available.</p>
@@ -82,10 +85,10 @@ export default function AdminPage() {
 
   return (
     <LibraryPage>
+      <PageBar crumbs={[{ label: "Admin", href: "/admin" }, { label: TABS.find((t) => t.id === tab)?.label ?? "Overview" }]} icon={ShieldIcon} />
       <header className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">Admin</h1>
             <p className="text-sm text-muted">
               soniroll {VERSION_LABEL} · {role === "owner" ? "Owner" : "Admin"}
             </p>

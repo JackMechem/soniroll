@@ -8,6 +8,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageBar, { type Crumb } from "@/components/PageBar";
 import { EmptyState, Pill } from "@/components/library/ui";
 import { CapIcon, PersonBadge, btnPrimary } from "@/components/lessons/parts";
 import LessonNoteEditor from "@/components/lessons/LessonNoteEditor";
@@ -18,6 +19,8 @@ import { ChevronLeftIcon, NoteIcon, PlusIcon, SearchIcon, TrashIcon } from "@/co
 type Note = { id: Id<"lessonItems">; title: string; body: string; createdAt: number; updatedAt: number };
 
 const SAVE_MS = 700;
+
+const LESSONS_CRUMB = { label: "Lessons", href: "/lessons" };
 
 /** A lesson's notes page; `session` = one lesson's notes (an id, or "earlier"). */
 export const notesHref = (lessonId: string, noteId?: string, session?: string) =>
@@ -68,6 +71,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
   if (data === undefined) {
     return (
       <main className="flex min-h-dvh items-center justify-center">
+        <PageBar crumbs={[LESSONS_CRUMB, { label: "Notes" }]} icon={CapIcon} />
         <LoadingSpinner />
       </main>
     );
@@ -75,6 +79,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
   if (!data) {
     return (
       <main className="mx-auto max-w-xl px-4 py-24">
+        <PageBar crumbs={[LESSONS_CRUMB, { label: "Notes" }]} icon={CapIcon} />
         <div className="rounded-lg border border-dashed border-foreground/15">
           <EmptyState icon={CapIcon} title="Notes not found" body="These aren't your lesson notes." action={<Pill label="Lessons" href="/lessons" />} />
         </div>
@@ -83,8 +88,16 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
   }
 
   const teacher = data.role === "teacher";
-  const backHref = session ? lessonHref(lessonId, session) : teacher ? `/lessons/student?id=${lessonId}` : `/lessons/teacher?id=${lessonId}`;
+  const personHref = teacher ? `/lessons/student?id=${lessonId}` : `/lessons/teacher?id=${lessonId}`;
   const heading = teacher ? data.studentName : (data.other?.name ?? "Your teacher");
+  // The header bar's trail: Lessons / the student or teacher / the lesson (when these are one
+  // lesson's notes) / Notes / the open note.
+  const crumbs: Crumb[] = [
+    LESSONS_CRUMB,
+    { label: heading, href: personHref },
+    ...(session ? [{ label: data.session ? data.session.title : "Earlier", href: lessonHref(lessonId, session) }] : []),
+    ...(selected ? [{ label: "Notes", href: href() }, { label: selected.title || "Untitled" }] : [{ label: "Notes" }]),
+  ];
 
   async function newNote() {
     setCreating(true);
@@ -99,20 +112,14 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
   }
 
   return (
-    <main className="flex w-full flex-col pt-[calc(env(safe-area-inset-top)+3.5rem)] lg:h-dvh lg:flex-row lg:pt-0">
+    <main className="flex w-full flex-col pt-[calc(env(safe-area-inset-top)+3.5rem)] lg:h-dvh lg:flex-row lg:pt-14">
+      <PageBar crumbs={crumbs} icon={CapIcon} />
       {/* The list */}
       <aside className={`${selected ? "hidden lg:flex" : "flex"} w-full shrink-0 flex-col gap-3 border-foreground/10 p-4 lg:h-full lg:w-80 lg:border-r lg:p-5`}>
-        <Link
-          href={backHref}
-          className="-ml-1 inline-flex h-8 items-center gap-0.5 self-start rounded-md pl-1 pr-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-          {heading}
-        </Link>
         <div className="flex items-center gap-3">
           <PersonBadge url={data.other?.avatarUrl} name={heading} size="sm" />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-semibold tracking-tight">{data.session ? data.session.title : "Lesson notes"}</h1>
+            <p className="truncate text-base font-semibold tracking-tight">{data.session ? data.session.title : "Lesson notes"}</p>
             <p className="truncate text-xs text-muted">
               {data.session
                 ? `${new Date(data.session.start).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · `

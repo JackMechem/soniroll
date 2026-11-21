@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ShedLogTour from "@/components/practicelog/ShedLogTour";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
-import { BackButton } from "@/components/library/shared";
+import PageBar from "@/components/PageBar";
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, HelpIcon, SearchIcon, SlidersIcon, StarIcon } from "@/components/tools";
 import { HELP_GROUPS, HELP_TOPICS, type HelpTopic, topicById } from "@/lib/helpContent";
 
@@ -61,19 +61,17 @@ function TopicList({ query, selected, onPick }: { query: string; selected: strin
   );
 }
 
-function TopicDetail({ topic, onPick, onBack }: { topic: HelpTopic; onPick: (id: string) => void; onBack: () => void }) {
+function TopicDetail({ topic, onPick }: { topic: HelpTopic; onPick: (id: string) => void }) {
   const [touring, setTouring] = useState(false);
   const index = ORDERED.indexOf(topic);
   const prev = ORDERED[index - 1];
   const next = ORDERED[index + 1];
   return (
     <article className="settings-pop mx-auto flex w-full max-w-4xl flex-col gap-8">
-      <BackButton onClick={onBack} label="All topics" className="lg:hidden" />
-
       <header className="flex flex-col gap-4 border-b border-foreground/10 pb-6">
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-xs text-muted"><TopicIcon topic={topic} size="sm" /> {topic.group}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{topic.title}</h1>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight">{topic.title}</h2>
           <p className="mt-1 text-base font-medium">{topic.tagline}</p>
           <p className="mt-1 text-sm text-muted">{topic.purpose}</p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -216,15 +214,14 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
   return (
     // The page scrolls as one; on desktop the topic list stays put beside the topic (sticky), and
     // scrolls on its own only when it's taller than the window (without a second scrollbar).
-    <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:px-8 lg:pt-8">
-      {/* Like the other pages' headers: icon, title, one line about it, a rule under it. */}
-      <header className={`flex-col gap-0.5 border-b border-foreground/10 pb-4 ${showDetail ? "hidden lg:flex" : "flex"}`}>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <HelpIcon className="h-5 w-5 shrink-0 text-muted" />
-          Help
-        </h1>
-        <p className="text-sm text-muted">How every tool and page works.</p>
-      </header>
+    <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:px-8 lg:pt-20">
+      {/* "Help / <topic>": desktop always shows a topic beside the list; on phones the topic
+          replaces the list once one is opened, and "Help" goes back to it. */}
+      <PageBar
+        crumbs={[{ label: "Help" }, { label: topic.title }]}
+        phoneCrumbs={showDetail ? [{ label: "Help", onClick: () => setShowDetail(false) }, { label: topic.title }] : [{ label: "Help" }]}
+        icon={HelpIcon}
+      />
       <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
         <aside className={`flex-col gap-3 lg:sticky lg:top-6 lg:flex lg:max-h-[calc(100dvh-7rem)] lg:min-h-0 ${showDetail ? "hidden" : "flex"}`}>
           <div className="flex h-9 shrink-0 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
@@ -236,7 +233,7 @@ export default function HelpPage({ initialTopic }: { initialTopic?: string }) {
           </div>
         </aside>
         <div ref={detailRef} className={`min-w-0 lg:block ${showDetail ? "block" : "hidden"}`}>
-          <TopicDetail key={topic.id} topic={topic} onPick={pick} onBack={() => setShowDetail(false)} />
+          <TopicDetail key={topic.id} topic={topic} onPick={pick} />
         </div>
       </div>
     </main>
