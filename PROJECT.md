@@ -221,6 +221,9 @@ Web (`apps/web`):
   become chips automatically. `optionsMode` holds a mode switch above the chips; `sidePanel`s
   (History, Struggles) are chips above the main display. The title must match the tool's
   `NAV_LINKS` label (icon and intro lookup).
+- `PageBar` (`components/PageBar.tsx`) — every page's slim top bar: icon, breadcrumbs (`crumbs`, each a link
+  back), `?`, buttons. `ToolLayout`, `Hero` and `PageHeader` render it; the phone top bar and split-screen
+  panes get the trail through `lib/pageCrumbs.ts`. Library trails: `components/library/hrefs.ts`.
 - Presets (`lib/toolPresets.ts`, `components/PresetsChip.tsx`) — every tool with options gets
   them: `presets={toolPresets("<href-slug>", settings, update, [non-option fields])}` on
   `ToolLayout`, or `<PresetsChip tool={…} />` in a tool's own `SettingsBar`, or
