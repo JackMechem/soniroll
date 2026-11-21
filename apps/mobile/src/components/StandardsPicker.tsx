@@ -1,7 +1,8 @@
 import { nameId, searchStandards, standardToTune, STANDARDS, type Standard } from '@jam-practice/core/standards';
 import type { Tune } from '@jam-practice/core/types';
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from '@/components/icons';
@@ -51,7 +52,7 @@ export function StandardsPicker({
   }
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose}>
+    <FullScreenModal visible animationType="slide" onRequestClose={onClose}>
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
           <View
@@ -149,6 +150,6 @@ export function StandardsPicker({
           </View>
         </SafeAreaView>
       </View>
-    </Modal>
+    </FullScreenModal>
   );
 }

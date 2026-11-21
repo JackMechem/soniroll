@@ -1,6 +1,7 @@
 import { analyzeInsights, noteName, type Share, type Where } from '@jam-practice/core/bassInsights';
 import { useMemo, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { FullScreenModal } from '@/components/FullScreenModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CloseIcon } from '@/components/icons';
@@ -41,7 +42,7 @@ export function PatternsSheet({
   const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0);
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
+    <FullScreenModal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <View className="flex-1" style={{ backgroundColor: colors.background, paddingTop: insets.top }}>
         <View className="flex-row items-center gap-3 px-4 py-3">
           <View className="flex-1">
@@ -191,7 +192,7 @@ export function PatternsSheet({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </FullScreenModal>
   );
 }
 
