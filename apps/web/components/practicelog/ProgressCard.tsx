@@ -18,6 +18,12 @@ const LEVEL_COLORS = ["rgba(255,255,255,0.07)", "#0e4429", "#006d32", "#26a641",
 const FLAME = "M12 2c.6 3.2-1.2 5.1-2.7 6.8C7.8 10.5 6.5 12 6.5 14.6 6.5 18.2 9 21 12 21s5.5-2.8 5.5-6.2c0-2.3-1-3.9-2.2-5.2.1 1.6-.5 2.9-1.7 3.4.4-3.6-.6-7.4-1.6-10z";
 
 const fmtHours = (h: number) => (h < 10 ? (Math.round(h * 10) / 10).toString() : String(Math.floor(h)));
+/** Hours as a number and its unit: under an hour it's minutes ("25 min"), not "0.4 hours". */
+function hoursParts(h: number): { value: string; unit: string } {
+  if (h < 1) return { value: String(Math.round(h * 60)), unit: "min" };
+  const value = fmtHours(h);
+  return { value, unit: value === "1" ? "hour" : "hours" };
+}
 const IN_RANGE: Record<ProgressCard["range"], string> = { week: "this week", month: "this month", year: "in the past year" };
 
 const fmtMinutes = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
@@ -32,11 +38,10 @@ export function cardHeadline(card: ProgressCard): { value: string; label: string
   if (card.kind === "streak") return { value: String(card.streak), label: "day streak", title: `${card.streak}-day practice streak` };
   if (card.kind === "hours") {
     // A year card is lifetime hours; a week or month card is that week's or month's.
-    const h = fmtHours(card.range === "year" ? card.hours : card.rangeHours);
-    const unit = h === "1" ? "hour" : "hours";
+    const { value: h, unit } = hoursParts(card.range === "year" ? card.hours : card.rangeHours);
     return card.range === "year"
-      ? { value: h, label: `${unit} practiced`, title: `${h} hours of practice` }
-      : { value: h, label: `${unit} practiced ${IN_RANGE[card.range]}`, title: `${h} hours of practice ${IN_RANGE[card.range]}` };
+      ? { value: h, label: `${unit} practiced`, title: `${h} ${unit} of practice` }
+      : { value: h, label: `${unit} practiced ${IN_RANGE[card.range]}`, title: `${h} ${unit} of practice ${IN_RANGE[card.range]}` };
   }
   const d = card.rangeDays;
   return { value: String(d), label: `${d === 1 ? "day" : "days"} practiced ${IN_RANGE[card.range]}`, title: `${d} days of practice ${IN_RANGE[card.range]}` };
@@ -139,9 +144,10 @@ function drawMilestone(ctx: CanvasRenderingContext2D, card: ProgressCard, userna
   ctx.fillText(fit(ctx, head.label, W - 2 * P), P, 480);
 
   // Three stats.
+  const time = hoursParts(card.range === "year" ? card.hours : card.rangeHours);
   const stats: [string, string][] = [
     [String(card.best), "best streak"],
-    card.range === "year" ? [fmtHours(card.hours), "hours in total"] : [fmtHours(card.rangeHours), `hours ${card.range === "week" ? "this week" : "this month"}`],
+    [time.value, card.range === "year" ? `${time.unit} in total` : `${time.unit} ${card.range === "week" ? "this week" : "this month"}`],
     [String(card.rangeDays), card.range === "year" ? "days this year" : `days ${card.range === "week" ? "this week" : "this month"}`],
   ];
   const gapS = 20;

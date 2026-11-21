@@ -198,16 +198,17 @@ export default function RoutineCard({
       {editingTime && <RoutineTimePicker date={date} routine={routine} occurrence={occurrence} log={log} onDone={() => setEditingTime(false)} />}
 
       {engine && running ? (
-        <div className="flex items-center gap-4 rounded-md bg-background p-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-background p-3">
           <PracticeTimerRing size="sm" startedAt={engine.startedAt} durationMs={engine.durationMs} paused={engine.paused} remainingMsAtPause={engine.remainingMsAtPause} alarming={engine.alarming} />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[9rem] flex-1">
             <div className={`text-xs font-semibold ${engine.alarming ? "animate-pulse text-danger" : "text-muted"}`}>
               {engine.alarming ? "Time's up" : engine.paused ? "Paused" : "Now"}
             </div>
-            <div className="truncate font-medium">{engine.current.title}</div>
+            <div className="line-clamp-2 font-medium">{engine.current.title}</div>
             <div className="truncate text-xs text-muted">{engine.next ? `Next: ${engine.next.title}` : "Last task"}</div>
           </div>
-          <div className="flex shrink-0 gap-1">
+          {/* Wraps under the task on a phone, so the task's name gets the width. */}
+          <div className="ml-auto flex shrink-0 gap-1">
             {engine.alarming ? (
               <TimerButton label="Continue" onClick={skip} primary>
                 <PlayIcon className="h-4 w-4" />

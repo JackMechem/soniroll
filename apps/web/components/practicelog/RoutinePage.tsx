@@ -27,6 +27,7 @@ import {
   parseTime,
   progressOf,
   scheduleTasks,
+  tasksOf,
   todayKey,
   totalMinutes,
 } from "@/lib/practiceLog";
@@ -113,11 +114,15 @@ export default function RoutinePage({ id }: { id: string }) {
   const start = parseTime(routine.startTime);
   const schedule = scheduleTasks(routine);
   const running = runningTask(routine.id, today);
+  // Part done today: carry on from the first open task, like the routine's card on the Shed Log.
+  const todayOcc = log.data.days[today]?.routines?.[routine.id];
+  const todayDone = new Set(todayOcc?.done ?? []);
+  const nextTask = todayOcc && todayDone.size > 0 ? tasksOf(routine, todayOcc).find((t) => !todayDone.has(t.id) && t.minutes > 0) : undefined;
 
   function startToday() {
     if (!routine) return;
     if (!occursOn(routine.repeat, today) && !(log.data.days[today]?.added ?? []).includes(routine.id)) log.addToDay(today, routine.id);
-    startRoutine(routine, today, undefined, false, log.data.days[today]?.routines?.[routine.id]);
+    startRoutine(routine, today, nextTask?.id, false, todayOcc);
     router.push(`/shed-log?date=${today}`);
   }
 
@@ -155,7 +160,7 @@ export default function RoutinePage({ id }: { id: string }) {
             )}
             {!running && routine.tasks.some((t) => t.minutes > 0) && (
               <button type="button" onClick={startToday} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
-                <PlayIcon className="h-4 w-4" /> Start today
+                <PlayIcon className="h-4 w-4" /> {nextTask ? "Continue today" : "Start today"}
               </button>
             )}
           </div>

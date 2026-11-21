@@ -50,6 +50,9 @@ const SMALL_ADD = "flex h-6 items-center gap-1 rounded-md bg-foreground/[0.05] p
 const TEXTAREA = "resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/40";
 
 /** `/shed-log/routine/edit?id=…` (or `?date=…` for a new one starting that day). */
+/** Names for `ROUTINE_COLORS`, in the same order, for screen readers and tooltips. */
+const COLOR_NAMES = ["Indigo", "Green", "Amber", "Red", "Pink", "Cyan", "Violet", "Lime"];
+
 export default function RoutineEditorPage({ id, date }: { id?: string; date?: string }) {
   const log = usePracticeLog();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -196,7 +199,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 key={c}
                 type="button"
                 onClick={() => set({ color: i })}
-                aria-label={`Color ${i + 1}`}
+                aria-label={COLOR_NAMES[i] ?? `Color ${i + 1}`}
+                title={COLOR_NAMES[i]}
                 aria-pressed={r.color === i}
                 className={`h-7 w-7 rounded-full ${r.color === i ? "ring-2 ring-foreground ring-offset-2 ring-offset-surface" : ""}`}
                 style={{ background: c }}

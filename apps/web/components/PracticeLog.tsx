@@ -19,7 +19,7 @@ import { RewardProvider } from "@/components/reward/Reward";
 import { DayView, MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
 import { formatPracticed, practicedMinutes } from "@/components/practicelog/minutes";
-import { findToolLink, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
+import { findToolLink, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, RepeatIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
 import { ChartIcon } from "@/components/practicelog/RoutineIcon";
 import {
   type DayTask,
@@ -284,8 +284,8 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 x: Math.max(8, r.right - 208),
                 y: r.bottom + 6,
                 items: [
-                  { label: `Task on ${selected === today ? "today" : formatShortDate(selected)}`, onSelect: () => setNewTask(newDayTask()) },
-                  { label: "Routine", onSelect: () => router.push(`/shed-log/routine/edit?date=${selected}`) },
+                  { label: `Task on ${selected === today ? "today" : formatShortDate(selected)}`, icon: <ChecklistIcon className="h-4 w-4 text-muted" />, onSelect: () => setNewTask(newDayTask()) },
+                  { label: "Routine", icon: <RepeatIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${selected}`) },
                 ],
               });
             }}
