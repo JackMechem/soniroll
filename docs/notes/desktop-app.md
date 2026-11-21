@@ -754,3 +754,15 @@ with margins — nothing depends on the button. Looks the same in Chromium; not 
 until Jack checks 0.1.10. Lesson: inside a `<button>`, don't size children by percentage/flex/grid
 fractions of its height.
 
+
+## 2026-11-20 — UI pass 1 fixes
+
+- **Blank window under `vite` / `tauri dev`:** the pdf.js worker import went through `@web/node_modules/…?url`,
+  which Vite's dev pre-bundler treats as a package and loses the `?url` export. It's a relative path now
+  (details in `pdf-editor.md`). Release builds weren't affected.
+- **Sign-in had no way out:** `src/pages/SignIn.tsx` (the full-window `/?auth=login`) has a "Not now"
+  `BackButton` at the top left — back in history, or the dashboard when there's none. The window has no
+  browser Back button.
+- **Native audio chip:** sits in the corner now (`right-4 lg:right-6`; the floating feedback button it
+  made room for moved into the header bar) and says "Idle" instead of "Off" when the engine isn't running.
+- Checked with `npx vite --port 1420` in headless Chromium (Tauri internals stubbed); not in the real window.
