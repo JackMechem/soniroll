@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeIcon, LibraryIcon, NAV_LINK_ICONS, ToolsIcon, UsersIcon, type IconProps } from '@/components/icons';
 import { LIBRARY_TABS } from '@/components/TabHeader';
 import { NOW_PLAYING_HEIGHT, NowPlayingStrip } from '@/components/NowPlaying';
+import { PRACTICE_TIMER_STRIP_HEIGHT, PracticeTimerStrip, usePracticeTimerRunning } from '@/components/PracticeTimerWidget';
 import { useNowPlaying } from '@/lib/nowPlaying';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -41,11 +42,13 @@ export function useTabBarVisible() {
 }
 
 /** How tall the bar is above the device's bottom inset right now: 0 when it's hidden, more while
-    a tool plays (the "now playing" strip on top of it). */
+    a tool plays or the Practice Timer runs (their strips on top of it). */
 export function useTabBarHeight() {
   const visible = useTabBarVisible();
   const playing = useNowPlaying().length > 0;
-  return visible ? TAB_BAR_CONTENT_HEIGHT + (playing ? NOW_PLAYING_HEIGHT : 0) : 0;
+  const timing = usePracticeTimerRunning();
+  if (!visible) return 0;
+  return TAB_BAR_CONTENT_HEIGHT + (playing ? NOW_PLAYING_HEIGHT : 0) + (timing ? PRACTICE_TIMER_STRIP_HEIGHT : 0);
 }
 
 /** Bottom padding for a scrolling page: the tab bar when it's showing, the device's bottom inset, and
@@ -77,7 +80,9 @@ export function FloatingTabBar() {
         borderTopColor: derived.hairline,
       }}
     >
-      {/* A tool that's playing, docked on top of the tabs (`components/NowPlaying.tsx`). */}
+      {/* The Practice Timer and a tool that's playing, docked on top of the tabs
+          (`components/PracticeTimerWidget.tsx`, `components/NowPlaying.tsx`). */}
+      <PracticeTimerStrip />
       <NowPlayingStrip playing={playing} />
       <View style={{ flexDirection: 'row', height: TAB_BAR_CONTENT_HEIGHT }}>
         {TABS.map(({ href, label, Icon, matches }) => {
