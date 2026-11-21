@@ -14,7 +14,7 @@ import { CapIcon, PersonBadge, btnPrimary } from "@/components/lessons/parts";
 import LessonNoteEditor from "@/components/lessons/LessonNoteEditor";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import { noteSnippet } from "@jam-practice/core/shedNotes";
-import { ChevronLeftIcon, NoteIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
+import { ChevronLeftIcon, DocumentIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
 
 type Note = { id: Id<"lessonItems">; title: string; body: string; createdAt: number; updatedAt: number };
 
@@ -205,7 +205,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
           <div className="m-auto w-full max-w-md p-8">
             <div className="rounded-lg border border-dashed border-foreground/15">
             <EmptyState
-              icon={NoteIcon}
+              icon={DocumentIcon}
               title={notes.length ? "Pick a note" : teacher ? "No notes yet" : "No notes yet"}
               body={
                 teacher

@@ -17,7 +17,7 @@ import { notesHref } from "@/components/lessons/NotesPage";
 import { NewLessonDialog, sessionWhen } from "@/components/lessons/sessions";
 import { lessonHref } from "@/components/lessons/NotesPage";
 import Link from "next/link";
-import { ChevronLeftIcon, ChevronRightIcon, NoteIcon, PlusIcon } from "@/components/tools";
+import { ChevronLeftIcon, ChevronRightIcon, DocumentIcon, PlusIcon } from "@/components/tools";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 
 type Adding = { kind: "note" | "assignment" | "file"; item?: LessonItem } | { kind: "chart" };
@@ -133,7 +133,7 @@ export default function LessonPage({ pair, id }: { pair: string; id: string }) {
         }
         actions={
           <>
-            {hasNotes && <Pill icon={NoteIcon} label="Notes" href={notesLink()} iconOnlyOnPhone />}
+            {hasNotes && <Pill icon={DocumentIcon} label="Notes" href={notesLink()} iconOnlyOnPhone />}
             {teacher && <Pill primary icon={PlusIcon} label="Add" onClick={openAddMenu} />}
             {teacher && s && <MoreButton label="Lesson options" onClick={openMore} />}
           </>

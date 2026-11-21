@@ -8,7 +8,7 @@ import { useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PageBar from "@/components/PageBar";
-import { CapIcon, PersonBadge, btnPrimary } from "@/components/lessons/parts";
+import { CapIcon, PersonBadge, btnPrimary, btnSecondary } from "@/components/lessons/parts";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { CheckIcon } from "@/components/tools";
 
@@ -47,6 +47,9 @@ export default function JoinPage({ code }: { code: string }) {
           <CapIcon className="h-6 w-6 text-muted" />
           <h2 className="text-2xl font-semibold tracking-tight">This link doesn&apos;t work anymore</h2>
           <p className="text-sm text-muted">Ask your teacher to send you a new one.</p>
+          <Link href={isAuthenticated ? "/lessons" : "/dashboard"} className={`${btnSecondary} mt-1`}>
+            {isAuthenticated ? "Go to Lessons" : "Go to the dashboard"}
+          </Link>
         </div>
       ) : (
         <div className="flex w-full flex-col gap-5 rounded-lg bg-surface p-6 text-center">

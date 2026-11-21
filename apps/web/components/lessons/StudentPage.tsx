@@ -121,12 +121,12 @@ export default function StudentPage({ id }: { id: string }) {
         }
       >
         {!data.joined && (
-          <div className="grid gap-4 rounded-lg bg-surface p-4 lg:grid-cols-2 lg:gap-6">
-            <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-lg bg-surface p-4 lg:grid-cols-2 lg:gap-6">
+            <div className="flex min-w-0 flex-col gap-2">
               <p className="text-sm font-medium">Email {data.name} their invite</p>
               <EmailInviteForm lessonId={lessonId} name={data.name} initialEmail={data.inviteEmail ?? ""} sentTo={data.inviteEmail} sentAt={data.invitedAt} />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <p className="text-sm font-medium">…or send the link yourself</p>
               <p className="text-xs text-muted">
                 They sign in (or sign up, free) and join — everything you add here is waiting for them, and your routines go straight into their Shed Log.

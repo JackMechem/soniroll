@@ -7,7 +7,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CalendarIcon, CheckIcon, CloseIcon, DownloadIcon, LinkIcon, PlusIcon } from "@/components/tools";
-import { Dialog, btnPrimary as btnMain, btnSecondary, errorText, field } from "@/components/lessons/parts";
+import { Dialog, dialogFooter, btnPrimary as btnMain, btnSecondary, errorText, field } from "@/components/lessons/parts";
 import { shareLink } from "@/lib/shareLink";
 import { durationLabel, googleCalendarUrl, lessonIcs, LESSON_LENGTHS, zoneName, type LessonEvent, type Slot } from "@jam-practice/core/lessonSchedule";
 import { siteOrigin } from "@/lib/siteOrigin";
@@ -299,7 +299,7 @@ function BookingDialog({ b, kind, other, onClose }: { b: Booking; kind: "accept"
         />
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex justify-end gap-2">
+      <div className={`${dialogFooter} flex justify-end gap-2`}>
         <button type="button" onClick={onClose} className={btnSecondary}>
           Back
         </button>
@@ -610,7 +610,7 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
         />
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex justify-end gap-2">
+      <div className={`${dialogFooter} flex justify-end gap-2`}>
         <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
@@ -694,7 +694,7 @@ function RequestLessonDialog({ lessonId, teacherName, onClose }: { lessonId: Id<
         />
       </label>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex items-center justify-end gap-2">
+      <div className={`${dialogFooter} flex items-center justify-end gap-2`}>
         {picked && <span className="mr-auto text-sm font-medium">{slotLabel(picked)}</span>}
         <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel

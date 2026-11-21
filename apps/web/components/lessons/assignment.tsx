@@ -78,13 +78,13 @@ export function SubmitSettings({ value, onChange }: { value: SubmitConfig | null
               <Toggle key={k.id} small on={k.id === "any" ? anyFile : c.fileKinds.includes(k.id)} onClick={() => toggleKind(k.id)} label={k.label} />
             ))}
             {c.extensions.map((e) => (
-              <span key={e} className="flex h-7 items-center gap-1 rounded-md border border-foreground/25 bg-surface-hover pl-2.5 pr-1 text-xs font-medium">
+              <span key={e} className="flex h-7 items-center gap-1 rounded-full bg-accent pl-2.5 pr-1 text-xs font-medium text-accent-foreground">
                 {e}
                 <button
                   type="button"
                   aria-label={`Remove ${e}`}
                   onClick={() => set({ extensions: c.extensions.filter((x) => x !== e) })}
-                  className="flex h-5 w-5 items-center justify-center rounded-sm text-muted hover:bg-foreground/10 hover:text-foreground"
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-accent-foreground/80 hover:bg-accent-foreground/15 hover:text-accent-foreground"
                 >
                   <CloseIcon className="h-3 w-3" />
                 </button>
@@ -128,8 +128,8 @@ function Toggle({ on, onClick, label, small = false }: { on: boolean; onClick: (
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`flex items-center gap-1 rounded-md border font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
-        on ? "border-foreground/25 bg-surface-hover text-foreground" : "border-foreground/10 text-muted hover:bg-surface-hover hover:text-foreground"
+      className={`flex items-center gap-1 rounded-full font-medium transition-colors ${small ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-sm"} ${
+        on ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-foreground/[0.05] text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
       {on && <CheckIcon className="h-3.5 w-3.5" />}

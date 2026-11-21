@@ -8,8 +8,8 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SwitchRow from "@/components/SwitchRow";
-import { ChevronRightIcon, ChordChartIcon, NoteIcon, PlusIcon } from "@/components/tools";
-import { CapIcon, ClipboardIcon, Dialog, btnPrimary, btnSecondary, errorText, field, FileIcon } from "@/components/lessons/parts";
+import { ChevronRightIcon, ChordChartIcon, DocumentIcon, PlusIcon } from "@/components/tools";
+import { CapIcon, ClipboardIcon, Dialog, btnPrimary, dialogFooter, btnSecondary, errorText, field, FileIcon } from "@/components/lessons/parts";
 import { lessonHref } from "@/components/lessons/NotesPage";
 import { materialsHref } from "@/components/lessons/MaterialsPage";
 
@@ -55,8 +55,8 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-end justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h2 className="text-sm font-medium">Lessons</h2>
           <p className="text-xs text-muted">
             {data.sessions.length
@@ -64,7 +64,7 @@ export function SessionList({ lessonId, otherName }: { lessonId: Id<"lessonStude
               : "Notes, assignments, files and charts live in each lesson."}
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {!empty && (
             <Link href={materialsHref(lessonId)} className={btnSecondary}>
               All materials
@@ -163,7 +163,7 @@ export function relWhen(ms: number, now: number) {
 /** What's in a lesson, as small icon + count pairs. */
 function Contents({ c }: { c: Counts }) {
   const parts = [
-    { n: c.notes, Icon: NoteIcon, label: "note" },
+    { n: c.notes, Icon: DocumentIcon, label: "note" },
     { n: c.assignments, Icon: ClipboardIcon, label: "assignment" },
     { n: c.files, Icon: FileIcon, label: "file" },
     { n: c.charts, Icon: ChordChartIcon, label: "chart" },
@@ -316,7 +316,7 @@ export function NewLessonDialog({
       )}
       {future && <SwitchRow label={`Hide it from ${otherName} until it starts`} checked={hidden} onChange={setHidden} />}
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex justify-end gap-2">
+      <div className={`${dialogFooter} flex justify-end gap-2`}>
         <button type="button" onClick={onClose} className={btnSecondary}>
           Cancel
         </button>
