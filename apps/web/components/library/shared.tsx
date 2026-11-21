@@ -66,11 +66,14 @@ export function PageHeader({
   helpTopic?: string;
 }) {
   const parents = crumbs ?? (back ? [{ label: "Back", onClick: back }] : []);
+  // Buttons with no subtitle beside them go up in the header bar on desktop, rather than alone on
+  // a row of their own (phones, and split-screen panes, keep the row).
+  const inBar = !!actions && !subtitle;
   return (
     <>
-      <PageBar crumbs={[...parents, { label: title }]} icon={icon} helpTopic={helpTopic} />
+      <PageBar crumbs={[...parents, { label: title }]} icon={icon} helpTopic={helpTopic} actions={inBar ? actions : undefined} />
       {(subtitle || actions) && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className={`flex flex-wrap items-center justify-between gap-3 ${inBar ? "lg:hidden" : ""}`}>
           {subtitle && <p className="min-w-0 truncate text-sm text-muted">{subtitle}</p>}
           {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
