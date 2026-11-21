@@ -106,10 +106,11 @@ export function CrumbTrail({
   let before: Crumb[] = earlier;
   let folded: Crumb[] = [];
   let after: Crumb[] = [];
-  // Compact: all of it when it's short ("Library / Tunes / Setlists"), else "… / parent / page".
-  // The bar: all of it up to five, else "first / … / last two / page".
+  // Compact: all of it when it's short ("Help / Metronome"), else "… / parent / page" — the
+  // phone bar has room for about 20 characters, and the page's own name must not be the part
+  // that's cut short. The bar: all of it up to five, else "first / … / last two / page".
   const length = crumbs.reduce((n, c) => n + (compact && c.short ? c.short : c.label).length + 3, -3);
-  if (compact && earlier.length > 1 && length > 26) {
+  if (compact && earlier.length > 1 && length > 20) {
     before = [];
     folded = earlier.slice(0, -1);
     after = earlier.slice(-1);
@@ -151,14 +152,18 @@ export function CrumbTrail({
       );
     return <span className={`flex min-w-0 ${compact ? "h-10 items-center" : ""} text-muted`}>{text}</span>;
   };
-  const crumbItem = (c: Crumb, i: number) => (
+  const crumbItem = (c: Crumb, i: number) => {
     // Earlier crumbs give way first (they shrink faster than the page's own name), down to a few
-    // letters each.
-    <li key={`${i}-${c.label}`} className={`flex shrink-[2] items-center gap-1.5 ${compact ? "min-w-[4rem] max-w-[7.5rem]" : "min-w-[2.5rem] max-w-[16rem]"}`}>
-      {crumbEl(c)}
-      {sep}
-    </li>
-  );
+    // letters each. On phones a short one ("Help", "Tunes") is already under that minimum, so it
+    // just takes its own width (a minimum would leave a gap after its "/").
+    const short = compact && (c.short ?? c.label).length <= 7;
+    return (
+      <li key={`${i}-${c.label}`} className={`flex items-center gap-1.5 ${short ? "shrink-0" : compact ? "min-w-[4rem] max-w-[7.5rem] shrink-[2]" : "min-w-[2.5rem] max-w-[16rem] shrink-[2]"}`}>
+        {crumbEl(c)}
+        {sep}
+      </li>
+    );
+  };
   const openFolded = (e: React.MouseEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     setMenu({ x: r.left, y: r.bottom + 4 });
@@ -189,15 +194,18 @@ export function CrumbTrail({
         {after.map((c, i) => crumbItem(c, i + 100))}
         <li className="flex min-w-0 shrink items-center">
           {compact ? (
-            onCurrentClick ? (
-              <button type="button" onClick={onCurrentClick} aria-current="page" title={last.label} className="-mx-1 flex h-10 min-w-0 items-center rounded-md px-1 text-left hover:bg-surface-hover">
-                <span className="truncate">{lastLabel}</span>
-              </button>
-            ) : (
-              <span aria-current="page" title={last.label} className="flex h-10 min-w-0 items-center">
-                <span className="truncate">{lastLabel}</span>
-              </span>
-            )
+            // The page's heading on phones (the desktop bar's is the h1 below, hidden there).
+            <span role="heading" aria-level={1} className="flex min-w-0">
+              {onCurrentClick ? (
+                <button type="button" onClick={onCurrentClick} aria-current="page" title={last.label} className="-mx-1 flex h-10 min-w-0 items-center rounded-md px-1 text-left hover:bg-surface-hover">
+                  <span className="truncate">{lastLabel}</span>
+                </button>
+              ) : (
+                <span aria-current="page" title={last.label} className="flex h-10 min-w-0 items-center">
+                  <span className="truncate">{lastLabel}</span>
+                </span>
+              )}
+            </span>
           ) : (
             <h1 aria-current="page" className="min-w-0 truncate text-base font-semibold" title={last.label}>
               {last.label}

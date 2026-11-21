@@ -1288,11 +1288,13 @@ function MobileBarName({ path }: { path: string }) {
       ? { href: page.href, label: page.label, Icon: page.icon }
       : null;
   if (path === DASHBOARD_PATH || !item) {
-    return (
+    const logo = (
       <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex h-10 items-center rounded-md px-1">
         <Logo height={24} />
       </Link>
     );
+    // On the dashboard the logo stands in for the page's name, so it's the page's heading.
+    return path === DASHBOARD_PATH ? <h1 className="flex">{logo}</h1> : logo;
   }
   const { Icon } = item;
   const inner = (
