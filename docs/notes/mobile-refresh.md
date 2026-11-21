@@ -507,3 +507,37 @@ Files on Recordings; the transpose menu; status bars in pickers, light and dark.
 removed afterwards (charts, files, lists, the files pushed to the emulator). **Not checked:** the
 setlist reader's dots and "Open the tune" button, import of a real chart link, signed out, a
 Recorder take's new name, audio by ear, a release build, a real phone.
+
+### UI pass 3 fixes: tools and the Shed Log (2026-11-20)
+
+A reviewer went over every tool and the Shed Log on the emulator (6.5/10). Fixed (commits 718ca85,
+66d4ae9, 7db99f6, b107092):
+
+- **The Practice Timer no longer floats over tools.** The pill sat at the tab bar's height, which on
+  a tool screen (no tab bar) is exactly where the setting chips are, so they couldn't be tapped. It
+  now works like now-playing: on the main screens a strip docked on top of the tab bar
+  (`PracticeTimerStrip`, counted in `useTabBarHeight`, so scrolling pages leave room), elsewhere a
+  small clock pill in the header (`PracticeTimerHeaderButton`), and nothing on the timer's own screen.
+- **Ear trainers stop when you leave their screen** (`lib/useStopOnBlur.ts`, `useFocusEffect`): one
+  left mid-round kept timing out questions and filing them as misses in Struggles. The Metronome
+  family and the Slow Downer still keep playing on purpose.
+- **Chip strip:** the "N more" cell has a set width (84 dp) so the real values get the row, and long
+  values/labels were shortened where they're made (a chip `title` keeps the full name for its sheet).
+  `adjustsFontSizeToFit` was tried and dropped: Android ignores `minimumFontScale`, so values shrank to
+  unreadable sizes.
+- **Learn path:** the trainers pass `scroll={false}` (new on `ToolScreen`) in Learn mode, so the
+  level card sits under the chips and the trail fills the rest and scrolls inside itself with fades.
+  A `flex: 1` ScrollView inside ToolFrame's own ScrollView isn't bounded — the outer one scrolled.
+- Smaller: Metronome / Tempo Trainer stop when switched to an empty Changing meters form; the
+  Metronome's help drops the website-only stats and Log options; History / Struggles clears ask
+  first; Guess the Chord shows ♯/♭ and "Time's up"; Rhythm Section's chart drops an opening 4/4;
+  routine editor (four "When" segments fit, colours in one row), calendar arrows flank the title,
+  share sheet opens on Hours at a 0-day streak.
+- Skipped: Metric Modulation's title on one line (`HeaderTitle` wraps long names on purpose rather
+  than shrinking them); the Sticking Warmup's serif L/R (drawn from VexFlow's Academico outlines, as
+  on the website — Geist would need its own glyph data); the day report's "1m" (matches the website's
+  card).
+
+Checked on the emulator (debug build, signed in as `mobile-audit@soniroll.test`); test data removed
+(the timer's 1 min via "Clear this day's time", Guess the Chord's struggles). Not checked: the Slow
+Downer loop line, the timer strip together with now-playing, audio by ear, a real phone.
