@@ -782,3 +782,27 @@ fractions of its height.
   sign-in. Try again from Sign in.", when the code exchange fails (it only logged).
 - The Linux updater toast's button says "Get the download" (was "Get it").
 - **Not verified at runtime**: both need the real Tauri window (read and type-checked only).
+
+## 2026-11-21 — Check for updates in Settings (0.1.12)
+
+Jack: a way in Settings to check for updates, so people can see whether their app is up to date.
+
+- **One update store:** `src/updates.ts` holds the update state (`useSyncExternalStore`) and
+  `checkForUpdates({ manual })` / `installUpdate()`. The launch check (`Updater.tsx`, 3 s after
+  opening, not in dev) and Settings both go through it, so they never disagree or check twice at
+  once. At launch an update on macOS/Windows still installs straight away; from Settings it waits
+  for **Update now**. A failed check is quiet at launch and says so in Settings.
+- **Settings → Updates** (`src/UpdatesSettings.tsx`): "You're on soniroll X for desktop", a status
+  line (newest version and when it was checked / X is out / updating / couldn't check) and the
+  button for the moment (Check for updates, Update now, or Get the download on Linux and after a
+  failed install). It's the website's `components/settings/DesktopUpdates.tsx` (renders nothing),
+  swapped by an exact alias in `vite.config.ts`, like `siteOrigin`. It shows at the top of
+  Account → General, and under Theme and display when signed out (that page is all a signed-out
+  person gets, and they need updates too).
+- The corner card no longer shows "X is out" for a check started from Settings (Settings says it);
+  it still shows the install's progress and the restart.
+- Checked under `npx vite --port 1420` in headless Chromium with `__TAURI_INTERNALS__` stubbed:
+  newest version, update out (Linux wording; Mac user agent → Update now → download → restart
+  calls in order), a failed check; light, dark, 390 wide. **Not checked in the real app** or
+  against the real update address — the first real test is 0.1.11 → 0.1.12 itself (0.1.11 updates
+  at launch as before; the new section is in 0.1.12 on).

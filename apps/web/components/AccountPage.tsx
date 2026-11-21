@@ -24,6 +24,7 @@ import {
   SidebarSettings,
   ToolSettings,
 } from "@/components/settings/SettingsSections";
+import DesktopUpdates from "@/components/settings/DesktopUpdates";
 import PageBar from "@/components/PageBar";
 import TunesTab from "@/components/TunesTab";
 import TunesToLearnTab from "@/components/TunesToLearnTab";
@@ -721,6 +722,8 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
         </div>
         {/* Theme, text size and the rest work on this device without an account. */}
         <AppearanceSettings />
+        {/* The desktop app's Updates section (nothing on the website). */}
+        <DesktopUpdates />
       </PageShell>
     );
   }
