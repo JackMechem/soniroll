@@ -62,3 +62,22 @@ turning, exported PDFs (pdftoppm/pdfinfo), 390 px dark with no overflow, `next b
 
 Mobile markup; showing markings on shared links; text search; bookmarks/setlists of PDFs; snapping
 symbols to staff lines.
+
+## UI pass 2 fixes (2026-11-20)
+
+- **Escape on a popover** (Symbols, Shapes, Colour and size) closed the whole editor: `Pop`'s
+  window capture-phase listener now calls `stopPropagation()`, which also stops the editor's own
+  window (bubble) listener. Escape with nothing open still leaves the editor; with a selection it
+  clears it first.
+- **Escape while typing a text mark keeps the text** (it used to throw away what you'd typed),
+  like Enter and clicking away. Empty text is still dropped; undo covers mistakes.
+- **Phone tool row:** below `sm` the buttons are 36 px wide with a 2 px gap and the "Symbols" /
+  stamp name is hidden (the glyph stays), so all ten tools fit at 360 px. The row uses
+  `useEdgeFade` (from `components/library/ui.tsx`, which now also watches buttons being added —
+  the selection's A−/A+/colour/delete) to fade the edge that has more; the bar's fill and border
+  sit on a wrapper so the fade doesn't cut them.
+- ⋮ menu is 240 px wide ("Download with markings" was cut off). "White box behind text" is a pill
+  toggle ("White box", the explanation in its tooltip) instead of a bare checkbox.
+- Verified in headless Chromium with a throwaway account (deleted after): Escape on all three
+  popovers, Escape after typing, Escape with nothing selected, tool row at 1440, 390 and 360
+  (light/dark, with a mark selected). Not verified: a real touch screen.

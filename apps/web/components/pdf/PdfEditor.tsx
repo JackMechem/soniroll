@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useEdgeFade } from "@/components/library/ui";
 import PdfPageView, { type Tool, type ToolOptions } from "@/components/pdf/PdfPageView";
 import PdfPages from "@/components/pdf/PdfPages";
 import PdfPerform from "@/components/pdf/PdfPerform";
@@ -178,6 +179,8 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
 
   // ---- zoom and the page you're on
   const scrollRef = useRef<HTMLDivElement>(null);
+  // The tool row scrolls sideways on a narrow phone; its edges fade to show there's more.
+  const { attach: toolRowRef, style: toolRowFade } = useEdgeFade<HTMLDivElement>();
   const [areaWidth, setAreaWidth] = useState(0);
   useEffect(() => {
     const el = scrollRef.current;
@@ -293,8 +296,9 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
   const openMenu = (e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setMenu({
-      x: rect.right - 208,
+      x: rect.right - 240,
       y: rect.bottom + 4,
+      width: 240,
       items: [
         { label: "Download", icon: <DownloadIcon className="h-4 w-4" />, onSelect: () => void download(false) },
         ...(marked ? [{ label: "Download with markings", icon: <DownloadIcon className="h-4 w-4" />, onSelect: () => void download(true) }] : []),
@@ -342,7 +346,8 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
 
       {/* Tools */}
       {tools && (
-        <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-foreground/10 bg-surface px-2 py-1.5 [scrollbar-width:none] sm:justify-center">
+        <div className="shrink-0 border-b border-foreground/10 bg-surface">
+        <div ref={toolRowRef} style={toolRowFade} className="flex items-center gap-0.5 overflow-x-auto px-2 py-1.5 [scrollbar-width:none] sm:justify-center sm:gap-1">
           <ToolBtn label="Scroll (H)" icon={HandIcon} active={options.tool === "hand"} onClick={() => pickTool("hand")} />
           <ToolBtn label="Select and move (V)" icon={CursorIcon} active={options.tool === "select"} onClick={() => pickTool("select")} />
           <ToolBtn label="Pen (P)" icon={PencilIcon} active={options.tool === "pen"} onClick={() => pickTool("pen")} />
@@ -352,11 +357,11 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
           <Pop
             label="Music symbols and stamps"
             trigger={
-              <span className={`${toolCls(options.tool === "stamp")} w-auto gap-1 px-2.5`}>
+              <span className={`${toolCls(options.tool === "stamp")} w-auto gap-1 px-2 sm:w-auto sm:px-2.5`}>
                 <span className="text-xl leading-none" style={{ fontFamily: fontFamily("music") }}>
                   {""}
                 </span>
-                <span className="text-xs font-medium">{options.tool === "stamp" ? options.stamp.label : "Symbols"}</span>
+                <span className="hidden text-xs font-medium sm:inline">{options.tool === "stamp" ? options.stamp.label : "Symbols"}</span>
               </span>
             }
           >
@@ -437,11 +442,11 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
               </div>
             )}
           </Pop>
-          <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
+          <span className="mx-0.5 h-6 w-px shrink-0 bg-foreground/10 sm:mx-1" />
           <Pop
             label="Colour and size"
             trigger={
-              <span className={`${toolCls(false)} w-auto gap-1.5 px-2`}>
+              <span className={`${toolCls(false)} w-auto gap-1.5 px-2 sm:w-auto`}>
                 <span className="h-5 w-5 rounded-full ring-2 ring-foreground/15" style={{ background: options.tool === "highlight" ? options.highlight : options.ink }} />
                 <span className="hidden text-xs font-medium sm:inline">{WIDTHS.find((w) => w.width === options.inkWidth)?.label}</span>
               </span>
@@ -490,17 +495,22 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
                       </button>
                     ))}
                   </div>
-                  <label className="mt-2 flex items-center gap-2 text-xs">
-                    <input type="checkbox" checked={options.textBoxed} onChange={(e) => setOpt({ textBoxed: e.target.checked })} className="accent-[var(--accent)]" />
-                    White box behind text (covers what&apos;s under it)
-                  </label>
+                  <button
+                    type="button"
+                    aria-pressed={options.textBoxed}
+                    onClick={() => setOpt({ textBoxed: !options.textBoxed })}
+                    title="Puts a white box behind new text, covering what's under it"
+                    className={`mt-1 h-8 w-full rounded-md text-xs ${options.textBoxed ? "bg-accent/15 font-medium text-accent" : "bg-foreground/[0.04] hover:bg-surface-hover"}`}
+                  >
+                    White box
+                  </button>
                 </div>
               </div>
             )}
           </Pop>
           {selectedMark && (
             <>
-              <span className="mx-1 h-6 w-px shrink-0 bg-foreground/10" />
+              <span className="mx-0.5 h-6 w-px shrink-0 bg-foreground/10 sm:mx-1" />
               <button type="button" onClick={() => changeSelected((m) => (m.t === "text" ? { ...m, size: Math.max(8, m.size / 1.2) } : m.t === "ink" || m.t === "shape" ? { ...m, width: Math.max(0.5, m.width / 1.3) } : m))} className={`${toolCls(false)} text-sm font-semibold`} aria-label="Smaller" title="Smaller">
                 A−
               </button>
@@ -519,6 +529,7 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
               <ToolBtn label="Delete (Del)" icon={TrashIcon} onClick={removeSelected} danger />
             </>
           )}
+        </div>
         </div>
       )}
 
@@ -639,7 +650,7 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
 // ---------------------------------------------------------------- bits
 
 const toolCls = (active: boolean) =>
-  `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${active ? "bg-accent/15 text-accent" : "text-foreground/80 hover:bg-surface-hover"}`;
+  `flex h-10 w-9 shrink-0 items-center justify-center rounded-lg transition-colors sm:w-10 ${active ? "bg-accent/15 text-accent" : "text-foreground/80 hover:bg-surface-hover"}`;
 
 function ToolBtn({ label, icon: Icon, active = false, danger, onClick }: { label: string; icon: ComponentType<{ className?: string }>; active?: boolean; danger?: boolean; onClick: () => void }) {
   return (
@@ -687,7 +698,13 @@ function Pop({ label, trigger, children }: { label: string; trigger: ReactNode; 
     const onDown = (e: PointerEvent) => {
       if (!panel.current?.contains(e.target as Node) && !btn.current?.contains(e.target as Node)) setPos(null);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPos(null);
+    // Escape closes just this panel: stopping it here (capture, on window) keeps the editor's own
+    // Escape handler from closing the whole editor.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setPos(null);
+    };
     document.addEventListener("pointerdown", onDown, true);
     window.addEventListener("keydown", onKey, true);
     return () => {

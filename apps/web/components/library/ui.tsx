@@ -148,9 +148,16 @@ export function useEdgeFade<T extends HTMLElement>() {
     const observer = new ResizeObserver(update);
     observer.observe(el);
     for (const child of el.children) observer.observe(child);
+    // Buttons that come and go (a toolbar's extra tools) change what's off screen too.
+    const added = new MutationObserver(() => {
+      for (const child of el.children) observer.observe(child);
+      update();
+    });
+    added.observe(el, { childList: true });
     el.addEventListener("scroll", update, { passive: true });
     return () => {
       observer.disconnect();
+      added.disconnect();
       el.removeEventListener("scroll", update);
     };
   }, [el]);
