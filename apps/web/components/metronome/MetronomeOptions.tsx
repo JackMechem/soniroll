@@ -229,8 +229,8 @@ export function SubdivisionPicker({ value, onChange, showTitle = true }: { value
               title={s.label}
               aria-label={s.label}
               onClick={() => onChange(s.value)}
-              className={`flex h-[4.25rem] flex-col items-center justify-center gap-1 rounded-md border transition-colors ${
-                on ? "border-accent bg-accent/10 text-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
+              className={`flex h-[4.25rem] flex-col items-center justify-center gap-1 rounded-md transition-colors ${
+                on ? "bg-accent/10 text-foreground ring-2 ring-inset ring-accent" : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
               }`}
             >
               <span className="flex h-7 items-end">
@@ -328,8 +328,8 @@ export function ClickSoundCards({
               onChange(c.id);
               previewSound(c.id, volume);
             }}
-            className={`flex h-11 items-center gap-2.5 rounded-md border px-3 text-left text-sm font-medium transition-colors ${
-              on ? "border-accent bg-accent/10" : "border-foreground/15 bg-background hover:bg-surface-hover"
+            className={`flex h-11 items-center gap-2.5 rounded-md px-3 text-left text-sm font-medium transition-colors ${
+              on ? "bg-accent/10 ring-2 ring-inset ring-accent" : "bg-foreground/[0.05] hover:bg-surface-hover"
             }`}
           >
             <svg viewBox="0 0 16 16" className={`h-4 w-4 shrink-0 ${on ? "text-accent" : "text-muted"}`} fill="currentColor" aria-hidden>

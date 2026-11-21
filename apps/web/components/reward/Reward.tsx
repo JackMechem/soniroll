@@ -130,10 +130,11 @@ export function RewardCard({
         onPick();
         reward?.tried(id, e.currentTarget);
       }}
-      className={`relative flex flex-col items-center justify-center gap-1 rounded-md border transition-colors ${
-        on ? "text-foreground" : "border-foreground/15 bg-background text-foreground hover:bg-surface-hover"
+      // A fill like the rest of the site's choices; the picked one tinted and ringed in the colour.
+      className={`relative flex flex-col items-center justify-center gap-1 rounded-md transition-colors ${
+        on ? "text-foreground" : "bg-foreground/[0.05] text-foreground hover:bg-surface-hover"
       } ${className}`}
-      style={on ? { borderColor: color, background: `color-mix(in srgb, ${color} 12%, var(--background))` } : undefined}
+      style={on ? { boxShadow: `inset 0 0 0 2px ${color}`, background: `color-mix(in srgb, ${color} 12%, var(--background))` } : undefined}
     >
       {on && <span key={id} className="reward-glow pointer-events-none absolute inset-0 rounded-md" style={{ "--reward": color } as React.CSSProperties} />}
       <span key={on ? "on" : "off"} className={`flex flex-col items-center gap-1 ${on ? "reward-pop" : ""}`}>
