@@ -133,8 +133,8 @@ function CommunityScreen() {
             </>
           ) : (
             <>
-              {/* Counts, once they've all arrived and one isn't zero (no "–" next to a "0"). */}
-              {likedIds && following && mine && likedIds.length + following.length + mine.length > 0 ? (
+              {/* Counts, once they've all arrived — always, so a new account can find Following. */}
+              {likedIds && following && mine ? (
                 <View className="flex-row flex-wrap gap-2">
                   <CountLink Icon={HeartIcon} count={likedIds.length} label="Liked" onPress={() => router.push('/liked-posts')} />
                   <CountLink Icon={FollowersIcon} count={following.length} label="Following" onPress={() => router.push('/community/following')} />

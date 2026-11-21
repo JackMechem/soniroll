@@ -106,7 +106,7 @@ function RootNavigator() {
         {/* Titles up front, so the header is right the instant a screen is pushed — each screen
             mounts its real content a frame later (see `components/ScreenLoader.tsx`), and its own
             <Stack.Screen options> only apply once it mounts. Dynamic titles ('') fill in then. */}
-        <Stack.Screen name="liked-posts" options={{ title: 'Liked Posts' }} />
+        <Stack.Screen name="liked-posts" options={{ title: 'Liked posts' }} />
         <Stack.Screen name="post/[id]" options={{ title: 'Post' }} />
         <Stack.Screen name="u/[username]" options={{ title: 'Profile' }} />
         <Stack.Screen name="tool/chord-charts" options={{ title: 'Chord Charts' }} />

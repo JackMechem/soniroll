@@ -2,8 +2,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
 import { api } from '@jam-practice/convex/_generated/api';
 import { useQuery } from 'convex/react';
+import Constants from 'expo-constants';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useState, type ComponentType, type ReactNode } from 'react';
+import { openBrowserAsync } from 'expo-web-browser';
+import { useState, type ComponentProps, type ComponentType, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,6 +15,8 @@ import {
   AccountEditIcon,
   ChevronRightIcon,
   DangerIcon,
+  FollowersIcon,
+  HeartIcon,
   LockIcon,
   LogoutIcon,
   PostIcon,
@@ -30,16 +34,13 @@ import { TextInput } from '@/components/ThemedTextInput';
  * `apps/web/components/AccountPage.tsx` (signed in) — same backend throughout, same
  * `@convex-dev/auth` password+email-verification state machine for both signing up and the
  * account-management flows. Signed out: the form (with "Forgot password?"), then Theme under a
- * "Settings" label. Signed in: who you are, a grouped list (your profile and posts; Settings:
- * Theme, Security), Sign out, and Delete account on its own at the bottom.
+ * "Settings" label. Signed in: who you are, a grouped list (your profile, posts, Following and Liked
+ * posts; Settings: Theme, Security), Sign out, and Delete account on its own at the bottom. Both
+ * end with About: the app's version and the website's What's new, Help, feedback and legal pages
+ * (opened in the in-app browser; Credits names the bundled samples' licences).
  *
- * **Deliberately not ported, both real, documented gaps, not forgotten corners**: web's own
- * "Following" tab (`FollowLists`) — there's no way to follow anyone yet without a Community
- * search/public-profile-viewing screen, neither of which exist on mobile yet, so an empty
- * Following list here would have nothing real to show; and Google sign-in connect/disconnect in
- * Security — Google itself isn't wired up on mobile at all yet (needs an in-app-browser +
- * deep-link redirect handshake, a separate, unstarted task), so there's nothing for those buttons
- * to actually do.
+ * Not ported: Google sign-in (connect/disconnect in Security too) — it needs an in-app-browser +
+ * deep-link redirect handshake that isn't built yet.
  */
 function ProfileScreen() {
   const { colors } = useAppTheme();
@@ -63,15 +64,62 @@ function ProfileScreen() {
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" onScroll={onScroll} scrollEventThrottle={16}>
             <AuthForm initialFlow={flow === 'signUp' ? 'signUp' : 'signIn'} />
-            <View className="mt-8 px-6">
-              <GroupLabel>Settings</GroupLabel>
-              <View className="overflow-hidden rounded-xl" style={{ backgroundColor: colors.surface }}>
-                <ListRow row={{ href: '/theme', label: 'Theme', Icon: ThemeIcon }} onPress={() => router.push('/theme')} />
+            <View className="mt-8 gap-[18px] px-6">
+              <View>
+                <GroupLabel>Settings</GroupLabel>
+                <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
+                  <ListRow row={{ href: '/theme', label: 'Theme', Icon: ThemeIcon }} onPress={() => router.push('/theme')} />
+                </View>
               </View>
+              <AboutGroup />
             </View>
           </ScrollView>
         )}
       </SafeAreaView>
+    </View>
+  );
+}
+
+function mci(name: ComponentProps<typeof MaterialCommunityIcons>['name']) {
+  return function Icon({ color, size = 18 }: IconProps) {
+    return <MaterialCommunityIcons name={name} size={size} color={color} />;
+  };
+}
+
+const SITE = 'https://www.soniroll.com';
+const ABOUT_ROWS: { path: string; label: string; Icon: ComponentType<IconProps> }[] = [
+  { path: '/changelog', label: "What's new", Icon: mci('star-four-points-outline') },
+  { path: '/help', label: 'Help', Icon: mci('help-circle-outline') },
+  { path: '/feedback', label: 'Send feedback', Icon: mci('message-text-outline') },
+  { path: '/privacy', label: 'Privacy', Icon: mci('shield-lock-outline') },
+  { path: '/terms', label: 'Terms', Icon: mci('file-document-outline') },
+  { path: '/credits', label: 'Credits', Icon: mci('creative-commons') },
+];
+
+/** About: the website's pages for news, help, feedback and the legal bits (Credits is where the
+    bundled sounds' licences are named), in the in-app browser, and this app's version. */
+function AboutGroup() {
+  const { colors } = useAppTheme();
+  const version = Constants.expoConfig?.version;
+  return (
+    <View>
+      <GroupLabel>About</GroupLabel>
+      <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
+        {ABOUT_ROWS.map((row, i) => (
+          <ListRow
+            key={row.path}
+            row={{ href: '/profile', label: row.label, Icon: row.Icon }}
+            divider={i < ABOUT_ROWS.length - 1}
+            external
+            onPress={() => void openBrowserAsync(SITE + row.path).catch(() => {})}
+          />
+        ))}
+      </View>
+      {version ? (
+        <Text className="font-ui mt-2 px-1 text-xs" style={{ color: colors.muted }}>
+          soniroll app, version {version} (beta)
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -113,6 +161,8 @@ function SignedIn({ onScroll }: { onScroll: ReturnType<typeof useScrolled>['onSc
       rows: [
         { href: '/account/public-profile', label: 'Public profile', Icon: AccountEditIcon, value: profile?.isPublic ? 'Public' : 'Private' },
         { href: '/account/posts', label: 'My posts', Icon: PostIcon, value: posts ? String(posts.length) : undefined },
+        { href: '/community/following', label: 'Following', Icon: FollowersIcon },
+        { href: '/liked-posts', label: 'Liked posts', Icon: HeartIcon },
       ],
     },
     {
@@ -161,6 +211,8 @@ function SignedIn({ onScroll }: { onScroll: ReturnType<typeof useScrolled>['onSc
         <ListRow row={{ href: '/profile', label: 'Sign out', Icon: LogoutIcon }} chevron={false} onPress={() => setConfirmSignOut(true)} />
       </View>
 
+      <AboutGroup />
+
       {/* On its own at the bottom, well away from Sign out. */}
       <View className="mt-10 overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
         <ListRow
@@ -188,11 +240,14 @@ function ListRow({
   row,
   divider,
   chevron = true,
+  external,
   onPress,
 }: {
   row: RowSpec;
   divider?: boolean;
   chevron?: boolean;
+  /** Opens a web page: an "open outside" mark instead of the chevron. */
+  external?: boolean;
   onPress: () => void;
 }) {
   const { colors } = useAppTheme();
@@ -213,7 +268,11 @@ function ListRow({
           {row.value}
         </Text>
       ) : null}
-      {chevron ? <ChevronRightIcon color={colors.muted} size={20} /> : null}
+      {external ? (
+        <MaterialCommunityIcons name="open-in-new" size={18} color={colors.muted} />
+      ) : chevron ? (
+        <ChevronRightIcon color={colors.muted} size={20} />
+      ) : null}
     </Pressable>
   );
 }
@@ -480,13 +539,32 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
         </Pressable>
       </View>
 
+      {flow === 'signUp' ? (
+        <Text className="font-ui -mt-2 mb-4 text-xs" style={{ color: colors.muted }}>
+          At least 8 characters.
+        </Text>
+      ) : null}
+
       {errorLine}
 
       <Button label={submitting ? (flow === 'signUp' ? 'Creating your account…' : 'Signing in…') : flow === 'signUp' ? 'Create an account' : 'Sign in'} onPress={() => void onSubmitCredentials()} />
 
+      {flow === 'signUp' ? (
+        <Text className="font-ui mt-4 text-center text-xs leading-5" style={{ color: colors.muted }}>
+          By creating an account, you agree to soniroll&apos;s{' '}
+          <Text accessibilityRole="link" className="font-ui-semibold font-semibold" style={{ color: colors.accent }} onPress={() => void openBrowserAsync(`${SITE}/terms`).catch(() => {})}>
+            Terms
+          </Text>{' '}
+          and{' '}
+          <Text accessibilityRole="link" className="font-ui-semibold font-semibold" style={{ color: colors.accent }} onPress={() => void openBrowserAsync(`${SITE}/privacy`).catch(() => {})}>
+            Privacy policy
+          </Text>
+          .
+        </Text>
+      ) : null}
+
       <Text className="font-ui mt-6 text-center text-xs leading-5" style={{ color: colors.muted }}>
-        Signing in with Google isn&apos;t available in the app yet — use email and password, or
-        sign in on the web.
+        Google sign-in: use the website for now.
       </Text>
     </View>
   );

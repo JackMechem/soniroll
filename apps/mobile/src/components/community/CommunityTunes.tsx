@@ -4,7 +4,7 @@ import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View, Share } from 'react-native';
 
-import { formatMinutesShort } from '@jam-practice/core/practiceLog';
+import { formatMinutesShort, type ProgressCard } from '@jam-practice/core/practiceLog';
 
 import { CalendarCheckIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -61,6 +61,19 @@ function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
+/** A milestone's headline numbers in words ("1.4 h · 3 days · 3-day streak"; a day report: "45m
+    practiced"), from the progress card it carries. */
+function milestoneSummary(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const card = payload as Partial<ProgressCard>;
+  if (card.kind === 'day' && card.report) return `${formatMinutesShort(card.report.minutes)} practiced`;
+  const parts: string[] = [];
+  if (typeof card.rangeHours === 'number') parts.push(`${Math.round(card.rangeHours * 10) / 10} h`);
+  if (typeof card.rangeDays === 'number') parts.push(plural(card.rangeDays, 'day'));
+  if (card.streak) parts.push(`${card.streak}-day streak`);
+  return parts.length ? parts.join(' · ') : null;
+}
+
 /**
  * One post in a list (Community's feed and search, My posts, Liked posts, a profile's posts) — a
  * card: author and how long ago on top; a "Setlist" tag for setlist posts; the title, description
@@ -93,7 +106,7 @@ export function PostListItem({
   const footer = routineTasks
     ? `${plural(routineTasks.length, 'task')} · ${formatMinutesShort(routineTasks.reduce((a, t) => a + (t.minutes ?? 0), 0))}`
     : isMilestone
-      ? null
+      ? milestoneSummary(post.payload)
       : [plural(post.tuneCount, 'tune'), post.chartCount > 0 ? plural(post.chartCount, 'chart') : null].filter(Boolean).join(' · ');
 
   async function handleShare() {

@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { BookIcon, CheckIcon, LinkIcon, PlusIcon } from '@/components/icons';
 import { LinkedChartModal } from '@/components/LinkedChartModal';
+import { prettyKeyName } from '@/lib/keyNames';
 import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -29,8 +30,10 @@ export function toOwnTune(source: PublicTune): Tune {
  * signed-in viewer looking at someone *else's* profile) shows per-row "Add"/"Learn" actions, each
  * copying that row into one of the viewer's own lists, disabled once a tune with the same name is
  * already there (matched the same name-insensitive way the jazz-standards picker already checks).
+ * `card`: the list sits on the page (a post), so it's one filled card with rows divided by hairlines
+ * rather than separate boxes for a section card's inside.
  */
-export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd: boolean }) {
+export function PublicTuneList({ tunes, canAdd, card }: { tunes: PublicTune[]; canAdd: boolean; card?: boolean }) {
   const { colors } = useAppTheme();
   const [myTunes, setMyTunes] = useSyncedTunes();
   const [tunesToLearn, setTunesToLearn] = useTunesToLearn();
@@ -40,13 +43,17 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
   const haveAsLearn = useMemo(() => new Set(tunesToLearn.map((t) => nameId(t.name))), [tunesToLearn]);
 
   return (
-    <View className="gap-2">
+    <View className={card ? 'overflow-hidden rounded-xl' : 'gap-2'} style={card ? { backgroundColor: colors.surface } : undefined}>
       <LinkedChartModal chart={viewingChart} onClose={() => setViewingChart(null)} />
-      {tunes.map((tune) => {
+      {tunes.map((tune, i) => {
         const inMyTunes = haveAsTune.has(nameId(tune.name));
         const inTunesToLearn = haveAsLearn.has(nameId(tune.name));
         return (
-          <View key={tune.id} className="gap-2.5 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
+          <View
+            key={tune.id}
+            className={card ? 'gap-2.5 px-4 py-3' : 'gap-2.5 rounded-xl p-3'}
+            style={card ? (i ? { borderTopWidth: 1, borderTopColor: colors.background } : undefined) : { backgroundColor: colors.background }}
+          >
             <View className="flex-row items-start justify-between gap-2">
               <View className="min-w-0 flex-1">
                 <Text numberOfLines={1} className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
@@ -93,7 +100,7 @@ export function PublicTuneList({ tunes, canAdd }: { tunes: PublicTune[]; canAdd:
                   <Chip key={t.id} enabled={t.enabled} label={`${t.value} BPM`} />
                 ))}
                 {tune.keys.map((k) => (
-                  <Chip key={k.id} enabled={k.enabled} label={k.value} />
+                  <Chip key={k.id} enabled={k.enabled} label={prettyKeyName(k.value)} />
                 ))}
               </View>
             )}
