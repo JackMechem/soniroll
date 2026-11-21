@@ -381,8 +381,8 @@ function MeCard({
   column?: boolean;
 }) {
   const stats: [number, string, string][] = [
-    [counts.posts, "Posts", "/community/posts"],
-    [counts.followers, "Followers", "/community/following"],
+    [counts.posts, counts.posts === 1 ? "Post" : "Posts", "/community/posts"],
+    [counts.followers, counts.followers === 1 ? "Follower" : "Followers", "/community/following"],
     [counts.following, "Following", "/community/following"],
     [counts.liked, "Liked", "/community/liked"],
   ];

@@ -118,6 +118,7 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title — e.g. Friday gig setlist"
+              aria-label="Title"
               autoFocus={!setlistId}
               className="h-10 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
@@ -125,12 +126,17 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description (optional)"
+              aria-label="Description (optional)"
               rows={3}
               className="resize-y rounded-md bg-foreground/[0.05] px-3 py-2 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
             />
             <div className="rounded-lg bg-surface px-4 py-2">
-              <SwitchRow label="Unlisted" checked={unlisted} onChange={setUnlisted} />
-              <p className="pb-1 text-xs text-muted">Won&apos;t show up in Community&apos;s feed or search, or on your public profile — only people with the link can see it.</p>
+              <SwitchRow
+                label="Unlisted"
+                checked={unlisted}
+                onChange={setUnlisted}
+                hint="Won't show up in Community's feed or search, or on your public profile — only people with the link can see it."
+              />
             </div>
           </div>
 

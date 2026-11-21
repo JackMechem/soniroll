@@ -78,3 +78,14 @@ ways, the minimum, double-click reset, the saved width.
 default look (`accent-[var(--accent)]`): the goal window, Bass Genius's Mix levels and drum
 settings, and the Drum Generator's faders. Fixed.
 
+
+## 2026-11-20 — UI pass 4 fixes (web)
+
+- "1 follower", "1 post" (profile stats in `PublicProfilePage.tsx`, Community's own-profile card).
+- **Following** (`FollowButton.tsx`) is a filled secondary button with a check (`aria-pressed`,
+  "Unfollow" tooltip); before, it looked like plain text.
+- Follow lists (`FollowLists.tsx`: `/community/following`, Account → Following) show "@name".
+- New post: Unlisted's description is behind the switch's hint (`SwitchRow` `hint`), and Title and
+  Description have `aria-label`s (they only had placeholders).
+Checked signed in with throwaway accounts (deleted): a profile at 1 follower and the Following
+state, 1440 and 390 dark.

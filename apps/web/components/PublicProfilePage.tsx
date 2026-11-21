@@ -103,9 +103,9 @@ export default function PublicProfilePage({ username }: { username: string }) {
   ];
   const current: ProfileTab = tab ?? (viewer && (posts?.length ?? 0) > 0 ? "posts" : profile.tunes.length ? "tunes" : "posts");
   const stats: [string, number | undefined][] = [
-    ["followers", followers?.length],
+    [followers?.length === 1 ? "follower" : "followers", followers?.length],
     ["following", following?.length],
-    ["posts", viewer ? posts?.length : undefined],
+    [posts?.length === 1 ? "post" : "posts", viewer ? posts?.length : undefined],
   ];
 
   async function share() {
