@@ -219,7 +219,7 @@ function PostScreenContent() {
 
       <ConfirmDialog
         visible={confirmDelete}
-        title={`Delete "${post.title}"?`}
+        title={`Delete “${post.title}”?`}
         message="This removes it from Community for everyone. It doesn't touch anyone who already added it."
         confirmLabel="Delete"
         onConfirm={() => void handleDelete()}

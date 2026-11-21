@@ -126,7 +126,7 @@ function NoteView({ lessonId, note, teacher }: { lessonId: string; note: Note; t
       </LessonsScroll>
       <ConfirmDialog
         visible={confirmDelete}
-        title={`Delete "${note.title || 'Untitled'}"?`}
+        title={`Delete “${note.title || 'Untitled'}”?`}
         message="Your student won't see it anymore. This can't be undone."
         confirmLabel="Delete"
         onConfirm={() => {

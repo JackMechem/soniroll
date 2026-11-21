@@ -419,7 +419,7 @@ function NoteList({ notes }: { notes: NoteMeta[] }) {
       />
       <ConfirmDialog
         visible={!!deleting}
-        title={`Delete "${deleting?.title ?? ''}"?`}
+        title={`Delete “${deleting?.title ?? ''}”?`}
         message="The note goes for good. Links to it in other notes stay, and make a new note if you open them."
         confirmLabel="Delete"
         onConfirm={() => {

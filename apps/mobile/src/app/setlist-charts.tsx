@@ -47,7 +47,7 @@ function SetlistChartsScreen() {
   if (mine) {
     if (ready && tunesReady) {
       const setlist = setlists.find((s) => s.id === mine);
-      const all = [...lists.tunes.tunes, ...lists.learn.tunes];
+      const all = [...lists.tunes.tunes, ...lists.learn.tunes, ...lists.library.tunes];
       title = setlist?.name ?? 'Setlist';
       pages = (setlist?.tuneIds ?? [])
         .map((id) => all.find((t) => t.id === id))
@@ -57,6 +57,7 @@ function SetlistChartsScreen() {
           return {
             key: t.id,
             name: t.name,
+            tuneId: t.id,
             chartId: t.chordChartId ?? null,
             toKey: o?.key ?? null,
             tempo: o?.tempo ?? t.tempos.find((x) => x.enabled)?.value ?? null,
@@ -85,7 +86,7 @@ function SetlistChartsScreen() {
           title,
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
-              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.accent }}>
+              <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.foreground }}>
                 {current?.name ?? title}
               </Text>
               <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>

@@ -217,7 +217,7 @@ function Lesson() {
       ) : null}
       <ConfirmDialog
         visible={confirm?.kind === 'lesson'}
-        title={`Delete "${s?.title ?? ''}"?`}
+        title={`Delete “${s?.title ?? ''}”?`}
         message={`Its notes, assignments (and what ${data.studentName} handed in), files and charts are deleted too.${s?.booked && !s.cancelled ? " The booked time stays booked — cancel it from the Booking card if it's off." : ''}`}
         confirmLabel="Delete"
         onConfirm={() => {

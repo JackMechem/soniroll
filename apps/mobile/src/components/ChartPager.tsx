@@ -1,5 +1,6 @@
 import { formatComposer, transposeSong, type IRealSong } from '@jam-practice/core/iRealPro';
 import { semitonesTo } from '@jam-practice/core/setlistKeys';
+import { useRouter } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { FlatList, ScrollView, Text, View, useWindowDimensions, type ViewToken } from 'react-native';
 
@@ -7,7 +8,8 @@ import ChordChartView from '@/components/ChordChartView';
 import { ChordChartIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { Button } from '@/components/ui';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** One page: a tune, with either its chart's library id (your own charts, loaded on demand) or the
     chart itself (someone else's setlist), or neither. */
@@ -20,6 +22,8 @@ export type ChartPage = {
   toKey?: string | null;
   /** The tempo to show with it. */
   tempo?: number | null;
+  /** Your own tune's id: a page without a chart then offers to open the tune (to link or write one). */
+  tuneId?: string;
 };
 
 /**
@@ -77,7 +81,7 @@ export function ChartPager({ pages, initialIndex = 0, onIndexChange }: { pages: 
           {pages.map((p, i) => (
             <View
               key={p.key}
-              style={{ width: i === index ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: i === index ? colors.accent : colors['surface-hover'] }}
+              style={{ width: i === index ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: i === index ? colors.accent : withAlpha(colors.muted, 0.4) }}
             />
           ))}
         </View>
@@ -88,11 +92,11 @@ export function ChartPager({ pages, initialIndex = 0, onIndexChange }: { pages: 
 
 const Page = memo(function Page({ page }: { page: ChartPage }) {
   if (page.song) return <ChartBody song={page.song} toKey={page.toKey} tempo={page.tempo} />;
-  if (page.chartId) return <LibraryChart name={page.name} chartId={page.chartId} toKey={page.toKey} tempo={page.tempo} />;
-  return <NoChart name={page.name} />;
+  if (page.chartId) return <LibraryChart name={page.name} chartId={page.chartId} toKey={page.toKey} tempo={page.tempo} tuneId={page.tuneId} />;
+  return <NoChart name={page.name} tuneId={page.tuneId} />;
 });
 
-function LibraryChart({ name, chartId, toKey, tempo }: { name: string; chartId: string; toKey?: string | null; tempo?: number | null }) {
+function LibraryChart({ name, chartId, toKey, tempo, tuneId }: { name: string; chartId: string; toKey?: string | null; tempo?: number | null; tuneId?: string }) {
   const { selectedSong, selectedSongLoading } = useChordChartsLibrary(chartId);
   if (selectedSong) return <ChartBody song={selectedSong} toKey={toKey} tempo={tempo} />;
   if (selectedSongLoading) {
@@ -102,11 +106,12 @@ function LibraryChart({ name, chartId, toKey, tempo }: { name: string; chartId: 
       </View>
     );
   }
-  return <NoChart name={name} missing />;
+  return <NoChart name={name} missing tuneId={tuneId} />;
 }
 
-function NoChart({ name, missing }: { name: string; missing?: boolean }) {
+function NoChart({ name, missing, tuneId }: { name: string; missing?: boolean; tuneId?: string }) {
   const { colors } = useAppTheme();
+  const router = useRouter();
   return (
     <View className="flex-1 items-center justify-center gap-3 px-10">
       <ChordChartIcon color={colors.muted} size={32} />
@@ -116,6 +121,7 @@ function NoChart({ name, missing }: { name: string; missing?: boolean }) {
       <Text className="font-ui text-center text-sm" style={{ color: colors.muted }}>
         {missing ? "Couldn't find this tune's chart." : 'No chord chart for this tune.'}
       </Text>
+      {tuneId ? <Button label="Open the tune" onPress={() => router.push({ pathname: '/library/tune', params: { id: tuneId } })} /> : null}
     </View>
   );
 }

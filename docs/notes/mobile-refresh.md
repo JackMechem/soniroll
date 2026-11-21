@@ -426,3 +426,84 @@ help, Slow Downer's volume sheet, Library empty states, and add tune → tune pa
 test tune was deleted; the theme was put back to "Same as my phone"). Not checked: the setlist tune sheet
 and a chart's ⋮ menu on `BottomSheet`, the Lessons settings switch, Home across a
 real midnight, iOS, a release build or a real phone.
+
+### UI pass 2 fixes: the Library catches up with the website (2026-11-20)
+
+A reviewer graded the phone's Library, files and chart reading 6/10; the main finding was that the
+phone's tune model had fallen behind the website's (`docs/notes/library-two-tabs.md`). Fixed:
+
+- **Three tune lists.** `lib/useTuneList.ts` now re-exports `TuneListId` / `TUNE_LIST_IDS` /
+  `TUNE_LIST_LABEL` from `@jam-practice/core/tuneLibrary` and adds the Library list
+  (`useLibraryTunes` in `useSyncedTunes.ts`, key `jam-practice-library-tunes`). Signed in, its
+  `ready` waits for the account's copy (`waitForAccount`), since the phone has usually never cached
+  it. Helpers: `findTune`, `allTunes`, `moveTune`, `chartsOnlyOn`, `useForgetChart`,
+  `useChartLinker`. Library tunes show on the Tunes tab (a third section, only when there are
+  some), its See all, search, Home search, setlist Add tunes / reader, "Link to a tune" /
+  "Attach to a tune", Community's new post. The tune ⋮ moves a tune to either other list.
+- **Every chart belongs to a tune**, as on the website. The tune ⋮ (`useTuneMenu`) has Open / Edit
+  chord chart, Make this the main chart, Link another chart, Write another chart and **Delete this
+  chart** (deleted for good unless another tune has it); "Unlink" and "Change linked chart" are
+  gone. Deleting a tune deletes its charts no other tune has, and the confirm says so
+  (`useTuneDeletes`, also used by the edit page). A chart deleted from its own ⋮ is taken off its
+  tunes. The edit page no longer unlinks or creates charts (it can still link one).
+- **New charts are linked.** "Create one" / "Write another chart" pass `tune=<list>:<id>`, the
+  tune's key and time signature through `chord-charts-new` to the editor, which adds the saved chart
+  to that tune (`addChartsToTune`) and goes back to it. A chart made anywhere else (Charts tab,
+  import, a lesson's "Save to my charts") goes through `useChartLinker` (`linkChartsToTunes`: the
+  tune with its name, else a new Library tune; imports are tagged with the playlist's name). The
+  linker reads the three lists at call time (`hook.read()`) and does nothing until all three are
+  the account's own copy — the phone's synced lists take the server's value only once per session,
+  so a write built from a stale phone copy would overwrite the account's.
+- **No automatic linking pass on the phone** (the website's `useAutoLinkCharts`): for the reason
+  just above, a phone left open while the website imports charts would see them as orphans and make
+  duplicate Library tunes. Older orphan charts still get linked the next time the website's Library
+  opens. That's also why the **Charts tab stays**: it's still the only place for chart playlists and
+  import, and the one way to reach a chart that isn't on a tune yet. Its "Playlists · 0" heading
+  over an "All charts" row is gone when there are no playlists.
+- **Tune page:** a "Chart 1 of 2" picker when a tune has several charts (main first; charts deleted
+  since are left out), the ⋮ acting on the chart shown; a **Files** card (uploads with this tune,
+  opened in the viewer, ⋮ menu, "Add a file" uploads onto the tune — `components/library/TuneFiles.tsx`);
+  ♭/♯ in the key tiles from PetalumaScript (Geist has none); keys shown as "Cm", not "C-".
+- **Recordings tab folded into Files:** four tabs (Tunes · Setlists · Charts · Files). `/recordings`
+  redirects to `/files?filter=source:recording`; Files reads `?filter=`, keeps that filter in its
+  menu even at 0, and says "No recordings yet" with Record. The Recorder's "All takes" opens it. The
+  tab labels reserve their bold width, so switching no longer nudges the row.
+- **Rows:** tune rows are a grouped card (the setlist page's look), with a chart count when there
+  are several and up to two tags. Recent / A–Z on the Tunes tab and See all (`tuneOrder.ts`,
+  remembered on the phone). A file's tune is on its own line in Files.
+- **Status bars:** `components/FullScreenModal.tsx` — a Modal is its own window on Android, so the
+  root `<StatusBar>` never reached it and the clock was white on light themes. It sets the bar style
+  inside the modal and again `onShow` (RN 0.86's StatusBar module applies styles to modal windows
+  too). Used by the standards picker, tune / chart pickers, Link / Attach to a tune, recording
+  picker, file viewer, linked chart, rhythm patterns and score dialog.
+- **Charts:** the time signature was pushed back over the opening barline (the chords' row was 100%
+  wide beside it); the chords now take the remaining width, as in the builder. Chords with ♭ or °
+  sat higher than their neighbours (Petaluma's glyphs have tall metrics): fixed line heights on the
+  root and quality. The transpose menu offers the chart's quality ("D♭m" for a minor chart), with
+  ♭/♯. The chart ⋮ sheet never shows an empty subtitle line.
+- **Smaller:** foreground titles and round ⋮ / trash buttons on the chart view, setlist, setlist
+  reader, tune notes and recording page (`IconButton` takes a `color`); Files → "Attach to a tune"
+  is titled that, and says "Attached … to Autumn Leaves." afterwards; **Open in Slow Downer** for
+  audio and video files (copies the file into the Slow Downer's own list, `saveLocalFile`, and opens
+  `/tool/slow-downer?open=<id>`); recording names use 12-hour time ("Nov 21, 12:38 AM") and detail
+  lines are "0:24 · Nov 21"; curly quotes in delete dialogs; the setlist reader's dots are visible
+  and a page without a chart has "Open the tune".
+- **Bug found on the way:** the Slow Downer couldn't open any file shorter than a few seconds —
+  building the waveform copied past the end of the audio (`copyFromChannel` with a full window at
+  the end; react-native-audio-api reads the whole underlying array even for a `subarray`). Fixed
+  with a right-sized array for the last window.
+- Skipped: naming iReal Pro in the Charts empty state is fine (only the Syncopation source and the
+  sticking book are never named).
+
+Checked: `tsc` and `eslint` in apps/mobile (packages/core unchanged). On the emulator (debug build,
+signed in as the throwaway `mobile-audit@soniroll.test`, data seeded with
+`npx convex run --identity '{"subject":"<userId>|x"}' …`): Tunes tab with all three lists, tags
+and chart counts; a Library tune with two charts (picker, menu, Write another chart → saved and
+linked as chart 3, Delete this chart → gone from the tune and the account); Autumn Leaves → Create
+one (key Gm filled in) → saved and shown on the tune; moving a tune to Tunes I Know; a chart made
+from the Charts tab became a new Library tune; Add a file on a tune; Files: attach to a Library
+tune with the notice, the tune line, Open in Slow Downer (waveform loads); old Recordings link →
+Files on Recordings; the transpose menu; status bars in pickers, light and dark. All test data
+removed afterwards (charts, files, lists, the files pushed to the emulator). **Not checked:** the
+setlist reader's dots and "Open the tune" button, import of a real chart link, signed out, a
+Recorder take's new name, audio by ear, a release build, a real phone.

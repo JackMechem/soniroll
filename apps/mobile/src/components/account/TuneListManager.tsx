@@ -227,7 +227,7 @@ export function TuneListManager({
 
       <ConfirmDialog
         visible={deleting !== null}
-        title={`Delete "${deleting?.name ?? ''}"?`}
+        title={`Delete “${deleting?.name ?? ''}”?`}
         message="This tune will be removed from this list. This can't be undone."
         confirmLabel="Delete"
         onConfirm={confirmDelete}

@@ -154,7 +154,7 @@ function ScoreList({ onOpen }: { onOpen: (id: string) => void }) {
       />
       <ConfirmDialog
         visible={!!deleting}
-        title={`Delete "${deleting?.title ?? ''}"?`}
+        title={`Delete “${deleting?.title ?? ''}”?`}
         message="The score goes for good, and notes that show it will say it's gone."
         confirmLabel="Delete"
         onConfirm={() => {

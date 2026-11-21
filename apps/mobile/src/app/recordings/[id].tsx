@@ -9,8 +9,9 @@ import { ChevronRightIcon, LinkIcon, TrashIcon, UnlinkIcon } from '@/components/
 import { PlayButton, SeekBar, TuneSelectModal, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { deleteOnDevice, useDeviceUrl } from '@/lib/deviceFiles';
-import { formatDuration, formatRecordedAt, recordingsApi } from '@/lib/recordings';
+import { formatDuration, formatRecordedDay, recordingsApi } from '@/lib/recordings';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { IconButton } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { TextInput } from '@/components/ThemedTextInput';
@@ -111,9 +112,7 @@ function RecordingScreen() {
                 </Text>
               </Pressable>
             ) : (
-              <Pressable onPress={() => setConfirmDelete(true)} accessibilityLabel="Delete recording" className="h-10 w-10 items-center justify-center">
-                <TrashIcon color={colors.danger} size={22} />
-              </Pressable>
+              <IconButton Icon={TrashIcon} color={colors.danger} label="Delete recording" onPress={() => setConfirmDelete(true)} />
             ),
         }}
       />
@@ -123,7 +122,7 @@ function RecordingScreen() {
             <PlayButton playing={active && player.playing} onPress={() => player.toggle(rec._id, rec.url)} size={52} />
             <View className="flex-1">
               <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-                {formatRecordedAt(rec.createdAt)} · {formatDuration(rec.durationSec)}
+                {formatDuration(rec.durationSec)} · {formatRecordedDay(rec.createdAt)}
               </Text>
               {!rec.url && rec.device ? (
                 <Text className="font-ui text-xs" style={{ color: colors.muted }}>

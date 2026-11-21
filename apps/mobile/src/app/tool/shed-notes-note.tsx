@@ -348,7 +348,7 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
       <FolderPickSheet visible={moving} title="Move to folder" current={note.folder} onClose={() => setMoving(false)} onPick={(folder) => void moveMut({ id: note.id as Id<'shedNotes'>, folder }).catch(fail)} />
       <ConfirmDialog
         visible={deleting}
-        title={`Delete "${note.title}"?`}
+        title={`Delete “${note.title}”?`}
         message="The note goes for good. Links to it in other notes stay, and make a new note if you open them."
         confirmLabel="Delete"
         onConfirm={() => {

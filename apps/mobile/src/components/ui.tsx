@@ -198,12 +198,15 @@ export function IconButton({
   onPress,
   size = 40,
   primary,
+  color,
 }: {
   Icon: ComponentType<IconProps>;
   label: string;
   onPress: () => void;
   size?: number;
   primary?: boolean;
+  /** The icon's colour (e.g. `danger` for a delete button); the text colour by default. */
+  color?: string;
 }) {
   const { colors, derived } = useAppTheme();
   return (
@@ -217,7 +220,7 @@ export function IconButton({
       className="items-center justify-center overflow-hidden rounded-full"
       style={{ width: size, height: size, backgroundColor: primary ? colors.accent : derived.fill }}
     >
-      <Icon color={primary ? colors['accent-foreground'] : colors.foreground} size={Math.round(size * 0.55)} />
+      <Icon color={color ?? (primary ? colors['accent-foreground'] : colors.foreground)} size={Math.round(size * 0.55)} />
     </Pressable>
   );
 }

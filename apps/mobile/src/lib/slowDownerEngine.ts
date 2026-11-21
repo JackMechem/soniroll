@@ -231,9 +231,13 @@ function peaksOf(buffer: AudioBuffer): Peaks {
       const at = Math.min(length - 1, from + Math.floor((w * span) / WINDOWS_PER_BUCKET));
       const n = Math.min(WINDOW, length - at);
       for (let c = 0; c < channels; c++) {
-        buffer.copyFromChannel(scratch, c, at);
+        // Never ask for more than is left: copying past the end threw on short files (a few
+        // seconds), so they never opened.
+        // (A fresh array, not a view: the native side reads the whole underlying buffer.)
+        const dest = n < WINDOW ? new Float32Array(n) : scratch;
+        buffer.copyFromChannel(dest, c, at);
         for (let i = 0; i < n; i++) {
-          const v = scratch[i];
+          const v = dest[i];
           if (v < lo) lo = v;
           if (v > hi) hi = v;
         }

@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CheckIcon, CloseIcon, FolderIcon, FolderMoveIcon, FolderPlusIcon, PencilIcon, TrashIcon } from '@/components/icons';
 import type { LibrarySongMeta } from '@/lib/useChordChartsLibrary';
 import { BottomSheet } from '@/components/BottomSheet';
+import { prettyKeyName } from '@/lib/keyNames';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { TextInput } from '@/components/ThemedTextInput';
 
@@ -85,8 +86,11 @@ export function ChordChartSongMenu({
               <Text numberOfLines={1} className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
                 {song.title}
               </Text>
+              {/* Composer and playlist, else key and style — never an empty line. */}
               <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
-                {[song.composer ? formatComposer(song.composer) : null, currentPlaylist?.name].filter(Boolean).join(' · ')}
+                {[song.composer ? formatComposer(song.composer) : null, currentPlaylist?.name].filter(Boolean).join(' · ') ||
+                  [song.key ? prettyKeyName(song.key) : null, song.style || null].filter(Boolean).join(' · ') ||
+                  'Chord chart'}
               </Text>
             </View>
           ) : null}
