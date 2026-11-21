@@ -45,6 +45,8 @@ export default function PublicProfilePage({ username }: { username: string }) {
   const [today] = useState(() => todayKey());
   const profile = useQuery(api.profiles.getPublicByUsername, { username, today });
   const viewer = useQuery(api.users.current);
+  // Only needed when the profile comes back hidden: is it the viewer's own private one?
+  const mine = useQuery(api.profiles.getMine, viewer && profile === null ? {} : "skip");
   const userId = profile ? (profile.userId as Id<"users">) : null;
   const posts = useQuery(api.communityTunes.listByUser, userId ? { userId } : "skip");
   const followers = useQuery(api.follows.listFollowers, userId ? { userId } : "skip");
@@ -57,7 +59,8 @@ export default function PublicProfilePage({ username }: { username: string }) {
 
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
 
-  if (profile === undefined || viewer === undefined) {
+  const ownPrivate = profile === null && !!mine && mine.username.toLowerCase() === username.toLowerCase();
+  if (profile === undefined || viewer === undefined || (profile === null && viewer && mine === undefined)) {
     return (
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-4 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-20">
         <PageBar crumbs={[{ label: "Community", href: "/community" }, { label: `@${username}` }]} icon={findToolLink("/community")?.icon} />
@@ -70,8 +73,20 @@ export default function PublicProfilePage({ username }: { username: string }) {
     return (
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-2 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] text-center sm:px-6 lg:pt-20">
         <PageBar crumbs={[{ label: "Community", href: "/community" }, { label: `@${username}` }]} icon={findToolLink("/community")?.icon} />
-        <h2 className="text-xl font-semibold">This profile isn&apos;t available</h2>
-        <p className="text-sm text-muted">It might not exist, or its owner hasn&apos;t made it public.</p>
+        {ownPrivate ? (
+          <>
+            <h2 className="text-xl font-semibold">Your profile is private</h2>
+            <p className="text-sm text-muted">Nobody else can see it. Make it public to share it and to post in Community.</p>
+            <Link href="/account?tab=profile" className="mt-3 flex h-9 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+              Make it public
+            </Link>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold">This profile isn&apos;t available</h2>
+            <p className="text-sm text-muted">It might not exist, or its owner hasn&apos;t made it public.</p>
+          </>
+        )}
       </main>
     );
   }
