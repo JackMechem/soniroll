@@ -25,9 +25,22 @@ export function useOpenNote() {
  * `AttachedNotes`): each as a card (title and the start of its text) that opens it, and "Add notes",
  * which offers a new note (attached, and opened to write in) or one you already have. `label` names
  * the thing (a note's "Attached to" list shows it); `newTitle` is a new note's title. Account only:
- * nothing shows signed out.
+ * nothing shows signed out. `button`: "Add notes" as a full soft button (and a line when there are
+ * none), as on the tune page beside its other sections.
  */
-export function AttachedNotes({ target, label, newTitle, compact }: { target: NoteTarget; label: string; newTitle: string; compact?: boolean }) {
+export function AttachedNotes({
+  target,
+  label,
+  newTitle,
+  compact,
+  button,
+}: {
+  target: NoteTarget;
+  label: string;
+  newTitle: string;
+  compact?: boolean;
+  button?: boolean;
+}) {
   const { colors, derived } = useAppTheme();
   const { isAuthenticated } = useConvexAuth();
   const key = targetKey(target);
@@ -38,7 +51,12 @@ export function AttachedNotes({ target, label, newTitle, compact }: { target: No
   if (!isAuthenticated) return null;
 
   return (
-    <View className="gap-1.5">
+    <View className={button ? 'gap-3' : 'gap-1.5'}>
+      {button && notes?.length === 0 ? (
+        <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+          No Shed Notes yet.
+        </Text>
+      ) : null}
       {notes?.map((n) => (
         <Pressable
           key={n.noteId}
@@ -60,12 +78,27 @@ export function AttachedNotes({ target, label, newTitle, compact }: { target: No
           </View>
         </Pressable>
       ))}
-      <Pressable onPress={() => setAdding(true)} accessibilityRole="button" hitSlop={6} className="flex-row items-center gap-1 self-start py-1">
-        <PlusIcon color={colors.muted} size={16} />
-        <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-          Add notes
-        </Text>
-      </Pressable>
+      {button ? (
+        <Pressable
+          onPress={() => setAdding(true)}
+          accessibilityRole="button"
+          android_ripple={{ color: colors['surface-hover'] }}
+          className="flex-row items-center justify-center gap-1.5 overflow-hidden rounded-xl py-2.5"
+          style={{ backgroundColor: colors.background }}
+        >
+          <PlusIcon color={colors.foreground} size={16} />
+          <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
+            Add notes
+          </Text>
+        </Pressable>
+      ) : (
+        <Pressable onPress={() => setAdding(true)} accessibilityRole="button" hitSlop={6} className="flex-row items-center gap-1 self-start py-1">
+          <PlusIcon color={colors.muted} size={16} />
+          <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
+            Add notes
+          </Text>
+        </Pressable>
+      )}
       <AddNotesSheet
         visible={adding}
         targetKey={key}
@@ -206,7 +239,7 @@ export function TuneShedNotes({ tuneId, name }: { tuneId: string; name: string }
         Shed Notes
       </Text>
       <View className="rounded-2xl p-4" style={{ backgroundColor: colors.surface }}>
-        <AttachedNotes target={{ kind: 'tune', tuneId }} label={label} newTitle={label} />
+        <AttachedNotes target={{ kind: 'tune', tuneId }} label={label} newTitle={label} button />
       </View>
     </View>
   );

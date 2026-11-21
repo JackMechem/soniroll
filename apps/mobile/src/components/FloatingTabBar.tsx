@@ -91,7 +91,15 @@ export function FloatingTabBar() {
             <Pressable
               key={href}
               onPress={() => {
-                if (!active) router.navigate(href);
+                if (active) return;
+                // Like Android's own tabs: Back from any tab goes to Home, and Back on Home leaves,
+                // rather than walking back through every tab you've visited.
+                if (href === '/') router.dismissTo('/');
+                else if (pathname === '/') router.push(href);
+                else {
+                  router.dismissTo('/');
+                  router.push(href);
+                }
               }}
               accessibilityRole="tab"
               accessibilityLabel={label}

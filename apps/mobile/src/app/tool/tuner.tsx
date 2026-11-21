@@ -315,7 +315,9 @@ function TunerScreen() {
           cents={reading ? cents : null}
           color={color}
           zoneColor={IN_TUNE}
-          caption={reading ? verdict : playing ? 'Playing a tone' : listening ? 'Play a note…' : 'Start listening, or tap a note to hear it'}
+          // Listening with nothing heard yet, the dial already says "Listening…" (a blank line keeps
+          // the layout still).
+          caption={reading ? verdict : playing ? 'Playing a tone' : listening ? '\u00a0' : 'Start listening, or tap a note to hear it'}
           captionColor={reading ? color : colors.muted}
         />
 

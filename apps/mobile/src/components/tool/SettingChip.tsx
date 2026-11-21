@@ -58,9 +58,6 @@ function flattenChildren(children: ReactNode, prefix = ''): ReactElement[] {
   return out;
 }
 
-/** The "N more" cell's width in the strip. */
-const MORE_CELL_WIDTH = 84;
-
 /** Whether a chip sits in a `SettingsBar` cell (then it fills the cell). */
 const ChipGridContext = createContext(false);
 
@@ -86,10 +83,10 @@ export function SettingsBar({ children, max = 4 }: { children: ReactNode; max?: 
           <View
             key={child.key ?? i}
             style={{
-              // The "N more" cell has a set width (its names are a list, fine to cut short), so the
-              // settings' own values get the rest of the row.
+              // The "N more" cell keeps its (short) size, so the settings' own values get the rest of
+              // the row.
               ...(child.type === MoreOptionsChip
-                ? { flexGrow: 0, flexShrink: 0, width: MORE_CELL_WIDTH }
+                ? { flexGrow: 0, flexShrink: 0 }
                 : { flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 0 }),
               borderLeftWidth: i > 0 ? 1 : 0,
               borderLeftColor: derived.hairline,
@@ -149,8 +146,10 @@ function StripCell({
         accessibilityRole="button"
         accessibilityLabel={value ? `${label}: ${value}` : label}
         android_ripple={{ color: colors['surface-hover'] }}
-        className="h-[52px] flex-1 justify-center px-2"
-        style={toggle ? { paddingLeft: 8 } : undefined}
+        // Grows from its content's width (not `flex-1`, whose zero basis made every cell the same
+        // width, cutting a long value off while a short one had room to spare).
+        className="h-[52px] justify-center px-2"
+        style={{ flexGrow: 1, flexShrink: 1, ...(toggle ? { paddingLeft: 8 } : null) }}
       >
         <Animated.View style={pop}>
           <Text numberOfLines={1} className="font-ui-bold text-[15px] font-bold" style={{ color: colors.foreground }}>
@@ -505,7 +504,8 @@ export function MoreOptionsChip({ children, label = 'More options' }: { children
     }, 280);
   };
   const opener = inGrid ? (
-    <StripCell Icon={MoreIcon} label={names.length ? names.join(', ') : label} value={count ? `${count} more` : 'More'} onPress={() => setListOpen(true)} />
+    // A plain word under "N more": a list of the names never fit the cell and was always cut off.
+    <StripCell Icon={MoreIcon} label="Options" value={count ? `${count} more` : 'More'} onPress={() => setListOpen(true)} />
   ) : (
     <Pressable
       onPress={() => setListOpen(true)}

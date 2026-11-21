@@ -152,7 +152,7 @@ function Hub({
     if (!want) return [];
     const out: { id: string; title: string; detail: string }[] = [];
     for (const s of allCharts.songs) {
-      if (titleKey(s.title) === want) out.push({ id: s.id, title: s.title, detail: [s.key, s.playlistNames].filter(Boolean).join(' · ') });
+      if (titleKey(s.title) === want) out.push({ id: s.id, title: s.title, detail: [s.key ? prettyKeyName(s.key) : null, s.playlistNames].filter(Boolean).join(' · ') });
     }
     return out.slice(0, 3);
   }, [hasChart, tune.name, allCharts]);
@@ -432,13 +432,24 @@ function TuneRecordings({ tuneId }: { tuneId: string }) {
               />
             ))
           )}
-          <View className="flex-row gap-2 rounded-2xl p-2" style={{ backgroundColor: colors.surface }}>
-            <HubButton
-              label="Record a take"
-              icon={<MicrophoneIcon color={colors.foreground} size={16} />}
-              onPress={() => router.push({ pathname: '/tool/recorder', params: { tuneId } })}
-            />
-            <HubButton label="Link existing" icon={<LinkIcon color={colors.foreground} size={16} />} onPress={() => setLinking(true)} />
+          {/* Empty, it reads like the Chord chart section: a line saying so, then the buttons. */}
+          <View
+            className={recordings?.length ? 'rounded-2xl p-2' : 'gap-3 rounded-2xl p-4'}
+            style={{ backgroundColor: colors.surface }}
+          >
+            {recordings?.length ? null : (
+              <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+                No takes yet.
+              </Text>
+            )}
+            <View className="flex-row gap-2">
+              <HubButton
+                label="Record a take"
+                icon={<MicrophoneIcon color={colors.foreground} size={16} />}
+                onPress={() => router.push({ pathname: '/tool/recorder', params: { tuneId } })}
+              />
+              <HubButton label="Link existing" icon={<LinkIcon color={colors.foreground} size={16} />} onPress={() => setLinking(true)} />
+            </View>
           </View>
         </>
       )}

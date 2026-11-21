@@ -84,13 +84,19 @@ export function TuneFiles({ tuneId }: { tuneId: string }) {
               {text}
             </Text>
           ))}
-          <View className="flex-row rounded-2xl p-2" style={{ backgroundColor: colors.surface }}>
+          {/* Empty, it reads like the tune page's Chord chart section: a line, then the button. */}
+          <View className={files.length ? 'rounded-2xl p-2' : 'gap-3 rounded-2xl p-4'} style={{ backgroundColor: colors.surface }}>
+            {files.length ? null : (
+              <Text className="font-ui text-sm" style={{ color: colors.muted }}>
+                No files yet.
+              </Text>
+            )}
             <Pressable
               onPress={() => void add()}
               disabled={!!uploader.progress}
               accessibilityRole="button"
               android_ripple={{ color: colors['surface-hover'] }}
-              className="flex-1 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-xl py-2.5"
+              className="flex-row items-center justify-center gap-1.5 overflow-hidden rounded-xl py-2.5"
               style={{ backgroundColor: colors.background }}
             >
               <UploadIcon color={colors.foreground} size={16} />

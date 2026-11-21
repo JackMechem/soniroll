@@ -85,13 +85,13 @@ export function FollowLists() {
     <View className="gap-4">
       <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
         <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-          Following{following !== undefined ? ` (${following.length})` : ''}
+          Following{following !== undefined ? ` · ${following.length}` : ''}
         </Text>
         <PersonList people={following} emptyText="You're not following anyone yet." />
       </View>
       <View className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
         <Text className="text-lg font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
-          Followers{followers !== undefined ? ` (${followers.length})` : ''}
+          Followers{followers !== undefined ? ` · ${followers.length}` : ''}
         </Text>
         <PersonList people={followers} emptyText="No one follows you yet." />
       </View>

@@ -9,15 +9,19 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { ProfileIcon } from '@/components/icons';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
-/** Your account, from the top-right of every main screen. Signed in: your picture, or a person
-    icon. Signed out: a "Sign in" pill, so whether you're signed in shows at a glance. Either way it
+/** Your account, from the top-right of every main screen. Signed in: your picture, or your
+    first letter. Signed out: a "Sign in" pill, so whether you're signed in shows at a glance. Either way it
     opens Account (profile, settings, theme, signing in). */
 export function AccountButton() {
   const router = useRouter();
   const { colors, derived } = useAppTheme();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const profile = useQuery(api.profiles.getMine, isAuthenticated ? {} : 'skip');
+  const user = useQuery(api.users.current, isAuthenticated ? {} : 'skip');
   const avatarUrl = isAuthenticated ? profile?.avatarUrl : null;
+  const initial = isAuthenticated
+    ? (profile?.username ?? user?.name ?? user?.email ?? '').replace(/^@/, '').charAt(0).toUpperCase()
+    : '';
   if (!isAuthenticated && !isLoading) {
     return (
       <Pressable
@@ -46,6 +50,11 @@ export function AccountButton() {
     >
       {avatarUrl ? (
         <Image source={{ uri: avatarUrl }} contentFit="cover" style={{ width: 40, height: 40 }} />
+      ) : initial ? (
+        // Your first letter, as on the Account card and in Community.
+        <Text className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground }}>
+          {initial}
+        </Text>
       ) : (
         <ProfileIcon color={colors.foreground} size={24} />
       )}

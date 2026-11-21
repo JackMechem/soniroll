@@ -39,7 +39,6 @@ export function useTuneDeletes(onTuneDeleted?: () => void) {
 
   const tuneCharts = deletingTune ? tuneChartIds(deletingTune.tune) : [];
   const chartGoes = deletingChart ? chartsOnlyOn(lists, deletingChart.tune, [deletingChart.chartId]).length > 0 : false;
-  const several = deletingChart ? tuneChartIds(deletingChart.tune).length > 1 : false;
 
   const element = (
     <>
@@ -65,7 +64,7 @@ export function useTuneDeletes(onTuneDeleted?: () => void) {
       />
       <ConfirmDialog
         visible={!!deletingChart}
-        title={several ? 'Delete this chart?' : 'Delete the chord chart?'}
+        title="Delete this chart?"
         message={deletingChart ? `It's taken off ${deletingChart.tune.name}${chartGoes ? ' and deleted for good.' : ' (another tune still has it).'}` : ''}
         confirmLabel="Delete"
         onConfirm={() => {
@@ -128,7 +127,6 @@ export function useTuneMenu(opts: { onTuneDeleted?: () => void; onChartLinked?: 
       actions.push(
         { key: 'link', icon: icon(LinkIcon), label: 'Link another chart', onPress: () => setPicking(target) },
         { key: 'create', icon: icon(PlusIcon), label: 'Write another chart', onPress: () => router.push({ pathname: '/tool/chord-charts-new', params: newChartParams(list, tune) }) },
-        { key: 'deleteChart', icon: icon(TrashIcon, true), label: charts.length > 1 ? 'Delete this chart' : 'Delete the chord chart', danger: true, onPress: () => deleteChart(list, tune, chartId) },
       );
     } else {
       actions.push(
@@ -139,6 +137,10 @@ export function useTuneMenu(opts: { onTuneDeleted?: () => void; onChartLinked?: 
     for (const other of TUNE_LIST_IDS) {
       if (other === list || (other === 'learn' && !isAuthenticated)) continue;
       actions.push({ key: `move-${other}`, icon: icon(FolderMoveIcon), label: `Move to ${TUNE_LIST_LABEL[other]}`, onPress: () => moveTune(lists, list, other, tune) });
+    }
+    // The two deletes last, together (the chart's own ⋮ says "Delete chart" too).
+    if (chartId) {
+      actions.push({ key: 'deleteChart', icon: icon(TrashIcon, true), label: 'Delete chart', danger: true, onPress: () => deleteChart(list, tune, chartId) });
     }
     actions.push({ key: 'delete', icon: icon(TrashIcon, true), label: 'Delete tune', danger: true, onPress: () => deleteTune(list, tune) });
   }
