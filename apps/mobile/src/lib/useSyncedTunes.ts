@@ -6,7 +6,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { currentStoreMode, onStoreModeChange, scopedKey, useStoreMode } from './accountScope';
+import {
+  currentStoreMode,
+  onFlushAccountWrites,
+  onStoreModeChange,
+  scopedKey,
+  sendToAccount,
+  useAppliedStoreMode,
+  useStoreMode,
+} from './accountScope';
 
 /**
  * The tune-list sibling of `useSyncedSettings.ts` — same offline-first precedence (AsyncStorage's
@@ -108,18 +116,30 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
       });
   }
 
-  // Signed in or out: drop the other copy's list (sending an edit still on its way to the account
-  // first) and load this one's.
-  onStoreModeChange((_next, was) => {
+  /** Sends the list to the account now (`sendToAccount` holds it until the backend has the
+      sign-in). */
+  function sendNow() {
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = null;
+    }
+    const send = entry.send;
+    if (!entry.hasValue || !send) return;
+    const value = JSON.stringify(entry.value);
+    void sendToAccount(key, () => send(value));
+  }
+
+  // Signing out sends an edit still waiting first, while the account still takes it.
+  onFlushAccountWrites(() => {
+    if (entry.timer) sendNow();
+  });
+
+  // Signed in or out: drop the other copy's list and load this one's.
+  onStoreModeChange(() => {
     generation++;
     if (entry.timer) {
       clearTimeout(entry.timer);
       entry.timer = null;
-      if (was === 'account' && entry.hasValue && entry.send) {
-        entry.send(JSON.stringify(entry.value)).catch(() => {
-          // offline right at sign-out — the account's row just stays one edit behind
-        });
-      }
     }
     entry.value = EMPTY;
     entry.hasValue = false;
@@ -133,6 +153,7 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
 
   function useHook(): [Tune[], (update: Tune[] | ((prev: Tune[]) => Tune[])) => void, boolean] {
     const mode = useStoreMode();
+    const applied = useAppliedStoreMode();
     const isAuthenticated = mode === 'account';
 
     // `useSyncExternalStore`, not `useState`+`forceRender` — see `useSyncedSettings.ts`'s own
@@ -148,12 +169,16 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
         };
       },
       () =>
-        (accountOnly && !isAuthenticated) || currentStoreMode() !== mode ? EMPTY : entry.hasValue ? entry.value : EMPTY,
+        (accountOnly && !isAuthenticated) || mode === 'loading' || currentStoreMode() !== mode
+          ? EMPTY
+          : entry.hasValue
+            ? entry.value
+            : EMPTY,
     );
 
     useEffect(() => {
-      if (mode === currentStoreMode()) loadLocal();
-    }, [mode]);
+      if (mode === applied) loadLocal();
+    }, [mode, applied]);
 
     const remote = useQuery(api.syncedSettings.get, isAuthenticated ? { key } : 'skip');
 
@@ -192,7 +217,7 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
     // The one-time "apply the account's own value" step (the reset on sign-in/out is the
     // `onStoreModeChange` handler above).
     useEffect(() => {
-      if (!isAuthenticated || currentStoreMode() !== 'account') return;
+      if (!isAuthenticated || applied !== 'account') return;
       if (remote === undefined) return;
       if (entry.serverApplied) return;
       entry.serverApplied = true;
@@ -205,7 +230,7 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
           if (!accountOnly) void AsyncStorage.setItem(scopedKey(key, 'account'), JSON.stringify(parsed));
         }
       }
-    }, [isAuthenticated, remote]);
+    }, [isAuthenticated, applied, remote]);
 
     function setTunes(update: Tune[] | ((prev: Tune[]) => Tune[])) {
       if (accountOnly && !isAuthenticated) return; // nothing to write while signed out.
@@ -220,12 +245,8 @@ function createSyncedTuneListHook(key: string, accountOnly: boolean, waitForAcco
 
       if (isAuthenticated) {
         if (entry.timer) clearTimeout(entry.timer);
-        entry.timer = setTimeout(() => {
-          entry.timer = null;
-          setRemote({ key, value: JSON.stringify(entry.value) }).catch(() => {
-            // offline, or the write otherwise failed — already safe in AsyncStorage above
-          });
-        }, DEBOUNCE_MS);
+        // If it fails (offline), the list is already safe in AsyncStorage above.
+        entry.timer = setTimeout(sendNow, DEBOUNCE_MS);
       }
     }
 

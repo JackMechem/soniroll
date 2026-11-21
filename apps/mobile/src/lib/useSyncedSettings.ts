@@ -3,7 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useSyncExternalStore } from 'react';
 
-import { currentStoreMode, onStoreModeChange, scopedKey, useStoreMode } from './accountScope';
+import {
+  currentStoreMode,
+  onFlushAccountWrites,
+  onStoreModeChange,
+  scopedKey,
+  sendToAccount,
+  useAppliedStoreMode,
+  useStoreMode,
+} from './accountScope';
 
 /**
  * The native sibling of `apps/web/lib/useSyncedSettings.ts` — same `[settings, update]` contract
@@ -54,8 +62,7 @@ type Entry = {
   localLoaded: boolean;
   /** A local read is on its way (for the current mode). */
   localLoading: boolean;
-  /** Sends a value to the account (the last mounted hook's mutation), for an edit still waiting
-      when the account signs out. */
+  /** Sends a value to the account (the last mounted hook's mutation). */
   send: ((value: string) => Promise<unknown>) | null;
   listeners: Set<() => void>;
 };
@@ -167,19 +174,34 @@ function loadLocal(key: string) {
     });
 }
 
-// Signed in or out: everything held is the other copy's, so drop it and load the right one. An edit
-// still waiting to reach the account is sent first rather than dropped with its timer.
-onStoreModeChange((_next, was) => {
+/** Sends `key`'s value to the account now (its debounce is over, or the phone is signing out);
+    `sendToAccount` holds it until the backend has the sign-in. */
+function sendEntry(key: string) {
+  const entry = getEntry(key);
+  if (entry.timer) {
+    clearTimeout(entry.timer);
+    entry.timer = null;
+  }
+  const send = entry.send;
+  if (!entry.hasValue || !send) return;
+  const value = JSON.stringify(entry.value);
+  void sendToAccount(key, () => send(value));
+}
+
+// Signing out sends what's still waiting first, while the account still takes it.
+onFlushAccountWrites(() => {
+  for (const [key, entry] of entries) if (entry.timer) sendEntry(key);
+});
+
+// Signed in or out: everything held is the other copy's, so drop it and load the right one. (An
+// edit still waiting was sent by `flushAccountWrites` before signing out; by now the account no
+// longer takes it.)
+onStoreModeChange(() => {
   generation++;
   for (const entry of entries.values()) {
     if (entry.timer) {
       clearTimeout(entry.timer);
       entry.timer = null;
-      if (was === 'account' && entry.hasValue && entry.send) {
-        entry.send(JSON.stringify(entry.value)).catch(() => {
-          // offline at the exact moment of sign-out — the account's row stays one edit behind
-        });
-      }
     }
     entry.value = undefined;
     entry.hasValue = false;
@@ -199,6 +221,7 @@ export function useSyncedSettings<T extends object>(
   defaults: T,
 ): [T, (patch: Partial<T>) => void, boolean] {
   const mode = useStoreMode();
+  const applied = useAppliedStoreMode();
   const isAuthenticated = mode === 'account';
 
   // `useSyncExternalStore`, not a `useState`+`forceRender`+listener-effect combo — this entry's
@@ -222,7 +245,9 @@ export function useSyncedSettings<T extends object>(
       };
     },
     () =>
-      currentStoreMode() === mode && getEntry(key).hasValue ? viewOf(getEntry(key).value as object, defaults) : defaults,
+      mode !== 'loading' && currentStoreMode() === mode && getEntry(key).hasValue
+        ? viewOf(getEntry(key).value as object, defaults)
+        : defaults,
   );
 
   // `ready`: this device's saved copy has been read, so `settings` is the real value rather than
@@ -242,8 +267,8 @@ export function useSyncedSettings<T extends object>(
 
   // Load this device's copy once per key and sign-in state (`loadLocal` skips one already read).
   useEffect(() => {
-    if (mode === currentStoreMode()) loadLocal(key);
-  }, [key, mode]);
+    if (mode === applied) loadLocal(key);
+  }, [key, mode, applied]);
 
   const remote = useQuery(api.syncedSettings.get, isAuthenticated ? { key } : 'skip');
   const setRemote = useMutation(api.syncedSettings.set);
@@ -255,7 +280,7 @@ export function useSyncedSettings<T extends object>(
   // The one-time "apply the account's own value" step (the reset on sign-in/out is the
   // `onStoreModeChange` handler above).
   useEffect(() => {
-    if (!isAuthenticated || currentStoreMode() !== 'account') return;
+    if (!isAuthenticated || applied !== 'account') return;
     if (remote === undefined) return; // still loading
     const entry = getEntry(key);
     if (entry.serverApplied) return;
@@ -273,7 +298,7 @@ export function useSyncedSettings<T extends object>(
         // corrupt server data — keep whatever's currently showing
       }
     }
-  }, [isAuthenticated, remote, key]);
+  }, [isAuthenticated, applied, remote, key]);
 
   function update(patch: Partial<T>) {
     // Before the stores have caught up with a sign-in or out, an edit would land in the wrong copy.
@@ -288,15 +313,11 @@ export function useSyncedSettings<T extends object>(
     notify(key);
     void AsyncStorage.setItem(scopedKey(key, mode), JSON.stringify(next));
 
+    // To the account 600 ms after the last edit. If that fails (offline), the edit is still in
+    // AsyncStorage above, and the next one sends the whole value again.
     if (isAuthenticated) {
       if (entry.timer) clearTimeout(entry.timer);
-      entry.timer = setTimeout(() => {
-        entry.timer = null;
-        setRemote({ key, value: JSON.stringify(getEntry(key).value) }).catch(() => {
-          // offline, or the account write otherwise failed — the local edit already landed in
-          // AsyncStorage above, so nothing is lost; it'll sync next time a write succeeds.
-        });
-      }, DEBOUNCE_MS);
+      entry.timer = setTimeout(() => sendEntry(key), DEBOUNCE_MS);
     }
   }
 

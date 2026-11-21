@@ -28,6 +28,7 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 import { Button, useScrolled } from '@/components/ui';
 import { TextInput } from '@/components/ThemedTextInput';
+import { flushAccountWrites } from '@/lib/accountScope';
 
 /**
  * The native side of `apps/web/components/AccountMenu.tsx`'s `AuthForm` (signed out) plus
@@ -229,6 +230,8 @@ function SignedIn({ onScroll }: { onScroll: ReturnType<typeof useScrolled>['onSc
         safe
         onConfirm={() => {
           setConfirmSignOut(false);
+          // Edits still waiting for their debounce go to the account first.
+          flushAccountWrites();
           void signOut();
         }}
         onCancel={() => setConfirmSignOut(false)}

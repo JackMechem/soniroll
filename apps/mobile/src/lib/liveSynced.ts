@@ -4,6 +4,8 @@ import { useConvexAuth } from '@convex-dev/auth/react';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { onFlushAccountWrites, sendToAccount } from './accountScope';
+
 /**
  * A synced document (one `syncedSettings` row, like the website's `useSyncedSettings`) that keeps
  * **following the account** while the app is open — for the Shed Log and the tools' usage log,
@@ -37,6 +39,9 @@ export type LiveDoc = ReturnType<typeof createLiveDoc>;
 export function createLiveDoc(key: string) {
   const accountKey = `${key}:account`;
   let mode: Mode = 'loading';
+  // Whose copy is held. It stays through `loading`: when the app is reopened after Back closed it,
+  // the sign-in is read again and it's normally the same copy, kept (with any edit still waiting).
+  let settled: 'device' | 'account' | null = null;
   let value: Doc | null = null;
   let json: string | null = null;
   let snapshot: LiveSnapshot = { value: EMPTY, ready: false };
@@ -68,7 +73,7 @@ export function createLiveDoc(key: string) {
   }
 
   function storageKey() {
-    return mode === 'account' ? accountKey : key;
+    return settled === 'account' ? accountKey : key;
   }
 
   function saveLocal() {
@@ -81,32 +86,44 @@ export function createLiveDoc(key: string) {
   }
 
   function send() {
+    if (timer) clearTimeout(timer);
     timer = null;
-    if (mode !== 'account' || json === null || !sender) return;
+    if (settled !== 'account' || json === null || !sender) return;
+    const body = json;
+    const s = sender;
     inFlight++;
-    sender(json)
-      .catch(() => {
-        // offline or refused: the copy on the phone still has it; the next edit tries again
-      })
-      .finally(() => {
-        inFlight--;
-      });
+    // Held until the backend has the sign-in (`accountScope.ts`); offline or refused, the copy on
+    // the phone still has it and the next edit tries again.
+    void sendToAccount(key, () => s(body)).finally(() => {
+      inFlight--;
+    });
   }
 
-  /** Signed in, out, or still finding out. A change drops what's held and loads the right copy. */
+  // Signing out sends an edit still waiting first, while the account still takes it.
+  onFlushAccountWrites(() => {
+    if (timer) send();
+  });
+
+  /** Signed in, out, or still finding out. Signing in or out drops what's held and loads the right
+      copy; `loading` and back to the same copy keeps it. */
   function setMode(next: Mode) {
     if (next === mode) return;
-    const was = mode;
-    // An edit made just before signing out still goes to the account.
-    if (was === 'account' && timer) {
+    mode = next;
+    if (next === 'loading' || next === settled) {
+      emit();
+      return;
+    }
+    const was = settled;
+    settled = next;
+    // Too late to send an edit still waiting: signing out already did (`flushAccountWrites`).
+    if (timer) {
       clearTimeout(timer);
-      send();
+      timer = null;
     }
     if (saveTimer) {
       clearTimeout(saveTimer);
       saveTimer = null;
     }
-    mode = next;
     value = null;
     json = null;
     remoteSeen = false;
@@ -114,7 +131,6 @@ export function createLiveDoc(key: string) {
     generation++;
     if (was === 'account' && next === 'device') void AsyncStorage.removeItem(accountKey).catch(() => {});
     emit();
-    if (next === 'loading') return;
     const gen = generation;
     AsyncStorage.getItem(next === 'account' ? accountKey : key)
       .then((raw) => {
