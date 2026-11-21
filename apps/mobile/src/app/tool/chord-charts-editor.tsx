@@ -3,7 +3,7 @@ import { encodeChartString } from '@jam-practice/core/chartString';
 import { parseBarSlots, slotsToText, type Bar, type ChordSlot, type IRealSong } from '@jam-practice/core/iRealPro';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChartEditorKeyboard, type BarTool } from '@/components/ChartEditorKeyboard';
@@ -14,6 +14,7 @@ import { NumberStepper } from '@/components/NumberStepper';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
+import { TextInput } from '@/components/ThemedTextInput';
 
 const STARTING_BARS = 8;
 const BARS_PER_ROW = 4;

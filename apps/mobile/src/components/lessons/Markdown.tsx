@@ -2,7 +2,7 @@ import { api } from '@jam-practice/convex/_generated/api';
 import { cleanScore } from '@jam-practice/core/bassTranscription';
 import { useQuery } from 'convex/react';
 import { useMemo, useRef, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from 'react-native';
+import { Pressable, ScrollView, Text, View, type TextStyle } from 'react-native';
 
 import { CheckIcon, NoteIcon } from '@/components/icons';
 import { openUrl } from '@/components/lessons/files';
@@ -11,6 +11,7 @@ import { FileBlock } from '@/components/shedNotes/NoteEmbeds';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import Score from '@/components/notation/Score';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Lesson notes on the phone. Notes are Markdown (`lessonItems.body`, written in the website's Shed

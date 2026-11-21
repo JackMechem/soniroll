@@ -15,7 +15,7 @@ import {
 } from '@jam-practice/core/meterControls';
 import { MAX_BEATS } from '@jam-practice/core/meters';
 import { useState, type ReactNode } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Svg, { Ellipse, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 
 import { Dropdown } from '@/components/Dropdown';
@@ -25,6 +25,7 @@ import { Slider } from '@/components/tool/Slider';
 import { getAudioContext } from '@/lib/audioContext';
 import { scheduleClick } from '@/lib/metronomeClickEngine';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The website's metronome controls (`apps/web/components/MeterFields.tsx` and

@@ -15,7 +15,7 @@ import {
   updateSection,
 } from '@jam-practice/core/structure';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { BeatIndicator } from '@/components/BeatIndicator';
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon } from '@/components/icons';
@@ -23,6 +23,7 @@ import { StepperPill, SubdivisionPicker, TimeSignatureControl } from '@/componen
 import { OptionGroup } from '@/components/tool/reward';
 import { EmptyPanel } from '@/components/tool/rhythm';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * "Changing meters" for the metronome-style tools (Metronome, Tempo Trainer, Recorder), in the

@@ -3,7 +3,7 @@ import { COMMON_INSTRUMENTS } from '@jam-practice/core/profileInstruments';
 import { normalizeUsername, usernameError } from '@jam-practice/core/username';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { PlusIcon, TrashIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -11,6 +11,7 @@ import { InfoButton } from '@/components/InfoButton';
 import { SwitchRow } from '@/components/SwitchRow';
 import { useSyncedTunes, useTunesToLearn } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 import { AvatarUpload } from './AvatarUpload';
 

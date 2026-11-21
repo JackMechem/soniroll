@@ -1,6 +1,6 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { Stack } from 'expo-router';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InfoButton } from '@/components/InfoButton';
@@ -13,6 +13,7 @@ import { SwitchRow } from '@/components/SwitchRow';
 import { Card } from '@/components/ui';
 import { useNotesConfig } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Shed Notes settings on the phone. They're one JSON file in your account (the website's settings

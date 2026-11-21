@@ -1,13 +1,14 @@
 import { sortByText } from '@jam-practice/core/sortText';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIcon, FolderIcon, FolderPlusIcon } from '@/components/icons';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * "New chord chart" details, as a full page rather than a bottom sheet — a sheet's text fields sat

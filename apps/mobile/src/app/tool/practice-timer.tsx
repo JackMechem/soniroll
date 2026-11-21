@@ -1,7 +1,7 @@
 import { describeSession, newSegment, type PracticeSession } from '@jam-practice/core/practiceTimer';
 import { Stack } from 'expo-router';
 import { Fragment, useState, useSyncExternalStore } from 'react';
-import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -20,6 +20,7 @@ import { usePracticeSessions, type SessionInput } from '@/lib/usePracticeSession
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
+import { TextInput } from '@/components/ThemedTextInput';
 
 const SOUND_SETTINGS_KEY = 'jam-practice-timer-sound-settings';
 const DEFAULT_SOUND_SETTINGS = { soundEnabled: true, alarmMode: false, fullScreenAlert: false };

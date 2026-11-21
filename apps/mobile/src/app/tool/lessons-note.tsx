@@ -5,7 +5,7 @@ import { formatLongDate, formatShortDate, toDateKey } from '@jam-practice/core/p
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { TrashIcon } from '@/components/icons';
@@ -16,6 +16,7 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { GhostIcon } from '@/components/shedLog/parts';
 import { Segmented } from '@/components/tool/reward';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * One lesson note (`?lesson=&session=&note=`, the note half of the website's `/lessons/notes`).

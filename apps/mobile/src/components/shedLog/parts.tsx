@@ -2,12 +2,13 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ROUTINE_COLORS } from '@jam-practice/core/practiceLog';
 import type { ComponentProps, ReactNode } from 'react';
-import { Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { CheckIcon, type IconProps } from '@/components/icons';
 import { useGradeColors } from '@/components/tool/ear';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The Shed Log's small shared pieces on the phone: a routine's icon in its colour, a section

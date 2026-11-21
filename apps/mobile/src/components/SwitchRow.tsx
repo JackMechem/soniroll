@@ -1,7 +1,7 @@
 import { Switch, Text, View } from 'react-native';
 
 import { InfoButton } from '@/components/InfoButton';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** The native sibling of `apps/web/components/SwitchRow.tsx` — a labeled row around RN's own
     native `Switch` (the same component `app/tool/metronome.tsx`'s "Use a structure" toggle
@@ -35,7 +35,11 @@ export function SwitchRow({
           value={checked}
           onValueChange={onChange}
           disabled={disabled}
-          trackColor={{ false: colors.background, true: colors.accent }}
+          // Android's switch in the theme's colours: an accent knob on a lighter accent track when on,
+          // a muted knob on a faint track when off. (Without thumbColor Android paints the knob in
+          // its default teal; its knob is bigger than the track, so it has to stand out by itself.)
+          trackColor={{ false: withAlpha(colors.foreground, 0.15), true: withAlpha(colors.accent, 0.45) }}
+          thumbColor={checked ? colors.accent : colors.muted}
         />
       </View>
     </View>

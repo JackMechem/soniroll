@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** A small "type a name" dialog pinned near the top of the screen, so the keyboard opens below it
     instead of over it — creating or renaming a setlist, a playlist, etc. */

@@ -4,7 +4,7 @@ import { api } from '@jam-practice/convex/_generated/api';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState, type ComponentType, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -23,6 +23,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 import { Button, useScrolled } from '@/components/ui';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The native side of `apps/web/components/AccountMenu.tsx`'s `AuthForm` (signed out) plus

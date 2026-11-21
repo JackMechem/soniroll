@@ -5,7 +5,7 @@ import type { Tune } from '@jam-practice/core/types';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CloseIcon, PlusIcon } from '@/components/icons';
@@ -16,6 +16,7 @@ import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useSetlists } from '@/lib/useSetlists';
 import { tuneSummary, useTuneLists } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * Posting to Community, as a full page (reached from Community's + or a setlist's ⋮ → Post to

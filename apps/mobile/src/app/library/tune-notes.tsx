@@ -1,13 +1,14 @@
 import type { Tune } from '@jam-practice/core/types';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 const SAVE_MS = 600;
 

@@ -30,7 +30,7 @@ import { SwitchRow } from '@/components/SwitchRow';
 import { useGradeColors } from '@/components/tool/ear';
 import { Button } from '@/components/ui';
 import { useNowCoarse } from '@/lib/useClock';
-import { useAppTheme } from '@/theme/ThemeProvider';
+import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** Monday first, the way most weeks are planned. */
 const WEEK = [1, 2, 3, 4, 5, 6, 0];
@@ -230,8 +230,8 @@ function Settings({ initial, features }: { initial: Availability; features: Less
                           value={mine.length > 0}
                           onValueChange={(on) => (on ? addRange(wd) : setWindows(windows.filter((w) => w.weekday !== wd)))}
                           accessibilityLabel={`Teach on ${WEEKDAYS[wd]}`}
-                          trackColor={{ true: colors.accent, false: colors['surface-hover'] }}
-                          thumbColor="#ffffff"
+                          trackColor={{ true: withAlpha(colors.accent, 0.45), false: withAlpha(colors.foreground, 0.15) }}
+                          thumbColor={mine.length > 0 ? colors.accent : colors.muted}
                         />
                       </View>
                       {mine.map(({ w, i }) => (

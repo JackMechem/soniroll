@@ -7,7 +7,7 @@ import { useMutation } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
 import { useMemo, useRef, useState } from 'react';
-import { Keyboard, Linking, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
+import { Keyboard, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
@@ -32,6 +32,7 @@ import { lineRange, toggleTaskLine } from '@/lib/shedNotes/markdown';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { SAVE_LABEL, errorText, useNote, useNoteList, useNotesConfig, useSharedWithMe, useTemplates, type NoteMeta, type NoteTemplate } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** The title a new note has until it's named ("Untitled", "Untitled - 2"). */
 const DEFAULT_TITLE = /^Untitled( - \d+)?$/;

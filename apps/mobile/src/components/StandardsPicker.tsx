@@ -1,12 +1,13 @@
 import { nameId, searchStandards, standardToTune, STANDARDS, type Standard } from '@jam-practice/core/standards';
 import type { Tune } from '@jam-practice/core/types';
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIcon, CloseIcon, PlusIcon, SearchIcon } from '@/components/icons';
 import { useSyncedTunes } from '@/lib/useSyncedTunes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 const MAX_ROWS = 60;
 

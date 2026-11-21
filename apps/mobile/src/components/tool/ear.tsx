@@ -5,7 +5,7 @@ import { attempts, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { isDarkColors } from '@jam-practice/core/themes';
 import { formatDuration } from '@jam-practice/core/trainerUtils';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -17,6 +17,7 @@ import { Slider } from '@/components/tool/Slider';
 import { Button } from '@/components/ui';
 import { EAR_TRAINING_TONES } from '@/lib/sampledTones';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The pitch and ear-training tools' shared pieces (Tuner, Slow Downer, the Note/Scale/Interval

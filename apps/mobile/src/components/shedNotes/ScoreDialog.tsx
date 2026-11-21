@@ -1,6 +1,6 @@
 import type { Transcription } from '@jam-practice/core/bassTranscription';
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import ScoreEditor from '@/components/notation/ScoreEditor';
 import { Button } from '@/components/ui';
 import { newScore, useScore, useScoreActions } from '@/lib/useScores';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /**
  * The notation editor over the whole screen, on a Score Writer score — how notation is written

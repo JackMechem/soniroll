@@ -2,7 +2,7 @@ import { decodeChartString, looksLikeChartString } from '@jam-practice/core/char
 import { parseIrealPlaylist } from '@jam-practice/core/iRealPro';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -12,6 +12,7 @@ import { SwitchRow } from '@/components/SwitchRow';
 import { useChordChartsLibrary } from '@/lib/useChordChartsLibrary';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** A soniroll chart link first, quietly falling back to an iReal Pro playlist link — never naming
     iReal Pro anywhere a user can see (same rule as the web app). */

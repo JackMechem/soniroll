@@ -2,7 +2,7 @@ import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { useMutation, useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ChevronRightIcon, LinkIcon, TrashIcon, UnlinkIcon } from '@/components/icons';
@@ -13,6 +13,7 @@ import { formatDuration, formatRecordedAt, recordingsApi } from '@/lib/recording
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** One saved recording: play it, rename it, keep notes on it, link it to a tune (or change or
     unlink it), or delete it. Edited name/notes show a Save button in the header; they also save

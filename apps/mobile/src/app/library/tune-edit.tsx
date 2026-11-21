@@ -3,7 +3,7 @@ import { mainChartId, removeChartFromTune, replaceMainChart } from '@jam-practic
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useChordChartBrowser } from '@/components/ChordChartList';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -16,6 +16,7 @@ import { TimeSignaturePicker } from '@/components/library/TimeSignaturePicker';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { asTuneListId, TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 function parseTempos(raw: string, previous: Tempo[]): Tempo[] {
   return raw

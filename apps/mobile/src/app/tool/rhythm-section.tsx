@@ -28,7 +28,7 @@ import { parseTypedProgression } from '@jam-practice/core/typedProgression';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { router } from 'expo-router';
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Dropdown } from '@/components/Dropdown';
 import { BassIcon, ChevronRightIcon, ChordChartIcon, ChordIcon, DrumIcon, EyeOffIcon, MetronomeIcon, ShuffleIcon, SpeakerIcon } from '@/components/icons';
@@ -59,6 +59,7 @@ import { useToolActivity } from '@/lib/toolTime';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 // The website's two settings keys and defaults (`apps/web/components/RhythmSection.tsx`), so
 // settings follow you between the two: the tune, bass, chords, swing drummer and mix under Bass

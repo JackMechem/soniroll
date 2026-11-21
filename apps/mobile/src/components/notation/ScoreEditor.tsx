@@ -33,7 +33,7 @@ import {
 } from '@jam-practice/core/bassTranscription';
 import { clampCursor, formatBeats, KEY_OPTIONS, keyLabel, noteIndexAtBeat, rebar, startBeat, TIME_SIGNATURES } from '@jam-practice/core/scoreEdit';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { Pressable, ScrollView, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
@@ -50,6 +50,7 @@ import { loadUprightBass, playUprightBassNote } from '@/lib/uprightBass';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
+import { TextInput } from '@/components/ThemedTextInput';
 
 const VALUE_ICON: Record<NoteValue, number> = { w: 1, h: 2, q: 4, '8': 8, '16': 16 };
 const VALUES: NoteValue[] = ['w', 'h', 'q', '8', '16'];

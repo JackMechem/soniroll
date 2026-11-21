@@ -3,7 +3,7 @@ import { cleanFolder } from '@jam-practice/core/shedNotes';
 import { sortByText } from '@jam-practice/core/sortText';
 import { useQuery } from 'convex/react';
 import { useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { CheckIcon } from '@/components/icons';
 import { FolderClosedIcon } from '@/components/shedNotes/icons';
@@ -11,6 +11,7 @@ import { ToolSheet } from '@/components/tool/SettingChip';
 import { Button } from '@/components/ui';
 import { useNoteList } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import { TextInput } from '@/components/ThemedTextInput';
 
 /** Every folder: the ones made on their own and the ones notes are in (with their parents). */
 export function useAllFolders(): string[] {
