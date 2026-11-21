@@ -587,7 +587,7 @@ function FindTheRootScreen() {
         </Field>
       </SettingChip>
 
-      <SettingChip Icon={StopwatchIcon} label="Rounds" value={`${roundCount} rounds`}>
+      <SettingChip Icon={StopwatchIcon} label="Rounds" value={`${roundCount}`}>
         <SliderField
           label="Number of rounds"
           value={roundCount}

@@ -593,7 +593,8 @@ function RhythmSectionScreen() {
   const ts = song?.timeSignature ?? style.meter;
   const meterMismatch = !!song && !style.swing && beatsInMeter(song.timeSignature) !== style.beats;
   const playerName = customPlayer?.name ?? 'Computer';
-  const chartName = noTune ? 'No chart' : typed ? 'Typed chords' : (meta?.title ?? 'Pick a chart');
+  // Short, for the Tune chip ("Typed", not "Typed chords": four chips share a phone's width).
+  const chartName = noTune ? 'No chart' : typed ? 'Typed' : (meta?.title ?? 'Pick a chart');
   const showClave = claveDirectionMatters(style, grooveOpts);
 
   const status = loadError

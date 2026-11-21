@@ -782,7 +782,7 @@ function NoteTrainerScreen() {
 
       {/* How long each note shows (Timed), or how long you have to play it and the pause after
           (Listen): the same setting either way, so one name. */}
-      <SettingChip Icon={StopwatchIcon} label="Time per note" value={`${intervalSeconds} s`}>
+      <SettingChip Icon={StopwatchIcon} label="Timing" title="Time per note" value={`${intervalSeconds} s`}>
         {locked}
         <SliderField
           label="Time per note"

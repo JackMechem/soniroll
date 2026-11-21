@@ -203,6 +203,8 @@ function GuessTheChordScreen() {
   useKeepAwakeWhile(running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
+  // Whether the open round was graded because its time ran out (not Submit / I don't know).
+  const [timedOut, setTimedOut] = useState(false);
   const [typed, setTyped] = useState('');
   const [progress, setProgress] = useState<{ index: number; total: number } | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -447,11 +449,15 @@ function GuessTheChordScreen() {
       setRoundSeed(roundSeedRef.current);
       setNoteTimer({ startedAt: Date.now(), durationMs: seconds * 1000 });
       setRound(next);
+      setTimedOut(false);
       setTypedValue(giveRoot ? pcLabel(next.rootPc, accidentalStyle, roundSeedRef.current) : '');
       playChordSound(next.notes);
     };
 
-    const onTimeUp = () => gradeAndReveal();
+    const onTimeUp = () => {
+      if (sessionRef.current?.round && sessionRef.current.best === null) setTimedOut(true);
+      gradeAndReveal();
+    };
     skipRef.current = () => {
       advance();
       if (sessionRef.current) {
@@ -482,21 +488,26 @@ function GuessTheChordScreen() {
   const bestMs = matchingHistory.length ? Math.min(...matchingHistory.map((h) => h.elapsedMs)) : null;
   const weakEntries = weakChordEntries(settings.chordStats);
 
+  // Roots and basses with ♯ / ♭, like everywhere else ("C♯sus", not "C#sus").
   function revealedLabel(r: ChordRound, seq: number) {
     const parts = chordRoundParts(r, accidentalStyle, seq);
-    return `${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ''}`;
+    return `${noteGlyphs(parts.root)}${parts.quality}${parts.bass ? `/${noteGlyphs(parts.bass)}` : ''}`;
   }
 
   const revealedText = round && status ? revealedLabel(round, roundSeed) : null;
   const typedParsed = round && !status ? parseChordInput(typed) : null;
   const typedParts = typedParsed ? formatChordParts(typedParsed) : null;
-  const typedPreview = typedParts ? `${typedParts.root}${typedParts.quality}${typedParts.bass ? `/${typedParts.bass}` : ''}` : null;
+  const typedPreview = typedParts ? `${noteGlyphs(typedParts.root)}${typedParts.quality}${typedParts.bass ? `/${noteGlyphs(typedParts.bass)}` : ''}` : null;
   const mainLabel = !round ? '?' : (revealedText ?? typedPreview ?? (typed ? typed : '?'));
   const glow = running && status === 'correct' ? GRADE_COLOR.correct : null;
   const answering = running && !!round && !status;
   const showingSummary = summary !== null && !running;
 
-  const missLine = status === 'incorrect' ? (typed.trim() ? `You typed ${typedPreviewOf(typed)}` : 'No answer') : null;
+  // Time ran out with nothing typed past the root we gave you: say so, not "You typed C♯".
+  const givenRoot = giveRoot && round ? pcLabel(round.rootPc, accidentalStyle, roundSeed) : '';
+  const untouched = !typed.trim() || typed.trim() === givenRoot;
+  const missLine =
+    status === 'incorrect' ? (timedOut && untouched ? "Time's up" : typed.trim() ? `You typed ${typedPreviewOf(typed)}` : 'No answer') : null;
 
   if (!settingsReady) return <ScreenSpinner />;
 
@@ -636,6 +647,8 @@ function GuessTheChordScreen() {
   return (
     <ToolScreen
       title="Guess the Chord"
+      // The Learn path scrolls by itself in the space it's given.
+      scroll={!(learnMode && !running)}
       mode={
         !running ? (
           <Segmented
@@ -678,7 +691,7 @@ function GuessTheChordScreen() {
             {/* How to type a symbol, beside the keyboard, in the first round only. */}
             {progress?.index === 1 ? (
               <Text className="font-ui px-4 pb-2 text-center text-xs leading-4" style={{ color: colors.muted }}>
-                Type the root, the quality, then an optional /bass, e.g. F♯Δ7 or A♭-7/D.
+                Root, quality, then an optional /bass: F♯Δ7, A♭-7/D.
               </Text>
             ) : null}
             <ChordAnswerKeyboard
@@ -810,7 +823,7 @@ function GuessTheChordScreen() {
 function typedPreviewOf(text: string): string {
   const parsed = parseChordInput(text);
   const parts = parsed ? formatChordParts(parsed) : null;
-  return parts ? `${parts.root}${parts.quality}${parts.bass ? `/${parts.bass}` : ''}` : text.trim();
+  return parts ? `${noteGlyphs(parts.root)}${parts.quality}${parts.bass ? `/${noteGlyphs(parts.bass)}` : ''}` : text.trim();
 }
 
 export default withScreenLoader(GuessTheChordScreen);

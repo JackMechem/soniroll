@@ -212,16 +212,9 @@ function JamPracticeScreen() {
               {pick.tune.name}
             </Text>
             {/* Only what the tune has: a tune with no key just shows its time signature. */}
-            <View className="flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              {pick.key ? (
-                <Text className="font-ui text-base" style={muted}>
-                  {pick.key.value}
-                </Text>
-              ) : null}
-              <Text className="font-ui text-base" style={muted}>
-                {pick.tune.timeSignature}
-              </Text>
-            </View>
+            <Text className="font-ui text-center text-base" style={muted}>
+              {[pick.key?.value, pick.tune.timeSignature].filter(Boolean).join(' · ')}
+            </Text>
             {pick.tune.notes ? (
               <Text className="font-ui max-w-xs text-center text-sm" style={muted}>
                 {pick.tune.notes}

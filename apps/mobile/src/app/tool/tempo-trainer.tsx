@@ -185,7 +185,11 @@ function TempoTrainerScreen() {
           onPage
           label="Meter"
           value={useStructure ? 'structure' : 'single'}
-          onChange={(v) => updateSettings({ useStructure: v === 'structure' })}
+          onChange={(v) => {
+            // Changing meters with nothing in the form can't play (as on the Metronome).
+            if (running && v === 'structure' && structure.form.length === 0) stopTempoTrainer();
+            updateSettings({ useStructure: v === 'structure' });
+          }}
           options={[
             { value: 'single', label: 'One meter' },
             { value: 'structure', label: 'Changing meters' },
@@ -269,8 +273,8 @@ function TempoTrainerScreen() {
       <TempoHero
         bpm={bpm}
         setBpm={(next) => updateSettings({ bpm: clampBpm(next) })}
-        beatsPerBar={activeSection?.beatsPerBar ?? beatsPerBar}
-        beatUnit={activeSection?.beatUnit ?? beatUnit}
+        beatsPerBar={useStructure && !activeSection ? undefined : (activeSection?.beatsPerBar ?? beatsPerBar)}
+        beatUnit={useStructure && !activeSection ? undefined : (activeSection?.beatUnit ?? beatUnit)}
         onTap={tap}
         tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
       />

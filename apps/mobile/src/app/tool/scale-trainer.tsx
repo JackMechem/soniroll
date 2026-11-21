@@ -865,7 +865,7 @@ function ScaleTrainerScreen() {
         ) : null}
       </SettingChip>
 
-      <SettingChip Icon={StopwatchIcon} label="Time per scale" value={`${intervalSeconds} s`}>
+      <SettingChip Icon={StopwatchIcon} label="Timing" title="Time per scale" value={`${intervalSeconds} s`}>
         {locked}
         <SliderField
           label="Time per scale"

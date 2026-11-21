@@ -548,8 +548,8 @@ function GuessTheProgressionScreen() {
   // How to write an answer, for the Answer chip's sheet and the first round's keyboard.
   const answerHowTo =
     answerMode === 'numerals'
-      ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality — ii7, V7, I^7 (IΔ7), iih7 (iiø7), viio' : ''}. ♭/♯ go before a numeral.`
-      : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 C^7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`;
+      ? `One numeral per chord: upper case major, lower case minor${typeQualities ? ', then the quality: ii7, V7, IΔ7, iiø7, vii°' : ''}. ♭/♯ go before a numeral.`
+      : `The chord names — ${typeQualities ? 'full symbols like D-7 G7 CΔ7' : 'just roots, with - for minor: D- G C'}. You're given the first chord's root.`;
 
   // The mode switch first, then History and Struggles (hidden until there's something in them, and
   // while a session runs). While answering, the keyboard is pinned at the bottom (`footer`) with a
@@ -600,13 +600,14 @@ function GuessTheProgressionScreen() {
         Icon={PencilIcon}
         label="Answer"
         value={
+          // The strip shows the part before " · " (four chips share a phone's width).
           answerMode === 'numerals'
             ? typeQualities
-              ? 'Numerals + qualities'
-              : 'Numerals only'
+              ? 'Numerals · with qualities'
+              : 'Numerals'
             : typeQualities
-              ? 'Chord symbols'
-              : 'Chord roots only'
+              ? 'Symbols · full chord symbols'
+              : 'Roots · chord roots only'
         }
       >
         <Field label="Answer with" hint="Type the progression as Roman numerals (ii V I), or as chord names in the key that was played (Dm G C).">
@@ -621,7 +622,7 @@ function GuessTheProgressionScreen() {
           onChange={(v) => updateSettings({ typeQualities: v })}
           hint={
             answerMode === 'numerals'
-              ? 'On: each numeral needs its quality too (ii7, V7, I^7, iiø7). Off: just the numerals — upper case for major, lower case for minor.'
+              ? 'On: each numeral needs its quality too (ii7, V7, IΔ7, iiø7). Off: just the numerals — upper case for major, lower case for minor.'
               : 'On: each chord needs its full symbol (D-7, G7, C^7). Off: just the roots, with a minor sign (D-) where the chord is minor.'
           }
         />
@@ -632,7 +633,7 @@ function GuessTheProgressionScreen() {
         ) : null}
       </SettingChip>
 
-      <SettingChip Icon={NoteIcon} label="Key & sound" value={`${keyLabel} · ${register.label}`}>
+      <SettingChip Icon={NoteIcon} label="Key" title="Key & sound" value={`${keyLabel} · ${register.label}`}>
         <Field label="Key" hint="A new random key every round, or always the same one.">
           <PillChoice label="Key" value={keyChoice} options={KEY_OPTIONS} onChange={(v) => updateSettings({ keyChoice: v })} />
         </Field>
@@ -708,6 +709,8 @@ function GuessTheProgressionScreen() {
   return (
     <ToolScreen
       title="Guess the Progression"
+      // The Learn path scrolls by itself in the space it's given.
+      scroll={!(learnMode && !running)}
       mode={
         !running ? (
           <Segmented

@@ -9,8 +9,14 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 /**
  * The chord chart Rhythm Section is playing, with the bar being heard lit (the website's
  * `ChordChart` with `activeBar`). Built from the chart viewer's own rows (`ChordChartView`'s `Row`,
- * `PageFit`, `BarContent`), so it's the same chart, just with a tint on the playing bar.
+ * `PageFit`, `BarContent`), so it's the same chart, just with a tint on the playing bar. The
+ * opening time signature only shows when it isn't 4/4: at this size it squeezed the first bar's
+ * chords against the barline (a change of meter mid-chart still shows).
  */
+function isCommonTime(ts: IRealSong['timeSignature']) {
+  return !ts || (ts.top === 4 && ts.bottom === 4);
+}
+
 export function RhythmChart({ song, activeBar }: { song: IRealSong; activeBar: number | null }) {
   const { colors } = useAppTheme();
   const rows = useMemo(() => layoutRows(song.bars, 4), [song.bars]);
@@ -37,7 +43,7 @@ export function RhythmChart({ song, activeBar }: { song: IRealSong; activeBar: n
           placed={row}
           isFirstRow={i === 0}
           isLastRow={i === rows.length - 1}
-          timeSignature={i === 0 ? song.timeSignature : undefined}
+          timeSignature={i === 0 && !isCommonTime(song.timeSignature) ? song.timeSignature : undefined}
           renderBarContent={lit ? content : undefined}
         />
       ))}

@@ -180,8 +180,9 @@ export function TempoHero({
 }: {
   bpm: number;
   setBpm: (bpm: number) => void;
-  beatsPerBar: number;
-  beatUnit: number;
+  /** The meter shown after "BPM"; left out (no meter yet), just "BPM". */
+  beatsPerBar?: number;
+  beatUnit?: number;
   onTap: () => void;
   tempoNote?: ReactNode;
   locked?: boolean;
@@ -225,7 +226,7 @@ export function TempoHero({
         <View className="mt-1 flex-row items-center gap-1.5">
           {tempoNote}
           <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-            BPM · {beatsPerBar}/{beatUnit}
+            {beatsPerBar !== undefined && beatUnit !== undefined ? `BPM · ${beatsPerBar}/${beatUnit}` : 'BPM'}
           </Text>
         </View>
       </View>
@@ -510,7 +511,9 @@ export function previewClick(soundId: string, volume: number) {
 
 /** A Sound chip's value: "Woodblock · 80%". */
 export function soundSummary(soundId: string, volume: number) {
-  return `${CLICK_SOUNDS.find((c) => c.id === soundId)?.label ?? 'Click'} · ${Math.round(volume * 100)}%`;
+  // "Classic", not "Classic click": the chip's label already says Sound, and it fits a phone.
+  const name = CLICK_SOUNDS.find((c) => c.id === soundId)?.label.replace(/ click$/, '') ?? 'Click';
+  return `${name} · ${Math.round(volume * 100)}%`;
 }
 
 /** The click sounds as cards (each plays when picked) and a volume slider. */
@@ -530,7 +533,7 @@ export function SoundPicker({
   return (
     <>
       <OptionGroup title="Click">
-        <View accessibilityRole="radiogroup" accessibilityLabel="Click sound" className="flex-row flex-wrap gap-2.5">
+        <View accessibilityRole="radiogroup" accessibilityLabel="Click sound" className="gap-2">
           {CLICK_SOUNDS.map((c) => (
             <RewardCard
               key={c.id}
@@ -541,7 +544,8 @@ export function SoundPicker({
                 setSoundId(c.id);
                 previewClick(c.id, volume);
               }}
-              style={{ height: 44, width: '47%', flexGrow: 1 }}
+              // One per row: five in two columns left "Soft thump" alone under four halves.
+              style={{ height: 44, width: '100%' }}
             >
               <PlayIcon color={colors.accent} size={16} />
               <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>

@@ -58,6 +58,9 @@ function flattenChildren(children: ReactNode, prefix = ''): ReactElement[] {
   return out;
 }
 
+/** The "N more" cell's width in the strip. */
+const MORE_CELL_WIDTH = 84;
+
 /** Whether a chip sits in a `SettingsBar` cell (then it fills the cell). */
 const ChipGridContext = createContext(false);
 
@@ -82,7 +85,15 @@ export function SettingsBar({ children, max = 4 }: { children: ReactNode; max?: 
         {items.map((child, i) => (
           <View
             key={child.key ?? i}
-            style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 0, borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: derived.hairline }}
+            style={{
+              // The "N more" cell has a set width (its names are a list, fine to cut short), so the
+              // settings' own values get the rest of the row.
+              ...(child.type === MoreOptionsChip
+                ? { flexGrow: 0, flexShrink: 0, width: MORE_CELL_WIDTH }
+                : { flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 0 }),
+              borderLeftWidth: i > 0 ? 1 : 0,
+              borderLeftColor: derived.hairline,
+            }}
           >
             {child}
           </View>
@@ -138,7 +149,7 @@ function StripCell({
         accessibilityRole="button"
         accessibilityLabel={value ? `${label}: ${value}` : label}
         android_ripple={{ color: colors['surface-hover'] }}
-        className="h-[52px] flex-1 justify-center px-2.5"
+        className="h-[52px] flex-1 justify-center px-2"
         style={toggle ? { paddingLeft: 8 } : undefined}
       >
         <Animated.View style={pop}>
@@ -201,6 +212,8 @@ export function ToolSheet({ visible, onClose, title, children }: { visible: bool
             <ScrollView
               nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
+              // Android's bar hugged the sheet's rounded edge; the cut-off content shows it scrolls.
+              showsVerticalScrollIndicator={false}
               // Sized to its content as that changes: on Android a sheet whose content grew after it
               // opened (a spinner becoming a button) kept its first height and cut the rest off. The
               // sheet's maxHeight still caps it, and then it scrolls.

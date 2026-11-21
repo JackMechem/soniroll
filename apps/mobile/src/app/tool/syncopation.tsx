@@ -76,6 +76,19 @@ const AFTER_OPTIONS: { value: AfterExercise; label: string }[] = [
   { value: 'stop', label: 'Stop' },
 ];
 
+/** What's underneath, short enough for its chip. */
+const OSTINATO_SHORT: Partial<Record<Ostinato, string>> = {
+  kick: 'Bass drum',
+  kickUnison: 'With snare',
+  pedal24: 'Hi-hat 2 & 4',
+  pedal: 'Hi-hat foot',
+  kickPedal: 'Bass + hi-hat',
+  hhEighths: 'Hi-hat 8ths',
+  hhQuarters: 'Hi-hat',
+  swing: 'Swing',
+  none: 'Nothing',
+};
+
 const MIN_BPM = 30;
 const MAX_BPM = 240;
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
@@ -207,6 +220,8 @@ function SyncopationScreen() {
   const bars = live ? (played[Math.min(shown, played.length - 1)] ?? preview) : preview;
   const familyNames = RHYTHM_FAMILIES.filter((f) => families.includes(f.id)).map((f) => f.short);
   const ostinatoLabel = OSTINATOS.find((o) => o.id === ostinato)?.label ?? '';
+  // The Underneath chip's short value (the sheet and the exercise card say it in full).
+  const ostinatoShort = OSTINATO_SHORT[ostinato] ?? ostinatoLabel;
   const status = loadError
     ? "Couldn't load the drums. Try again."
     : starting && !running
@@ -234,7 +249,7 @@ function SyncopationScreen() {
           <SettingChip Icon={MetronomeIcon} label="Tempo" value={`${settings.bpm} BPM`}>
             <TempoHero bpm={settings.bpm} setBpm={setBpm} beatsPerBar={4} beatUnit={4} onTap={tap} />
           </SettingChip>
-          <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.join(', ')}>
+          <SettingChip Icon={NoteIcon} label="Rhythms" value={familyNames.length > 1 ? `${familyNames.length} of ${RHYTHM_FAMILIES.length}` : familyNames[0]}>
             <OptionGroup title="In the mix">
               <PoolPills
                 label="Rhythms in the mix"
@@ -265,7 +280,7 @@ function SyncopationScreen() {
               />
             </OptionGroup>
           </SettingChip>
-          <SettingChip Icon={DrumIcon} label="Underneath" value={ostinatoLabel}>
+          <SettingChip Icon={DrumIcon} label="Underneath" value={ostinatoShort}>
             <ChoiceCards
               label="Keep going underneath"
               options={OSTINATOS.filter((o) => !(settings.split && o.feet)).map((o) => ({ value: o.id, label: o.label }))}

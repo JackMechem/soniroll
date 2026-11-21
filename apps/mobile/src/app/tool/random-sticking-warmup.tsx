@@ -233,7 +233,7 @@ function RandomStickingWarmupScreen() {
       }
       chips={
         <SettingsBar>
-          <SettingChip Icon={ListIcon} label="Pattern" value={ROLL_TYPES.find((r) => r.value === rollType)?.label ?? ''}>
+          <SettingChip Icon={ListIcon} label="Pattern" value={(ROLL_TYPES.find((r) => r.value === rollType)?.label ?? '').replace(/ roll$/, '')}>
             <View className="gap-2.5">
               <OptionLabel
                 title="Roll type"

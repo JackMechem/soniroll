@@ -626,6 +626,8 @@ function GuessTheIntervalScreen() {
   return (
     <ToolScreen
       title="Guess the Interval"
+      // The Learn path scrolls by itself in the space it's given.
+      scroll={!(learnMode && !running)}
       mode={
         !running ? (
           <Segmented

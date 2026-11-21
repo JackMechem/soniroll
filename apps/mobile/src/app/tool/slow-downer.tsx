@@ -553,13 +553,17 @@ function SlowDownerScreen() {
           <View className="w-full flex-row flex-wrap items-center justify-center gap-2">
             <LoopButton label="Loop start" Icon={RepeatIcon} disabled={!duration} onPress={() => setEdge('start', time)} />
             <LoopButton label="Loop end" disabled={!duration} onPress={() => setEdge('end', time)} />
+            <LoopButton label="Clear loop" disabled={!loop} onPress={() => (setLoop(null), setLoopOn(false))} />
+            <LoopButton label="Add marker" Icon={FlagIcon} disabled={!duration} onPress={() => addMarker(time)} />
+          </View>
+          {/* The loop's range on its own line, its room kept when there's none, so setting a loop
+              doesn't move the buttons. */}
+          <View className="h-5 items-center justify-center">
             {loop ? (
               <Text className="font-ui text-sm tabular-nums" style={{ color: loopOn ? colors.foreground : colors.muted }}>
                 Loop {formatTime(loop.start)}–{formatTime(loop.end)}
               </Text>
             ) : null}
-            <LoopButton label="Clear loop" disabled={!loop} onPress={() => (setLoop(null), setLoopOn(false))} />
-            <LoopButton label="Add marker" Icon={FlagIcon} disabled={!duration} onPress={() => addMarker(time)} />
           </View>
         </>
       )}

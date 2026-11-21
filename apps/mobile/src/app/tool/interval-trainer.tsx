@@ -881,7 +881,7 @@ function IntervalTrainerScreen() {
         ) : null}
       </SettingChip>
 
-      <SettingChip Icon={StopwatchIcon} label="Time per interval" value={`${roundSeconds} s`}>
+      <SettingChip Icon={StopwatchIcon} label="Timing" title="Time per interval" value={`${roundSeconds} s`}>
         {locked}
         <SliderField
           label="Time per interval"
