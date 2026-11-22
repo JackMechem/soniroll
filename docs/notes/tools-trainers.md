@@ -298,3 +298,33 @@ the jump to the Tuner) wasn't run; audio by ear; Safari/Firefox recording and de
 should pick AAC in MP4); real microphones; the desktop file chooser itself (the file was handed to
 the input from a script); macOS/Windows desktop; the Recorder and the Tuner recording at the same
 time on desktop.
+
+### Tuner: pitch graph in the dial (2026-11-22)
+
+Jack: an option to always show the graph, with live data, in the middle of the ring of notes.
+
+- **Pitch graph** chip (`tuner-graph`, setting `dialGraph`, off by default): "Pitch graph in the
+  dial". A band across the middle of the ring (`components/tuner/DialGraph.tsx`) shows the last
+  5 s: cents sharp up, flat down (±50, clamped like the take graph), the ±8 in-tune band shaded,
+  ±25 dashed, "now" at 86% across so the newest point isn't lost in the circle's edge, with a dot
+  on it. Each run of frames on one note (broken by a gap over 0.12 s) is one line, coloured by its
+  median with `centsColor`.
+- **Live** it reads `getTunerHistory()` from `lib/tunerEngine.ts`: every accepted frame (after the
+  two-frame candidate check), unsmoothed cents, kept 12 s, cleared when listening starts. It's not
+  in the snapshot; the graph polls it on animation frames while listening, so the Tuner itself
+  doesn't re-render per point. After Stop it holds what it last showed. With strings (not
+  Chromatic) the cents are against the nearest string, like the needle, so a note far from a string
+  sits on the band's edge.
+- **With a take open** it shows the take's frames for the 5 s up to the playhead (chromatic, like the
+  take graph).
+- `TunerDial`'s `tight` prop: less padding inside the ring and the middle clipped to the circle (only
+  then: clipping cut the long "Press Start…" hint without it). The readout is smaller with the graph
+  (letter `text-4xl`, cents · Hz on one line, fixed `h-14` so the graph doesn't jump) and the hint is
+  narrowed to 75%.
+
+Verified: `tsc`, eslint on the changed files. Headless Chromium with a fake mic playing a WAV (A4 +5,
+C5 −18, E4 +30, with a little vibrato), Chromatic: the graph drew green/amber/red lines at the right
+heights, scrolled, held after Stop; recorded a take and played it: the graph followed the take. 1440
+and 390, light and dark, no console errors or overflow; without the graph the dial looks as before.
+Not verified: a real mic, the desktop app, how smooth it is on a slow phone (an SVG redrawn every
+frame while listening).

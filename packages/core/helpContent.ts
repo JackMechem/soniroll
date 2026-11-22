@@ -713,6 +713,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Instrument", text: "Sets the reference pitches shown for each string or the instrument's usual notes." },
       { name: "Microphone", text: "Which mic to listen to." },
       { name: "Reference & tone", text: "A4 = 440 Hz or another reference, a tuning offset in cents, the sound and octave of the reference tone, and Hold tapped notes (on: a tapped note keeps sounding until you tap it again or press Stop tone)." },
+      { name: "Pitch graph", text: "Pitch graph in the dial draws the last few seconds of what you play inside the ring of notes: sharp goes up, flat goes down, and the green band is in tune. It keeps what it last showed when you stop, and with a take open it follows the take." },
     ],
     shot: "tuner",
   },

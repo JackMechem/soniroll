@@ -50,6 +50,7 @@ export default function TunerDial({
   detectedColor,
   playingPc,
   onSelect,
+  tight = false,
   children,
 }: {
   /** Pitch class currently heard, lit up on the ring. */
@@ -58,6 +59,8 @@ export default function TunerDial({
   /** Pitch class of the tone being played, filled with the accent on the ring. */
   playingPc: number | null;
   onSelect: (pc: number) => void;
+  /** Less padding inside the ring, to make room for the pitch graph. */
+  tight?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -138,7 +141,8 @@ export default function TunerDial({
         })}
       </svg>
 
-      <div className="pointer-events-none absolute left-1/2 top-1/2 flex aspect-square w-[58%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-between rounded-full py-[9%] text-center">
+      {/* With the graph it's clipped to the circle, so the graph's ends meet the ring. */}
+      <div className={`pointer-events-none absolute left-1/2 top-1/2 flex aspect-square w-[58%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-between rounded-full text-center ${tight ? "overflow-hidden py-[5%]" : "py-[9%]"}`}>
         {children}
       </div>
     </div>

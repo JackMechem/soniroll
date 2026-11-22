@@ -11,10 +11,11 @@ import PanelsToggle from "@/components/PanelsToggle";
 import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import TunerDial from "@/components/TunerDial";
+import DialGraph from "@/components/tuner/DialGraph";
 import TakePanel from "@/components/tuner/TakePanel";
 import TakesChip from "@/components/tuner/TakesChip";
 import { useTakePlayback } from "@/components/tuner/useTakePlayback";
-import { MicIcon, RecordIcon, SlidersIcon, StopIcon, TunerIcon } from "@/components/tools";
+import { MicIcon, RecordIcon, SlidersIcon, StopIcon, TunerIcon, WaveIcon } from "@/components/tools";
 import { InputDevice, SENSITIVITY, listAudioInputs } from "@/lib/audioInput";
 import { midiToNote, parseNote } from "@/lib/noteRange";
 import { centsColor, readingAt } from "@/lib/pitchTrack";
@@ -45,7 +46,7 @@ import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
 import { startButtonClass } from "@/components/learning/quizUi";
 
-const PANEL_IDS = ["tuner-instrument", "tuner-input", "tuner-tone"];
+const PANEL_IDS = ["tuner-instrument", "tuner-input", "tuner-tone", "tuner-graph"];
 const SETTINGS_KEY = "jam-practice-tuner";
 const DEFAULT_SETTINGS = {
   instrumentId: "guitar",
@@ -58,6 +59,8 @@ const DEFAULT_SETTINGS = {
   octave: 3,
   /** Seconds the take's pitch graph shows at once. */
   takeZoom: 6,
+  /** A graph of the last few seconds of pitch inside the ring of notes. */
+  dialGraph: false,
 };
 
 const MIN_REF = 415;
@@ -450,6 +453,15 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
             />
           </CollapsiblePanel>
+
+          <CollapsiblePanel id="tuner-graph" title="Pitch graph" icon={WaveIcon} summary={settings.dialGraph ? "In the dial" : "Off"}>
+            <SwitchRow
+              label="Pitch graph in the dial"
+              checked={settings.dialGraph}
+              onChange={(v) => updateSettings({ dialGraph: v })}
+              hint="Draws the last few seconds of what you play inside the ring of notes, so you can watch a held note drift sharp or flat. With a take open it follows the take."
+            />
+          </CollapsiblePanel>
         </>
       }
     >
@@ -458,9 +470,26 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
         detectedColor={color}
         playingPc={playingPc}
         onSelect={playPitchClass}
+        tight={settings.dialGraph}
       >
-        <div className="flex flex-col items-center leading-tight">
-          {noteLetter ? (
+        {/* With the graph, a fixed height, so the graph doesn't jump when a note comes and goes. */}
+        <div className={`flex flex-col items-center leading-tight ${settings.dialGraph ? "h-14 shrink-0 justify-center gap-1" : ""}`}>
+          {noteLetter && settings.dialGraph ? (
+            // Smaller, on two lines, to leave the middle for the graph.
+            <>
+              <span className="flex items-start text-4xl leading-none font-bold" style={{ color }}>
+                {noteLetter}
+                <span className="text-base leading-none font-medium text-muted">{noteOctave}</span>
+              </span>
+              <span className="text-xs tabular-nums">
+                <span className="font-medium" style={{ color }}>
+                  {reading!.cents > 0 ? "+" : ""}
+                  {reading!.cents.toFixed(1)} cents
+                </span>
+                <span className="text-muted"> · {reading!.freq.toFixed(0)} Hz</span>
+              </span>
+            </>
+          ) : noteLetter ? (
             <>
               <span className="flex items-start text-5xl font-bold" style={{ color }}>
                 {noteLetter}
@@ -484,7 +513,7 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
               </span>
             </>
           ) : (
-            <span className="px-2 text-xs text-muted">
+            <span className={`px-2 text-xs text-muted ${settings.dialGraph ? "max-w-[75%]" : ""}`}>
               {openTake
                 ? playback.playing
                   ? "No note here"
@@ -495,6 +524,16 @@ export default function Tuner({ openTakeId }: { openTakeId?: string }) {
             </span>
           )}
         </div>
+
+        {settings.dialGraph && (
+          <div className="my-1 min-h-0 w-full flex-1">
+            {openTake ? (
+              <DialGraph kind="take" track={openTake.track} pos={playback.pos} refA={refA} minRms={minRms} />
+            ) : (
+              <DialGraph kind="live" listening={listening} />
+            )}
+          </div>
+        )}
 
         <div className="pointer-events-auto flex flex-col items-center">
           <span className="text-[0.65rem] font-medium text-muted">
