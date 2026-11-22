@@ -41,17 +41,25 @@ export function RecordingCard({
   songName,
   onMenu,
   onContextMenu,
+  hidePlace = false,
+  className = "bg-surface",
 }: {
   recording: Recording;
+  /** Leave out the routine/task line (on that task's or routine's own page). */
+  hidePlace?: boolean;
+  /** Its background (the routine and task pages use their soft fill). */
+  className?: string;
   tuneName?: string | null;
   songUrl?: string | null;
   songName?: string;
   onMenu?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }) {
-  const detail = [formatRecordedAt(recording.createdAt), formatDuration(recording.durationSec)].filter(Boolean).join(" · ");
+  // The date once: not again under a name that already has it ("Scales · Nov 22, 12:09").
+  const when = formatRecordedAt(recording.createdAt);
+  const detail = [recording.name.includes(when) ? null : when, formatDuration(recording.durationSec)].filter(Boolean).join(" · ");
   return (
-    <div className="flex flex-col gap-2 rounded-lg bg-surface p-3" onContextMenu={onContextMenu}>
+    <div className={`flex flex-col gap-2 rounded-lg p-3 ${className}`} onContextMenu={onContextMenu}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <Link href={`/tunes/recording?id=${recording._id}`} className="block truncate text-sm font-medium hover:underline">
@@ -69,7 +77,7 @@ export function RecordingCard({
             )}
           </div>
           {/* The routine and task it was made for, so a list of takes says what each one is. */}
-          <RecordingPlace routineId={recording.routineId ?? null} taskId={recording.taskId ?? null} logDate={recording.logDate ?? null} />
+          {!hidePlace && <RecordingPlace routineId={recording.routineId ?? null} taskId={recording.taskId ?? null} logDate={recording.logDate ?? null} />}
         </div>
         {onMenu && <MenuButton label={`Options for ${recording.name}`} onClick={onMenu} alwaysVisible />}
       </div>

@@ -668,3 +668,37 @@ page had a player there (no "kept on" card); the note read "## Notes / Recording
 with a node script (a bare player, text around a player, a new note, a second clip, a later section).
 `tsc` web/mobile/convex, eslint, `convex dev --once`. Not verified: a past day's page, subtasks on the
 page, the timer block running on the task page, phones by touch.
+
+### Redesign of the routine and task pages (same day)
+
+Jack: the new pages looked sloppy and thrown together. What was wrong (from his screenshot): the
+task's name four times and the routine's three; three ways to start (header Start, "Time it", the
+timer) beside Edit routine; a different surface per section (card, card, none, labelled card,
+dashed box) with "Arrange" floating above them; the note preview reading "Nov 22, 11:53 Nov 22,
+11:57" (its players' names); recording cards with the date twice and "Bass / Scales" on that task's
+own page; the totals as a tiny line; the full page stretched across the screen.
+
+- **`pageParts.tsx`** — one vocabulary for both pages: `PageTitle` (title, one line of facts, quiet
+  Edit/Share), `Stats` (three figures on fills), `FILL` / `ROWS` (a soft `foreground/[0.04]` tint,
+  rounded-xl, no borders — it shows the same on the page and in the side view, unlike `bg-surface`),
+  `Quiet` (empty states on the same fill), `RecordingList` (one per row, newest first, no place line),
+  `NotePreview` (fetches the note: its first written lines — not headings or players — with its
+  recordings count and Open; or a "Start notes" empty state).
+- **Task page:** title + "10 min · Every Sunday" + Edit; then the **day panel** (one fill): a big
+  box with "Done today" / "Not done today yet", time logged and planned, a bar of logged against
+  planned, one primary **Start · 10 min** (or the running timer in its place) and Log time, the
+  checklist, and Attached (the routine's own chips, then today's with "Attach for today"); then
+  Stats (days done, practiced, recordings); then Notes, Recordings (count, Record), History.
+- **Routine page:** title + "Every Sunday · 20 min · 2 tasks" + Share/Edit; "Today" with the day's
+  card (`RoutineCard embedded`: no icon or name, no minutes or repeat — the title has them — on the
+  page's fill), or "It isn't on today" with Add; Stats; Notes, Coming up, Recordings on other days,
+  History (rows with x/y and time on the right).
+- **`PageSections`:** one header style (semibold, an optional count, actions on the right); "Arrange
+  this page" is a quiet button at the end, and arranging shows the sections as a list of rows with
+  ↑ ↓ and show/hide, then Done.
+- **`RecordingCard`:** `hidePlace`, `className`; the date isn't repeated under a name that has it.
+- As pages of their own both sit in a `max-w-2xl` column.
+
+Verified in headless Chromium signed in (throwaway accounts, deleted): the task page empty, with a
+note and a recording, light and dark; the routine page in the side view light and dark; the routine
+as a page at 1440 and 390 (no overflow); no console errors. Not verified by touch.

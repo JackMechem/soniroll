@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { type NoteTarget, addRecordingToNote } from "@jam-practice/core/shedNotes";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import { NotePreview, ROWS } from "@/components/practicelog/pageParts";
 import { useAttachedNotes } from "@/components/shednotes/AttachedNotes";
-import { ChevronRightIcon, DocumentIcon, PlusIcon } from "@/components/tools";
+import { ChevronRightIcon, DocumentIcon } from "@/components/tools";
 import { errorText } from "@/lib/useShedNotes";
 
 /** What a page can do with its notes: put a recording's player in its note, under "## Recordings"
@@ -17,9 +17,9 @@ export type PageNotesHandle = { addRecording: (line: string) => Promise<void> };
 
 /**
  * A routine's or task's notes on its page: the notes attached to it (Shed Notes, so they're in
- * Shed Notes too, with links and backlinks), each a card with the start of its text. They're
- * written in the side view: a card opens it there (`onOpen`), never an editor on the page. With
- * none yet, "Start notes" makes one (`newTitle`, `newBody`) and opens it.
+ * Shed Notes too, with links and backlinks): the main one as a preview of what's written in it
+ * (`NotePreview`), any others as rows. They're written in the side view (`onOpen`), never on the
+ * page. With none yet, "Start notes" makes one (`newTitle`, `newBody`) and opens it.
  */
 export default function PageNotes({
   target,
@@ -75,42 +75,26 @@ export default function PageNotes({
     };
   });
 
-  if (notes === undefined) return <LoadingSpinner />;
-  if (!main) {
-    return (
-      <div className="flex flex-col items-start gap-2 rounded-lg bg-surface p-4">
-        <p className="text-sm text-muted">No notes yet. Write what you&apos;re working on, what went well, what to try next. Recordings you make here go in too.</p>
-        <button
-          type="button"
-          onClick={() => void start()}
-          disabled={busy}
-          className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
-        >
-          <PlusIcon className="h-4 w-4" /> Start notes
-        </button>
-        {error && <p className="text-sm text-danger">{error}</p>}
-      </div>
-    );
-  }
-
+  if (notes === undefined) return <div className="h-20 rounded-xl bg-foreground/[0.04]" aria-hidden />;
+  const others = notes.slice(1);
   return (
-    <ul className="flex flex-col gap-1.5">
-      {notes.map((n) => (
-        <li key={n.noteId}>
-          <button
-            type="button"
-            onClick={() => onOpen(n.noteId)}
-            className="flex w-full items-start gap-3 rounded-lg bg-surface px-4 py-3 text-left transition-colors hover:bg-surface-hover"
-          >
-            <DocumentIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{n.title}</span>
-              <span className="line-clamp-3 text-sm text-muted">{n.snippet || "Empty note — open it to write."}</span>
-            </span>
-            <ChevronRightIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-2">
+      <NotePreview noteId={main?.noteId ?? null} onOpen={() => main && onOpen(main.noteId)} onStart={() => void start()} starting={busy} />
+      {error && <p className="text-sm text-danger">{error}</p>}
+      {/* Other notes attached to it (from Shed Notes). */}
+      {others.length > 0 && (
+        <ul className={ROWS}>
+          {others.map((n) => (
+            <li key={n.noteId}>
+              <button type="button" onClick={() => onOpen(n.noteId)} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-foreground/[0.04]">
+                <DocumentIcon className="h-4 w-4 shrink-0 text-muted" />
+                <span className="min-w-0 flex-1 truncate text-sm">{n.title}</span>
+                <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

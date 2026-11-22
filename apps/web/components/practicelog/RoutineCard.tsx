@@ -53,6 +53,7 @@ export default function RoutineCard({
   recordings,
   dayRoutines,
   onOpenTask,
+  embedded = false,
 }: {
   date: string;
   item: DayRoutine;
@@ -61,6 +62,8 @@ export default function RoutineCard({
   dayRoutines: { id: string; name: string }[];
   /** Opens a task (tapping its name): its page in the side view unless given. */
   onOpenTask?: (taskId: string) => void;
+  /** On the routine's own page: no icon or name (the page's title has them). */
+  embedded?: boolean;
 }) {
   const { routine, occurrence, added } = item;
   const { engine, startRoutine, runningTask } = useRoutineTimer();
@@ -138,25 +141,28 @@ export default function RoutineCard({
 
   return (
     <article
-      className={`relative flex flex-col gap-3 overflow-hidden rounded-lg bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}
+      className={`relative flex flex-col gap-3 overflow-hidden p-4 pl-5 ${embedded ? "rounded-xl bg-foreground/[0.04]" : "rounded-lg bg-surface"} ${skipped ? "opacity-60" : ""}`}
       style={timeIsNow ? { boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
       <header className="flex items-start gap-3 pl-1">
-        <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
+        {!embedded && <RoutineIcon icon={routine.icon} color={routine.color} size="md" />}
         <div className="min-w-0 flex-1">
           {/* Its page opens in the side view, so the day stays in sight. */}
-          <button type="button" onClick={() => openSide({ kind: "routine", id: routine.id, date })} className={`block max-w-full truncate text-left text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
-            {routine.name || "Untitled routine"}
-          </button>
-          {routine.assigned && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
+          {!embedded && (
+            <button type="button" onClick={() => openSide({ kind: "routine", id: routine.id, date })} className={`block max-w-full truncate text-left text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
+              {routine.name || "Untitled routine"}
+            </button>
+          )}
+          {routine.assigned && !embedded && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
           <div className="flex flex-col gap-0.5 text-xs text-muted">
             {/* Dots between items that never dangle when a line wraps (DotList). */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <DotList
                 items={[
                   span ? <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span> : "Any time",
-                  formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
+                  // On its own page the title already says how long and how often.
+                  !embedded && formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
                 ]}
               />
               {!span && !skipped && (
@@ -167,13 +173,15 @@ export default function RoutineCard({
             </div>
             <DotList
               items={[
-                <span key="repeat" className="flex items-center gap-1">
-                  {added ? "Added to this day" : (
-                    <>
-                      <RepeatIcon className="h-3 w-3 shrink-0" /> {describeRepeat(routine.repeat)}
-                    </>
-                  )}
-                </span>,
+                (!embedded || added) && (
+                  <span key="repeat" className="flex items-center gap-1">
+                    {added ? "Added to this day" : (
+                      <>
+                        <RepeatIcon className="h-3 w-3 shrink-0" /> {describeRepeat(routine.repeat)}
+                      </>
+                    )}
+                  </span>
+                ),
                 skipped && <span className="font-semibold text-foreground">Skipped</span>,
                 !skipped && routineStatus(item, date, today) === "missed" && "Missed",
                 routineStatus(item, date, today) === "partial" && <span className="font-semibold text-warning">Partly done</span>,

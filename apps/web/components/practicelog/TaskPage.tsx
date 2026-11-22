@@ -9,23 +9,24 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { type NoteTarget, TASK_NOTE_START, targetKey } from "@jam-practice/core/shedNotes";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
+import { BackButton, PageShell } from "@/components/library/shared";
 import PageBar, { type Crumb } from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import PageNotes, { type PageNotesHandle } from "@/components/practicelog/PageNotes";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
+import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList, Stats } from "@/components/practicelog/pageParts";
 import LogTimeDialog from "@/components/practicelog/LogTimeDialog";
 import RecordClip from "@/components/practicelog/RecordClip";
 import { RunningTimer } from "@/components/practicelog/RoutineCard";
 import Subtasks from "@/components/practicelog/Subtasks";
-import TaskCheck from "@/components/practicelog/TaskCheck";
-import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { useAttachedNotes } from "@/components/shednotes/AttachedNotes";
 import { embedText } from "@/components/shednotes/fileEmbedSetup";
 import { CheckIcon, PencilIcon, PlayIcon, StopwatchIcon, findToolLink } from "@/components/tools";
 import {
+  type Attachment,
   DAY_TASKS_ID,
   type DayTask,
+  describeRepeat,
   ROUTINE_COLORS,
   type RoutineTask,
   formatLongDate,
@@ -120,13 +121,16 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
     ) : (
       <PageShell>
         <PageBar crumbs={[...baseCrumbs, { label }]} icon={SHED_LOG_ICON} />
-        <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log"))} />
-        {children}
+        {/* A readable column, not the whole width. */}
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+          <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log"))} />
+          {children}
+        </div>
       </PageShell>
     );
 
   if (!log.ready || !mounted) return frame("Task", <LoadingSpinner />);
-  if (!task || (routineId && !routine)) return frame("Task", <EmptyCard>That task isn&apos;t there anymore.</EmptyCard>);
+  if (!task || (routineId && !routine)) return frame("Task", <Quiet>That task isn&apos;t there anymore.</Quiet>);
 
   const title = task.title || "Untitled task";
   // The day it's looked at for (the Shed Log's day it was opened from; else today).
@@ -170,39 +174,76 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
     if (main) void appendLine({ id: main.noteId as Id<"shedNotes">, line: `- [[${note.title}]]` });
   }
 
-  const sections: PageSection[] = [
-    {
-      // The day itself, like the task on the Shed Log: ticked off, time on it, its checklist, the timer.
-      id: "day",
-      title: day === today ? "Today" : formatLongDate(day),
-      content: (
-        <div className="flex flex-col gap-3 rounded-lg bg-surface p-4">
-          {engine && running && <RunningTimer engine={engine} />}
-          <TaskCheck
-            checked={checked}
-            label={title}
-            color={color}
-            onToggle={toggleDone}
-            meta={[formatMinutesShort(task.minutes), spentMs > 0 && `${formatMinutesShort(spentMs / 60000)} logged`, checked ? "Done" : null]}
-          />
-          {(task.subtasks?.length ?? 0) > 0 && (
-            <div className="pl-8">
-              <Subtasks items={task.subtasks ?? []} color={color} isDone={(id) => subDone.has(id)} onToggle={toggleSub} />
-            </div>
-          )}
-          <div className="flex flex-wrap gap-2 pl-8">
-            {!past && !running && task.minutes > 0 && (
-              <button type="button" onClick={start} className="flex h-8 items-center gap-1.5 rounded-md bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15">
-                <PlayIcon className="h-3.5 w-3.5" /> Time it
-              </button>
-            )}
-            <button type="button" onClick={() => setLogging(true)} className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-              <StopwatchIcon className="h-3.5 w-3.5 text-muted" /> Log time
-            </button>
-          </div>
+  const planned = task.minutes;
+  const loggedMin = spentMs / 60000;
+  const dayLabel = day === today ? "today" : `on ${formatShortDate(day)}`;
+  const dayAttachments = routineId ? (occ?.taskAttachments?.[taskId] ?? []) : (dayTask?.attachments ?? []);
+  const setDayAttachments = (items: Attachment[]) =>
+    routineId
+      ? log.updateOccurrence(day, routineId, (o) => ({ ...o, taskAttachments: { ...(o.taskAttachments ?? {}), [taskId]: items } }))
+      : dayTask && log.saveDayTask(day, { ...dayTask, attachments: items });
+  const everyTime = routineId ? (task.attachments ?? []) : [];
+
+  // The day: done or not, the time on it, the one way to start it (or the timer while it runs),
+  // its checklist and what's attached. Everything for practicing it now, in one place.
+  const dayPanel = (
+    <section aria-label={day === today ? "Today" : formatLongDate(day)} className={`${FILL} flex flex-col gap-4 p-4`}>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={checked}
+          aria-label={`${title} done`}
+          onClick={toggleDone}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${checked ? "border-transparent text-white" : "border-foreground/25 hover:border-muted"}`}
+          style={checked ? { background: color } : undefined}
+        >
+          {checked && <CheckIcon className="h-4 w-4" />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{checked ? `Done ${dayLabel}` : `Not done ${dayLabel} yet`}</p>
+          <p className="text-xs tabular-nums text-muted">
+            {loggedMin > 0 ? `${formatMinutesShort(Math.max(1, Math.round(loggedMin)))} logged` : "No time logged"}
+            {planned > 0 ? ` · ${formatMinutesShort(planned)} planned` : ""}
+          </p>
         </div>
-      ),
-    },
+      </div>
+      {planned > 0 && (
+        <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden>
+          <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(100, (loggedMin / planned) * 100)}%`, background: color }} />
+        </div>
+      )}
+      {engine && running ? (
+        <RunningTimer engine={engine} />
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {!past && planned > 0 && (
+            <button type="button" onClick={start} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+              <PlayIcon className="h-4 w-4" /> Start · {formatMinutesShort(planned)}
+            </button>
+          )}
+          <button type="button" onClick={() => setLogging(true)} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.06] px-3.5 text-sm font-medium hover:bg-surface-hover">
+            <StopwatchIcon className="h-4 w-4 text-muted" /> Log time
+          </button>
+        </div>
+      )}
+      {(task.subtasks?.length ?? 0) > 0 && (
+        <div className="flex flex-col gap-1.5 border-t border-foreground/[0.06] pt-3">
+          <span className="text-xs font-semibold text-muted">Checklist</span>
+          <Subtasks items={task.subtasks ?? []} color={color} isDone={(id) => subDone.has(id)} onToggle={toggleSub} />
+        </div>
+      )}
+      <div className="flex flex-col gap-1.5 border-t border-foreground/[0.06] pt-3">
+        <span className="text-xs font-semibold text-muted">Attached</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {everyTime.length > 0 && <AttachmentList items={everyTime} />}
+          <AttachmentList items={dayAttachments} onChange={setDayAttachments} addLabel={routineId ? `Attach for ${day === today ? "today" : formatShortDate(day)}` : "Attach"} />
+        </div>
+      </div>
+    </section>
+  );
+
+  const sections: PageSection[] = [
     {
       id: "notes",
       title: "Notes",
@@ -222,6 +263,7 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
     {
       id: "recordings",
       title: "Recordings",
+      count: recordings?.length,
       action: isAuthenticated ? (
         <RecordClip
           date={day}
@@ -233,46 +275,11 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
         />
       ) : undefined,
       content: !isAuthenticated ? (
-        <EmptyCard>Sign in to record clips — recordings are saved to your account.</EmptyCard>
+        <Quiet>Sign in to record clips. Recordings are saved to your account.</Quiet>
       ) : recordings === undefined ? (
-        <LoadingSpinner />
-      ) : recordings.length === 0 ? (
-        <EmptyCard>No recordings of this task yet. Record one here: it&apos;s saved on the task and goes in its notes.</EmptyCard>
+        <div className={`${FILL} h-16`} aria-hidden />
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {recordings.map((r) => (
-            <RecordingCard key={r._id} recording={r} />
-          ))}
-        </div>
-      ),
-    },
-    {
-      // A routine's task: what it always has (the routine editor's), and what's attached for just
-      // this day, here. A day's own task: its attachments, here.
-      id: "attached",
-      title: "Attached",
-      content: routineId ? (
-        <div className="flex flex-col gap-3 rounded-lg bg-surface p-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-muted">Every time</span>
-            {(task.attachments?.length ?? 0) > 0 ? (
-              <AttachmentList items={task.attachments ?? []} />
-            ) : (
-              <p className="text-sm text-muted">Nothing yet. {routine && !routine.assigned ? "Edit the routine to attach tunes, charts or tools for every day." : ""}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-muted">Just for {day === today ? "today" : formatShortDate(day)}</span>
-            <AttachmentList
-              items={occ?.taskAttachments?.[taskId] ?? []}
-              onChange={(items) => log.updateOccurrence(day, routineId, (o) => ({ ...o, taskAttachments: { ...(o.taskAttachments ?? {}), [taskId]: items } }))}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-lg bg-surface p-4">
-          <AttachmentList items={dayTask?.attachments ?? []} onChange={(attachments) => dayTask && log.saveDayTask(day, { ...dayTask, attachments })} />
-        </div>
+        <RecordingList recordings={recordings} empty="No recordings yet. Record one here and it goes in the task's notes too." />
       ),
     },
     ...(routineId
@@ -280,19 +287,23 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
           {
             id: "history",
             title: "History",
+            count: history.length,
             content:
               history.length === 0 ? (
-                <EmptyCard>Not practiced yet.</EmptyCard>
+                <Quiet>Not practiced yet.</Quiet>
               ) : (
-                <ul className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface">
-                  {history.map((h) => (
+                <ul className={ROWS}>
+                  {history.slice(0, 30).map((h) => (
                     <li key={h.date}>
-                      <Link href={`/shed-log?date=${h.date}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-hover">
-                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${h.done ? "bg-accent text-accent-foreground" : "border-[1.5px] border-foreground/25"}`}>
+                      <Link href={`/shed-log?date=${h.date}`} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-foreground/[0.04]">
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${h.done ? "text-white" : "border-[1.5px] border-foreground/25"}`}
+                          style={h.done ? { background: color } : undefined}
+                        >
                           {h.done && <CheckIcon className="h-2.5 w-2.5" />}
                         </span>
                         <span className="min-w-0 flex-1 text-sm">{formatLongDate(h.date)}</span>
-                        <span className="text-xs tabular-nums text-muted">{h.ms > 0 ? formatMinutesShort(Math.max(1, Math.round(h.ms / 60000))) : h.done ? "Checked off" : ""}</span>
+                        <span className="text-xs tabular-nums text-muted">{h.ms > 0 ? formatMinutesShort(Math.max(1, Math.round(h.ms / 60000))) : "Checked off"}</span>
                       </Link>
                     </li>
                   ))}
@@ -306,53 +317,29 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
   return frame(
     title,
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-foreground/10 pb-6">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className={inPanel ? "text-xl font-extrabold" : "text-2xl font-extrabold sm:text-3xl"}>{title}</h1>
-          <p className="text-sm text-muted">
-            {formatMinutesShort(task.minutes)}
-            {routine ? (
-              <>
-                {" · in "}
-                {inPanel ? (
-                  <button type="button" onClick={() => followSide({ kind: "routine", id: routine.id })} className="font-medium text-foreground hover:underline">
-                    {routine.name || "Untitled routine"}
-                  </button>
-                ) : (
-                  <Link href={routineHref(routine.id)} className="font-medium text-foreground hover:underline">
-                    {routine.name || "Untitled routine"}
-                  </Link>
-                )}
-              </>
-            ) : date ? (
-              ` · ${formatLongDate(date)}`
-            ) : null}
-          </p>
-          {routineId && (
-            <p className="text-xs tabular-nums text-muted">
-              {daysDone} day{daysDone === 1 ? "" : "s"} checked off · {formatMinutesShort(Math.round(minutesPracticed))} practiced
-            </p>
-          )}
-          {task.notes && <p className="mt-1 whitespace-pre-wrap text-sm">{task.notes}</p>}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {routine && !routine.assigned && (
-            <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className="flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-              <PencilIcon className="h-4 w-4 text-muted" /> Edit routine
+      <PageTitle
+        title={title}
+        facts={[formatMinutesShort(task.minutes), routine ? describeRepeat(routine.repeat) : date ? formatLongDate(date) : null].filter(Boolean).join(" · ")}
+        actions={
+          routine &&
+          !routine.assigned && (
+            <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className={QUIET_BUTTON} title="Edit this routine and its tasks">
+              <PencilIcon className="h-4 w-4" /> Edit
             </Link>
-          )}
-          {task.minutes > 0 && !past && (
-            <button
-              type="button"
-              onClick={start}
-              disabled={running}
-              className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-60"
-            >
-              <PlayIcon className="h-4 w-4" /> {running ? "Timing now" : "Start"}
-            </button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
+      {task.notes && <p className="-mt-3 whitespace-pre-wrap text-sm">{task.notes}</p>}
+      {dayPanel}
+      {routineId && (
+        <Stats
+          items={[
+            { value: String(daysDone), label: daysDone === 1 ? "day done" : "days done" },
+            { value: formatMinutesShort(Math.round(minutesPracticed)), label: "practiced" },
+            { value: String(recordings?.length ?? 0), label: (recordings?.length ?? 0) === 1 ? "recording" : "recordings" },
+          ]}
+        />
+      )}
       <PageSections pageKey={key} sections={sections} />
       {logging && (
         <LogTimeDialog
