@@ -117,8 +117,7 @@ in both the Practice Timer and the Shed Log.
   a run is restored on page load (`chime: false`), so reloading or opening another page mid-step
   doesn't jump back. `lib/useOpenStepTools.ts` listens and `router.push`es the tool (through
   `findToolLink`, so a retired href goes to the tool it became), unless you're already on it. It's
-  mounted in `PracticeTimerAlert`, which both `app/layout.tsx` and the desktop `main.tsx` mount
-  (the desktop app has no `AppShell`). In split screen the push retargets the active pane, like a
+  mounted in `PracticeTimerAlert`, which both `app/layout.tsx` and the desktop `main.tsx` mount. In split screen the push retargets the active pane, like a
   sidebar link.
 - **Turning it off:** Practice Timer → **Tools** chip → "Open each step's tool" (`openTools`, on by
   default, in the synced sound settings the Shed Log's runs already share).

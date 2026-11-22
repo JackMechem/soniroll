@@ -67,6 +67,12 @@ const DEFAULT_WIDTH = 244;
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 420;
 const COLLAPSED_WIDTH = 68;
+/** Dragging the edge narrower than this turns the sidebar into its icon strip. */
+const RAIL_SNAP_WIDTH = 150;
+/** How long the pointer can be away before the peeking sidebar slides away again. */
+const PEEK_CLOSE_MS = 300;
+/** Room the page bar leaves at its left for the menu button while the sidebar is hidden. */
+const TOGGLE_ROOM = "2.75rem";
 
 function PaletteIcon({ className }: { className?: string }) {
   return (
@@ -127,13 +133,18 @@ function DotsIcon({ className }: { className?: string }) {
   );
 }
 
+const noSubscribe = () => () => {};
+
 function clamp(n: number) {
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, n));
 }
 
-type Layout = { width: number; collapsed: boolean };
+/** `collapsed`: the icon strip (dragged narrow). `hidden`: out of the way entirely, like Notion's
+    sidebar: a menu button at the top left brings it back, and hovering that button (or the
+    window's left edge) slides it in over the page. */
+type Layout = { width: number; collapsed: boolean; hidden: boolean };
 
-const DEFAULT_LAYOUT: Layout = { width: DEFAULT_WIDTH, collapsed: false };
+const DEFAULT_LAYOUT: Layout = { width: DEFAULT_WIDTH, collapsed: false, hidden: false };
 const layoutListeners = new Set<() => void>();
 let cachedLayout: Layout | null = null;
 
@@ -146,6 +157,7 @@ function getLayout(): Layout {
       cachedLayout = {
         width: typeof stored.width === "number" ? clamp(stored.width) : DEFAULT_WIDTH,
         collapsed: stored.collapsed === true,
+        hidden: stored.hidden === true,
       };
     }
   } catch {
@@ -177,31 +189,63 @@ function subscribeLayout(listener: () => void) {
     `BackgroundToolDock.tsx` can anchor itself just to the right of the sidebar's own edge without
     duplicating this module's layout store. */
 export function useSidebarShownWidth(): number {
-  const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
-  return collapsed ? COLLAPSED_WIDTH : width;
+  const { width, collapsed, hidden } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
+  return hidden ? 0 : collapsed ? COLLAPSED_WIDTH : width;
 }
 
-/** Hides the sidebar down to its icon strip (in the header, after the ⋮ menu), or, collapsed,
-    brings it back (under the logo). */
-function SidebarCollapseButton({ collapsed }: { collapsed: boolean }) {
-  const label = collapsed ? "Show the sidebar" : "Hide the sidebar";
+/** The shortcut that hides the sidebar or brings it back: ⌘\ on a Mac, Ctrl+\ elsewhere (Ctrl on
+    the server and while hydrating). */
+function useHideShortcut() {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘\\" : "Ctrl+\\"),
+    () => "Ctrl+\\",
+  );
+}
+
+function DoubleChevronIcon({ direction, className }: { direction: "left" | "right"; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={direction === "left" ? "m11 17-5-5 5-5M18 17l-5-5 5-5" : "m13 17 5-5-5-5M6 17l5-5-5-5"} />
+    </svg>
+  );
+}
+
+/** In the sidebar's header: « hides it completely. While it's peeking (hidden, slid in over the
+    page), » keeps it open instead. */
+function SidebarHideButton({ peeking }: { peeking: boolean }) {
+  const label = peeking ? "Keep the sidebar open" : "Hide the sidebar";
+  const shortcut = useHideShortcut();
   return (
     <button
       type="button"
-      onClick={() => updateLayout({ collapsed: !collapsed })}
+      onClick={() => updateLayout({ hidden: !peeking })}
       aria-label={label}
-      title={label}
-      className={`flex shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${collapsed ? "mx-auto mb-2 h-8 w-8" : "h-8 w-8"}`}
+      title={`${label} (${shortcut})`}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
     >
-      {/* Just a chevron: ‹ hides the sidebar, › brings it back. */}
+      <DoubleChevronIcon direction={peeking ? "right" : "left"} className="h-4 w-4" />
+    </button>
+  );
+}
+
+/** Under the logo in the icon strip: widens the sidebar again (as dragging its edge out does). */
+function SidebarExpandButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => updateLayout({ collapsed: false })}
+      aria-label="Widen the sidebar"
+      title="Widen the sidebar"
+      className="mx-auto mb-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+    >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d={collapsed ? "m9 6 6 6-6 6" : "m15 6-6 6 6 6"} />
+        <path d="m9 6 6 6-6 6" />
       </svg>
     </button>
   );
 }
 
-const noSubscribe = () => () => {};
 /** "⌘K" on a Mac, "Ctrl K" elsewhere; null on the server and while hydrating (shown after). */
 function usePaletteKey() {
   return useSyncExternalStore(
@@ -703,8 +747,16 @@ function SearchExtras({ query, large, toolsFound, onNavigate }: { query: string;
 export default function Sidebar() {
   // The ⋮ menus offer the desktop app everywhere but inside it.
   const inDesktop = useInDesktopApp();
-  const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
+  const layout = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
+  const { width, hidden } = layout;
+  // Hidden, the sidebar peeks in at full width (never as the icon strip).
+  const collapsed = layout.collapsed && !hidden;
   const [dragging, setDragging] = useState(false);
+  const [peek, setPeek] = useState(false);
+  const peeking = hidden && peek;
+  const asideRef = useRef<HTMLElement>(null);
+  const shortcut = useHideShortcut();
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const [query, setQuery] = useState("");
   const [themeOpen, setThemeOpen] = useState(false);
   const router = useRouter();
@@ -728,6 +780,66 @@ export default function Sidebar() {
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });
 
+  // While hidden, the page bar leaves room at its left for the menu button (`PageBar`, panes).
+  useEffect(() => {
+    const root = document.documentElement;
+    if (hidden) root.style.setProperty("--sidebar-toggle-room", TOGGLE_ROOM);
+    else root.style.removeProperty("--sidebar-toggle-room");
+  }, [hidden]);
+
+  // ⌘\ / Ctrl+\ hides the sidebar or brings it back (desktop widths).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "\\" || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      if (!window.matchMedia("(min-width: 1024px)").matches) return;
+      e.preventDefault();
+      setPeek(false);
+      updateLayout({ hidden: !getLayout().hidden });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Hidden: the window's left edge brings the sidebar in, like hovering the menu button.
+  useEffect(() => {
+    if (!hidden || peek) return;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.clientX <= 4) setPeek(true);
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [hidden, peek]);
+
+  // Peeking: it stays while the pointer is over it, the menu button, or a menu or dialog it opened
+  // (those are portaled outside it), and slides away a moment after the pointer leaves them all.
+  useEffect(() => {
+    if (!peeking) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const keep = (target: EventTarget | null) =>
+      target instanceof Element &&
+      (asideRef.current?.contains(target) ||
+        toggleRef.current?.contains(target) ||
+        !!target.closest('[role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]'));
+    const onMove = (e: PointerEvent) => {
+      if (keep(e.target) || (e.pointerType === "mouse" && e.clientX <= 4)) {
+        if (timer !== null) clearTimeout(timer);
+        timer = null;
+      } else if (timer === null) {
+        timer = setTimeout(() => setPeek(false), PEEK_CLOSE_MS);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPeek(false);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      if (timer !== null) clearTimeout(timer);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [peeking]);
+
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -748,21 +860,30 @@ export default function Sidebar() {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
-    if (collapsed) {
-      updateLayout({ collapsed: false, width: MIN_WIDTH });
-    }
   }
 
+  /** Narrower than `RAIL_SNAP_WIDTH` it becomes the icon strip, and wider again comes back out
+      (not while peeking: the strip is for a sidebar that's kept open). */
   function onDrag(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragging) return;
     const left = e.currentTarget.parentElement?.getBoundingClientRect().left ?? 0;
-    setWidth(e.clientX - left);
+    const w = e.clientX - left;
+    if (!hidden && w < RAIL_SNAP_WIDTH) {
+      if (!layout.collapsed) updateLayout({ collapsed: true });
+    } else {
+      updateLayout({ collapsed: false, width: clamp(w) });
+    }
   }
 
   function onKeyResize(e: React.KeyboardEvent) {
-    if (e.key === "ArrowLeft") setWidth(width - 16);
-    else if (e.key === "ArrowRight") setWidth(width + 16);
-    else return;
+    if (e.key === "ArrowLeft") {
+      if (collapsed) return;
+      if (!hidden && width <= MIN_WIDTH) updateLayout({ collapsed: true });
+      else setWidth(width - 16);
+    } else if (e.key === "ArrowRight") {
+      if (collapsed) updateLayout({ collapsed: false, width: MIN_WIDTH });
+      else setWidth(width + 16);
+    } else return;
     e.preventDefault();
   }
 
@@ -947,10 +1068,36 @@ export default function Sidebar() {
 
       {themeOpen && <ThemeModal onClose={() => setThemeOpen(false)} />}
 
+      {/* Hidden: the menu button at the top left. Hovering it slides the sidebar in over the
+          page; clicking keeps it open again. */}
+      {hidden && (
+        <button
+          ref={toggleRef}
+          type="button"
+          onClick={() => {
+            setPeek(false);
+            updateLayout({ hidden: false });
+          }}
+          onPointerEnter={(e) => e.pointerType === "mouse" && setPeek(true)}
+          aria-label="Show the sidebar"
+          title={`Keep the sidebar open (${shortcut})`}
+          className="fixed left-3 top-2.5 z-[51] hidden h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground lg:flex"
+        >
+          {peeking ? <DoubleChevronIcon direction="right" className="h-4 w-4" /> : <MenuIcon className="h-5 w-5" />}
+        </button>
+      )}
+
       <aside
+        ref={asideRef}
         style={{ width: shownWidth }}
-        className={`relative hidden shrink-0 flex-col border-r border-foreground/10 bg-surface p-2 lg:flex ${
-          dragging ? "" : "transition-[width] duration-150"
+        inert={hidden && !peek}
+        aria-hidden={hidden && !peek ? true : undefined}
+        className={`hidden shrink-0 flex-col bg-surface p-2 lg:flex ${
+          hidden
+            ? `fixed bottom-2 left-2 top-14 z-50 rounded-xl shadow-2xl shadow-black/20 ring-1 ring-foreground/10 transition-transform duration-200 ease-out motion-reduce:transition-none ${
+                peek ? "translate-x-0" : "-translate-x-[calc(100%+1rem)]"
+              }`
+            : `relative border-r border-foreground/10 ${dragging ? "" : "transition-[width] duration-150"}`
         }`}
       >
         <div
@@ -1072,11 +1219,11 @@ export default function Sidebar() {
               </>
             )}
           </Flyout>
-          <SidebarCollapseButton collapsed={false} />
+          <SidebarHideButton peeking={peeking} />
           </div>
           )}
         </div>
-        {collapsed && <SidebarCollapseButton collapsed />}
+        {collapsed && <SidebarExpandButton />}
         {collapsed ? (
           <button
             type="button"
@@ -1220,7 +1367,7 @@ export default function Sidebar() {
           onPointerCancel={() => setDragging(false)}
           onKeyDown={onKeyResize}
           onDoubleClick={() => updateLayout({ collapsed: false, width: DEFAULT_WIDTH })}
-          title="Drag to resize · double-click to reset"
+          title="Drag to resize (very narrow: just icons) · double-click to reset"
           // A 16px grab area covering the gap between the sidebar and the page, with a faint pill
           // in the middle as the handle; a hairline shows the edge while hovering or dragging.
           className="group absolute -right-3 top-0 z-10 flex h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none"
