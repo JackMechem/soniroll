@@ -85,7 +85,7 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
             <PauseIcon className="h-4 w-4" /> Pause
           </button>
         ) : (
-          <button type="button" onClick={startDayTimer} className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
+          <button type="button" onClick={() => startDayTimer()} className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             <PlayIcon className="h-4 w-4" /> Start timer
           </button>
         ))}

@@ -509,3 +509,24 @@ Checked in a harness against the real engine and stopwatch. Not on a phone.
   - The New menu, the Hours and Days share cards, the routine page with 1/3 done, and the
     swatch labels.
 - **Not checked:** a narrow split pane.
+
+## 2026-11-22 — The day timer stops with the task that started it
+
+Jack: playing a task and stopping it left the day timer running, which was confusing. (Until now
+the day timer was meant to keep going after a routine or task stopped; see "Desktop layout and the
+day timer" above.)
+
+- `lib/dayStopwatch.ts` remembers who started it: `startDayTimer(true)` from a routine or task run
+  (`startRoutine` / `startDayTasks`, and resuming one) sets `byTask`; the day timer's own Start
+  button doesn't (its `onClick` now wraps the call, so the click event isn't taken for `byTask`). An
+  already running day timer is left as it was, so one you started yourself stays yours.
+- `PracticeLogGlobal` watches the engine: when a run linked to the Shed Log was going and is then
+  paused, stopped, finished (its last step ends) or replaced by a plain Practice Timer session, it
+  pauses the day timer if `dayTimerStartedByTask()`. Resuming the run starts it again (as before).
+  Pausing the day timer still pauses the run.
+
+Verified signed in (throwaway `.test` account, deleted afterwards), headless Chromium, an extra task
+timed from the day panel and paused/stopped on the Practice Timer page: task started → day timer
+running (by the task); stopped → stopped; paused → stopped; resumed → running; stopped → stopped.
+Day timer started by hand first → the task started and stopped → still running. Not verified: a
+routine's last step running out on its own (same code path as Stop: the run ends), alarm mode, a phone.

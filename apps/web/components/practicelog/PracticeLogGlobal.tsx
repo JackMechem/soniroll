@@ -10,7 +10,7 @@ import { type ProgressCardKind, todayKey } from "@/lib/practiceLog";
 import { useToolTimeTracker } from "@/lib/toolTime";
 import { useToolUsageWriter } from "@/lib/toolUsage";
 import { usePracticeLog } from "@/lib/usePracticeLog";
-import { startDayTimer } from "@/lib/dayStopwatch";
+import { dayTimerStartedByTask, pauseDayTimer, startDayTimer } from "@/lib/dayStopwatch";
 import { getSnapshot as engineState, subscribe as subscribeEngine } from "@/lib/practiceTimerEngine";
 
 /**
@@ -35,17 +35,26 @@ export default function PracticeLogGlobal() {
     );
   }, [ready, teachers, syncAssigned]);
   useCelebrations(data, ready);
-  // A Shed Log routine or task resumed on the Practice Timer (from anywhere) restarts the day
-  // timer, the way starting it does — pausing the day timer pauses the run (`pauseDayPractice`).
+  // The day timer and a Shed Log routine or task on the Practice Timer stay in step (from
+  // anywhere): resuming the run restarts the day timer, the way starting it does; pausing or
+  // stopping it (or its last step ending) stops the day timer too, if the run is what started it —
+  // one you started yourself keeps going. Pausing the day timer pauses the run (`pauseDayPractice`).
   useEffect(() => {
     if (!ready) return;
+    const linkOf = () => {
+      const run = engineState();
+      return run && run.session.type === "custom" ? run.session.link : undefined;
+    };
     let wasPaused = engineState()?.paused ?? true;
+    let wasLinked = !!linkOf();
     const off = subscribeEngine(() => {
       const run = engineState();
       const paused = run?.paused ?? true;
-      const link = run && run.session.type === "custom" ? run.session.link : undefined;
-      if (wasPaused && !paused && link?.date === todayKey()) startDayTimer();
+      const link = linkOf();
+      if (wasPaused && !paused && link?.date === todayKey()) startDayTimer(true);
+      else if (wasLinked && !wasPaused && (paused || !link) && dayTimerStartedByTask()) pauseDayTimer();
       wasPaused = paused;
+      wasLinked = !!link;
     });
     return () => {
       off();

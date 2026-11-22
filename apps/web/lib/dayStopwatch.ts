@@ -7,14 +7,16 @@ import { queueLogEntry, setDayTimerCoverage } from "@/lib/practiceTimerEngine";
 /**
  * The day timer: a stopwatch for the whole day's practice, separate from the routine / task
  * timer (`practiceTimerEngine`). Start it on its own, or it starts itself when a routine or task
- * timer starts; it keeps going while those run and stop. A plain module (like the Practice Timer),
+ * timer starts; started that way it stops again when the task does (paused, stopped or finished;
+ * `PracticeLogGlobal`), while one started on its own keeps going. A plain module (like the Practice Timer),
  * kept in localStorage, so it keeps running across pages and reloads. Time is handed to the
  * Shed Log every 30 seconds, and on pause, as `DAY_STOPWATCH_ID` entries in the timer's queue
  * (`applyTimerEntries` adds them to the day's `stopwatchMs`); `unflushedMs()` is the part not
  * handed over yet, for a live display. It stops itself at midnight.
  */
 
-type State = { date: string; running: boolean; since: number };
+/** `byTask`: a routine or task timer started it, so it stops when that does. */
+type State = { date: string; running: boolean; since: number; byTask?: boolean };
 
 const KEY = "jam-practice-day-stopwatch";
 const FLUSH_MS = 30000;
@@ -109,12 +111,13 @@ function getSnapshot(): State | null {
   return state;
 }
 
-/** Starts (or resumes) today's day timer. */
-export function startDayTimer() {
+/** Starts (or resumes) today's day timer. `byTask`: a routine or task timer is starting it (an
+    already running day timer stays as it was). */
+export function startDayTimer(byTask = false) {
   ensureLoaded();
   if (state?.running && state.date === todayKey()) return;
   if (state?.running) flush();
-  state = { date: todayKey(), running: true, since: Date.now() };
+  state = { date: todayKey(), running: true, since: Date.now(), ...(byTask ? { byTask: true } : {}) };
   startTicking();
   save();
   notify();
@@ -139,6 +142,12 @@ export function discardDayTimer() {
   stopTicking();
   save();
   notify();
+}
+
+/** Whether the running day timer was started by a routine or task timer. */
+export function dayTimerStartedByTask(): boolean {
+  ensureLoaded();
+  return !!state?.running && !!state.byTask;
 }
 
 export function isDayTimerRunning(): boolean {

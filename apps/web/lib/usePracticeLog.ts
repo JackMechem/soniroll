@@ -268,8 +268,9 @@ export function useRoutineTimer() {
       link: { routineId: routine.id, date },
     };
     start(session, sound.soundEnabled, sound.toneId, sound.alarmMode, sound.fullScreenAlert);
-    // The day timer runs alongside: starting a routine starts it if it isn't going already.
-    if (date === todayKey()) startDayTimer();
+    // The day timer runs alongside: starting a routine starts it if it isn't going already (and
+    // then it stops with the routine, `PracticeLogGlobal`).
+    if (date === todayKey()) startDayTimer(true);
   }
 
   /** Runs a day's own tasks on the timer: just `only`, or every one not done yet. */
@@ -285,7 +286,7 @@ export function useRoutineTimer() {
       link: { routineId: DAY_TASKS_ID, date },
     };
     start(session, sound.soundEnabled, sound.toneId, sound.alarmMode, sound.fullScreenAlert);
-    if (date === todayKey()) startDayTimer();
+    if (date === todayKey()) startDayTimer(true);
   }
 
   /** The running step's task id when the timer is running this routine on this day. */
