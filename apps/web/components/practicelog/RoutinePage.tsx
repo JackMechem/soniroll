@@ -13,7 +13,7 @@ import PageBar from "@/components/PageBar";
 import PageNotes from "@/components/practicelog/PageNotes";
 import RoutineCard from "@/components/practicelog/RoutineCard";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
-import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList, Stats } from "@/components/practicelog/pageParts";
+import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList } from "@/components/practicelog/pageParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
 import { CheckIcon, PencilIcon, ShareIcon, findToolLink } from "@/components/tools";
 import {
@@ -119,14 +119,8 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
   const today = todayKey();
   const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
   const upcoming = nextOccurrences(routine.repeat, today, 6);
-  const completed = history.filter(({ occ }) => {
-    const p = progressOf(routine, occ);
-    return p.total > 0 && p.done === p.total;
-  }).length;
-  const minutes = history.reduce((s, h) => s + minutesFor(routine, h.occ), 0);
   const start = parseTime(routine.startTime);
 
-  const recCount = recordings?.length ?? 0;
   // Which tasks have notes, and a new routine note's start: a link to each task's notes.
   const taskNotes = (notesUnder ?? []).filter((n) => n.target.startsWith(`${routineKey}/task:`));
   const routineNoteBody = () => {
@@ -280,13 +274,6 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
         <h2 className="text-sm font-semibold">{day === today ? "Today" : formatLongDate(day)}</h2>
         {dayCard}
       </section>
-      <Stats
-        items={[
-          { value: String(completed), label: completed === 1 ? "day completed" : "days completed" },
-          { value: formatMinutesShort(Math.round(minutes)), label: "practiced" },
-          { value: String(recCount), label: recCount === 1 ? "recording" : "recordings" },
-        ]}
-      />
       <PageSections pageKey={routineKey} sections={sections} />
       {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
     </>,

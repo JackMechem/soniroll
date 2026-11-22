@@ -14,7 +14,7 @@ import PageBar, { type Crumb } from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import PageNotes, { type PageNotesHandle } from "@/components/practicelog/PageNotes";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
-import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList, Stats } from "@/components/practicelog/pageParts";
+import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList } from "@/components/practicelog/pageParts";
 import LogTimeDialog from "@/components/practicelog/LogTimeDialog";
 import RecordClip from "@/components/practicelog/RecordClip";
 import { RunningTimer } from "@/components/practicelog/RoutineCard";
@@ -142,8 +142,6 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
   const checked = routineId ? (occ?.done ?? []).includes(taskId) : !!dayTask?.done;
   const spentMs = (routineId ? occ?.spentMs?.[taskId] : dayTask?.spentMs) ?? 0;
   const color = routine ? ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length] : "var(--accent)";
-  const minutesPracticed = history.reduce((s, h) => s + (h.ms > 0 ? h.ms / 60000 : h.done ? task.minutes : 0), 0);
-  const daysDone = history.filter((h) => h.done).length;
 
   function start() {
     if (!task) return;
@@ -331,15 +329,6 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
       />
       {task.notes && <p className="-mt-3 whitespace-pre-wrap text-sm">{task.notes}</p>}
       {dayPanel}
-      {routineId && (
-        <Stats
-          items={[
-            { value: String(daysDone), label: daysDone === 1 ? "day done" : "days done" },
-            { value: formatMinutesShort(Math.round(minutesPracticed)), label: "practiced" },
-            { value: String(recordings?.length ?? 0), label: (recordings?.length ?? 0) === 1 ? "recording" : "recordings" },
-          ]}
-        />
-      )}
       <PageSections pageKey={key} sections={sections} />
       {logging && (
         <LogTimeDialog

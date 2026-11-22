@@ -34,20 +34,6 @@ export function PageTitle({ title, facts, actions }: { title: string; facts: Rea
 export const QUIET_BUTTON =
   "flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:opacity-50";
 
-/** Figures for the whole time: days, minutes, takes. */
-export function Stats({ items }: { items: { value: string; label: string }[] }) {
-  return (
-    <dl className="grid grid-cols-3 gap-2">
-      {items.map((s) => (
-        <div key={s.label} className={`${FILL} flex flex-col gap-0.5 px-3.5 py-3`}>
-          <dt className="order-2 text-xs text-muted">{s.label}</dt>
-          <dd className="order-1 text-lg font-semibold tabular-nums leading-tight">{s.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 /** Nothing here yet: one quiet line, on the same fill as content. */
 export function Quiet({ children }: { children: React.ReactNode }) {
   return <p className={`${FILL} px-4 py-3.5 text-sm text-muted`}>{children}</p>;
