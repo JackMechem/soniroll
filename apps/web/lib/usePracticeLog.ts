@@ -6,6 +6,7 @@ import {
   DAY_TASKS_ID,
   DEFAULT_PREFS,
   type DayLog,
+  type Attachment,
   type DayTask,
   type PracticeLogPrefs,
   type Occurrence,
@@ -237,6 +238,12 @@ export function usePracticeLog({ drainTimer = false }: { drainTimer?: boolean } 
   return { data, ready, syncAssigned, updateDay, setAllTasks, addDayTime, saveDayTask, removeDayTask, toggleDayTask, moveDayTask, setPrefs, updateOccurrence, toggleTask, saveRoutine, deleteRoutine, addToDay, removeFromDay };
 }
 
+/** A task's first attached tool, as a timer step's `tool` (opened when the step starts). */
+function taskTool(attachments: Attachment[] | undefined): { tool?: string } {
+  const tool = attachments?.find((a) => a.kind === "tool");
+  return tool && tool.kind === "tool" ? { tool: tool.href } : {};
+}
+
 /** The Practice Timer as the Shed Log uses it: what's running, and starting a routine on it.
     A routine runs as a timer session whose segments are its tasks, so the sidebar widget, alarm
     mode and surviving a reload all work the same, and each finished task is checked off. */
@@ -256,7 +263,7 @@ export function useRoutineTimer() {
       id: `routine:${routine.id}:${date}`,
       name: routine.name || "Routine",
       type: "custom",
-      segments: tasks.map((t) => ({ id: t.id, title: t.title || "Task", minutes: t.minutes })),
+      segments: tasks.map((t) => ({ id: t.id, title: t.title || "Task", minutes: t.minutes, ...taskTool(t.attachments) })),
       updatedAt: Date.now(),
       link: { routineId: routine.id, date },
     };
@@ -273,7 +280,7 @@ export function useRoutineTimer() {
       id: `day:${date}`,
       name: list.length === 1 ? list[0].title || "Task" : "Today's tasks",
       type: "custom",
-      segments: list.map((t) => ({ id: t.id, title: t.title || "Task", minutes: t.minutes })),
+      segments: list.map((t) => ({ id: t.id, title: t.title || "Task", minutes: t.minutes, ...taskTool(t.attachments) })),
       updatedAt: Date.now(),
       link: { routineId: DAY_TASKS_ID, date },
     };

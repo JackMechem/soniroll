@@ -32,7 +32,7 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.string(),
     type: v.union(v.literal("custom"), v.literal("pomodoro")),
-    segments: v.optional(v.array(v.object({ id: v.string(), title: v.string(), minutes: v.number() }))),
+    segments: v.optional(v.array(v.object({ id: v.string(), title: v.string(), minutes: v.number(), tool: v.optional(v.string()) }))),
     pomodoro: v.optional(
       v.object({
         workMinutes: v.number(),

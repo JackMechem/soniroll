@@ -9,6 +9,7 @@ import {
   stop,
   subscribe,
 } from "@/lib/practiceTimerEngine";
+import { useOpenStepTools } from "@/lib/useOpenStepTools";
 
 /**
  * A full-screen "time's up" takeover, shown app-wide (mounted once in `app/layout.tsx`, alongside
@@ -26,6 +27,8 @@ import {
  */
 export default function PracticeTimerAlert() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Also mounted once for the whole app (web and desktop): a step's tool opens when it starts.
+  useOpenStepTools();
   if (!state || !state.alarming || !state.fullScreenAlert) return null;
 
   return (

@@ -45,6 +45,9 @@ const STORAGE_KEY = "jam-practice-timer-running";
     (`takePendingLogEntries`) when it's open, so time is logged even if it wasn't open at the time. */
 const PENDING_KEY = "jam-practice-log-pending";
 export const PENDING_EVENT = "practice-log-pending";
+/** Fired on `window` when a step with a tool starts (`detail`: the tool's href), as it happens:
+    never when a run is restored on page load. `useOpenStepTools` opens it. */
+export const STEP_TOOL_EVENT = "practice-timer-step-tool";
 const ALARM_REPEAT_MS = 1500;
 
 let state: EngineState | null = null;
@@ -200,6 +203,8 @@ function loadStep(
   persist();
   scheduleAdvance(durationMs);
   if (soundEnabled && chime) playTransitionChime(toneId);
+  // `chime` is false only when restoring on page load, which shouldn't jump to another page.
+  if (chime && current.tool) window.dispatchEvent(new CustomEvent(STEP_TOOL_EVENT, { detail: current.tool }));
 }
 
 /** Enters the "time's up, waiting on you" state instead of loading the next step — what a normal

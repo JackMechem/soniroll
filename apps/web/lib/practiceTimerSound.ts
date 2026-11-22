@@ -8,4 +8,6 @@ export const DEFAULT_SOUND_SETTINGS = {
   toneId: DEFAULT_TONE_ID,
   alarmMode: false,
   fullScreenAlert: false,
+  /** Open a step's tool (a Shed Log task's attached tool) when the step starts. */
+  openTools: true,
 };

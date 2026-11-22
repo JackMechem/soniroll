@@ -24,10 +24,12 @@ import { useSiteSettings } from "@/lib/siteSettings";
 import { toolPresets } from "@/lib/toolPresets";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import {
+  NAV_LINKS,
   PauseIcon,
   PencilIcon,
   PlayIcon,
   PlusIcon,
+  SlidersIcon,
   SpeakerIcon,
   StopIcon,
   TrashIcon,
@@ -55,7 +57,18 @@ import { TONES } from "@/lib/tones";
 import { DEFAULT_SOUND_SETTINGS, SOUND_SETTINGS_KEY } from "@/lib/practiceTimerSound";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
-const PANEL_IDS = ["practice-timer-editor", "practice-timer-sound"];
+const PANEL_IDS = ["practice-timer-editor", "practice-timer-sound", "practice-timer-tools"];
+
+/** The tools a step can open when it starts (the Shed Log's list of tools to attach, without the
+    timer itself). */
+const STEP_TOOL_OPTIONS = [
+  { value: "", label: "No tool" },
+  ...NAV_LINKS.filter((l) => !["/community", "/tunes", "/chord-charts", "/shed-log", "/practice-timer"].includes(l.href)).map((l) => ({
+    value: l.href,
+    label: l.label,
+    icon: <l.icon className="h-4 w-4 text-accent" />,
+  })),
+];
 const TONE_OPTIONS = TONES.map((t) => ({ value: t.id, label: t.label }));
 
 /** The session editor's own working copy — always keeps both `segments` and `pomodoro` around
@@ -103,7 +116,7 @@ export default function PracticeTimer() {
     SOUND_SETTINGS_KEY,
     DEFAULT_SOUND_SETTINGS,
   );
-  const { soundEnabled, toneId, alarmMode, fullScreenAlert } = settings;
+  const { soundEnabled, toneId, alarmMode, fullScreenAlert, openTools } = settings;
   const [{ rewardChips }] = useSiteSettings();
   const [draft, setDraft] = useState<Draft | null>(null);
   // The session editor is the "New session" chip's popover; an Edit button on a saved session
@@ -316,11 +329,12 @@ export default function PracticeTimer() {
               </Hint>
 
               {draft.type === "custom" ? (
-                <div className="flex flex-col gap-3 sm:gap-2">
+                <div className="flex flex-col gap-4">
                   {/* On a phone the name takes its own line, so the minutes, the 40px move buttons
                       and Remove (set apart, so it isn't hit by mistake) fit on the next. */}
                   {draft.segments.map((segment, i) => (
-                    <div key={segment.id} className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap">
+                    <div key={segment.id} className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap">
                       <input
                         type="text"
                         value={segment.title}
@@ -368,6 +382,14 @@ export default function PracticeTimer() {
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
+                    </div>
+                    {/* The tool this step opens when it starts. */}
+                    <Select
+                      value={segment.tool ?? ""}
+                      onChange={(tool) => updateSegment(i, { tool: tool || undefined })}
+                      options={STEP_TOOL_OPTIONS}
+                      className="w-full text-sm"
+                    />
                     </div>
                   ))}
                   <button
@@ -454,6 +476,15 @@ export default function PracticeTimer() {
               onChange={(fullScreenAlert) => updateSoundSettings({ fullScreenAlert })}
               disabled={!alarmMode}
               hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a sound. Only applies while alarm mode is on."
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel id="practice-timer-tools" title="Tools" icon={SlidersIcon} summary={openTools ? "Open on start" : "Don't open"}>
+            <SwitchRow
+              label="Open each step's tool"
+              checked={openTools}
+              onChange={(openTools) => updateSoundSettings({ openTools })}
+              hint="When a step with a tool starts, that tool opens, wherever you are. Pick a step's tool in the session editor; a Shed Log task's tool (the first one attached) opens when it starts too."
             />
           </CollapsiblePanel>
         </OptionChipLook>

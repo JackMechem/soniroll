@@ -4,7 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import type { PracticeSession } from "@jam-practice/core/practiceTimer";
 
-const segmentValidator = v.object({ id: v.string(), title: v.string(), minutes: v.number() });
+const segmentValidator = v.object({ id: v.string(), title: v.string(), minutes: v.number(), tool: v.optional(v.string()) });
 const pomodoroValidator = v.object({
   workMinutes: v.number(),
   shortBreakMinutes: v.number(),
