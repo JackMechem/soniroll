@@ -4,6 +4,18 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.13] - 2026-11-22
+
+- **Record the computer's sound too** in the Recorder (off unless you turn it on): a song playing in
+  Spotify or a video is recorded along with your microphone, mixed into one take.
+- The sidebar hides completely (« or Ctrl+\\ / ⌘\\); hover the menu button or the window's left
+  edge to slide it in. Drag it very narrow for just icons.
+- Routine and task pages in the Shed Log, opened beside it: the day's progress, notes, recordings
+  made for the task, and things attached for just that day. Notes open in a side view.
+- A step's tool opens when it starts (Practice Timer and Shed Log), the Tuner's pitch graph in the
+  dial, and the day timer stops with the task that started it.
+- Everything else in the website's 0.10.16.
+
 ## [0.1.12] - 2026-11-21
 
 - **Check for updates** in Settings: see which version you're on and look for a newer one any

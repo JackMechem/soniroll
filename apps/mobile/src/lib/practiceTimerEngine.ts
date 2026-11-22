@@ -65,6 +65,7 @@ let state: EngineState | null = null;
 let hydrated = false;
 let hydrating = false;
 const listeners = new Set<() => void>();
+const stepToolListeners = new Set<(href: string) => void>();
 let timeoutId: ReturnType<typeof setTimeout> | null = null;
 let alarmChimeIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -105,6 +106,17 @@ function updateOngoingNotification() {
 
 function notify() {
   for (const listener of listeners) listener();
+}
+
+/** Calls `listener` with the tool's href when a step with a tool starts, as it happens (start,
+    skip, auto-advance, Continue after an alarm) — never when a run is restored as the app reopens,
+    so opening the app mid-step doesn't jump to another screen. The phone's version of the website's
+    `STEP_TOOL_EVENT`; `lib/useOpenStepTools.ts` opens the tool. */
+export function onStepTool(listener: (href: string) => void): () => void {
+  stepToolListeners.add(listener);
+  return () => {
+    stepToolListeners.delete(listener);
+  };
 }
 
 function persist() {
@@ -253,6 +265,9 @@ function loadStep(
     Vibration.vibrate(120);
     playTransitionChime();
   }
+  // `chime` is false only when restoring as the app reopens, which shouldn't jump to another screen.
+  const tool = current.tool;
+  if (chime && tool) for (const listener of stepToolListeners) listener(tool);
 }
 
 /** Enters the "time's up, waiting on you" state instead of loading the next step — what a normal

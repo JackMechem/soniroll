@@ -23,6 +23,8 @@ export type Recording = {
   /** The Shed Log day (YYYY-MM-DD) and routine it's attached to, if any. */
   logDate?: string | null;
   routineId?: string | null;
+  /** A task in that routine, or a one-off task on that day. */
+  taskId?: string | null;
   createdAt: number;
   updatedAt: number;
   /** Null when it's on another device (`device`), or before `useDeviceUrls` fills it in. */

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { PlayIcon, StopIcon, StopwatchIcon } from '@/components/icons';
 import { PillButton } from '@/components/tool/rhythm';
 import { getSnapshot, skip, stop, subscribe } from '@/lib/practiceTimerEngine';
+import { useOpenStepTools } from '@/lib/useOpenStepTools';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /**
@@ -19,10 +20,14 @@ import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
  * `skip()` already does everywhere else) or Stop (end the session). The repeating alarm vibration
  * itself is driven entirely by the engine (`lib/practiceTimerEngine.ts`) — this component only
  * reflects state.
+ *
+ * Also where a step's tool opens when the step starts (`useOpenStepTools`), since this is mounted
+ * once for the whole app — the same place the website mounts it.
  */
 export function PracticeTimerAlert() {
   const state = useSyncExternalStore(subscribe, getSnapshot);
   const { colors } = useAppTheme();
+  useOpenStepTools();
 
   if (!state || !state.alarming || !state.fullScreenAlert) return null;
 

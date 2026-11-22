@@ -8,12 +8,13 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { type NoteTarget, targetKey } from "@jam-practice/core/shedNotes";
 import { DocumentIcon, PlusIcon, SearchIcon } from "@/components/tools";
 import { errorText, useNoteList } from "@/lib/useShedNotes";
-import NoteDialog from "./NoteDialog";
+import { openNotePeek } from "@/lib/notePeek";
 
-/** The notes attached to one thing (exactly that target, not ones under it). */
-export function useAttachedNotes(target: NoteTarget) {
+/** The notes attached to one thing (exactly that target, not ones under it). `enabled` false
+    skips the query (nothing to look up). */
+export function useAttachedNotes(target: NoteTarget, enabled = true) {
   const key = targetKey(target);
-  const rows = useQuery(api.shedNotes.attachedTo, { prefix: key });
+  const rows = useQuery(api.shedNotes.attachedTo, enabled ? { prefix: key } : "skip");
   return { key, notes: rows?.filter((r) => r.target === key) };
 }
 
@@ -42,7 +43,9 @@ export default function AttachedNotes({
 }) {
   const { key, notes } = useAttachedNotes(target);
   const detach = useMutation(api.shedNotes.detachNote);
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Notes open in the side view, with a way to take them off this thing.
+  const setOpenId = (noteId: string) =>
+    openNotePeek(noteId, { label: `Take off ${label}`, run: () => void detach({ noteId: noteId as Id<"shedNotes">, target: key }) });
 
   return (
     <>
@@ -65,17 +68,6 @@ export default function AttachedNotes({
         {children}
         <AddNotesButton targetKey={key} label={label} newTitle={newTitle} attachedIds={new Set(notes?.map((n) => n.noteId) ?? [])} onOpen={setOpenId} className={buttonClassName} />
       </div>
-      {openId && (
-        <NoteDialog
-          noteId={openId}
-          onClose={() => setOpenId(null)}
-          detachLabel={`Take off ${label}`}
-          onDetach={() => {
-            void detach({ noteId: openId as Id<"shedNotes">, target: key });
-            setOpenId(null);
-          }}
-        />
-      )}
     </>
   );
 }

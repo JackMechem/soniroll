@@ -158,6 +158,7 @@ function RootNavigator() {
         <Stack.Screen name="tool/shed-log" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="tool/shed-log-routines" options={{ title: 'Routines' }} />
         <Stack.Screen name="tool/shed-log-routine" options={{ title: '' }} />
+        <Stack.Screen name="tool/shed-log-task" options={{ title: '' }} />
         <Stack.Screen name="tool/shed-log-routine-edit" options={{ title: '' }} />
         <Stack.Screen name="tool/shed-notes" options={{ title: 'Shed Notes' }} />
         <Stack.Screen name="tool/shed-notes-note" options={{ title: '' }} />

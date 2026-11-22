@@ -44,6 +44,7 @@ import PostPage from "@/components/PostPage";
 import PracticeLog from "@/components/PracticeLog";
 import RoutineEditorPage from "@/components/practicelog/RoutineEditor";
 import RoutinePage from "@/components/practicelog/RoutinePage";
+import TaskPage from "@/components/practicelog/TaskPage";
 import RoutinesPage from "@/components/practicelog/RoutinesPage";
 import SharedRoutinePage from "@/components/practicelog/SharedRoutinePage";
 import ShedLogGate from "@/components/practicelog/ShedLogGate";
@@ -129,6 +130,14 @@ const ROUTES: Route[] = [
   { path: "/shed-log", render: (_, query) => <ShedLogGate><PracticeLog initialDate={opt(query, "date")} /></ShedLogGate> },
   { path: "/shed-log/routines", render: () => <ShedLogGate><RoutinesPage /></ShedLogGate> },
   { path: "/shed-log/routine", render: (_, query) => <ShedLogGate><RoutinePage id={q(query, "id")} /></ShedLogGate> },
+  {
+    path: "/shed-log/task",
+    render: (_, query) => (
+      <ShedLogGate>
+        <TaskPage routineId={opt(query, "routine")} date={opt(query, "date")} taskId={q(query, "task")} />
+      </ShedLogGate>
+    ),
+  },
   {
     path: "/shed-log/routine/edit",
     render: (_, query) => <ShedLogGate><RoutineEditorPage id={opt(query, "id")} date={opt(query, "date")} /></ShedLogGate>,

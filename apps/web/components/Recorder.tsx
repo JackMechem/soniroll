@@ -29,6 +29,7 @@ import {
   type RecorderInput,
   type RecorderMetronome,
   type RecorderMono,
+  canRecordDesktopAudio,
   clearRecorderError,
   getRecorderServerSnapshot,
   getRecorderSnapshot,
@@ -46,7 +47,7 @@ import { EMPTY_STRUCTURE, type Structure, cycleSectionAccent, cycleSectionSubAcc
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useToolActivity } from "@/lib/toolTime";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { useDeviceUrls } from "@/lib/deviceFiles";
+import { useDeviceUrls, useInDesktopApp } from "@/lib/deviceFiles";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { usePaneElement } from "@/lib/paneContext";
@@ -54,6 +55,7 @@ import { usePaneElement } from "@/lib/paneContext";
 // The same key as the app's Recorder. Everything from `bpm` on is the Metronome tool's own
 // settings shape. `autoGainOn` replaced `autoGain` (on by default before; now off, and in the Input
 // chip): the old field is left alone in stored settings.
+const noopSubscribe = () => () => {};
 const SETTINGS_KEY = "jam-practice-recorder-take";
 const DEFAULT_SETTINGS = {
   /** The microphone ("" = the system default). */
@@ -61,6 +63,8 @@ const DEFAULT_SETTINGS = {
   /** Input level: a gain before anything else, 1 = as it comes in (0 to 4). */
   inputGain: 1,
   autoGainOn: false,
+  /** Also record what the computer is playing (Spotify, a browser tab), mixed with the mic. */
+  desktopAudio: false,
   /** Record in mono (one channel, both ears), from both inputs mixed or just one side. */
   mono: false,
   monoSource: "mix" as RecorderMono,
@@ -162,6 +166,9 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const [settings, updateSettings] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
+  // Recording the computer's sound: where the browser (or the desktop app) can.
+  const inDesktopApp = useInDesktopApp();
+  const desktopAudioOk = useSyncExternalStore(noopSubscribe, canRecordDesktopAudio, () => false);
   const byId = useTuneIndex();
   const tune = tuneId ? byId.get(tuneId)?.tune : undefined;
   const recordings = useDeviceUrls(useQuery(recordingsApi.list, isAuthenticated ? {} : "skip"));
@@ -239,8 +246,8 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
   // The input, as the engine wants it.
   const gain = Math.min(4, Math.max(0, settings.inputGain));
   const input: RecorderInput = useMemo(
-    () => ({ deviceId: settings.inputDeviceId, autoGain: settings.autoGainOn, mono: settings.mono ? settings.monoSource : null, gain }),
-    [settings.inputDeviceId, settings.autoGainOn, settings.mono, settings.monoSource, gain],
+    () => ({ deviceId: settings.inputDeviceId, autoGain: settings.autoGainOn, mono: settings.mono ? settings.monoSource : null, gain, desktopAudio: settings.desktopAudio && desktopAudioOk }),
+    [settings.inputDeviceId, settings.autoGainOn, settings.mono, settings.monoSource, gain, settings.desktopAudio, desktopAudioOk],
   );
 
   // Microphones: listed now and again once the browser has said yes (names are hidden until then).
@@ -422,6 +429,19 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
             disabled={busy}
             hint="Lets the browser (or the desktop app) keep turning the level up and down for you. Handy for a quiet room recording; it flattens your dynamics, so leave it off when you can set the input level."
           />
+          {desktopAudioOk && (
+            <SwitchRow
+              label="Record the computer's sound too"
+              checked={settings.desktopAudio}
+              onChange={(v) => updateSettings({ desktopAudio: v })}
+              disabled={busy}
+              hint={
+                inDesktopApp
+                  ? "Records whatever the computer is playing (a song in Spotify, a video) along with the microphone, mixed into one take. The metronome is in it too if it's on. Wear headphones, or the microphone hears the song as well."
+                  : "Records a song playing in Spotify, a video or a browser tab along with the microphone. When you press Record the browser asks what to share: pick the tab (or your whole screen, on Windows) and turn on its sound. Wear headphones, or the microphone hears the song as well."
+              }
+            />
+          )}
         </div>
       </SettingChip>
 

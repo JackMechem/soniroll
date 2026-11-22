@@ -5,9 +5,11 @@ import {
   type PracticeSession,
   type Segment,
 } from '@jam-practice/core/practiceTimer';
+import { NAV_LINKS_DATA, currentToolHref } from '@jam-practice/core/navLinks';
 import { Fragment, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { Dropdown } from '@/components/Dropdown';
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@/components/icons';
 import { OptionGroup, Segmented } from '@/components/tool/reward';
 import { OptionLabel } from '@/components/tool/rhythm';
@@ -42,6 +44,30 @@ export function blankDraft(): Draft {
 
 const MAX_CYCLES = 24;
 
+/** The tools a step can open when it starts (the Shed Log's list of tools to attach, without the
+    timer itself), as on the website. */
+const STEP_TOOL_OPTIONS = [
+  { value: '', label: 'No tool' },
+  ...NAV_LINKS_DATA.filter((l) => !['/community', '/tunes', '/chord-charts', '/shed-log', '/practice-timer'].includes(l.href)).map((l) => ({
+    value: l.href,
+    label: l.label,
+  })),
+];
+
+/** The picked tool's name for the button: the short name when the full one is long. */
+function stepToolLabel(href: string): string | undefined {
+  const link = NAV_LINKS_DATA.find((l) => l.href === href);
+  return link?.short && link.label.length > 21 ? link.short : undefined;
+}
+
+/** `segment` with its tool set, or without one (`''`: no tool) — the key is left out rather than
+    stored empty. */
+function withTool(segment: Segment, tool: string): Segment {
+  const { tool: _old, ...rest } = segment;
+  void _old;
+  return tool ? { ...rest, tool } : rest;
+}
+
 /** How many cycle names there are slots for: one per work cycle, or, when it keeps going, one per
     cycle in a round (names repeat after each long break). Same as the website's `PomodoroEditor`. */
 function nameSlots(config: PomodoroConfig) {
@@ -65,7 +91,7 @@ function formatTotal(minutes: number) {
 /**
  * The create/edit page for a saved session, like the website's session editor
  * (`apps/web/components/PracticeTimer.tsx` and `PomodoroEditor.tsx`): a name, Custom / Pomodoro,
- * then either the list of segments (each with its minutes, moved with ↑ ↓) or the Pomodoro's timing
+ * then either the list of segments (each with its minutes and the tool it opens, moved with ↑ ↓) or the Pomodoro's timing
  * cards, cycles, one optional name per cycle and a preview of the run; Save and Cancel at the end.
  */
 export function PracticeSessionEditor({
@@ -167,6 +193,18 @@ export function PracticeSessionEditor({
                 <RowButton onPress={() => removeSegment(i)} label="Remove segment">
                   <TrashIcon color={colors.danger} size={18} />
                 </RowButton>
+              </View>
+              {/* The tool this step opens when it starts. */}
+              <View className="flex-row items-center gap-2 pl-1">
+                <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+                  Opens
+                </Text>
+                <Dropdown
+                  value={segment.tool ? currentToolHref(segment.tool) : ''}
+                  triggerLabel={segment.tool ? stepToolLabel(currentToolHref(segment.tool)) : undefined}
+                  options={STEP_TOOL_OPTIONS}
+                  onChange={(tool) => onChange({ ...draft, segments: draft.segments.map((s, j) => (j === i ? withTool(s, tool) : s)) })}
+                />
               </View>
             </View>
           ))}

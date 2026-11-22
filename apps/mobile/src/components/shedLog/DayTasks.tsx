@@ -8,24 +8,29 @@ import {
   parseTime,
   type DayTask,
 } from '@jam-practice/core/practiceLog';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ActionSheet } from '@/components/ActionSheet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ArrowDownIcon, DotsVerticalIcon, PencilIcon, PlayIcon, StopwatchIcon, TrashIcon } from '@/components/icons';
+import { AttachmentChips } from '@/components/shedLog/Attachments';
 import { Field, GhostIcon, Muted, Panel, Section, SmallButton, TaskCheck } from '@/components/shedLog/parts';
 import { LogTimeSheet, TaskSheet, type LogTarget } from '@/components/shedLog/sheets';
 import { Subtasks } from '@/components/shedLog/Subtasks';
+import { taskRoute } from '@/lib/shedLogPages';
 import { useToday } from '@/lib/useClock';
 import { useRoutineTimer, type PracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** The day's own tasks, outside routines ("Tasks for today"; the website's "Extra tasks"): a
     quick-add box, a checklist, the timer (one task or all), and ⋮ (edit, move to the next day,
-    delete). Home's Today's practice card adds to the same list ("Add a task for today"). */
+    delete). Home's Today's practice card adds to the same list ("Add a task for today"). A task's
+    name opens its screen (notes, recordings, what's attached); only its box ticks it off. */
 export function DayTasks({ date, log, icon }: { date: string; log: PracticeLog; icon?: React.ReactNode }) {
   const { colors } = useAppTheme();
+  const router = useRouter();
   const tasks = log.data.days[date]?.tasks ?? [];
   const { engine, startDayTasks, runningTask } = useRoutineTimer();
   const running = runningTask('day', date);
@@ -77,6 +82,7 @@ export function DayTasks({ date, log, icon }: { date: string; log: PracticeLog; 
                   color={colors.accent}
                   mark={colors['accent-foreground']}
                   onToggle={() => log.toggleDayTask(date, t.id)}
+                  onOpen={() => router.push(taskRoute({ date, taskId: t.id }))}
                   meta={[time !== null && formatTime(time), formatMinutesShort(t.minutes), !!t.spentMs && `${formatMinutesShort(t.spentMs / 60000)} logged`, isNow && engine ? (engine.paused ? 'Paused' : 'Timing') : null]}
                 />
                 <View style={{ paddingLeft: 36 }}>
@@ -98,6 +104,11 @@ export function DayTasks({ date, log, icon }: { date: string; log: PracticeLog; 
                     onAdd={(sub) => log.saveDayTask(date, { ...t, subtasks: [...(t.subtasks ?? []), newSubtask(sub)] })}
                     onRemove={(id) => log.saveDayTask(date, { ...t, subtasks: (t.subtasks ?? []).filter((x) => x.id !== id) })}
                   />
+                  {t.attachments?.length ? (
+                    <View className="mt-1.5">
+                      <AttachmentChips items={t.attachments} compact />
+                    </View>
+                  ) : null}
                 </View>
               </View>
               {!t.done && !isNow ? (

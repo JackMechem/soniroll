@@ -97,3 +97,36 @@
   in `usePracticeSessions` run unconditionally on every render regardless of sign-in state, per
   rules-of-hooks; only the returned `sessions`/mutators branch on it, same pattern as
   `AccountPage.tsx`.
+
+## 2026-11-22 — A step's tool opens when the step starts (Practice Timer and Shed Log)
+
+Jack: "if a task has a tool attached to it, the tool will automatically open when the task starts",
+in both the Practice Timer and the Shed Log.
+
+- **`Segment.tool`** (optional href, `packages/core/practiceTimer.ts`), carried into `RunSegment.tool`
+  by `stepAt`. Saved sessions keep it: the Convex `practiceSessions` segment validator and the
+  schema have `tool: v.optional(v.string())` (pushed to dev; prod gets it with the next production
+  deploy). Pomodoro steps never have one.
+- **Practice Timer editor:** each step has a tool picker under its name and minutes ("No tool", then
+  the same tools the Shed Log lets you attach, minus the timer itself). Steps are spaced a little
+  further apart (`gap-4`) so each step's two lines read as one.
+- **Shed Log:** `startRoutine` and `startDayTasks` (`lib/usePracticeLog.ts`) give each step the
+  task's **first** attached tool (`taskTool`).
+- **Opening it:** `loadStep` in `lib/practiceTimerEngine.ts` fires `STEP_TOOL_EVENT` on `window`
+  when a step with a tool starts live (start, skip, auto-advance, Continue after an alarm), never when
+  a run is restored on page load (`chime: false`), so reloading or opening another page mid-step
+  doesn't jump back. `lib/useOpenStepTools.ts` listens and `router.push`es the tool (through
+  `findToolLink`, so a retired href goes to the tool it became), unless you're already on it. It's
+  mounted in `PracticeTimerAlert`, which both `app/layout.tsx` and the desktop `main.tsx` mount. In split screen the push retargets the active pane, like a
+  sidebar link.
+- **Turning it off:** Practice Timer → **Tools** chip → "Open each step's tool" (`openTools`, on by
+  default, in the synced sound settings the Shed Log's runs already share).
+- Help: the Practice Timer's options and the Shed Log's attachments line say so.
+
+Verified: `tsc` (web, mobile, desktop, convex), eslint, `convex dev --once`. Headless Chromium:
+Practice Timer signed out, a two-step draft (no tool, then Metronome): Start now stayed on the timer,
+skipping opened `/metronome`, reload stayed put; editor at 1440 and 390, no overflow. Signed in (a
+throwaway `.test` account, deleted afterwards): a Shed Log extra task with Metronome attached, timed
+from the day panel, opened `/metronome`; going to `/tuner` mid-step stayed on the Tuner. Not verified:
+a routine run (same mapping as day tasks), saving a session with a tool signed in (the Convex
+validator), the desktop app, split screen, the mobile app (it doesn't do this).

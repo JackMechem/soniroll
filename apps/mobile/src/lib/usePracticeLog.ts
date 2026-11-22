@@ -10,6 +10,7 @@ import {
   tasksOf,
   todayKey,
   type AssignedRoutine,
+  type Attachment,
   type DayLog,
   type DayTask,
   type Occurrence,
@@ -191,6 +192,13 @@ export function usePracticeLog(): PracticeLog {
 const SOUND_KEY = 'jam-practice-timer-sound-settings';
 const SOUND_DEFAULTS = { soundEnabled: true, alarmMode: false, fullScreenAlert: false };
 
+/** A task's first attached tool, as a timer step's `tool` (opened when the step starts —
+    `lib/useOpenStepTools.ts`). */
+function taskTool(attachments: Attachment[] | undefined): { tool?: string } {
+  const tool = attachments?.find((a) => a.kind === 'tool');
+  return tool && tool.kind === 'tool' ? { tool: tool.href } : {};
+}
+
 /** The Practice Timer as the Shed Log uses it: what's running, and starting a routine on it. A
     routine runs as a timer session whose steps are its tasks, so the floating timer, alarm mode
     and surviving the app closing all work the same, and each finished task is checked off. */
@@ -211,13 +219,15 @@ export function useRoutineTimer() {
         id: `routine:${routine.id}:${date}`,
         name: routine.name || 'Routine',
         type: 'custom',
-        segments: tasks.map((t) => ({ id: t.id, title: t.title || 'Task', minutes: t.minutes })),
+        // A tool attached for just that day counts too (after the task's own).
+        segments: tasks.map((t) => ({ id: t.id, title: t.title || 'Task', minutes: t.minutes, ...taskTool([...(t.attachments ?? []), ...(occ?.taskAttachments?.[t.id] ?? [])]) })),
         updatedAt: Date.now(),
         link: { routineId: routine.id, date },
       };
       start(session, sound.soundEnabled, sound.alarmMode, sound.fullScreenAlert);
-      // The day timer runs alongside: starting a routine starts it if it isn't going already.
-      if (date === todayKey()) startDayTimer();
+      // The day timer runs alongside: starting a routine starts it if it isn't going already (and
+      // then it stops with the routine, `ShedLogGlobal`).
+      if (date === todayKey()) startDayTimer(true);
     },
     [sound],
   );
@@ -231,12 +241,12 @@ export function useRoutineTimer() {
         id: `day:${date}`,
         name: list.length === 1 ? list[0].title || 'Task' : "Today's tasks",
         type: 'custom',
-        segments: list.map((t) => ({ id: t.id, title: t.title || 'Task', minutes: t.minutes })),
+        segments: list.map((t) => ({ id: t.id, title: t.title || 'Task', minutes: t.minutes, ...taskTool(t.attachments) })),
         updatedAt: Date.now(),
         link: { routineId: DAY_TASKS_ID, date },
       };
       start(session, sound.soundEnabled, sound.alarmMode, sound.fullScreenAlert);
-      if (date === todayKey()) startDayTimer();
+      if (date === todayKey()) startDayTimer(true);
     },
     [sound],
   );

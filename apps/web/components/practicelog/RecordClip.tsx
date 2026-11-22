@@ -23,11 +23,17 @@ export default function RecordClip({
   routineId = null,
   routines,
   compact = false,
+  task,
+  onSaved,
 }: {
   date: string;
   routineId?: string | null;
   routines: { id: string; name: string }[];
   compact?: boolean;
+  /** A task the clip is for (in `routineId`'s routine, or a day's own task). */
+  task?: { id: string; name: string };
+  /** After it's saved: its id and name (a task page puts it in the task's notes). */
+  onSaved?: (recording: { id: string; name: string }) => void;
 }) {
   const { isAuthenticated } = useConvexAuth();
   const rec = useSyncExternalStore(subscribeRecorder, getRecorderSnapshot, getRecorderServerSnapshot);
@@ -88,8 +94,11 @@ export default function RecordClip({
           blob={take.blob}
           durationSec={take.durationSec}
           initialTuneId={null}
-          log={{ date, routineId, routines }}
-          onSaved={() => setTake(null)}
+          log={{ date, routineId, routines, ...(task ? { task } : {}) }}
+          onSaved={(id, name) => {
+            setTake(null);
+            onSaved?.({ id, name });
+          }}
           onDiscard={() => setTake(null)}
         />
       )}

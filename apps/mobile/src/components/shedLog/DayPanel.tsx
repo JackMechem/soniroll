@@ -1,3 +1,4 @@
+import { useConvexAuth } from '@convex-dev/auth/react';
 import { NAV_LINKS_DATA, currentToolHref, hrefToSlug } from '@jam-practice/core/navLinks';
 import { formatPracticed } from '@jam-practice/core/practiceMinutes';
 import {
@@ -13,6 +14,7 @@ import {
   routinesOn,
   type Attachment,
 } from '@jam-practice/core/practiceLog';
+import { useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -29,6 +31,7 @@ import {
   ShareIcon,
   StopwatchIcon,
 } from '@/components/icons';
+import { useRecordingPlayer } from '@/components/recordings/RecordingParts';
 import { DayTasks } from '@/components/shedLog/DayTasks';
 import { DayTimerCard, useDayTimerMs } from '@/components/shedLog/DayTimer';
 import { Bar, ChecklistIcon, GhostIcon, Muted, Panel, RoutineIcon, Section, SmallButton, useSuccess } from '@/components/shedLog/parts';
@@ -36,6 +39,8 @@ import { RoutineCard } from '@/components/shedLog/RoutineCard';
 import { AttachedNotes } from '@/components/shedNotes/AttachedNotes';
 import { LogTimeSheet } from '@/components/shedLog/sheets';
 import { ToolTimeCard } from '@/components/shedLog/ToolTimeCard';
+import { useDeviceUrls } from '@/lib/deviceFiles';
+import { recordingsApi } from '@/lib/recordings';
 import { useToday } from '@/lib/useClock';
 import { openProgressShare } from '@/lib/progressShare';
 import type { PracticeLog } from '@/lib/usePracticeLog';
@@ -76,6 +81,11 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
   const newRoutine = () => router.push({ pathname: '/tool/shed-log-routine-edit', params: { date } });
   const others = data.routines.filter((r) => !items.some((i) => i.routine.id === r.id));
   const openAdd = () => (others.length ? setAddMenu(true) : newRoutine());
+  // The day's clips, shown on their routines' cards (one player for the screen). Through
+  // `useDeviceUrls`, so a clip kept on this phone plays.
+  const { isAuthenticated } = useConvexAuth();
+  const recordings = useDeviceUrls(useQuery(recordingsApi.listForLogRange, isAuthenticated ? { from: date, to: date } : 'skip'));
+  const player = useRecordingPlayer();
 
   return (
     <View className="gap-5">
@@ -129,7 +139,7 @@ export function DayPanel({ date, log, onDateChange }: { date: string; log: Pract
             <Muted>{data.routines.length === 0 ? 'No routines yet. Make one to plan what to practice and when.' : 'No routines on this day. Add one?'}</Muted>
           </Pressable>
         ) : (
-          items.map((item) => <RoutineCard key={item.routine.id} date={date} item={item} log={log} />)
+          items.map((item) => <RoutineCard key={item.routine.id} date={date} item={item} log={log} recordings={recordings} player={player} />)
         )}
       </Section>
 

@@ -509,3 +509,196 @@ Checked in a harness against the real engine and stopwatch. Not on a phone.
   - The New menu, the Hours and Days share cards, the routine page with 1/3 done, and the
     swatch labels.
 - **Not checked:** a narrow split pane.
+
+## 2026-11-22 — The day timer stops with the task that started it
+
+Jack: playing a task and stopping it left the day timer running, which was confusing. (Until now
+the day timer was meant to keep going after a routine or task stopped; see "Desktop layout and the
+day timer" above.)
+
+- `lib/dayStopwatch.ts` remembers who started it: `startDayTimer(true)` from a routine or task run
+  (`startRoutine` / `startDayTasks`, and resuming one) sets `byTask`; the day timer's own Start
+  button doesn't (its `onClick` now wraps the call, so the click event isn't taken for `byTask`). An
+  already running day timer is left as it was, so one you started yourself stays yours.
+- `PracticeLogGlobal` watches the engine: when a run linked to the Shed Log was going and is then
+  paused, stopped, finished (its last step ends) or replaced by a plain Practice Timer session, it
+  pauses the day timer if `dayTimerStartedByTask()`. Resuming the run starts it again (as before).
+  Pausing the day timer still pauses the run.
+
+Verified signed in (throwaway `.test` account, deleted afterwards), headless Chromium, an extra task
+timed from the day panel and paused/stopped on the Practice Timer page: task started → day timer
+running (by the task); stopped → stopped; paused → stopped; resumed → running; stopped → stopped.
+Day timer started by hand first → the task started and stopped → still running. Not verified: a
+routine's last step running out on its own (same code path as Stop: the run ends), alarm mode, a phone.
+
+## 2026-11-22 — Routine and task pages: notes, recordings, a side view for notes
+
+Jack: record something attached to a task in a routine (or a task on its own); notes for each task
+that are reachable from the routine's "master" note, like links between notes; each routine and
+task a page (a dashboard he can configure) with its notes and its recordings embedded; notes in a
+side view like Notion's, over the content or pushing it over.
+
+- **Note targets** (`packages/core/shedNotes.ts`): `routineNotes` (`routine:<id>`, a routine's own
+  notes, not one day's), `task` (`routine:<id>/task:<task>`) and `dayTask` (`day:<date>/task:<task>`).
+  `parseTargetKey` knows them (the server refuses to attach to anything it can't parse);
+  `LinksPanel`'s "Attached to" goes to the pages (`lib/shedLogPages.ts`: `routineHref`, `taskHref`);
+  the phone app sends them to the Shed Log.
+- **Recordings** have an optional `taskId` (schema, `create`, `update`, returned by every list). It's
+  only kept with a `logDate` (the day it was recorded on). `SaveTakeDialog`'s `log.task` shows "For
+  the task …" and sends `taskId` while the routine choice is still the task's; `onSaved` now gets the
+  name too. `RecordClip` takes `task` and `onSaved`.
+- **`shedNotes.appendLine`**: adds a line at the end of a note (owner or editor). `NoteSurface` passes
+  the saved body as `syncText`, so an open editor takes the line in.
+- **`/shed-log/task`** (`TaskPage.tsx`; `?routine=&task=` or `?date=&task=`): title, minutes, the
+  routine, days checked off and time practiced; Start (runs just that task on the timer, adding the
+  routine to today if it isn't on it); Edit routine. Sections: Notes, Recordings (Record in the
+  section's header), Attached, History (routine tasks). A task added to a routine for one day is
+  found in the occurrences' `extraTasks`.
+- **Routine page** (`RoutinePage.tsx`): the same sections idea: Notes (the routine's own note), Tasks
+  (each row now links to its page, with a note icon when it has notes), Attached, Coming up,
+  Recordings, History.
+- **`PageNotes`**: the page's note written in place (`NoteSurface`, `fill={false}`), ⤢ opens it in
+  the side view; other notes attached to it are listed under it. "Start notes" makes one. A task's
+  note is titled "<Routine> · <Task>" ("<Task> · <date>" for a day's task) and, when the routine has
+  notes, `- [[that title]]` is added to the routine's note; a new routine note starts with "## Tasks"
+  and a link to each task note there already. `PageNotesHandle.addLine` puts a recording's embed
+  (`![name](file:recording/<id>)`, the player) into the open editor, else `appendLine`, else a new
+  note with it.
+- **`PageSections`**: a page's sections in your order, some hidden. "Arrange" shows ↑ ↓ and
+  hide/show per section. Kept per page in the synced setting `jam-practice-shed-pages` as
+  `{ pages: { [targetKey]: { order, hidden } } }` — under one key because a synced setting only
+  hands back the keys its defaults have (with `{}` as the defaults nothing came back; found in
+  testing).
+- **Ways in:** a notes button on each task row of a routine card (beside ▶, on hover on desktop),
+  "Notes and recordings" in a day task's ⋮ menu, the routine page's task rows.
+- **Side view** (`components/shednotes/NotePeek.tsx`, `lib/notePeek.ts`): replaces `NoteDialog`
+  (deleted); attached notes everywhere open in it. Mounted once in `AppShell` after the page: "Beside
+  the page" is an in-flow `<aside>` (the page shrinks), "Over the page" a fixed panel with a shadow;
+  phones get a full-screen sheet. Width (360–900, the left edge drags) and mode are this device's
+  (`jam-practice-note-peek`). Links open in the same view with Back; ⤢ opens Shed Notes; ⋮ has the
+  mode and "Take off …" for an attached note. Escape closes (not from the editor with vim on).
+  `NoteSurface` is the editor part, shared with the pages; it gained a File button (a recording,
+  picture or file from your Files).
+
+Verified signed in (throwaway `.test` accounts, deleted), headless Chromium with a fake mic: made a
+routine with two tasks in the editor; started the routine's notes and typed; opened a task's page,
+started its notes, recorded a clip from there ("For the task Long tones" in the save dialog), and the
+clip's player appeared in the task's note and its Recordings; ⤢ → side view over the page, then
+beside it (the page narrowed); the routine's note then had "Morning warm-up · Long tones" linked. A
+day task's ⋮ → its page; Arrange (hide Attached, Recordings up) held after a reload. 1440 and 390, no
+overflow, no console errors. `tsc` web, mobile, convex; eslint; `convex dev --once`.
+Not verified: `pnpm build`; recordings on a plan (online) rather than on the device; the phone's
+full-screen side view by touch; two editors on the same note at once (the routine note open on its
+page while a task note adds its link: the sync takes it in when nothing typed is waiting); the
+desktop app.
+
+### Follow-up (same day): notes only in the side view; pages open in it too; full screen and Back
+
+Jack (with a screenshot of the task page's inline editor): notes shouldn't be editable on the page,
+they should always open in the side view (which can go full screen); the task and routine pages
+should open in the side view too so the Shed Log stays visible; full screen needs a Back to the
+screen you were on.
+
+- **`lib/notePeek.ts`** now holds a `SideItem`: a note, a task (`TaskRef`) or a routine, with a Back
+  stack (`followSide` pushes, `sideBack` pops and, with nothing before, closes), `full`, and the
+  attached note's `detach`. `openSide` replaces what's open (keeping full screen if it was).
+- **`NotePeek.tsx`** (the side view, `role="dialog"` "Side view") draws a note (`NoteSurface`) or the
+  page (`TaskPage` / `RoutinePage` with `inPanel`) under a bar with Back, ⤢ full screen / "Exit full
+  screen", ⋮ (Open in Shed Notes / Open as a page, over or beside the page, Take off …) and ✕. Full
+  screen covers the page from the sidebar's edge (`useSidebarShownWidth`); phones are always full
+  screen. Back shows when there's something to go back to, and always in full screen (then it
+  closes, back to the page under it). It closes when the route changes (an effect on the pathname:
+  closing during render warned "Cannot update a component while rendering").
+- **Pages:** `inPanel` drops the page bar (a heading instead) and opens their routine, tasks and
+  notes in the view (`followSide`). As pages of their own they get a `BackButton` (history back, or
+  the Shed Log / Routines with no history) and their tasks and notes open in the side view.
+- **`PageNotes`** no longer has an editor: the attached notes are cards (title, three lines) that
+  open in the side view; "Start notes" makes the note and opens it. A recording saved on the page
+  goes in with `appendLine` (the open editor takes it in through `syncText`).
+- **Shed Log:** a routine card's name and its ⋮ "Open routine" open the routine in the side view; a
+  task's notes button and a day task's "Notes and recordings" open the task there.
+
+Verified signed in (throwaway accounts, deleted), headless Chromium 1440: the routine's name → its page
+in the side view with the Shed Log beside it; its task → the task page (Back shown); Start notes →
+the note in the view, typed; Back → the task page with the note's card showing the text; ⤢ → it
+covered from x=244 (the sidebar) on; Back → the routine; Back → closed, still on /shed-log; ⋮ "Open
+as a page" → /shed-log/routine, view closed, Back → /shed-log. 390 wide: no overflow. No console
+errors after the fix. Not verified: touch on a phone, split screen, the desktop app.
+
+### Follow-up (same day): the name opens the task; the pages show the day; per-day attachments
+
+Jack: tapping anywhere on a task should open it (only the box checks it off); the routine and task
+pages should have everything from the day (progress, time…); recordings should play on the task's
+page; attach things to a task for just one day there; a task's note should have a "Notes" heading
+with "Recordings" under it; the side view's header should show "routine / task", with Back from a
+task to its routine.
+
+- **`TaskCheck`** takes `onOpen`: then only the box (a padded button) ticks it, and the name and its
+  line open the task. The Shed Log's routine cards and day tasks use it (the side view, with the
+  card's date); the card's separate notes button is gone. `RoutineCard` takes `onOpenTask` (the
+  routine page opens tasks in the view with it).
+- **Day context:** `TaskRef` for a routine task and the side view's routine item carry the `date` they
+  were opened from (`?date=` on the task page's URL too); else today.
+- **Routine page:** a first section for that day: the day's `RoutineCard` itself (progress, Start /
+  Continue / Log time, the running timer, the tasks to tick, its clips and day notes), or "Not on …"
+  with "Add it to …".
+- **Task page:** a first section for that day: the timer while it runs (`RunningTimer`, pulled out of
+  `RoutineCard`), the box (`TaskCheck`) with its minutes and time logged, its subtasks (ticked per day
+  for a routine task, on the task for a day task), Time it (not on past days), Log time
+  (`LogTimeDialog`). Header Start hides on past days.
+- **Per-day attachments:** `Occurrence.taskAttachments[taskId]` (kept by `pruneDay`). The task page's
+  Attached shows "Every time" (the routine's, read-only) and "Just for today/<date>" (editable); a day
+  task's own attachments are editable there. Routine cards show both under the task, and a tool
+  attached for the day opens when the task starts (`startRoutine`).
+- **Recordings play:** the task and routine pages' recording queries go through `useDeviceUrls` (a
+  recording kept on this device had no URL there, so it showed "kept on Firefox on Linux" instead of a
+  player — the routine page's was missing it from before).
+- **Note headings:** a new task note starts `## Notes`; recordings go in with `shedNotes.addRecording`
+  (`addRecordingToNote` in core): under `## Recordings` at the end of that section, or, without one,
+  `## Notes` over the text and `## Recordings` with the players already in the note moved under it.
+- **Side view header:** `SideCrumbs` — "Routines / Bass", "Bass / Scales" (the routine opens in the
+  view), "Nov 22 / Task". Back on a routine's task with nothing before it goes up to the routine
+  (`sideBack`).
+
+Verified signed in (throwaway accounts, deleted), headless Chromium 1440: the name opened the task,
+unticked; the card's box ticked it and the page showed it ticked, and unticking on the page unticked
+the card; Metronome attached just for today showed on the card's row; a clip recorded on the task's
+page had a player there (no "kept on" card); the note read "## Notes / Recordings / the clip"; header
+"Bass / Scales", Back → "Routines / Bass"; the routine page's Today had Start routine. `addRecordingToNote`
+with a node script (a bare player, text around a player, a new note, a second clip, a later section).
+`tsc` web/mobile/convex, eslint, `convex dev --once`. Not verified: a past day's page, subtasks on the
+page, the timer block running on the task page, phones by touch.
+
+### Redesign of the routine and task pages (same day)
+
+Jack: the new pages looked sloppy and thrown together. What was wrong (from his screenshot): the
+task's name four times and the routine's three; three ways to start (header Start, "Time it", the
+timer) beside Edit routine; a different surface per section (card, card, none, labelled card,
+dashed box) with "Arrange" floating above them; the note preview reading "Nov 22, 11:53 Nov 22,
+11:57" (its players' names); recording cards with the date twice and "Bass / Scales" on that task's
+own page; the totals as a tiny line; the full page stretched across the screen.
+
+- **`pageParts.tsx`** — one vocabulary for both pages: `PageTitle` (title, one line of facts, quiet
+  Edit/Share), `Stats` (three figures on fills), `FILL` / `ROWS` (a soft `foreground/[0.04]` tint,
+  rounded-xl, no borders — it shows the same on the page and in the side view, unlike `bg-surface`),
+  `Quiet` (empty states on the same fill), `RecordingList` (one per row, newest first, no place line),
+  `NotePreview` (fetches the note: its first written lines — not headings or players — with its
+  recordings count and Open; or a "Start notes" empty state).
+- **Task page:** title + "10 min · Every Sunday" + Edit; then the **day panel** (one fill): a big
+  box with "Done today" / "Not done today yet", time logged and planned, a bar of logged against
+  planned, one primary **Start · 10 min** (or the running timer in its place) and Log time, the
+  checklist, and Attached (the routine's own chips, then today's with "Attach for today"); then
+  Stats (days done, practiced, recordings); then Notes, Recordings (count, Record), History.
+- **Routine page:** title + "Every Sunday · 20 min · 2 tasks" + Share/Edit; "Today" with the day's
+  card (`RoutineCard embedded`: no icon or name, no minutes or repeat — the title has them — on the
+  page's fill), or "It isn't on today" with Add; Stats; Notes, Coming up, Recordings on other days,
+  History (rows with x/y and time on the right).
+- **`PageSections`:** one header style (semibold, an optional count, actions on the right); "Arrange
+  this page" is a quiet button at the end, and arranging shows the sections as a list of rows with
+  ↑ ↓ and show/hide, then Done.
+- **`RecordingCard`:** `hidePlace`, `className`; the date isn't repeated under a name that has it.
+- As pages of their own both sit in a `max-w-2xl` column.
+
+Verified in headless Chromium signed in (throwaway accounts, deleted): the task page empty, with a
+note and a recording, light and dark; the routine page in the side view light and dark; the routine
+as a page at 1440 and 390 (no overflow); no console errors. Not verified by touch.

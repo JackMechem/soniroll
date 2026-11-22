@@ -5,6 +5,9 @@ export type Segment = {
   /** Decimal minutes (e.g. 2.5 = 2:30), so a single field covers both whole-minute and
       finer-grained durations without a separate seconds field. */
   minutes: number;
+  /** A tool to open when this step starts (its href), if the "Open each step's tool" setting is
+      on. A Shed Log task's first attached tool, when a routine runs on the timer. */
+  tool?: string;
 };
 
 export type PomodoroConfig = {
@@ -57,6 +60,8 @@ export type RunSegment = {
   /** True for a Pomodoro break step (short or long) — lets the UI style breaks differently
       (e.g. a calmer color) without re-deriving it from the title text. */
   isBreak: boolean;
+  /** The step's tool (`Segment.tool`). */
+  tool?: string;
 };
 
 /** The Pomodoro step at a given 0-based index, expanding the pattern (work, break, work, break,
@@ -95,7 +100,7 @@ export function pomodoroStepAt(config: PomodoroConfig, index: number): RunSegmen
 export function stepAt(session: PracticeSession, index: number): RunSegment | null {
   if (session.type === "pomodoro") return pomodoroStepAt(session.pomodoro, index);
   const segment = session.segments[index];
-  return segment ? { title: segment.title, minutes: segment.minutes, isBreak: false } : null;
+  return segment ? { title: segment.title, minutes: segment.minutes, isBreak: false, ...(segment.tool ? { tool: segment.tool } : {}) } : null;
 }
 
 /** A short, human summary for a session's card in the library — "3 segments, 25 min total" or

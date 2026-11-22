@@ -5,14 +5,15 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Dropdown } from '@/components/Dropdown';
-import { MicrophoneIcon, TunerIcon } from '@/components/icons';
+import { MicrophoneIcon, TunerIcon, WaveIcon } from '@/components/icons';
 import { ToneIcon } from '@/components/tool/toolIcons';
 import { SwitchRow } from '@/components/SwitchRow';
 import { Field, PillChoice, SheetButton, SheetText, SliderField, noteGlyphs } from '@/components/tool/ear';
 import { BigButton, StepButton } from '@/components/tool/meter';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { ToolFrame } from '@/components/tool/ToolFrame';
-import { TunerDial, TunerMeter } from '@/components/TunerDial';
+import { IN_TUNE, TunerDial, TunerMeter, centsColor } from '@/components/TunerDial';
+import { TunerDialGraph } from '@/components/TunerDialGraph';
 import { SENSITIVITY } from '@/lib/audioInput';
 import { startTone, type ToneHandle } from '@/lib/toneGenerator';
 import {
@@ -36,9 +37,11 @@ import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
  * same `TunerDial` ring-of-12-notes concept (now `react-native-svg` instead of a DOM `<svg>`), laid
  * out like every tool (`ToolFrame`): the dial (the heard note big inside it) fitted to the space,
  * the cents meter (the main feedback), the strings, then the footer: Start listening and the
- * Instrument, Microphone and Reference & tone chips (the octave of tapped notes is in that last
- * sheet). It starts listening by itself when the microphone's already allowed. The website's recorded
- * takes (Record, the Takes chip) aren't on mobile. Deliberately **no input-
+ * Instrument, Microphone, Reference & tone (the octave of tapped notes is in that sheet) and Pitch
+ * graph chips. The pitch graph (`dialGraph`, off by default, like the website's) draws the last few
+ * seconds of what's heard inside the ring (`TunerDialGraph`), with a smaller readout above it. It
+ * starts listening by itself when the microphone's already allowed. The website's recorded takes
+ * (Record, the Takes chip) aren't on mobile, so the graph is always live. Deliberately **no input-
  * device picker** — `lib/audioInput.ts`'s own doc comment explains why there's no native
  * equivalent of web's `MediaDeviceInfo` enumeration to build one from.
  */
@@ -51,6 +54,8 @@ const DEFAULT_SETTINGS = {
   waveform: 'sine' as 'sine' | 'triangle' | 'sawtooth' | 'square',
   sustain: false,
   octave: 3,
+  /** The last few seconds of pitch drawn inside the ring of notes. */
+  dialGraph: false,
 };
 
 const MIN_REF = 415;
@@ -66,15 +71,6 @@ const WAVEFORMS: { value: 'sine' | 'triangle' | 'sawtooth' | 'square'; label: st
   { value: 'square', label: 'Square' },
 ];
 
-const IN_TUNE = '#22c55e';
-const CLOSE = '#f59e0b';
-const OFF = '#ef4444';
-
-function centsColor(cents: number) {
-  const abs = Math.abs(cents);
-  return abs <= 8 ? IN_TUNE : abs <= 25 ? CLOSE : OFF;
-}
-
 function freqOfMidi(midi: number, refA: number) {
   return refA * 2 ** ((midi - 69) / 12);
 }
@@ -88,7 +84,7 @@ function TunerScreen() {
   const tuning = getTuning(instrument, settings.tuningId);
   const refA = Math.min(MAX_REF, Math.max(MIN_REF, settings.refA));
   const octave = Math.min(MAX_OCTAVE, Math.max(MIN_OCTAVE, Math.round(settings.octave)));
-  const { sustain, waveform, sensitivity } = settings;
+  const { sustain, waveform, sensitivity, dialGraph } = settings;
   const transpose = instrument.transpose;
 
   const stringMidis = tuning.strings.flatMap((s) => {
@@ -261,6 +257,20 @@ function TunerScreen() {
                 hint="Off: a note you tap rings for a couple of seconds. On: it keeps sounding until you tap it again or press Stop tone."
               />
             </SettingChip>
+
+            <SettingChip
+              Icon={WaveIcon}
+              label="Pitch graph"
+              value={dialGraph ? 'In the dial' : 'Off'}
+              toggle={{ checked: dialGraph, onChange: (v) => updateSettings({ dialGraph: v }) }}
+            >
+              <SwitchRow
+                label="Pitch graph in the dial"
+                checked={dialGraph}
+                onChange={(v) => updateSettings({ dialGraph: v })}
+                hint="Draws the last few seconds of what you play inside the ring of notes, so you can watch a held note drift sharp or flat."
+              />
+            </SettingChip>
         </SettingsBar>
       }
     >
@@ -268,8 +278,50 @@ function TunerScreen() {
         {/* The dial takes what's left, square, up to 340 across. */}
         <View className="w-full flex-1 items-center justify-center" style={{ minHeight: 0 }} onLayout={(e) => setDialBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {dialSize > 0 ? (
-            <TunerDial size={dialSize} detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass}>
-              {noteLetter ? (
+            <TunerDial size={dialSize} detectedPc={detectedPc} detectedColor={color} playingPc={playingPc} onSelect={playPitchClass} tight={dialGraph}>
+              {dialGraph ? (
+                // Smaller, at a fixed height so the graph under it doesn't jump as notes come and go.
+                <View className="w-full items-center justify-center" style={{ height: Math.max(46, Math.round(dialSize * 0.17)) }}>
+                  {noteLetter ? (
+                    <>
+                      <View className="flex-row items-start">
+                        <Text className="font-ui-bold font-bold" style={{ color, fontSize: Math.round(dialSize * 0.1), lineHeight: Math.round(dialSize * 0.115) }}>
+                          {noteGlyphs(noteLetter)}
+                        </Text>
+                        <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
+                          {noteOctave}
+                        </Text>
+                      </View>
+                      <Text numberOfLines={1} className="font-ui text-[11px] tabular-nums" style={{ color: colors.muted }}>
+                        <Text className="font-ui-semibold text-[11px] font-semibold" style={{ color }}>
+                          {reading!.cents > 0 ? '+' : ''}
+                          {reading!.cents.toFixed(1)} cents
+                        </Text>
+                        {` · ${reading!.freq.toFixed(0)} Hz`}
+                      </Text>
+                    </>
+                  ) : playing ? (
+                    <>
+                      <Text className="font-ui-bold font-bold" style={{ color: colors.accent, fontSize: Math.round(dialSize * 0.1), lineHeight: Math.round(dialSize * 0.115) }}>
+                        {noteGlyphs(midiToNote(playing.midi + transpose).replace(/-?\d+$/, ''))}
+                      </Text>
+                      <Text className="font-ui text-[11px] tabular-nums" style={{ color: colors.muted }}>
+                        {freqOfMidi(playing.midi, refA).toFixed(1)} Hz
+                      </Text>
+                    </>
+                  ) : (
+                    <View className="items-center" style={{ maxWidth: '75%' }}>
+                      <Text numberOfLines={1} adjustsFontSizeToFit className="font-ui-semibold text-base font-semibold" style={{ color: listening ? colors.muted : colors.foreground }}>
+                        {listening ? 'Play a note…' : instrument.label.split(' (')[0]}
+                      </Text>
+                      <Text numberOfLines={1} className="font-ui text-[11px]" style={{ color: colors.muted }}>
+                        {tuning.strings.length > 0 ? tuning.label : `A = ${refA} Hz`}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
+              {dialGraph ? <TunerDialGraph listening={listening} /> : noteLetter ? (
                 <View className="items-center">
                   <View className="flex-row items-start">
                     <Text className="font-ui-bold font-bold" style={{ color, fontSize: Math.round(dialSize * 0.22), lineHeight: Math.round(dialSize * 0.26) }}>

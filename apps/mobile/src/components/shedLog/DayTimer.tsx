@@ -32,7 +32,8 @@ export function useDayTimerMs(data: PracticeLogData, date: string): { ms: number
 
 /**
  * The day timer card (the website's `DayTimer`): a stopwatch for the day's practice — start it when
- * you sit down to play; starting a routine starts it too, and it keeps going until you pause it.
+ * you sit down to play; starting a routine starts it too (and then it stops when the routine does;
+ * one started here keeps going until you pause it).
  * Today's can be started; another day's just shows its time. ⋮ clears a day's time. `compact` is
  * the smaller one inside Home's card; both `compact` and `inset` draw no fill of their own (they sit
  * inside a card) except the accent tint while the timer runs.
@@ -64,7 +65,7 @@ export function DayTimerCard({ data, date, compact, inset, onClear }: { data: Pr
         running ? (
           <SmallButton label="Pause" Icon={PauseIcon} onPress={pauseDayPractice} />
         ) : (
-          <SmallButton label="Start timer" Icon={PlayIcon} primary onPress={startDayTimer} />
+          <SmallButton label="Start timer" Icon={PlayIcon} primary onPress={() => startDayTimer()} />
         )
       ) : null}
       {onClear && ms > 0 ? <GhostIcon Icon={DotsVerticalIcon} label="Day timer options" onPress={() => setMenu(true)} /> : null}

@@ -144,6 +144,12 @@ export function cleanFolder(folder: string): string {
 export type NoteTarget =
   | { kind: "day"; date: string }
   | { kind: "routine"; date: string; routineId: string }
+  /** A routine itself (not one day of it): its page's main notes. */
+  | { kind: "routineNotes"; routineId: string }
+  /** A task in a routine: its page's notes. */
+  | { kind: "task"; routineId: string; taskId: string }
+  /** A one-off task on a day (not in a routine). */
+  | { kind: "dayTask"; date: string; taskId: string }
   | { kind: "tune"; tuneId: string }
   /** Lessons with a teacher or student (a `lessonStudents` id). */
   | { kind: "lesson"; lessonId: string };
@@ -154,6 +160,12 @@ export function targetKey(t: NoteTarget): string {
       return `day:${t.date}`;
     case "routine":
       return `day:${t.date}/routine:${t.routineId}`;
+    case "routineNotes":
+      return `routine:${t.routineId}`;
+    case "task":
+      return `routine:${t.routineId}/task:${t.taskId}`;
+    case "dayTask":
+      return `day:${t.date}/task:${t.taskId}`;
     case "tune":
       return `tune:${t.tuneId}`;
     case "lesson":
@@ -164,6 +176,12 @@ export function targetKey(t: NoteTarget): string {
 export function parseTargetKey(key: string): NoteTarget | null {
   let m = /^day:(\d{4}-\d{2}-\d{2})\/routine:(.+)$/.exec(key);
   if (m) return { kind: "routine", date: m[1], routineId: m[2] };
+  m = /^day:(\d{4}-\d{2}-\d{2})\/task:(.+)$/.exec(key);
+  if (m) return { kind: "dayTask", date: m[1], taskId: m[2] };
+  m = /^routine:([^/]+)\/task:(.+)$/.exec(key);
+  if (m) return { kind: "task", routineId: m[1], taskId: m[2] };
+  m = /^routine:([^/]+)$/.exec(key);
+  if (m) return { kind: "routineNotes", routineId: m[1] };
   m = /^day:(\d{4}-\d{2}-\d{2})$/.exec(key);
   if (m) return { kind: "day", date: m[1] };
   m = /^tune:(.+)$/.exec(key);
@@ -172,3 +190,37 @@ export function parseTargetKey(key: string): NoteTarget | null {
   if (m) return { kind: "lesson", lessonId: m[1] };
   return null;
 }
+
+// ---------------------------------------------------------------- a task's notes and its recordings
+
+/** A line that's only a recording's player (`![name](file:recording/<id>)`). */
+const RECORDING_EMBED = /^!\[[^\]\n]*\]\(file:recording\/[^)\s]+\)\s*$/;
+
+/**
+ * Adds `line` (a recording's player) to a task's note under its "## Recordings" heading, at the end
+ * of that section. A note without one gets "## Notes" over what's written and "## Recordings" under
+ * it, and players already in the note (on lines of their own) move under "## Recordings".
+ */
+export function addRecordingToNote(body: string, line: string): string {
+  const lines = body.replace(/\s+$/, "").split("\n");
+  const at = lines.findIndex((l) => /^##\s+Recordings\s*$/i.test(l));
+  if (at >= 0) {
+    let end = at + 1;
+    while (end < lines.length && !/^#{1,2}\s/.test(lines[end])) end++;
+    // Before the blank lines that end the section.
+    let insert = end;
+    while (insert > at + 1 && !lines[insert - 1].trim()) insert--;
+    lines.splice(insert, 0, line);
+    return `${lines.join("\n")}\n`;
+  }
+  const players = lines.filter((l) => RECORDING_EMBED.test(l.trim()));
+  const text = lines.filter((l) => !RECORDING_EMBED.test(l.trim()));
+  while (text.length && !text[text.length - 1].trim()) text.pop();
+  while (text.length && !text[0].trim()) text.shift();
+  const hasNotes = text.some((l) => /^##\s+Notes\s*$/i.test(l));
+  const notes = hasNotes ? text : ["## Notes", ...(text.length ? ["", ...text] : [])];
+  return `${[...notes, "", "## Recordings", ...players.map((l) => l.trim()), line].join("\n")}\n`;
+}
+
+/** How a new task note starts. */
+export const TASK_NOTE_START = "## Notes\n\n";

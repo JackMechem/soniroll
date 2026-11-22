@@ -39,6 +39,7 @@ import {
   todayKey,
 } from "@/lib/practiceLog";
 import type { Recording } from "@/lib/recordings";
+import { openSide } from "@/lib/notePeek";
 import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
 type Log = ReturnType<typeof usePracticeLog>;
@@ -344,6 +345,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                   color="var(--accent)"
                   boxClass="h-6 w-6 lg:h-5 lg:w-5"
                   onToggle={() => log.toggleDayTask(date, t.id)}
+                  onOpen={() => openSide({ kind: "task", date, taskId: t.id })}
                   meta={[
                     time !== null && <span className="font-medium">{formatTime(time)}</span>,
                     formatMinutesShort(t.minutes),
@@ -408,6 +410,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       x: r.right - 208,
                       y: r.bottom + 4,
                       items: [
+                        { label: "Notes and recordings", onSelect: () => openSide({ kind: "task", date, taskId: t.id }) },
                         { label: "Edit", onSelect: () => setEditing({ task: t, isNew: false }) },
                         { label: "Move to the next day", onSelect: () => log.moveDayTask(date, addDays(date, 1), { ...t, done: false }) },
                         { label: "Delete", danger: true, onSelect: () => askDelete(t) },

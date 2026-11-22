@@ -33,6 +33,27 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.16",
+    date: "2026-11-22",
+    title: "Routine and task pages",
+    summary: "Every routine and task in the Shed Log has its own page, with its notes, recordings and the day's progress, opened beside the Shed Log so your day stays in sight.",
+    changes: [
+      {
+        kind: "new",
+        text: "**Routine and task pages**: tap a task's name in the Shed Log (its box still checks it off) or a routine's name. The page opens beside the Shed Log with that day's progress, one Start, Log time, the checklist, its notes, its recordings and its history.",
+      },
+      { kind: "new", text: "**Record on a task's page**: the clip is saved on the task, named after it, and goes into the task's notes under Recordings. Recordings everywhere show which routine and task they're from." },
+      { kind: "new", text: "Attach tunes, charts or tools to a task **for just one day**, from its page." },
+      { kind: "new", text: "**Notes open in a side view** beside the page: over it or pushing it over, full screen with Back, and links inside open in place." },
+      { kind: "new", text: "Practice Timer and Shed Log: **a step's tool opens when the step starts** (a task's attached tool, or one picked for a timer step). Turn it off under Tools." },
+      { kind: "new", text: "Tuner: a **pitch graph in the dial** shows the last few seconds of what you play (turn it on under Pitch graph)." },
+      { kind: "new", text: "Recorder: **record the computer's sound too**, like a song playing in Spotify, mixed with your mic. Off unless you turn it on." },
+      { kind: "improved", text: "The sidebar **hides completely** (« or ⌘\\ / Ctrl+\\); hover the menu button or the left edge to peek at it. Drag it very narrow for just icons." },
+      { kind: "fixed", text: "Stopping a task in the Shed Log now stops the day timer it started." },
+      { kind: "new", text: "Phone app (Android alpha 4): **routine and task screens** with the day, notes and recordings, tapping a task's name to open it, the Tuner's pitch graph, a step's tool opening when it starts, and the day timer stopping with its task." },
+    ],
+  },
+  {
     version: "0.10.15",
     date: "2026-11-21",
     title: "Polish everywhere",

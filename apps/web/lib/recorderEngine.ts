@@ -13,6 +13,13 @@
  * the browser records best: AAC in an MP4 container where supported (plays everywhere, including the
  * app), else Opus in WebM.
  *
+ * **The computer's sound** (`desktopAudio`, off unless you turn it on): a song playing in Spotify or
+ * a browser tab is recorded too, mixed with the microphone. The browser asks what to share
+ * (`getDisplayMedia`, asked before the microphone so it still counts as your click): a tab's sound
+ * works in Chromium browsers everywhere, the whole computer's sound on Windows and ChromeOS. Only
+ * its sound is kept (the picture is stopped straight away), at its own level, not through the input
+ * level or the meter. The desktop app records the computer's sound itself (`native/recorderEngine.ts`).
+ *
  * **The tune's song** can play along (`song`): it starts with the take (after any count-in), and
  * the finished take carries `songOffsetSec` — where in the song the take started, less the time
  * the song took to start and the round-trip audio latency, so playing back over the song lines
@@ -67,7 +74,12 @@ export type RecorderMono = "mix" | "left" | "right";
 
 /** Where a take comes from and how it's set up. `gain`: 0 to 4 (1 = as it comes in). `deviceId`:
     empty for the system default. */
-export type RecorderInput = { deviceId?: string; autoGain: boolean; mono: RecorderMono | null; gain: number };
+export type RecorderInput = { deviceId?: string; autoGain: boolean; mono: RecorderMono | null; gain: number; desktopAudio?: boolean };
+
+/** Whether this browser can record the computer's (or a tab's) sound. */
+export function canRecordDesktopAudio(): boolean {
+  return typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function" && !/Android|iPhone|iPad/.test(navigator.userAgent);
+}
 
 const clampGain = (gain: number) => (Number.isFinite(gain) ? Math.min(4, Math.max(0, gain)) : 1);
 
@@ -98,6 +110,11 @@ let stream: MediaStream | null = null;
 let recordStream: MediaStream | null = null;
 let graphNodes: AudioNode[] = [];
 let gainNode: GainNode | null = null;
+/** Where the take's stream is made (the computer's sound joins the microphone here). */
+let recordDest: MediaStreamAudioDestinationNode | null = null;
+/** The computer's sound, while a take records it. */
+let desktopStream: MediaStream | null = null;
+let desktopNodes: AudioNode[] = [];
 /** The input the open stream was opened with (a level check's input is reused by a take). */
 let openedWith: RecorderInput | null = null;
 
@@ -112,6 +129,7 @@ function buildGraph(input: MediaStream, options: RecorderInput): { out: MediaStr
   source.connect(gain);
   gainNode = gain;
   const dest = ctx.createMediaStreamDestination();
+  recordDest = dest;
   graphNodes = [source, gain, dest];
   if (!options.mono) {
     dest.channelCount = 2;
@@ -197,8 +215,55 @@ function releaseInput() {
   for (const node of graphNodes) node.disconnect();
   graphNodes = [];
   gainNode = null;
+  recordDest = null;
+  releaseDesktopAudio();
   recordStream = null;
   openedWith = null;
+}
+
+function releaseDesktopAudio() {
+  desktopStream?.getTracks().forEach((t) => t.stop());
+  desktopStream = null;
+  for (const node of desktopNodes) node.disconnect();
+  desktopNodes = [];
+}
+
+/** Asks what to share and keeps only its sound. Null (with the error set) if there's none. */
+async function openDesktopAudio(): Promise<MediaStream | null> {
+  if (!canRecordDesktopAudio()) {
+    setSnapshot({ error: "This browser can't record the computer's sound. Try Chrome or Edge, or the desktop app." });
+    return null;
+  }
+  let display: MediaStream;
+  try {
+    display = await navigator.mediaDevices.getDisplayMedia({
+      // Browsers only share sound along with a picture; the picture is stopped right away.
+      video: true,
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      systemAudio: "include",
+      selfBrowserSurface: "exclude",
+    } as DisplayMediaStreamOptions);
+  } catch (e) {
+    const name = e instanceof Error ? e.name : "";
+    setSnapshot({ error: name === "NotAllowedError" ? "Recording the computer's sound was cancelled. Turn it off under Microphone to record just the microphone." : "Couldn't record the computer's sound." });
+    return null;
+  }
+  display.getVideoTracks().forEach((t) => t.stop());
+  if (display.getAudioTracks().length === 0) {
+    setSnapshot({ error: "Nothing to hear there: share a tab or your whole screen and turn on its sound (\"Share audio\")." });
+    return null;
+  }
+  return display;
+}
+
+/** Mixes the computer's sound into the take, beside the microphone. */
+function connectDesktopAudio(display: MediaStream) {
+  if (!recordDest) return;
+  const ctx = getAudioContext();
+  const source = ctx.createMediaStreamSource(display);
+  source.connect(recordDest);
+  desktopStream = display;
+  desktopNodes = [source];
 }
 
 /** Same microphone, auto gain and channels (the gain can change on an open input). */
@@ -333,11 +398,20 @@ export async function startRecording(metronome: RecorderMetronome, options: Reco
     el.addEventListener("loadedmetadata", () => (el.currentTime = songStartSec), { once: true });
     songEl = el;
   }
-  if (!(await openInput(options))) {
+  // The computer's sound is asked for first, while it's still your click that asks.
+  const display = options.desktopAudio ? await openDesktopAudio() : null;
+  if (options.desktopAudio && !display) {
     stopSong();
     setSnapshot({ phase: "idle", level: 0 });
     return;
   }
+  if (!(await openInput(options))) {
+    display?.getTracks().forEach((t) => t.stop());
+    stopSong();
+    setSnapshot({ phase: "idle", level: 0 });
+    return;
+  }
+  if (display) connectDesktopAudio(display);
 
   if (metronome.enabled) {
     const { settings, structure } = metronome;

@@ -78,6 +78,7 @@ function Pane({
   // name once the page has set it.
   const [crumbStore] = useState(createCrumbStore);
   const page = useCurrentCrumbs(crumbStore);
+  const atTopLeft = useAtTopLeft(paneEl);
 
   return (
     <div
@@ -92,7 +93,12 @@ function Pane({
           sticky inside it with a negative margin, so the page starts under it and scrolls beneath
           it, as on a phone, while the scrollbar runs the full height beside it. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
-        <div className="sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:px-6">
+        {/* The top-left pane leaves room for the hidden sidebar's menu button (`--sidebar-toggle-room`). */}
+        <div
+          className={`sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:px-6 ${
+            atTopLeft ? "pl-[calc(1rem+var(--sidebar-toggle-room,0px))] sm:pl-[calc(1.5rem+var(--sidebar-toggle-room,0px))]" : ""
+          }`}
+        >
           <div className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
             {page && page.crumbs.length > 0 ? (
               <CrumbTrail crumbs={page.crumbs} icon={page.icon} variant="compact" />
@@ -393,4 +399,21 @@ export default function TilingLayout() {
       onResize={resizeSplitNode}
     />
   );
+}
+
+/** Whether a pane sits in the window's top-left corner (where the hidden sidebar's menu button is). */
+function useAtTopLeft(el: HTMLElement | null) {
+  const [at, setAt] = useState(false);
+  useEffect(() => {
+    if (!el) return;
+    const check = () => {
+      const r = el.getBoundingClientRect();
+      setAt(r.left < 8 && r.top < 8);
+    };
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, [el]);
+  return at;
 }

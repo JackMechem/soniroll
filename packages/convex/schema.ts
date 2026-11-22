@@ -32,7 +32,7 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.string(),
     type: v.union(v.literal("custom"), v.literal("pomodoro")),
-    segments: v.optional(v.array(v.object({ id: v.string(), title: v.string(), minutes: v.number() }))),
+    segments: v.optional(v.array(v.object({ id: v.string(), title: v.string(), minutes: v.number(), tool: v.optional(v.string()) }))),
     pomodoro: v.optional(
       v.object({
         workMinutes: v.number(),
@@ -566,6 +566,8 @@ export default defineSchema({
         so this is a plain string id like `tuneId`. */
     logDate: v.optional(v.string()),
     routineId: v.optional(v.string()),
+    /** A task in that routine, or a one-off task on that day (no `routineId`). */
+    taskId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

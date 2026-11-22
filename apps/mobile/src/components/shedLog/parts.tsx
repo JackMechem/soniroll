@@ -171,7 +171,10 @@ export function CheckBox({ checked, color, mark = '#ffffff', size = 24 }: { chec
   );
 }
 
-/** A task to tick: the box, the name and its details are one target. */
+/** A task to tick: the box, the name and its details are one target.
+
+    With `onOpen` (the Shed Log's tasks), only the box ticks it off (a padded target, easy to hit)
+    and the name and its line open the task's screen. */
 export function TaskCheck({
   checked,
   label,
@@ -180,6 +183,7 @@ export function TaskCheck({
   badge,
   mark,
   onToggle,
+  onOpen,
 }: {
   checked: boolean;
   label: string;
@@ -188,9 +192,50 @@ export function TaskCheck({
   meta?: (string | false | null | undefined)[];
   badge?: string;
   onToggle: () => void;
+  /** Tapping the name opens the task instead of ticking it. */
+  onOpen?: () => void;
 }) {
   const { colors } = useAppTheme();
   const details = (meta ?? []).filter(Boolean).join(' · ');
+  const text = (
+    <View className="flex-1">
+      <Text
+        className="font-ui text-[15px]"
+        style={{ color: checked ? colors.muted : colors.foreground, textDecorationLine: checked ? 'line-through' : 'none' }}
+      >
+        {label || 'Untitled task'}
+        {badge ? (
+          <Text className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted, textDecorationLine: 'none' }}>
+            {`  ${badge}`}
+          </Text>
+        ) : null}
+      </Text>
+      {details ? (
+        <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+          {details}
+        </Text>
+      ) : null}
+    </View>
+  );
+  if (onOpen) {
+    return (
+      <View className="flex-row items-start">
+        <Pressable
+          onPress={onToggle}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked }}
+          accessibilityLabel={`${label || 'Task'} done`}
+          hitSlop={{ top: 6, bottom: 6, left: 8, right: 4 }}
+          className="py-1 pr-3"
+        >
+          <CheckBox checked={checked} color={color} mark={mark} />
+        </Pressable>
+        <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Open ${label || 'the task'}`} accessibilityHint="Its notes, recordings and time" className="flex-1 flex-row py-1">
+          {text}
+        </Pressable>
+      </View>
+    );
+  }
   return (
     <Pressable
       onPress={onToggle}
@@ -200,24 +245,7 @@ export function TaskCheck({
       className="flex-row items-start gap-3 py-1"
     >
       <CheckBox checked={checked} color={color} mark={mark} />
-      <View className="flex-1">
-        <Text
-          className="font-ui text-[15px]"
-          style={{ color: checked ? colors.muted : colors.foreground, textDecorationLine: checked ? 'line-through' : 'none' }}
-        >
-          {label || 'Untitled task'}
-          {badge ? (
-            <Text className="font-ui-semibold text-[11px] font-semibold" style={{ color: colors.muted, textDecorationLine: 'none' }}>
-              {`  ${badge}`}
-            </Text>
-          ) : null}
-        </Text>
-        {details ? (
-          <Text className="font-ui text-xs" style={{ color: colors.muted }}>
-            {details}
-          </Text>
-        ) : null}
-      </View>
+      {text}
     </Pressable>
   );
 }

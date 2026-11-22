@@ -175,3 +175,28 @@ and the Shed Log. Still open from the same rethink: favorites shown once (they a
 and as starred rows), the streak shown once (Shed Log card and account row), and a sign-in card
 in "Your shed"/"People" when signed out. In the ⌘K palette these four destinations are still
 listed under the "Community" category (that's `navLinks.ts`'s category, unchanged).
+
+## 2026-11-22 — The sidebar hides like Notion's
+
+Jack wanted the sidebar's collapse button to hide it completely (the page gets the full width), with
+Notion's menu button at the top left that slides the sidebar in over the page on hover; the icon
+strip stays, but only by dragging the sidebar very narrow.
+
+- The layout store (`jam-practice-sidebar`, `components/Sidebar.tsx`) has `hidden` beside `width` and
+  `collapsed`. The « button in the sidebar's header (`SidebarHideButton`) and ⌘\ / Ctrl+\ hide it.
+- **Hidden:** the `<aside>` turns `fixed` (top-14, bottom-2, rounded, shadow), off screen to the left
+  and `inert`. A menu button (`fixed left-3 top-2.5`, desktop only) sits where the page bar starts;
+  `--sidebar-toggle-room` on `<html>` makes `PageBar` and the top-left split-screen pane
+  (`useAtTopLeft` in `TilingLayout.tsx`) leave room for it. Hovering the button, or the window's
+  left edge (≤4px), slides the sidebar in at its full width ("peek"); it stays while the pointer is
+  over it, the button or any menu, listbox or dialog (those are portaled out of it), and slides away
+  300 ms after the pointer leaves them, or on Escape. In it, » (and clicking the menu button) keeps it
+  open again. `useSidebarShownWidth` is 0 while hidden (the tool dock).
+- **Icon strip:** dragging the edge below 150px snaps to the strip (68px); dragging out past that
+  widens it again (←/→ on the handle do the same at the minimum). The strip's › button widens it.
+  Hidden, the sidebar never peeks as the strip.
+
+Verified in headless Chromium at 1440: hide → aside off screen, menu button showing, page full width;
+hovering the button and the left edge brought it in, moving away took it out; clicking the button
+and Ctrl+\ toggled it; dragging to 100px gave the strip, to 280px back to 280; hidden on /tunes.
+No console errors. Not verified: hover feel by hand, a ⋮ menu opened while peeking, the desktop app.

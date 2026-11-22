@@ -26,6 +26,12 @@
 //! decoder's 529). Without a LAME tag no decoder trims it, so it's the same everywhere: the
 //! decoded file starts `CODEC_DELAY_FRAMES` before the take's first sample, and `recorder_begin`
 //! reports the line-up (`lead`) with that included.
+//!
+//! **The computer's sound** (`desktop_audio`, off unless the Recorder's switch is on): a second
+//! stream opened as an *input* on the output device — PipeWire records that output's monitor, and
+//! WASAPI (Windows) records it as loopback — mixed into the take after the input level and the
+//! meter (`Loopback`), resampled if its rate differs. Everything the computer plays is in it, the
+//! app's own metronome too.
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
@@ -232,6 +238,80 @@ impl Processor {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The computer's sound, mixed in
+
+/// The computer's sound on its way into the take: what the loopback stream delivered, played out
+/// one input frame at a time at the input's rate (linear interpolation when the rates differ).
+pub struct Loopback {
+    channels: usize,
+    /// Loopback frames per input frame.
+    step: f64,
+    buf: VecDeque<f32>,
+    pos: f64,
+    /// Never more than this much of it waiting (the two clocks drift; it stays close).
+    max_backlog_frames: usize,
+}
+
+impl Loopback {
+    pub fn new(channels: usize, loopback_rate: u32, input_rate: u32) -> Self {
+        Self {
+            channels: channels.clamp(1, 2),
+            step: loopback_rate as f64 / input_rate.max(1) as f64,
+            buf: VecDeque::new(),
+            pos: 0.0,
+            max_backlog_frames: (loopback_rate as usize / 4).max(1024),
+        }
+    }
+
+    pub fn push(&mut self, sample: f32) {
+        self.buf.push_back(sample);
+    }
+
+    fn frame(&self, i: usize) -> (f32, f32) {
+        let at = i * self.channels;
+        if self.channels == 1 {
+            (self.buf[at], self.buf[at])
+        } else {
+            (self.buf[at], self.buf[at + 1])
+        }
+    }
+
+    /// Adds the computer's sound to `out` (`out_channels` interleaved: both sides averaged into
+    /// one for mono). Where it hasn't arrived yet, the input stays as it is.
+    pub fn mix_into(&mut self, out: &mut [f32], out_channels: usize) {
+        let available = self.buf.len() / self.channels;
+        let needed = (out.len() / out_channels.max(1)) as f64 * self.step;
+        let backlog = available as f64 - self.pos - needed;
+        if backlog > self.max_backlog_frames as f64 {
+            let skip = (backlog as usize - self.max_backlog_frames / 2).min(available);
+            self.buf.drain(..skip * self.channels);
+            self.pos = (self.pos - skip as f64).max(0.0);
+        }
+        let available = self.buf.len() / self.channels;
+        for frame in out.chunks_mut(out_channels.max(1)) {
+            let i = self.pos.floor() as usize;
+            if i + 1 >= available {
+                break;
+            }
+            let t = (self.pos - i as f64) as f32;
+            let (l0, r0) = self.frame(i);
+            let (l1, r1) = self.frame(i + 1);
+            let (l, r) = (l0 + (l1 - l0) * t, r0 + (r1 - r0) * t);
+            if frame.len() == 1 {
+                frame[0] = soft_clip(frame[0] + (l + r) * 0.5);
+            } else {
+                frame[0] = soft_clip(frame[0] + l);
+                frame[1] = soft_clip(frame[1] + r);
+            }
+            self.pos += self.step;
+        }
+        let used = (self.pos.floor() as usize).min(self.buf.len() / self.channels);
+        self.buf.drain(..used * self.channels);
+        self.pos -= used as f64;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // Assembling the take: which frames go in
 
 /// Where the processed frames go once the take has started.
@@ -402,6 +482,7 @@ pub fn recorder_open(
     mono: Option<MonoSource>,
     auto_gain: bool,
     gain: Option<f32>,
+    desktop_audio: Option<bool>,
     on_level: Channel<(f32, f32)>,
 ) -> Result<OpenInfo, String> {
     cancel_session(&state);
@@ -436,6 +517,18 @@ pub fn recorder_open(
         input_latency_micros: AtomicU32::new(0),
         failed: AtomicBool::new(false),
     });
+    // The computer's sound: the output the app plays through (the forced test output, else the
+    // system default), opened as an input.
+    let loopback_device = if desktop_audio.unwrap_or(false) {
+        let id = audio::forced_output().unwrap_or_default();
+        let device = audio::find_device(&id, false).ok_or("Couldn't record the computer's sound: no output found.")?;
+        let supported = device
+            .default_output_config()
+            .map_err(|e| format!("Couldn't record the computer's sound: {e}"))?;
+        Some((device, supported.config(), supported.sample_format()))
+    } else {
+        None
+    };
     let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
     let (done_tx, done_rx) = mpsc::channel::<Result<Take, String>>();
     let worker_shared = shared.clone();
@@ -461,9 +554,40 @@ pub fn recorder_open(
                 return;
             }
         };
+        let loopback = match loopback_device {
+            None => None,
+            Some((device, config, format)) => {
+                let channels = (config.channels as usize).min(2);
+                let rate = config.sample_rate;
+                let (lb_producer, lb_consumer) = rtrb::RingBuffer::<f32>::new(rate as usize * 4 * channels);
+                let built = match format {
+                    SampleFormat::F32 => build_loopback::<f32>(&device, config, lb_producer),
+                    SampleFormat::I16 => build_loopback::<i16>(&device, config, lb_producer),
+                    SampleFormat::I32 => build_loopback::<i32>(&device, config, lb_producer),
+                    SampleFormat::U16 => build_loopback::<u16>(&device, config, lb_producer),
+                    SampleFormat::F64 => build_loopback::<f64>(&device, config, lb_producer),
+                    other => Err(format!("unsupported sample format {other}")),
+                };
+                match built.and_then(|s| s.play().map(|_| s).map_err(|e| e.to_string())) {
+                    Ok(lb_stream) => {
+                        eprintln!("recorder: also recording the computer's sound, {rate} Hz, {channels} ch");
+                        Some((lb_stream, lb_consumer, Loopback::new(channels, rate, sample_rate)))
+                    }
+                    Err(error) => {
+                        let _ = ready_tx.send(Err(format!("Couldn't record the computer's sound: {error}")));
+                        return;
+                    }
+                }
+            }
+        };
         let _ = ready_tx.send(Ok(()));
+        let (lb_stream, lb) = match loopback {
+            Some((stream, consumer, mixer)) => (Some(stream), Some((consumer, mixer))),
+            None => (None, None),
+        };
         let result =
-            run_worker(&worker_shared, consumer, markers_rx, processor, kept, sample_rate, &on_level);
+            run_worker(&worker_shared, consumer, markers_rx, processor, kept, sample_rate, &on_level, lb);
+        drop(lb_stream);
         drop(stream);
         if let Some(result) = result {
             let _ = done_tx.send(result);
@@ -531,7 +655,32 @@ where
         .map_err(|e| e.to_string())
 }
 
+/// The computer's sound as an input stream on an output device (see the module's doc).
+fn build_loopback<T>(device: &Device, config: StreamConfig, mut producer: rtrb::Producer<f32>) -> Result<cpal::Stream, String>
+where
+    T: SizedSample,
+    f32: FromSample<T>,
+{
+    let channels = config.channels as usize;
+    let kept = channels.min(2);
+    device
+        .build_input_stream(
+            config,
+            move |data: &[T], _: &cpal::InputCallbackInfo| {
+                for frame in data.chunks(channels) {
+                    for sample in &frame[..kept] {
+                        let _ = producer.push(sample.to_sample::<f32>());
+                    }
+                }
+            },
+            move |error| eprintln!("recorder loopback error: {error}"),
+            None,
+        )
+        .map_err(|e| e.to_string())
+}
+
 /// Runs until the take is finished (returns it) or the session is cancelled (returns None).
+#[allow(clippy::too_many_arguments)]
 fn run_worker(
     shared: &Shared,
     mut samples: rtrb::Consumer<f32>,
@@ -540,6 +689,7 @@ fn run_worker(
     in_channels: usize,
     sample_rate: u32,
     on_level: &Channel<(f32, f32)>,
+    mut loopback: Option<(rtrb::Consumer<f32>, Loopback)>,
 ) -> Option<Result<Take, String>> {
     let out_channels = processor.out_channels();
     let mut assembler = TakeAssembler::new(out_channels, (PREROLL_SECS * sample_rate as f64) as usize);
@@ -575,6 +725,13 @@ fn run_worker(
                 meter.pop_front();
             }
             meter.push_back(frame.iter().sum::<f32>() / out_channels as f32);
+        }
+        // The computer's sound joins after the meter (the meter is for setting the input level).
+        if let Some((consumer, mixer)) = loopback.as_mut() {
+            while let Ok(sample) = consumer.pop() {
+                mixer.push(sample);
+            }
+            mixer.mix_into(&mut processed, out_channels);
         }
 
         if let Some(m) = marker {
@@ -896,6 +1053,69 @@ mod tests {
         assert!((out[0] - 0.05).abs() < 1e-6, "halved after the change: {}", out[0]);
         assert_eq!(clamp_gain(f32::NAN), 1.0);
         assert_eq!(clamp_gain(10.0), 4.0);
+    }
+
+    /// `SONIROLL_AUDIO_OUTPUT=<output id> cargo test -- --ignored --nocapture loopback_hears` records
+    /// two seconds of that output's sound through `build_loopback` and prints its level and pitch
+    /// (play a tone into the output meanwhile; a null sink keeps it off the speakers).
+    #[test]
+    #[ignore]
+    fn loopback_hears_an_output() {
+        let id = audio::forced_output().expect("set SONIROLL_AUDIO_OUTPUT");
+        let device = audio::find_device(&id, false).expect("no such output");
+        let supported = device.default_output_config().unwrap();
+        let config = supported.config();
+        let (rate, channels) = (config.sample_rate, config.channels as usize);
+        let (producer, mut consumer) = rtrb::RingBuffer::<f32>::new(rate as usize * 4 * 2);
+        let stream = match supported.sample_format() {
+            SampleFormat::F32 => build_loopback::<f32>(&device, config, producer),
+            SampleFormat::I16 => build_loopback::<i16>(&device, config, producer),
+            other => panic!("format {other}"),
+        }
+        .unwrap();
+        stream.play().unwrap();
+        thread::sleep(Duration::from_secs(2));
+        drop(stream);
+        let mut left = Vec::new();
+        let kept = channels.min(2);
+        let mut i = 0;
+        while let Ok(s) = consumer.pop() {
+            if i % kept == 0 {
+                left.push(s);
+            }
+            i += 1;
+        }
+        let tail = &left[left.len() / 2..];
+        let rms = (tail.iter().map(|s| s * s).sum::<f32>() / tail.len().max(1) as f32).sqrt();
+        println!("loopback: {} frames at {rate} Hz, {channels} ch, rms {rms:.3}, {:.1} Hz", left.len(), zero_crossing_freq(tail, rate as f32));
+    }
+
+    #[test]
+    fn loopback_mixes_in_and_resamples() {
+        // 48 kHz stereo computer sound into a 44.1 kHz stereo take: a steady 0.25 on the left.
+        let mut lb = Loopback::new(2, 48000, 44100);
+        for _ in 0..48000 {
+            lb.push(0.25);
+            lb.push(0.0);
+        }
+        let mut out = vec![0.1f32; 2 * 44100 / 2];
+        lb.mix_into(&mut out, 2);
+        assert!((out[0] - 0.35).abs() < 1e-5 && (out[1] - 0.1).abs() < 1e-5);
+        let last = out.len() - 2;
+        assert!((out[last] - 0.35).abs() < 1e-5);
+        // A second was waiting and half a second was used: the backlog was cut back to an eighth
+        // of a second first (it can't lag the input by more than a quarter).
+        let left = lb.buf.len() / 2;
+        assert!((5000..=7000).contains(&left), "left {left}");
+        // Mono: both sides averaged in.
+        let mut mono = vec![0.0f32; 100];
+        lb.mix_into(&mut mono, 1);
+        assert!((mono[50] - 0.125).abs() < 1e-5);
+        // Nothing waiting: the input is left alone.
+        let mut empty = Loopback::new(2, 48000, 48000);
+        let mut out = vec![0.3f32; 8];
+        empty.mix_into(&mut out, 2);
+        assert!(out.iter().all(|&x| (x - 0.3).abs() < 1e-6));
     }
 
     #[test]

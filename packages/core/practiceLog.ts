@@ -89,6 +89,8 @@ export type Occurrence = {
   subDone?: string[];
   /** Tasks added to the routine for just this day (after its own). */
   extraTasks?: RoutineTask[];
+  /** Things attached to a task for just this day (beside the task's own), by task id. */
+  taskAttachments?: Record<string, Attachment[]>;
   /** Time logged by checking a task off (its planned minutes), per task — taken back off
       `spentMs` if it's unchecked. */
   autoMs?: Record<string, number>;
@@ -655,7 +657,8 @@ export function pruneDay(day: DayLog): DayLog | null {
       o.skipped ||
       o.startTime !== undefined ||
       (o.subDone?.length ?? 0) > 0 ||
-      (o.extraTasks?.length ?? 0) > 0,
+      (o.extraTasks?.length ?? 0) > 0 ||
+      Object.values(o.taskAttachments ?? {}).some((list) => list.length > 0),
   );
   const next: DayLog = {
     ...(day.notes ? { notes: day.notes } : {}),

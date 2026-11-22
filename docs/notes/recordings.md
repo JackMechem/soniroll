@@ -224,3 +224,43 @@ the Library's route. Files already was (`/tunes?tab=files`); Recordings now is t
   recording page; Back with history and with none (falls back to the tab); delete → the tab; a
   deleted id's page. `curl` showed both old addresses 307 to the new ones on the dev server. Not
   checked: the desktop app (types only), playback (device-kept seeds have no audio here).
+
+## 2026-11-22 — Record the computer's sound too (Recorder, off by default)
+
+Jack: the Recorder should also be able to record desktop audio (a song playing in Spotify), only
+when turned on.
+
+- **Setting:** `desktopAudio` (default false) in the Recorder's synced settings; a switch "Record the
+  computer's sound too" in the Microphone chip, shown only where it can work
+  (`canRecordDesktopAudio`, read through `useSyncExternalStore` so it's false on the server). Kept out
+  of presets? No: it's an option like the others. Help line added.
+- **Website** (`lib/recorderEngine.ts`): `startRecording` asks `getDisplayMedia` *before* the
+  microphone (the share prompt needs the click's activation), with `systemAudio: "include"` and
+  `selfBrowserSurface: "exclude"`; the video track is stopped at once; no audio track → "Nothing to
+  hear there…". Its source connects straight to the take's `MediaStreamDestination` (`recordDest`),
+  so it skips the input level, mono pick and meter (mono down-mixes it). Released with the input.
+  Works where Chromium shares audio: a tab anywhere, the whole screen's sound on Windows/ChromeOS
+  (not Firefox or Safari: the switch hides when `getDisplayMedia` is missing, and on phones).
+- **Desktop** (`recorder.rs`): `recorder_open(desktop_audio)` opens a second cpal stream *as an
+  input on the output device* (the forced `SONIROLL_AUDIO_OUTPUT`, else the default output):
+  PipeWire records that output's monitor, WASAPI records loopback. `Loopback` resamples it to the
+  input's rate (linear) and adds it to the processed frames after the meter (`soft_clip` on the
+  sum); its backlog is kept under a quarter of a second (the two clocks drift), and where nothing
+  has arrived yet the input is left as it is. Everything the computer plays is in it, the app's own
+  metronome click too. A failure to open it fails `recorder_open` with "Couldn't record the
+  computer's sound…", which the wrapper shows as such. `sameInput` includes `desktopAudio`, so a
+  level check (opened without it) is reopened for the take.
+
+Verified: `cargo test` (11 recorder tests; new `loopback_mixes_in_and_resamples`: 48 kHz into a
+44.1 kHz take, mono averaging, nothing waiting), `cargo clippy --all-targets -D warnings`; on this
+PipeWire machine, a null sink with a 440 Hz tone played into it (`pw-play --target`, nothing to the
+speakers) recorded through `build_loopback` (ignored test `loopback_hears_an_output`): rms 0.212 (=
+0.3/√2), 439.8 Hz. Web: `tsc`, eslint, desktop `tsc`. In headless Chromium signed in (throwaway
+accounts, deleted): the switch shows in the Microphone chip; with it on, Record auto-picked a tab
+playing a tone (`--auto-select-tab-capture-source-by-title`), the share came back with an audio
+track and a 3.9 s take was made with no errors — but the take was silent, most likely because the
+test browser runs with `--mute-audio` (kept on so nothing plays aloud), so the tab's sound reaching
+the take is **not verified** on the web. Not verified either: the whole desktop app recording a
+take with it (only the loopback stream and the mixer separately), Windows WASAPI loopback, macOS
+(likely refused without a capture permission/aggregate device), real Spotify, the alignment between
+the song and the microphone (tens of ms apart is expected).

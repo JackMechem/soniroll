@@ -64,7 +64,8 @@ export default function PageBar({
 
   return (
     <>
-      <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 px-8 lg:flex">
+      {/* With the sidebar hidden, room at the left for its menu button (`--sidebar-toggle-room`). */}
+      <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 pl-[calc(2rem+var(--sidebar-toggle-room,0px))] pr-8 lg:flex">
         <CrumbTrail crumbs={crumbs} icon={Icon} />
         {shownIntro && <IntroButton onClick={shownIntro.show} label={shownIntro.label} />}
         {help && <div className="ml-1">{help}</div>}

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import TilingLayout from "@/components/TilingLayout";
 import PracticeLogGlobal from "@/components/practicelog/PracticeLogGlobal";
+import NotePeek from "@/components/shednotes/NotePeek";
 import { prefersReducedMotion } from "@/lib/logoAnimation";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useRecordToolVisits } from "@/lib/toolRecents";
@@ -32,6 +33,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <>
         <PracticeLogGlobal />
         <AnimatedPage>{children}</AnimatedPage>
+        <NotePeek />
       </>
     );
 
@@ -41,6 +43,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <TilingLayout />
       </div>
+      <NotePeek />
     </>
   );
 }

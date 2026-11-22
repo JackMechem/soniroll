@@ -22,7 +22,7 @@
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM"
       ],
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "output": "static",

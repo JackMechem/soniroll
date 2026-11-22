@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import {
   MAX_BODY,
+  addRecordingToNote,
   cleanFolder,
   cleanTitle,
   findTags,
@@ -272,6 +273,42 @@ export const create = mutation({
     });
     if (args.attach) await attach(ctx, userId, id, args.attach.target, args.attach.label);
     return { id: id as string, title };
+  },
+});
+
+/** Adds a line at the end of a note (a task note's link in its routine's notes, a recording just
+    made for a task). Only for a note that isn't open in an editor: the open one adds it there. */
+export const appendLine = mutation({
+  args: { id: v.id("shedNotes"), line: v.string() },
+  handler: async (ctx, { id, line }) => {
+    const userId = await me(ctx);
+    const note = await ctx.db.get(id);
+    if (!note) throw new Error("That note isn't there any more.");
+    const role = await noteAccess(ctx, note, userId);
+    if (role !== "owner" && role !== "write") throw new Error("You can only read this note.");
+    const clean = line.replace(/[\r\n]+/g, " ").trim().slice(0, 1000);
+    if (!clean) return;
+    const body = note.body.replace(/\s*$/, "") + (note.body.trim() ? "\n" : "") + clean + "\n";
+    if (body.length > MAX_BODY) throw new Error(`A note can hold up to ${MAX_BODY.toLocaleString()} characters.`);
+    await ctx.db.patch(id, { body, links: linkKeys(body), tags: findTags(body), updatedAt: Date.now() });
+  },
+});
+
+/** Puts a recording's player in a task's note, under its "## Recordings" heading
+    (`addRecordingToNote`: the headings are added, and players already in it moved, if missing). */
+export const addRecording = mutation({
+  args: { id: v.id("shedNotes"), line: v.string() },
+  handler: async (ctx, { id, line }) => {
+    const userId = await me(ctx);
+    const note = await ctx.db.get(id);
+    if (!note) throw new Error("That note isn't there any more.");
+    const role = await noteAccess(ctx, note, userId);
+    if (role !== "owner" && role !== "write") throw new Error("You can only read this note.");
+    const clean = line.replace(/[\r\n]+/g, " ").trim().slice(0, 1000);
+    if (!clean) return;
+    const body = addRecordingToNote(note.body, clean);
+    if (body.length > MAX_BODY) throw new Error(`A note can hold up to ${MAX_BODY.toLocaleString()} characters.`);
+    await ctx.db.patch(id, { body, links: linkKeys(body), tags: findTags(body), updatedAt: Date.now() });
   },
 });
 

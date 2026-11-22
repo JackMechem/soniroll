@@ -5,7 +5,7 @@ import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { PauseIcon, PencilIcon, PlayIcon, PlusIcon, SpeakerIcon, StopIcon, StopwatchIcon, TrashIcon, type IconProps } from '@/components/icons';
+import { PauseIcon, PencilIcon, PlayIcon, PlusIcon, SpeakerIcon, StopIcon, StopwatchIcon, ToolsIcon, TrashIcon, type IconProps } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { blankDraft, draftFromSession, PracticeSessionEditor, type Draft } from '@/components/PracticeSessionEditor';
 import { PracticeTimerRing } from '@/components/PracticeTimerRing';
@@ -14,6 +14,7 @@ import { BigButton, StepButton } from '@/components/tool/meter';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { ToolFrame } from '@/components/tool/ToolFrame';
 import { Card, EmptyState } from '@/components/ui';
+import { DEFAULT_SOUND_SETTINGS, SOUND_SETTINGS_KEY } from '@/lib/practiceTimerSound';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { getSnapshot, pause, resume, skip, start, stop, subscribe, type EngineState } from '@/lib/practiceTimerEngine';
 import { usePracticeSessions, type SessionInput } from '@/lib/usePracticeSessions';
@@ -22,8 +23,6 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useKeepAwakeWhile } from '@/lib/useKeepAwake';
 import { TextInput } from '@/components/ThemedTextInput';
 
-const SOUND_SETTINGS_KEY = 'jam-practice-timer-sound-settings';
-const DEFAULT_SOUND_SETTINGS = { soundEnabled: true, alarmMode: false, fullScreenAlert: false };
 
 /**
  * The Practice Timer, laid out like the website's (`apps/web/components/PracticeTimer.tsx`).
@@ -36,14 +35,16 @@ const DEFAULT_SOUND_SETTINGS = { soundEnabled: true, alarmMode: false, fullScree
  * sync to the same Convex `practiceSessions` table the website uses (`lib/usePracticeSessions.ts`,
  * with an offline `AsyncStorage` fallback); notifications and the alarm live in
  * `lib/practiceTimerEngine.ts`. The session editor takes the whole screen (the website opens it in
- * a popover; on a phone a long form with a keyboard is better as its own page).
+ * a popover; on a phone a long form with a keyboard is better as its own page). A step can have a
+ * tool (picked in the editor; a Shed Log task's first attached tool) that opens when the step
+ * starts, wherever you are (`lib/useOpenStepTools.ts`), unless the Tools chip turns that off.
  */
 function PracticeTimerScreen() {
   const { colors } = useAppTheme();
   const { sessions, loading, createSession, updateSession, deleteSession } = usePracticeSessions();
   const engineState = useSyncExternalStore(subscribe, getSnapshot) as EngineState | null;
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SOUND_SETTINGS_KEY, DEFAULT_SOUND_SETTINGS);
-  const { soundEnabled, alarmMode, fullScreenAlert } = settings;
+  const { soundEnabled, alarmMode, fullScreenAlert, openTools } = settings;
   const [draft, setDraft] = useState<Draft | null>(null);
   // The quick timer's length: a plain countdown, no session needed. Not saved (as on the website).
   const [quickMinutes, setQuickMinutes] = useState(10);
@@ -161,6 +162,19 @@ function PracticeTimerScreen() {
               hint="Also shows a full-screen prompt when the alarm goes off, wherever you are in the app — not just a chime. Only applies while alarm mode is on."
             />
             <ReliabilityHints />
+          </SettingChip>
+          <SettingChip
+            Icon={ToolsIcon}
+            label="Tools"
+            value={openTools ? 'Open on start' : 'Off'}
+            toggle={{ checked: openTools, onChange: (v) => updateSettings({ openTools: v }) }}
+          >
+            <SwitchRow
+              label="Open each step's tool"
+              checked={openTools}
+              onChange={(v) => updateSettings({ openTools: v })}
+              hint="When a step with a tool starts, that tool opens, wherever you are in the app. Pick a step's tool in the session editor; a Shed Log task's tool (the first one attached) opens when it starts too."
+            />
           </SettingChip>
         </SettingsBar>
       }

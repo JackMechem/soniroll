@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,6 +16,7 @@ import TaskCheck, { DotList } from "@/components/practicelog/TaskCheck";
 import { TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
 import { CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import { openSide } from "@/lib/notePeek";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
   type DayRoutine,
@@ -36,7 +36,7 @@ import {
   scheduleTasks,
   todayKey,
 } from "@/lib/practiceLog";
-import { pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
+import { type EngineState, pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
 import type { Recording } from "@/lib/recordings";
 import { useClockMinute } from "@/lib/useClockMinute";
 import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
@@ -52,12 +52,18 @@ export default function RoutineCard({
   log,
   recordings,
   dayRoutines,
+  onOpenTask,
+  embedded = false,
 }: {
   date: string;
   item: DayRoutine;
   log: Log;
   recordings: Recording[] | undefined;
   dayRoutines: { id: string; name: string }[];
+  /** Opens a task (tapping its name): its page in the side view unless given. */
+  onOpenTask?: (taskId: string) => void;
+  /** On the routine's own page: no icon or name (the page's title has them). */
+  embedded?: boolean;
 }) {
   const { routine, occurrence, added } = item;
   const { engine, startRoutine, runningTask } = useRoutineTimer();
@@ -88,7 +94,6 @@ export default function RoutineCard({
   const noteLabel = `${routine.name || "Untitled routine"} · ${formatShortDate(date)}`;
   const clock = useClockMinute();
   const router = useRouter();
-  const routineHref = `/shed-log/routine?id=${encodeURIComponent(routine.id)}`;
   const [addingTask, setAddingTask] = useState(false);
   // Its time is now: outlined in its colour.
   const timeIsNow = !!clock && clock.today === date && isRoutineNow(item, clock.nowMin);
@@ -99,7 +104,7 @@ export default function RoutineCard({
       x: rect.right - 208,
       y: rect.bottom + 4,
       items: [
-        { label: "Open routine", onSelect: () => router.push(routineHref) },
+        { label: "Open routine", onSelect: () => openSide({ kind: "routine", id: routine.id, date }) },
         { label: "Edit routine", onSelect: () => router.push(`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`) },
         { label: span ? "Change the time" : "Set a time", onSelect: () => setEditingTime(true) },
         ...(timeOverride
@@ -136,24 +141,28 @@ export default function RoutineCard({
 
   return (
     <article
-      className={`relative flex flex-col gap-3 overflow-hidden rounded-lg bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}
+      className={`relative flex flex-col gap-3 overflow-hidden p-4 pl-5 ${embedded ? "rounded-xl bg-foreground/[0.04]" : "rounded-lg bg-surface"} ${skipped ? "opacity-60" : ""}`}
       style={timeIsNow ? { boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
       <header className="flex items-start gap-3 pl-1">
-        <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
+        {!embedded && <RoutineIcon icon={routine.icon} color={routine.color} size="md" />}
         <div className="min-w-0 flex-1">
-          <Link href={routineHref} className={`block truncate text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
-            {routine.name || "Untitled routine"}
-          </Link>
-          {routine.assigned && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
+          {/* Its page opens in the side view, so the day stays in sight. */}
+          {!embedded && (
+            <button type="button" onClick={() => openSide({ kind: "routine", id: routine.id, date })} className={`block max-w-full truncate text-left text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
+              {routine.name || "Untitled routine"}
+            </button>
+          )}
+          {routine.assigned && !embedded && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
           <div className="flex flex-col gap-0.5 text-xs text-muted">
             {/* Dots between items that never dangle when a line wraps (DotList). */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <DotList
                 items={[
                   span ? <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span> : "Any time",
-                  formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
+                  // On its own page the title already says how long and how often.
+                  !embedded && formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
                 ]}
               />
               {!span && !skipped && (
@@ -164,13 +173,15 @@ export default function RoutineCard({
             </div>
             <DotList
               items={[
-                <span key="repeat" className="flex items-center gap-1">
-                  {added ? "Added to this day" : (
-                    <>
-                      <RepeatIcon className="h-3 w-3 shrink-0" /> {describeRepeat(routine.repeat)}
-                    </>
-                  )}
-                </span>,
+                (!embedded || added) && (
+                  <span key="repeat" className="flex items-center gap-1">
+                    {added ? "Added to this day" : (
+                      <>
+                        <RepeatIcon className="h-3 w-3 shrink-0" /> {describeRepeat(routine.repeat)}
+                      </>
+                    )}
+                  </span>
+                ),
                 skipped && <span className="font-semibold text-foreground">Skipped</span>,
                 !skipped && routineStatus(item, date, today) === "missed" && "Missed",
                 routineStatus(item, date, today) === "partial" && <span className="font-semibold text-warning">Partly done</span>,
@@ -198,40 +209,7 @@ export default function RoutineCard({
       {editingTime && <RoutineTimePicker date={date} routine={routine} occurrence={occurrence} log={log} onDone={() => setEditingTime(false)} />}
 
       {engine && running ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-background p-3">
-          <PracticeTimerRing size="sm" startedAt={engine.startedAt} durationMs={engine.durationMs} paused={engine.paused} remainingMsAtPause={engine.remainingMsAtPause} alarming={engine.alarming} />
-          <div className="min-w-[9rem] flex-1">
-            <div className={`text-xs font-semibold ${engine.alarming ? "animate-pulse text-danger" : "text-muted"}`}>
-              {engine.alarming ? "Time's up" : engine.paused ? "Paused" : "Now"}
-            </div>
-            <div className="line-clamp-2 font-medium">{engine.current.title}</div>
-            <div className="truncate text-xs text-muted">{engine.next ? `Next: ${engine.next.title}` : "Last task"}</div>
-          </div>
-          {/* Wraps under the task on a phone, so the task's name gets the width. */}
-          <div className="ml-auto flex shrink-0 gap-1">
-            {engine.alarming ? (
-              <TimerButton label="Continue" onClick={skip} primary>
-                <PlayIcon className="h-4 w-4" />
-              </TimerButton>
-            ) : engine.paused ? (
-              <TimerButton label="Resume" onClick={resume} primary>
-                <PlayIcon className="h-4 w-4" />
-              </TimerButton>
-            ) : (
-              <TimerButton label="Pause" onClick={pause}>
-                <PauseIcon className="h-4 w-4" />
-              </TimerButton>
-            )}
-            {!engine.alarming && (
-              <TimerButton label="Skip — don't check it off" onClick={skip}>
-                <span className="text-xs font-bold">»</span>
-              </TimerButton>
-            )}
-            <TimerButton label="Stop" onClick={stop}>
-              <StopIcon className="h-4 w-4 text-danger" />
-            </TimerButton>
-          </div>
-        </div>
+        <RunningTimer engine={engine} />
       ) : (
         !skipped &&
         firstOpen &&
@@ -272,6 +250,7 @@ export default function RoutineCard({
                     label={task.title}
                     color={color}
                     onToggle={() => log.toggleTask(date, routine.id, task.id)}
+                    onOpen={() => (onOpenTask ? onOpenTask(task.id) : openSide({ kind: "task", routineId: routine.id, taskId: task.id, date }))}
                     badge={extraIds.has(task.id) && <span className="ml-1.5 rounded-sm bg-foreground/[0.05] px-1 py-px align-middle text-[10px] font-medium text-muted">Today only</span>}
                     meta={[
                       start !== null && <span className={task.time ? "font-medium" : ""}>{formatTime(start)}</span>,
@@ -308,9 +287,10 @@ export default function RoutineCard({
                       : {})}
                   />
                   {task.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{task.notes}</p>}
-                  {task.attachments.length > 0 && (
+                  {/* Its own attachments and the ones for just this day (added on its page). */}
+                  {task.attachments.length + (occurrence.taskAttachments?.[task.id]?.length ?? 0) > 0 && (
                     <div className="mt-1.5">
-                      <AttachmentList items={task.attachments} compact />
+                      <AttachmentList items={[...task.attachments, ...(occurrence.taskAttachments?.[task.id] ?? [])]} compact />
                     </div>
                   )}
                   </div>
@@ -468,5 +448,46 @@ function TimerButton({ label, onClick, primary = false, children }: { label: str
     >
       {children}
     </button>
+  );
+}
+
+/** What the Practice Timer is running for a routine (or one of its tasks): the countdown ring, the
+    task now and next, and pause / skip / stop. Also on a task's page while it runs. */
+export function RunningTimer({ engine }: { engine: EngineState }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-background p-3">
+      <PracticeTimerRing size="sm" startedAt={engine.startedAt} durationMs={engine.durationMs} paused={engine.paused} remainingMsAtPause={engine.remainingMsAtPause} alarming={engine.alarming} />
+      <div className="min-w-[9rem] flex-1">
+        <div className={`text-xs font-semibold ${engine.alarming ? "animate-pulse text-danger" : "text-muted"}`}>
+          {engine.alarming ? "Time's up" : engine.paused ? "Paused" : "Now"}
+        </div>
+        <div className="line-clamp-2 font-medium">{engine.current.title}</div>
+        <div className="truncate text-xs text-muted">{engine.next ? `Next: ${engine.next.title}` : "Last task"}</div>
+      </div>
+      {/* Wraps under the task on a phone, so the task's name gets the width. */}
+      <div className="ml-auto flex shrink-0 gap-1">
+        {engine.alarming ? (
+          <TimerButton label="Continue" onClick={skip} primary>
+            <PlayIcon className="h-4 w-4" />
+          </TimerButton>
+        ) : engine.paused ? (
+          <TimerButton label="Resume" onClick={resume} primary>
+            <PlayIcon className="h-4 w-4" />
+          </TimerButton>
+        ) : (
+          <TimerButton label="Pause" onClick={pause}>
+            <PauseIcon className="h-4 w-4" />
+          </TimerButton>
+        )}
+        {!engine.alarming && (
+          <TimerButton label="Skip — don't check it off" onClick={skip}>
+            <span className="text-xs font-bold">»</span>
+          </TimerButton>
+        )}
+        <TimerButton label="Stop" onClick={stop}>
+          <StopIcon className="h-4 w-4 text-danger" />
+        </TimerButton>
+      </div>
+    </div>
   );
 }

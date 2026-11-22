@@ -50,6 +50,18 @@ function segmentPath(centerDegrees: number) {
   return `M ${ox1} ${oy1} A ${OUTER} ${OUTER} 0 0 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${INNER} ${INNER} 0 0 0 ${ix1} ${iy1} Z`;
 }
 
+/** The tuning colours: in tune (±8 cents), close (±25), off — the same everywhere in the Tuner. */
+export const IN_TUNE_CENTS = 8;
+export const CLOSE_CENTS = 25;
+export const IN_TUNE = '#22c55e';
+export const CLOSE = '#f59e0b';
+export const OFF = '#ef4444';
+
+export function centsColor(cents: number) {
+  const abs = Math.abs(cents);
+  return abs <= IN_TUNE_CENTS ? IN_TUNE : abs <= CLOSE_CENTS ? CLOSE : OFF;
+}
+
 /** "C#" → "C♯", "Db" → "D♭", for the labels on the dial. */
 function glyphs(name: string) {
   return name.replace('#', '♯').replace(/^([A-G])b/, '$1♭');
@@ -57,13 +69,16 @@ function glyphs(name: string) {
 
 /** A ring of the 12 notes (C at the top) with the tuner readout (the heard note, big) in the
     middle; tap a note to hear it. The heard note is lit in its tuning colour, the one playing
-    filled with the accent. `size` is its width and height (the screen fits it to the space). */
+    filled with the accent. `size` is its width and height (the screen fits it to the space).
+    `tight` (the pitch graph in the dial): the middle stacks its children from the top with less
+    padding and is clipped to the circle, so the graph's ends meet the ring. */
 export function TunerDial({
   detectedPc,
   detectedColor,
   playingPc,
   onSelect,
   size,
+  tight = false,
   children,
 }: {
   size: number;
@@ -73,6 +88,7 @@ export function TunerDial({
   /** Pitch class of the tone being played, outlined on the ring. */
   playingPc: number | null;
   onSelect: (pc: number) => void;
+  tight?: boolean;
   children: ReactNode;
 }) {
   const { colors } = useAppTheme();
@@ -131,7 +147,9 @@ export function TunerDial({
           height: '58%',
           borderRadius: 9999,
           alignItems: 'center',
-          justifyContent: 'center',
+          ...(tight
+            ? { justifyContent: 'flex-start', overflow: 'hidden', paddingTop: size * 0.58 * 0.08, paddingBottom: size * 0.58 * 0.12 }
+            : { justifyContent: 'center' }),
         }}
       >
         {children}

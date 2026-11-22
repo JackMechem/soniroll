@@ -32,6 +32,9 @@ import { Channel, engineLatency, engineNow, invoke } from "./engine";
  * - The line-up with the tune's song (`songOffsetSec`) uses the capture delay the audio system
  *   reports instead of the browser's guess.
  *
+ * The computer's sound (`desktopAudio`) is recorded by the native engine too: the output the app
+ * plays through, opened as an input (PipeWire's monitor, WASAPI loopback), mixed into the take.
+ *
  * Auto gain is a gentle gain control in Rust standing in for the browser's `autoGainControl`;
  * Mono works the same way as the website's (Left / Mix / Right), and so does the input level
  * (`gain`, applied in Rust, live through `recorder_set_gain`). Checking the level
@@ -108,7 +111,13 @@ function closeInput() {
 
 /** The input the open session was opened with (a level check's input is reused by a take). */
 let openedWith: RecorderInput | null = null;
-const sameInput = (a: RecorderInput, b: RecorderInput) => (a.deviceId ?? "") === (b.deviceId ?? "") && a.autoGain === b.autoGain && a.mono === b.mono;
+const sameInput = (a: RecorderInput, b: RecorderInput) =>
+  (a.deviceId ?? "") === (b.deviceId ?? "") && a.autoGain === b.autoGain && a.mono === b.mono && !!a.desktopAudio === !!b.desktopAudio;
+
+/** The native engine records the computer's sound itself (on macOS, if the system lets it). */
+export function canRecordDesktopAudio(): boolean {
+  return true;
+}
 
 /** Changes the input level live (checking the level, or mid-take). */
 export function setRecorderGain(gain: number) {
@@ -136,11 +145,16 @@ async function openInput(options: RecorderInput, id: number): Promise<boolean> {
       mono: options.mono ?? null,
       autoGain: options.autoGain,
       gain: options.gain,
+      desktopAudio: !!options.desktopAudio,
       onLevel,
     });
   } catch (error) {
     console.error("recorder: couldn't open the input", error);
-    setSnapshot({ error: "Couldn't open the microphone. Pick another input." });
+    setSnapshot({
+      error: String(error).includes("computer's sound")
+        ? "Couldn't record the computer's sound here. Turn it off under Microphone to record just the microphone."
+        : "Couldn't open the microphone. Pick another input.",
+    });
     return false;
   }
   if (id !== session) {
