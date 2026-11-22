@@ -14,6 +14,7 @@ import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
 import { LibraryIcon, LinkIcon, TrashIcon, TunerIcon, WaveIcon } from "@/components/tools";
 import { FILES_CRUMB, LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
+import RecordingPlace from "@/components/practicelog/RecordingPlace";
 import { copyRecordingToTuner } from "@/lib/tunerTakes";
 import { useDeviceUrl } from "@/lib/deviceFiles";
 import { OnOtherDevice } from "@/components/files/StorageMove";
@@ -150,6 +151,10 @@ export default function RecordingPage({ id }: { id: string }) {
           </>
         }
       />
+      {/* The Shed Log routine and task it was made for. */}
+      <div className="-mt-2">
+        <RecordingPlace routineId={rec.routineId ?? null} taskId={rec.taskId ?? null} logDate={rec.logDate ?? null} />
+      </div>
       {toTuner !== "idle" && toTuner !== "busy" && <p className="text-sm text-danger">{toTuner}</p>}
       {rec.url &&
         (song?.url ? (

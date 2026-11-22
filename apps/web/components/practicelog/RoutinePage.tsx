@@ -17,7 +17,7 @@ import PageSections, { type PageSection } from "@/components/practicelog/PageSec
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
-import { CheckIcon, ChevronRightIcon, DocumentIcon, PencilIcon, PlayIcon, ShareIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlayIcon, ShareIcon, findToolLink } from "@/components/tools";
 import {
   type Occurrence,
   type Routine,
@@ -32,7 +32,6 @@ import {
   parseTime,
   progressOf,
   routinesOn,
-  scheduleTasks,
   tasksOf,
   todayKey,
   totalMinutes,
@@ -127,7 +126,6 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
   }).length;
   const minutes = history.reduce((s, h) => s + minutesFor(routine, h.occ), 0);
   const start = parseTime(routine.startTime);
-  const schedule = scheduleTasks(routine);
   const running = runningTask(routine.id, today);
   // Part done today: carry on from the first open task, like the routine's card on the Shed Log.
   const todayOcc = log.data.days[today]?.routines?.[routine.id];
@@ -144,7 +142,6 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
   const recCount = recordings?.length ?? 0;
   // Which tasks have notes, and a new routine note's start: a link to each task's notes.
   const taskNotes = (notesUnder ?? []).filter((n) => n.target.startsWith(`${routineKey}/task:`));
-  const taskNoteIds = new Set(taskNotes.map((n) => n.target.slice(`${routineKey}/task:`.length)));
   const routineNoteBody = () => {
     const ordered = routine.tasks.flatMap((t) => taskNotes.filter((n) => n.target === `${routineKey}/task:${t.id}`));
     return ordered.length ? `## Tasks\n${ordered.map((n) => `- [[${n.title}]]`).join("\n")}\n\n` : "";
@@ -155,6 +152,7 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
   const day = date ?? today;
   const onDay = routinesOn(log.data, day);
   const dayItem = onDay.find((r) => r.routine.id === routine.id);
+  const otherDays = byDate.filter(([d]) => d !== day);
   const sections: PageSection[] = [
     {
       id: "day",
@@ -193,44 +191,6 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
         <EmptyCard>Sign in to keep notes.</EmptyCard>
       ),
     },
-    {
-      id: "tasks",
-      title: "Tasks",
-      content: (
-        <>
-        {routine.tasks.length === 0 ? (
-          <EmptyCard>No tasks yet — Edit to add some.</EmptyCard>
-        ) : (
-          <ol className={LIST}>
-            {schedule.map(({ task, start }, i) => (
-              <li key={task.id}>
-                <button type="button" onClick={() => show({ kind: "task", routineId: routine.id, taskId: task.id, date: day })} className="flex w-full gap-3 px-4 py-3 text-left hover:bg-surface-hover">
-                <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    {task.title || "Untitled task"}
-                    {taskNoteIds.has(task.id) && <DocumentIcon className="h-3.5 w-3.5 text-muted" aria-label="Has notes" />}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {start !== null ? `${formatTime(start)} · ` : ""}
-                    {formatMinutesShort(task.minutes)}
-                  </div>
-                  {task.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{task.notes}</p>}
-                  {task.attachments.length > 0 && (
-                    <div className="mt-1.5">
-                      <AttachmentList items={task.attachments} compact />
-                    </div>
-                  )}
-                </div>
-                <ChevronRightIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-                </button>
-              </li>
-            ))}
-          </ol>
-        )}
-        </>
-      ),
-    },
     ...(routine.attachments.length > 0
       ? [{ id: "attached", title: "Attached", content: <AttachmentList items={routine.attachments} /> }]
       : []),
@@ -253,34 +213,31 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
         </>
       ),
     },
-    {
-      id: "recordings",
-      title: "Recordings",
-      content: (
-        <>
-        {!isAuthenticated ? (
-          <EmptyCard>Sign in to record clips — recordings are saved to your account.</EmptyCard>
-        ) : recordings === undefined ? (
-          <LoadingSpinner />
-        ) : recordings.length === 0 ? (
-          <EmptyCard>No recordings yet. Record a clip from the routine on any of its days.</EmptyCard>
-        ) : (
-          byDate.map(([date, list]) => (
-            <div key={date || "none"} className="flex flex-col gap-2">
-              <Link href={date ? `/shed-log?date=${date}` : "/shed-log"} className="self-start text-xs font-medium text-muted hover:text-foreground">
-                {date ? formatLongDate(date) : "No day"}
-              </Link>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {list.map((r) => (
-                  <RecordingCard key={r._id} recording={r} />
+    // That day's clips are on its card above; here, the other days'.
+    ...(isAuthenticated && otherDays.length > 0
+      ? [
+          {
+            id: "recordings",
+            title: "Recordings on other days",
+            content: (
+              <>
+                {otherDays.map(([d, list]) => (
+                  <div key={d || "none"} className="flex flex-col gap-2">
+                    <Link href={d ? `/shed-log?date=${d}` : "/shed-log"} className="self-start text-xs font-medium text-muted hover:text-foreground">
+                      {d ? formatLongDate(d) : "No day"}
+                    </Link>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {list.map((r) => (
+                        <RecordingCard key={r._id} recording={r} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </div>
-            </div>
-          ))
-        )}
-        </>
-      ),
-    },
+              </>
+            ),
+          },
+        ]
+      : []),
     {
       id: "history",
       title: "History",
@@ -352,7 +309,8 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
                 <PencilIcon className="h-4 w-4 text-muted" /> Edit
               </Link>
             )}
-            {!running && routine.tasks.some((t) => t.minutes > 0) && (
+            {/* Not while the day's card is on the page: its Start is right there. */}
+            {!running && !dayItem && routine.tasks.some((t) => t.minutes > 0) && (
               <button type="button" onClick={startToday} className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
                 <PlayIcon className="h-4 w-4" /> {nextTask ? "Continue today" : "Start today"}
               </button>

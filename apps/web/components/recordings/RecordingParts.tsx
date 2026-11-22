@@ -10,6 +10,7 @@ import { MenuButton } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MixPlayer, { SavedMixPlayer } from "@/components/recordings/MixPlayer";
 import TakePlayer from "@/components/recordings/TakePlayer";
+import RecordingPlace from "@/components/practicelog/RecordingPlace";
 import { CloseIcon, LinkIcon, MicIcon, NoteIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { errorText } from "@/lib/files";
@@ -67,6 +68,8 @@ export function RecordingCard({
               </>
             )}
           </div>
+          {/* The routine and task it was made for, so a list of takes says what each one is. */}
+          <RecordingPlace routineId={recording.routineId ?? null} taskId={recording.taskId ?? null} logDate={recording.logDate ?? null} />
         </div>
         {onMenu && <MenuButton label={`Options for ${recording.name}`} onClick={onMenu} alwaysVisible />}
       </div>
@@ -227,7 +230,10 @@ export function SaveTakeDialog({
   const [logRoutineId, setLogRoutineId] = useState<string | null>(log?.routineId ?? null);
   const song = useTuneSong(tuneId);
 
-  const defaultName = initialTuneId && forTune ? `Take ${forTune.length + 1}` : formatRecordedAt(recordedAt);
+  // Named for what it's of: the tune's next take, else the task or routine it's for, with when.
+  const placeName = log?.task && logRoutineId === log.routineId ? log.task.name : logRoutineId ? log?.routines.find((r) => r.id === logRoutineId)?.name : undefined;
+  const defaultName =
+    initialTuneId && forTune ? `Take ${forTune.length + 1}` : placeName ? `${placeName} · ${formatRecordedAt(recordedAt)}` : formatRecordedAt(recordedAt);
   const shownName = name ?? defaultName;
   const tune = tuneId ? byId.get(tuneId)?.tune : undefined;
 
