@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { EmptyCard, PageShell } from "@/components/library/shared";
+import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import PageNotes from "@/components/practicelog/PageNotes";
@@ -37,7 +37,7 @@ import {
 } from "@/lib/practiceLog";
 import { type Recording, recordingsApi } from "@/lib/recordings";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
-import { taskHref } from "@/lib/shedLogPages";
+import { followSide, openNotePeek, openSide } from "@/lib/notePeek";
 
 const noopSubscribe = () => () => {};
 
@@ -64,7 +64,10 @@ function minutesFor(routine: Routine, occ: Occurrence): number {
 /** `/shed-log/routine?id=…` — one routine's page, a dashboard you arrange (`PageSections`): its
     notes (a Shed Note linking each task's notes), its tasks (each with its own page), what's
     attached, when it's coming up, every clip recorded for it and every day it was practiced. */
-export default function RoutinePage({ id }: { id: string }) {
+/** `inPanel`: drawn in the side view (`NotePeek`) — no page bar; its tasks and notes open in the
+    view too. As a page of its own it has Back (to the page you came from), and its tasks open in
+    the side view. */
+export default function RoutinePage({ id, inPanel = false }: { id: string; inPanel?: boolean }) {
   const router = useRouter();
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
@@ -95,22 +98,22 @@ export default function RoutinePage({ id }: { id: string }) {
     return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [recordings]);
 
-  if (!log.ready || !mounted) {
-    return (
+  /** The page around it: nothing extra in the side view; a page bar and Back as a page. */
+  const frame = (label: string, children: React.ReactNode) =>
+    inPanel ? (
+      <>{children}</>
+    ) : (
       <PageShell>
-        <PageBar crumbs={[...ROUTINES_CRUMBS, { label: "Routine" }]} icon={SHED_LOG_ICON} />
-        <LoadingSpinner />
+        <PageBar crumbs={[...ROUTINES_CRUMBS, { label }]} icon={SHED_LOG_ICON} />
+        <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log/routines"))} />
+        {children}
       </PageShell>
     );
-  }
-  if (!routine) {
-    return (
-      <PageShell>
-        <PageBar crumbs={[...ROUTINES_CRUMBS, { label: "Routine" }]} icon={SHED_LOG_ICON} />
-        <EmptyCard>That routine doesn&apos;t exist anymore.</EmptyCard>
-      </PageShell>
-    );
-  }
+  // From the side view, things open in it (with Back); from the page, in a fresh side view.
+  const show = inPanel ? followSide : openSide;
+
+  if (!log.ready || !mounted) return frame("Routine", <LoadingSpinner />);
+  if (!routine) return frame("Routine", <EmptyCard>That routine doesn&apos;t exist anymore.</EmptyCard>);
 
   const today = todayKey();
   const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
@@ -155,6 +158,7 @@ export default function RoutinePage({ id }: { id: string }) {
           label={routine.name || "Routine"}
           newTitle={routine.name || "Routine"}
           newBody={routineNoteBody}
+          onOpen={(noteId) => (inPanel ? followSide({ kind: "note", id: noteId }) : openNotePeek(noteId))}
         />
       ) : (
         <EmptyCard>Sign in to keep notes.</EmptyCard>
@@ -171,7 +175,7 @@ export default function RoutinePage({ id }: { id: string }) {
           <ol className={LIST}>
             {schedule.map(({ task, start }, i) => (
               <li key={task.id}>
-                <Link href={taskHref({ routineId: routine.id, taskId: task.id })} className="flex gap-3 px-4 py-3 hover:bg-surface-hover">
+                <button type="button" onClick={() => show({ kind: "task", routineId: routine.id, taskId: task.id })} className="flex w-full gap-3 px-4 py-3 text-left hover:bg-surface-hover">
                 <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-sm font-medium">
@@ -190,7 +194,7 @@ export default function RoutinePage({ id }: { id: string }) {
                   )}
                 </div>
                 <ChevronRightIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-                </Link>
+                </button>
               </li>
             ))}
           </ol>
@@ -288,9 +292,10 @@ export default function RoutinePage({ id }: { id: string }) {
     },
   ];
 
-  return (
-    <PageShell>
-      <PageBar crumbs={[...ROUTINES_CRUMBS, { label: routine.name || "Untitled routine" }]} icon={SHED_LOG_ICON} />
+  return frame(
+    routine.name || "Untitled routine",
+    <>
+      {inPanel && <h1 className="-mb-3 text-xl font-extrabold">{routine.name || "Untitled routine"}</h1>}
       <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -330,7 +335,7 @@ export default function RoutinePage({ id }: { id: string }) {
 
       <PageSections pageKey={routineKey} sections={sections} />
       {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
-    </PageShell>
+    </>,
   );
 }
 

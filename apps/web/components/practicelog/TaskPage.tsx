@@ -3,12 +3,13 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useSyncExternalStore } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { type NoteTarget, targetKey } from "@jam-practice/core/shedNotes";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { EmptyCard, PageShell } from "@/components/library/shared";
+import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar, { type Crumb } from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import PageNotes, { type PageNotesHandle } from "@/components/practicelog/PageNotes";
@@ -29,6 +30,7 @@ import {
   todayKey,
 } from "@/lib/practiceLog";
 import { recordingsApi } from "@/lib/recordings";
+import { followSide, openNotePeek } from "@/lib/notePeek";
 import { routineHref } from "@/lib/shedLogPages";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
@@ -40,8 +42,12 @@ const SHED_LOG_ICON = findToolLink("/shed-log")?.icon;
  * one task's page, a dashboard you arrange (`PageSections`) — its notes (a Shed Note, linked from
  * the routine's notes), recordings made for it (Record here saves the clip on the task and puts it
  * in the notes), what's attached, and the days it was practiced. Start runs it on the timer.
+ *
+ * `inPanel`: drawn in the side view (`NotePeek`) — no page bar, and its notes and routine open in
+ * the view too. As a page of its own it has Back (to the page you came from).
  */
-export default function TaskPage({ routineId, date, taskId }: { routineId?: string; date?: string; taskId: string }) {
+export default function TaskPage({ routineId, date, taskId, inPanel = false }: { routineId?: string; date?: string; taskId: string; inPanel?: boolean }) {
+  const router = useRouter();
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
   const { startRoutine, startDayTasks, runningTask } = useRoutineTimer();
@@ -99,22 +105,20 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
         { label: date ? formatShortDate(date) : "Day", href: date ? `/shed-log?date=${date}` : "/shed-log" },
       ];
 
-  if (!log.ready || !mounted) {
-    return (
+  /** The page around it: nothing extra in the side view; a page bar and Back as a page. */
+  const frame = (label: string, children: React.ReactNode) =>
+    inPanel ? (
+      <>{children}</>
+    ) : (
       <PageShell>
-        <PageBar crumbs={[...baseCrumbs, { label: "Task" }]} icon={SHED_LOG_ICON} />
-        <LoadingSpinner />
+        <PageBar crumbs={[...baseCrumbs, { label }]} icon={SHED_LOG_ICON} />
+        <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log"))} />
+        {children}
       </PageShell>
     );
-  }
-  if (!task || (routineId && !routine)) {
-    return (
-      <PageShell>
-        <PageBar crumbs={[...baseCrumbs, { label: "Task" }]} icon={SHED_LOG_ICON} />
-        <EmptyCard>That task isn&apos;t there anymore.</EmptyCard>
-      </PageShell>
-    );
-  }
+
+  if (!log.ready || !mounted) return frame("Task", <LoadingSpinner />);
+  if (!task || (routineId && !routine)) return frame("Task", <EmptyCard>That task isn&apos;t there anymore.</EmptyCard>);
 
   const title = task.title || "Untitled task";
   const recDate = routineId ? today : (date ?? today);
@@ -150,6 +154,7 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
           label={routine ? `${routine.name || "Routine"} · ${title}` : `${title} (${date ? formatShortDate(date) : ""})`}
           newTitle={routine ? `${routine.name || "Routine"} · ${title}` : `${title} · ${date ? formatShortDate(date) : ""}`}
           onCreated={routine ? linkFromRoutine : undefined}
+          onOpen={(id) => (inPanel ? followSide({ kind: "note", id }) : openNotePeek(id))}
           handleRef={notesRef}
         />
       ),
@@ -219,20 +224,26 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
       : []),
   ];
 
-  return (
-    <PageShell>
-      <PageBar crumbs={[...baseCrumbs, { label: title }]} icon={SHED_LOG_ICON} />
+  return frame(
+    title,
+    <>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-foreground/10 pb-6">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-extrabold sm:text-3xl">{title}</h1>
+          <h1 className={inPanel ? "text-xl font-extrabold" : "text-2xl font-extrabold sm:text-3xl"}>{title}</h1>
           <p className="text-sm text-muted">
             {formatMinutesShort(task.minutes)}
             {routine ? (
               <>
                 {" · in "}
-                <Link href={routineHref(routine.id)} className="font-medium text-foreground hover:underline">
-                  {routine.name || "Untitled routine"}
-                </Link>
+                {inPanel ? (
+                  <button type="button" onClick={() => followSide({ kind: "routine", id: routine.id })} className="font-medium text-foreground hover:underline">
+                    {routine.name || "Untitled routine"}
+                  </button>
+                ) : (
+                  <Link href={routineHref(routine.id)} className="font-medium text-foreground hover:underline">
+                    {routine.name || "Untitled routine"}
+                  </Link>
+                )}
               </>
             ) : date ? (
               ` · ${formatLongDate(date)}`
@@ -264,6 +275,6 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
         </div>
       </div>
       <PageSections pageKey={key} sections={sections} />
-    </PageShell>
+    </>,
   );
 }

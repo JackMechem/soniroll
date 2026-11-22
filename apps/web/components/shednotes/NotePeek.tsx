@@ -1,26 +1,32 @@
 "use client";
 
-import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeftIcon, CloseIcon, DotsVerticalIcon, MaximizeIcon } from "@/components/tools";
 import Flyout, { FlyoutItem } from "@/components/Flyout";
+import RoutinePage from "@/components/practicelog/RoutinePage";
+import TaskPage from "@/components/practicelog/TaskPage";
+import { useSidebarShownWidth } from "@/components/Sidebar";
+import { ChevronLeftIcon, CloseIcon, DotsVerticalIcon, ExternalLinkIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useNotesConfig } from "@/lib/useShedNotes";
+import { routineHref, taskHref } from "@/lib/shedLogPages";
 import {
   type PeekMode,
+  type SideItem,
   PEEK_MAX_WIDTH,
   PEEK_MIN_WIDTH,
   clampPeekWidth,
-  closeNotePeek,
-  followNotePeek,
-  peekBack,
+  closeSide,
+  followSide,
   setPeekPrefs,
-  useNotePeek,
+  setSideFull,
+  sideBack,
   useNotePeekPrefs,
+  useSideView,
 } from "@/lib/notePeek";
 import NoteSurface from "./NoteSurface";
 
-/** Two panels side by side: the page and the note pushed beside it. */
+/** Two panels side by side: the page and the view pushed beside it. */
 function PushIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -40,18 +46,30 @@ function OverlayIcon({ className }: { className?: string }) {
   );
 }
 
+/** Where the thing in the side view lives as a page of its own. */
+function hrefOf(item: SideItem): string {
+  if (item.kind === "note") return `/shed-notes?id=${encodeURIComponent(item.id)}`;
+  if (item.kind === "routine") return routineHref(item.id);
+  return taskHref(item);
+}
+
 /**
- * The note side view, like Notion's side peek: a Shed Note open beside whatever page you're on
- * (`openNotePeek` from `lib/notePeek.ts`). On desktop it either floats over the page or pushes the
- * page over (the ⋮ menu, kept for this device), and its left edge drags to resize; on phones it
- * covers the screen. Links in it open in the same view, with Back. Mounted once, in `AppShell`,
- * after the page, so pushing just takes room from the page beside it.
+ * The side view, like Notion's side peek: a Shed Note, a task's page or a routine's page beside
+ * whatever page you're on (`openSide` / `openNotePeek` in `lib/notePeek.ts`). On desktop it floats
+ * over the page or pushes it over (the ⋮ menu, kept for this device) and its left edge drags to
+ * resize; ⤢ makes it cover the page (beside the sidebar), and then Back returns to what was open
+ * before it, or to the page under it. Phones always get it full screen. Links and tasks in it open
+ * in the same view, with Back. Going to another page closes it. Mounted once, in `AppShell`, after
+ * the page, so pushing just takes room from the page beside it.
  */
 export default function NotePeek() {
-  const { noteId, back, detach } = useNotePeek();
+  const { item, back, detach, full } = useSideView();
   const { mode, width } = useNotePeekPrefs();
   const isDesktop = useIsDesktop();
+  const sidebarWidth = useSidebarShownWidth();
   const cfg = useNotesConfig();
+  const router = useRouter();
+  const pathname = usePathname();
   const flushRef = useRef<() => void>(() => {});
   const [dragging, setDragging] = useState(false);
   const onFlush = useCallback((f: () => void) => {
@@ -59,30 +77,39 @@ export default function NotePeek() {
   }, []);
   const close = useCallback(() => {
     flushRef.current();
-    closeNotePeek();
+    closeSide();
   }, []);
-  const openNote = useCallback((id: string) => {
+  const goBack = useCallback(() => {
     flushRef.current();
-    followNotePeek(id);
+    sideBack();
   }, []);
 
+  // Another page: the view closes (it belonged to the page you were on).
+  const lastPath = useRef(pathname);
   useEffect(() => {
-    if (!noteId) return;
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    closeSide();
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!item) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       // Vim uses Escape to leave insert mode: only close from outside the editor, or with it off.
       const inEditor = (e.target as HTMLElement | null)?.closest(".cm-editor");
       if (inEditor && cfg.config.vimMode) return;
       // A menu or dialog over it closes first.
-      if (document.querySelector('[role="menu"], [role="dialog"][aria-modal="true"]')) return;
+      if (document.querySelector('[role="menu"], [role="dialog"]:not([aria-label="Side view"])')) return;
       close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [noteId, close, cfg.config.vimMode]);
+  }, [item, close, cfg.config.vimMode]);
 
-  if (!noteId) return null;
-  const push = isDesktop && mode === "push";
+  if (!item) return null;
+  const covers = full || !isDesktop;
+  const push = isDesktop && !full && mode === "push";
 
   function startDrag(e: React.PointerEvent<HTMLDivElement>) {
     e.preventDefault();
@@ -99,23 +126,78 @@ export default function NotePeek() {
     <FlyoutItem key={value} icon={Icon} label={label} checked={mode === value} onSelect={() => setPeekPrefs({ mode: value })} />
   );
 
+  // Back: what was open before in the view; full screen with nothing before it, the page under it.
+  const backButton =
+    back.length > 0 || covers ? (
+      <button type="button" onClick={goBack} title={back.length > 0 ? "Back to what was open before" : "Back to the page"} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-1.5 pr-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
+        <ChevronLeftIcon className="h-4 w-4" /> Back
+      </button>
+    ) : null;
+
+  const controls = (
+    <>
+      {isDesktop && (
+        <button type="button" onClick={() => setSideFull(!full)} aria-label={full ? "Exit full screen" : "Full screen"} title={full ? "Exit full screen" : "Full screen"} className={iconButton}>
+          {full ? <MinimizeIcon className="h-4 w-4" /> : <MaximizeIcon className="h-4 w-4" />}
+        </button>
+      )}
+      <Flyout icon={DotsVerticalIcon} label="Side view options" align="end">
+        {(closeMenu) => (
+          <>
+            <FlyoutItem
+              icon={ExternalLinkIcon}
+              label={item.kind === "note" ? "Open in Shed Notes" : "Open as a page"}
+              onSelect={() => {
+                closeMenu();
+                flushRef.current();
+                router.push(hrefOf(item));
+              }}
+            />
+            {isDesktop && !full && (
+              <>
+                {modeOption("overlay", "Over the page", OverlayIcon)}
+                {modeOption("push", "Beside the page", PushIcon)}
+              </>
+            )}
+            {detach && (
+              <FlyoutItem
+                icon={CloseIcon}
+                label={detach.label}
+                onSelect={() => {
+                  closeMenu();
+                  flushRef.current();
+                  detach.run();
+                  closeSide();
+                }}
+              />
+            )}
+          </>
+        )}
+      </Flyout>
+      <button type="button" onClick={close} aria-label="Close the side view" title="Close (Esc)" className={iconButton}>
+        <CloseIcon className="h-4 w-4" />
+      </button>
+    </>
+  );
+
   return (
     <aside
-      aria-label="Note"
-      style={isDesktop ? { width } : undefined}
+      role="dialog"
+      aria-label="Side view"
+      style={covers ? (isDesktop ? { left: sidebarWidth } : undefined) : { width }}
       className={
-        push
-          ? "relative flex h-full shrink-0 flex-col border-l border-foreground/10 bg-surface"
-          : isDesktop
-            ? "fixed inset-y-0 right-0 z-[45] flex flex-col bg-surface shadow-2xl shadow-black/25 ring-1 ring-foreground/10"
-            : "fixed inset-0 z-[65] flex flex-col bg-surface pt-[env(safe-area-inset-top)]"
+        covers
+          ? "fixed inset-y-0 right-0 z-[65] flex flex-col bg-background pt-[env(safe-area-inset-top)] max-lg:left-0"
+          : push
+            ? "relative flex h-full shrink-0 flex-col border-l border-foreground/10 bg-surface"
+            : "fixed inset-y-0 right-0 z-[45] flex flex-col bg-surface shadow-2xl shadow-black/25 ring-1 ring-foreground/10"
       }
     >
-      {isDesktop && (
+      {isDesktop && !covers && (
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label="Resize the note"
+          aria-label="Resize the side view"
           aria-valuemin={PEEK_MIN_WIDTH}
           aria-valuemax={PEEK_MAX_WIDTH}
           aria-valuenow={width}
@@ -136,63 +218,40 @@ export default function NotePeek() {
           <div className={`h-10 w-1 rounded-full transition-colors ${dragging ? "bg-accent" : "bg-transparent group-hover:bg-accent/60 group-focus-visible:bg-accent"}`} />
         </div>
       )}
-      <NoteSurface
-        key={noteId}
-        noteId={noteId}
-        onOpenNote={openNote}
-        onFlush={onFlush}
-        autoFocus={isDesktop}
-        headerStart={
-          back.length > 0 ? (
-            <button type="button" onClick={() => { flushRef.current(); peekBack(); }} aria-label="Back" title="Back to the note before" className={iconButton}>
-              <ChevronLeftIcon className="h-4 w-4" />
-            </button>
-          ) : undefined
-        }
-        headerEnd={
-          <>
-            <Link
-              href={`/shed-notes?id=${encodeURIComponent(noteId)}`}
-              onClick={close}
-              aria-label="Open in Shed Notes"
-              title="Open in Shed Notes"
-              className={iconButton}
-            >
-              <MaximizeIcon className="h-4 w-4" />
-            </Link>
-            <Flyout icon={DotsVerticalIcon} label="Note view options" align="end">
-              {(closeMenu) => (
-                <>
-                  {isDesktop && (
-                    <>
-                      {modeOption("overlay", "Over the page", OverlayIcon)}
-                      {modeOption("push", "Beside the page", PushIcon)}
-                    </>
-                  )}
-                  {detach && (
-                    <FlyoutItem
-                      icon={CloseIcon}
-                      label={detach.label}
-                      onSelect={() => {
-                        closeMenu();
-                        flushRef.current();
-                        detach.run();
-                        closeNotePeek();
-                      }}
-                    />
-                  )}
-                </>
+      {item.kind === "note" ? (
+        <div className={`flex min-h-0 flex-1 flex-col ${covers ? "mx-auto w-full max-w-4xl" : ""}`}>
+          <NoteSurface
+            key={item.id}
+            noteId={item.id}
+            onOpenNote={(id) => {
+              flushRef.current();
+              followSide({ kind: "note", id });
+            }}
+            onFlush={onFlush}
+            autoFocus={isDesktop}
+            headerStart={backButton}
+            headerEnd={controls}
+            footer={(saveState) => <p className="px-5 pb-3 text-xs text-muted">{saveState === "saved" ? "Saved" : saveState === "error" ? "Not saved" : "Saving…"}</p>}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-foreground/10 px-4">
+            {backButton}
+            <span className="flex-1" />
+            {controls}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className={`flex flex-col gap-6 px-5 py-5 ${covers ? "mx-auto w-full max-w-5xl lg:px-8" : ""}`}>
+              {item.kind === "task" ? (
+                <TaskPage key={JSON.stringify(item)} inPanel routineId={"routineId" in item ? item.routineId : undefined} date={"date" in item ? item.date : undefined} taskId={item.taskId} />
+              ) : (
+                <RoutinePage key={item.id} inPanel id={item.id} />
               )}
-            </Flyout>
-            <button type="button" onClick={close} aria-label="Close the note" title="Close (Esc)" className={iconButton}>
-              <CloseIcon className="h-4 w-4" />
-            </button>
-          </>
-        }
-        footer={(saveState) => (
-          <p className="px-5 pb-3 text-xs text-muted">{saveState === "saved" ? "Saved" : saveState === "error" ? "Not saved" : "Saving…"}</p>
-        )}
-      />
+            </div>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

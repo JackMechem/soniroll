@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,7 +16,7 @@ import TaskCheck, { DotList } from "@/components/practicelog/TaskCheck";
 import { TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
 import { CloseIcon, DocumentIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
-import { taskHref } from "@/lib/shedLogPages";
+import { openSide } from "@/lib/notePeek";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
   type DayRoutine,
@@ -89,7 +88,6 @@ export default function RoutineCard({
   const noteLabel = `${routine.name || "Untitled routine"} · ${formatShortDate(date)}`;
   const clock = useClockMinute();
   const router = useRouter();
-  const routineHref = `/shed-log/routine?id=${encodeURIComponent(routine.id)}`;
   const [addingTask, setAddingTask] = useState(false);
   // Its time is now: outlined in its colour.
   const timeIsNow = !!clock && clock.today === date && isRoutineNow(item, clock.nowMin);
@@ -100,7 +98,7 @@ export default function RoutineCard({
       x: rect.right - 208,
       y: rect.bottom + 4,
       items: [
-        { label: "Open routine", onSelect: () => router.push(routineHref) },
+        { label: "Open routine", onSelect: () => openSide({ kind: "routine", id: routine.id }) },
         { label: "Edit routine", onSelect: () => router.push(`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`) },
         { label: span ? "Change the time" : "Set a time", onSelect: () => setEditingTime(true) },
         ...(timeOverride
@@ -144,9 +142,10 @@ export default function RoutineCard({
       <header className="flex items-start gap-3 pl-1">
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0 flex-1">
-          <Link href={routineHref} className={`block truncate text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
+          {/* Its page opens in the side view, so the day stays in sight. */}
+          <button type="button" onClick={() => openSide({ kind: "routine", id: routine.id })} className={`block max-w-full truncate text-left text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
             {routine.name || "Untitled routine"}
-          </Link>
+          </button>
           {routine.assigned && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
           <div className="flex flex-col gap-0.5 text-xs text-muted">
             {/* Dots between items that never dangle when a line wraps (DotList). */}
@@ -338,15 +337,16 @@ export default function RoutineCard({
                     <PlayIcon className="h-3.5 w-3.5" />
                   </button>
                 )}
-                {/* The task's own page: its notes, recordings and history. */}
-                <Link
-                  href={taskHref({ routineId: routine.id, taskId: task.id })}
+                {/* The task's own page (its notes, recordings and history), in the side view. */}
+                <button
+                  type="button"
+                  onClick={() => openSide({ kind: "task", routineId: routine.id, taskId: task.id })}
                   aria-label={`${task.title || "Task"}: notes and recordings`}
                   title="Notes and recordings for this task"
                   className={`shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100 ${TOUCH_ICON}`}
                 >
                   <DocumentIcon className="h-3.5 w-3.5" />
-                </Link>
+                </button>
                 {extraIds.has(task.id) && (
                   <button
                     type="button"

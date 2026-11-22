@@ -591,3 +591,36 @@ Not verified: `pnpm build`; recordings on a plan (online) rather than on the dev
 full-screen side view by touch; two editors on the same note at once (the routine note open on its
 page while a task note adds its link: the sync takes it in when nothing typed is waiting); the
 desktop app.
+
+### Follow-up (same day): notes only in the side view; pages open in it too; full screen and Back
+
+Jack (with a screenshot of the task page's inline editor): notes shouldn't be editable on the page,
+they should always open in the side view (which can go full screen); the task and routine pages
+should open in the side view too so the Shed Log stays visible; full screen needs a Back to the
+screen you were on.
+
+- **`lib/notePeek.ts`** now holds a `SideItem`: a note, a task (`TaskRef`) or a routine, with a Back
+  stack (`followSide` pushes, `sideBack` pops and, with nothing before, closes), `full`, and the
+  attached note's `detach`. `openSide` replaces what's open (keeping full screen if it was).
+- **`NotePeek.tsx`** (the side view, `role="dialog"` "Side view") draws a note (`NoteSurface`) or the
+  page (`TaskPage` / `RoutinePage` with `inPanel`) under a bar with Back, ⤢ full screen / "Exit full
+  screen", ⋮ (Open in Shed Notes / Open as a page, over or beside the page, Take off …) and ✕. Full
+  screen covers the page from the sidebar's edge (`useSidebarShownWidth`); phones are always full
+  screen. Back shows when there's something to go back to, and always in full screen (then it
+  closes, back to the page under it). It closes when the route changes (an effect on the pathname:
+  closing during render warned "Cannot update a component while rendering").
+- **Pages:** `inPanel` drops the page bar (a heading instead) and opens their routine, tasks and
+  notes in the view (`followSide`). As pages of their own they get a `BackButton` (history back, or
+  the Shed Log / Routines with no history) and their tasks and notes open in the side view.
+- **`PageNotes`** no longer has an editor: the attached notes are cards (title, three lines) that
+  open in the side view; "Start notes" makes the note and opens it. A recording saved on the page
+  goes in with `appendLine` (the open editor takes it in through `syncText`).
+- **Shed Log:** a routine card's name and its ⋮ "Open routine" open the routine in the side view; a
+  task's notes button and a day task's "Notes and recordings" open the task there.
+
+Verified signed in (throwaway accounts, deleted), headless Chromium 1440: the routine's name → its page
+in the side view with the Shed Log beside it; its task → the task page (Back shown); Start notes →
+the note in the view, typed; Back → the task page with the note's card showing the text; ⤢ → it
+covered from x=244 (the sidebar) on; Back → the routine; Back → closed, still on /shed-log; ⋮ "Open
+as a page" → /shed-log/routine, view closed, Back → /shed-log. 390 wide: no overflow. No console
+errors after the fix. Not verified: touch on a phone, split screen, the desktop app.
