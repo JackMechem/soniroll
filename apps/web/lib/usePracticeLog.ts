@@ -263,7 +263,8 @@ export function useRoutineTimer() {
       id: `routine:${routine.id}:${date}`,
       name: routine.name || "Routine",
       type: "custom",
-      segments: tasks.map((t) => ({ id: t.id, title: t.title || "Task", minutes: t.minutes, ...taskTool(t.attachments) })),
+      // A tool attached for just that day counts too (after the task's own).
+      segments: tasks.map((t) => ({ id: t.id, title: t.title || "Task", minutes: t.minutes, ...taskTool([...t.attachments, ...(occ?.taskAttachments?.[t.id] ?? [])]) })),
       updatedAt: Date.now(),
       link: { routineId: routine.id, date },
     };

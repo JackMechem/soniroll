@@ -14,7 +14,8 @@ import type { TaskRef } from "@/lib/shedLogPages";
 
 export type PeekMode = "overlay" | "push";
 
-export type SideItem = { kind: "note"; id: string } | ({ kind: "task" } & TaskRef) | { kind: "routine"; id: string };
+/** A routine's `date`: the day it's looked at from (its card for that day is on its page). */
+export type SideItem = { kind: "note"; id: string } | ({ kind: "task" } & TaskRef) | { kind: "routine"; id: string; date?: string };
 
 /** Taking a note off what it was opened from (an attached note), shown in the view's menu. */
 export type PeekDetach = { label: string; run: () => void };
@@ -91,10 +92,19 @@ export function followSide(item: SideItem) {
   notify();
 }
 
-/** Back: the thing open before this one, or (with nothing before it) closes the view. */
+/** Back: the thing open before this one; with nothing before it, a routine's task goes up to its
+    routine, and anything else closes the view. */
 export function sideBack() {
   const prev = state.back[state.back.length - 1];
-  if (!prev) return closeSide();
+  if (!prev) {
+    const it = state.item;
+    if (it?.kind === "task" && "routineId" in it) {
+      state = { ...state, item: { kind: "routine", id: it.routineId, ...(it.date ? { date: it.date } : {}) }, detach: null };
+      notify();
+      return;
+    }
+    return closeSide();
+  }
   state = { ...state, item: prev, back: state.back.slice(0, -1), detach: null };
   notify();
 }

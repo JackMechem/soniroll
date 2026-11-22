@@ -12,6 +12,7 @@ import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import PageNotes from "@/components/practicelog/PageNotes";
+import RoutineCard from "@/components/practicelog/RoutineCard";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
@@ -30,11 +31,13 @@ import {
   occursOn,
   parseTime,
   progressOf,
+  routinesOn,
   scheduleTasks,
   tasksOf,
   todayKey,
   totalMinutes,
 } from "@/lib/practiceLog";
+import { useDeviceUrls } from "@/lib/deviceFiles";
 import { type Recording, recordingsApi } from "@/lib/recordings";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 import { followSide, openNotePeek, openSide } from "@/lib/notePeek";
@@ -67,13 +70,13 @@ function minutesFor(routine: Routine, occ: Occurrence): number {
 /** `inPanel`: drawn in the side view (`NotePeek`) — no page bar; its tasks and notes open in the
     view too. As a page of its own it has Back (to the page you came from), and its tasks open in
     the side view. */
-export default function RoutinePage({ id, inPanel = false }: { id: string; inPanel?: boolean }) {
+export default function RoutinePage({ id, date, inPanel = false }: { id: string; date?: string; inPanel?: boolean }) {
   const router = useRouter();
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
   const { startRoutine, runningTask } = useRoutineTimer();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
-  const recordings = useQuery(recordingsApi.listForRoutine, isAuthenticated ? { routineId: id } : "skip");
+  const recordings = useDeviceUrls(useQuery(recordingsApi.listForRoutine, isAuthenticated ? { routineId: id } : "skip"));
   const routine = log.data.routines.find((r) => r.id === id);
   const [sharing, setSharing] = useState(false);
   // The routine's notes and its tasks' notes (`routine:<id>` and `routine:<id>/task:<task>`).
@@ -147,7 +150,33 @@ export default function RoutinePage({ id, inPanel = false }: { id: string; inPan
     return ordered.length ? `## Tasks\n${ordered.map((n) => `- [[${n.title}]]`).join("\n")}\n\n` : "";
   };
 
+  // The day it's looked at for (the Shed Log's day it was opened from; else today): its card, the
+  // same as on the Shed Log — progress, Start, the timer, the tasks to tick, time, clips, notes.
+  const day = date ?? today;
+  const onDay = routinesOn(log.data, day);
+  const dayItem = onDay.find((r) => r.routine.id === routine.id);
   const sections: PageSection[] = [
+    {
+      id: "day",
+      title: day === today ? "Today" : formatLongDate(day),
+      content: dayItem ? (
+        <RoutineCard
+          date={day}
+          item={dayItem}
+          log={log}
+          recordings={recordings?.filter((r) => r.logDate === day)}
+          dayRoutines={onDay.map((r) => ({ id: r.routine.id, name: r.routine.name || "Routine" }))}
+          onOpenTask={(taskId) => show({ kind: "task", routineId: routine.id, taskId, date: day })}
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface p-4">
+          <p className="text-sm text-muted">Not on {day === today ? "today" : formatShortDate(day)}.</p>
+          <button type="button" onClick={() => log.addToDay(day, routine.id)} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+            Add it to {day === today ? "today" : formatShortDate(day)}
+          </button>
+        </div>
+      ),
+    },
     {
       id: "notes",
       title: "Notes",
@@ -175,7 +204,7 @@ export default function RoutinePage({ id, inPanel = false }: { id: string; inPan
           <ol className={LIST}>
             {schedule.map(({ task, start }, i) => (
               <li key={task.id}>
-                <button type="button" onClick={() => show({ kind: "task", routineId: routine.id, taskId: task.id })} className="flex w-full gap-3 px-4 py-3 text-left hover:bg-surface-hover">
+                <button type="button" onClick={() => show({ kind: "task", routineId: routine.id, taskId: task.id, date: day })} className="flex w-full gap-3 px-4 py-3 text-left hover:bg-surface-hover">
                 <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-sm font-medium">

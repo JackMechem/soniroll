@@ -4,16 +4,16 @@ import { useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
-import type { NoteTarget } from "@jam-practice/core/shedNotes";
+import { type NoteTarget, addRecordingToNote } from "@jam-practice/core/shedNotes";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAttachedNotes } from "@/components/shednotes/AttachedNotes";
 import { ChevronRightIcon, DocumentIcon, PlusIcon } from "@/components/tools";
 import { errorText } from "@/lib/useShedNotes";
 
-/** What a page can do with its notes: add a line (a recording's player, a link) to the end of its
-    note, or make the note with it when there's none yet. An open editor takes the line in
-    (`NoteSurface` syncs the saved text). */
-export type PageNotesHandle = { addLine: (line: string) => Promise<void> };
+/** What a page can do with its notes: put a recording's player in its note, under "## Recordings"
+    (`addRecordingToNote`), or make the note with it when there's none yet. An open editor takes it
+    in (`NoteSurface` syncs the saved text). */
+export type PageNotesHandle = { addRecording: (line: string) => Promise<void> };
 
 /**
  * A routine's or task's notes on its page: the notes attached to it (Shed Notes, so they're in
@@ -46,7 +46,7 @@ export default function PageNotes({
 }) {
   const { notes } = useAttachedNotes(target);
   const create = useMutation(api.shedNotes.create);
-  const appendLine = useMutation(api.shedNotes.appendLine);
+  const addRecording = useMutation(api.shedNotes.addRecording);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const main = notes?.[0];
@@ -68,13 +68,9 @@ export default function PageNotes({
   useEffect(() => {
     if (!handleRef) return;
     handleRef.current = {
-      addLine: async (line) => {
-        if (main) {
-          await appendLine({ id: main.noteId as Id<"shedNotes">, line });
-        } else {
-          const base = newBody?.() ?? "";
-          await start(`${base}${base && !base.endsWith("\n") ? "\n" : ""}${line}\n`, false);
-        }
+      addRecording: async (line) => {
+        if (main) await addRecording({ id: main.noteId as Id<"shedNotes">, line });
+        else await start(addRecordingToNote(newBody?.() ?? "", line), false);
       },
     };
   });

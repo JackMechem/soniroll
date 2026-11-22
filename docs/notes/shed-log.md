@@ -624,3 +624,47 @@ the note in the view, typed; Back → the task page with the note's card showing
 covered from x=244 (the sidebar) on; Back → the routine; Back → closed, still on /shed-log; ⋮ "Open
 as a page" → /shed-log/routine, view closed, Back → /shed-log. 390 wide: no overflow. No console
 errors after the fix. Not verified: touch on a phone, split screen, the desktop app.
+
+### Follow-up (same day): the name opens the task; the pages show the day; per-day attachments
+
+Jack: tapping anywhere on a task should open it (only the box checks it off); the routine and task
+pages should have everything from the day (progress, time…); recordings should play on the task's
+page; attach things to a task for just one day there; a task's note should have a "Notes" heading
+with "Recordings" under it; the side view's header should show "routine / task", with Back from a
+task to its routine.
+
+- **`TaskCheck`** takes `onOpen`: then only the box (a padded button) ticks it, and the name and its
+  line open the task. The Shed Log's routine cards and day tasks use it (the side view, with the
+  card's date); the card's separate notes button is gone. `RoutineCard` takes `onOpenTask` (the
+  routine page opens tasks in the view with it).
+- **Day context:** `TaskRef` for a routine task and the side view's routine item carry the `date` they
+  were opened from (`?date=` on the task page's URL too); else today.
+- **Routine page:** a first section for that day: the day's `RoutineCard` itself (progress, Start /
+  Continue / Log time, the running timer, the tasks to tick, its clips and day notes), or "Not on …"
+  with "Add it to …".
+- **Task page:** a first section for that day: the timer while it runs (`RunningTimer`, pulled out of
+  `RoutineCard`), the box (`TaskCheck`) with its minutes and time logged, its subtasks (ticked per day
+  for a routine task, on the task for a day task), Time it (not on past days), Log time
+  (`LogTimeDialog`). Header Start hides on past days.
+- **Per-day attachments:** `Occurrence.taskAttachments[taskId]` (kept by `pruneDay`). The task page's
+  Attached shows "Every time" (the routine's, read-only) and "Just for today/<date>" (editable); a day
+  task's own attachments are editable there. Routine cards show both under the task, and a tool
+  attached for the day opens when the task starts (`startRoutine`).
+- **Recordings play:** the task and routine pages' recording queries go through `useDeviceUrls` (a
+  recording kept on this device had no URL there, so it showed "kept on Firefox on Linux" instead of a
+  player — the routine page's was missing it from before).
+- **Note headings:** a new task note starts `## Notes`; recordings go in with `shedNotes.addRecording`
+  (`addRecordingToNote` in core): under `## Recordings` at the end of that section, or, without one,
+  `## Notes` over the text and `## Recordings` with the players already in the note moved under it.
+- **Side view header:** `SideCrumbs` — "Routines / Bass", "Bass / Scales" (the routine opens in the
+  view), "Nov 22 / Task". Back on a routine's task with nothing before it goes up to the routine
+  (`sideBack`).
+
+Verified signed in (throwaway accounts, deleted), headless Chromium 1440: the name opened the task,
+unticked; the card's box ticked it and the page showed it ticked, and unticking on the page unticked
+the card; Metronome attached just for today showed on the card's row; a clip recorded on the task's
+page had a player there (no "kept on" card); the note read "## Notes / Recordings / the clip"; header
+"Bass / Scales", Back → "Routines / Bass"; the routine page's Today had Start routine. `addRecordingToNote`
+with a node script (a bare player, text around a player, a new note, a second clip, a later section).
+`tsc` web/mobile/convex, eslint, `convex dev --once`. Not verified: a past day's page, subtasks on the
+page, the timer block running on the task page, phones by touch.

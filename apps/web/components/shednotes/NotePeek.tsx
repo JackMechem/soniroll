@@ -9,7 +9,9 @@ import { useSidebarShownWidth } from "@/components/Sidebar";
 import { ChevronLeftIcon, CloseIcon, DotsVerticalIcon, ExternalLinkIcon, MaximizeIcon, MinimizeIcon } from "@/components/tools";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useNotesConfig } from "@/lib/useShedNotes";
+import { formatShortDate } from "@/lib/practiceLog";
 import { routineHref, taskHref } from "@/lib/shedLogPages";
+import { usePracticeLog } from "@/lib/usePracticeLog";
 import {
   type PeekMode,
   type SideItem,
@@ -70,6 +72,7 @@ export default function NotePeek() {
   const cfg = useNotesConfig();
   const router = useRouter();
   const pathname = usePathname();
+  const log = usePracticeLog();
   const flushRef = useRef<() => void>(() => {});
   const [dragging, setDragging] = useState(false);
   const onFlush = useCallback((f: () => void) => {
@@ -126,10 +129,12 @@ export default function NotePeek() {
     <FlyoutItem key={value} icon={Icon} label={label} checked={mode === value} onSelect={() => setPeekPrefs({ mode: value })} />
   );
 
-  // Back: what was open before in the view; full screen with nothing before it, the page under it.
+  // Back: what was open before in the view; with nothing before it, a routine's task goes up to its
+  // routine, and full screen goes back to the page under it.
+  const upToRoutine = back.length === 0 && item.kind === "task" && "routineId" in item;
   const backButton =
-    back.length > 0 || covers ? (
-      <button type="button" onClick={goBack} title={back.length > 0 ? "Back to what was open before" : "Back to the page"} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-1.5 pr-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
+    back.length > 0 || covers || upToRoutine ? (
+      <button type="button" onClick={goBack} title={back.length > 0 ? "Back to what was open before" : upToRoutine ? "Back to the routine" : "Back to the page"} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-1.5 pr-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
         <ChevronLeftIcon className="h-4 w-4" /> Back
       </button>
     ) : null;
@@ -238,7 +243,7 @@ export default function NotePeek() {
         <>
           <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-foreground/10 px-4">
             {backButton}
-            <span className="flex-1" />
+            <SideCrumbs item={item} log={log} />
             {controls}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -246,12 +251,46 @@ export default function NotePeek() {
               {item.kind === "task" ? (
                 <TaskPage key={JSON.stringify(item)} inPanel routineId={"routineId" in item ? item.routineId : undefined} date={"date" in item ? item.date : undefined} taskId={item.taskId} />
               ) : (
-                <RoutinePage key={item.id} inPanel id={item.id} />
+                <RoutinePage key={item.id} inPanel id={item.id} date={item.date} />
               )}
             </div>
           </div>
         </>
       )}
     </aside>
+  );
+}
+
+/** Where the page in the side view sits: "Routines / Bass", "Bass / Scales" (the routine opens in
+    the view), "Nov 22 / Transcribe a chorus". */
+function SideCrumbs({ item, log }: { item: SideItem; log: ReturnType<typeof usePracticeLog> }) {
+  if (item.kind === "note") return <span className="flex-1" />;
+  const routineId = item.kind === "routine" ? item.id : "routineId" in item ? item.routineId : null;
+  const routine = routineId ? log.data.routines.find((r) => r.id === routineId) : undefined;
+  const routineName = routine?.name || "Routine";
+  let parent: React.ReactNode;
+  let current: string;
+  if (item.kind === "routine") {
+    parent = <span className="shrink-0 text-muted">Routines</span>;
+    current = routineName;
+  } else if ("routineId" in item) {
+    const task = routine?.tasks.find((t) => t.id === item.taskId) ??
+      Object.values(log.data.days).flatMap((d) => d.routines?.[item.routineId]?.extraTasks ?? []).find((t) => t.id === item.taskId);
+    parent = (
+      <button type="button" onClick={() => followSide({ kind: "routine", id: item.routineId, ...(item.date ? { date: item.date } : {}) })} className="min-w-0 max-w-[45%] truncate text-muted hover:text-foreground hover:underline">
+        {routineName}
+      </button>
+    );
+    current = task?.title || "Task";
+  } else {
+    parent = <span className="shrink-0 text-muted">{formatShortDate(item.date)}</span>;
+    current = log.data.days[item.date]?.tasks?.find((t) => t.id === item.taskId)?.title || "Task";
+  }
+  return (
+    <nav aria-label="Where this is" className="ml-1 flex min-w-0 flex-1 items-center gap-1.5 text-sm font-medium">
+      {parent}
+      <span className="shrink-0 text-muted/60">/</span>
+      <span className="min-w-0 truncate">{current}</span>
+    </nav>
   );
 }

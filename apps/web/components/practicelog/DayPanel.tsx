@@ -345,6 +345,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                   color="var(--accent)"
                   boxClass="h-6 w-6 lg:h-5 lg:w-5"
                   onToggle={() => log.toggleDayTask(date, t.id)}
+                  onOpen={() => openSide({ kind: "task", date, taskId: t.id })}
                   meta={[
                     time !== null && <span className="font-medium">{formatTime(time)}</span>,
                     formatMinutesShort(t.minutes),

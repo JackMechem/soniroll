@@ -15,7 +15,7 @@ import Subtasks from "@/components/practicelog/Subtasks";
 import TaskCheck, { DotList } from "@/components/practicelog/TaskCheck";
 import { TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
-import { CloseIcon, DocumentIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import { CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
 import { openSide } from "@/lib/notePeek";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
@@ -36,7 +36,7 @@ import {
   scheduleTasks,
   todayKey,
 } from "@/lib/practiceLog";
-import { pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
+import { type EngineState, pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
 import type { Recording } from "@/lib/recordings";
 import { useClockMinute } from "@/lib/useClockMinute";
 import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
@@ -52,12 +52,15 @@ export default function RoutineCard({
   log,
   recordings,
   dayRoutines,
+  onOpenTask,
 }: {
   date: string;
   item: DayRoutine;
   log: Log;
   recordings: Recording[] | undefined;
   dayRoutines: { id: string; name: string }[];
+  /** Opens a task (tapping its name): its page in the side view unless given. */
+  onOpenTask?: (taskId: string) => void;
 }) {
   const { routine, occurrence, added } = item;
   const { engine, startRoutine, runningTask } = useRoutineTimer();
@@ -98,7 +101,7 @@ export default function RoutineCard({
       x: rect.right - 208,
       y: rect.bottom + 4,
       items: [
-        { label: "Open routine", onSelect: () => openSide({ kind: "routine", id: routine.id }) },
+        { label: "Open routine", onSelect: () => openSide({ kind: "routine", id: routine.id, date }) },
         { label: "Edit routine", onSelect: () => router.push(`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`) },
         { label: span ? "Change the time" : "Set a time", onSelect: () => setEditingTime(true) },
         ...(timeOverride
@@ -143,7 +146,7 @@ export default function RoutineCard({
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0 flex-1">
           {/* Its page opens in the side view, so the day stays in sight. */}
-          <button type="button" onClick={() => openSide({ kind: "routine", id: routine.id })} className={`block max-w-full truncate text-left text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
+          <button type="button" onClick={() => openSide({ kind: "routine", id: routine.id, date })} className={`block max-w-full truncate text-left text-base font-semibold hover:underline ${skipped ? "line-through" : ""}`}>
             {routine.name || "Untitled routine"}
           </button>
           {routine.assigned && <span className="text-[11px] font-medium text-muted">From {routine.assigned.teacher}</span>}
@@ -198,40 +201,7 @@ export default function RoutineCard({
       {editingTime && <RoutineTimePicker date={date} routine={routine} occurrence={occurrence} log={log} onDone={() => setEditingTime(false)} />}
 
       {engine && running ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-background p-3">
-          <PracticeTimerRing size="sm" startedAt={engine.startedAt} durationMs={engine.durationMs} paused={engine.paused} remainingMsAtPause={engine.remainingMsAtPause} alarming={engine.alarming} />
-          <div className="min-w-[9rem] flex-1">
-            <div className={`text-xs font-semibold ${engine.alarming ? "animate-pulse text-danger" : "text-muted"}`}>
-              {engine.alarming ? "Time's up" : engine.paused ? "Paused" : "Now"}
-            </div>
-            <div className="line-clamp-2 font-medium">{engine.current.title}</div>
-            <div className="truncate text-xs text-muted">{engine.next ? `Next: ${engine.next.title}` : "Last task"}</div>
-          </div>
-          {/* Wraps under the task on a phone, so the task's name gets the width. */}
-          <div className="ml-auto flex shrink-0 gap-1">
-            {engine.alarming ? (
-              <TimerButton label="Continue" onClick={skip} primary>
-                <PlayIcon className="h-4 w-4" />
-              </TimerButton>
-            ) : engine.paused ? (
-              <TimerButton label="Resume" onClick={resume} primary>
-                <PlayIcon className="h-4 w-4" />
-              </TimerButton>
-            ) : (
-              <TimerButton label="Pause" onClick={pause}>
-                <PauseIcon className="h-4 w-4" />
-              </TimerButton>
-            )}
-            {!engine.alarming && (
-              <TimerButton label="Skip — don't check it off" onClick={skip}>
-                <span className="text-xs font-bold">»</span>
-              </TimerButton>
-            )}
-            <TimerButton label="Stop" onClick={stop}>
-              <StopIcon className="h-4 w-4 text-danger" />
-            </TimerButton>
-          </div>
-        </div>
+        <RunningTimer engine={engine} />
       ) : (
         !skipped &&
         firstOpen &&
@@ -272,6 +242,7 @@ export default function RoutineCard({
                     label={task.title}
                     color={color}
                     onToggle={() => log.toggleTask(date, routine.id, task.id)}
+                    onOpen={() => (onOpenTask ? onOpenTask(task.id) : openSide({ kind: "task", routineId: routine.id, taskId: task.id, date }))}
                     badge={extraIds.has(task.id) && <span className="ml-1.5 rounded-sm bg-foreground/[0.05] px-1 py-px align-middle text-[10px] font-medium text-muted">Today only</span>}
                     meta={[
                       start !== null && <span className={task.time ? "font-medium" : ""}>{formatTime(start)}</span>,
@@ -308,9 +279,10 @@ export default function RoutineCard({
                       : {})}
                   />
                   {task.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{task.notes}</p>}
-                  {task.attachments.length > 0 && (
+                  {/* Its own attachments and the ones for just this day (added on its page). */}
+                  {task.attachments.length + (occurrence.taskAttachments?.[task.id]?.length ?? 0) > 0 && (
                     <div className="mt-1.5">
-                      <AttachmentList items={task.attachments} compact />
+                      <AttachmentList items={[...task.attachments, ...(occurrence.taskAttachments?.[task.id] ?? [])]} compact />
                     </div>
                   )}
                   </div>
@@ -337,16 +309,6 @@ export default function RoutineCard({
                     <PlayIcon className="h-3.5 w-3.5" />
                   </button>
                 )}
-                {/* The task's own page (its notes, recordings and history), in the side view. */}
-                <button
-                  type="button"
-                  onClick={() => openSide({ kind: "task", routineId: routine.id, taskId: task.id })}
-                  aria-label={`${task.title || "Task"}: notes and recordings`}
-                  title="Notes and recordings for this task"
-                  className={`shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100 ${TOUCH_ICON}`}
-                >
-                  <DocumentIcon className="h-3.5 w-3.5" />
-                </button>
                 {extraIds.has(task.id) && (
                   <button
                     type="button"
@@ -478,5 +440,46 @@ function TimerButton({ label, onClick, primary = false, children }: { label: str
     >
       {children}
     </button>
+  );
+}
+
+/** What the Practice Timer is running for a routine (or one of its tasks): the countdown ring, the
+    task now and next, and pause / skip / stop. Also on a task's page while it runs. */
+export function RunningTimer({ engine }: { engine: EngineState }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-background p-3">
+      <PracticeTimerRing size="sm" startedAt={engine.startedAt} durationMs={engine.durationMs} paused={engine.paused} remainingMsAtPause={engine.remainingMsAtPause} alarming={engine.alarming} />
+      <div className="min-w-[9rem] flex-1">
+        <div className={`text-xs font-semibold ${engine.alarming ? "animate-pulse text-danger" : "text-muted"}`}>
+          {engine.alarming ? "Time's up" : engine.paused ? "Paused" : "Now"}
+        </div>
+        <div className="line-clamp-2 font-medium">{engine.current.title}</div>
+        <div className="truncate text-xs text-muted">{engine.next ? `Next: ${engine.next.title}` : "Last task"}</div>
+      </div>
+      {/* Wraps under the task on a phone, so the task's name gets the width. */}
+      <div className="ml-auto flex shrink-0 gap-1">
+        {engine.alarming ? (
+          <TimerButton label="Continue" onClick={skip} primary>
+            <PlayIcon className="h-4 w-4" />
+          </TimerButton>
+        ) : engine.paused ? (
+          <TimerButton label="Resume" onClick={resume} primary>
+            <PlayIcon className="h-4 w-4" />
+          </TimerButton>
+        ) : (
+          <TimerButton label="Pause" onClick={pause}>
+            <PauseIcon className="h-4 w-4" />
+          </TimerButton>
+        )}
+        {!engine.alarming && (
+          <TimerButton label="Skip — don't check it off" onClick={skip}>
+            <span className="text-xs font-bold">»</span>
+          </TimerButton>
+        )}
+        <TimerButton label="Stop" onClick={stop}>
+          <StopIcon className="h-4 w-4 text-danger" />
+        </TimerButton>
+      </div>
+    </div>
   );
 }

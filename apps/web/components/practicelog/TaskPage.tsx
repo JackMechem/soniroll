@@ -4,24 +4,29 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
-import { type NoteTarget, targetKey } from "@jam-practice/core/shedNotes";
+import { type NoteTarget, TASK_NOTE_START, targetKey } from "@jam-practice/core/shedNotes";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar, { type Crumb } from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import PageNotes, { type PageNotesHandle } from "@/components/practicelog/PageNotes";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
+import LogTimeDialog from "@/components/practicelog/LogTimeDialog";
 import RecordClip from "@/components/practicelog/RecordClip";
+import { RunningTimer } from "@/components/practicelog/RoutineCard";
+import Subtasks from "@/components/practicelog/Subtasks";
+import TaskCheck from "@/components/practicelog/TaskCheck";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { useAttachedNotes } from "@/components/shednotes/AttachedNotes";
 import { embedText } from "@/components/shednotes/fileEmbedSetup";
-import { CheckIcon, PencilIcon, PlayIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlayIcon, StopwatchIcon, findToolLink } from "@/components/tools";
 import {
   DAY_TASKS_ID,
   type DayTask,
+  ROUTINE_COLORS,
   type RoutineTask,
   formatLongDate,
   formatMinutesShort,
@@ -29,6 +34,7 @@ import {
   occursOn,
   todayKey,
 } from "@/lib/practiceLog";
+import { useDeviceUrls } from "@/lib/deviceFiles";
 import { recordingsApi } from "@/lib/recordings";
 import { followSide, openNotePeek } from "@/lib/notePeek";
 import { routineHref } from "@/lib/shedLogPages";
@@ -50,7 +56,8 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
   const router = useRouter();
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
-  const { startRoutine, startDayTasks, runningTask } = useRoutineTimer();
+  const { engine, startRoutine, startDayTasks, runningTask } = useRoutineTimer();
+  const [logging, setLogging] = useState(false);
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const notesRef = useRef<PageNotesHandle | null>(null);
   const appendLine = useMutation(api.shedNotes.appendLine);
@@ -75,8 +82,9 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
   const key = targetKey(target);
   const routineNotes = useAttachedNotes({ kind: "routineNotes", routineId: routineId ?? "" }, !!routineId);
 
-  const routineRecs = useQuery(recordingsApi.listForRoutine, isAuthenticated && routineId ? { routineId } : "skip");
-  const dayRecs = useQuery(recordingsApi.listForLogRange, isAuthenticated && !routineId && date ? { from: date, to: date } : "skip");
+  // `useDeviceUrls`: a recording kept on this device (no storage plan) plays from here too.
+  const routineRecs = useDeviceUrls(useQuery(recordingsApi.listForRoutine, isAuthenticated && routineId ? { routineId } : "skip"));
+  const dayRecs = useDeviceUrls(useQuery(recordingsApi.listForLogRange, isAuthenticated && !routineId && date ? { from: date, to: date } : "skip"));
   const recordings = (routineId ? routineRecs : dayRecs)?.filter((r) => r.taskId === taskId);
 
   // The days it was practiced: checked off or timed.
@@ -121,21 +129,40 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
   if (!task || (routineId && !routine)) return frame("Task", <EmptyCard>That task isn&apos;t there anymore.</EmptyCard>);
 
   const title = task.title || "Untitled task";
-  const recDate = routineId ? today : (date ?? today);
-  const running = routineId ? runningTask(routineId, today) === taskId : date ? runningTask(DAY_TASKS_ID, date) === taskId : false;
+  // The day it's looked at for (the Shed Log's day it was opened from; else today).
+  const day = date ?? today;
+  const past = day < today;
+  const running = runningTask(routineId ?? DAY_TASKS_ID, day) === taskId;
+  const occ = routineId ? log.data.days[day]?.routines?.[routineId] : undefined;
+  const dayTask = routineId ? undefined : (task as DayTask);
+  const checked = routineId ? (occ?.done ?? []).includes(taskId) : !!dayTask?.done;
+  const spentMs = (routineId ? occ?.spentMs?.[taskId] : dayTask?.spentMs) ?? 0;
+  const color = routine ? ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length] : "var(--accent)";
   const minutesPracticed = history.reduce((s, h) => s + (h.ms > 0 ? h.ms / 60000 : h.done ? task.minutes : 0), 0);
   const daysDone = history.filter((h) => h.done).length;
 
   function start() {
     if (!task) return;
     if (routine) {
-      const todayOcc = log.data.days[today]?.routines?.[routine.id];
-      if (!occursOn(routine.repeat, today) && !(log.data.days[today]?.added ?? []).includes(routine.id)) log.addToDay(today, routine.id);
-      startRoutine(routine, today, taskId, true, todayOcc);
+      if (!occursOn(routine.repeat, day) && !(log.data.days[day]?.added ?? []).includes(routine.id)) log.addToDay(day, routine.id);
+      startRoutine(routine, day, taskId, true, occ);
     } else if (date) {
       startDayTasks(date, log.data.days[date]?.tasks ?? [], taskId);
     }
   }
+
+  const toggleDone = () => (routineId ? log.toggleTask(day, routineId, taskId) : log.toggleDayTask(day, taskId));
+  const subDone = new Set(routineId ? (occ?.subDone ?? []) : (task.subtasks ?? []).filter((x) => x.done).map((x) => x.id));
+  const toggleSub = (id: string) => {
+    if (routineId) {
+      log.updateOccurrence(day, routineId, (o) => {
+        const list = o.subDone ?? [];
+        return { ...o, subDone: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] };
+      });
+    } else if (dayTask) {
+      log.saveDayTask(day, { ...dayTask, subtasks: (dayTask.subtasks ?? []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) });
+    }
+  };
 
   /** A task note made in a routine gets a link in the routine's notes, so they're all reachable there. */
   function linkFromRoutine(note: { title: string }) {
@@ -145,6 +172,38 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
 
   const sections: PageSection[] = [
     {
+      // The day itself, like the task on the Shed Log: ticked off, time on it, its checklist, the timer.
+      id: "day",
+      title: day === today ? "Today" : formatLongDate(day),
+      content: (
+        <div className="flex flex-col gap-3 rounded-lg bg-surface p-4">
+          {engine && running && <RunningTimer engine={engine} />}
+          <TaskCheck
+            checked={checked}
+            label={title}
+            color={color}
+            onToggle={toggleDone}
+            meta={[formatMinutesShort(task.minutes), spentMs > 0 && `${formatMinutesShort(spentMs / 60000)} logged`, checked ? "Done" : null]}
+          />
+          {(task.subtasks?.length ?? 0) > 0 && (
+            <div className="pl-8">
+              <Subtasks items={task.subtasks ?? []} color={color} isDone={(id) => subDone.has(id)} onToggle={toggleSub} />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 pl-8">
+            {!past && !running && task.minutes > 0 && (
+              <button type="button" onClick={start} className="flex h-8 items-center gap-1.5 rounded-md bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15">
+                <PlayIcon className="h-3.5 w-3.5" /> Time it
+              </button>
+            )}
+            <button type="button" onClick={() => setLogging(true)} className="flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+              <StopwatchIcon className="h-3.5 w-3.5 text-muted" /> Log time
+            </button>
+          </div>
+        </div>
+      ),
+    },
+    {
       id: "notes",
       title: "Notes",
       content: (
@@ -153,6 +212,7 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
           targetKey={key}
           label={routine ? `${routine.name || "Routine"} · ${title}` : `${title} (${date ? formatShortDate(date) : ""})`}
           newTitle={routine ? `${routine.name || "Routine"} · ${title}` : `${title} · ${date ? formatShortDate(date) : ""}`}
+          newBody={() => TASK_NOTE_START}
           onCreated={routine ? linkFromRoutine : undefined}
           onOpen={(id) => (inPanel ? followSide({ kind: "note", id }) : openNotePeek(id))}
           handleRef={notesRef}
@@ -164,12 +224,12 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
       title: "Recordings",
       action: isAuthenticated ? (
         <RecordClip
-          date={recDate}
+          date={day}
           routineId={routineId ?? null}
           routines={routine ? [{ id: routine.id, name: routine.name || "Routine" }] : []}
           task={{ id: taskId, name: title }}
           compact
-          onSaved={(r) => void notesRef.current?.addLine(embedText(r.name, `recording/${r.id}`))}
+          onSaved={(r) => void notesRef.current?.addRecording(embedText(r.name, `recording/${r.id}`))}
         />
       ) : undefined,
       content: !isAuthenticated ? (
@@ -187,14 +247,33 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
       ),
     },
     {
+      // A routine's task: what it always has (the routine editor's), and what's attached for just
+      // this day, here. A day's own task: its attachments, here.
       id: "attached",
       title: "Attached",
-      content:
-        task.attachments && task.attachments.length > 0 ? (
-          <AttachmentList items={task.attachments} />
-        ) : (
-          <EmptyCard>Nothing attached. {routine && !routine.assigned ? "Edit the routine to attach tunes, charts or tools." : "Edit the task to attach tunes, charts or tools."}</EmptyCard>
-        ),
+      content: routineId ? (
+        <div className="flex flex-col gap-3 rounded-lg bg-surface p-4">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-muted">Every time</span>
+            {(task.attachments?.length ?? 0) > 0 ? (
+              <AttachmentList items={task.attachments ?? []} />
+            ) : (
+              <p className="text-sm text-muted">Nothing yet. {routine && !routine.assigned ? "Edit the routine to attach tunes, charts or tools for every day." : ""}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-muted">Just for {day === today ? "today" : formatShortDate(day)}</span>
+            <AttachmentList
+              items={occ?.taskAttachments?.[taskId] ?? []}
+              onChange={(items) => log.updateOccurrence(day, routineId, (o) => ({ ...o, taskAttachments: { ...(o.taskAttachments ?? {}), [taskId]: items } }))}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg bg-surface p-4">
+          <AttachmentList items={dayTask?.attachments ?? []} onChange={(attachments) => dayTask && log.saveDayTask(day, { ...dayTask, attachments })} />
+        </div>
+      ),
     },
     ...(routineId
       ? [
@@ -262,7 +341,7 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
               <PencilIcon className="h-4 w-4 text-muted" /> Edit routine
             </Link>
           )}
-          {task.minutes > 0 && (
+          {task.minutes > 0 && !past && (
             <button
               type="button"
               onClick={start}
@@ -275,6 +354,15 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
         </div>
       </div>
       <PageSections pageKey={key} sections={sections} />
+      {logging && (
+        <LogTimeDialog
+          date={day}
+          log={log}
+          initial={routineId ? { kind: "routine", routineId, taskId } : { kind: "task", taskId }}
+          initialMinutes={task.minutes || undefined}
+          onClose={() => setLogging(false)}
+        />
+      )}
     </>,
   );
 }
