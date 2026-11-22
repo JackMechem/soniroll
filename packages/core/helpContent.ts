@@ -761,6 +761,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Microphone", text: "Which mic, its level (100% = as it comes in), the channels (Stereo; Left or Right for a single mic on one side of an interface; Both mixed into one), and Auto gain." },
       { name: "Auto gain", text: "Lets the browser (or desktop app) keep adjusting the level for you. Off by default: it flattens your dynamics, so set the input level instead when you can." },
+      { name: "Record the computer's sound too", text: "Off by default. On, a take also records what the computer is playing (a song in Spotify, a video), mixed with the microphone. In the desktop app it just works (macOS may not allow it). In a browser, Record asks what to share: pick the tab playing it (Chrome or Edge), or your whole screen on Windows, and turn on its sound. Wear headphones, or the microphone hears the song too." },
       { name: "Metronome", text: "Switch it on in the chip (Click while recording); its settings have the full Metronome's tempo, meter, subdivision and accents. The beat strip shows under the timer." },
       { name: "Count-in", text: "How many bars of click before the take starts." },
       { name: "Song", text: "When recording for a tune with a song uploaded, plays the song along with you, from a start point and at a volume you choose." },
