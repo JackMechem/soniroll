@@ -521,7 +521,8 @@ pub fn recorder_open(
     // system default), opened as an input.
     let loopback_device = if desktop_audio.unwrap_or(false) {
         let id = audio::forced_output().unwrap_or_default();
-        let device = audio::find_device(&id, false).ok_or("Couldn't record the computer's sound: no output found.")?;
+        let device =
+            audio::find_device(&id, false).ok_or("Couldn't record the computer's sound: no output found.")?;
         let supported = device
             .default_output_config()
             .map_err(|e| format!("Couldn't record the computer's sound: {e}"))?;
@@ -656,7 +657,11 @@ where
 }
 
 /// The computer's sound as an input stream on an output device (see the module's doc).
-fn build_loopback<T>(device: &Device, config: StreamConfig, mut producer: rtrb::Producer<f32>) -> Result<cpal::Stream, String>
+fn build_loopback<T>(
+    device: &Device,
+    config: StreamConfig,
+    mut producer: rtrb::Producer<f32>,
+) -> Result<cpal::Stream, String>
 where
     T: SizedSample,
     f32: FromSample<T>,
@@ -1087,7 +1092,11 @@ mod tests {
         }
         let tail = &left[left.len() / 2..];
         let rms = (tail.iter().map(|s| s * s).sum::<f32>() / tail.len().max(1) as f32).sqrt();
-        println!("loopback: {} frames at {rate} Hz, {channels} ch, rms {rms:.3}, {:.1} Hz", left.len(), zero_crossing_freq(tail, rate as f32));
+        println!(
+            "loopback: {} frames at {rate} Hz, {channels} ch, rms {rms:.3}, {:.1} Hz",
+            left.len(),
+            zero_crossing_freq(tail, rate as f32)
+        );
     }
 
     #[test]
