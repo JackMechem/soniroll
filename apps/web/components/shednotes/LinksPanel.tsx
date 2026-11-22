@@ -7,6 +7,7 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { findWikiLinks, parseTargetKey, titleKey } from "@jam-practice/core/shedNotes";
 import { CalendarIcon, CloseIcon, DocumentIcon, GraduationCapIcon, LinkIcon, NoteIcon } from "@/components/tools";
 import type { NoteMeta } from "@/lib/useShedNotes";
+import { routineHref, taskHref } from "@/lib/shedLogPages";
 
 /** Where an attachment lives on the site. */
 export function targetHref(target: string): string | null {
@@ -14,6 +15,9 @@ export function targetHref(target: string): string | null {
   if (!t) return null;
   if (t.kind === "tune") return `/tunes/tune?id=${encodeURIComponent(t.tuneId)}`;
   if (t.kind === "lesson") return `/lessons/notes?lesson=${encodeURIComponent(t.lessonId)}`;
+  if (t.kind === "routineNotes") return routineHref(t.routineId);
+  if (t.kind === "task") return taskHref({ routineId: t.routineId, taskId: t.taskId });
+  if (t.kind === "dayTask") return taskHref({ date: t.date, taskId: t.taskId });
   return `/shed-log?date=${t.date}`;
 }
 

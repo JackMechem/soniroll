@@ -198,10 +198,11 @@ export function SaveTakeDialog({
   initialTuneId: string | null;
   /** A Shed Log clip: the day it's on, and the routines that day it can be attached to
       (`routineId` preselects one; null = the day itself). */
-  log?: { date: string; routineId: string | null; routines: { id: string; name: string }[] };
+  log?: { date: string; routineId: string | null; routines: { id: string; name: string }[]; task?: { id: string; name: string } };
   /** The mix it was recorded with, when the tune's song played along (its line-up measured). */
   initialMix?: RecordingMix | null;
-  onSaved: (id: string) => void;
+  /** Gets the new recording's id and name. */
+  onSaved: (id: string, name: string) => void;
   onDiscard: () => void;
 }) {
   const byId = useTuneIndex();
@@ -245,12 +246,14 @@ export function SaveTakeDialog({
         ...(tuneId ? { tuneId } : {}),
         ...(tuneId && (song?.url || initialMix) ? { mix } : {}),
         ...(log ? { logDate: log.date, ...(logRoutineId ? { routineId: logRoutineId } : {}) } : {}),
+        // The task goes with it while it stays on the task's routine (or the day, for a day's task).
+        ...(log?.task && logRoutineId === log.routineId ? { taskId: log.task.id } : {}),
       }).catch(async (e: unknown) => {
         await unplace(placed);
         throw e;
       });
       URL.revokeObjectURL(url);
-      onSaved(id);
+      onSaved(id, shownName);
     } catch (e) {
       setSaving(false);
       setError(errorText(e, "Couldn't save the recording."));
@@ -275,7 +278,13 @@ export function SaveTakeDialog({
           <span className="text-xs font-medium text-muted">Name</span>
           <input value={shownName} onChange={(e) => setName(e.target.value)} className="h-10 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:h-9 sm:text-sm" />
         </label>
-        {log && log.routines.length > 0 && (
+        {log?.task && logRoutineId === log.routineId && (
+          <p className="text-sm">
+            <span className="text-xs font-medium text-muted">For the task </span>
+            <span className="font-medium">{log.task.name}</span>
+          </p>
+        )}
+        {log && log.routines.length > 0 && !log.task && (
           <div className="flex flex-col gap-1 text-sm">
             <span className="text-xs font-medium text-muted">Attached to</span>
             <div className="flex flex-wrap gap-1.5">

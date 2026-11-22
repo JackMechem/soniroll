@@ -566,6 +566,8 @@ export default defineSchema({
         so this is a plain string id like `tuneId`. */
     logDate: v.optional(v.string()),
     routineId: v.optional(v.string()),
+    /** A task in that routine, or a one-off task on that day (no `routineId`). */
+    taskId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

@@ -16,7 +16,8 @@ import Subtasks from "@/components/practicelog/Subtasks";
 import TaskCheck, { DotList } from "@/components/practicelog/TaskCheck";
 import { TOUCH_ICON, TOUCH_TEXT } from "@/components/practicelog/touch";
 import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
-import { CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import { CloseIcon, DocumentIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon, StopwatchIcon } from "@/components/tools";
+import { taskHref } from "@/lib/shedLogPages";
 import LogTimeDialog, { type LogTarget } from "@/components/practicelog/LogTimeDialog";
 import {
   type DayRoutine,
@@ -337,6 +338,15 @@ export default function RoutineCard({
                     <PlayIcon className="h-3.5 w-3.5" />
                   </button>
                 )}
+                {/* The task's own page: its notes, recordings and history. */}
+                <Link
+                  href={taskHref({ routineId: routine.id, taskId: task.id })}
+                  aria-label={`${task.title || "Task"}: notes and recordings`}
+                  title="Notes and recordings for this task"
+                  className={`shrink-0 rounded-md p-1.5 text-muted opacity-100 hover:bg-surface-hover hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100 ${TOUCH_ICON}`}
+                >
+                  <DocumentIcon className="h-3.5 w-3.5" />
+                </Link>
                 {extraIds.has(task.id) && (
                   <button
                     type="button"

@@ -39,6 +39,7 @@ import {
   todayKey,
 } from "@/lib/practiceLog";
 import type { Recording } from "@/lib/recordings";
+import { taskHref } from "@/lib/shedLogPages";
 import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
 type Log = ReturnType<typeof usePracticeLog>;
@@ -280,6 +281,7 @@ export default function DayPanel({
 
 /** The day's own tasks (not part of a routine): a quick-add box, a checklist, and the timer. */
 function DayTasks({ date, log }: { date: string; log: Log }) {
+  const router = useRouter();
   const tasks = log.data.days[date]?.tasks ?? [];
   const { engine, startDayTasks, runningTask } = useRoutineTimer();
   const running = runningTask("day", date);
@@ -408,6 +410,7 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                       x: r.right - 208,
                       y: r.bottom + 4,
                       items: [
+                        { label: "Notes and recordings", onSelect: () => router.push(taskHref({ date, taskId: t.id })) },
                         { label: "Edit", onSelect: () => setEditing({ task: t, isNew: false }) },
                         { label: "Move to the next day", onSelect: () => log.moveDayTask(date, addDays(date, 1), { ...t, done: false }) },
                         { label: "Delete", danger: true, onSelect: () => askDelete(t) },

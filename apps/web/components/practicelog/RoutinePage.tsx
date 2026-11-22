@@ -2,6 +2,8 @@
 
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
+import { api } from "@jam-practice/convex/_generated/api";
+import { targetKey } from "@jam-practice/core/shedNotes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -9,10 +11,12 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar from "@/components/PageBar";
 import { AttachmentList } from "@/components/practicelog/Attachments";
+import PageNotes from "@/components/practicelog/PageNotes";
+import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
-import { CheckIcon, PencilIcon, PlayIcon, ShareIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, ChevronRightIcon, DocumentIcon, PencilIcon, PlayIcon, ShareIcon, findToolLink } from "@/components/tools";
 import {
   type Occurrence,
   type Routine,
@@ -33,6 +37,7 @@ import {
 } from "@/lib/practiceLog";
 import { type Recording, recordingsApi } from "@/lib/recordings";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
+import { taskHref } from "@/lib/shedLogPages";
 
 const noopSubscribe = () => () => {};
 
@@ -56,8 +61,9 @@ function minutesFor(routine: Routine, occ: Occurrence): number {
   return ms / 60000;
 }
 
-/** `/shed-log/routine?id=…` — one routine: when it happens, its tasks, what's attached, every
-    day it was practiced, and every clip recorded for it. */
+/** `/shed-log/routine?id=…` — one routine's page, a dashboard you arrange (`PageSections`): its
+    notes (a Shed Note linking each task's notes), its tasks (each with its own page), what's
+    attached, when it's coming up, every clip recorded for it and every day it was practiced. */
 export default function RoutinePage({ id }: { id: string }) {
   const router = useRouter();
   const log = usePracticeLog();
@@ -67,6 +73,9 @@ export default function RoutinePage({ id }: { id: string }) {
   const recordings = useQuery(recordingsApi.listForRoutine, isAuthenticated ? { routineId: id } : "skip");
   const routine = log.data.routines.find((r) => r.id === id);
   const [sharing, setSharing] = useState(false);
+  // The routine's notes and its tasks' notes (`routine:<id>` and `routine:<id>/task:<task>`).
+  const routineKey = targetKey({ kind: "routineNotes", routineId: id });
+  const notesUnder = useQuery(api.shedNotes.attachedTo, isAuthenticated && id ? { prefix: routineKey } : "skip");
 
   const history = useMemo(() => {
     if (!routine) return [];
@@ -127,6 +136,157 @@ export default function RoutinePage({ id }: { id: string }) {
   }
 
   const recCount = recordings?.length ?? 0;
+  // Which tasks have notes, and a new routine note's start: a link to each task's notes.
+  const taskNotes = (notesUnder ?? []).filter((n) => n.target.startsWith(`${routineKey}/task:`));
+  const taskNoteIds = new Set(taskNotes.map((n) => n.target.slice(`${routineKey}/task:`.length)));
+  const routineNoteBody = () => {
+    const ordered = routine.tasks.flatMap((t) => taskNotes.filter((n) => n.target === `${routineKey}/task:${t.id}`));
+    return ordered.length ? `## Tasks\n${ordered.map((n) => `- [[${n.title}]]`).join("\n")}\n\n` : "";
+  };
+
+  const sections: PageSection[] = [
+    {
+      id: "notes",
+      title: "Notes",
+      content: isAuthenticated ? (
+        <PageNotes
+          target={{ kind: "routineNotes", routineId: routine.id }}
+          targetKey={routineKey}
+          label={routine.name || "Routine"}
+          newTitle={routine.name || "Routine"}
+          newBody={routineNoteBody}
+        />
+      ) : (
+        <EmptyCard>Sign in to keep notes.</EmptyCard>
+      ),
+    },
+    {
+      id: "tasks",
+      title: "Tasks",
+      content: (
+        <>
+        {routine.tasks.length === 0 ? (
+          <EmptyCard>No tasks yet — Edit to add some.</EmptyCard>
+        ) : (
+          <ol className={LIST}>
+            {schedule.map(({ task, start }, i) => (
+              <li key={task.id}>
+                <Link href={taskHref({ routineId: routine.id, taskId: task.id })} className="flex gap-3 px-4 py-3 hover:bg-surface-hover">
+                <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    {task.title || "Untitled task"}
+                    {taskNoteIds.has(task.id) && <DocumentIcon className="h-3.5 w-3.5 text-muted" aria-label="Has notes" />}
+                  </div>
+                  <div className="text-xs text-muted">
+                    {start !== null ? `${formatTime(start)} · ` : ""}
+                    {formatMinutesShort(task.minutes)}
+                  </div>
+                  {task.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{task.notes}</p>}
+                  {task.attachments.length > 0 && (
+                    <div className="mt-1.5">
+                      <AttachmentList items={task.attachments} compact />
+                    </div>
+                  )}
+                </div>
+                <ChevronRightIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
+        </>
+      ),
+    },
+    ...(routine.attachments.length > 0
+      ? [{ id: "attached", title: "Attached", content: <AttachmentList items={routine.attachments} /> }]
+      : []),
+    {
+      id: "upcoming",
+      title: "Coming up",
+      content: (
+        <>
+        {upcoming.length === 0 ? (
+          <EmptyCard>Nothing coming up{routine.repeat.end ? ` — it ended ${formatShortDate(routine.repeat.end)}` : ""}.</EmptyCard>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {upcoming.map((date) => (
+              <Link key={date} href={`/shed-log?date=${date}`} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
+                {date === today ? "Today" : formatShortDate(date)}
+              </Link>
+            ))}
+          </div>
+        )}
+        </>
+      ),
+    },
+    {
+      id: "recordings",
+      title: "Recordings",
+      content: (
+        <>
+        {!isAuthenticated ? (
+          <EmptyCard>Sign in to record clips — recordings are saved to your account.</EmptyCard>
+        ) : recordings === undefined ? (
+          <LoadingSpinner />
+        ) : recordings.length === 0 ? (
+          <EmptyCard>No recordings yet. Record a clip from the routine on any of its days.</EmptyCard>
+        ) : (
+          byDate.map(([date, list]) => (
+            <div key={date || "none"} className="flex flex-col gap-2">
+              <Link href={date ? `/shed-log?date=${date}` : "/shed-log"} className="self-start text-xs font-medium text-muted hover:text-foreground">
+                {date ? formatLongDate(date) : "No day"}
+              </Link>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {list.map((r) => (
+                  <RecordingCard key={r._id} recording={r} />
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+        </>
+      ),
+    },
+    {
+      id: "history",
+      title: "History",
+      content: (
+        <>
+        {history.length === 0 ? (
+          <EmptyCard>Nothing logged yet.</EmptyCard>
+        ) : (
+          <ul className={LIST}>
+            {history.map(({ date, occ }) => {
+              const p = progressOf(routine, occ);
+              const complete = p.total > 0 && p.done === p.total;
+              const m = minutesFor(routine, occ);
+              return (
+                <li key={date}>
+                  <Link href={`/shed-log?date=${date}`} className="flex items-start gap-3 px-4 py-3 hover:bg-surface-hover">
+                    <span
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${complete ? "text-white" : "border-[1.5px] border-foreground/25"}`}
+                      style={complete ? { background: color } : undefined}
+                    >
+                      {complete && <CheckIcon className="h-2.5 w-2.5" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium">{formatLongDate(date)}</div>
+                      <div className="text-xs text-muted">
+                        {occ.skipped ? "Skipped" : `${p.done}/${p.total} tasks${m > 0 ? ` · ${formatMinutesShort(Math.round(m))}` : ""}`}
+                      </div>
+                      {occ.notes && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{occ.notes}</p>}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        </>
+      ),
+    },
+  ];
 
   return (
     <PageShell>
@@ -168,108 +328,7 @@ export default function RoutinePage({ id }: { id: string }) {
       </div>
       {routine.description && <p className="whitespace-pre-wrap text-sm">{routine.description}</p>}
 
-      <Section title="Tasks">
-        {routine.tasks.length === 0 ? (
-          <EmptyCard>No tasks yet — Edit to add some.</EmptyCard>
-        ) : (
-          <ol className={LIST}>
-            {schedule.map(({ task, start }, i) => (
-              <li key={task.id} className="flex gap-3 px-4 py-3">
-                <span className="w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted">{i + 1}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{task.title || "Untitled task"}</div>
-                  <div className="text-xs text-muted">
-                    {start !== null ? `${formatTime(start)} · ` : ""}
-                    {formatMinutesShort(task.minutes)}
-                  </div>
-                  {task.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{task.notes}</p>}
-                  {task.attachments.length > 0 && (
-                    <div className="mt-1.5">
-                      <AttachmentList items={task.attachments} compact />
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Section>
-
-      {routine.attachments.length > 0 && (
-        <Section title="Attached">
-          <AttachmentList items={routine.attachments} />
-        </Section>
-      )}
-
-      <Section title="Coming up">
-        {upcoming.length === 0 ? (
-          <EmptyCard>Nothing coming up{routine.repeat.end ? ` — it ended ${formatShortDate(routine.repeat.end)}` : ""}.</EmptyCard>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {upcoming.map((date) => (
-              <Link key={date} href={`/shed-log?date=${date}`} className="flex h-8 items-center rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-                {date === today ? "Today" : formatShortDate(date)}
-              </Link>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <Section title="Recordings">
-        {!isAuthenticated ? (
-          <EmptyCard>Sign in to record clips — recordings are saved to your account.</EmptyCard>
-        ) : recordings === undefined ? (
-          <LoadingSpinner />
-        ) : recordings.length === 0 ? (
-          <EmptyCard>No recordings yet. Record a clip from the routine on any of its days.</EmptyCard>
-        ) : (
-          byDate.map(([date, list]) => (
-            <div key={date || "none"} className="flex flex-col gap-2">
-              <Link href={date ? `/shed-log?date=${date}` : "/shed-log"} className="self-start text-xs font-medium text-muted hover:text-foreground">
-                {date ? formatLongDate(date) : "No day"}
-              </Link>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {list.map((r) => (
-                  <RecordingCard key={r._id} recording={r} />
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </Section>
-
-      <Section title="History">
-        {history.length === 0 ? (
-          <EmptyCard>Nothing logged yet.</EmptyCard>
-        ) : (
-          <ul className={LIST}>
-            {history.map(({ date, occ }) => {
-              const p = progressOf(routine, occ);
-              const complete = p.total > 0 && p.done === p.total;
-              const m = minutesFor(routine, occ);
-              return (
-                <li key={date}>
-                  <Link href={`/shed-log?date=${date}`} className="flex items-start gap-3 px-4 py-3 hover:bg-surface-hover">
-                    <span
-                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${complete ? "text-white" : "border-[1.5px] border-foreground/25"}`}
-                      style={complete ? { background: color } : undefined}
-                    >
-                      {complete && <CheckIcon className="h-2.5 w-2.5" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium">{formatLongDate(date)}</div>
-                      <div className="text-xs text-muted">
-                        {occ.skipped ? "Skipped" : `${p.done}/${p.total} tasks${m > 0 ? ` · ${formatMinutesShort(Math.round(m))}` : ""}`}
-                      </div>
-                      {occ.notes && <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm">{occ.notes}</p>}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Section>
+      <PageSections pageKey={routineKey} sections={sections} />
       {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
     </PageShell>
   );
@@ -277,12 +336,3 @@ export default function RoutinePage({ id }: { id: string }) {
 
 const SECONDARY = "flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
 const LIST = "flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg bg-surface";
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">{title}</h2>
-      {children}
-    </section>
-  );
-}

@@ -17,6 +17,8 @@ export function targetRoute(target: string): Href | null {
   if (!t) return null;
   if (t.kind === 'tune') return { pathname: '/library/tune', params: { id: t.tuneId } };
   if (t.kind === 'lesson') return null;
+  // Routine and task pages aren't on the phone yet.
+  if (t.kind === 'routineNotes' || t.kind === 'task') return { pathname: '/tool/shed-log', params: {} };
   return { pathname: '/tool/shed-log', params: { date: t.date } };
 }
 

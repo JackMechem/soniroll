@@ -530,3 +530,64 @@ timed from the day panel and paused/stopped on the Practice Timer page: task sta
 running (by the task); stopped → stopped; paused → stopped; resumed → running; stopped → stopped.
 Day timer started by hand first → the task started and stopped → still running. Not verified: a
 routine's last step running out on its own (same code path as Stop: the run ends), alarm mode, a phone.
+
+## 2026-11-22 — Routine and task pages: notes, recordings, a side view for notes
+
+Jack: record something attached to a task in a routine (or a task on its own); notes for each task
+that are reachable from the routine's "master" note, like links between notes; each routine and
+task a page (a dashboard he can configure) with its notes and its recordings embedded; notes in a
+side view like Notion's, over the content or pushing it over.
+
+- **Note targets** (`packages/core/shedNotes.ts`): `routineNotes` (`routine:<id>`, a routine's own
+  notes, not one day's), `task` (`routine:<id>/task:<task>`) and `dayTask` (`day:<date>/task:<task>`).
+  `parseTargetKey` knows them (the server refuses to attach to anything it can't parse);
+  `LinksPanel`'s "Attached to" goes to the pages (`lib/shedLogPages.ts`: `routineHref`, `taskHref`);
+  the phone app sends them to the Shed Log.
+- **Recordings** have an optional `taskId` (schema, `create`, `update`, returned by every list). It's
+  only kept with a `logDate` (the day it was recorded on). `SaveTakeDialog`'s `log.task` shows "For
+  the task …" and sends `taskId` while the routine choice is still the task's; `onSaved` now gets the
+  name too. `RecordClip` takes `task` and `onSaved`.
+- **`shedNotes.appendLine`**: adds a line at the end of a note (owner or editor). `NoteSurface` passes
+  the saved body as `syncText`, so an open editor takes the line in.
+- **`/shed-log/task`** (`TaskPage.tsx`; `?routine=&task=` or `?date=&task=`): title, minutes, the
+  routine, days checked off and time practiced; Start (runs just that task on the timer, adding the
+  routine to today if it isn't on it); Edit routine. Sections: Notes, Recordings (Record in the
+  section's header), Attached, History (routine tasks). A task added to a routine for one day is
+  found in the occurrences' `extraTasks`.
+- **Routine page** (`RoutinePage.tsx`): the same sections idea: Notes (the routine's own note), Tasks
+  (each row now links to its page, with a note icon when it has notes), Attached, Coming up,
+  Recordings, History.
+- **`PageNotes`**: the page's note written in place (`NoteSurface`, `fill={false}`), ⤢ opens it in
+  the side view; other notes attached to it are listed under it. "Start notes" makes one. A task's
+  note is titled "<Routine> · <Task>" ("<Task> · <date>" for a day's task) and, when the routine has
+  notes, `- [[that title]]` is added to the routine's note; a new routine note starts with "## Tasks"
+  and a link to each task note there already. `PageNotesHandle.addLine` puts a recording's embed
+  (`![name](file:recording/<id>)`, the player) into the open editor, else `appendLine`, else a new
+  note with it.
+- **`PageSections`**: a page's sections in your order, some hidden. "Arrange" shows ↑ ↓ and
+  hide/show per section. Kept per page in the synced setting `jam-practice-shed-pages` as
+  `{ pages: { [targetKey]: { order, hidden } } }` — under one key because a synced setting only
+  hands back the keys its defaults have (with `{}` as the defaults nothing came back; found in
+  testing).
+- **Ways in:** a notes button on each task row of a routine card (beside ▶, on hover on desktop),
+  "Notes and recordings" in a day task's ⋮ menu, the routine page's task rows.
+- **Side view** (`components/shednotes/NotePeek.tsx`, `lib/notePeek.ts`): replaces `NoteDialog`
+  (deleted); attached notes everywhere open in it. Mounted once in `AppShell` after the page: "Beside
+  the page" is an in-flow `<aside>` (the page shrinks), "Over the page" a fixed panel with a shadow;
+  phones get a full-screen sheet. Width (360–900, the left edge drags) and mode are this device's
+  (`jam-practice-note-peek`). Links open in the same view with Back; ⤢ opens Shed Notes; ⋮ has the
+  mode and "Take off …" for an attached note. Escape closes (not from the editor with vim on).
+  `NoteSurface` is the editor part, shared with the pages; it gained a File button (a recording,
+  picture or file from your Files).
+
+Verified signed in (throwaway `.test` accounts, deleted), headless Chromium with a fake mic: made a
+routine with two tasks in the editor; started the routine's notes and typed; opened a task's page,
+started its notes, recorded a clip from there ("For the task Long tones" in the save dialog), and the
+clip's player appeared in the task's note and its Recordings; ⤢ → side view over the page, then
+beside it (the page narrowed); the routine's note then had "Morning warm-up · Long tones" linked. A
+day task's ⋮ → its page; Arrange (hide Attached, Recordings up) held after a reload. 1440 and 390, no
+overflow, no console errors. `tsc` web, mobile, convex; eslint; `convex dev --once`.
+Not verified: `pnpm build`; recordings on a plan (online) rather than on the device; the phone's
+full-screen side view by touch; two editors on the same note at once (the routine note open on its
+page while a task note adds its link: the sync takes it in when nothing typed is waiting); the
+desktop app.

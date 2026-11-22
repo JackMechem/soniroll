@@ -40,6 +40,7 @@ async function withUrl(ctx: QueryCtx, row: Doc<"recordings">) {
     mix: row.mix ?? null,
     logDate: row.logDate ?? null,
     routineId: row.routineId ?? null,
+    taskId: row.taskId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     /** Null when it's only on a device (`device`). */
@@ -75,6 +76,8 @@ export const create = mutation({
     mix: v.optional(mixValidator),
     logDate: v.optional(v.string()),
     routineId: v.optional(v.string()),
+    /** A task in the routine (or a one-off task on the day, without `routineId`). */
+    taskId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -101,6 +104,7 @@ export const create = mutation({
       ...(args.mix ? { mix: cleanMix(args.mix) } : {}),
       ...(args.logDate && DATE_RE.test(args.logDate) ? { logDate: args.logDate } : {}),
       ...(args.routineId ? { routineId: args.routineId.slice(0, 100) } : {}),
+      ...(args.taskId && args.logDate ? { taskId: args.taskId.slice(0, 100) } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -187,8 +191,9 @@ export const update = mutation({
     mix: v.optional(mixValidator),
     logDate: v.optional(v.union(v.string(), v.null())),
     routineId: v.optional(v.union(v.string(), v.null())),
+    taskId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, { id, name, notes, tuneId, mix, logDate, routineId }) => {
+  handler: async (ctx, { id, name, notes, tuneId, mix, logDate, routineId, taskId }) => {
     const userId = await getAuthUserId(ctx);
     const row = await ctx.db.get(id);
     if (!userId || !row || row.userId !== userId) throw new Error("Recording not found.");
@@ -199,6 +204,7 @@ export const update = mutation({
       ...(mix ? { mix: cleanMix(mix) } : {}),
       ...(logDate !== undefined ? { logDate: logDate && DATE_RE.test(logDate) ? logDate : undefined } : {}),
       ...(routineId !== undefined ? { routineId: routineId ?? undefined } : {}),
+      ...(taskId !== undefined ? { taskId: taskId ? taskId.slice(0, 100) : undefined } : {}),
       updatedAt: Date.now(),
     });
   },

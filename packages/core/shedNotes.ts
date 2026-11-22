@@ -144,6 +144,12 @@ export function cleanFolder(folder: string): string {
 export type NoteTarget =
   | { kind: "day"; date: string }
   | { kind: "routine"; date: string; routineId: string }
+  /** A routine itself (not one day of it): its page's main notes. */
+  | { kind: "routineNotes"; routineId: string }
+  /** A task in a routine: its page's notes. */
+  | { kind: "task"; routineId: string; taskId: string }
+  /** A one-off task on a day (not in a routine). */
+  | { kind: "dayTask"; date: string; taskId: string }
   | { kind: "tune"; tuneId: string }
   /** Lessons with a teacher or student (a `lessonStudents` id). */
   | { kind: "lesson"; lessonId: string };
@@ -154,6 +160,12 @@ export function targetKey(t: NoteTarget): string {
       return `day:${t.date}`;
     case "routine":
       return `day:${t.date}/routine:${t.routineId}`;
+    case "routineNotes":
+      return `routine:${t.routineId}`;
+    case "task":
+      return `routine:${t.routineId}/task:${t.taskId}`;
+    case "dayTask":
+      return `day:${t.date}/task:${t.taskId}`;
     case "tune":
       return `tune:${t.tuneId}`;
     case "lesson":
@@ -164,6 +176,12 @@ export function targetKey(t: NoteTarget): string {
 export function parseTargetKey(key: string): NoteTarget | null {
   let m = /^day:(\d{4}-\d{2}-\d{2})\/routine:(.+)$/.exec(key);
   if (m) return { kind: "routine", date: m[1], routineId: m[2] };
+  m = /^day:(\d{4}-\d{2}-\d{2})\/task:(.+)$/.exec(key);
+  if (m) return { kind: "dayTask", date: m[1], taskId: m[2] };
+  m = /^routine:([^/]+)\/task:(.+)$/.exec(key);
+  if (m) return { kind: "task", routineId: m[1], taskId: m[2] };
+  m = /^routine:([^/]+)$/.exec(key);
+  if (m) return { kind: "routineNotes", routineId: m[1] };
   m = /^day:(\d{4}-\d{2}-\d{2})$/.exec(key);
   if (m) return { kind: "day", date: m[1] };
   m = /^tune:(.+)$/.exec(key);
