@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ChevronRightIcon, LinkIcon, TrashIcon, UnlinkIcon } from '@/components/icons';
+import { RecordingPlace } from '@/components/recordings/RecordingPlace';
 import { PlayButton, SeekBar, TuneSelectModal, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { deleteOnDevice, useDeviceUrl } from '@/lib/deviceFiles';
@@ -124,6 +125,8 @@ function RecordingScreen() {
               <Text className="font-ui text-sm" style={{ color: colors.muted }}>
                 {formatDuration(rec.durationSec)} · {formatRecordedDay(rec.createdAt)}
               </Text>
+              {/* The routine or task it was made for, which opens it. */}
+              <RecordingPlace routineId={rec.routineId} taskId={rec.taskId} logDate={rec.logDate} />
               {!rec.url && rec.device ? (
                 <Text className="font-ui text-xs" style={{ color: colors.muted }}>
                   Kept on {rec.device.label}, so it plays there. A storage plan keeps recordings on all your devices.

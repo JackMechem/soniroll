@@ -50,6 +50,7 @@ export const RELEASES: Release[] = [
       { kind: "new", text: "Recorder: **record the computer's sound too**, like a song playing in Spotify, mixed with your mic. Off unless you turn it on." },
       { kind: "improved", text: "The sidebar **hides completely** (« or ⌘\\ / Ctrl+\\); hover the menu button or the left edge to peek at it. Drag it very narrow for just icons." },
       { kind: "fixed", text: "Stopping a task in the Shed Log now stops the day timer it started." },
+      { kind: "new", text: "Phone app (Android alpha 4): **routine and task screens** with the day, notes and recordings, tapping a task's name to open it, the Tuner's pitch graph, a step's tool opening when it starts, and the day timer stopping with its task." },
     ],
   },
   {

@@ -17,6 +17,11 @@ export type Recording = {
   url: string | null;
   /** Set when it's kept on a device instead of online (free accounts). */
   device?: DeviceRef | null;
+  /** A Shed Log clip: the day it was recorded on, the routine it's for, and the task (in that
+      routine, or one of the day's own tasks without a routine). */
+  logDate?: string | null;
+  routineId?: string | null;
+  taskId?: string | null;
 };
 
 export const RECORDING_MIME = 'audio/mp4';

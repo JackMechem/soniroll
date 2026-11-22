@@ -661,3 +661,167 @@ How the public alphas go out, written down with alpha 3 (the phone UI passes 2�
 
 Alpha 3: versionCode 3, built from `preview` after 0.10.15's commits. Not installed on a phone
 before release (Jack tests it himself).
+
+## 2026-11-22 — Pitch graph in the Tuner, a step's tool opening, the day timer stopping with its task
+
+Three of the website's 2026-11-22 features, ported to the phone (web notes: `tools-trainers.md`
+"Tuner: pitch graph in the dial", `tools-practice-timer.md` "A step's tool opens when the step
+starts", `shed-log.md` "The day timer stops with the task that started it").
+
+**Tuner: pitch graph in the dial.**
+- `lib/tunerEngine.ts` keeps a 12 s history of heard frames (`getTunerHistory()`: `t` from
+  `Date.now()`, unsmoothed cents, after the two-frame check), cleared when listening starts; it's
+  not in the snapshot.
+- `components/TunerDialGraph.tsx` draws it with react-native-svg (already installed): the last 5 s,
+  ±50 cents clamped, the ±8 band shaded, ±25 dashed, "now" at 86% with a dot, one line per run on a
+  note (broken by a gap over 0.12 s), coloured by its median. It draws in pixels from `onLayout`
+  rather than a stretched `viewBox` (so the dot is a plain `Circle` and strokes don't need
+  `vectorEffect`). It polls on `requestAnimationFrame` at most every 33 ms while listening, in its
+  own state, and skips redraws while nothing's been heard in the window; after Stop it holds.
+- `TunerDial`'s `tight`: the middle stacks from the top with less padding and `overflow: hidden`
+  with the round corners, so the graph is clipped to the circle. The tuning colours and
+  `centsColor` moved from the screen into `TunerDial.tsx` (exported) so the graph shares them.
+- Setting `dialGraph` (off by default, the website's key, so it syncs): a fourth chip, **Pitch
+  graph**, a toggle chip whose sheet has "Pitch graph in the dial". With it on, the readout is
+  smaller at a fixed height (letter, then "cents · Hz" on one line; "Play a note…" while listening).
+- The phone's Tuner has no takes, so the graph is always live.
+
+**A step's tool opens when it starts (Practice Timer and Shed Log).**
+- `lib/practiceTimerEngine.ts`: `onStepTool(listener)`; `loadStep` calls the listeners with the
+  step's `tool` only when `chime` is true (start, skip, auto-advance, Continue after an alarm),
+  never when a run is restored as the app reopens.
+- `lib/useOpenStepTools.ts`, mounted in `PracticeTimerAlert` (once, app-wide, as on the website):
+  maps the href through `currentToolHref` (retired hrefs), checks it's a known tool, and
+  `router.push(toolRoute(href))` (`ToolGrid`'s mapping, so tab tools go to their tabs), unless
+  `usePathname()` is already that route. Off when `openTools` is false.
+- `lib/practiceTimerSound.ts`: the timer's synced sound settings key and defaults, now with
+  `openTools: true` (the website's field). The timer screen imports it; `usePracticeLog.ts` still
+  has its own copy of the key (left alone, another agent was working nearby).
+- Practice Timer: a **Tools** toggle chip ("Open each step's tool"). The session editor has an
+  "Opens" dropdown on each step ("No tool", then the same tools as the website's list: everything
+  but Community, Library, Chord Charts, Shed Log and the timer); "No tool" removes the key rather
+  than saving it empty; a long name shows its short name on the button.
+- `usePracticeLog.ts`'s `startRoutine` / `startDayTasks` give each step the task's first tool
+  attachment (`taskTool`; for routines, that day's `taskAttachments` count too, after the task's own).
+
+**The day timer stops with the task that started it.**
+- `lib/dayStopwatch.ts`: `startDayTimer(byTask)` sets `byTask` (kept through flushes and the saved
+  copy); `dayTimerStartedByTask()`. A running day timer is left as it was.
+- `startRoutine` / `startDayTasks` call `startDayTimer(true)`; the day timer card's Start now calls
+  `startDayTimer()` through an arrow (it was `onPress={startDayTimer}`, which would have passed the
+  press event as `byTask`).
+- `ShedLogGlobal` watches the engine like the website's `PracticeLogGlobal`: resuming a linked run
+  restarts the day timer (by the task); a linked run that was going and is then paused, stopped,
+  finished or replaced by a plain session pauses it if `dayTimerStartedByTask()`.
+
+Verified: `npx tsc --noEmit` in `apps/mobile` (the only errors were in another agent's new
+`lib/shedLogPages.ts`, a typed route not generated yet — none in these files); `npx eslint` on every
+changed file (clean); `npx expo export --platform android` bundled. A Node script against the real
+`stepAt` checked the task-tool mapping (first tool wins, a day's attachment counts, a retired href
+is passed through for the hook to map) and a copy of the watcher's logic through start → pause →
+resume → stop, a hand-started day timer surviving a task's start and stop, and a plain session
+replacing a linked run. **Not verified at all on a device or the emulator** (none was run this
+session): how the graph looks and how smooth it is on a phone, the readout's sizes in the dial,
+Android clipping the graph to the circle, a tool actually opening when a step starts (including from
+the background or with the editor open), the Tools and Pitch graph chips at 390 wide, saving a
+session with a tool signed in (the Convex validator has `tool` on dev; prod gets it with the next
+production deploy), the day timer pausing with a real run, and anything by ear.
+
+## 2026-11-22 — Routine and task screens, recordings that say where they're from
+
+The website's routine and task pages (`shed-log.md`, every 2026-11-22 section from "Routine and
+task pages" to "Redesign of the routine and task pages") on the phone. No side view on a phone:
+they're normal stacked screens with the header's back button, so Back returns to the Shed Log
+where you were.
+
+**Ways in.** A task's name on a routine card or in the day's tasks opens its screen; only the box
+ticks it off (`TaskCheck`'s `onOpen` in `components/shedLog/parts.tsx`: the box is its own padded
+target, the name and its line another). A routine's name or icon on its card opens its screen for
+that day. A recording's "Bass / Scales" line opens the task. A note's "Attached to" a routine or
+task (`LinksSection`'s `targetRoute`) now opens those screens instead of the Shed Log.
+Routes are built in `lib/shedLogPages.ts` (`routineRoute`, `taskRoute`).
+
+**Task screen** (`app/tool/shed-log-task.tsx`, new; `?routine=&task=&date=` or `?date=&task=`,
+`&from=routine` when opened from the routine's screen). The header has the name and one line of
+facts ("10 min · Every Sunday", or the day for a day's task) and Edit (the routine editor; not for
+a teacher's routine). The header pattern is the tune and setlist screens' (title over a muted line,
+icon buttons on the right) in `PageHeader`, `components/shedLog/pageParts.tsx`; the running
+timer's header pill is kept there. Under it a pill with the routine's icon and name (or the day)
+opens the routine: Back when it came from there, else the routine's screen for that day. Then the
+day panel on one card: a big box with "Done today" / "Not done today yet", the time logged and
+planned, a bar of one against the other, one primary **Start · 10 min** (hidden on past days; adds
+the routine to the day first if it isn't on it) or the running timer with pause/skip/stop in its
+place (`RunningTimer`, pulled out of `RoutineCard`), **Log time** (the Shed Log's own
+`LogTimeSheet` on this task), the checklist (per day through `Occurrence.subDone` for a routine
+task, on the task for a day's task) and Attached: the task's own attachments, then the day's,
+editable (`Occurrence.taskAttachments[taskId]`, or the day task's own). Then Notes, Recordings
+(with Record in the section header) and History (routine tasks: days checked off or timed, each
+opening that day in the Shed Log). No stats row and no Arrange (Jack dropped the stats on the web;
+arranging sections isn't worth it on a phone).
+
+**Routine screen** (`app/tool/shed-log-routine.tsx`, restructured). Header: name and "Every Sunday
+· 8:00 AM · 20 min · 2 tasks", Share and Edit. Then the teacher line and description if there are
+any; that day's card (`RoutineCard embedded`: no icon or name, no minutes or repeat, no "Open
+routine" in its ⋮; its tasks open their screens with `from=routine`), or "It isn't on today" with
+"Add it to today"; Notes; Coming up; Recordings on other days (grouped by day, each day opening it
+in the Shed Log); History (x/y and time on the right, the old day notes under the date). The old
+Tasks list and "Start today" button are gone: the card has them.
+
+**Notes** (`PageNotes` / `NotePreview` in `pageParts.tsx`, `lib/taskNotes.ts`). The main attached
+note shows as a preview card: its first written lines (not headings or `![…](file:…)` player
+lines; checked with a node script), its title, how many recordings are in it, Open. Others are rows.
+With none, "Start notes" makes it and opens it in the Shed Notes note screen to write. A task's note
+is attached to its `task` / `dayTask` target, titled "<Routine> · <Task>" ("<Task> · Nov 22" for a
+day's task), starts with `TASK_NOTE_START`, and for a routine task `- [[title]]` is appended to the
+routine's own note when it has one (`appendLine`; a failure there doesn't stop the note being made).
+A routine's new note (`routineNotes`) starts with "## Tasks" and a link to each task note there
+already. `useTaskNoteActions` reads the attached notes with `useConvex().query` at the moment it
+needs them, so the save screen can use it too.
+
+**Recordings.**
+- `components/shedLog/RecordClip.tsx` records in place with the Recorder's engine (no metronome,
+  the Recorder's Auto gain setting): Record, then the take's time and Stop; stopping opens the save
+  screen with `logDate`, `routineId` and `taskId`. One take at a time (Record is greyed out while
+  the Recorder or another task is recording); which clip started the take is a tiny module store,
+  so the right screen shows Stop after you've been away.
+- `app/recordings/save.tsx` names such a take after what it's for ("Scales · Nov 22, 12:09 PM"),
+  shows "For the task Scales · Bass" (or "For the routine"), saves `logDate`/`routineId`/`taskId`,
+  puts a task's player into its note (`shedNotes.addRecording`, or a new note with it) and goes back
+  to the screen it came from.
+- `RecordingRow` shows where a take is from (`components/recordings/RecordingPlace.tsx`: "Bass /
+  Scales", "Bass", "Nov 22 / Transcribe"), which opens the task or routine; `hidePlace` on the
+  task's own screen, `placeWithin` inside a routine (just the task's name). It also stops repeating
+  the day when the name has it. The place shows on the recording's own screen too. Everywhere else
+  recordings are listed (the Recorder's recent takes, a tune's page) gets it from the row.
+- The Shed Log's routine cards now show that day's clips and Record (`DayPanel` queries
+  `listForLogRange` for the day; the website's card does the same). The routine screen passes its
+  own. Every list goes through `useDeviceUrls`, so a clip kept on this phone plays.
+- `lib/recordings.ts`'s `Recording` type gained `logDate`, `routineId`, `taskId` (Convex already
+  returns them).
+
+**Attachments** (`components/shedLog/Attachments.tsx`, new — the phone had no attachment picker):
+chips that open the tune, setlist, chart or tool; with `onChange` a × each and an Attach button
+opening a sheet with Tunes / Setlists / Charts / Tools tabs, a search and tick rows (charts load only
+on their tab). The routine card now also shows each task's attachments (its own and that day's)
+and the routine's; the day's tasks show theirs.
+
+**Verified:** `npx tsc --noEmit` in `apps/mobile` (after regenerating typed routes with a short
+`CI=1 npx expo start --offline`), `npx eslint` on every changed file, `npx expo export --platform
+android` bundles. The note preview text and the date-in-name check with a node script.
+**Not verified at all:** nothing was run on a device or the emulator, so none of this has been seen
+or tapped — the layouts at 390 wide, light/dark, the box vs name touch targets, the header with a
+long title, recording and saving a clip (mic permission, the player line landing in the note),
+attaching for a day, the Shed Notes link in the routine's note, the timer block on the task screen,
+a clip kept on the phone playing, and Back landing where it should.
+
+### Seen on the emulator (2026-11-22, after both ports above)
+
+Debug build (no native changes, so the existing debug APK with Metro), AVD `sheddex`, signed in with a
+throwaway dev account (deleted) whose routine "Bass" (Scales, Arpeggios) was made on the website:
+the Tuner with "Pitch graph in the dial" on (the band and lines draw in the dial; no sound on the
+emulator, so no trace); the Shed Log card (a task's box ticks it, its name opens the task screen);
+the task screen (Bass pill, day panel with Start · 10 min and Log time, Attach for today, Start
+notes, Recordings, History); its box → "Done today"; the routine screen (Today card without the
+title, Notes, Coming up, History "2/2 · 20 min"); Start notes → "Bass · Scales" opening with
+"## Notes". Not seen: recording a clip (the emulator has no mic), a tool opening when a step starts,
+the day timer with a real run, dark mode.

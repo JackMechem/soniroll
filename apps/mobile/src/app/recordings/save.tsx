@@ -6,13 +6,15 @@ import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { LinkIcon, UnlinkIcon } from '@/components/icons';
+import { LinkIcon, RepeatIcon, UnlinkIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PlayButton, SeekBar, TuneSelectModal, useRecordingPlayer, useTuneIndex } from '@/components/recordings/RecordingParts';
 import { withScreenLoader } from '@/components/ScreenLoader';
 import { errorText, placeFile, unplace, useSaveTarget } from '@/lib/files';
 import { RECORDING_MIME, deleteLocalTake, formatRecordedAt, recordingsApi } from '@/lib/recordings';
+import { recordingEmbed, useTaskNoteActions } from '@/lib/taskNotes';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { usePracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { TextInput } from '@/components/ThemedTextInput';
@@ -22,12 +24,16 @@ import { TextInput } from '@/components/ThemedTextInput';
  * recorded from a tune's page), then Save keeps it with the account: online with a storage plan, on
  * this phone without one (`placeFile`). Leaving any other way asks first — until it's saved, the
  * take is only a temporary file.
+ *
+ * Recorded on a Shed Log screen (`?logDate=…&routineId=…&taskId=…`), it's for that routine or
+ * task: named after it ("Scales · Nov 22, 12:09 PM"), saved with them, and a task's take goes into
+ * the task's notes (its player under "## Recordings", or a new note with it). Save goes back there.
  */
 function SaveRecordingScreen() {
   const bottomSpace = useTabBarSpace();
   const { colors } = useAppTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ uri: string; duration?: string; tuneId?: string }>();
+  const params = useLocalSearchParams<{ uri: string; duration?: string; tuneId?: string; logDate?: string; routineId?: string; taskId?: string }>();
   const durationSec = Number(params.duration) || 0;
   const { byId } = useTuneIndex();
   const generateUploadUrl = useMutation(recordingsApi.generateUploadUrl);
@@ -36,6 +42,20 @@ function SaveRecordingScreen() {
   const forTune = useQuery(recordingsApi.listForTune, params.tuneId ? { tuneId: params.tuneId } : 'skip');
   const player = useRecordingPlayer();
   const keyboard = useKeyboardHeight();
+  const log = usePracticeLog();
+  const taskNotes = useTaskNoteActions();
+
+  // The Shed Log routine or task it's for (a task only with its day, as the server keeps it).
+  const logDate = params.logDate || null;
+  const routineId = logDate ? params.routineId || null : null;
+  const taskId = logDate ? params.taskId || null : null;
+  const routine = routineId ? log.data.routines.find((r) => r.id === routineId) : undefined;
+  const task = taskId && logDate
+    ? routineId
+      ? (routine?.tasks.find((t) => t.id === taskId) ?? log.data.days[logDate]?.routines?.[routineId]?.extraTasks?.find((t) => t.id === taskId))
+      : log.data.days[logDate]?.tasks?.find((t) => t.id === taskId)
+    : undefined;
+  const placeName = taskId ? task?.title || 'Task' : routineId ? routine?.name || 'Routine' : undefined;
 
   const [recordedAt] = useState(() => Date.now());
   const [tuneId, setTuneId] = useState<string | null>(params.tuneId ?? null);
@@ -47,8 +67,9 @@ function SaveRecordingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  // Default name: "Take N" for a tune's recording, else the date and time.
-  const defaultName = params.tuneId && forTune ? `Take ${forTune.length + 1}` : formatRecordedAt(recordedAt);
+  // Default name: "Take N" for a tune's recording, else what it's for and when, else when.
+  const defaultName =
+    params.tuneId && forTune ? `Take ${forTune.length + 1}` : placeName ? `${placeName} · ${formatRecordedAt(recordedAt)}` : formatRecordedAt(recordedAt);
   const shownName = nameTouched ? name : defaultName;
   const tune = tuneId ? byId.get(tuneId)?.tune : undefined;
 
@@ -78,13 +99,21 @@ function SaveRecordingScreen() {
           durationSec,
           mimeType: RECORDING_MIME,
           ...(tuneId ? { tuneId } : {}),
+          ...(logDate ? { logDate, ...(routineId ? { routineId } : {}), ...(taskId ? { taskId } : {}) } : {}),
         });
       } catch (e) {
         unplace(placed);
         throw e;
       }
       deleteLocalTake(params.uri);
-      if (params.tuneId) router.dismiss(2); // back to the tune's page, past the recorder
+      // A task's take goes in its notes too. The recording is saved either way.
+      if (taskId && logDate) {
+        await taskNotes
+          .addRecordingLine({ routineId, taskId, date: logDate, routineName: routine?.name, taskTitle: task?.title ?? '' }, recordingEmbed(shownName, id))
+          .catch(() => undefined);
+      }
+      if (logDate) router.back(); // back to the routine's or task's screen it was recorded on
+      else if (params.tuneId) router.dismiss(2); // back to the tune's page, past the recorder
       else router.replace({ pathname: '/recordings/[id]', params: { id } });
     } catch (e) {
       setSaving(false);
@@ -156,6 +185,25 @@ function SaveRecordingScreen() {
             style={{ backgroundColor: colors.surface, color: colors.foreground }}
           />
         </View>
+
+        {placeName ? (
+          <View className="gap-1.5">
+            <Text className={label} style={{ color: colors.muted }}>
+              {taskId ? 'For the task' : 'For the routine'}
+            </Text>
+            <View className="flex-row items-center gap-3 rounded-2xl px-4 py-3" style={{ backgroundColor: colors.surface }}>
+              <RepeatIcon color={colors.accent} size={18} />
+              <Text numberOfLines={1} className="font-ui flex-1 text-base" style={{ color: colors.foreground }}>
+                {placeName}
+                {taskId && routine ? (
+                  <Text className="font-ui text-base" style={{ color: colors.muted }}>
+                    {` · ${routine.name || 'Routine'}`}
+                  </Text>
+                ) : null}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <View className="gap-1.5">
           <Text className={label} style={{ color: colors.muted }}>

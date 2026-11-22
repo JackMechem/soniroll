@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { CalendarCheckIcon, CloseIcon, LessonsIcon, LinkIcon, MusicNoteIcon } from '@/components/icons';
 import { NoteDocIcon } from '@/components/shedNotes/icons';
+import { routineRoute, taskRoute } from '@/lib/shedLogPages';
 import type { NoteMeta } from '@/lib/useShedNotes';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -17,8 +18,10 @@ export function targetRoute(target: string): Href | null {
   if (!t) return null;
   if (t.kind === 'tune') return { pathname: '/library/tune', params: { id: t.tuneId } };
   if (t.kind === 'lesson') return null;
-  // Routine and task pages aren't on the phone yet.
-  if (t.kind === 'routineNotes' || t.kind === 'task') return { pathname: '/tool/shed-log', params: {} };
+  // A routine's and a task's own screens.
+  if (t.kind === 'routineNotes') return routineRoute(t.routineId);
+  if (t.kind === 'task') return taskRoute({ routineId: t.routineId, taskId: t.taskId });
+  if (t.kind === 'dayTask') return taskRoute({ date: t.date, taskId: t.taskId });
   return { pathname: '/tool/shed-log', params: { date: t.date } };
 }
 
@@ -117,7 +120,7 @@ export function LinksSection({
                 icon: <Icon color={colors.muted} size={18} />,
                 title: a.label,
                 // The Shed Log is a tab: switch to it (with the day) rather than stacking a second one.
-                onPress: route ? () => (a.target.startsWith('day:') ? router.navigate(route) : router.push(route)) : undefined,
+                onPress: route ? () => (/^day:[^/]+(\/routine:|$)/.test(a.target) ? router.navigate(route) : router.push(route)) : undefined,
                 right: (
                   <Pressable
                     onPress={() => void detach({ noteId: note.id as Id<'shedNotes'>, target: a.target })}

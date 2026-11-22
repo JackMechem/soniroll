@@ -8,15 +8,17 @@ import { queueLogEntry, setDayTimerCoverage } from '@/lib/practiceLogQueue';
 /**
  * The day timer — the native sibling of the website's `lib/dayStopwatch.ts`: a stopwatch for the
  * whole day's practice, separate from the routine / task timer (the Practice Timer engine). Start
- * it on its own, or it starts itself when a routine or task timer starts; it keeps going while
- * those run and stop. Kept on the phone (`jam-practice-day-stopwatch`, the website's key), so it
+ * it on its own, or it starts itself when a routine or task timer starts; started that way it
+ * stops again when that run does (paused, stopped, finished or replaced; `ShedLogGlobal`), while one
+ * started on its own keeps going. Kept on the phone (`jam-practice-day-stopwatch`, the website's key), so it
  * keeps running while the app is closed: it's a start time, not a ticking count. Its time is
  * handed to the Shed Log every 30 seconds, on pause and when the app goes to the background, as
  * `DAY_STOPWATCH_ID` entries (`applyTimerEntries` adds them to the day's `stopwatchMs`). It stops
  * itself at midnight. Each device has its own (as each browser does on the website).
  */
 
-type State = { date: string; running: boolean; since: number };
+/** `byTask`: a routine or task timer started it, so it stops when that does. */
+type State = { date: string; running: boolean; since: number; byTask?: boolean };
 
 const KEY = 'jam-practice-day-stopwatch';
 const FLUSH_MS = 30000;
@@ -116,12 +118,13 @@ function getSnapshot(): State | null {
   return state;
 }
 
-/** Starts (or resumes) today's day timer. */
-export function startDayTimer() {
+/** Starts (or resumes) today's day timer. `byTask`: a routine or task timer is starting it (an
+    already running day timer stays as it was, so one you started yourself stays yours). */
+export function startDayTimer(byTask = false) {
   ensureLoaded();
   if (state?.running && state.date === todayKey()) return;
   if (state?.running) flush();
-  state = { date: todayKey(), running: true, since: Date.now() };
+  state = { date: todayKey(), running: true, since: Date.now(), ...(byTask ? { byTask: true } : {}) };
   startTicking();
   save();
   notify();
@@ -146,6 +149,12 @@ export function discardDayTimer() {
   stopTicking();
   save();
   notify();
+}
+
+/** Whether the running day timer was started by a routine or task timer. */
+export function dayTimerStartedByTask(): boolean {
+  ensureLoaded();
+  return !!state?.running && !!state.byTask;
 }
 
 /** The day timer's state: which day it's running for (or null when it isn't), and when its time

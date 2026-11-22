@@ -7,6 +7,7 @@ import { FullScreenModal } from '@/components/FullScreenModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SearchField } from '@/components/ChordChartList';
+import { RecordingPlace } from '@/components/recordings/RecordingPlace';
 import { CheckIcon, CloseIcon, LinkIcon, PauseIcon, PlayIcon } from '@/components/icons';
 import { formatDuration, formatRecordedDay, type Recording } from '@/lib/recordings';
 import { allTunes, TUNE_LIST_LABEL, useTuneLists, type TuneListId } from '@/lib/useTuneList';
@@ -114,29 +115,38 @@ export function SeekBar({
 
 /** What a row needs — your own `Recording`, or one shared with you in a setlist (`PublicRecording`
     mapped to `_id`). */
-type PlayableRecording = Pick<Recording, 'name' | 'durationSec' | 'createdAt' | 'url' | 'device'> & { _id: string };
+type PlayableRecording = Pick<Recording, 'name' | 'durationSec' | 'createdAt' | 'url' | 'device'> &
+  Partial<Pick<Recording, 'logDate' | 'routineId' | 'taskId'>> & { _id: string };
 
-/** A recording in a list: play/pause, name, date · length (· tune), and a seek bar while it's
-    the one playing. Tapping the row itself opens it (when `onOpen` is given — your own only). */
+/** A recording in a list: play/pause, name, length · date (· tune), where in the Shed Log it was
+    made (`RecordingPlace`: "Bass / Scales", which opens that task), and a seek bar while it's the
+    one playing. Tapping the row itself opens it (when `onOpen` is given — your own only). The date
+    isn't repeated under a name that already has it ("Scales · Nov 22, 12:09 PM").
+    `hidePlace`: on that task's own screen. `placeWithin`: inside that routine (its name left out). */
 export function RecordingRow({
   recording,
   tuneName,
   player,
   onOpen,
   background,
+  hidePlace,
+  placeWithin,
 }: {
   recording: PlayableRecording;
   tuneName?: string | null;
   player: RecordingPlayer;
   onOpen?: () => void;
   background?: string;
+  hidePlace?: boolean;
+  placeWithin?: string;
 }) {
   const { colors } = useAppTheme();
   const active = player.activeKey === recording._id;
   // Kept on another device (a free account's take saved on the website or another phone): it
   // plays only there.
   const elsewhere = !recording.url && recording.device ? recording.device.label : null;
-  const detail = [formatDuration(recording.durationSec), formatRecordedDay(recording.createdAt), tuneName, elsewhere ? `On ${elsewhere}` : null].filter(Boolean).join(' · ');
+  const day = formatRecordedDay(recording.createdAt);
+  const detail = [formatDuration(recording.durationSec), new RegExp(`\\b${day}\\b`).test(recording.name) ? null : day, tuneName, elsewhere ? `On ${elsewhere}` : null].filter(Boolean).join(' · ');
   return (
     <View className="gap-2 rounded-xl p-3" style={{ backgroundColor: background ?? colors.surface }}>
       <View className="flex-row items-center gap-3">
@@ -150,6 +160,7 @@ export function RecordingRow({
           <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
             {detail}
           </Text>
+          {!hidePlace ? <RecordingPlace routineId={recording.routineId} taskId={recording.taskId} logDate={recording.logDate} within={placeWithin} /> : null}
         </Pressable>
       </View>
       {active ? (

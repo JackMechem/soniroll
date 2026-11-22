@@ -1,4 +1,3 @@
-import { formatClock } from '@jam-practice/core/practiceTimer';
 import {
   describeRepeat,
   formatMinutesShort,
@@ -24,28 +23,52 @@ import {
   CheckIcon,
   CloseIcon,
   DotsVerticalIcon,
-  PauseIcon,
   PencilIcon,
   PlayIcon,
   PlusIcon,
   RepeatIcon,
   SkipForwardIcon,
-  StopIcon,
   StopwatchIcon,
 } from '@/components/icons';
+import { RecordingRow, type RecordingPlayer } from '@/components/recordings/RecordingParts';
+import { AttachmentChips } from '@/components/shedLog/Attachments';
+import { RecordClip } from '@/components/shedLog/RecordClip';
+import { RunningTimer } from '@/components/shedLog/RunningTimer';
 import { Bar, Field, GhostIcon, RoutineIcon, SmallButton, TaskCheck, routineColor, useSuccess } from '@/components/shedLog/parts';
 import { AttachedNotes } from '@/components/shedNotes/AttachedNotes';
 import { LogTimeSheet, RoutineTimeSheet, type LogTarget } from '@/components/shedLog/sheets';
 import { Subtasks } from '@/components/shedLog/Subtasks';
-import { pause, resume, skip, stop, type EngineState } from '@/lib/practiceTimerEngine';
-import { useNow, useNowCoarse, useToday } from '@/lib/useClock';
+import type { Recording } from '@/lib/recordings';
+import { routineRoute, taskRoute } from '@/lib/shedLogPages';
+import { useNowCoarse, useToday } from '@/lib/useClock';
 import { useRoutineTimer, type PracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 
 /** One routine on one day (the website's `RoutineCard`): its tasks to check off (with when each
     one is), Start (runs it on the Practice Timer), a task just for that day, and ⋮ (open, edit,
-    set a time, skip, check every task, remove). On a day that's gone, Log time instead of Start. */
-export function RoutineCard({ date, item, log }: { date: string; item: DayRoutine; log: PracticeLog }) {
+    set a time, skip, check every task, remove). On a day that's gone, Log time instead of Start.
+    The routine's name opens its screen for that day; a task's name opens the task's screen (only
+    its box ticks it off). With `recordings` (that day's; the card picks its own), its clips and a
+    Record button. `embedded`: on the routine's own screen, without its icon and name, minutes or
+    repeat (the screen's title has them). */
+export function RoutineCard({
+  date,
+  item,
+  log,
+  embedded,
+  onOpenTask,
+  recordings,
+  player,
+}: {
+  date: string;
+  item: DayRoutine;
+  log: PracticeLog;
+  embedded?: boolean;
+  /** Opens a task (tapping its name): its screen for this day unless given. */
+  onOpenTask?: (taskId: string) => void;
+  recordings?: Recording[];
+  player?: RecordingPlayer;
+}) {
   const { colors } = useAppTheme();
   const success = useSuccess();
   const router = useRouter();
@@ -79,10 +102,12 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
   const [newTitle, setNewTitle] = useState('');
   const setExtra = (fn: (list: RoutineTask[]) => RoutineTask[]) => log.updateOccurrence(date, routine.id, (o) => ({ ...o, extraTasks: fn(o.extraTasks ?? []) }));
   const logTask = (task: RoutineTask) => setLogging({ target: { kind: 'routine', routineId: routine.id, taskId: task.id }, minutes: task.minutes || undefined });
-  const open = () => router.push({ pathname: '/tool/shed-log-routine', params: { id: routine.id } });
+  const open = () => router.push(routineRoute(routine.id, date));
+  const openTask = (taskId: string) => (onOpenTask ? onOpenTask(taskId) : router.push(taskRoute({ routineId: routine.id, taskId, date })));
+  const mine = recordings?.filter((r) => r.routineId === routine.id) ?? [];
 
   const actions: SheetAction[] = [
-    { key: 'open', icon: <RepeatIcon color={colors.muted} size={20} />, label: 'Open routine', onPress: open },
+    ...(!embedded ? [{ key: 'open', icon: <RepeatIcon color={colors.muted} size={20} />, label: 'Open routine', onPress: open }] : []),
     ...(!routine.assigned
       ? [{ key: 'edit', icon: <PencilIcon color={colors.muted} size={20} />, label: 'Edit routine', onPress: () => router.push({ pathname: '/tool/shed-log-routine-edit', params: { id: routine.id } }) }]
       : []),
@@ -131,9 +156,10 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
 
   const details = [
     span ? `${formatTime(span.start)} – ${formatTime(span.end)}` : 'Any time',
-    formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
-    added ? 'Added to this day' : describeRepeat(routine.repeat),
-  ];
+    // On its own screen the title already says how long and how often.
+    !embedded && formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0)),
+    added ? 'Added to this day' : !embedded && describeRepeat(routine.repeat),
+  ].filter(Boolean);
   const statusText = skipped ? 'Skipped' : status === 'missed' ? 'Missed' : status === 'partial' ? 'Partly done' : null;
 
   return (
@@ -143,14 +169,18 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
     >
       <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: color }} />
       <View className="flex-row items-start gap-3">
-        <Pressable onPress={open} accessibilityRole="link" accessibilityLabel={`Open ${routine.name || 'routine'}`}>
-          <RoutineIcon icon={routine.icon} color={routine.color} size={34} />
-        </Pressable>
-        <Pressable onPress={open} className="flex-1">
-          <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground, textDecorationLine: skipped ? 'line-through' : 'none' }}>
-            {routine.name || 'Untitled routine'}
-          </Text>
-          {routine.assigned ? (
+        {!embedded ? (
+          <Pressable onPress={open} accessibilityRole="link" accessibilityLabel={`Open ${routine.name || 'routine'}`}>
+            <RoutineIcon icon={routine.icon} color={routine.color} size={34} />
+          </Pressable>
+        ) : null}
+        <Pressable onPress={open} disabled={embedded} className="flex-1">
+          {!embedded ? (
+            <Text numberOfLines={1} className="font-ui-semibold text-base font-semibold" style={{ color: colors.foreground, textDecorationLine: skipped ? 'line-through' : 'none' }}>
+              {routine.name || 'Untitled routine'}
+            </Text>
+          ) : null}
+          {routine.assigned && !embedded ? (
             <Text className="font-ui text-[11px]" style={{ color: colors.muted }}>
               From {routine.assigned.teacher}
             </Text>
@@ -183,29 +213,7 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
       ) : null}
 
       {engine && running ? (
-        <View className="flex-row items-center gap-3 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
-          <RunClock engine={engine} />
-          <View className="flex-1">
-            <Text className="font-ui-semibold text-xs font-semibold" style={{ color: engine.alarming ? colors.danger : colors.muted }}>
-              {engine.alarming ? "Time's up" : engine.paused ? 'Paused' : 'Now'}
-            </Text>
-            <Text numberOfLines={1} className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
-              {engine.current.title}
-            </Text>
-            <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>
-              {engine.next ? `Next: ${engine.next.title}` : 'Last task'}
-            </Text>
-          </View>
-          {engine.alarming ? (
-            <GhostIcon Icon={PlayIcon} label="Continue" onPress={skip} color={colors.accent} size={22} />
-          ) : engine.paused ? (
-            <GhostIcon Icon={PlayIcon} label="Resume" onPress={resume} color={colors.accent} size={22} />
-          ) : (
-            <GhostIcon Icon={PauseIcon} label="Pause" onPress={pause} color={colors.foreground} size={22} />
-          )}
-          {!engine.alarming ? <GhostIcon Icon={SkipForwardIcon} label="Skip — don't check it off" onPress={skip} color={colors.foreground} size={22} /> : null}
-          <GhostIcon Icon={StopIcon} label="Stop" onPress={stop} color={colors.danger} size={22} />
-        </View>
+        <RunningTimer engine={engine} />
       ) : !skipped && firstOpen ? (
         <View className="flex-row">
           {past ? (
@@ -237,6 +245,7 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
                     color={color}
                     badge={extra ? 'Today only' : undefined}
                     onToggle={() => log.toggleTask(date, routine.id, task.id)}
+                    onOpen={() => openTask(task.id)}
                     meta={[start !== null && formatTime(start), formatMinutesShort(task.minutes), !!spent && `${formatMinutesShort(spent / 60000)} logged`]}
                   />
                   <View style={{ paddingLeft: 36 }}>
@@ -265,6 +274,12 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
                       <Text className="font-ui mt-0.5 text-xs" style={{ color: colors.muted }}>
                         {task.notes}
                       </Text>
+                    ) : null}
+                    {/* Its own attachments and the ones for just this day (added on its screen). */}
+                    {(task.attachments?.length ?? 0) + (occurrence.taskAttachments?.[task.id]?.length ?? 0) > 0 ? (
+                      <View className="mt-1.5">
+                        <AttachmentChips items={[...(task.attachments ?? []), ...(occurrence.taskAttachments?.[task.id] ?? [])]} compact />
+                      </View>
                     ) : null}
                   </View>
                 </View>
@@ -333,10 +348,32 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
         )
       ) : null}
 
+      {routine.attachments?.length ? <AttachmentChips items={routine.attachments} /> : null}
+
       {occurrence.notes ? (
         <Text className="font-ui text-sm" style={{ color: colors.muted }}>
           {occurrence.notes}
         </Text>
+      ) : null}
+      {/* That day's clips for it (made on it, or on one of its tasks), and Record. */}
+      {recordings && player ? (
+        <View className="gap-2">
+          {[...mine]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map((r) => (
+              <RecordingRow
+                key={r._id}
+                recording={r}
+                player={player}
+                placeWithin={routine.id}
+                background={colors.background}
+                onOpen={() => router.push({ pathname: '/recordings/[id]', params: { id: r._id } })}
+              />
+            ))}
+          <View className="flex-row">
+            <RecordClip date={date} routineId={routine.id} />
+          </View>
+        </View>
       ) : null}
       {/* Shed Notes on this routine for this day (the website's Add notes). */}
       <AttachedNotes
@@ -360,20 +397,6 @@ export function RoutineCard({ date, item, log }: { date: string; item: DayRoutin
           setConfirming(null);
         }}
       />
-    </View>
-  );
-}
-
-/** The running task's time left, ticking. */
-function RunClock({ engine }: { engine: EngineState }) {
-  const { colors } = useAppTheme();
-  const now = useNow(!engine.paused && !engine.alarming);
-  const left = engine.alarming ? 0 : engine.paused ? (engine.remainingMsAtPause ?? 0) : Math.max(0, engine.durationMs - (now - engine.startedAt));
-  return (
-    <View className="h-12 min-w-[60px] items-center justify-center rounded-lg px-2" style={{ backgroundColor: engine.alarming ? withAlpha(colors.danger, 0.14) : withAlpha(colors.accent, 0.12) }}>
-      <Text className="font-ui-bold text-lg font-bold" style={{ color: engine.alarming ? colors.danger : colors.accent, fontVariant: ['tabular-nums'] }}>
-        {formatClock(left)}
-      </Text>
     </View>
   );
 }
