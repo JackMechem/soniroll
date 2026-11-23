@@ -1,0 +1,5 @@
+jRhodes3d by Jeff Learman (1977 Rhodes Mark I Stage 73), https://github.com/sfzinstruments/jlearman.jRhodes3d
+Samples licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): credit must be given to the creator.
+Samples are from jRhodes3d - https://github.com/sfzinstruments/jlearman.jRhodes3d (credited on soniroll.com/credits).
+Converted from the mono FLAC set: layers 2-4, the first 8 s with a 1.5 s fade, mono MP3 (VBR -q:a 2).
+File names: <midi>_<layer>.mp3 (jRhodes3d's layer 1 is the hardest hit, 5 the softest).

@@ -2,24 +2,27 @@ import { noteToFrequency } from "@/lib/noteRange";
 
 /**
  * Real recorded instrument samples for the "Piano" and "Rhodes" tones, replacing what used to be
- * from-scratch Web Audio synthesis (`lib/tones.ts`'s old `pianoTone`/`rhodesTone`) — this app's
- * first actual audio *assets*. Samples aren't bundled in the repo; they're fetched from their
- * origin CDN the first time a given note is actually needed (matching a normal browser's own HTTP
- * caching after that — no bespoke persistence layer needed here) and decoded once into an
- * `AudioBuffer`, then reused for every later play of that exact sample. A requested note that
+ * from-scratch Web Audio synthesis (`lib/tones.ts`'s old `pianoTone`/`rhodesTone`). The piano is
+ * fetched from the Tone.js project's CDN; the Rhodes is served by soniroll itself
+ * (`public/samples/rhodes/`, the same files Rhythm Section's chords use). Each sample is fetched
+ * the first time a given note is actually needed (the browser's own HTTP cache covers later
+ * visits — no bespoke persistence layer needed here) and decoded once into an `AudioBuffer`, then
+ * reused for every later play of that exact sample. A requested note that
  * doesn't have its own recording gets the *nearest* recorded one, pitch-shifted via
  * `playbackRate` up or down to the exact target frequency — continuous, not limited to semitone
  * steps, the same as the synthesized tones could render any frequency exactly.
  *
- * Both sets are CC-BY 3.0 — attribution lives on `/credits`, linked from the site footer.
+ * The piano is CC BY 3.0 and the Rhodes CC BY 4.0 — attribution lives on `/credits`, linked from
+ * the site footer.
  */
 
 type SampleNote = { note: string; freq: number; file: string };
-type SampleSet = { baseUrl: string; notes: SampleNote[] };
+/** `gain` evens out the sets' recorded levels (the Rhodes files are normalized ~18 dB hotter than
+    the piano's). */
+type SampleSet = { baseUrl: string; notes: SampleNote[]; gain: number };
 export type SampledInstrumentId = "piano" | "rhodes";
 
 const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const FLAT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 
 /** This app's own note-name spelling (sharps, e.g. "C#4") for a MIDI note number, so each sample
     can be run through the same `noteToFrequency` every other note name in this app already uses. */
@@ -29,13 +32,6 @@ function midiToAppName(midi: number): string {
   return `${SHARP_NAMES[pc]}${octave}`;
 }
 
-/** The flat-spelled note name (e.g. "Db4") the electric piano set's own filenames use. */
-function midiToFlatName(midi: number): string {
-  const pc = ((midi % 12) + 12) % 12;
-  const octave = Math.floor(midi / 12) - 1;
-  return `${FLAT_NAMES[pc]}${octave}`;
-}
-
 function buildSampleNote(note: string, file: string): SampleNote {
   const freq = noteToFrequency(note);
   if (freq === null) throw new Error(`Invalid sample note name: ${note}`);
@@ -43,9 +39,8 @@ function buildSampleNote(note: string, file: string): SampleNote {
 }
 
 // Salamander Grand Piano (Alexander Holm, CC-BY 3.0), rendered to mp3 and hosted by the Tone.js
-// project. Sampled at A/C/D#/F# every octave from A0 to C8 (30 notes) — sparser than the electric
-// piano set below, so a played note further from its nearest sample gets pitch-shifted a bit
-// more, but still reads as a real piano rather than a synth.
+// project. Sampled at A/C/D#/F# every octave from A0 to C8 (30 notes), so a played note is never
+// more than a semitone and a half from its sample.
 const PIANO_SAMPLES: [note: string, file: string][] = [
   ["A0", "A0"],
   ["C1", "C1"], ["D#1", "Ds1"], ["F#1", "Fs1"], ["A1", "A1"],
@@ -58,29 +53,30 @@ const PIANO_SAMPLES: [note: string, file: string][] = [
   ["C8", "C8"],
 ];
 
-// FluidR3 GM SoundFont's "Electric Piano 1" (Rhodes-style) patch, converted to per-note mp3s by
-// the midi-js-soundfonts project (CC-BY 3.0). Sampled at every semitone across the same A0–C8
-// range (88 notes, the full range of an acoustic piano) — generated rather than hand-listed since
-// it's dense enough that typing 88 entries by hand would just be a typo risk for no benefit; the
-// pattern (every semitone, flat-spelled filenames) is exactly what the source hosts.
-const ELECTRIC_PIANO_SAMPLES: [note: string, file: string][] = (() => {
-  const pairs: [string, string][] = [];
-  for (let midi = 21; midi <= 108; midi++) {
-    // MIDI 21 = A0, 108 = C8 — the full 88-key range this set covers.
-    const flatName = midiToFlatName(midi);
-    pairs.push([midiToAppName(midi), flatName]);
-  }
-  return pairs;
-})();
+// jRhodes3d (Jeff Learman, CC BY 4.0): his 1977 Rhodes Mark I Stage 73, sampled every 4th white
+// key from F1 to C7 (MIDI 29–96 — the instrument itself runs E1–E7), converted to trimmed mono
+// mp3s served from `public/samples/rhodes/<midi>_<layer>.mp3`. There's no velocity here, so every
+// note uses layer 4 — jRhodes3d counts its layers down from 1 (hardest) to 5 (softest), so 4 is a
+// medium-soft touch: round, with a little bell and none of the bark, the same timbre from the
+// bottom to the top (the only layer sampled on every key). Notes past either end are
+// pitch-shifted from F1 or C7.
+const RHODES_LAYER = 4;
+const RHODES_MIDIS = [29, 35, 40, 45, 50, 55, 59, 62, 65, 71, 76, 81, 86, 91, 96];
+const RHODES_SAMPLES: [note: string, file: string][] = RHODES_MIDIS.map((midi) => [
+  midiToAppName(midi),
+  `${midi}_${RHODES_LAYER}`,
+]);
 
 const SAMPLE_SETS: Record<SampledInstrumentId, SampleSet> = {
   piano: {
     baseUrl: "https://tonejs.github.io/audio/salamander/",
     notes: PIANO_SAMPLES.map(([note, file]) => buildSampleNote(note, file)),
+    gain: 1,
   },
   rhodes: {
-    baseUrl: "https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/electric_piano_1-mp3/",
-    notes: ELECTRIC_PIANO_SAMPLES.map(([note, file]) => buildSampleNote(note, file)),
+    baseUrl: "/samples/rhodes/",
+    notes: RHODES_SAMPLES.map(([note, file]) => buildSampleNote(note, file)),
+    gain: 0.15,
   },
 };
 
@@ -177,20 +173,22 @@ export function playSampledNote(
       source.playbackRate.value = freq / sample.freq;
 
       const gain = ctx.createGain();
-      // Both sample sets are stereo recordings (real mic'd pianos, not synthesized), each with
-      // its own inherent left/right balance baked into the recording itself — unlike every other
-      // tone here (a single mono oscillator, inherently centered), so without this they'd play
-      // off-center. Forcing this node's input down to a single, explicitly-interpreted channel
-      // sums L+R into a properly centered mono signal (the Web Audio spec's standard stereo->mono
-      // downmix, "speakers" interpretation) before it reaches `ctx.destination`, which then
-      // upmixes that mono signal back out to both speakers equally.
+      // The piano set is a stereo recording (a real mic'd piano, not synthesized), with its own
+      // left/right balance baked into the recording itself — unlike every other tone here (a
+      // single mono oscillator, inherently centered), so without this it'd play off-center. (The
+      // Rhodes files are already mono; this changes nothing for them.) Forcing this node's input
+      // down to a single, explicitly-interpreted channel sums L+R into a properly centered mono
+      // signal (the Web Audio spec's standard stereo->mono downmix, "speakers" interpretation)
+      // before it reaches `ctx.destination`, which then upmixes that mono signal back out to both
+      // speakers equally.
       gain.channelCount = 1;
       gain.channelCountMode = "explicit";
       gain.channelInterpretation = "speakers";
       // A real recording already has its own natural attack baked in — no envelope needed there,
       // just a short release ramp at the end so cutting the note off doesn't click.
       const releaseStart = Math.max(now, end - 0.08);
-      gain.gain.setValueAtTime(1, releaseStart);
+      gain.gain.setValueAtTime(set.gain, now);
+      gain.gain.setValueAtTime(set.gain, releaseStart);
       gain.gain.linearRampToValueAtTime(0, end);
 
       source.connect(gain);

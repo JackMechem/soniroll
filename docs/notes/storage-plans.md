@@ -137,7 +137,9 @@ routes, `.env`) doesn't apply: the webhook and keys live in Convex.
 
 ## Before charging anyone
 
-- **The Rhodes (jRhodes3d) is CC BY-NC** — get Jeff Learman's permission or swap it first.
+- ~~**The Rhodes (jRhodes3d) is CC BY-NC** — get Jeff Learman's permission or swap it first.~~
+  Done: taken out 2026-11-18, then Jeff Learman relicensed it CC BY (2026-11-22) and it's back
+  (2026-11-23, `docs/notes/rhythm-section.md`).
 - Refund policy: the terms say nothing about refunds yet (Polar has its own); Jack to decide.
 - Deploy the backend to prod, turn on Convex backups.
 
@@ -282,7 +284,7 @@ sure nothing goes online without a subscription.
   `/plans` page shows them signed out.
 - `files:markNoteFiles --prod` run (marked 2).
 - Not done by Claude: Polar's own account verification and payouts (Jack), a real live purchase,
-  the Rhodes license and a refund policy before charging.
+  the Rhodes license (since sorted: CC BY, 2026-11-22) and a refund policy before charging.
 
 ## 2026-11-17 — Admin: a user's storage, and giving plans
 

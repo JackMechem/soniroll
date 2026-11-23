@@ -2,7 +2,7 @@
 
 sheddex has no ads. Jack asked whether very unintrusive ads could pay for hosting; the advice was
 no for now: at this size they'd earn a few dollars a month, they'd make the site commercial (the
-Rhodes samples are CC BY-NC; Vercel's Hobby plan is for non-commercial use, so check its terms),
+Rhodes samples were CC BY-NC then — CC BY since 2026-11-22; Vercel's Hobby plan is for non-commercial use, so check its terms),
 and most ad networks add tracking the privacy policy rules out. If ads ever happen: one small
 tracking-free unit (Carbon Ads / EthicalAds, which have traffic minimums) or a direct sponsor line,
 only on browsing pages (landing, Help), never inside a tool. Instead, donations were made much more

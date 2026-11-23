@@ -146,3 +146,54 @@ GitHub Pages) and stays.
 Jack found it annoying: while playing, the page no longer scrolls to keep the bass's playing note in
 view (`scrollIntoView` removed); the note is still lit (`bass-now`). The drum notation still turns to
 the next window of bars as it plays (that swaps the bars shown, it doesn't scroll).
+
+## 2026-11-23 — The Rhodes is back (CC BY), and it's the one Rhodes everywhere
+
+Jeff Learman relicensed jRhodes3d (and jRhodes3c) **CC BY 4.0** (attribution only; the repo's
+LICENSE now reads "License for samples: CC BY / everything else: CC0"), so Jack had the real Rhodes
+brought back and used as the Rhodes in every tool.
+
+- **Samples:** the 28 mp3s restored from git (`git checkout 9d28186^ -- apps/web/public/samples/rhodes`)
+  plus 11 new ones converted the same way from the repo's mono FLACs (pinned commit `4508215a`):
+  29/35/40 (F1, B1, E2) layers 2–4 and 96 (C7) layers 2 and 4 — so the set runs F1–C7 (MIDI 29–96;
+  the instrument is E1–E7), 39 files, 3.2 MB. The recipe, worked out by matching the old files byte
+  for byte in size: `ffmpeg -i A_045__A2_3.flac -t 8 -af afade=t=out:st=6.5:d=1.5 -ac 1 -c:a libmp3lame
+  -q:a 2 45_3.mp3`. `LICENSE.txt` there says CC BY 4.0 with the credit line.
+- **Layer numbering was backwards.** jRhodes3d's sfz maps layer **1 to the hardest** velocities and
+  **5 to the softest** (4 = vel 61–84, 3 = 85–103, 2 = 104–119); the README says the higher
+  velocity layers have "substantial bark". The old `LAYER_VELOCITY` treated 2 as soft and 4 as
+  loud, so soft comping played the barky samples. Now `rhodes: { 4: 0.3, 3: 0.55, 2: 0.8 }` (web and
+  phone). Comping velocities are 0.15–0.9, mostly ~0.4, so most chords use layer 4 now — it will
+  sound rounder than what Jack heard before 11-18.
+- **Rhythm Section (web and phone):** Chords Off / Piano / Rhodes again; the chip says "Rhodes ·
+  comping/held"; a stored `chords: "rhodes"` plays the Rhodes again. `compSounds.ts` as before
+  (A2–D6 table, trim 0.85, 0.25 s release). Help (`packages/core/helpContent.ts`) says piano or Rhodes.
+- **The trainers' Rhodes tone** (Guess the Interval/Chord/Progression, Find the Root, Note/Scale/
+  Interval Trainer's play-out-loud, Practice Timer's chime — everything through `lib/tones.ts`) was
+  FluidR3 "Electric Piano 1" from GitHub Pages; now it's jRhodes3d from `/samples/rhodes/`
+  (`lib/sampledTones.ts`). No velocity there, so every note is **layer 4** (medium-soft, the only
+  layer on every key, so one timbre top to bottom), nearest sample pitch-shifted. The files are
+  normalized ~18 dB hotter than the Salamander mp3s, so the set has `gain: 0.15` (measured: Rhodes
+  layer 4 mean ≈ −8 to −15 dB over the first 1.5 s vs the piano's ≈ −25 to −36 dB). The trainers do
+  go low (Guess the Chord's Low register is MIDI 36–47 with slash basses an octave under; Guess the
+  Interval played an F1 sample in a test), which is why the low samples were added: nothing is
+  shifted more than ~3 semitones inside F1–C7.
+- **Phone:** `src/lib/rhodesSamples.ts` bundles the 39 files with `require` from the website's folder
+  (like `uprightBassSamples.ts` and `drumSamples.ts`), so the Rhodes plays offline and doesn't wait
+  for a deploy; `sampledTones.ts` (layer 4, gain 0.15) and `compSounds.ts` (layers 4/3/2) use them.
+  `SampleNote` now carries a cache `key` and a `src` (URL or asset).
+- **Desktop:** nothing to change — its `publicDir` is `apps/web/public`, so the folder is served in
+  dev and bundled in release, and the Web Audio bridge decodes the mp3s in Rust as before.
+- **Credits** (`/credits`): jRhodes3d by Jeff Learman (1977 Rhodes Mark I Stage 73), CC BY 4.0,
+  served by soniroll; the FluidR3 credit is gone (nothing uses it now). Privacy: GitHub Pages now
+  serves only the piano samples. PROJECT.md's licence rule updated; the "sort out the Rhodes before
+  charging" items in `storage-plans.md`, `support-and-donations.md` and `ux-refresh.md` marked done.
+
+Verified: tsc (web, mobile, desktop; core's only errors are the existing `lessonFiles.ts` `.at`
+ones), eslint on the changed files; every file in `/samples/rhodes/` answers 200 from the dev
+server; in headless Chromium (signed out) Rhythm Section with typed chords and Rhodes loaded all 26
+comping samples (200) and played without console errors, the Chords panel shows Off / Piano /
+Rhodes at 390 wide (dark), Guess the Interval and Guess the Chord (Low, slash basses) with the
+Rhodes tone fetched `29_4`, `35_4`, `40_4`, `45_4` (200) with no errors. **Not heard** — the level
+match (0.15) and the layer swap need Jack's ears. Not checked: the phone app on a device or
+emulator (only tsc/eslint), the desktop app running, signed in.

@@ -91,8 +91,8 @@ type BandSettings = {
   swing: BassSwing;
   volume: number;
   room: boolean;
-  /** "rhodes" may still be stored from before the Rhodes was taken out; it plays the piano. */
-  chords: 'off' | CompInstrument | 'rhodes';
+  /** Chords under the bass: off, or a piano / Rhodes comping the changes. */
+  chords: 'off' | CompInstrument;
   chordStyle: CompStyle;
   chordVolume: number;
   /** "off" or on ("sticks"; an old "brushes" counts as on). With no chart the drums always play. */
@@ -239,7 +239,7 @@ type WrittenDrums = { chorus: number; bars: { time: GrooveBar[]; comp: GrooveBar
 /**
  * Rhythm Section: a band to play along with — the website's tool (`apps/web/components/
  * RhythmSection.tsx`, the Band tab) for the phone. Pick a drum style and it plays on its own, or
- * pick one of your chord charts (or type chords) and an upright bass and a piano play the changes
+ * pick one of your chord charts (or type chords) and an upright bass and a piano or Rhodes play the changes
  * with the drums; the style decides how the whole band plays. On `ToolFrame`: the bass line, the
  * chart and the drums, written out as they play, scroll in the middle; Play and the setting chips
  * (Tempo, Tune, Style, and Drums, Bass, Chords, Mix under "4 more") stay in the footer.
@@ -315,7 +315,7 @@ function RhythmSectionScreen() {
 
   // What plays: with no chart, just the drums.
   const bassOn = !!song && settings.bass;
-  const chords: 'off' | CompInstrument = song && settings.chords !== 'off' ? 'piano' : 'off';
+  const chords: 'off' | CompInstrument = !song || settings.chords === 'off' ? 'off' : settings.chords === 'rhodes' ? 'rhodes' : 'piano';
   const drumsOn = !song || settings.drums !== 'off';
 
   // ——— The bass player ———
@@ -957,7 +957,7 @@ function RhythmSectionScreen() {
               <SettingChip
                 Icon={ChordIcon}
                 label="Chords"
-                value={!song ? 'Needs a chart' : chords === 'off' ? 'Off' : `Piano · ${walking && chordStyle === 'comp' ? 'comping' : 'held'}`}
+                value={!song ? 'Needs a chart' : chords === 'off' ? 'Off' : `${chords === 'piano' ? 'Piano' : 'Rhodes'} · ${walking && chordStyle === 'comp' ? 'comping' : 'held'}`}
                 toggle={song ? { checked: chords !== 'off', onChange: (on) => update({ chords: on ? 'piano' : 'off' }) } : undefined}
               >
                 {!song ? (
@@ -971,6 +971,7 @@ function RhythmSectionScreen() {
                       options={[
                         { value: 'off', label: 'Off' },
                         { value: 'piano', label: 'Piano' },
+                        { value: 'rhodes', label: 'Rhodes' },
                       ]}
                     />
                     {chords !== 'off' && walking ? (

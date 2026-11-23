@@ -427,7 +427,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     href: "/rhythm-section",
     tagline: "A band to play along with.",
     purpose:
-      "Drums in over 30 styles on a real kit, written out as they play. Add one of your chord charts (or type chords) and an upright bass and a piano play the changes with them.",
+      "Drums in over 30 styles on a real kit, written out as they play. Add one of your chord charts (or type chords) and an upright bass and a piano or Rhodes play the changes with them.",
     steps: [
       { title: "Pick a style", text: "Swing, shuffle, bossa nova, samba, mambo, songo, merengue, tango and more." },
       { title: "Add the changes", text: "Choose one of your charts or type a progression — or let the drums play on their own." },
@@ -437,7 +437,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       "30+ drum styles, grouped by country",
       "A walking bass on swing; a fitting bass part on every other style",
       "Bass lines in the style of transcriptions you add",
-      "Piano chords",
+      "Piano or Rhodes chords",
       "Notation as it plays",
       "A fader per drum",
     ],
@@ -446,7 +446,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Style", text: "The groove the whole band plays, grouped by country. Swing styles walk the bass and swing; the others play a bass part that fits them (root and fifth with the pushes in a bossa, the tumbao in a mambo, and so on). Swing sets how long the first eighth note of each pair is." },
       { name: "Drums", text: "On swing: just time (ride, hi-hat on 2 and 4) or with comping (snare, setups into sections); Drum settings has every detail of the swing and ride. On the other styles: what the right hand plays, cross-stick and woodblock (the style's part, a clave, or nothing), clave direction, fills, variation and human feel. With the drums off you can have a hi-hat click on 2 and 4." },
       { name: "Bass", text: "Off, or the upright. On swing, the Computer walks a line from scratch (walking in 4 or a two feel); your own players (and the built-in one) play from the transcriptions you add: Their phrases reuses their lines, Their style writes new lines the way they play. Touch is how hard it's plucked." },
-      { name: "Chords", text: "Off or piano. On swing, Comping plays varied rhythms and Held plays one chord per change; other styles hold the chords." },
+      { name: "Chords", text: "Off, piano or Rhodes. On swing, Comping plays varied rhythms and Held plays one chord per change; other styles hold the chords." },
       { name: "Mix", text: "Levels for bass, chords, drums, the click and the room sound, and a fader for each part of the kit." },
       { name: "Bass players", text: "The tab next to Band: add players and transcribe their lines (or import MusicXML), so the bass can play like them. The idea and the built-in Ray Brown transcription are Rob Moreno's." },
     ],

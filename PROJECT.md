@@ -196,18 +196,18 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - **Never name the source the Syncopation exercises were modelled on** (still under copyright),
   anywhere in the site, code, help text or docs. The Random Sticking Warmup likewise doesn't name
   the book its patterns were transcribed from.
-- **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — not for anything commercial, so
-  since soniroll sells storage plans they're **out** (removed 2026-11-18: Rhythm Section's chords are
-  piano only; samples and code in git history) until Jeff Learman gives permission. Every bundled
-  sample/font is credited on `/credits`. The trainers' "Rhodes" tone is FluidR3 (CC BY 3.0), fine.
+- **Licenses:** every bundled sample/font is credited on `/credits`. The Rhodes (jRhodes3d, Jeff
+  Learman) is **CC BY 4.0** since he gave permission (2026-11-22; it was CC BY-NC and taken out
+  2026-11-18 to 11-23), so it's fine on a site that sells plans, with credit. It's the one Rhodes
+  everywhere: Rhythm Section's chords and the trainers' Rhodes tone, web and phone
+  (`apps/web/public/samples/rhodes/`; the phone bundles the same files).
 - **Storage:** files, recordings and tune songs live online (`storageId`) or on the device that
   saved them (`device`; the row stays in Convex). Free accounts save on the device and get 50 MB
   online (sharing, Lessons, notes, profile); a storage plan (Polar, `billing.ts`) saves online. Only
   online bytes count (`packages/convex/lib/storage.ts`; every upload path must call `assertHasRoom` /
   `assertFits`). Wrap any new query of files/recordings/songs with `useDeviceUrls` so device files
   play. A new kind of stored file must also be added to `storedItems` and `ownedItem` in `files.ts`.
-  Every tool and feature stays free; only storage is sold. The Rhodes license has to be sorted out
-  before soniroll charges anything. See `docs/notes/storage-plans.md`.
+  Every tool and feature stays free; only storage is sold. See `docs/notes/storage-plans.md`.
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
 - **Be honest about verification:** say what was checked and how, and what wasn't (especially

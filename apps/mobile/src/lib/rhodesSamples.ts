@@ -1,0 +1,48 @@
+/**
+ * The Rhodes's samples (jRhodes3d by Jeff Learman, CC BY 4.0 — a 1977 Rhodes Mark I Stage 73),
+ * bundled into the app from the website's own folder (`apps/web/public/samples/rhodes/`), so the
+ * Rhodes plays offline, the same files the website serves. Generated from that folder's file list.
+ * Keyed by file name without `.mp3`: `<midi>_<layer>` (layer 4 is soft, 2 is hard — jRhodes3d counts
+ * its layers down from 1).
+ */
+export const RHODES_SAMPLES: Record<string, number> = {
+  '29_2': require('../../../web/public/samples/rhodes/29_2.mp3'),
+  '29_3': require('../../../web/public/samples/rhodes/29_3.mp3'),
+  '29_4': require('../../../web/public/samples/rhodes/29_4.mp3'),
+  '35_2': require('../../../web/public/samples/rhodes/35_2.mp3'),
+  '35_3': require('../../../web/public/samples/rhodes/35_3.mp3'),
+  '35_4': require('../../../web/public/samples/rhodes/35_4.mp3'),
+  '40_2': require('../../../web/public/samples/rhodes/40_2.mp3'),
+  '40_3': require('../../../web/public/samples/rhodes/40_3.mp3'),
+  '40_4': require('../../../web/public/samples/rhodes/40_4.mp3'),
+  '45_2': require('../../../web/public/samples/rhodes/45_2.mp3'),
+  '45_3': require('../../../web/public/samples/rhodes/45_3.mp3'),
+  '45_4': require('../../../web/public/samples/rhodes/45_4.mp3'),
+  '50_2': require('../../../web/public/samples/rhodes/50_2.mp3'),
+  '50_3': require('../../../web/public/samples/rhodes/50_3.mp3'),
+  '50_4': require('../../../web/public/samples/rhodes/50_4.mp3'),
+  '55_2': require('../../../web/public/samples/rhodes/55_2.mp3'),
+  '55_3': require('../../../web/public/samples/rhodes/55_3.mp3'),
+  '55_4': require('../../../web/public/samples/rhodes/55_4.mp3'),
+  '59_2': require('../../../web/public/samples/rhodes/59_2.mp3'),
+  '59_3': require('../../../web/public/samples/rhodes/59_3.mp3'),
+  '59_4': require('../../../web/public/samples/rhodes/59_4.mp3'),
+  '62_2': require('../../../web/public/samples/rhodes/62_2.mp3'),
+  '62_3': require('../../../web/public/samples/rhodes/62_3.mp3'),
+  '62_4': require('../../../web/public/samples/rhodes/62_4.mp3'),
+  '65_2': require('../../../web/public/samples/rhodes/65_2.mp3'),
+  '65_3': require('../../../web/public/samples/rhodes/65_3.mp3'),
+  '65_4': require('../../../web/public/samples/rhodes/65_4.mp3'),
+  '71_2': require('../../../web/public/samples/rhodes/71_2.mp3'),
+  '71_4': require('../../../web/public/samples/rhodes/71_4.mp3'),
+  '76_2': require('../../../web/public/samples/rhodes/76_2.mp3'),
+  '76_4': require('../../../web/public/samples/rhodes/76_4.mp3'),
+  '81_2': require('../../../web/public/samples/rhodes/81_2.mp3'),
+  '81_4': require('../../../web/public/samples/rhodes/81_4.mp3'),
+  '86_2': require('../../../web/public/samples/rhodes/86_2.mp3'),
+  '86_4': require('../../../web/public/samples/rhodes/86_4.mp3'),
+  '91_2': require('../../../web/public/samples/rhodes/91_2.mp3'),
+  '91_4': require('../../../web/public/samples/rhodes/91_4.mp3'),
+  '96_2': require('../../../web/public/samples/rhodes/96_2.mp3'),
+  '96_4': require('../../../web/public/samples/rhodes/96_4.mp3'),
+};
