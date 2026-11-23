@@ -110,3 +110,13 @@ every pdf in a … side view like clicking on a task in shed logs".
   the Files page's organizer); "Open full window" still has them.
 - Verified with the Shed Log entry of the same date (`shed-log.md`): the side view beside the
   Metronome, a pen mark saved from it, Play inside it, 390 full screen with Back.
+
+## 2026-11-23 (later) — PDFs open in place
+
+Jack, after trying it: "when I open a pdf it opens in a new pane, i think the default behavior should
+be to just open in the current window". Clicking a PDF (Files, a tune's files, a task's or routine's
+Files section, a file chip on a routine card) now opens `/files/view` where you clicked — the page, or
+that pane in a split — with Back returning. The side view and a split are in the ⋮ menu ("Open in the
+side view", "Open side by side"), and "Open full window" stays. Other file kinds still open the quick
+preview. Checked in headless Chromium: alone (Back returns to Files) and in a Files | Metronome split
+(the Files pane became the PDF, no new pane).

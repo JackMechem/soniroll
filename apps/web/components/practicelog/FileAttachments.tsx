@@ -177,15 +177,14 @@ export function LinkedFiles({ groups, empty }: { groups: FileGroup[]; empty: Rea
     const items: MenuItem[] = [
       { label: "Open in the side view", onSelect: () => void openFileBeside(item.kind, item.id, { from: paneId }) },
       ...(wide() ? [{ label: "Open side by side", onSelect: () => void openFileBeside(item.kind, item.id, { mode: "right", from: paneId }) }] : []),
-      { label: "Open as a page", onSelect: () => router.push(fileViewHref(item.kind, item.id)), icon: <ExternalLinkIcon className="h-4 w-4" /> },
+      { label: "Open", onSelect: () => open(item), icon: <ExternalLinkIcon className="h-4 w-4" /> },
       { label: item.folder ? `Show in ${item.folder.split("/").pop()}` : "Show in Files", onSelect: () => router.push(filesHref({ folder: item.folder || undefined })), icon: <FolderIcon className="h-4 w-4" /> },
       ...(takeOff ? [{ label: takeOff.label, onSelect: takeOff.run, danger: true, divider: true, icon: <TrashIcon className="h-4 w-4" /> }] : []),
     ];
     setMenu({ ...menuPosition(e), items, width: 220 });
   };
-  const open = (item: { kind: StoredKind; id: string }) => {
-    if (!openFileBeside(item.kind, item.id, { from: paneId })) router.push(fileViewHref(item.kind, item.id));
-  };
+  // Opens in place (this page or pane; Back returns to the task). The ⋮ menu opens it beside.
+  const open = (item: { kind: StoredKind; id: string }) => router.push(fileViewHref(item.kind, item.id));
 
   const fileRow = (item: LinkedItem, detail: string, takeOff?: { label: string; run: () => void }) => (
     <div key={`${item.kind}:${item.id}`} className="group flex items-center gap-1 pr-2 transition-colors hover:bg-foreground/[0.04]" onContextMenu={(e) => { e.preventDefault(); openMenu(e, item, takeOff); }}>

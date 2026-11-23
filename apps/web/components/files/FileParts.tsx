@@ -41,7 +41,7 @@ import PdfEditor from "@/components/pdf/PdfEditor";
 import PdfInline from "@/components/pdf/PdfInline";
 import { useOpenInTool } from "@/components/files/openInTool";
 import type { FileOrganizer } from "@/components/files/FileFolders";
-import { openFileBeside, opensBeside } from "@/lib/fileView";
+import { fileViewHref, openFileBeside, opensBeside } from "@/lib/fileView";
 import { usePaneId } from "@/lib/paneContext";
 
 // ---------------------------------------------------------------- icons
@@ -437,10 +437,13 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
     item.href ? item.href : item.kind === "song" && item.tuneId ? `/tunes/tune?id=${encodeURIComponent(item.tuneId)}` : null;
   const goToLabel = (item: StoredEntry) => (item.kind === "song" ? `Open ${(item.tuneId && tuneName(item.tuneId)) || "the tune"}` : (GO_TO[item.kind] ?? "Open"));
 
-  /** Opens a file: a PDF in the side view (so it stays open beside whatever you open next), the
-      rest in the preview. */
+  /** Opens a file: a PDF in place (this page, or this pane in a split — Back returns), the rest in
+      the preview. Opening it beside something else is in the ⋮ menu. */
   function openFile(item: StoredEntry) {
-    if (item.kind !== "profile" && opensBeside(item) && openFileBeside(item.kind, item.id, { from: paneId })) return;
+    if (item.kind !== "profile" && opensBeside(item)) {
+      router.push(fileViewHref(item.kind, item.id));
+      return;
+    }
     setOpen(item);
   }
 
@@ -451,7 +454,8 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
     const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
     return [
       { label: "Open", onSelect: () => openFile(item), icon: <FileIcon className="h-4 w-4" /> },
-      // A PDF opens in the side view; these are the other ways (a split, or the whole window).
+      // A PDF opens in place; these are the other ways (beside the page, a split, the whole window).
+      ...(beside ? [{ label: "Open in the side view", onSelect: () => void openFileBeside(item.kind, item.id, { from: paneId }), icon: <SideViewIcon className="h-4 w-4" /> }] : []),
       ...(beside && wide
         ? [{ label: "Open side by side", onSelect: () => void openFileBeside(item.kind, item.id, { mode: "right", from: paneId }), icon: <SplitIcon className="h-4 w-4" /> }]
         : []),
