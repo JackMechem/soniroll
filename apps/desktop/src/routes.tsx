@@ -7,6 +7,7 @@ import AdminPage from "@/components/admin/AdminPage";
 import ChangelogPage from "@/components/changelog/ChangelogPage";
 import Community, { CommunitySubPage } from "@/components/Community";
 import FeedbackPage from "@/components/feedback/FeedbackPage";
+import FileViewPage from "@/components/files/FileViewPage";
 import SharedFilePage from "@/components/files/SharedFilePage";
 import SharedTunePage from "@/components/files/SharedTunePage";
 import FindTheRoot from "@/components/FindTheRoot";
@@ -190,6 +191,7 @@ const ROUTES: Route[] = [
   { path: "/setlist/:id", render: ({ id }) => <SharedSetlistPage id={id} /> },
   { path: "/routine/:id", render: ({ id }) => <SharedRoutinePage id={id} /> },
   { path: "/tune/:id", render: ({ id }) => <SharedTunePage id={id} /> },
+  { path: "/files/view", render: (_, query) => <FileViewPage kind={q(query, "kind") || "file"} id={q(query, "id")} /> },
   { path: "/file/:id", render: ({ id }) => <SharedFilePage id={id} /> },
   { path: "/note/:token", render: ({ token }, query) => <SharedNotePage token={token} note={opt(query, "n")} /> },
 

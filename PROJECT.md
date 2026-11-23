@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.16 beta** (see versioning).
+**v0.10.17 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -149,9 +149,19 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   `users.current` has answered (as `useChordChartsLibrary` does). See `docs/notes/ux-refresh.md`.
 - `react-hooks` lint (React Compiler) rejects reading refs during render and calling `setState`
   synchronously inside an effect; restructure rather than disabling the rule.
-- In split-screen (tiling) mode, keep the address bar in sync with `history.replaceState`
-  (`syncAddressBar`), not Next's router — `router.replace` remounts the pane and stopped running
-  audio.
+- Split screen and the side view are one system (`lib/useTilingLayout.ts`, drawn by
+  `components/TilingLayout.tsx`). Each pane has its own address: inside a pane `usePathname`,
+  `useSearchParams` and `useRouter` are the pane's (`components/panes/NextPaneContexts.tsx`
+  provides Next's internal contexts; the desktop shim reads `PaneNavContext`), links open in the
+  pane, and the address bar follows the active pane through `syncAddressBar` (History API, never
+  Next's router — a router navigation re-renders the real route and remounted panes). Don't read
+  `window.location` for a page's own state, and don't write it with `history.replaceState` from a
+  page that can be in a pane. A page a pane should show must be in `PANE_ROUTES`
+  (`lib/toolRegistry.tsx`, kept in step with `app/` like the desktop's routes).
+- Tabs (`lib/useTabs.ts`) each hold one `Layout`; only the active tab is mounted, and switching
+  puts a layout on screen with `showTabLayout`, never Next's router (phones excepted). Something
+  that swaps the page out without a link must ask through `confirmLeave` (`lib/leaveGuards.ts`) so
+  unsaved work isn't lost; `useLeaveGuard` registers there.
 - Split-screen panes are size containers (`data-pane`): inside one, `sm:`/`md:` follow the
   pane's width, `lg:` and up never apply and `max-lg:` always does (`@custom-variant`s at the top
   of `globals.css`). Use `100cqw`, not `100vw`, for widths. A phone-only sheet portaled to `<body>`
@@ -196,18 +206,19 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - **Never name the source the Syncopation exercises were modelled on** (still under copyright),
   anywhere in the site, code, help text or docs. The Random Sticking Warmup likewise doesn't name
   the book its patterns were transcribed from.
-- **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — not for anything commercial, so
-  since soniroll sells storage plans they're **out** (removed 2026-11-18: Rhythm Section's chords are
-  piano only; samples and code in git history) until Jeff Learman gives permission. Every bundled
-  sample/font is credited on `/credits`. The trainers' "Rhodes" tone is FluidR3 (CC BY 3.0), fine.
+- **Licenses:** every bundled sample/font is credited on `/credits`. The Rhodes (jRhodes3d, Jeff
+  Learman) is **CC BY 4.0** since he gave permission (2026-11-22; it was CC BY-NC and taken out
+  2026-11-18 to 11-23), so it's fine on a site that sells plans, with credit. It's the one Rhodes
+  everywhere: Rhythm Section's chords and the trainers' Rhodes tone, web and phone
+  (`apps/web/public/samples/rhodes/`; the phone bundles the same files).
 - **Storage:** files, recordings and tune songs live online (`storageId`) or on the device that
   saved them (`device`; the row stays in Convex). Free accounts save on the device and get 50 MB
   online (sharing, Lessons, notes, profile); a storage plan (Polar, `billing.ts`) saves online. Only
   online bytes count (`packages/convex/lib/storage.ts`; every upload path must call `assertHasRoom` /
   `assertFits`). Wrap any new query of files/recordings/songs with `useDeviceUrls` so device files
-  play. A new kind of stored file must also be added to `storedItems` and `ownedItem` in `files.ts`.
-  Every tool and feature stays free; only storage is sold. The Rhodes license has to be sorted out
-  before soniroll charges anything. See `docs/notes/storage-plans.md`.
+  play. A new kind of stored file must also be added to `storedItems` / `storedItemById` (`lib/storage.ts`)
+  and `ownedItem` in `files.ts`, and its delete path should call `dropMeta` (its folder and tags, `fileMeta`).
+  Every tool and feature stays free; only storage is sold. See `docs/notes/storage-plans.md`.
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
 - **Be honest about verification:** say what was checked and how, and what wasn't (especially
@@ -258,9 +269,15 @@ Web (`apps/web`):
   A tool that opens a file uses `useFilePicker` (`components/files/FilePicker.tsx`: the "Open a
   file" dialog listing the user's files, Upload, saving to Files) and `lib/useFileDrop.ts`
   (drop a file anywhere on the tool's page or pane).
+  One of your files beside the page: `openFileBeside(kind, id)` (`lib/fileView.ts`, the
+  `/files/view` page; PDFs open there by default).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
 - Notation: `components/notation/ScoreEditor.tsx` (the one notation editor — never write another;
   wrap it with a `header`) and `Score.tsx` (read-only view too); scores via `lib/useScores.ts`.
+- Beside the page: `openBeside(href, { mode })` (`lib/useTilingLayout.ts`) — the side view
+  (default; over or beside the page, full screen with Back on phones) or a split (`mode: "right"` /
+  `"down"`). Returns false when a pane can't show the page. `usePaneId()` says which pane a page is
+  in. Shed Log things and notes: `openSide` / `openNotePeek` (`lib/notePeek.ts`) wrap it.
 - Notes: `components/shednotes/AttachedNotes.tsx` (Shed Notes on anything — a `NoteTarget` from
   `packages/core/shedNotes.ts`), `NoteEditor` (CodeMirror markdown editor), `renderNotation` (abcjs).
 
@@ -297,16 +314,16 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Bass Genius history (bass lines, players, transcriptions, comping, the swing drummer) — now Rhythm Section's bass | `bass-genius.md` |
 | Drum Generator history (styles, kit, notation) — now Rhythm Section's drums; Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |
-| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`); routine and task pages (notes, recordings per task, Arrange), the note side view (`NotePeek`) | `shed-log.md` |
+| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`); routine and task pages (notes, recordings per task, Arrange), opening them in the side view; files, folders and tags on routines/tasks (`FileAttachment`, `fileFolders.linked`); the "now practicing" pill (`NowPracticing.tsx`) | `shed-log.md` |
 | Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Rhythm Section's bass players; clefs, key signatures, re-barring | `score-writer.md` |
 | Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Library as two tabs (Tunes, Files; FB-30, 2026-11-20): every chart on a tune (`tuneChartIds`, several per tune), the Library tune list, tags, linking on import and the one-time pass (`useAutoLinkCharts`), Open in Slow Downer/Tuner from Files | `library-two-tabs.md` |
-| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias | `pdf-editor.md` |
+| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias; PDFs open in the side view (`/files/view`, `lib/fileView.ts`) | `pdf-editor.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
-| Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
+| Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link; folders and tags on files (`fileMeta`, `fileFolders.ts`: `inFolder`/`withTag` for other features) | `files-and-tune-sharing.md` |
 | Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
 | Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |
@@ -321,12 +338,13 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Random Sticking Warmup | `tools-sticking-warmup.md` |
 | Slow Downer, old Recorder, Community posts, old Home, legal pages | `tools-slow-downer-recorder-community-home.md` |
 | Backend: sync design, auth, email, account page, profiles, follows, file storage | `backend-convex.md` |
-| Split screen (tiling panes) | `tiling-split-screen.md` |
+| Split screen and the side view (one system since 2026-11-23: `openBeside`, panes with their own address, flip/swap/float/full screen, phones); tabs (each a saved layout: the strip, the phone sheet, `jam-practice-tabs` in the account or browser, shortcuts) | `tiling-split-screen.md` |
 | Older shared-conventions list (partly superseded by the section above) | `shared-conventions.md` |
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |
 | Feedback, reports, admin panel, Mayday switches, analytics, launch checklist | `launch-admin-analytics.md` |
 | Five UI/UX passes (2026-11-20): grades per pass, the bugs they found, what was left for Jack | `ui-passes-2026-11-20.md` |
+| Three UI/UX passes per platform (2026-11-23: web desktop, web phone, Android): scores, the sync and PDF bugs they found, what was left for Jack | `ui-passes-2026-11-23.md` |
 | UX refresh (2026-11-17): radius scale, borders vs fills, flat sidebar with coloured icons, phone top bar, tool header, decluttered dashboard/library/Shed Log | `ux-refresh.md` |
 | Desktop app (`apps/desktop`): Tauri, reusing web components via aliases, native audio (the Web Audio bridge to `web-audio-api`), Google sign-in through the system browser; CI, `desktop-v*` release tags, the Stable/Unstable channel branches and the Nix package (update its pnpm hash when the lock file changes) | `desktop-app.md` |
 

@@ -11,6 +11,7 @@ import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
 import { bestStreak, historyOf, todayKey, toolStreak, totalMs, useToolUsage, usedMs, weekOf } from "@/lib/toolUsage";
 
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
 const CHIP = `${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm transition-colors hover:bg-surface-hover`;
 
 /** "38 s" under a minute, then "12 min", "1 h 5 min". Every time in the popover uses it. */
@@ -60,7 +61,15 @@ export default function ToolStats({ href }: { href: string }) {
   const unlogged = unloggedToday(usage, href, liveMs);
   // Some of today's time went into the Shed Log already (Log pressed earlier today).
   const loggedBefore = todayMs - unlogged >= 1000;
-  const history = historyOf(usage, href);
+  // The days with use, today's counted up to now (the stored log lags the running time, so the
+  // list could say "Nothing yet" under a week that already has seconds in it).
+  const stored = historyOf(usage, href);
+  const history =
+    todayMs < 1000
+      ? stored
+      : stored.some((d) => d.key === today)
+        ? stored.map((d) => (d.key === today ? { ...d, ms: todayMs } : d))
+        : [{ key: today, ms: todayMs, logged: 0 }, ...stored];
   const best = Math.max(bestStreak(usage, href), s);
 
   function log() {
@@ -108,13 +117,19 @@ export default function ToolStats({ href }: { href: string }) {
           <MiniStat value={formatUse(weekMs)} label="this week" />
           <MiniStat value={formatTotal(allMs)} label="in total" />
         </div>
-        <div className="flex h-10 items-end gap-1" title="This week">
+        <div className="flex gap-1" title="This week">
           {week.map((d) => (
-            <span
-              key={d.key}
-              className={`flex-1 rounded-sm ${d.ms >= 60_000 ? "" : "bg-foreground/10"} ${d.key === today ? "ring-1 ring-foreground/30" : ""}`}
-              style={{ height: `${Math.max(d.ms > 0 ? 25 : 12, (d.ms / maxDay) * 100)}%`, ...(d.ms >= 60_000 ? { background: color } : {}) }}
-            />
+            <div key={d.key} className="flex flex-1 flex-col items-center gap-1">
+              <div className="flex h-10 w-full items-end">
+                <span
+                  className={`w-full rounded-sm ${d.ms >= 60_000 ? "" : "bg-foreground/10"} ${d.key === today ? "ring-1 ring-foreground/30" : ""}`}
+                  style={{ height: `${Math.max(d.ms > 0 ? 25 : 12, (d.ms / maxDay) * 100)}%`, ...(d.ms >= 60_000 ? { background: color } : {}) }}
+                />
+              </div>
+              <span className={`text-[11px] leading-none ${d.key === today ? "font-semibold text-foreground" : "text-muted"}`}>
+                {WEEKDAY_LETTER[weekdayOf(d.key)]}
+              </span>
+            </div>
           ))}
         </div>
         <p className="text-xs text-muted">

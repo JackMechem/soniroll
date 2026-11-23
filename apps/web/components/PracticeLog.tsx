@@ -18,7 +18,7 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { RewardProvider } from "@/components/reward/Reward";
 import { DayView, MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
-import { formatPracticed, practicedMinutes } from "@/components/practicelog/minutes";
+import { formatPracticed, practicedOfGoal } from "@/components/practicelog/minutes";
 import { findToolLink, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, RepeatIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
 import { ChartIcon } from "@/components/practicelog/RoutineIcon";
 import {
@@ -302,7 +302,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         ref={tabsRef}
         role="tablist"
         aria-label="Show"
-        className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-4 -mt-2 flex gap-5 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden"
+        className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-4 -mt-2 flex gap-5 border-b border-foreground/10 bg-background px-4 sm:-mx-6 sm:px-6 lg:hidden"
       >
         {(
           [
@@ -498,7 +498,7 @@ function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; today: s
           </span>
         )}
         <span className="tabular-nums">
-          {goal > 0 ? `${practicedMinutes(minutes)} of ${goal} min today` : `${practicedMinutes(minutes)} min today`}
+          {goal > 0 ? `${practicedOfGoal(minutes, goal)} today` : `${formatPracticed(minutes)} today`}
           {met && " · goal met"}
         </span>
       </button>

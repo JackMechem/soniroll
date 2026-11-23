@@ -6,6 +6,7 @@ import {
   type Segment,
 } from '@jam-practice/core/practiceTimer';
 import { NAV_LINKS_DATA, currentToolHref } from '@jam-practice/core/navLinks';
+import { sortByText } from '@jam-practice/core/sortText';
 import { Fragment, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -45,13 +46,16 @@ export function blankDraft(): Draft {
 const MAX_CYCLES = 24;
 
 /** The tools a step can open when it starts (the Shed Log's list of tools to attach, without the
-    timer itself), as on the website. */
+    timer itself), as on the website; A to Z, so a tool is easy to find in the long list. */
 const STEP_TOOL_OPTIONS = [
   { value: '', label: 'No tool' },
-  ...NAV_LINKS_DATA.filter((l) => !['/community', '/tunes', '/chord-charts', '/shed-log', '/practice-timer'].includes(l.href)).map((l) => ({
-    value: l.href,
-    label: l.label,
-  })),
+  ...sortByText(
+    NAV_LINKS_DATA.filter((l) => !['/community', '/tunes', '/chord-charts', '/shed-log', '/practice-timer'].includes(l.href)).map((l) => ({
+      value: l.href,
+      label: l.label,
+    })),
+    (o) => o.label,
+  ),
 ];
 
 /** The picked tool's name for the button: the short name when the full one is long. */

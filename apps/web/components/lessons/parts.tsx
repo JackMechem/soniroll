@@ -13,6 +13,7 @@ import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { ChartMeta, ChartPaper } from "@/components/library/chartView";
 import { Chip } from "@/components/library/ui";
+import { TOUCH_HIT } from "@/components/SettingsBar";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { CheckIcon, ChordChartIcon, CloseIcon, DocumentIcon, DotsVerticalIcon, GraduationCapIcon, MicIcon, PencilIcon, TrashIcon } from "@/components/tools";
 import type { IRealSong } from "@/lib/iRealPro";
@@ -794,7 +795,7 @@ export function MoreButton({ onClick, label }: { onClick: (e: React.MouseEvent) 
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+      className="relative flex h-9 w-9 items-center justify-center rounded-md bg-foreground/[0.05] text-muted transition-colors pointer-coarse:after:absolute pointer-coarse:after:-inset-1 hover:bg-surface-hover hover:text-foreground"
     >
       <DotsVerticalIcon className="h-4 w-4" />
     </button>
@@ -880,7 +881,7 @@ export function EmailInviteForm({
           className={`${field} resize-y`}
         />
       ) : (
-        <button type="button" onClick={() => setNoteOpen(true)} className="self-start text-xs font-medium text-muted hover:text-foreground">
+        <button type="button" onClick={() => setNoteOpen(true)} className={`-ml-2 inline-flex h-8 items-center self-start rounded-md px-2 text-xs font-medium text-muted hover:bg-surface-hover hover:text-foreground ${TOUCH_HIT}`}>
           + Add a note to the email
         </button>
       )}
@@ -937,12 +938,16 @@ export function AddStudentDialog({ onClose, onAdded }: { onClose: () => void; on
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" className={field} autoFocus disabled={!!added} />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
-          Email <span className="font-normal text-muted">(optional — we&apos;ll email them their invite link)</span>
+          <span>
+            Email <span className="font-normal text-muted">(optional, for their invite)</span>
+          </span>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="sam@example.com" className={field} />
         </label>
         {email.trim() && (
           <label className="flex flex-col gap-1.5 text-sm font-medium">
-            A note with the invite <span className="font-normal text-muted">(optional)</span>
+            <span>
+              A note with the invite <span className="font-normal text-muted">(optional)</span>
+            </span>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}

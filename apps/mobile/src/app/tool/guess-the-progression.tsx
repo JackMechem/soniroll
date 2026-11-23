@@ -49,6 +49,7 @@ import {
   SliderField,
   StrugglesChip,
   TextButton,
+  AnswerKeyboardSlot,
   ToolScreen,
   useGradeColors,
 } from '@/components/tool/ear';
@@ -748,8 +749,8 @@ function GuessTheProgressionScreen() {
         ) : null
       }
       footer={
-        answering ? (
-          <View>
+        running && round ? (
+          <AnswerKeyboardSlot active={answering}>
             {/* How to write the answer, beside the keyboard, in the first round only. */}
             {progress?.index === 1 ? (
               <Text className="font-ui px-4 pb-2 text-center text-xs leading-4" style={{ color: colors.muted }}>
@@ -764,11 +765,11 @@ function GuessTheProgressionScreen() {
               onGiveUp={gradeAndReveal}
               onSubmit={gradeAndReveal}
             />
-          </View>
+          </AnswerKeyboardSlot>
         ) : null
       }
       action={
-        !answering && (!showingSummary || learnMode) ? (
+        !(running && round) && (!showingSummary || learnMode) ? (
           <BigButton
             label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
             secondary={running}
@@ -877,8 +878,8 @@ function GuessTheProgressionScreen() {
               <ElapsedTimer active={running} startedAt={sessionStartedAt} />
             </View>
           ) : null}
-          {/* While answering, the keyboard's at the bottom: a quiet Stop. */}
-          {answering ? <TextButton label="Stop" onPress={endSession} /> : null}
+          {/* While a round runs, the keyboard's at the bottom: a quiet Stop that never moves. */}
+          {running && round ? <TextButton label="Stop" onPress={endSession} /> : null}
         </View>
       )}
 

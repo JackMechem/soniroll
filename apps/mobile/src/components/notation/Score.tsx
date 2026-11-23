@@ -306,7 +306,10 @@ function ScoreRowView({
     const box = row.measures.find((m) => m.measure === caret.measure);
     if (box) {
       const note = caret.note >= 0 ? row.notes.find((n) => n.measure === caret.measure && n.note === caret.note) : null;
-      caretX = note ? note.x + note.w + 2 : box.noteStart - 6;
+      // Before the first note: just after where the notes start (the clef and time signature end
+      // there), and never on the first note itself.
+      const before = box.noteXs.length ? Math.min(box.noteStart + 2, box.noteXs[0] - 4) : box.noteStart + 2;
+      caretX = note ? note.x + note.w + 2 : before;
     }
   }
   // The note's name goes above the finger; near the top of the row, beside it instead.

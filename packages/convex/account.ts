@@ -302,6 +302,17 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of sharedFiles) await ctx.db.delete(row._id);
+    // Folders and tags on files (Library → Files).
+    const fileMeta = await ctx.db
+      .query("fileMeta")
+      .withIndex("by_user_item", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of fileMeta) await ctx.db.delete(row._id);
+    const fileFolders = await ctx.db
+      .query("fileFolders")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of fileFolders) await ctx.db.delete(row._id);
 
     // Score Writer scores.
     const scores = await ctx.db

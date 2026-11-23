@@ -2,15 +2,18 @@ import { noteToFrequency } from '@jam-practice/core/noteRange';
 import type { AudioBuffer, AudioContext } from 'react-native-audio-api';
 
 import { getAudioContext } from '@/lib/audioContext';
+import { RHODES_SAMPLES } from '@/lib/rhodesSamples';
 
 /**
  * The native sibling of `apps/web/lib/sampledTones.ts` + `lib/tones.ts`'s ear-training tones —
  * the **same recorded samples** the website plays for "Piano" and "Rhodes": the Salamander Grand
- * Piano (Alexander Holm, CC-BY 3.0, hosted by the Tone.js project — A/C/D#/F# every octave) and the
- * FluidR3 GM "Electric Piano 1" patch (CC-BY 3.0, midi-js-soundfonts — every semitone A0–C8),
- * fetched from the same URLs the first time a note needs them and decoded once
- * (`react-native-audio-api`'s `decodeAudioData` downloads a remote URL itself). A note without its
- * own recording gets the nearest one, pitch-shifted via `playbackRate` — exactly as on web.
+ * Piano (Alexander Holm, CC-BY 3.0, hosted by the Tone.js project — A/C/D#/F# every octave),
+ * fetched from the same URLs the first time a note needs them (`react-native-audio-api`'s
+ * `decodeAudioData` downloads a remote URL itself), and jRhodes3d (Jeff Learman, CC BY 4.0 — a 1977
+ * Rhodes Mark I Stage 73, every 4th white key F1–C7, layer 4), bundled from the website's
+ * `public/samples/rhodes/` (`rhodesSamples.ts`) so it plays offline. Each is decoded once. A note
+ * without its own recording gets the nearest one, pitch-shifted via `playbackRate` — exactly as on
+ * web.
  *
  * One difference from web: web centres these stereo recordings by forcing the gain node down to
  * one channel (`channelCount = 1`); those properties are read-only here, so each decoded sample is
@@ -28,20 +31,31 @@ export function asToneId(value: string): SampledInstrumentId {
   return value === 'rhodes' ? 'rhodes' : DEFAULT_EAR_TRAINING_TONE_ID;
 }
 
-type SampleNote = { freq: number; file: string };
-type SampleSet = { baseUrl: string; notes: SampleNote[] };
+/** `key` names the sample in the cache; `src` is what `decodeAudioData` gets (a URL, or a bundled
+    asset). */
+type SampleNote = { freq: number; key: string; src: string | number };
+/** `gain` evens out the sets' recorded levels (the Rhodes files are normalized ~18 dB hotter than
+    the piano's) — the same trim as web. */
+type SampleSet = { notes: SampleNote[]; gain: number };
 
-const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-function nameOf(midi: number, names: string[]) {
-  return `${names[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
-}
+const PIANO_URL = 'https://tonejs.github.io/audio/salamander/';
 
 function sample(note: string, file: string): SampleNote {
   const freq = noteToFrequency(note);
   if (freq === null) throw new Error(`Invalid sample note name: ${note}`);
-  return { freq, file: `${file}.mp3` };
+  const url = `${PIANO_URL}${file}.mp3`;
+  return { freq, key: url, src: url };
+}
+
+/** jRhodes3d's sampled keys (MIDI). Every note plays layer 4 (medium-soft; jRhodes3d counts its
+    layers down from 1, the hardest) — the only layer sampled on every key, so the timbre stays the
+    same from bottom to top. */
+const RHODES_MIDIS = [29, 35, 40, 45, 50, 55, 59, 62, 65, 71, 76, 81, 86, 91, 96];
+function rhodesSample(midi: number): SampleNote {
+  const name = `${midi}_4`;
+  const asset = RHODES_SAMPLES[name];
+  if (asset === undefined) throw new Error(`No Rhodes sample ${name}`);
+  return { freq: 440 * Math.pow(2, (midi - 69) / 12), key: `rhodes:${name}`, src: asset };
 }
 
 const PIANO: [string, string][] = [
@@ -57,12 +71,12 @@ const PIANO: [string, string][] = [
 
 const SAMPLE_SETS: Record<SampledInstrumentId, SampleSet> = {
   piano: {
-    baseUrl: 'https://tonejs.github.io/audio/salamander/',
     notes: PIANO.map(([note, file]) => sample(note, file)),
+    gain: 1,
   },
   rhodes: {
-    baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/electric_piano_1-mp3/',
-    notes: Array.from({ length: 108 - 21 + 1 }, (_, i) => sample(nameOf(21 + i, SHARP_NAMES), nameOf(21 + i, FLAT_NAMES))),
+    notes: RHODES_MIDIS.map(rhodesSample),
+    gain: 0.15,
   },
 };
 
@@ -80,13 +94,13 @@ function toMono(ctx: AudioContext, buffer: AudioBuffer): AudioBuffer {
   return mono;
 }
 
-function loadBuffer(ctx: AudioContext, url: string): Promise<AudioBuffer> {
-  let promise = bufferCache.get(url);
+function loadBuffer(ctx: AudioContext, s: SampleNote): Promise<AudioBuffer> {
+  let promise = bufferCache.get(s.key);
   if (!promise) {
-    promise = ctx.decodeAudioData(url).then((b) => toMono(ctx, b));
-    bufferCache.set(url, promise);
+    promise = ctx.decodeAudioData(s.src).then((b) => toMono(ctx, b));
+    bufferCache.set(s.key, promise);
     // A failed download (offline, ...) mustn't stay cached forever — a later play retries.
-    promise.catch(() => bufferCache.delete(url));
+    promise.catch(() => bufferCache.delete(s.key));
   }
   return promise;
 }
@@ -107,7 +121,7 @@ function nearestSample(set: SampleSet, freq: number): SampleNote {
 function resolve(instrument: SampledInstrumentId, freq: number) {
   const set = SAMPLE_SETS[instrument];
   const s = nearestSample(set, freq);
-  return { url: set.baseUrl + s.file, sampleFreq: s.freq };
+  return { sample: s, sampleFreq: s.freq, gain: set.gain };
 }
 
 function context() {
@@ -119,7 +133,7 @@ function context() {
 /** react-native-audio-api's buffer source (not the DOM type of the same name). */
 type SourceNode = ReturnType<AudioContext['createBufferSource']>;
 
-function playBuffer(ctx: AudioContext, buffer: AudioBuffer, rate: number, durationSeconds: number, startTime: number): SourceNode {
+function playBuffer(ctx: AudioContext, buffer: AudioBuffer, rate: number, level: number, durationSeconds: number, startTime: number): SourceNode {
   const now = Math.max(startTime, ctx.currentTime);
   const end = now + durationSeconds;
   const source = ctx.createBufferSource();
@@ -128,7 +142,8 @@ function playBuffer(ctx: AudioContext, buffer: AudioBuffer, rate: number, durati
   const gain = ctx.createGain();
   // A real recording has its own attack — just a short release so cutting it off doesn't click.
   const releaseStart = Math.max(now, end - 0.08);
-  gain.gain.setValueAtTime(1, releaseStart);
+  gain.gain.setValueAtTime(level, now);
+  gain.gain.setValueAtTime(level, releaseStart);
   gain.gain.linearRampToValueAtTime(0, end);
   source.connect(gain);
   gain.connect(ctx.destination);
@@ -143,9 +158,9 @@ export function playNote(note: string, durationSeconds: number, instrument: Samp
   const freq = noteToFrequency(note);
   if (freq === null) return;
   const ctx = context();
-  const { url, sampleFreq } = resolve(instrument, freq);
-  loadBuffer(ctx, url)
-    .then((buffer) => playBuffer(ctx, buffer, freq / sampleFreq, durationSeconds, ctx.currentTime))
+  const { sample: s, sampleFreq, gain } = resolve(instrument, freq);
+  loadBuffer(ctx, s)
+    .then((buffer) => playBuffer(ctx, buffer, freq / sampleFreq, gain, durationSeconds, ctx.currentTime))
     .catch(() => {});
 }
 
@@ -154,8 +169,8 @@ const midiFreq = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 /** Downloads the sample a MIDI note plays from (once), so a run scheduled after it starts on time —
     the notation editor's Play (`components/notation/ScoreEditor.tsx`). */
 export function prepareSampledMidi(instrument: SampledInstrumentId, midi: number): Promise<void> {
-  const { url } = resolve(instrument, midiFreq(midi));
-  return loadBuffer(context(), url).then(() => undefined);
+  const { sample: s } = resolve(instrument, midiFreq(midi));
+  return loadBuffer(context(), s).then(() => undefined);
 }
 
 /** Plays a MIDI note at `when` on the audio clock (seconds), ringing `durationSeconds`. Silent if its
@@ -163,9 +178,9 @@ export function prepareSampledMidi(instrument: SampledInstrumentId, midi: number
 export function playSampledMidi(instrument: SampledInstrumentId, midi: number, durationSeconds: number, when: number) {
   const freq = midiFreq(midi);
   const ctx = context();
-  const { url, sampleFreq } = resolve(instrument, freq);
-  loadBuffer(ctx, url)
-    .then((buffer) => playBuffer(ctx, buffer, freq / sampleFreq, durationSeconds, when))
+  const { sample: s, sampleFreq, gain } = resolve(instrument, freq);
+  loadBuffer(ctx, s)
+    .then((buffer) => playBuffer(ctx, buffer, freq / sampleFreq, gain, durationSeconds, when))
     .catch(() => {});
 }
 
@@ -179,11 +194,11 @@ export async function playNotesTogether(notes: string[], durationSeconds: number
     .map((n) => noteToFrequency(n))
     .filter((f): f is number => f !== null)
     .map((freq) => ({ freq, ...resolve(instrument, freq) }));
-  const buffers = await Promise.all(voices.map((v) => loadBuffer(ctx, v.url).catch(() => null)));
+  const buffers = await Promise.all(voices.map((v) => loadBuffer(ctx, v.sample).catch(() => null)));
   const start = ctx.currentTime + 0.02;
   voices.forEach((v, i) => {
     const buffer = buffers[i];
-    if (buffer) playBuffer(ctx, buffer, v.freq / v.sampleFreq, durationSeconds, start);
+    if (buffer) playBuffer(ctx, buffer, v.freq / v.sampleFreq, v.gain, durationSeconds, start);
   });
 }
 
@@ -203,14 +218,14 @@ export async function playChordSequence(
       .filter((f): f is number => f !== null)
       .map((freq) => ({ freq, ...resolve(options.instrument, freq) })),
   );
-  const buffers = await Promise.all(voices.map((chord) => Promise.all(chord.map((v) => loadBuffer(ctx, v.url).catch(() => null)))));
+  const buffers = await Promise.all(voices.map((chord) => Promise.all(chord.map((v) => loadBuffer(ctx, v.sample).catch(() => null)))));
   const start = ctx.currentTime + 0.05;
   const gap = options.arpeggioGapSeconds ?? 0;
   const sources: SourceNode[] = [];
   voices.forEach((chord, i) => {
     chord.forEach((v, j) => {
       const buffer = buffers[i][j];
-      if (buffer) sources.push(playBuffer(ctx, buffer, v.freq / v.sampleFreq, options.ringSeconds, start + i * options.stepSeconds + j * gap));
+      if (buffer) sources.push(playBuffer(ctx, buffer, v.freq / v.sampleFreq, v.gain, options.ringSeconds, start + i * options.stepSeconds + j * gap));
     });
   });
   return {

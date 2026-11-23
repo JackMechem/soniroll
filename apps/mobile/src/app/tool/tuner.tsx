@@ -191,7 +191,7 @@ function TunerScreen() {
       }
       chips={
         <SettingsBar>
-            <SettingChip Icon={TunerIcon} label="Instrument" value={instrument.label.split(' (')[0]}>
+            <SettingChip Icon={TunerIcon} label="Instrument" value={instrumentChipValue(instrument)}>
               <Field label="Instrument" hint="Sets which strings the dial and the tap-to-hear buttons below are built from.">
                 <PillChoice
                   label="Instrument"
@@ -211,7 +211,7 @@ function TunerScreen() {
               {transpose !== 0 ? <SheetText>Notes are shown as written for this transposing instrument, not concert pitch.</SheetText> : null}
             </SettingChip>
 
-            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
+            <SettingChip Icon={MicrophoneIcon} label="Mic" title="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
               <Field label="Sensitivity" hint="How quiet a signal can be before it's ignored as silence — raise it in a noisy room.">
                 <PillChoice
                   label="Sensitivity"
@@ -222,7 +222,7 @@ function TunerScreen() {
               </Field>
             </SettingChip>
 
-            <SettingChip Icon={ToneIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
+            <SettingChip Icon={ToneIcon} label="Tone" title="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
               <SliderField
                 label="Reference pitch (A4)"
                 value={refA}
@@ -258,19 +258,14 @@ function TunerScreen() {
               />
             </SettingChip>
 
+            {/* Just a switch (the pitch graph inside the dial): tapping the chip turns it on or off. */}
             <SettingChip
               Icon={WaveIcon}
-              label="Pitch graph"
-              value={dialGraph ? 'In the dial' : 'Off'}
+              label="Graph"
+              title="Pitch graph"
+              value={dialGraph ? 'On' : 'Off'}
               toggle={{ checked: dialGraph, onChange: (v) => updateSettings({ dialGraph: v }) }}
-            >
-              <SwitchRow
-                label="Pitch graph in the dial"
-                checked={dialGraph}
-                onChange={(v) => updateSettings({ dialGraph: v })}
-                hint="Draws the last few seconds of what you play inside the ring of notes, so you can watch a held note drift sharp or flat."
-              />
-            </SettingChip>
+            />
         </SettingsBar>
       }
     >
@@ -413,3 +408,11 @@ function TunerScreen() {
 }
 
 export default withScreenLoader(TunerScreen);
+
+/** The Instrument chip's value: the name before any "(…)", or for the transposing groups whose name
+    lists several instruments ("Trumpet / Clarinet / Tenor sax (B♭)") just "B♭ instrument", so the
+    chips beside it aren't squeezed. */
+function instrumentChipValue(instrument: { label: string; transpose: number }): string {
+  const [name, key] = instrument.label.replace(/\)$/, '').split(' (');
+  return instrument.transpose !== 0 && key && name.includes(' / ') ? `${key} instrument` : name;
+}

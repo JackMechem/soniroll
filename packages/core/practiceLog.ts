@@ -19,7 +19,23 @@ export type Attachment =
   | { kind: "tune"; id: string; list: "tunes" | "learn" | "library"; label: string }
   | { kind: "setlist"; id: string; label: string }
   | { kind: "chart"; id: string; label: string }
-  | { kind: "tool"; href: string; label: string };
+  | { kind: "tool"; href: string; label: string }
+  | FileAttachment;
+
+/** One of your own files (anything on the Files page: `itemKind` is its `StoredKind` — an upload,
+    a recording, a tune's song, a lesson file…), a Files folder (everything in it and the folders
+    under it, as it is now), or every file with a tag. Only references: removing one never touches
+    the file, and a file deleted since shows struck through by its `label`. */
+export type FileAttachment =
+  | { kind: "file"; itemKind: "file" | "recording" | "song" | "lesson" | "handin" | "profile"; id: string; label: string; mimeType?: string }
+  | { kind: "folder"; path: string; label: string }
+  | { kind: "fileTag"; tag: string; label: string };
+
+/** Whether an attachment is a file, folder or tag (the routine and task pages list those under
+    Files rather than with the other attachments). */
+export function isFileAttachment(a: Attachment): a is FileAttachment {
+  return a.kind === "file" || a.kind === "folder" || a.kind === "fileTag";
+}
 
 export type RoutineTask = {
   id: string;
@@ -644,7 +660,18 @@ export function newRoutine(start: string, color = 0): Routine {
 }
 
 export function attachmentKey(a: Attachment): string {
-  return a.kind === "tool" ? `tool:${a.href}` : `${a.kind}:${a.id}`;
+  switch (a.kind) {
+    case "tool":
+      return `tool:${a.href}`;
+    case "file":
+      return `file:${a.itemKind}:${a.id}`;
+    case "folder":
+      return `folder:${a.path}`;
+    case "fileTag":
+      return `fileTag:${a.tag.toLowerCase()}`;
+    default:
+      return `${a.kind}:${a.id}`;
+  }
 }
 
 /** Drops days that hold nothing at all, so the stored object doesn't fill with empty entries. */
@@ -690,8 +717,9 @@ export type PublicRoutine = {
 
 export type PublicAttachment = { kind: Attachment["kind"]; label: string; href?: string };
 
+/** Files, folders and tags are left out: they're private to you (not even their names go). */
 function publicAttachments(list: Attachment[] | undefined): PublicAttachment[] {
-  return (list ?? []).map((a) => (a.kind === "tool" ? { kind: a.kind, label: a.label, href: a.href } : { kind: a.kind, label: a.label }));
+  return (list ?? []).filter((a) => !isFileAttachment(a)).map((a) => (a.kind === "tool" ? { kind: a.kind, label: a.label, href: a.href } : { kind: a.kind, label: a.label }));
 }
 
 export function toPublicRoutine(r: Routine): PublicRoutine {

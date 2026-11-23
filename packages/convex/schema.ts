@@ -629,6 +629,31 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_tune", ["userId", "tuneId"]),
 
+  /** Where the owner put one of their stored items (Library → Files) and its tags: any kind
+      `files.storage` lists (`kind` is a `StoredKind`, `itemId` its id there — an upload, recording,
+      tune song, lesson file, hand-in or profile image), online or kept on a device. `folder` is a
+      path like "Etudes/Wilcoxon" ("" = the top level); `tags` are cleaned (`@jam-practice/core/
+      fileFolders`). One row per item, only while it has a folder or a tag; deleting the item deletes
+      it (and a row whose item is gone is ignored). Rules and helpers: `fileFolders.ts`. */
+  fileMeta: defineTable({
+    userId: v.id("users"),
+    kind: v.string(),
+    itemId: v.string(),
+    folder: v.string(),
+    tags: v.array(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_user_item", ["userId", "kind", "itemId"])
+    .index("by_user_folder", ["userId", "folder"]),
+
+  /** Files folders made on their own (New folder), so a folder can be empty. A file's `fileMeta.folder`
+      also makes its folder (and that folder's parents) exist. Like `shedNoteFolders`. */
+  fileFolders: defineTable({
+    userId: v.id("users"),
+    path: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   /** The markings on one of the owner's PDF files (`files`): ink, highlights, text, music symbols,
       and the page list (reordered, rotated, deleted, blank or staff pages added). The PDF itself
       is never changed; the web PDF editor (`apps/web/components/pdf/`) draws this layer over it.

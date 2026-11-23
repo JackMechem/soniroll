@@ -80,7 +80,8 @@ export default function LessonPage({ pair, id }: { pair: string; id: string }) {
   const notesLink = (noteId?: string) => notesHref(lessonId, noteId, sessionKey);
 
   async function newNote() {
-    const title = s ? `Notes — ${s.title}` : `Lesson — ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+    // In a lesson, just "Notes" (the lesson's own name already says which one and when).
+    const title = s ? "Notes" : `Lesson — ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
     const noteId = await addItem({ lessonId, kind: "note", title, body: "", ...(sessionId ? { sessionId } : {}) });
     router.push(notesLink(noteId));
   }
@@ -123,6 +124,8 @@ export default function LessonPage({ pair, id }: { pair: string; id: string }) {
         icon={CapIcon}
         crumbs={[{ label: "Lessons", href: "/lessons" }, { label: otherName, href: backHref }]}
         leading={<PersonBadge url={data.other?.avatarUrl} name={otherName} size="lg" />}
+        // The lesson's name as the page's heading, like a tune's (the crumb is cut short on phones).
+        heading={title}
         subtitle={
           <>
             {s ? sessionWhen(s.start, s.end) : "Things added before lessons had their own pages"}

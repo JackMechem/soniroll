@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
+import { RemainingLabel } from "@/components/RemainingLabel";
 import { TOUCH_HIT } from "@/components/SettingsBar";
 import { PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, StopwatchIcon } from "@/components/tools";
-import { formatClock } from "@/lib/practiceTimer";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
+import { useNowPracticing, useOpenNowPracticing } from "@/components/practicelog/NowPracticing";
 import {
   getServerSnapshot,
   getSnapshot,
@@ -15,48 +17,6 @@ import {
   stop,
   subscribe,
 } from "@/lib/practiceTimerEngine";
-
-/** A ticking "M:SS" readout for a running (or frozen-while-paused/alarming) Practice Timer step.
-    Writes straight to the DOM via rAF rather than React state, same reasoning as CountdownLabel —
-    a once-a-second-or-faster text update shouldn't re-render the whole sidebar. Computes off
-    Date.now() directly, and formats via the same `formatClock` the tool page's own
-    `PracticeTimerRing` uses, so the two can never show different numbers for the same step. */
-function RemainingLabel({
-  startedAt,
-  durationMs,
-  paused,
-  remainingMsAtPause,
-  alarming,
-}: {
-  startedAt: number;
-  durationMs: number;
-  paused: boolean;
-  remainingMsAtPause: number | null;
-  alarming: boolean;
-}) {
-  const spanRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (alarming) {
-      if (spanRef.current) spanRef.current.textContent = formatClock(0);
-      return;
-    }
-    if (paused) {
-      if (spanRef.current) spanRef.current.textContent = formatClock(remainingMsAtPause ?? 0);
-      return;
-    }
-    let frame = 0;
-    const tick = () => {
-      const remaining = Math.max(0, durationMs - (Date.now() - startedAt));
-      if (spanRef.current) spanRef.current.textContent = formatClock(remaining);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [startedAt, durationMs, paused, remainingMsAtPause, alarming]);
-
-  return <span className="shrink-0 tabular-nums" ref={spanRef} />;
-}
 
 /** A small round icon button for the widget's control row — kept local since its sizing/style is
     specific to sitting inline in this compact a space (the tool page's own transport buttons are
@@ -104,7 +64,12 @@ function ControlButton({
     nested inside it (invalid HTML, breaks click handling), so clicking a control never also
     navigates.
 
-    `bar`: the phone top bar's chip (`Sidebar`), in the bar's row just before the bug button. */
+    `bar`: the phone top bar's chip (`Sidebar`), in the bar's row just before the bug button.
+
+    Running a Shed Log routine, the step's name opens its task's page in the side view (its notes,
+    files and recordings), not the Practice Timer — the same as the header's "now practicing" pill
+    (`components/practicelog/NowPracticing.tsx`). On a phone, with nothing running, the chip is the
+    next task today (just its routine's icon, to keep the bar's room for the page name). */
 export default function PracticeTimerWidget({
   collapsed,
   bar,
@@ -114,7 +79,29 @@ export default function PracticeTimerWidget({
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const pathname = usePathname();
-  if (!state) return null;
+  const now = useNowPracticing();
+  const openNow = useOpenNowPracticing();
+  // A routine's step: its task page (else the Practice Timer).
+  const taskHref = now?.running && now.href !== "/practice-timer" ? now.href : null;
+  const openTask = (e: React.MouseEvent) => {
+    if (!taskHref) return;
+    e.preventDefault();
+    openNow(taskHref);
+  };
+  if (!state) {
+    if (!bar || !now || now.running || pathname.startsWith("/shed-log")) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => openNow(now.href)}
+        aria-label={`Next up today: ${now.routine ? `${now.routine} · ` : ""}${now.title}`}
+        title={`Next: ${now.title}`}
+        className={`${TOUCH_HIT} flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] lg:hidden`}
+      >
+        {now.color !== null ? <RoutineIcon icon={now.icon} color={now.color} size="xs" /> : <StopwatchIcon className="h-4 w-4 text-muted" />}
+      </button>
+    );
+  }
   // The phone's top-bar chip would only repeat the big timer on the tool's own page.
   if (bar && pathname === "/practice-timer") return null;
 
@@ -129,18 +116,20 @@ export default function PracticeTimerWidget({
   );
 
   if (bar) {
-    // Just the stopwatch and the time left (the step's name is in the label and on the tool
-    // page), so the page name beside it keeps its room.
+    // The stopwatch and the time left (on a phone the step's name is in the label and on the
+    // tool page, so the page name beside it keeps its room; a wider screen has room for it).
     return (
       <Link
-        href="/practice-timer"
-        aria-label={`Practice Timer ${state.alarming ? "time's up" : "running"}: ${state.current.title}`}
+        href={taskHref ?? "/practice-timer"}
+        onClick={openTask}
+        aria-label={`${state.alarming ? "Time's up" : taskHref ? "Now practicing" : "Practice Timer"}: ${state.current.title}`}
         title={state.current.title}
         className={`${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-2.5 text-xs font-medium lg:hidden ${
           state.alarming ? "animate-pulse text-danger" : "text-foreground"
         }`}
       >
         <StopwatchIcon className={`h-4 w-4 shrink-0 ${state.alarming ? "" : "text-accent"}`} />
+        <span className="hidden max-w-[10rem] truncate sm:inline">{state.current.title}</span>
         {state.alarming ? <span className="whitespace-nowrap">Time&apos;s up</span> : remaining}
       </Link>
     );
@@ -165,7 +154,9 @@ export default function PracticeTimerWidget({
   return (
     <div className="flex flex-col gap-1.5 rounded-xl bg-background px-3 py-2 text-xs">
       <Link
-        href="/practice-timer"
+        href={taskHref ?? "/practice-timer"}
+        onClick={openTask}
+        title={taskHref ? `${now?.routine ? `${now.routine} · ` : ""}${state.current.title}: open it beside the page` : undefined}
         className="flex items-center gap-2 font-medium text-foreground transition-colors hover:text-accent"
       >
         <StopwatchIcon

@@ -76,7 +76,8 @@ export function MinutesInput({ value, onChange, min = 0, max = 600, step = 5 }: 
 const QUICK_TIMES = ['08:00', '12:00', '17:00', '19:00'];
 
 /** A time of day ("HH:MM"): − / + by 15 minutes, ‹hour› buttons, and quick picks. `null` = any
-    time (with `allowNone`). */
+    time (with `allowNone`). "Other…" picks the next quarter hour from now and shows the steppers
+    (no native time picker in the app), and stays lit for a time that isn't a quick pick. */
 export function TimeInput({ value, onChange, allowNone, noneLabel = 'Any time' }: { value: string | null; onChange: (t: string | null) => void; allowNone?: boolean; noneLabel?: string }) {
   const mins = parseTime(value);
   const set = (m: number) => onChange(timeString(((m % 1440) + 1440) % 1440));
@@ -87,6 +88,15 @@ export function TimeInput({ value, onChange, allowNone, noneLabel = 'Any time' }
         {QUICK_TIMES.map((t) => (
           <ChoicePill key={t} label={formatTime(parseTime(t)!)} on={value === t} onPress={() => onChange(t)} />
         ))}
+        <ChoicePill
+          label="Other…"
+          on={mins !== null && !QUICK_TIMES.includes(value ?? '')}
+          onPress={() => {
+            if (mins !== null && !QUICK_TIMES.includes(value ?? '')) return;
+            const now = new Date();
+            set(Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15);
+          }}
+        />
       </View>
       {mins !== null ? (
         <View className="flex-row items-center gap-2">

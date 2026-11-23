@@ -150,6 +150,7 @@ export default function SetlistPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={setlist.name}
+        heading={setlist.name}
         icon={LibraryIcon}
         crumbs={[...UNDER_TUNES, SETLISTS_CRUMB]}
         subtitle={

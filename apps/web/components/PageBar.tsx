@@ -8,6 +8,9 @@ import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { topicById } from "@/lib/helpContent";
 import { type Crumb, type CrumbIcon, usePageCrumbs } from "@/lib/pageCrumbs";
+import NowPracticingPill from "@/components/practicelog/NowPracticing";
+import { usePaneId, usePaneTitleSlot } from "@/lib/paneContext";
+import { useTilingState } from "@/lib/useTilingLayout";
 
 export type { Crumb } from "@/lib/pageCrumbs";
 
@@ -61,6 +64,11 @@ export default function PageBar({
   const shownIntro = intro ?? (topic ? { label: `How ${topic.title} works`, show: ownIntro.show } : undefined);
   const Icon = icon ?? (topic ? ICON_BY_ID[topic.id] : undefined);
   usePageCrumbs({ crumbs: phoneCrumbs ?? crumbs, icon: Icon, intro: phoneIntro ? shownIntro : undefined });
+  // In split screen this bar is hidden (the pane's bar shows the trail): "now practicing" goes in
+  // the main pane's bar instead (once, not in every pane).
+  const paneId = usePaneId();
+  const paneTitleSlot = usePaneTitleSlot();
+  const mainPaneId = useTilingState().layout.mainPaneId;
 
   return (
     <>
@@ -72,11 +80,16 @@ export default function PageBar({
         {/* Only the room left over (`basis-0`), cut short with … when the header is tight, so
             the title and the buttons on the right never get squeezed by it (FB-22). */}
         {titleExtra && <div className="ml-3 min-w-0 flex-1 basis-0 truncate pr-4">{titleExtra}</div>}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {actions}
-          <FeedbackHeaderButton />
+        <div className="ml-auto flex min-w-0 shrink items-center gap-2">
+          {/* What you're practicing (or next today): opens its task in the side view. */}
+          {!paneId && <NowPracticingPill />}
+          <div className="flex shrink-0 items-center gap-2">
+            {actions}
+            <FeedbackHeaderButton />
+          </div>
         </div>
       </div>
+      {paneId && paneId === mainPaneId && paneTitleSlot && createPortal(<span className="ml-1 flex min-w-0"><NowPracticingPill compact /></span>, paneTitleSlot)}
       {ownIntro.open && topic && <ToolIntro topic={topic} onClose={ownIntro.close} />}
     </>
   );
@@ -107,18 +120,18 @@ export function CrumbTrail({
   let before: Crumb[] = earlier;
   let folded: Crumb[] = [];
   let after: Crumb[] = [];
-  // Compact: all of it when it's short ("Help / Metronome"), else "… / parent / page" — the
-  // phone bar has room for about 20 characters, and the page's own name must not be the part
-  // that's cut short. The bar: all of it up to five, else "first / … / last two / page".
+  // Compact: all of it when it's short ("Library / Tunes / Setlists"), else "… / parent / page" —
+  // the phone bar has room for about 28 characters (~245px at 390 wide), and the page's own name
+  // must not be the part that's cut short. The bar: all of it up to five, else "first / … / last two / page".
   const length = crumbs.reduce((n, c) => n + (compact && c.short ? c.short : c.label).length + 3, -3);
-  if (compact && earlier.length > 1 && length > 20) {
+  if (compact && earlier.length > 1 && length > 26) {
     before = [];
     folded = earlier.slice(0, -1);
     after = earlier.slice(-1);
     // Still too long for both ("… / Sam St… / Lesson — Nov…"): fold the parent too, so the page's
     // own name is whole ("… / Lesson — Nov 20").
     const tail = [after[0], last].reduce((n, c) => n + (c.short ?? c.label).length + 3, -3);
-    if (tail > 22) {
+    if (tail > 24) {
       folded = earlier;
       after = [];
     }
@@ -162,11 +175,12 @@ export function CrumbTrail({
   };
   const crumbItem = (c: Crumb, i: number) => {
     // Earlier crumbs give way first (they shrink faster than the page's own name), down to a few
-    // letters each. On phones a short one ("Help", "Tunes") is already under that minimum, so it
-    // just takes its own width (a minimum would leave a gap after its "/").
+    // letters each. On phones a short one ("Help", "Library") has no minimum (one would leave a gap
+    // after its "/"), so with the bar full (the tab count, the timer chip) it gives way before the
+    // page's own name does ("Lib… / Files", not "Library / F").
     const short = compact && (c.short ?? c.label).length <= 7;
     return (
-      <li key={`${i}-${c.label}`} className={`flex items-center gap-1.5 ${short ? "shrink-0" : compact ? "min-w-[4rem] max-w-[7.5rem] shrink-[2]" : "min-w-[2.5rem] max-w-[16rem] shrink-[2]"}`}>
+      <li key={`${i}-${c.label}`} className={`flex items-center gap-1.5 ${short ? "min-w-0 shrink-[3]" : compact ? "min-w-[4rem] max-w-[7.5rem] shrink-[2]" : "min-w-[2.5rem] max-w-[16rem] shrink-[2]"}`}>
         {crumbEl(c)}
         {sep}
       </li>
@@ -200,7 +214,11 @@ export function CrumbTrail({
           </li>
         )}
         {after.map((c, i) => crumbItem(c, i + 100))}
-        <li className="flex min-w-0 shrink items-center">
+        <li
+          className="flex min-w-0 shrink items-center"
+          // Phones: the page's own name keeps up to its first 8 letters whatever's beside it.
+          style={compact ? { minWidth: `${Math.min(lastLabel.length, 8)}ch` } : undefined}
+        >
           {compact ? (
             // The page's heading on phones (the desktop bar's is the h1 below, hidden there).
             <span role="heading" aria-level={1} className="flex min-w-0">

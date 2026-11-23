@@ -111,6 +111,14 @@ function titleFromBody(text: string): string | null {
   return cleanTitle(noteSnippet(line, 80)) || null;
 }
 
+/** Whether a note starts with a "# Heading" that says its title, so the title above it would only
+    repeat it. */
+function opensWithTitle(body: string, title: string): boolean {
+  const line = body.split("\n").find((l) => l.trim())?.trim() ?? "";
+  if (!/^#\s/.test(line)) return false;
+  return cleanTitle(noteSnippet(line, 80)).toLowerCase() === title.trim().toLowerCase();
+}
+
 /** Phones and tablets: a note opens to read, and the keyboard comes up only when you tap into it. */
 function isTouchScreen() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -183,6 +191,10 @@ export default function NotePane({
   const loaded = !!note;
   // A note still called "Untitled" takes its first line as its title (once).
   const autoTitled = useRef(false);
+  // A note that opens with its title as a "# Heading" hides the title above it (decided when it
+  // opens, so nothing jumps while you type; Rename shows it again).
+  const [titleInBody, setTitleInBody] = useState<boolean | null>(null);
+  if (note && titleInBody === null) setTitleInBody(!focusTitle && opensWithTitle(note.body, note.title));
 
   useEffect(() => {
     if (focusTitle && loaded) {
@@ -212,8 +224,11 @@ export default function NotePane({
             save: flush,
             toggleFullWidth,
             renameNote: () => {
-              titleRef.current?.focus();
-              titleRef.current?.select();
+              setTitleInBody(false);
+              requestAnimationFrame(() => {
+                titleRef.current?.focus();
+                titleRef.current?.select();
+              });
             },
           }
         : {
@@ -394,6 +409,7 @@ export default function NotePane({
           }}
           aria-label="Note title"
           readOnly={!mine}
+          hidden={!!titleInBody}
           className="w-full resize-none overflow-hidden bg-transparent text-2xl leading-tight font-semibold tracking-tight outline-none sm:text-3xl"
           style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto" }), ...(fontStack ? { fontFamily: fontStack } : {}) }}
         />
@@ -415,7 +431,7 @@ export default function NotePane({
         {mine && (empty ?? !note.body.trim()) && (
           // An empty note: start it from a template.
           <div className="flex flex-wrap items-center gap-1.5 text-xs" style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
-            <span className="font-medium text-muted">Start from a template:</span>
+            {templates.length > 0 && <span className="font-medium text-muted">Start from a template:</span>}
             {templates.slice(0, 6).map((t) => (
               <button key={t.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => actions.applyTemplate?.(t.id)} className="h-7 rounded-md bg-foreground/[0.05] px-2 font-medium transition-colors hover:bg-surface-hover">
                 {t.name}

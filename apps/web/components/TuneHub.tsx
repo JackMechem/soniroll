@@ -245,6 +245,7 @@ function Hub({
     <LibraryPage>
       <Hero
         title={tune.name}
+        heading={tune.name || "Untitled tune"}
         icon={LibraryIcon}
         crumbs={UNDER_TUNES}
         leading={<KeyBadge label={firstKey} size="lg" />}

@@ -6,10 +6,10 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="November 19, 2026">
+    <LegalPage title="Privacy policy" updated="November 23, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
-        Mechem. This page says what it collects and why, in plain words.
+        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a set of free music practice tools run by Jack Mechem.
+        Every tool is free; the only thing sold is optional extra storage (a storage plan). This page says what it collects and why, in plain words.
       </p>
 
       <LegalSection title="The short version">
@@ -34,8 +34,9 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings and the presets you save, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, and the details of your recordings and files (PDFs,
-            images, audio, video and so on, on their own or attached to a tune): their names, sizes, dates and which tune they&apos;re on.
+            <strong>Your stuff:</strong> tool settings and the presets you save, your open tabs (which pages each one shows and how they&apos;re split), how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log (including which of your files, folders and tags you attach to its routines and tasks; a shared routine never includes them), your Shed Notes (with their templates and settings file), your Score Writer scores, and the details of your recordings and files (PDFs,
+            images, audio, video and so on, on their own or attached to a tune): their names, sizes, dates, which tune they&apos;re on, and the
+            folders and tags you put them in.
             When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
           <li>
@@ -154,8 +155,8 @@ export default function PrivacyPage() {
             request details such as IP addresses.
           </li>
           <li>
-            <LegalLink href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub Pages</LegalLink> serves some of the
-            piano and Rhodes samples straight to your browser (see <LegalLink href="/credits">Credits</LegalLink>).
+            <LegalLink href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub Pages</LegalLink> serves the piano
+            samples straight to your browser (see <LegalLink href="/credits">Credits</LegalLink>).
           </li>
         </ul>
         <p>These may process data outside your country, including in the United States. soniroll doesn&apos;t sell or share data for advertising.</p>

@@ -45,7 +45,7 @@ import {
 import {
   ACCIDENTAL_STYLES,
   AccidentalStyle,
-  spellNote,
+  spellInterval,
 } from "@/lib/noteSpelling";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
@@ -693,7 +693,7 @@ export default function GuessTheInterval() {
   const weakEntries = weakIntervalEntries(settings.intervalStats);
   const revealedNotes =
     revealNotes && status && round
-      ? noteGlyphs(`${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`)
+      ? noteGlyphs(spellInterval(round.notes, accidentalStyle, roundSeed).join(" → "))
       : null;
 
   return (
@@ -1087,7 +1087,12 @@ export default function GuessTheInterval() {
         )}
 
         {running && round && answerChoices.length > 0 && (
-          <div className="grid w-full grid-cols-3 gap-2">
+          // Three to a row; fewer (Learn's first level has two) stay the same width, centred.
+          <div
+            className={`grid w-full gap-2 ${
+              answerChoices.length === 1 ? "max-w-[33%] grid-cols-1" : answerChoices.length === 2 ? "max-w-[66%] grid-cols-2" : "grid-cols-3"
+            }`}
+          >
             {answerChoices.map((interval) => {
               const answered = status !== null;
               const isCorrectAnswer = interval.id === round.interval.id;

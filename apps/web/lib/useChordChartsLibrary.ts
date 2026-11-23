@@ -22,6 +22,12 @@ import type { LinkResult } from "@jam-practice/core/tuneLibrary";
 
 const IMPORT_CHUNK = 150;
 
+/** Charts being deleted right now. The library query still lists one for a moment after its tune
+    is gone (deleting a tune deletes its charts), and the tune auto-linker (`useAutoLinkCharts`)
+    mustn't take it for a chart with no tune and make it a new one. */
+export const deletingChartIds = new Set<string>();
+const DELETING_HOLD_MS = 10_000;
+
 export type LibrarySongMeta = {
   id: string;
   title: string;
@@ -259,6 +265,8 @@ export function useChordChartsLibrary(selectedSongId: string | null) {
   }
 
   async function deleteSong(songId: string) {
+    deletingChartIds.add(songId);
+    setTimeout(() => deletingChartIds.delete(songId), DELETING_HOLD_MS);
     if (isAuthenticated) {
       await deleteMutation({ songId: songId as Id<"chordChartSongs"> });
       return;

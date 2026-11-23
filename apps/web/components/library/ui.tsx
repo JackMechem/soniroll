@@ -238,9 +238,13 @@ export function Hero({
   actions,
   helpTopic,
   titleExtra,
+  heading,
   children,
 }: {
   title: string;
+  /** A one item's page (a tune, a chart): its name as a big heading above the badge and details,
+      since the header bar's crumb alone was easy to miss (and cut short on phones). */
+  heading?: string;
   subtitle?: ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
   leading?: ReactNode;
@@ -265,8 +269,9 @@ export function Hero({
   return (
     <>
       <PageBar crumbs={[...parents, { label: title }]} icon={Icon} helpTopic={helpTopic} />
-      {(hasLine || tabs || children) && (
+      {(hasLine || tabs || children || heading) && (
         <header className="flex flex-col gap-4">
+          {heading && <h2 className="-mb-1 break-words text-2xl font-extrabold text-foreground sm:text-3xl">{heading}</h2>}
           {hasLine && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
               {(leading || subtitle || (titleExtra && !tabs)) && (

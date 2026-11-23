@@ -111,7 +111,7 @@ What changed, roughly by area (details in the round commits, 42a8ab3 → the r8 
   theme-coloured scrollbars on non-touch screens.
 
 Left for Jack: the Rhodes license before any paid plan (see `support-and-donations.md` /
-PROJECT.md), Help and landing screenshots (retake signed in), the browser Back button not closing
+PROJECT.md; done 2026-11-22, it's CC BY now), Help and landing screenshots (retake signed in), the browser Back button not closing
 sheets, the dashboard gap at two-column widths, the Shed Log header icon.
 
 Not verified across these rounds: anything that writes to a signed-in account (logging, linking,

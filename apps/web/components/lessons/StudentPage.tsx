@@ -12,7 +12,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { menuPosition } from "@/components/library/shared";
 import { EmptyState, Hero, LibraryPage, Pill } from "@/components/library/ui";
-import { CapIcon, EmailInviteForm, MoreButton, PersonBadge, RoutinePickDialog, dateLabel, type LessonItem } from "@/components/lessons/parts";
+import { CapIcon, EmailInviteForm, MoreButton, PersonBadge, RoutinePickDialog, btnSecondary, dateLabel, type LessonItem } from "@/components/lessons/parts";
 import { LinkIcon, PlusIcon, ShareIcon } from "@/components/tools";
 import { ScheduleCard } from "@/components/lessons/schedule";
 import { SessionList } from "@/components/lessons/sessions";
@@ -95,6 +95,9 @@ export default function StudentPage({ id }: { id: string }) {
         icon={CapIcon}
         crumbs={[{ label: "Lessons", href: "/lessons" }]}
         leading={<PersonBadge url={data.student?.avatarUrl} name={data.name} size="lg" />}
+        // Their name as the page's heading, like a tune's (the header bar's crumb alone was easy
+        // to miss, and cut short on phones).
+        heading={data.name}
         subtitle={
           data.joined
             ? `${data.student?.name}${data.joinedAt ? ` · student since ${new Date(data.joinedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}` : ""}`
@@ -151,12 +154,8 @@ export default function StudentPage({ id }: { id: string }) {
                   <h2 className="text-sm font-medium">Practice routines</h2>
                   <p className="text-xs text-muted">In {data.name}&apos;s Shed Log, not tied to one lesson. Open one for its practice report.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAdding({ kind: "routine" })}
-                  className="flex shrink-0 items-center gap-1 text-xs text-muted transition-colors hover:text-foreground"
-                >
-                  <PlusIcon className="h-3.5 w-3.5" /> Assign a routine
+                <button type="button" onClick={() => setAdding({ kind: "routine" })} className={btnSecondary}>
+                  <PlusIcon className="h-4 w-4" /> Assign a routine
                 </button>
               </div>
               {routineItems.length === 0 ? (

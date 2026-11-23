@@ -8,7 +8,11 @@ import { setlistHref } from "@/components/library/setlistParts";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { ChordChartIcon, CheckIcon, CloseIcon, NoteIcon, PlusIcon, SearchIcon, SetlistIcon, NAV_LINKS, findToolLink } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
-import { type Attachment, attachmentKey } from "@/lib/practiceLog";
+import { type Attachment, attachmentKey, isFileAttachment } from "@/lib/practiceLog";
+import { useConvexAuth } from "@convex-dev/auth/react";
+import { FilesPickerTab, fileAttachmentHref, fileAttachmentIcon } from "@/components/practicelog/FileAttachments";
+import { openFileBeside } from "@/lib/fileView";
+import { usePaneId } from "@/lib/paneContext";
 import { useTuneIndex } from "@/lib/recordings";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { useSetlists } from "@/lib/useSetlists";
@@ -46,26 +50,37 @@ export function useAttachmentResolver() {
           const tool = findToolLink(a.href);
           return { href: a.href, label: tool?.label ?? a.label, icon: tool?.icon ?? NoteIcon, kindLabel: "Tool" };
         }
+        // Your files: opened beside the page (the chip's click), a folder or tag in Files.
+        case "file":
+        case "folder":
+        case "fileTag":
+          return { href: fileAttachmentHref(a), label: a.label, icon: fileAttachmentIcon(a), kindLabel: a.kind === "file" ? "File" : a.kind === "folder" ? "Folder" : "Tag" };
       }
     };
   }, [tunes, setlists, allSongs]);
 }
 
-/** Attachments as chips that open what they point at; with `onChange`, each has a × and there's
-    an "Attach" button. */
+/** Attachments as chips that open what they point at (a file opens in the side view); with
+    `onChange`, each has a × and there's an "Attach" button. `noFiles`: files, folders and tags are
+    left out here (the routine and task pages list them under Files) and kept as they are. */
 export function AttachmentList({
-  items,
-  onChange,
+  items: all,
+  onChange: changeAll,
   compact = false,
   addLabel = "Attach",
+  noFiles = false,
 }: {
   items: Attachment[];
   onChange?: (items: Attachment[]) => void;
   compact?: boolean;
   addLabel?: string;
+  noFiles?: boolean;
 }) {
   const resolve = useAttachmentResolver();
+  const paneId = usePaneId();
   const [picking, setPicking] = useState(false);
+  const items = noFiles ? all.filter((a) => !isFileAttachment(a)) : all;
+  const onChange = changeAll && (noFiles ? (next: Attachment[]) => changeAll([...next, ...all.filter(isFileAttachment)]) : changeAll);
   if (!items.length && !onChange) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -82,7 +97,11 @@ export function AttachmentList({
         return (
           <span key={attachmentKey(a)} className={`${cls} ${r.href ? "" : "text-muted line-through"}`} title={`${r.kindLabel}: ${r.label}${r.href ? "" : " (deleted)"}`}>
             {r.href ? (
-              <Link href={r.href} className="flex min-w-0 items-center gap-1.5 hover:underline">
+              <Link
+                href={r.href}
+                onClick={a.kind === "file" ? (e) => openFileBeside(a.itemKind, a.id, { from: paneId }) && e.preventDefault() : undefined}
+                className="flex min-w-0 items-center gap-1.5 hover:underline"
+              >
                 {chip}
               </Link>
             ) : (
@@ -111,19 +130,34 @@ export function AttachmentList({
           <PlusIcon className="h-3.5 w-3.5" /> {addLabel}
         </button>
       )}
-      {picking && onChange && <AttachmentPicker selected={items} onChange={onChange} onClose={() => setPicking(false)} />}
+      {picking && onChange && <AttachmentPicker selected={items} onChange={onChange} onClose={() => setPicking(false)} noFiles={noFiles} />}
     </div>
   );
 }
 
-type Tab = "tunes" | "setlists" | "charts" | "tools";
+type Tab = "tunes" | "setlists" | "charts" | "tools" | "files";
 
-/** Pick tunes, setlists, chord charts and tools to attach — tap to add or remove, Done to close. */
-export function AttachmentPicker({ selected, onChange, onClose }: { selected: Attachment[]; onChange: (items: Attachment[]) => void; onClose: () => void }) {
+/** Pick tunes, setlists, chord charts, tools and (signed in) your files, folders and tags to attach
+    — tap to add or remove, Done to close. `only: "files"`: just the Files tab ("Add files" on the
+    routine and task pages); `noFiles`: no Files tab. */
+export function AttachmentPicker({
+  selected,
+  onChange,
+  onClose,
+  only,
+  noFiles = false,
+}: {
+  selected: Attachment[];
+  onChange: (items: Attachment[]) => void;
+  onClose: () => void;
+  only?: "files";
+  noFiles?: boolean;
+}) {
   const tunes = useTuneIndex();
   const { setlists } = useSetlists();
   const { allSongs } = useChordChartsLibrary(null);
-  const [tab, setTab] = useState<Tab>("tunes");
+  const { isAuthenticated } = useConvexAuth();
+  const [tab, setTab] = useState<Tab>(only ?? "tunes");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -150,6 +184,7 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
         detail: `${s.tuneIds.length} tune${s.tuneIds.length === 1 ? "" : "s"}`,
       }));
     }
+    if (tab === "files") return [];
     if (tab === "charts") {
       const all = allSongs.filter((s) => match(`${s.title} ${s.composer}`));
       return sortByText(all, (s) => s.title)
@@ -174,62 +209,69 @@ export function AttachmentPicker({ selected, onChange, onClose }: { selected: At
     setlists: "No setlists yet — make one on the Tunes page.",
     charts: "No chord charts yet — import or make some on the Chord Charts page.",
     tools: "No tools match.",
+    files: "",
   };
+  const pickRow = (r: { attachment: Attachment; title: string; detail: string; group?: string; icon?: IconType }, prevGroup: string | undefined) => {
+    const on = keys.has(attachmentKey(r.attachment));
+    const Icon = r.icon;
+    return (
+      <li key={attachmentKey(r.attachment)}>
+        {r.group && r.group !== prevGroup && <p className="bg-foreground/[0.03] px-3 pb-1 pt-2.5 text-xs font-semibold text-muted">{r.group}</p>}
+        <button type="button" onClick={() => toggle(r.attachment)} aria-pressed={on} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-hover">
+          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${on ? "border-accent bg-accent text-accent-foreground" : "border-foreground/25"}`}>
+            {on && <CheckIcon className="h-3.5 w-3.5" />}
+          </span>
+          {Icon && <Icon className="h-4 w-4 shrink-0 text-muted" />}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">{r.title}</span>
+            {r.detail && <span className="block truncate text-xs text-muted">{r.detail}</span>}
+          </span>
+        </button>
+      </li>
+    );
+  };
+  const listOf = (list: { attachment: Attachment; title: string; detail: string; group?: string; icon?: IconType }[], emptyText: string) => (
+    <ul className="min-h-0 flex-1 divide-y divide-foreground/10 overflow-y-auto rounded-md bg-foreground/[0.05]">
+      {list.length === 0 ? <li className="px-3 py-6 text-center text-sm text-muted">{emptyText}</li> : list.map((r, i) => pickRow(r, list[i - 1]?.group))}
+    </ul>
+  );
+  const tabs: { value: Tab; label: string }[] = [
+    { value: "tunes", label: "Tunes" },
+    { value: "setlists", label: "Setlists" },
+    { value: "charts", label: "Charts" },
+    { value: "tools", label: "Tools" },
+    ...(isAuthenticated && !noFiles ? [{ value: "files" as Tab, label: "Files" }] : []),
+  ];
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onClick={onClose}>
-      <div role="dialog" aria-label="Attach" className="flex max-h-[80vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={only ? "Add files" : "Attach"} className="flex max-h-[80vh] w-full max-w-lg flex-col gap-3 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Attach</h2>
+          <h2 className="text-base font-semibold">{only ? "Add files" : "Attach"}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="-mr-1.5 flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-        <Segmented
-          label="What to attach"
-          value={tab}
-          onChange={(t) => {
-            setTab(t);
-            setQuery("");
-          }}
-          options={[
-            { value: "tunes", label: "Tunes" },
-            { value: "setlists", label: "Setlists" },
-            { value: "charts", label: "Charts" },
-            { value: "tools", label: "Tools" },
-          ]}
-        />
+        {!only && (
+          <Segmented
+            label="What to attach"
+            value={tab}
+            onChange={(t) => {
+              setTab(t);
+              setQuery("");
+            }}
+            options={tabs}
+          />
+        )}
         <div className="flex h-9 items-center gap-2 rounded-md bg-foreground/[0.05] px-3 focus-within:ring-2 focus-within:ring-accent/40">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
         </div>
-        <ul className="min-h-0 flex-1 divide-y divide-foreground/10 overflow-y-auto rounded-md bg-foreground/[0.05]">
-          {rows.length === 0 ? (
-            <li className="px-3 py-6 text-center text-sm text-muted">{query ? "Nothing matches." : empty[tab]}</li>
-          ) : (
-            rows.map((r) => {
-              const on = keys.has(attachmentKey(r.attachment));
-              return (
-                <li key={attachmentKey(r.attachment)}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(r.attachment)}
-                    aria-pressed={on}
-                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-hover"
-                  >
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${on ? "border-accent bg-accent text-accent-foreground" : "border-foreground/25"}`}>
-                      {on && <CheckIcon className="h-3.5 w-3.5" />}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{r.title}</span>
-                      {r.detail && <span className="block truncate text-xs text-muted">{r.detail}</span>}
-                    </span>
-                  </button>
-                </li>
-              );
-            })
-          )}
-        </ul>
+        {tab === "files" ? (
+          <FilesPickerTab query={query} selected={selected} onChange={onChange} renderRows={listOf} />
+        ) : (
+          listOf(rows, query ? "Nothing matches." : empty[tab])
+        )}
         <div className="flex justify-end">
           <button type="button" onClick={onClose} className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
             Done

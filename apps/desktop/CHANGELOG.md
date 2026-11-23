@@ -4,6 +4,21 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.14] - 2026-11-23
+
+- **PDFs open beside the page**: read and mark up a chart while the Metronome or any tool runs
+  next to it. Split screen is rebuilt: every pane keeps its place, has the same bar (Back, full
+  screen, swap, flip side by side / above and below, float, close), and many more pages can go in
+  a pane.
+- **Tabs**: several saved views (a page or a split), switched with Ctrl+Alt+1–9.
+- **Folders and tags** for your files, and **files on routines and tasks** (a file, a folder or a
+  tag), opened beside whatever you're doing. **Now practicing** in every page's top bar.
+- **The Rhodes is back** (jRhodes3d by Jeff Learman, now CC BY) in Rhythm Section and the ear
+  trainers.
+- Scanned PDFs no longer open blank; changes made on another device are picked up by an open
+  window, and an edit made just before leaving a page is saved.
+- Everything else in the website's 0.10.17: three rounds of fixes across the site.
+
 ## [0.1.13] - 2026-11-22
 
 - **Record the computer's sound too** in the Recorder (off unless you turn it on): a song playing in

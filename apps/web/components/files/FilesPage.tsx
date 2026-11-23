@@ -4,23 +4,28 @@ import { LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
 import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader } from "@/components/files/FileParts";
-import { MenuButton } from "@/components/library/shared";
+import { MenuButton, menuPosition } from "@/components/library/shared";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Toolbar, useEdgeFade } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { ArchiveIcon, CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronRightIcon, LinkIcon, MicIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { ArchiveIcon, CloudIcon, DeviceIcon, DownloadIcon, FolderIcon, FolderPlusIcon, LibraryIcon, ChevronRightIcon, LinkIcon, MicIcon, TagIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
-import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
+import { otherDeviceName, tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
 import { StorageMovePanel } from "@/components/files/StorageMove";
 import { useBackup } from "@/lib/storageMove";
 import { PLAN_HREF, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
 import SaveWhere from "@/components/files/SaveWhere";
 import { useSiteSettings } from "@/lib/siteSettings";
+import { usePaneId } from "@/lib/paneContext";
+import { FolderCrumbs, folderLabel, useFileOrganizer } from "@/components/files/FileFolders";
+import { childFolders, cleanFolder, folderAfterDelete, folderName, folderParent, hasFileTag, isInFolder, movedFolder } from "@jam-practice/core/fileFolders";
 
 type Source = StoredKind;
 
@@ -46,13 +51,14 @@ const SOURCE_SHORT: Record<Source, string | null> = {
 type SortKey = "added" | "name" | "where" | "size";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 
-/** The phone's sort menu (the columns sort on wider screens). */
+/** The phone's sort menu (the columns sort on wider screens). Short, so the chosen one fits the
+    button whole ("Newest first" was cut to "Newest fi…"). */
 const SORT_OPTIONS: { value: string; label: string; sort: Sort }[] = [
-  { value: "new", label: "Newest first", sort: { key: "added", dir: "desc" } },
-  { value: "old", label: "Oldest first", sort: { key: "added", dir: "asc" } },
+  { value: "new", label: "Newest", sort: { key: "added", dir: "desc" } },
+  { value: "old", label: "Oldest", sort: { key: "added", dir: "asc" } },
   { value: "name", label: "Name", sort: { key: "name", dir: "asc" } },
-  { value: "big", label: "Largest first", sort: { key: "size", dir: "desc" } },
-  { value: "small", label: "Smallest first", sort: { key: "size", dir: "asc" } },
+  { value: "big", label: "Largest", sort: { key: "size", dir: "desc" } },
+  { value: "small", label: "Smallest", sort: { key: "size", dir: "asc" } },
 ];
 
 /** A kind as a filter. */
@@ -77,30 +83,111 @@ const COLUMNS = "sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,13rem)_5.5rem_6.5r
  * own or attached to tunes), recordings, tunes' songs, lesson files and hand-ins, profile images.
  * Upload (button or drop anywhere on the page), search, filter by where a file came from and what
  * kind it is, sort by any column, and open anything in place. Every item has a ⋮ menu (also on
- * right-click): rename, share a link, download, attach to a tune (uploads), delete. Tick several to
- * delete them together (Delete key works too).
+ * right-click): rename, share a link, download, attach to a tune (uploads), move to a folder, tags,
+ * delete. Tick several to move, tag or delete them together (Delete key works too).
+ *
+ * Folders and tags (`components/files/FileFolders.tsx`): with no search or filter on, it's a folder
+ * view — a breadcrumb, the folders here first, then the files here; uploads go into the open folder,
+ * and files (or folders) can be dragged onto a folder or a breadcrumb. Searching, a filter or a tag
+ * pill lists matching files from every folder, each with its folder in the Where column.
+ * `?folder=Etudes/Wilcoxon` and `?tag=Gig` (`initialFolder`, `initialTag`) open on one.
  */
-export default function FilesPage({ initialSource = "all" }: { initialSource?: Source | "all" }) {
+export default function FilesPage({
+  initialSource = "all",
+  initialFolder = null,
+  initialTag = null,
+  initialQuery = "",
+}: {
+  initialSource?: Source | "all";
+  initialFolder?: string | null;
+  initialTag?: string | null;
+  initialQuery?: string;
+}) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
   const tunes = useTuneIndex();
   const tuneName = (id: string) => tunes.get(id)?.tune.name;
   const saveTarget = useSaveTarget();
-  const uploader = useFileUploader(undefined, saveTarget);
-  const actions = useFileActions({ tuneName });
+  const myFiles = useMemo(() => storage?.items.filter((i) => i.kind === "file"), [storage]);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [source, setSource] = useState<Source | "all">(initialSource);
   const [kind, setKind] = useState<FileKind | "all">("all");
+  const [folder, setFolder] = useState(() => cleanFolder(initialFolder ?? ""));
+  const [tagFilter, setTagFilter] = useState<string[]>(() => (initialTag ? [initialTag] : []));
+  // A new `?folder=` / `?tag=` link (e.g. from a routine's task) opens that folder or tag.
+  const [linked, setLinked] = useState({ folder: initialFolder, tag: initialTag });
+  if (linked.folder !== initialFolder || linked.tag !== initialTag) {
+    setLinked({ folder: initialFolder, tag: initialTag });
+    if (initialFolder != null) setFolder(cleanFolder(initialFolder));
+    if (initialTag != null) setTagFilter(initialTag ? [initialTag] : []);
+  }
+  const { attach: tagFadeRef, style: tagFadeStyle } = useEdgeFade<HTMLDivElement>();
   const [sort, setSort] = useState<Sort>({ key: "added", dir: "desc" });
   const { attach: phoneFadeRef, style: phoneFadeStyle } = useEdgeFade<HTMLDivElement>();
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [folderMenu, setFolderMenu] = useState<MenuState | null>(null);
   const [selecting, setSelecting] = useState(false);
 
   const plan = useStoragePlan();
   const backup = useBackup();
   const withUrls = useDeviceUrls(storage?.items);
   const items = useMemo<StoredEntry[]>(() => withUrls ?? [], [withUrls]);
+  const folders = useMemo(() => storage?.folders ?? [], [storage]);
+  // The open folder, or the top level if it's gone (deleted or renamed on another device).
+  const here = folder && !folders.includes(folder) ? "" : folder;
+
+  const organizer = useFileOrganizer({
+    items,
+    folders,
+    onFolderMoved: (from, to) => {
+      if (isInFolder(here, from, true)) setFolder(to === null ? folderAfterDelete(here, from) : movedFolder(here, from, to));
+    },
+  });
+  const actions = useFileActions({ tuneName, organizer });
+  const tagCounts = organizer.tags;
+  // Tags picked that no file has any more don't filter anything.
+  const pickedTags = useMemo(() => tagFilter.filter((t) => tagCounts.some((x) => x.tag.toLowerCase() === t.toLowerCase())), [tagFilter, tagCounts]);
+  const toggleTag = (tag: string) =>
+    setTagFilter(pickedTags.some((t) => t.toLowerCase() === tag.toLowerCase()) ? pickedTags.filter((t) => t.toLowerCase() !== tag.toLowerCase()) : [...pickedTags, tag]);
+  // The open folder, the search and a single picked tag live in the address too (`?folder=`,
+  // `?q=`, `?tag=`), replaced as you browse: Back (a split-screen pane's Back included) and a
+  // reload come back to the same place. In a pane the pane's own router keeps its address; as a
+  // page, the History API (Next keeps its search params in step, without a navigation).
+  const paneId = usePaneId();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tagParam = pickedTags.length === 1 ? pickedTags[0] : "";
+  useEffect(() => {
+    if (initialSource !== "all" || !storage) return;
+    const current = searchParams?.toString() ?? "";
+    const want = new URLSearchParams(current);
+    const put = (key: string, value: string) => (value ? want.set(key, value) : want.delete(key));
+    put("folder", here);
+    put("q", query.trim());
+    put("tag", tagParam);
+    const next = want.toString();
+    if (next === current) return;
+    const timer = window.setTimeout(() => {
+      const href = `${pathname}?${next}`;
+      if (paneId) router.replace(href, { scroll: false });
+      else window.history.replaceState(null, "", href);
+    }, query.trim() ? 400 : 0);
+    return () => window.clearTimeout(timer);
+  }, [initialSource, storage, searchParams, pathname, paneId, router, here, query, tagParam]);
+
+  /** No search or filter: show folders. */
+  const folderView = !query.trim() && source === "all" && kind === "all" && pickedTags.length === 0;
+  const uploader = useFileUploader(undefined, saveTarget, myFiles, folderView && here ? here : undefined);
+  /** Opens a folder, clearing whatever was filtering (from a row's Where, in the filtered list). */
+  const openFolder = (path: string) => {
+    setFolder(path);
+    setQuery("");
+    setSource("all");
+    setKind("all");
+    setTagFilter([]);
+  };
 
   // Forget files on this device that the account no longer lists (deleted or moved online, maybe
   // from another device).
@@ -124,20 +211,29 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
   const showSources = counts.bySource.size > 1 || source !== "all";
   const showKinds = counts.byKind.size > 1 || kind !== "all";
 
-  /** The Where column: what it is and which tune it's on. */
+  /** The Where column: what it is, which tune it's on, and the folder it's in ("Files" at the top
+      level) — the same for every row, folders included, in the folder view and the filtered list. */
   const whereOf = (item: StoredEntry) => {
     const tune = item.tuneId ? tuneName(item.tuneId) : undefined;
-    return [SOURCE_SHORT[item.kind], tune].filter(Boolean).join(" · ") || "Your files";
+    return [SOURCE_SHORT[item.kind], tune, folderLabel(item.folder ?? "")].filter(Boolean).join(" · ");
+  };
+  /** The phone's line under the name: the folder only in the filtered list (in the folder view
+      it's the one you're in). */
+  const phoneWhereOf = (item: StoredEntry) => {
+    const tune = item.tuneId ? tuneName(item.tuneId) : undefined;
+    return [SOURCE_SHORT[item.kind], tune, !folderView && item.folder ? folderName(item.folder) : null].filter(Boolean).join(" · ");
   };
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = items.filter((item) => {
+      if (folderView) return (item.folder ?? "") === here;
       if (source !== "all" && item.kind !== source) return false;
       if (kind !== "all" && fileKind(item.mimeType, item.name) !== kind) return false;
+      if (pickedTags.length && !pickedTags.some((t) => hasFileTag(item.tags, t))) return false;
       if (!q) return true;
       const tune = item.tuneId ? (tuneName(item.tuneId) ?? "") : "";
-      return [item.name, tune].some((t) => t.toLowerCase().includes(q));
+      return [item.name, tune, item.folder ?? "", ...(item.tags ?? [])].some((t) => t.toLowerCase().includes(q));
     });
     const by: Record<SortKey, (a: StoredEntry, b: StoredEntry) => number> = {
       added: (a, b) => a.createdAt - b.createdAt,
@@ -149,7 +245,16 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
     return out;
     // tuneName and whereOf read `tunes`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, query, source, kind, sort, tunes]);
+  }, [items, query, source, kind, sort, tunes, folderView, here, pickedTags]);
+
+  // The folders inside the open one (folder view), A–Z, with how much is in each (all the way down).
+  const subfolders = useMemo(() => {
+    if (!folderView) return [];
+    return childFolders(folders, here).map((path) => {
+      const inside = items.filter((i) => isInFolder(i.folder ?? "", path, true));
+      return { path, count: inside.length, size: inside.reduce((sum, i) => sum + i.size, 0), folders: folders.filter((f) => f.startsWith(`${path}/`)).length };
+    });
+  }, [folderView, folders, here, items]);
 
   // Only what's still listed counts as selected (deleted or filtered-out items drop out).
   const picked = shown.filter((item) => selected.has(keyOf(item)));
@@ -319,7 +424,8 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
               )}
               {showKinds && (
               <div className="flex flex-wrap items-center gap-1.5">
-                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" />
+                {/* With no source row above, this row's "all" is Everything, as on phones. */}
+                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label={showSources ? "All types" : "Everything"} count={showSources ? undefined : items.length} />
                 {(Object.keys(FILE_KIND_LABEL) as FileKind[])
                   .filter((k) => counts.byKind.get(k))
                   .map((k) => (
@@ -331,9 +437,26 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
             </>
             )}
 
+            {/* Tags: tap one or more to list the files that have any of them, from every folder. */}
+            {tagCounts.length > 0 && (
+              <div className="flex min-w-0 items-center gap-2">
+                <TagIcon className="h-4 w-4 shrink-0 text-muted" />
+                <div ref={tagFadeRef} style={tagFadeStyle} className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="flex w-max gap-1.5" role="group" aria-label="Tags">
+                    {tagCounts.map(({ tag, count }) => (
+                      <FilterChip key={tag} active={pickedTags.some((t) => t.toLowerCase() === tag.toLowerCase())} onClick={() => toggleTag(tag)} label={tag} count={count} />
+                    ))}
+                  </div>
+                </div>
+                <button type="button" onClick={organizer.manageTags} className="inline-flex h-8 shrink-0 items-center rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
+                  Edit
+                </button>
+              </div>
+            )}
+
             {/* No files at all: the same dashed empty state as the other Library tabs, not an empty
                 "Everything 0" card. (No second Upload button: the one at the top does it.) */}
-            {items.length === 0 ? (
+            {items.length === 0 && folders.length === 0 ? (
               <>
                 <EmptyState
                   boxed
@@ -356,7 +479,23 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                   <>
                     <span className="text-sm font-medium">{picked.length} selected</span>
                     <span className="text-xs tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
-                    <div className="ml-auto flex items-center gap-1.5">
+                    <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => organizer.moveMany(picked, clearSelection)}
+                        title="Move what's ticked to a folder"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+                      >
+                        <FolderIcon className="h-4 w-4" /> Move
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => organizer.tagMany(picked, clearSelection)}
+                        title="Add tags to what's ticked"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover"
+                      >
+                        <TagIcon className="h-4 w-4" /> Tag
+                      </button>
                       {plan?.hasPlan && picked.some((i) => i.device && i.url) && (
                         <button
                           type="button"
@@ -387,8 +526,28 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                   </>
                 ) : (
                   <>
-                    {/* No count here: the filter above already shows it. */}
-                    <h2 className="text-sm font-medium">{source === "all" ? (kind === "all" ? "Everything" : kindLabel(kind)) : SOURCE_LABEL[source]}</h2>
+                    {/* Folders: where you are, and New folder. Filtering: what's shown (no count here: the
+                        filter above already shows it). */}
+                    {folderView ? (
+                      <>
+                        <div className="min-w-0 flex-1">
+                          <FolderCrumbs folder={here} onOpen={setFolder} org={organizer} />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => organizer.newFolder(here)}
+                          title={here ? `New folder in “${folderName(here)}”` : "New folder"}
+                          aria-label="New folder"
+                          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:h-8"
+                        >
+                          <FolderPlusIcon className="h-4 w-4" /> <span className="hidden sm:inline">New folder</span>
+                        </button>
+                      </>
+                    ) : (
+                      <h2 className="min-w-0 truncate text-sm font-medium">
+                        {[source === "all" ? (kind === "all" ? (pickedTags.length ? "Files" : "Everything") : kindLabel(kind)) : SOURCE_LABEL[source], pickedTags.join(" or ")].filter(Boolean).join(" · ")}
+                      </h2>
+                    )}
                     {/* Showing recordings: make another one. */}
                     {source === "recording" && (
                       <Link href="/recorder" className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground">
@@ -401,14 +560,14 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                         value={phoneSort}
                         onChange={(v) => setSort(SORT_OPTIONS.find((o) => o.value === v)!.sort)}
                         options={SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
-                        className={`${source === "recording" ? "" : "ml-auto"} w-36 sm:hidden`}
+                        className={`${source === "recording" || folderView ? "" : "ml-auto"} w-32 sm:hidden`}
                       />
                     )}
                     {shown.length > 0 && (
                       <button
                         type="button"
                         onClick={() => (selecting ? clearSelection() : setSelecting(true))}
-                        className={`${source === "recording" || shown.length > 1 ? "" : "ml-auto"} inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden`}
+                        className={`${source === "recording" || shown.length > 1 || folderView ? "" : "ml-auto"} inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground sm:hidden`}
                       >
                         {selecting ? "Done" : "Select"}
                       </button>
@@ -417,8 +576,18 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                 )}
               </div>
 
-              {shown.length === 0 ? (
-                source === "recording" && !query && kind === "all" ? (
+              {shown.length === 0 && (!folderView || subfolders.length === 0) ? (
+                folderView ? (
+                  <EmptyState
+                    title={here ? "This folder is empty" : "Everything's in folders"}
+                    body={
+                      <>
+                        Upload while it&apos;s open and files go in here. Or move files in from their ⋮ menu
+                        <span className="pointer-coarse:hidden">, or drag them onto a folder</span>.
+                      </>
+                    }
+                  />
+                ) : source === "recording" && !query && kind === "all" ? (
                   <EmptyState title="No recordings yet" body="Record a take in the Recorder or on a tune's page and it shows up here." />
                 ) : (
                   <EmptyState title="Nothing matches" body="Try another word, or clear the filters." />
@@ -440,6 +609,45 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                     <SortHeader label="Added" k="added" sort={sort} onSort={sortBy} end />
                     <span />
                   </div>
+                  {subfolders.map((f) => (
+                    <div
+                      key={`folder:${f.path}`}
+                      role="row"
+                      {...organizer.dragFolder(f.path)}
+                      {...organizer.dropOn(f.path)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setFolderMenu({ x: e.clientX, y: e.clientY, items: organizer.folderMenu(f.path, () => setFolder(f.path)) });
+                      }}
+                      className={`group grid items-center px-1.5 ${showChecks ? "grid-cols-[2.25rem_minmax(0,1fr)_2.5rem]" : "grid-cols-[minmax(0,1fr)_2.5rem]"} ${COLUMNS} ${
+                        organizer.over === f.path ? "bg-accent/15 ring-2 ring-inset ring-accent/40" : "hover:bg-surface-hover"
+                      }`}
+                    >
+                      <span role="cell" className={`${showChecks ? "block" : "hidden sm:block"}`} />
+                      <button type="button" role="cell" onClick={() => setFolder(f.path)} className="flex min-w-0 items-center gap-3 px-2 py-2 text-left">
+                        <span className="flex h-8 w-5 shrink-0 items-center justify-center text-accent" aria-hidden>
+                          <FolderIcon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{folderName(f.path)}</span>
+                          <span className="block truncate text-xs text-muted">
+                            {folderCountLabel(f.count, f.folders)}
+                            <span className="sm:hidden">{f.size ? ` · ${formatBytes(f.size)}` : ""}</span>
+                          </span>
+                        </span>
+                      </button>
+                      <span role="cell" className="hidden truncate px-2 text-sm text-muted sm:block">
+                        {folderLabel(folderParent(f.path))}
+                      </span>
+                      <span role="cell" className="hidden px-2 text-right text-sm tabular-nums text-muted sm:block">
+                        {f.size ? formatBytes(f.size) : ""}
+                      </span>
+                      <span role="cell" className="hidden sm:block" />
+                      <span role="cell" className="flex justify-center">
+                        <MenuButton label={`Options for the folder ${folderName(f.path)}`} onClick={(e) => setFolderMenu({ ...menuPosition(e), items: organizer.folderMenu(f.path, () => setFolder(f.path)) })} />
+                      </span>
+                    </div>
+                  ))}
                   {shown.map((item) => {
                     const isPicked = selected.has(keyOf(item));
                     const where = whereOf(item);
@@ -449,6 +657,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                         role="row"
                         aria-selected={isPicked}
                         onContextMenu={(e) => actions.contextMenu(item, e)}
+                        {...organizer.dragItem(item, picked)}
                         className={`group grid items-center px-1.5 ${showChecks ? "grid-cols-[2.25rem_minmax(0,1fr)_2.5rem]" : "grid-cols-[minmax(0,1fr)_2.5rem]"} ${COLUMNS} ${
                           isPicked ? "bg-accent/10" : "hover:bg-surface-hover"
                         }`}
@@ -465,7 +674,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                           type="button"
                           role="cell"
                           onClick={() => (showChecks && !window.matchMedia("(min-width: 640px)").matches ? toggle(item) : actions.openFile(item))}
-                          className="flex min-w-0 items-center gap-3 px-2 py-2 text-left"
+                          className={`flex min-w-0 items-center gap-3 px-2 py-2 text-left ${item.device && !item.url ? "opacity-60" : ""}`}
                         >
                           <FileTypeIcon kind={fileKind(item.mimeType, item.name)} recording={item.kind === "recording"} />
                           <span className="min-w-0 flex-1">
@@ -480,8 +689,18 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                               <PlaceBadge item={item} paid={!!plan?.hasPlan} />
                             </span>
                             {/* Phones: everything in one line under the name. */}
-                            <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, where === "Your files" ? null : where)}</span>
-                            <span className="hidden truncate text-xs text-muted sm:block">{FILE_KIND_LABEL[fileKind(item.mimeType, item.name)]}</span>
+                            <span className="block truncate text-xs text-muted sm:hidden">
+                              {fileDetail(item, [phoneWhereOf(item) || null, item.device && !item.url ? `On ${otherDeviceName(item.device.label)}` : null, ...(item.tags ?? [])].filter(Boolean).join(" · ") || null)}
+                            </span>
+                            <span className="hidden min-w-0 items-center gap-1 text-xs text-muted sm:flex">
+                              <span className="shrink-0">{FILE_KIND_LABEL[fileKind(item.mimeType, item.name)]}</span>
+                              {(item.tags ?? []).slice(0, 3).map((t) => (
+                                <span key={t} className="min-w-0 max-w-[8rem] truncate rounded bg-foreground/[0.06] px-1.5 py-px text-[11px] font-medium text-foreground">
+                                  {t}
+                                </span>
+                              ))}
+                              {(item.tags?.length ?? 0) > 3 && <span className="shrink-0">+{item.tags!.length - 3}</span>}
+                            </span>
                           </span>
                         </button>
                         <span role="cell" className="hidden truncate px-2 text-sm text-muted sm:block" title={where}>
@@ -491,9 +710,24 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                               <Link href={`/tunes/tune?id=${encodeURIComponent(item.tuneId)}`} className="text-foreground hover:text-accent hover:underline">
                                 {tuneName(item.tuneId)}
                               </Link>
+                              {" · "}
                             </>
                           ) : (
-                            where
+                            SOURCE_SHORT[item.kind] && `${SOURCE_SHORT[item.kind]} · `
+                          )}
+                          {/* The folder it's in ("Files" at the top level); in the filtered list it opens it. */}
+                          {folderView ? (
+                            folderLabel(item.folder ?? "")
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openFolder(item.folder ?? "")}
+                              title={item.folder ? `Open the folder ${item.folder}` : "Open the top of Files"}
+                              className="inline-flex max-w-full items-center gap-1 align-bottom text-foreground hover:text-accent hover:underline"
+                            >
+                              <FolderIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
+                              <span className="truncate">{folderLabel(item.folder ?? "")}</span>
+                            </button>
                           )}
                         </span>
                         <span role="cell" className="hidden px-2 text-right text-sm tabular-nums text-muted sm:block">
@@ -510,8 +744,8 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                   })}
                 </div>
               )}
-              {actions.status && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-muted">{actions.status}</p>}
-              {actions.error && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error}</p>}
+              {(actions.status ?? organizer.status) && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-muted">{actions.status ?? organizer.status}</p>}
+              {(actions.error ?? organizer.error) && <p className="border-t border-foreground/10 px-4 py-3 text-sm text-danger">{actions.error ?? organizer.error}</p>}
             </section>
             )}
           </>
@@ -519,8 +753,16 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
       </div>
       {uploader.input}
       {actions.dialogs}
+      {organizer.dialogs}
+      {folderMenu && <ContextMenu menu={folderMenu} onClose={() => setFolderMenu(null)} />}
     </LibraryPage>
   );
+}
+
+/** "3 files", "2 files · 1 folder", "Empty". */
+function folderCountLabel(files: number, folders: number) {
+  const parts = [files && `${files} file${files === 1 ? "" : "s"}`, folders && `${folders} folder${folders === 1 ? "" : "s"}`].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Empty";
 }
 
 /** A column heading that sorts by it; a second click flips the order. */
@@ -577,12 +819,13 @@ function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean }) {
     return item.url ? (
       <span title="Kept on this device" className={`${badge} bg-foreground/[0.05] text-muted`}>
         <DeviceIcon className="h-3 w-3" />
-        <span className="hidden lg:inline">This device</span>
+        <span>This device</span>
       </span>
     ) : (
-      <span title={`Kept on ${item.device.label}. Open it there.`} className={`${badge} bg-foreground/[0.05] text-muted`}>
+      <span title={`Kept on ${otherDeviceName(item.device.label)}. Open it there.`} className={`${badge} bg-foreground/[0.05] text-muted`}>
         <DeviceIcon className="h-3 w-3" />
-        <span className="max-w-[10rem] truncate">{item.device.label}</span>
+        {/* Phones say where in the line under the name, so the name keeps its room. */}
+        <span className="hidden max-w-[10rem] truncate sm:inline">{otherDeviceName(item.device.label).replace(/^another/, "Another")}</span>
       </span>
     );
   }

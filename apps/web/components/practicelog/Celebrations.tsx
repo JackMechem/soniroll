@@ -175,14 +175,18 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
 
     if (now.doneTotal > was.doneTotal && sounds) taskNote(Math.max(1, now.todayDone));
 
+    // Held back until the "everything done today" check below: when the last routine also
+    // finishes the day, that one toast says both (two stacked toasts covered the page).
+    const routineToasts: Omit<Toast, "id">[] = [];
     for (const key of now.complete) {
       if (was.complete.has(key)) continue;
       const [, rid] = key.split(":");
       const routine = data.routines.find((r) => r.id === rid);
       if (!routine || !firstTime(now.today, `routine:${key}`)) continue;
-      toast({ kind: "routine", title: `${routine.name || "Routine"} complete!`, detail: `All ${routine.tasks.length} task${routine.tasks.length === 1 ? "" : "s"} done.` });
+      routineToasts.push({ kind: "routine", title: `${routine.name || "Routine"} complete!`, detail: `All ${routine.tasks.length} task${routine.tasks.length === 1 ? "" : "s"} done.` });
       big = true;
     }
+    let dayDone = false;
 
     const goal = goalOn(data, now.today);
     const goalMet = goal <= 0 || now.todayMinutes >= goal;
@@ -195,6 +199,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
     // itself. "A full day" only once the daily goal is met too.
     if (now.todayTotal > 0 && now.todayDone === now.todayTotal && was.todayDone < was.todayTotal && firstTime(now.today, "day")) {
       const tasks = `${now.todayTotal} of ${now.todayTotal} task${now.todayTotal === 1 ? "" : "s"}`;
+      dayDone = true;
       toast(
         goalMet
           ? { kind: "day", title: "Everything done today", detail: `${tasks}. That's a full day.`, share: "day", celebrate: true }
@@ -202,6 +207,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
       );
       big = true;
     }
+    if (!dayDone) routineToasts.forEach((t) => toast(t));
 
     if (was.todayMinutes === 0 && now.todayMinutes > 0 && firstTime(now.today, "streak")) {
       const s = streak(data, now.today);
@@ -303,9 +309,10 @@ export default function Celebrations({ hideToasts = false }: { hideToasts?: bool
             />
           ))}
       </div>
-      {/* Phones: at the bottom, so they don't cover the top bar and the tool's own row (menu,
-          Presets, Log). Desktop: at the top. A tap on one puts it away. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[96] flex flex-col items-center gap-2 px-4 lg:bottom-auto lg:top-4" aria-live="polite">
+      {/* At the bottom, so they don't cover the top bar and the page's own header (the Shed Log's
+          goal line and buttons); on desktop in the bottom-right corner (the background tool dock
+          is bottom-left). A tap on one puts it away. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[96] flex flex-col items-center gap-2 px-4 lg:bottom-6 lg:left-auto lg:right-6 lg:w-96 lg:px-0" aria-live="polite">
         {!hideToasts && s.toasts.map((t) => (
           <div
             key={t.id}

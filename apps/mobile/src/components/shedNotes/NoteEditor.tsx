@@ -80,6 +80,7 @@ export function NoteEditor({
   onTemplateLink,
   handleRef,
   autoFocus = true,
+  self,
 }: {
   value: string;
   onChange: (text: string) => void;
@@ -102,6 +103,9 @@ export function NoteEditor({
   handleRef?: Ref<EditorHandle>;
   /** Open the keyboard straight away (a note opened to write in). */
   autoFocus?: boolean;
+  /** The title of the note being written, left out of the `[[` suggestions (a note doesn't link
+      to itself). */
+  self?: string;
 }) {
   const { colors, derived } = useAppTheme();
   const input = useRef<TextInput>(null);
@@ -171,8 +175,9 @@ export function NoteEditor({
   const suggestions = useMemo((): Suggestion[] => {
     if (!query) return [];
     const q = titleKey(query.query);
+    const selfKey = self === undefined ? null : titleKey(self);
     const matching = notes
-      .filter((n) => !q || titleKey(n.title).includes(q))
+      .filter((n) => titleKey(n.title) !== selfKey && (!q || titleKey(n.title).includes(q)))
       .sort((a, b) => Number(!titleKey(a.title).startsWith(q)) - Number(!titleKey(b.title).startsWith(q)))
       .slice(0, 5)
       .map((n): Suggestion => ({ kind: 'note', title: n.title, folder: n.folder }));
@@ -183,7 +188,7 @@ export function NoteEditor({
     const exact = notes.some((n) => titleKey(n.title) === q);
     const create: Suggestion[] = q && !exact && onCreateLinked ? [{ kind: 'create', title: query.query.trim() }] : [];
     return [...fromTemplates, ...matching, ...create];
-  }, [query, notes, templates, onCreateLinked]);
+  }, [query, notes, templates, onCreateLinked, self]);
 
   function pick(s: Suggestion) {
     if (!query) return;

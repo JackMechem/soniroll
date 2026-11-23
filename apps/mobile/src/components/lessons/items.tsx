@@ -92,6 +92,10 @@ export function ItemCard({
   /** Hand-in assignments show their hand-in status instead of "Done". */
   const shownDone = item.done && !item.submit;
   const status = item.submission?.status;
+  const hasMore =
+    item.kind === 'note'
+      ? !!item.body.trim() || !!onOpenNotes
+      : !!item.body || !!item.fileUrl || !!item.chart || !!item.routine || (item.kind === 'assignment' && !!item.submit) || (item.kind === 'routine' && !teacher);
   return (
     <View className="gap-3 rounded-xl p-4" style={{ backgroundColor: colors.surface, borderWidth: overdue ? 1 : 0, borderColor: withAlpha(colors.danger, 0.4) }}>
       <View className="flex-row items-start gap-3">
@@ -107,8 +111,9 @@ export function ItemCard({
                 <AssignmentIcon color={status === 'changes' ? grade.partial : colors.muted} size={17} />
               )}
             </View>
-          ) : item.kind === 'assignment' ? (
-            <Tick checked={item.done} label={item.done ? 'Mark as not done' : 'Mark as done'} onPress={onToggleDone ? () => onToggleDone(!item.done) : undefined} />
+          ) : item.kind === 'assignment' && (onToggleDone || item.done) ? (
+            // Only the student ticks it off; the teacher sees the tick once it's done, else the icon.
+            <Tick checked={item.done} label={item.done ? (onToggleDone ? 'Mark as not done' : 'Done') : 'Mark as done'} onPress={onToggleDone ? () => onToggleDone(!item.done) : undefined} />
           ) : (
             <View className="h-6 w-6 items-center justify-center">
               <Icon color={colors.muted} size={18} />
@@ -142,31 +147,36 @@ export function ItemCard({
           </View>
         ) : null}
       </View>
-      {item.kind === 'note' ? (
-        <>
-          {item.body.trim() ? (
-            <Text numberOfLines={3} className="font-ui text-sm leading-5" style={{ color: colors.foreground }}>
-              {notePreview(item.body, 320)}
+      {/* What's under the heading lines up with the title, not the tick. */}
+      {hasMore ? (
+        <View className="gap-3" style={{ marginLeft: 36 }}>
+          {item.kind === 'note' ? (
+            <>
+              {item.body.trim() ? (
+                <Text numberOfLines={3} className="font-ui text-sm leading-5" style={{ color: colors.foreground }}>
+                  {notePreview(item.body, 320)}
+                </Text>
+              ) : null}
+              {onOpenNotes ? (
+                <View className="self-start">
+                  <SmallButton label={teacher ? 'Open in notes' : 'Read the notes'} onPress={onOpenNotes} />
+                </View>
+              ) : null}
+            </>
+          ) : item.body ? (
+            <Text selectable className="font-ui text-sm leading-5" style={{ color: colors.foreground }}>
+              {item.body}
             </Text>
           ) : null}
-          {onOpenNotes ? (
+          {item.fileUrl ? <FileView url={item.fileUrl} name={item.fileName ?? item.title} type={item.fileType ?? ''} /> : null}
+          {item.chart ? <ChartView chart={item.chart as IRealSong} saveAs={saveChartsAs} /> : null}
+          {item.routine ? <RoutineSummary routine={item.routine} /> : null}
+          {item.kind === 'assignment' && item.submit ? <AssignmentWork item={item} teacher={teacher} studentName={studentName} now={now} /> : null}
+          {item.kind === 'routine' && !teacher ? (
             <View className="self-start">
-              <SmallButton label={teacher ? 'Open in notes' : 'Read the notes'} onPress={onOpenNotes} />
+              <SmallButton primary label="Open in your Shed Log" onPress={() => router.push({ pathname: '/tool/shed-log-routine', params: { id: lessonRoutineId(item.id) } })} />
             </View>
           ) : null}
-        </>
-      ) : item.body ? (
-        <Text selectable className="font-ui text-sm leading-5" style={{ color: colors.foreground }}>
-          {item.body}
-        </Text>
-      ) : null}
-      {item.fileUrl ? <FileView url={item.fileUrl} name={item.fileName ?? item.title} type={item.fileType ?? ''} /> : null}
-      {item.chart ? <ChartView chart={item.chart as IRealSong} saveAs={saveChartsAs} /> : null}
-      {item.routine ? <RoutineSummary routine={item.routine} /> : null}
-      {item.kind === 'assignment' && item.submit ? <AssignmentWork item={item} teacher={teacher} studentName={studentName} now={now} /> : null}
-      {item.kind === 'routine' && !teacher ? (
-        <View className="self-start">
-          <SmallButton primary label="Open in your Shed Log" onPress={() => router.push({ pathname: '/tool/shed-log-routine', params: { id: lessonRoutineId(item.id) } })} />
         </View>
       ) : null}
     </View>
@@ -352,12 +362,7 @@ function ItemForm({ lessonId, sessionId, edit, today, onClose }: { lessonId: Id<
       ) : null}
       <View className="gap-1.5">
         <FieldLabel>Title</FieldLabel>
-        <Field
-          value={title}
-          onChangeText={setTitle}
-          placeholder={kind === 'assignment' ? 'e.g. Learn the head of Autumn Leaves' : 'File name'}
-          autoFocus={kind === 'assignment' && !editing}
-        />
+        <Field value={title} onChangeText={setTitle} placeholder={kind === 'assignment' ? 'e.g. Learn the head of Autumn Leaves' : 'File name'} autoFocus={kind === 'assignment' && !editing} />
       </View>
       <View className="gap-1.5">
         <FieldLabel aside={kind === 'file' ? '(optional)' : undefined}>{kind === 'assignment' ? 'Details' : 'Note'}</FieldLabel>

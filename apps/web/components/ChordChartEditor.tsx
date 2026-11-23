@@ -22,7 +22,7 @@ import type { Crumb } from "@/components/PageBar";
 import { useLeaveGuard } from "@/components/library/useLeaveGuard";
 import { LibraryIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import { encodeChartString } from "@/lib/chartString";
-import { parseBarSlots, slotsToText, type Bar, type ChordSlot, type IRealSong } from "@/lib/iRealPro";
+import { parseBarSlots, parseChordToken, slotsToText, type Bar, type ChordSlot, type IRealSong } from "@/lib/iRealPro";
 
 const STARTING_BARS = 4;
 const BARS_PER_ROW = 4;
@@ -198,6 +198,13 @@ function songOf(f: { title: string; composer: string; style: string; key: string
   };
 }
 
+/** The words in a bar's text that aren't a chord this app can read (they'd be left out of the
+    chart), so the editor can say so instead of quietly showing an empty bar. */
+function unreadableChords(eb: EditableBar): string[] {
+  if (eb.isRepeatBar) return [];
+  return eb.text.split(/\s+/).filter((t) => t && !parseChordToken(t));
+}
+
 function trimTrailingBlank(bars: EditableBar[]) {
   let end = bars.length;
   while (end > 1 && isBlankBar(bars[end - 1])) end--;
@@ -318,6 +325,15 @@ export default function ChordChartEditor({
       e.preventDefault();
       if (index === bars.length - 1) addBar();
       else activateBar(index + 1);
+    } else if (e.key === "Tab" && !e.shiftKey && (index < bars.length - 1 || bars[index].text.trim())) {
+      // Tab and Shift+Tab move between bars like Enter does (focus used to land on the next bar's
+      // button, so what was typed next went nowhere). Tab out of an empty last bar leaves the grid.
+      e.preventDefault();
+      if (index === bars.length - 1) addBar();
+      else activateBar(index + 1);
+    } else if (e.key === "Tab" && e.shiftKey && index > 0) {
+      e.preventDefault();
+      activateBar(index - 1);
     } else if (e.key === "Escape") {
       // Deliberately doesn't bubble up to this view's own Escape-closes-the-builder handler —
       // it only blurs the current bar, since losing an entire typed-out chart because Escape was
@@ -408,6 +424,9 @@ export default function ChordChartEditor({
   const addButtonFitsInGrid = lastRow !== undefined && lastRowCells <= 12;
 
   const activeBar = bars[activeIndex];
+  const unreadableList = bars
+    .map((b, i) => ({ bar: i + 1, words: i === activeIndex ? [] : unreadableChords(b) }))
+    .filter((u) => u.words.length > 0);
 
   return (
     // Left-aligned like the other library pages (not centred in the wide shell).
@@ -420,31 +439,6 @@ export default function ChordChartEditor({
       />
 
       <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface p-4 sm:grid-cols-2">
-        {!editing && (
-          <div className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="text-xs font-medium text-muted">Folder</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={playlist}
-                onChange={setPlaylist}
-                options={[
-                  { value: NO_PLAYLIST, label: "No folder" },
-                  ...playlists.map((name) => ({ value: name, label: name })),
-                  { value: "", label: "New folder…" },
-                ]}
-                className="min-w-0 max-w-full"
-              />
-              {playlist === "" && (
-                <input
-                  value={newPlaylist}
-                  onChange={(e) => setNewPlaylist(e.target.value)}
-                  placeholder="New folder name"
-                  className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
-                />
-              )}
-            </div>
-          </div>
-        )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-muted">Title</span>
           <input
@@ -521,6 +515,31 @@ export default function ChordChartEditor({
             />
           </div>
         </div>
+        {!editing && (
+          <div className="flex flex-col gap-1 text-sm sm:col-span-2">
+            <span className="text-xs font-medium text-muted">Folder</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={playlist}
+                onChange={setPlaylist}
+                options={[
+                  { value: NO_PLAYLIST, label: "No folder" },
+                  ...playlists.map((name) => ({ value: name, label: name })),
+                  { value: "", label: "New folder…" },
+                ]}
+                className="min-w-0 max-w-full"
+              />
+              {playlist === "" && (
+                <input
+                  value={newPlaylist}
+                  onChange={(e) => setNewPlaylist(e.target.value)}
+                  placeholder="New folder name"
+                  className="min-w-0 flex-1 h-9 rounded-md bg-foreground/[0.05] px-3 text-base outline-none focus:ring-2 focus:ring-accent/40 sm:text-sm"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* One line of help; the rest behind "More tips" (descriptions aren't always on show). */}
@@ -575,13 +594,21 @@ export default function ChordChartEditor({
                     />
                   );
                 }
+                const unreadable = unreadableChords(bars[globalIndex]);
+                const nothingRead = bar.content.kind === "chords" && bar.content.slots.length === 0;
                 return (
                   <button
                     type="button"
                     onClick={() => activateBar(globalIndex)}
+                    aria-label={`Bar ${globalIndex + 1}${bars[globalIndex].text.trim() ? `: ${bars[globalIndex].text.trim()}` : ""}`}
                     className="flex h-full w-full min-w-0 items-center justify-center"
                   >
-                    <BarContent bar={bar} />
+                    {unreadable.length > 0 && nothingRead ? (
+                      // Nothing in this bar could be read: show what was typed, so it isn't lost.
+                      <span className="truncate px-1 text-sm text-danger">{bars[globalIndex].text.trim()}</span>
+                    ) : (
+                      <BarContent bar={bar} />
+                    )}
                   </button>
                 );
               }}
@@ -642,6 +669,15 @@ export default function ChordChartEditor({
           <PlusIcon className="h-4 w-4" />
           Add bar
         </button>
+      )}
+
+      {unreadableList.length > 0 && (
+        <p className="text-xs text-danger" role="status">
+          {unreadableList
+            .map(({ bar, words }) => `Bar ${bar}: can't read ${words.map((w) => `"${w}"`).join(", ")}`)
+            .join(" · ")}
+          . Try spellings like C^7, Cmaj7, D-7, Dm7, Bo7 or Bh7.
+        </p>
       )}
 
       {activeBar && (

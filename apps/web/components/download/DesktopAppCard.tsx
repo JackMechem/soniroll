@@ -57,25 +57,28 @@ export function DesktopAppCard({ always = false }: { always?: boolean }) {
         <h2 className="font-semibold">soniroll for your computer</h2>
         <p className="text-sm text-muted">The desktop app: its own audio engine for steadier timing, files kept on your computer, its own window. Free.</p>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2 pr-6 @2xl:pr-8">
+      <div className={`flex shrink-0 flex-wrap items-center gap-2 ${always ? "" : "pr-6 @2xl:pr-8"}`}>
         <Link href={DOWNLOAD_PATH} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent-hover">
           <DownloadIcon className="h-4 w-4" /> {platform ? `Get it for ${PLATFORM_NAME[platform]}` : "Get the desktop app"}
         </Link>
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          try {
-            localStorage.setItem(DISMISS_KEY, "1");
-          } catch {}
-          listeners.forEach((l) => l());
-        }}
-        aria-label="Hide this card"
-        title="Hide this card"
-        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
-      >
-        <CloseIcon className="h-4 w-4" />
-      </button>
+      {/* While the dashboard is edited (`always`), its frame has its own × to take the card off. */}
+      {!always && (
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              localStorage.setItem(DISMISS_KEY, "1");
+            } catch {}
+            listeners.forEach((l) => l());
+          }}
+          aria-label="Hide this card"
+          title="Hide this card"
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+      )}
     </section>
   );
 }

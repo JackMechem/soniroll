@@ -11,7 +11,8 @@ import { type NoteTarget, TASK_NOTE_START, targetKey } from "@jam-practice/core/
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
 import PageBar, { type Crumb } from "@/components/PageBar";
-import { AttachmentList } from "@/components/practicelog/Attachments";
+import { AttachmentList, AttachmentPicker } from "@/components/practicelog/Attachments";
+import { type FileGroup, LinkedFiles, splitFiles, useLinkedCount } from "@/components/practicelog/FileAttachments";
 import PageNotes, { type PageNotesHandle } from "@/components/practicelog/PageNotes";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
 import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList } from "@/components/practicelog/pageParts";
@@ -21,10 +22,12 @@ import { RunningTimer } from "@/components/practicelog/RoutineCard";
 import Subtasks from "@/components/practicelog/Subtasks";
 import { useAttachedNotes } from "@/components/shednotes/AttachedNotes";
 import { embedText } from "@/components/shednotes/fileEmbedSetup";
-import { CheckIcon, PencilIcon, PlayIcon, StopwatchIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlayIcon, PlusIcon, StopwatchIcon, findToolLink } from "@/components/tools";
 import {
   type Attachment,
+  type FileAttachment,
   DAY_TASKS_ID,
+  isFileAttachment,
   type DayTask,
   describeRepeat,
   ROUTINE_COLORS,
@@ -37,7 +40,9 @@ import {
 } from "@/lib/practiceLog";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { recordingsApi } from "@/lib/recordings";
-import { followSide, openNotePeek } from "@/lib/notePeek";
+import { openNotePeek } from "@/lib/notePeek";
+import { usePaneId } from "@/lib/paneContext";
+import { goBackOr } from "@/lib/goBack";
 import { routineHref } from "@/lib/shedLogPages";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
@@ -50,15 +55,17 @@ const SHED_LOG_ICON = findToolLink("/shed-log")?.icon;
  * the routine's notes), recordings made for it (Record here saves the clip on the task and puts it
  * in the notes), what's attached, and the days it was practiced. Start runs it on the timer.
  *
- * `inPanel`: drawn in the side view (`NotePeek`) — no page bar, and its notes and routine open in
- * the view too. As a page of its own it has Back (to the page you came from).
+ * Its notes open in the side view (from inside the side view, in it, with Back). As a page of its
+ * own it has Back (to the page you came from); in a pane the pane's bar has Back and the trail.
  */
-export default function TaskPage({ routineId, date, taskId, inPanel = false }: { routineId?: string; date?: string; taskId: string; inPanel?: boolean }) {
+export default function TaskPage({ routineId, date, taskId }: { routineId?: string; date?: string; taskId: string }) {
   const router = useRouter();
+  const inPane = usePaneId() !== null;
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
   const { engine, startRoutine, startDayTasks, runningTask } = useRoutineTimer();
   const [logging, setLogging] = useState(false);
+  const [addingFiles, setAddingFiles] = useState(false);
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const notesRef = useRef<PageNotesHandle | null>(null);
   const appendLine = useMutation(api.shedNotes.appendLine);
@@ -78,6 +85,42 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
     }
     return date ? log.data.days[date]?.tasks?.find((t) => t.id === taskId) : undefined;
   }, [routineId, routine, taskId, date, log.data.days]);
+
+  // A task added to the routine for one day lives on that day: the day it's on.
+  const extraDay = useMemo(() => {
+    if (!routineId || routine?.tasks.some((t) => t.id === taskId)) return null;
+    return Object.entries(log.data.days).find(([, d]) => d.routines?.[routineId]?.extraTasks?.some((t) => t.id === taskId))?.[0] ?? null;
+  }, [routineId, routine, taskId, log.data.days]);
+
+  // Its Files: the task's own (every time), and the ones for just this day.
+  const ownFiles = splitFiles(task?.attachments);
+  const viewDay = date ?? todayKey();
+  const dayFiles = routineId ? splitFiles(log.data.days[viewDay]?.routines?.[routineId]?.taskAttachments?.[taskId]) : { files: [], other: [] };
+  const fileGroups: FileGroup[] = [
+    { key: "own", attachments: ownFiles.files, onChange: routine?.assigned ? undefined : (files) => saveTaskAttachments([...ownFiles.other, ...files]) },
+    {
+      key: "day",
+      title: viewDay === todayKey() ? "Just for today" : `Just for ${formatShortDate(viewDay)}`,
+      attachments: dayFiles.files,
+      onChange: (files) =>
+        routineId &&
+        log.updateOccurrence(viewDay, routineId, (o) => ({ ...o, taskAttachments: { ...(o.taskAttachments ?? {}), [taskId]: [...dayFiles.other, ...files] } })),
+    },
+  ];
+  const fileCount = useLinkedCount(fileGroups);
+
+  /** Saves the task's own attachments, wherever the task lives (the routine, one day's additions
+      to it, or a day's own task). */
+  function saveTaskAttachments(attachments: Attachment[]) {
+    if (routine && routine.tasks.some((t) => t.id === taskId)) {
+      log.saveRoutine({ ...routine, tasks: routine.tasks.map((t) => (t.id === taskId ? { ...t, attachments } : t)) });
+    } else if (routineId && extraDay) {
+      log.updateOccurrence(extraDay, routineId, (o) => ({ ...o, extraTasks: (o.extraTasks ?? []).map((t) => (t.id === taskId ? { ...t, attachments } : t)) }));
+    } else if (!routineId && date) {
+      const own = log.data.days[date]?.tasks?.find((t) => t.id === taskId);
+      if (own) log.saveDayTask(date, { ...own, attachments });
+    }
+  }
 
   const target: NoteTarget = routineId ? { kind: "task", routineId, taskId } : { kind: "dayTask", date: date ?? "", taskId };
   const key = targetKey(target);
@@ -114,20 +157,17 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
         { label: date ? formatShortDate(date) : "Day", href: date ? `/shed-log?date=${date}` : "/shed-log" },
       ];
 
-  /** The page around it: nothing extra in the side view; a page bar and Back as a page. */
-  const frame = (label: string, children: React.ReactNode) =>
-    inPanel ? (
-      <>{children}</>
-    ) : (
-      <PageShell>
-        <PageBar crumbs={[...baseCrumbs, { label }]} icon={SHED_LOG_ICON} />
-        {/* A readable column, not the whole width. */}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log"))} />
-          {children}
-        </div>
-      </PageShell>
-    );
+  /** The page around it: the page bar (its trail goes in a pane's bar) and Back, outside a pane. */
+  const frame = (label: string, children: React.ReactNode) => (
+    <PageShell>
+      <PageBar crumbs={[...baseCrumbs, { label }]} icon={SHED_LOG_ICON} />
+      {/* A readable column, not the whole width. */}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        {!inPane && <BackButton onClick={() => goBackOr(router, "/shed-log")} />}
+        {children}
+      </div>
+    </PageShell>
+  );
 
   if (!log.ready || !mounted) return frame("Task", <LoadingSpinner />);
   if (!task || (routineId && !routine)) return frame("Task", <Quiet>That task isn&apos;t there anymore.</Quiet>);
@@ -232,16 +272,35 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
         </div>
       )}
       <div className="flex flex-col gap-1.5 border-t border-foreground/[0.06] pt-3">
+        {/* Tunes, charts and tools; files have their own section below (for every time). */}
         <span className="text-xs font-semibold text-muted">Attached</span>
         <div className="flex flex-wrap items-center gap-1.5">
-          {everyTime.length > 0 && <AttachmentList items={everyTime} />}
-          <AttachmentList items={dayAttachments} onChange={setDayAttachments} addLabel={routineId ? `Attach for ${day === today ? "today" : formatShortDate(day)}` : "Attach"} />
+          {/* Files, folders and tags are listed under Files. */}
+          {everyTime.some((a) => !isFileAttachment(a)) && <AttachmentList items={everyTime} noFiles />}
+          <AttachmentList items={dayAttachments} onChange={setDayAttachments} noFiles addLabel={routineId ? `Add for ${day === today ? "today" : formatShortDate(day)} only` : "Attach"} />
         </div>
       </div>
     </section>
   );
 
   const sections: PageSection[] = [
+    {
+      id: "files",
+      title: "Files",
+      count: fileCount || undefined,
+      action:
+        isAuthenticated && !routine?.assigned ? (
+          <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON} title="Files for every time you do this task">
+            <PlusIcon className="h-4 w-4" /> Add files
+          </button>
+        ) : undefined,
+      content: (
+        <LinkedFiles
+          groups={fileGroups}
+          empty="No files yet. Add PDFs, recordings or any file from your Files, or link a folder or a tag: what's in it shows here, even files added later. They open beside the page."
+        />
+      ),
+    },
     {
       id: "notes",
       title: "Notes",
@@ -253,7 +312,7 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
           newTitle={routine ? `${routine.name || "Routine"} · ${title}` : `${title} · ${date ? formatShortDate(date) : ""}`}
           newBody={() => TASK_NOTE_START}
           onCreated={routine ? linkFromRoutine : undefined}
-          onOpen={(id) => (inPanel ? followSide({ kind: "note", id }) : openNotePeek(id))}
+          onOpen={(id) => openNotePeek(id)}
           handleRef={notesRef}
         />
       ),
@@ -330,6 +389,14 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
       {task.notes && <p className="-mt-3 whitespace-pre-wrap text-sm">{task.notes}</p>}
       {dayPanel}
       <PageSections pageKey={key} sections={sections} />
+      {addingFiles && (
+        <AttachmentPicker
+          only="files"
+          selected={ownFiles.files}
+          onChange={(next) => saveTaskAttachments([...ownFiles.other, ...(next as FileAttachment[])])}
+          onClose={() => setAddingFiles(false)}
+        />
+      )}
       {logging && (
         <LogTimeDialog
           date={day}

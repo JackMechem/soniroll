@@ -702,3 +702,137 @@ own page; the totals as a tiny line; the full page stretched across the screen.
 Verified in headless Chromium signed in (throwaway accounts, deleted): the task page empty, with a
 note and a recording, light and dark; the routine page in the side view light and dark; the routine
 as a page at 1440 and 390 (no overflow); no console errors. Not verified by touch.
+
+### 2026-11-23: the side view is now a pane of split screen
+
+`NotePeek.tsx` and the `SideItem` store are gone: the side view is a pane (`openBeside` in
+`lib/useTilingLayout.ts`; `openSide`/`openNotePeek` in `lib/notePeek.ts` turn a task, routine or
+note into its address). Task and routine pages no longer take `inPanel`; in a pane the pane's bar
+has Back and the trail. Phones: Back is a real history entry. Details in `tiling-split-screen.md`.
+
+## 2026-11-23 — Files on routines and tasks, linked folders and tags, "now practicing" everywhere
+
+Jack: "I want to be able to have a file like a pdf attached to a task on a routine"; "make it so I
+can associate a tag or folder with a task / routine"; the current routine/task should be "more
+visible and featured" — reachable from anywhere (maybe every tool's header), opening the page the
+side view shows, with the routine's/task's files there to open in split view whenever he wants.
+
+### Data (`packages/core/practiceLog.ts`)
+
+- `Attachment` gained three kinds (`FileAttachment`), stored wherever attachments already are (a
+  routine, its tasks, a day's tasks, `Occurrence.taskAttachments` for one day, the day itself):
+  `{ kind: "file", itemKind: StoredKind, id, label, mimeType? }` (anything on the Files page —
+  an upload, a recording, a tune's song, a lesson file…), `{ kind: "folder", path, label }` and
+  `{ kind: "fileTag", tag, label }`. References only: taking one off never touches the file; a file
+  deleted since shows struck through by its `label`. Old data is unchanged and still valid.
+- `isFileAttachment(a)`; `attachmentKey` handles the new kinds (`file:<itemKind>:<id>`,
+  `folder:<path>`, `fileTag:<tag lower case>`).
+- **Private:** `toPublicRoutine` leaves them out (a shared routine or a Community post never carries
+  your files' names); Lessons already copies only tool attachments to a student. `previewSeed` writes
+  `attachments: []`, so it's unchanged. Privacy policy: one clause on the Shed Log line.
+
+### Backend (`packages/convex/fileFolders.ts`, dev only)
+
+- `fileFolders.linked({ items: [{kind,id}], folders, tags })` → `{ items, missing, folders: [{path,
+  items}], tags: [{tag, items}] }` (each item `OrganizedItem`: folder, tags, `url` null when kept on
+  a device). A linked folder includes the folders under it (`deep`); the top level ("") is never
+  read. Capped at 100 items / 20 folders / 20 tags. Ownership through `storedItemById`.
+- `fileFolders.item({ kind, id })` → one of your items with folder/tags, or null (the file pane).
+- Fixed in passing: `files.removeItem` (what the Files page deletes with) left the PDF's
+  `pdfMarkups` row behind; it now deletes it like `files.remove`.
+
+### Web
+
+- **Picking** (`components/practicelog/Attachments.tsx`): the attach picker has a **Files** tab
+  (signed in): your folders, your tags (with counts) and your files (newest first, search matches
+  folders and tags too), plus **Upload and attach** (`useFileUploader` gained an `onSaved` callback
+  with the new file's id). `AttachmentPicker only="files"` is the pages' "Add files" dialog.
+  `AttachmentList` shows file chips (a PDF chip opens in the side view; folder/tag chips open Files
+  on them); `noFiles` hides them and keeps them when the list changes (the task page's Attached
+  row, and the routine card's own row on the routine page).
+- **Files section** (`components/practicelog/FileAttachments.tsx`, `LinkedFiles`): on the task page
+  (first section): the task's own files (every time; added and taken off here — saved on the
+  routine's task, on one day's added task, or on a day task) and "Just for today" (the day's).
+  On the routine page: the routine's own (editable), then each task's under its name (read-only
+  there, the name links to the task). A linked folder/tag shows as a heading (Folder · n / Tag · n,
+  ⋮: Open in Files, Unlink) with its files under it, live (files added later appear). Every row
+  opens in the side view; its ⋮ (or right-click) has Open in the side view, Open side by side
+  (desktop), Open as a page, Show in <folder>, and "Take off (the file stays)". A teacher's routine
+  (`assigned`) is read-only here, like its Edit button. The section's count is distinct files.
+  The list doesn't go through `useDeviceUrls` on purpose: it only shows names and opens files
+  through `/files/view`, which does (loading every device file's blob just to list it would be
+  wasteful).
+- The editor's per-task and routine Attach got the Files tab for free; `taskTool` (the tool that
+  opens when a step starts) still only looks at tools.
+
+### "Now practicing" (`components/practicelog/NowPracticing.tsx`)
+
+- `useNowPracticing()`: the running timer step (a routine task: its task page; a day task: its
+  page; a plain Practice Timer session: `/practice-timer`), else today's next task not done (the
+  routine whose time it is now first, then routines in order, then day tasks by time), else null.
+  Signed in only; nothing before mount (today isn't known on the server).
+- **Where it shows:**
+  - `PageBar` (every page's desktop header, tools included): a pill on the right before the page's
+    buttons — the routine's icon, the task ("Next: Scales" when nothing runs, muted) and the time
+    left (tinted with the accent while running, pulsing "Time's up" when alarming). Hidden on the very
+    page it opens. Click → `openBeside(taskHref)` (the side view; as a page if it can't).
+  - Split screen: that bar is hidden in panes, so `PageBar` portals a compact pill (icon + time) into
+    the **main pane's** title slot only (not every pane).
+  - Phones: no new chip. The existing timer chip in the top bar (`PracticeTimerWidget bar`) now opens
+    the task page in the side view when the run is a routine's; with nothing running it's a small
+    round button with the next task's routine icon (not on `/shed-log*` pages). Icon only, so the
+    page name keeps its room at 390.
+- **The sidebar widget is kept** (it has the pause/skip/stop controls the pill doesn't), but its
+  title now opens the task page beside too, like the pill. Why both: the pill answers "what am I on,
+  open it" at the top of whatever page you're on and works when nothing runs; the widget is the
+  remote control for a running timer. Neither repeats the other's job.
+- `RemainingLabel` moved to `components/RemainingLabel.tsx` (shared by the widget and the pill).
+
+### Phone app
+
+- `components/shedLog/LinkedFiles.tsx`: the task and routine screens get a **Files** section (only
+  when something's attached) — the same groups as the website, read-only; a file opens in the
+  phone's `FileViewer` (PDFs page by page). Lists go through `useDeviceUrls` (the viewer plays from
+  the url). `AttachmentChips` skips file kinds (they'd have opened as a chart) and keeps them when
+  editing. Adding files on the phone isn't built (the website does it).
+
+### Verified (headless Chromium, dev, the shared `uxpass` account)
+
+At 1440 light: three generated PDFs uploaded on Files (kept on the device, free plan); one moved
+into "Taskfiles etudes" and one tagged "taskfiles-gig" (CLI); a routine made in the editor with the
+first PDF attached from the task's Attach → Files tab; the task page's Add → the folder and the tag
+ticked; the Files section showed all three under their headings; the PDF row → the side view with
+the editor (address `/files/view?…`); the sidebar's Metronome → the PDF stayed beside it; a pen
+stroke in the side view saved (`pdfMarkups.get` had it); Play stayed inside the side view (no
+browser full screen); Start · 10 min on the task, then `/metronome`: the pill read "Etude reading
+9:54", clicking it opened the task page in the side view with the running timer and its Files. A
+routine card chip on the Shed Log opened the PDF beside. Dark at 1440: task and routine pages, a
+file's ⋮ → Open side by side (two panes, the compact pill in the main pane's bar), a PDF on the
+Files page (in a folder) → the side view. 390 light and dark: task and routine pages (no overflow),
+the phone's next-up chip on the Metronome, which opened the task full screen with Back; a PDF
+uploaded and opened from Files → full-screen side view with the editor, Back → Files. No console
+errors from this work (one existing hydration warning on the Files page: a spinner `div` inside a
+`<p>` in "Backing up"). Everything made was deleted (routine, files; the folder and tag went with
+them) except one orphan `pdfMarkups` row from before the `removeItem` fix (375 bytes, its file is
+gone). `tsc` web, mobile, desktop, convex (core: only the old `.at()` errors); eslint on every
+changed file; `convex dev --once`.
+
+**Not verified:** the phone app at all beyond `tsc`/eslint (not run on the emulator); a file kept
+online (only device-kept ones); a recording/song/lesson file attached (same code path); assigned
+routines; the pill during an alarm; keyboard focus between the PDF pane and a tool pane with a real
+keyboard (the PDF's keys are guarded with `usePaneKeyGuard`); `pnpm build`; the desktop app.
+
+### 2026-11-23 — review fixes (task page wording, chips)
+
+- Task page: the status card's button reads **"Add for today only"** (tunes, charts, tools for this
+  day; was "Attach for today") and the Files section's is **"Add files"** (for every time; was
+  "Add", with a tooltip saying so). The routine page's Files button is "Add files" too.
+- The routine card's ⋮ is labelled "Options for <routine name>".
+- The phone top bar's timer chip: its label is plain ("Now practicing: Scales", "Time's up: …"),
+  and from `sm` up (a tablet's bar has room) it shows the step's name before the time.
+- The phone top bar's trail gives way from the left: an earlier crumb ("Library") shrinks before the
+  page's own name, which keeps up to 8 letters (`CrumbTrail` compact) — "L… / Files", not
+  "Library / F", with the tab count and the timer chip showing. At 340px with both, the earlier
+  crumb disappears and the name can run a few pixels into the ? button (not fixed).
+- Verified in headless Chromium (uxpass, dark 1440): the task and routine pages' buttons; the trail
+  measured at 390/340/320 with a stand-in for the chip (signed out). The tablet chip name: code only.

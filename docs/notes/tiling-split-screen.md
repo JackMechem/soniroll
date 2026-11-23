@@ -472,3 +472,349 @@ listeners call the guard too (Find the Root Enter, Time Test R, Slow Downer B). 
 shortcut must go through it.** Outside split screen nothing changes. Also: the intro "?" goes in
 a slot after the pane title (`PaneTitleSlotContext`), and tool idea credits are in the page flow,
 not fixed. Verified headless with Metronome + Tuner side by side; not on a real browser window.
+
+## 2026-11-23: split screen and the side view become one system
+
+Jack: "the split pane thing doesnt work perfectly, some window will reset (specifically the
+library) when clicking on the other pane, windows should function individually"; he wants to read a
+PDF with the metronome beside it, every PDF in a side view "like clicking on a task in shed logs",
+the same splits as right-clicking a tool, and a way to switch a split between side by side and
+above and below — "make the split pane tiling functionality more featured and easier to use and
+polished", the same everywhere.
+
+### Why panes reset (the bug)
+
+Two causes, both "a pane read or changed the window's address instead of its own":
+- **Pages read the real URL.** The Library picks its tab from `useSearchParams()` (`?tab=files`);
+  a pane only had a pathname (`leaf.href` was `/tunes`), so its tab lived only in the window's
+  address. Anything that changed that address (another pane's link, the sidebar, closing a pane,
+  reloading) put it back on Tunes. Same for every page with state in its query (`?id=`, `?date=`).
+- **Links inside a pane went through Next's router.** Opening a tune from the Library pane
+  navigated the whole window to `/tunes/tune?…`; the old outside-navigation effect then set the
+  active pane's href to that, which wasn't in `TOOL_COMPONENTS`, so the pane showed "This tool isn't
+  available anymore" — and any real navigation remounted the panes rendered from the route.
+
+### What was built
+
+- **Each pane is its own little browser.** `leaf.href` is the full address (path and query) and
+  each leaf has its own Back list (`back`). Inside a pane, Next's own `usePathname`,
+  `useSearchParams` and `useRouter` return the pane's: `components/panes/NextPaneContexts.tsx`
+  provides Next's internal contexts (`AppRouterContext`, `PathnameContext`, `SearchParamsContext`,
+  `PathParamsContext`, and in development `NavigationPromisesContext` — Next's hooks read that first
+  and its own segments below spread it, so a pane gets a full set of its own; providing `null` broke
+  the page with "unsupported type passed to use()"). Outside a pane it passes the outer values
+  through, so the page keeps the same element tree either way. Checked that the override really
+  reaches Next's hooks (same module instance under Turbopack): a Library pane at `?tab=files` shows
+  Files while the window is on `/metronome`. The desktop app aliases that file to a pass-through and
+  its `next/navigation` stand-in reads `PaneNavContext` (`lib/paneContext.ts`) instead.
+- **Links open in their pane.** One capture-phase click listener on the document (`TilingLayout`):
+  a link inside a pane (or in a menu portaled from it — the pane that last got a pointer press is
+  remembered) navigates that pane; a link outside the panes (sidebar) goes to the main pane, the
+  tree pane last clicked. It runs before Next's `<Link>` handler, which then sees `defaultPrevented`.
+  Only while the screen is split (desktop, two or more tiled panes), plus always for links inside
+  the side view. A page a pane can't show (admin, legal…) is left to Next: the window navigates and
+  `routeChanged` puts it in that pane as the real page. ⌘K and the sidebar's "Open" use
+  `navigateMain`; the practice timer's "open the step's tool" too (`useOpenStepTools`).
+- **Panes are rendered flat** (`components/TilingLayout.tsx`): one keyed child per pane, placed
+  with absolute positions computed from the tree (`layoutRects`), dividers drawn separately. So
+  splitting, closing, swapping, flipping, floating or docking moves boxes around and never remounts
+  anything. The real page (Next's `children`) keeps the key `"page"` whichever pane holds it
+  (`pageLeafId`, worked out from the address on load), so the page you're on isn't remounted when
+  the first pane opens beside it — checked with a DOM marker on the Shed Log through open, Back,
+  full screen, dock, flip, swap, float and close. Other panes are ordered by id, not tree order
+  (moving a node in the DOM can restart media). `AppShell` always renders `TilingLayout`; with
+  nothing open it's just the page (it also does the page slide-in that `AnimatedPage` did).
+- **One layout object** (`lib/tilingLayout.ts`, `Layout`, `v: 2`): `tree` (tiled panes, null = the
+  plain page), `float` (the side view over the page, px width), `sideId` (where side-view things
+  open: the float, or a tree pane when docked), `activePaneId`, `mainPaneId`, `maximizedId`. Saved
+  under `jam-practice-tiling`. The old `{ enabled, tree, activePaneId }` is read and kept
+  (`readLayout`), retired addresses mapped (`normalizePaneHref`: Bass Genius/Drum Generator,
+  `/chord-charts`, `/files`, `/recordings`, `/settings`…). **Tabs later:** a tab would hold one
+  `Layout` each (e.g. `{ tabs: [{ id, name, layout }], activeTab }` under a new key, with today's
+  `jam-practice-tiling` as the first tab); `set()` in `useTilingLayout.ts` is the one place that
+  saves, and `pageLeafId`/`routeHref` stay per window (only the active tab can hold the real page).
+- **The side view is a pane** (`NotePeek.tsx` and its store are gone). Its look is still this
+  device's choice (`jam-practice-note-peek`: over or beside, width): "Over the page" is the float,
+  the page stays a normal desktop page under it; "Beside the page" docks it as a split at the right.
+  Full screen is the pane's ⤢ (any pane: `maximizedId`, Esc restores). A note shows as
+  `/shed-notes?id=…&view=note` (`NoteSidePane`: just the editor; as a page of its own it's Shed Notes
+  with that note). Task and routine pages lost `inPanel`: in a pane the pane's bar has Back and the
+  trail, so they hide their own `BackButton` (fixes "Back plus ×" side by side). The side view stays
+  open when the page under it changes (so a PDF can stay beside whatever tool you open); on a phone
+  a real navigation closes it.
+- **Phones:** no split screen (a saved split shows just the page). The side view is full screen
+  with a bar of Back, the trail and ⋮ (no ×: Back is the way out). Opening it pushes a history
+  entry (`__paneSide`), so the phone's Back gesture closes it and stays on the Shed Log; the bar's
+  Back goes back inside the view, then closes it (through `history.back()`).
+- **Pane controls** (every pane, the side view included): Back (when the pane has history), the
+  page's trail and "?", ⤢ full screen, ⋮, ×. ⋮ has Side by side / Above and below (flip), Swap
+  places, Over the page / Beside the page (the side view) or "Float over the page" (any other
+  pane), "Open another beside it… / below it…" (the ⌘K picker, `requestSplit`), "Open as a page"
+  (only this pane stays — no remount; "Open in Shed Notes" for a note), and "Take off …" for an
+  attached note. Dividers: drag (each side keeps 320px wide / 200px tall while there's room),
+  double-click for half and half, arrow keys (Shift for bigger steps). The sidebar's right-click
+  menu gained "Open in the side view". A newly opened pane gets keyboard focus; focusing a pane by
+  Tab makes it active (Space etc. still go through `keyIsForPane`).
+- **Closing down to one pane** leaves it showing as a plain page without remounting (a running
+  metronome keeps going); if it isn't the real page it stays a lone pane (its own address, no bar)
+  until the next real navigation turns it back into the plain page.
+- **Which pages can be panes:** `PANE_ROUTES` in `lib/toolRegistry.tsx` (was `TOOL_COMPONENTS`):
+  every tool, the dashboard, the Shed Log and its routine/task/routines/edit pages, Shed Notes and a
+  note, the Library (`/tunes` with its tabs), tune/setlist/recording/list pages, chart view/edit/
+  new/import/playlist, setlist charts, Community and its sub-pages, a post, a profile, Lessons and
+  its pages, shared file/tune/setlist links, plus Account and Help (already there before). Not
+  admin, legal, landing, sign-in. `canShowInPane(href)` asks.
+- `BackgroundToolDock` hides a tool's card while any pane shows it (it only checked the URL); the
+  sidebar highlights the main pane's page; `goBackOr` asks the pane's own history in a pane
+  (`markPaneBack`). `PdfEditor` (and Play mode) cover just their pane when opened inside one.
+
+### The API (for opening things beside)
+
+```ts
+import { openBeside } from "@/lib/useTilingLayout";
+openBeside("/shed-log/task?routine=r&task=t");          // the side view (the default)
+openBeside("/metronome", { mode: "right" });             // split: side by side ("down": above and below)
+openBeside(href, { from: usePaneId(), detach });         // from a pane; detach = a "Take off …" menu item
+```
+- Returns false (and does nothing) when a pane can't show the page — open it as a page then.
+- Side mode: if a side view is open it goes there (Back returns to what it showed), else a new one
+  over/beside the page by this device's choice. Phones: always the side view.
+- An edge mode splits the pane given as `from`, else the main pane.
+- Other calls: `navigatePane`, `navigateMain`, `closePane`, `toggleMaximize`, `flipPane`,
+  `swapPane`, `floatPane`, `dockFloat`, `keepOnlyPane`, `canShowInPane`, `usePaneId()`.
+
+**For the PDF agent:** `PdfEditor` already fills just its pane when it's inside one. What's missing
+is an address for "one of my files": add a route (e.g. `app/files/view/page.tsx`, `?id=<fileId>`,
+rendering the file viewer / `PdfEditor` filling the page; no page there today), add it to
+`PANE_ROUTES` and the desktop's `routes.tsx`, then in `useFileActions` open PDFs with
+`openBeside(fileViewHref(id))` (falling back to today's behaviour when it returns false). From a
+task page, files attached to it can open beside the page the same way.
+
+### Decisions
+
+- Panes render pages from `PANE_ROUTES` rather than Next routes (still no way to mount several
+  App Router routes at once); Next's contexts are overridden instead of rewriting pages to use our
+  own hooks, so every existing page works in a pane unchanged.
+- The side view doesn't close when the page under it changes (it did): Jack wants it to stay while
+  he uses tools. Phones still close it on a real navigation.
+- With only the side view over the page, the page isn't a "pane" (no bar, desktop layout, its
+  links navigate as usual); split-screen link handling starts at two tiled panes.
+- A real navigation while split (browser Back/Forward, a page a pane can't show) goes into the
+  active tree pane as the real page; the pane that held the real page before re-renders from
+  `PANE_ROUTES` (one remount, only in that case).
+- Opening an address directly (typed, a link from outside) with a saved split puts that page in the
+  main pane instead of ignoring it.
+
+### Verified (headless Chromium against the dev server, 1440 and 390, light and dark)
+
+Library pane at `?tab=files` keeps its tab (and scroll) while clicking the other pane; a tune opened
+in the Library pane shows in the pane (scroll kept at 300 after clicking the other pane); pane Back;
+a registry pane's `useSearchParams` reads its own address while the window is elsewhere; old saved
+layout format; reload with the address of the active pane and with another address. Signed in
+(the shared `uxpass` test account, no data created): Shed Log routine name → side view over the
+page (the Shed Log's DOM node unchanged), task inside it, Back, full screen + Esc, Beside the page,
+flip, swap, Over the page, close — address bar following each; sidebar link with the side view
+open (Shed Log → Metronome, side view stays); a note in the side view beside the Metronome. Phone
+(390): full-screen side view with Back/trail/⋮, no overflow, Back inside it, the browser Back
+closing it on `/shed-log`, the bar's Back closing it. Signed out: right-click → side by side and
+above and below, Metronome started, sidebar link to the main pane, ⌘K split from a pane's menu,
+closing panes one by one down to the plain page — still running, and Space in another pane didn't
+stop it; closing the Library pane leaving the Metronome as a lone pane, then a sidebar link back to
+a plain page. Divider keys, double-click and drag (stops at 320px). `tsc` (web, desktop) and
+`eslint` on every changed file; no console errors in any run.
+
+**Not verified:** the desktop app running (only `tsc`; its router now ignores `__pane`
+replaceStates); a real phone's Back gesture (the browser's Back stood in for it); hover looks with a
+real mouse; `pnpm build` (the `next/dist/shared/lib/*.shared-runtime` imports are the risk — they
+resolved under Turbopack dev); audio by ear (the Metronome engine outlives its component, so
+"still running" was also checked with DOM markers for the Shed Log, not for the Metronome);
+PDFs in a pane; the chart editor's leave guard in a pane (the pane's link handler runs before it);
+pages that write their own query with `history.replaceState` (Shed Notes, Help, Score Writer) don't
+update their pane's saved address.
+
+**Incident:** my `git rm` of `NotePeek.tsx` was staged while another agent committed (`dc6b519`,
+"Website: UI pass 3 fixes"), so that commit deletes `NotePeek.tsx` while its `AppShell` still
+imports it — the tree only builds again once this work is committed. Use plain `rm` while others
+share the working tree.
+
+## 2026-11-23: tabs (each a view of its own)
+
+Jack: "another thing id like, if you could add tabs that are essentially different views (that
+save to the browser or account) that would be pretty cool" — after the split-screen rework above.
+
+### What was built
+
+- **A tab is one `Layout`.** `lib/useTabs.ts` keeps the list; only the active tab is on screen, as
+  the live layout in `useTilingLayout.ts`. Switching copies the screen into the tab you leave and
+  puts the other tab's layout on screen with `showTabLayout(saved, href)` (new in
+  `useTilingLayout.ts`). On a desktop its panes render from `PANE_ROUTES` (the real page only where
+  a pane already shows the window's address) and the address bar follows the tab's active pane by
+  `syncAddressBar`, so a switch never goes through Next's router. Phones show only the main pane
+  (as the real page), so there a switch is a `router.replace` (`setTabNavigator`, from `TabsSync`);
+  so is a lone tab page a pane can't show (admin, legal).
+- **Desktop strip** (`components/tabs/TabStrip.tsx`, at the top of the content area, from `lg`):
+  only once there are two or more tabs. The surface colour of the sidebar; the active tab is the
+  page's background colour and joins the page below it. Each tab: its main pane's page icon (tool
+  category colour) and name (`tabTitle` in `components/pageNames.ts`, the phone top bar's naming
+  moved out of `Sidebar.tsx`), "+N" when it holds more panes, × (always on the active tab, on
+  hover for the others), middle click closes. Click switches, double-click renames in place
+  (Enter/click away keeps, Esc doesn't, empty = back to the page's name), right-click: Rename,
+  Duplicate, Close other tabs, Close tab. Drag to reorder (HTML drag and drop, an accent bar where
+  it lands). + after the tabs and a double-click on the empty strip open a new tab; ⋮ at the end
+  has New tab / Rename / Duplicate / Close other tabs / Close this tab. More tabs than fit: the
+  tabs shrink to 7.5rem, then scroll (no scrollbar), keeping the active one in view.
+- **New tab opens the dashboard.** Where to find it before the strip shows: the sidebar's ⋮ (both
+  the full and the icon-strip sidebar), ⌘K ("new tab"; typing a tab's name or "tab" also lists the
+  other tabs to switch to), a page's right-click menu in the sidebar ("Open in a new tab", that
+  page) and a pane's ⋮ ("Open in a new tab", that pane's page — a note in the side view opens as
+  Shed Notes). Up to 12 tabs (`MAX_TABS`).
+- **Phones:** no strip. A count (a rounded square with the number, like a browser's) in the top
+  bar once there are two or more tabs, and "Tabs" in the menu's ⋮; both open a sheet listing the
+  tabs (tap to switch, ⋮ Rename/Duplicate, ×) with a New tab button (`components/tabs/PhoneTabs.tsx`).
+- **Keyboard:** Ctrl+Alt (⌘⌥ on a Mac) + 1–8 for that tab, 9 for the last, [ and ] for the one
+  before/after (`e.code`, since Alt changes `e.key` on a Mac). Not while typing (inputs,
+  contenteditable, CodeMirror). Tooltips on the tabs show them. None of these is a browser
+  shortcut (Ctrl/⌘+number and ⌘⌥←/→ are the browser's own).
+- **Unsaved work:** switching, closing or opening a tab swaps the page out without a link, so
+  `useLeaveGuard` now also registers in `lib/leaveGuards.ts` and tabs call `confirmLeave(go)`: the
+  page's own "Leave without saving?" dialog asks first (checked with a new chord chart).
+- `panesActive()` is now also true for a **lone pane that isn't the real page** (a tab's page
+  after a switch): links and the sidebar go into that pane. Without it a sidebar link to the page
+  Next's router still had underneath did nothing (same URL, no `routeChanged`).
+- `routeChanged` now notifies listeners when nothing is split too (tabs keep the active tab's
+  address in step).
+- `cloneLayout` (`lib/tilingLayout.ts`) gives a duplicated tab new pane ids (panes are keyed by id).
+
+### Saving (the shape and keys)
+
+- `jam-practice-tabs`, through `useSyncedSettings` with the module-level `TABS_DEFAULTS`
+  (`components/tabs/TabsSync.tsx`): signed in it's a `syncedSettings` row in the account, signed
+  out it's this browser's localStorage. No merge between them; signing in or out switches lists.
+  The phone app doesn't read it.
+- Shape: `{ tabs: SavedTab[] }`, `SavedTab = { id, name?, href, layout? }`: `href` is the tab's
+  address (its active pane's, or its one page); `layout` (the `Layout`, `v: 2`) only when it holds
+  more than one pane (a split or the side view); `name` only once renamed. Page addresses and pane
+  layouts only, no page contents; Back lists are kept (≤20 per pane, as before).
+- **One tab saves nothing** (`tabs: []`): the screen is the one tab, kept on this device in
+  `jam-practice-tiling` as before. So today's saved layout simply becomes the first tab when a
+  second one opens (no migration step, nothing lost), and people who never open a tab cost the
+  account nothing. Closing down to one tab writes `[]` again.
+- `jam-practice-tiling` still holds the screen (the active tab) on this device, so a reload draws
+  it at once; signed in, the account's copy of that tab is applied if it differs once it loads.
+- Which tab is open is per device and per store: `jam-practice-active-tab` =
+  `{ account?: id, local?: id }`. Two devices can be on different tabs.
+- Writes are the synced store's (debounced 600 ms, flushed on page hide); every layout change
+  of the active tab rewrites the list, so with tabs open there's one account write per pause in
+  using the panes.
+
+### Decisions
+
+- **Inactive tabs unmount** (cheaper, no hidden pages listening to keys or holding Convex
+  subscriptions, and only the active tab can hold Next's real page anyway). Tools with an engine
+  of their own keep playing: the Metronome, Metric Modulation and the Tuner — they show in the
+  background dock as when you leave their page (checked: Metronome started in tab 1, switched to
+  tab 2, the dock's Metronome card with Stop showed). Everything else stops on a switch, as when
+  you go to another page (Rhythm Section, Slow Downer, Jam Practice, a recording — the Recorder's
+  leave guard asks first).
+- **Another device's tabs:** the tab on screen is this device's — a change to it from elsewhere
+  is ignored here (the next change here writes over it); other tabs, new and closed tabs show
+  straight away. A device whose tab isn't in the list (new to these tabs, or its tab was closed
+  elsewhere) joins the tab already showing its page, else its screen becomes a new tab at the
+  end (`join`): opening soniroll somewhere new never changes a tab set up elsewhere. The cost: a
+  first sign-in on a new device (landing on the dashboard) adds a Dashboard tab if no tab shows it.
+- Duplicate stays on the tab you're on (switching would remount what's showing).
+- New tab (+, ⌘K) goes at the end; "Open in a new tab" right after the current tab.
+- No "always show the strip" setting: the strip appears at two tabs, and New tab is in four other
+  places. With the strip showing, the page bar under it needs no room for the hidden sidebar's
+  menu button (`AppShell` sets `--sidebar-toggle-room` to 0 under the strip).
+
+### Verified (headless Chromium against the dev server)
+
+Signed out, 1440: New tab from the sidebar ⋮ (address /dashboard), switching by click and by
+Ctrl+Alt+1 / ] / 9, Metronome still running in the background dock after a switch, rename by
+double-click, reload (tabs, names, active tab, address kept), a page's "Open in a new tab", a split
+inside tab 2 kept through switching away and back and a reload, drag to reorder, a sidebar link in
+a lone-pane tab (goes into it), closing the active tab, "Close other tabs" from the right-click
+menu down to one tab (`tabs: []` saved, the strip gone, the split left on screen), a pane's ⋮
+"Open in a new tab", ⌘K "new tab" and listing tabs, the chart editor's leave dialog on a switch
+(Cancel stays, Leave switches), 12 tabs at 1100 wide (+ disabled, no page overflow, active in view),
+the hidden sidebar's menu button beside the strip; light and dark. Phone (390, dark, signed out):
+"Tabs" in the menu's ⋮, the sheet, New tab, the count in the top bar, switching (a real
+navigation), no horizontal overflow. Signed in (the shared `uxpass` account): tabs with a split
+saved to the account and back after a reload; a second browser context (another device) opened at
+`/tuner` joined the tab showing the Tuner and switched between both; a phone context listed them,
+switched and closed them; a second window of the same context saw the same list. Cleaned up after:
+the account's `jam-practice-tabs` is `{"tabs":[]}` (the row stays). `tsc` (web, desktop), `eslint`
+on every changed file; no console errors in any run.
+
+**Not verified:** two devices open at the same moment (live updates arriving while you work — code
+only); hover looks (the × on inactive tabs, hover fills); a real mouse drag (Playwright's
+`dragTo`); the desktop app running (only `tsc`; its router shim has `replace`); audio by ear; a
+window resized from desktop to phone width while a tab shows a lone pane (the phone layout then
+shows Next's page underneath, the address bar the pane's — an old edge case of lone panes, more
+likely with tabs); `pnpm build`.
+
+**Note for other agents:** while testing, the shared `uxpass` account briefly had tabs, so another
+agent's signed-in page could have shown a tab strip (its screen becoming a tab). It's back to one
+tab. The privacy line about open tabs went in with the Files commit (`7a06059`), ahead of this
+code.
+
+## 2026-11-23: review fixes (side view, panes, tabs)
+
+A review of today's split screen, side view and tabs found things covering each other. What changed:
+
+- **The side view opens beside the page by default** (`DEFAULT_SIDE_PREFS.mode = "push"`): over the
+  page it hid the Metronome's controls under a PDF, half the "now practicing" pill, the Library's
+  Upload. `jam-practice-note-peek` now carries `chosen: true` once someone picks Over/Beside in the
+  side view's ⋮; a stored mode without it (the old default, saved with every width change, so a
+  real choice couldn't be told apart) reads as beside. "Over the page" stays in every pane's ⋮ for
+  quick peeks. Beside the page needs room: the side view keeps its width if the other panes stay
+  ≥ 320px, else everything along the row is shared out evenly, else (a narrow window) it floats.
+- **Things open next to where they were opened** (`openBeside`): from a pane of a split with no
+  side view, the new pane goes right beside that pane (and becomes the side view); from a pane the
+  floating side view covers, the float docks first; "Open side by side"/"Open beside…" from the
+  floating side view docks it and splits it, so nothing lands under it (the task page's file case).
+- **Even splits and a minimum** (`balanceAlong` in `tilingLayout.ts`): a new pane shares the room
+  out along its line (a third pane beside two gives thirds, not 50/25/25). A new pane (and the one
+  it's opened beside) must be ≥ 360px wide (`MIN_PANE_WIDTH`) or 240px tall; with no room it opens
+  in a new tab instead, with a notice (`setNoRoomHandler`, registered by `useTabs`).
+- **A PDF as the page** (`/files/view` not in a pane) fills the page on a desktop (`PdfEditor
+  embedded`, Done goes back) instead of the full-window editor at z-70, which covered a floated
+  pane and the sidebar. Phones keep the full-screen editor.
+- **Browser Back while split** goes back inside the active pane only (`paneHistoryTraverse`, from a
+  capture-phase `popstate` listener in `TilingLayout` that stops Next's own listener). It used to
+  load the window's previous page into the focused pane (two copies of the PDF). Forward does
+  nothing in a pane (direction from the Navigation API's `navigate` event; Back if it's missing).
+  With nothing left in the pane's own history, Back does nothing (the browser entry is used up).
+- **Phones don't rewrite tabs** (`useTabs.ts`): a phone shows one page of a tab, and used to save
+  that back (dropping the other panes and turning the PDF side view into a pane). Now a phone
+  never copies its screen into a tab; where it went inside a tab is remembered on the phone only
+  (`phoneHrefs`). Tab actions (new, close, rename, duplicate, reorder) still save from anywhere.
+- **Tab names:** a tab showing one of your files is named after the file (`useTabName`, a
+  `fileFolders.item` query); `/files/view` is "File" in `pageNames.ts` (was "Page"). "+N" became a
+  small split mark whose tooltip lists the pages ("3 pages: Tuner, Dashboard, Metronome"). The phone's
+  tab list shows "Also in this tab:" with a button per other page (`switchTab(id, href)` shows that
+  page of the tab on the phone).
+- **Wording:** every pane's ⋮ has the same pair, "Beside the page" / "Over the page" (was "Float
+  over the page" on some), and "Open beside…" / "Open below…"; the ⌘K picker then says "Open
+  beside… (pick a tool or page)" (was "Pick a tool to tile…").
+- **Close other tabs** shows "Closed N other tabs · Undo" (`lib/notice.ts` + `components/Notice.tsx`,
+  a small one-at-a-time notice mounted by `AppShell`, also used for "no room").
+- **Not a bug:** "Float over the page floats the wrong pane" (Dashboard | Metronome) came from the
+  review script's locator — `filter({ hasText: "Tap tempo" })` matched the Dashboard pane too
+  (hidden text), so it opened the Dashboard's menu. Floating from the right pane's own ⋮ floats it.
+
+Verified in headless Chromium (dev, signed out and a throwaway `.test` account, deleted after):
+the old unchosen "overlay" pref opening beside; the pane menu's wording; thirds from "Open beside…"
+and a fourth pane opening in a new tab with the notice; browser Back/Forward in a split (pane Back,
+no duplicate); a PDF from Files beside the Files pane, Upload uncovered; Metronome floated over the
+PDF page (embedded editor, float on top, sidebar usable); a PDF from a Files pane in a split (new
+pane beside it, thirds); "Open side by side" from inside the floating side view (docked, three
+panes); a PDF opened from a pane the float covered (float docked, Back in it); 1440 dark three panes
+with a PDF (no overflow); 390 phone PDF from Files (full-screen side view). Tabs: a desktop tab with
+Metronome + PDF side view, a phone switching into it, navigating and showing the PDF through "Also
+in this tab", then the desktop reloaded — the tab still had both panes; Close other tabs + Undo.
+`tsc` (web, desktop), eslint on the changed files.
+**Not verified:** a real phone and two devices open at the same moment; Safari/Firefox (no
+Navigation API in older ones: Back is assumed); the desktop app running; hover tooltips (the split
+mark's list); audio by ear.

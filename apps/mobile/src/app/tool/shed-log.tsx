@@ -137,9 +137,9 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
       scrolled={scrolled}
       right={
         <>
-          <IconButton Icon={ShareIcon} label="Share your progress" onPress={() => openProgressShare({ kind: 'streak' })} />
+          {/* Share your progress is in ⋮ (four round buttons crowded the title). */}
           <IconButton Icon={StatsIcon} label="Stats" onPress={() => setStatsOpen(true)} />
-          <IconButton Icon={DotsVerticalIcon} label="More: routines, daily goal, sounds" onPress={() => setSettingsOpen(true)} />
+          <IconButton Icon={DotsVerticalIcon} label="More: share, routines, daily goal, sounds" onPress={() => setSettingsOpen(true)} />
         </>
       }
     >
@@ -248,6 +248,7 @@ function ShedLog({ log }: { log: ReturnType<typeof usePracticeLog> }) {
         title="Shed Log"
         onClose={() => setSettingsOpen(false)}
         actions={[
+          { key: 'share', icon: <ShareIcon color={colors.muted} size={20} />, label: 'Share your progress', onPress: () => openProgressShare({ kind: 'streak' }) },
           {
             key: 'routines',
             icon: <RoutinesIcon color={colors.muted} size={20} />,

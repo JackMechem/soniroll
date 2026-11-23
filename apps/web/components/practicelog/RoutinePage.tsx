@@ -12,11 +12,14 @@ import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar from "@/components/PageBar";
 import PageNotes from "@/components/practicelog/PageNotes";
 import RoutineCard from "@/components/practicelog/RoutineCard";
+import { AttachmentPicker } from "@/components/practicelog/Attachments";
+import { type FileGroup, LinkedFiles, splitFiles, useLinkedCount } from "@/components/practicelog/FileAttachments";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
 import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList } from "@/components/practicelog/pageParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
-import { CheckIcon, PencilIcon, ShareIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlusIcon, ShareIcon, findToolLink } from "@/components/tools";
 import {
+  type FileAttachment,
   type Occurrence,
   type Routine,
   ROUTINE_COLORS,
@@ -35,7 +38,10 @@ import {
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { type Recording, recordingsApi } from "@/lib/recordings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
-import { followSide, openNotePeek, openSide } from "@/lib/notePeek";
+import { openNotePeek, openSide } from "@/lib/notePeek";
+import { usePaneId } from "@/lib/paneContext";
+import { goBackOr } from "@/lib/goBack";
+import { taskHref } from "@/lib/shedLogPages";
 
 const noopSubscribe = () => () => {};
 
@@ -62,11 +68,12 @@ function minutesFor(routine: Routine, occ: Occurrence): number {
 /** `/shed-log/routine?id=…` — one routine's page, a dashboard you arrange (`PageSections`): its
     notes (a Shed Note linking each task's notes), its tasks (each with its own page), what's
     attached, when it's coming up, every clip recorded for it and every day it was practiced. */
-/** `inPanel`: drawn in the side view (`NotePeek`) — no page bar; its tasks and notes open in the
-    view too. As a page of its own it has Back (to the page you came from), and its tasks open in
-    the side view. */
-export default function RoutinePage({ id, date, inPanel = false }: { id: string; date?: string; inPanel?: boolean }) {
+/** Its tasks and notes open in the side view (from inside the side view, in it, with Back). As a
+    page of its own it has Back (to the page you came from); in a pane (the side view, split
+    screen) the pane's bar has Back and the trail instead. */
+export default function RoutinePage({ id, date }: { id: string; date?: string }) {
   const router = useRouter();
+  const inPane = usePaneId() !== null;
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
 
@@ -74,6 +81,21 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
   const recordings = useDeviceUrls(useQuery(recordingsApi.listForRoutine, isAuthenticated ? { routineId: id } : "skip"));
   const routine = log.data.routines.find((r) => r.id === id);
   const [sharing, setSharing] = useState(false);
+  const [addingFiles, setAddingFiles] = useState(false);
+  // Its Files: the routine's own, then each task's (added on the task's page or in the editor).
+  const ownFiles = splitFiles(routine?.attachments);
+  const fileGroups: FileGroup[] = routine
+    ? [
+        { key: "own", attachments: ownFiles.files, onChange: routine.assigned ? undefined : (files) => log.saveRoutine({ ...routine, attachments: [...ownFiles.other, ...files] }) },
+        ...routine.tasks.map((t) => ({
+          key: `task:${t.id}`,
+          title: t.title || "Untitled task",
+          href: taskHref({ routineId: routine.id, taskId: t.id, date }),
+          attachments: splitFiles(t.attachments).files,
+        })),
+      ]
+    : [];
+  const fileCount = useLinkedCount(fileGroups);
   // The routine's notes and its tasks' notes (`routine:<id>` and `routine:<id>/task:<task>`).
   const routineKey = targetKey({ kind: "routineNotes", routineId: id });
   const notesUnder = useQuery(api.shedNotes.attachedTo, isAuthenticated && id ? { prefix: routineKey } : "skip");
@@ -96,22 +118,18 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
     return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [recordings]);
 
-  /** The page around it: nothing extra in the side view; a page bar and Back as a page. */
-  const frame = (label: string, children: React.ReactNode) =>
-    inPanel ? (
-      <>{children}</>
-    ) : (
-      <PageShell>
-        <PageBar crumbs={[...ROUTINES_CRUMBS, { label }]} icon={SHED_LOG_ICON} />
-        {/* A readable column, not the whole width. */}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log/routines"))} />
-          {children}
-        </div>
-      </PageShell>
-    );
-  // From the side view, things open in it (with Back); from the page, in a fresh side view.
-  const show = inPanel ? followSide : openSide;
+  /** The page around it: the page bar (its trail goes in a pane's bar) and Back, outside a pane. */
+  const frame = (label: string, children: React.ReactNode) => (
+    <PageShell>
+      <PageBar crumbs={[...ROUTINES_CRUMBS, { label }]} icon={SHED_LOG_ICON} />
+      {/* A readable column, not the whole width. */}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        {!inPane && <BackButton onClick={() => goBackOr(router, "/shed-log/routines")} />}
+        {children}
+      </div>
+    </PageShell>
+  );
+  const show = openSide;
 
   if (!log.ready || !mounted) return frame("Routine", <LoadingSpinner />);
   if (!routine) return frame("Routine", <EmptyCard>That routine doesn&apos;t exist anymore.</EmptyCard>);
@@ -157,6 +175,23 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
 
   const sections: PageSection[] = [
     {
+      id: "files",
+      title: "Files",
+      count: fileCount || undefined,
+      action:
+        isAuthenticated && !routine.assigned ? (
+          <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON}>
+            <PlusIcon className="h-4 w-4" /> Add files
+          </button>
+        ) : undefined,
+      content: (
+        <LinkedFiles
+          groups={fileGroups}
+          empty="No files yet. Add PDFs, recordings or any file from your Files, or link a folder or a tag: what's in it shows here, even files added later. Files on its tasks show here too."
+        />
+      ),
+    },
+    {
       id: "notes",
       title: "Notes",
       content: isAuthenticated ? (
@@ -166,7 +201,7 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
           label={routine.name || "Routine"}
           newTitle={routine.name || "Routine"}
           newBody={routineNoteBody}
-          onOpen={(noteId) => (inPanel ? followSide({ kind: "note", id: noteId }) : openNotePeek(noteId))}
+          onOpen={(noteId) => openNotePeek(noteId)}
         />
       ) : (
         <Quiet>Sign in to keep notes.</Quiet>
@@ -276,6 +311,14 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
       </section>
       <PageSections pageKey={routineKey} sections={sections} />
       {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
+      {addingFiles && (
+        <AttachmentPicker
+          only="files"
+          selected={ownFiles.files}
+          onChange={(next) => log.saveRoutine({ ...routine, attachments: [...ownFiles.other, ...(next as FileAttachment[])] })}
+          onClose={() => setAddingFiles(false)}
+        />
+      )}
     </>,
   );
 }

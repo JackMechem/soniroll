@@ -107,8 +107,8 @@ export default function Flyout({
             ref={menuRef}
             data-flyout
             role="menu"
-            style={{ position: "fixed", top: pos.top, left: pos.left, width: MENU_WIDTH }}
-            className="z-[70] flex flex-col gap-px rounded-lg bg-surface p-1 text-sm shadow-lg ring-1 ring-foreground/10"
+            style={{ position: "fixed", top: pos.top, left: pos.left, width: MENU_WIDTH, maxHeight: "calc(100dvh - 16px)" }}
+            className="z-[70] flex flex-col gap-px overflow-y-auto overscroll-contain rounded-lg bg-surface p-1 text-sm shadow-lg ring-1 ring-foreground/10"
           >
             {children(close)}
           </div>,

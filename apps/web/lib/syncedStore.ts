@@ -23,6 +23,9 @@
  */
 
 const DEBOUNCE_MS = 600;
+/** How long after sending a write we ignore server values that aren't that write — the query can
+    still answer with the value from before it while the mutation is on its way. */
+const ECHO_WAIT_MS = 5000;
 
 type Entry<T> = {
   value: T;
@@ -30,6 +33,8 @@ type Entry<T> = {
       edit. Before that, callers should show `defaults`, not this (unset) entry. */
   seeded: boolean;
   timer: ReturnType<typeof setTimeout> | null;
+  /** The last write sent (as JSON) and when, until the server echoes it back. */
+  sent: { json: string; at: number } | null;
   listeners: Set<() => void>;
 };
 
@@ -38,7 +43,7 @@ const entries = new Map<string, Entry<unknown>>();
 function getEntry<T>(key: string): Entry<T> {
   let entry = entries.get(key);
   if (!entry) {
-    entry = { value: undefined as T, seeded: false, timer: null, listeners: new Set() };
+    entry = { value: undefined as T, seeded: false, timer: null, sent: null, listeners: new Set() };
     entries.set(key, entry as Entry<unknown>);
   }
   return entry as Entry<T>;
@@ -61,15 +66,32 @@ export function getSyncedValue<T>(key: string, fallback: T): T {
   return entry.seeded ? entry.value : fallback;
 }
 
-/** Seeds the cache from a just-loaded server value — but only the *first* time this key sees one
-    in the current signed-in session (`resetSynced` clears that on sign-out), so a query result
-    that resolves late can never stomp a local edit made in the meantime. Call from a `useEffect`
-    keyed on the query result, not during render. */
+/** Takes a server value for `key`. The first one seeds the cache. After that, a newer server value
+    (another device or tab saved this key) replaces the cache — but never while a local edit is
+    waiting to be written, or while our own last write hasn't come back yet, so a late or stale
+    query result can't stomp a local edit. Without this, a page kept open on one device wrote its
+    old copy back over changes made elsewhere (a Shed Log tick on the phone vanished the next time
+    the website saved). Call from a `useEffect` keyed on the query result, not during render. */
 export function seedSynced<T>(key: string, value: T) {
   const entry = getEntry<T>(key);
-  if (entry.seeded) return;
+  if (!entry.seeded) {
+    entry.value = value;
+    entry.seeded = true;
+    notify(key);
+    return;
+  }
+  if (entry.timer) return;
+  const json = JSON.stringify(value);
+  if (entry.sent) {
+    if (json === entry.sent.json) {
+      entry.sent = null;
+      return;
+    }
+    if (Date.now() - entry.sent.at < ECHO_WAIT_MS) return;
+    entry.sent = null;
+  }
+  if (json === JSON.stringify(entry.value)) return;
   entry.value = value;
-  entry.seeded = true;
   notify(key);
 }
 
@@ -84,10 +106,38 @@ export function setSyncedValue<T>(key: string, value: T, write: (value: T) => vo
   notify(key);
 
   if (entry.timer) clearTimeout(entry.timer);
-  entry.timer = setTimeout(() => {
+  const fire = () => {
     entry.timer = null;
-    write(getEntry<T>(key).value);
-  }, DEBOUNCE_MS);
+    pending.delete(key);
+    entry.sent = { json: JSON.stringify(entry.value), at: Date.now() };
+    write(entry.value);
+  };
+  entry.timer = setTimeout(fire, DEBOUNCE_MS);
+  pending.set(key, fire);
+  listenForPageHide();
+}
+
+/** Writes waiting for their debounce, by key — sent at once when the page is hidden. */
+const pending = new Map<string, () => void>();
+let listening = false;
+
+/** A page that's left (closed, reloaded, or navigated "back" to an earlier full page load, when
+    the browser freezes it in the back-forward cache) never runs its timers again, so an edit made
+    just before — e.g. deleting a tune, which goes back to the list — was lost. Send them now. */
+function listenForPageHide() {
+  if (listening || typeof window === "undefined") return;
+  listening = true;
+  const flush = () => {
+    for (const [key, fire] of [...pending]) {
+      const entry = getEntry(key);
+      if (entry.timer) clearTimeout(entry.timer);
+      fire();
+    }
+  };
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
 }
 
 /** Clears a key's cache on sign-out, so a subsequent sign-in (even back-to-back, same tab, a
@@ -100,9 +150,11 @@ export function resetSynced<T>(key: string, write: (value: T) => void) {
   if (entry.timer) {
     clearTimeout(entry.timer);
     entry.timer = null;
+    pending.delete(key);
     if (entry.seeded) write(entry.value);
   }
   entry.seeded = false;
+  entry.sent = null;
 }
 
 /** Whether `key` holds a real value yet (seeded from the server or set locally) — "loaded", for

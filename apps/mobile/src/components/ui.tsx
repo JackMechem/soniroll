@@ -1,5 +1,5 @@
 import type { NavLinkInfo } from '@jam-practice/core/navLinks';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import {
   Pressable,
@@ -16,6 +16,7 @@ import { CheckIcon, ChevronRightIcon, ClearIcon, NAV_LINK_ICONS, SearchIcon, typ
 import { useAppTheme, withAlpha } from '@/theme/ThemeProvider';
 import { TextInput } from '@/components/ThemedTextInput';
 import { withAccidentals } from '@/components/Accidentals';
+import { HeaderTitle } from '@/components/HeaderTitle';
 
 /**
  * The app's basic pieces, styled like the website after its UX refresh: filled cards (no thin
@@ -175,19 +176,23 @@ export function Button({
   const primary = kind === 'primary';
   const fg = primary ? colors['accent-foreground'] : colors.foreground;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
-      className={`h-11 flex-row items-center justify-center gap-1.5 overflow-hidden px-4 ${pill ? 'rounded-full' : 'rounded-lg'}`}
-      style={[{ backgroundColor: primary ? colors.accent : derived.fill, opacity: disabled ? 0.5 : 1 }, style]}
-    >
-      {Icon ? <Icon color={fg} size={18} /> : null}
-      <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: fg }}>
-        {label}
-      </Text>
-    </Pressable>
+    // The ripple is drawn with the button's background, which Android doesn't round off: the
+    // wrapper's rounded clip does (it was a square box behind a rounded button).
+    <View className={`overflow-hidden ${pill ? 'rounded-full' : 'rounded-lg'}`} style={style}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
+        className="h-11 flex-row items-center justify-center gap-1.5 px-4"
+        style={{ backgroundColor: primary ? colors.accent : derived.fill, opacity: disabled ? 0.5 : 1 }}
+      >
+        {Icon ? <Icon color={fg} size={18} /> : null}
+        <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: fg }}>
+          {label}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -211,18 +216,21 @@ export function IconButton({
 }) {
   const { colors, derived } = useAppTheme();
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      hitSlop={6}
-      // Not `borderless`: on Android a borderless ripple replaces the button's background colour.
-      android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
-      className="items-center justify-center overflow-hidden rounded-full"
-      style={{ width: size, height: size, backgroundColor: primary ? colors.accent : derived.fill }}
-    >
-      <Icon color={color ?? (primary ? colors['accent-foreground'] : colors.foreground)} size={Math.round(size * 0.55)} />
-    </Pressable>
+    // Round clip around it: Android doesn't round off the ripple itself (see `Button`).
+    <View className="overflow-hidden rounded-full">
+      <Pressable
+        onPress={onPress}
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        hitSlop={6}
+        // Not `borderless`: on Android a borderless ripple replaces the button's background colour.
+        android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
+        className="items-center justify-center"
+        style={{ width: size, height: size, backgroundColor: primary ? colors.accent : derived.fill }}
+      >
+        <Icon color={color ?? (primary ? colors['accent-foreground'] : colors.foreground)} size={Math.round(size * 0.55)} />
+      </Pressable>
+    </View>
   );
 }
 
@@ -338,19 +346,21 @@ export function SortControl<T extends string>({
       {options.map((o) => {
         const on = o.value === value;
         return (
-          <Pressable
-            key={o.value}
-            onPress={() => onChange(o.value)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: on }}
-            android_ripple={{ color: colors['surface-hover'] }}
-            className="h-9 justify-center overflow-hidden rounded-full px-3.5"
-            style={{ backgroundColor: on ? colors.foreground : derived.fill }}
-          >
-            <Text className="font-ui-semibold text-sm font-semibold" style={{ color: on ? colors.background : colors.foreground }}>
-              {o.label}
-            </Text>
-          </Pressable>
+          <View key={o.value} className="overflow-hidden rounded-full">
+            <Pressable
+              onPress={() => onChange(o.value)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              android_ripple={{ color: on ? colors['accent-hover'] : colors['surface-hover'] }}
+              className="h-9 justify-center px-3.5"
+              // The accent when picked, like every other selected toggle.
+              style={{ backgroundColor: on ? colors.accent : derived.fill }}
+            >
+              <Text className="font-ui-semibold text-sm font-semibold" style={{ color: on ? colors['accent-foreground'] : colors.foreground }}>
+                {o.label}
+              </Text>
+            </Pressable>
+          </View>
         );
       })}
     </View>
@@ -449,12 +459,20 @@ export function SignInGate({
 }
 
 /** `SignInGate` as a whole screen: on the page background, with the page's padding, scrolling if
-    the phone is small. `bottom` is the bottom padding (`useTabBarSpace()` on a main screen). */
-export function SignInGateScreen({ bottom = 48, ...gate }: Parameters<typeof SignInGate>[0] & { bottom?: number }) {
+    the phone is small. `bottom` is the bottom padding (`useTabBarSpace()` on a main screen).
+    `header`: the header's title while signed out — set on a screen that names a routine, note or
+    person in its header, so that (and its Edit, Share or ⋮ buttons) never stay up from before
+    signing out. */
+export function SignInGateScreen({ bottom = 48, header, ...gate }: Parameters<typeof SignInGate>[0] & { bottom?: number; header?: string }) {
   const { colors } = useAppTheme();
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: bottom }}>
-      <SignInGate {...gate} />
-    </ScrollView>
+    <>
+      {header ? (
+        <Stack.Screen options={{ title: header, headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>, headerRight: () => null }} />
+      ) : null}
+      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: bottom }}>
+        <SignInGate {...gate} />
+      </ScrollView>
+    </>
   );
 }

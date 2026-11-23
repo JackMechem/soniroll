@@ -36,6 +36,7 @@ import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { Segmented } from '@/components/tool/reward';
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { Button, Card } from '@/components/ui';
+import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 import { usePracticeLog, type PracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -59,7 +60,7 @@ function EditorScreen() {
   const [draftId] = useState(() => newRoutine(todayKey(), 0).id);
   const { colors } = useAppTheme();
   if (isLoading) return <ScreenSpinner />;
-  if (!isAuthenticated) return <ShedLogGate />;
+  if (!isAuthenticated) return <ShedLogGate header="Shed Log" />;
   if (!log.ready) return <ScreenSpinner />;
   const existing = id ? log.data.routines.find((r) => r.id === id) : undefined;
   if (id && !existing) {
@@ -81,6 +82,10 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  // Android draws edge to edge, so the keyboard covers the bottom of the screen instead of
+  // shrinking it: the screen lifts itself (form and footer) above it, and the field being typed
+  // in stays in view (a task added at the end was left behind the keyboard).
+  const keyboard = useKeyboardHeight();
   const [r, setR] = useState<Routine>(initial);
   const [start] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +140,7 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
   const startTime = parseTime(r.startTime);
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background, paddingBottom: keyboard ? keyboard + insets.bottom : 0 }}>
       <Stack.Screen options={{ title: isNew ? 'New routine' : 'Edit routine' }} />
       <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 16 }}>
         {error ? (
@@ -166,7 +171,7 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
           </View>
           <Label>What it&apos;s for (optional)</Label>
           <Field value={r.description} onChangeText={(description) => set({ description })} multiline label="What it's for" />
-          <Label>Colour</Label>
+          <Label>Color</Label>
           {/* All eight in one row, spread across the card (they wrapped 7 + 1 on a phone). */}
           <View className="flex-row justify-between">
             {ROUTINE_COLORS.map((c, i) => (
@@ -174,7 +179,7 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
                 key={c}
                 onPress={() => set({ color: i })}
                 accessibilityRole="radio"
-                accessibilityLabel={`Colour ${i + 1}`}
+                accessibilityLabel={`Color ${i + 1}`}
                 accessibilityState={{ checked: r.color === i }}
                 hitSlop={3}
                 className="h-8 w-8 items-center justify-center rounded-full"
@@ -285,7 +290,7 @@ function Editor({ initial, isNew, log }: { initial: Routine; isNew: boolean; log
         {!isNew ? <SmallButton label="Delete routine" Icon={TrashIcon} danger onPress={() => setConfirmDelete(true)} /> : null}
       </ScrollView>
 
-      <View className="flex-row gap-2 px-4 pt-3" style={{ paddingBottom: insets.bottom + 12, backgroundColor: colors.background, borderTopWidth: 1, borderColor: colors['surface-hover'] }}>
+      <View className="flex-row gap-2 px-4 pt-3" style={{ paddingBottom: keyboard ? 12 : insets.bottom + 12, backgroundColor: colors.background, borderTopWidth: 1, borderColor: colors['surface-hover'] }}>
         <View className="flex-1">
           <Button label="Cancel" kind="secondary" onPress={() => router.back()} />
         </View>

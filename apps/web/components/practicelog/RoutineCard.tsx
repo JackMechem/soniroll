@@ -195,7 +195,7 @@ export default function RoutineCard({
         >
           {done}/{total}
         </span>
-        <button type="button" onClick={openMenu} aria-label="Routine options" className="-mr-1 shrink-0 rounded-md p-1.5 text-muted pointer-coarse:-my-1.5 pointer-coarse:p-3 hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={openMenu} aria-label={`Options for ${routine.name || "this routine"}`} className="-mr-1 shrink-0 rounded-md p-1.5 text-muted pointer-coarse:-my-1.5 pointer-coarse:p-3 hover:bg-surface-hover hover:text-foreground">
           <DotsVerticalIcon className="h-4 w-4" />
         </button>
       </header>
@@ -392,7 +392,8 @@ export default function RoutineCard({
           </button>
         ))}
 
-      {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} />}
+      {/* On the routine's own page its files are in the page's Files section. */}
+      {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} noFiles={embedded} />}
 
       {occurrence.notes !== undefined && occurrence.notes !== "" && (
         <LegacyNotes

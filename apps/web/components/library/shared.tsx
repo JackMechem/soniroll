@@ -153,7 +153,7 @@ export function MenuButton({ label, onClick, alwaysVisible = false }: { label: s
       }}
       aria-label={label}
       title="Options"
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-foreground/[0.08] hover:text-foreground focus-visible:opacity-100 ${
+      className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 hover:bg-foreground/[0.08] hover:text-foreground focus-visible:opacity-100 ${
         alwaysVisible ? "" : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
       }`}
     >
@@ -171,5 +171,5 @@ export function tuneSummary(tune: Tune): string {
 export function menuPosition(e: React.MouseEvent) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
   // ContextMenu's width (208px), so the menu's right edge lines up with the button's.
-  return { x: rect.right - 208, y: rect.bottom + 4 };
+  return { x: rect.right - 208, y: rect.bottom + 4, flipY: rect.top - 4 };
 }

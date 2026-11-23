@@ -112,7 +112,7 @@ function SmallButton({ label, onPress, primary, on, children }: { label: string;
 }
 
 const WAVEFORM_INFO =
-  "Vertical lines are the click (bars numbered). Each stroke is a coloured line, shaded back to where it should have landed; the strip under the waveform shows how early or late it was. Dashed lines are extra strokes, and hollow circles are notes you didn't play. Drag to move along, pinch to zoom, tap to play from there or drag the playhead. The strip at the bottom is the whole take: tap it to jump.";
+  "Vertical lines are the click (bars numbered). Each stroke is a colored line, shaded back to where it should have landed; the strip under the waveform shows how early or late it was. Dashed lines are extra strokes, and hollow circles are notes you didn't play. Drag to move along, pinch to zoom, tap to play from there or drag the playhead. The strip at the bottom is the whole take: tap it to jump.";
 
 /** The waveform with its playback controls. Its playhead moves on its own (60 times a second), so
     it's kept here rather than redrawing the whole results. */

@@ -1,403 +1,795 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { CloseIcon, GearIcon, HelpIcon, HomeIcon, findToolLink } from "@/components/tools";
-import { PaneContext, PaneTitleSlotContext } from "@/lib/paneContext";
-import { PaneCrumbStoreContext, createCrumbStore, useCurrentCrumbs } from "@/lib/pageCrumbs";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Fragment, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import Flyout, { FlyoutItem } from "@/components/Flyout";
+import { OPEN_PALETTE_EVENT } from "@/components/CommandPalette";
 import { CrumbTrail } from "@/components/PageBar";
+import NextPaneContexts from "@/components/panes/NextPaneContexts";
 import { IntroButton } from "@/components/help/ToolIntro";
-import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
+import { NewTabIcon } from "@/components/tabs/tabParts";
+import { newTab } from "@/lib/useTabs";
 import {
-  type PaneSplit,
-  type PaneTree,
-  collectLeaves,
-  createLeaf,
-  removePane,
-  resizeSplit,
-  updateLeafHref,
-} from "@/lib/tilingLayout";
+  ChevronLeftIcon,
+  CloseIcon,
+  DotsVerticalIcon,
+  ExternalLinkIcon,
+  GearIcon,
+  HelpIcon,
+  HomeIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  findToolLink,
+} from "@/components/tools";
+import { prefersReducedMotion } from "@/lib/logoAnimation";
+import { PaneCrumbStoreContext, createCrumbStore, useCurrentCrumbs } from "@/lib/pageCrumbs";
 import {
-  syncAddressBar,
-  updateTilingState,
+  type PaneNav,
+  type PaneRouter,
+  PaneContext,
+  PaneIdContext,
+  PaneNavContext,
+  PaneTitleSlotContext,
+  markPaneBack,
+} from "@/lib/paneContext";
+import { type DividerRect, type PaneLeaf, type PaneRect, allPanes, collectLeaves, layoutRects, parentSplit } from "@/lib/tilingLayout";
+import { canShowInPane, renderPaneHref } from "@/lib/toolRegistry";
+import { useNotesConfig } from "@/lib/useShedNotes";
+import {
+  SIDE_MAX_WIDTH,
+  SIDE_MIN_WIDTH,
+  closePane,
+  closeSideFromHistory,
+  dockFloat,
+  flipPane,
+  floatPane,
+  focusPane,
+  keepOnlyPane,
+  navigateMain,
+  navigatePane,
+  paneBack,
+  paneHistoryTraverse,
+  panesActive,
+  paneCanGoBack,
+  paneDetach,
+  requestSplit,
+  resizePanes,
+  routeChanged,
+  setFloatWidth,
+  swapPane,
+  takeFocusRequest,
+  toggleMaximize,
   useTilingState,
 } from "@/lib/useTilingLayout";
 
-
-/** The name and icon shown in a pane's top bar: the tool's own (as in the sidebar), or the page's
-    for the few non-tool pages a pane can show. */
+/** The pane bar's name and icon before the page has set its own trail. */
 const PANE_PAGES: Record<string, { label: string; icon: (props: { className?: string }) => React.JSX.Element }> = {
   "/dashboard": { label: "Dashboard", icon: HomeIcon },
-  "/": { label: "Dashboard", icon: HomeIcon },
   "/account": { label: "Account", icon: GearIcon },
   "/help": { label: "Help", icon: HelpIcon },
 };
 
 function paneTitle(href: string) {
-  const link = findToolLink(href);
+  const path = href.split(/[?#]/)[0];
+  const link = findToolLink(path);
   if (link) return { label: link.label, icon: link.icon };
-  return PANE_PAGES[href] ?? null;
+  return PANE_PAGES[path] ?? null;
 }
 
-/** One pane: its own top bar (the page's name and the close button) over the tool, which is
-    mounted via `TOOL_COMPONENTS`.
+const pathOf = (href: string) => href.split(/[?#]/)[0];
 
-    A pane behaves like a phone or tablet screen of its own width (FB-22): it's a size container
-    named `pane` (`@container/pane`) marked `data-pane`, and `app/globals.css` makes the `sm:`/`md:`
-    variants follow the pane's width and `lg:` and up never apply inside one. Every page's
-    phone/tablet layout is built to sit under the phone top bar (`Sidebar.tsx`: 3.5rem, see-through,
-    the page scrolling under it; pages leave 4.5rem at the top and stick their own bars at 3.5rem),
-    so the pane's bar is that bar's twin — same height, same look — and the page needs no changes.
-    The bar holds the close button, so it can't land on top of the tool's own header buttons any
-    more (it used to be absolutely positioned over the page's top-right corner), and it sits in the
-    same place in every pane. The page's name is dimmed in the panes that aren't active.
+/** A pane's address as a page of its own (a note in the side view is Shed Notes with that note). */
+function pageHrefOf(href: string) {
+  const url = new URL(href, "http://x");
+  if (url.pathname !== "/shed-notes" || url.searchParams.get("view") !== "note") return href;
+  url.searchParams.delete("view");
+  return `${url.pathname}${url.search}`;
+}
 
-    Container queries re-run whenever the pane's width changes (the window, the sidebar or the
-    divider), so the layout follows a resize with no JavaScript. */
-function Pane({
-  href,
+/** `href` as an in-app address, resolved against the pane's own (a relative `?tab=x` stays in the
+    pane's page); null for another site. */
+function resolveHref(href: string, base: string): string | null {
+  try {
+    const url = new URL(href, window.location.origin + base);
+    if (url.origin !== window.location.origin) return null;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return null;
+  }
+}
+
+const desktopQuery = "(min-width: 1024px)";
+function subscribeDesktop(cb: () => void) {
+  const mql = window.matchMedia(desktopQuery);
+  mql.addEventListener("change", cb);
+  return () => mql.removeEventListener("change", cb);
+}
+/** Read straight from the window (not after an effect, like `useIsDesktop`), so a side view that
+    floats on a desktop never draws a frame as a phone's full-screen one. */
+function useDesktopWindow() {
+  return useSyncExternalStore(subscribeDesktop, () => window.matchMedia(desktopQuery).matches, () => false);
+}
+
+/** What the real router rendered: the page (`children`) is shown in a pane only at this address. */
+function RouteTracker() {
+  const pathname = usePathname();
+  const search = useSearchParams()?.toString() ?? "";
+  useEffect(() => {
+    routeChanged(`${pathname}${search ? `?${search}` : ""}`);
+  }, [pathname, search]);
+  return null;
+}
+
+type Frame = {
+  key: string;
+  leaf: PaneLeaf | null;
+  /** Shows the real page (`children`). */
+  page: boolean;
+  kind: "plain" | "tree" | "float";
+};
+
+/**
+ * Split screen and the side view, one system (state and API: `lib/useTilingLayout.ts`).
+ *
+ * Mounted once by `AppShell` around the page, always — with nothing split it's just the page. Every
+ * pane is a flat, keyed child of one box, placed from the layout tree with absolute positions, so
+ * splitting, closing, swapping, flipping, floating or docking a pane moves boxes around without
+ * remounting anything (a metronome keeps running; the page you were on stays as it was when the
+ * first pane opens beside it — it's still Next's own `children`, in the "page" frame).
+ *
+ * Each pane is its own little browser: its address is `leaf.href`, and inside it `usePathname`,
+ * `useSearchParams` and `useRouter` are the pane's (`NextPaneContexts`), links open in it (the
+ * click listener below), and its Back goes through its own history. The address bar follows the
+ * active pane (`syncAddressBar`, never Next's router). The sidebar, ⌘K and links outside the panes
+ * open pages in the main pane (the tree pane last clicked).
+ *
+ * Phones have no split screen: the page shows as usual, and the side view covers it, full screen,
+ * with Back (a real history entry, so the phone's Back gesture closes it).
+ */
+export default function TilingLayout({ children }: { children: React.ReactNode }) {
+  const { layout, pageLeafId, routeHref } = useTilingState();
+  const desktop = useDesktopWindow();
+  const router = useRouter();
+  const pathname = usePathname();
+  const hostRef = useRef<HTMLDivElement>(null);
+  const panes = allPanes(layout);
+  const sideFloat = layout.float;
+
+  // Links open in the pane they're in; outside the panes (sidebar, menus) in the main pane. One
+  // listener on the document, in the capture phase, so it runs before Next's <Link> handler (which
+  // then sees the click handled). Portaled menus aren't inside their pane's box, so the pane that
+  // last got a pointer press inside it (through React's tree) is remembered for the click.
+  const pressedPane = useRef<string | null>(null);
+  const stateRef = useRef({ layout });
+  useEffect(() => {
+    stateRef.current = { layout };
+  });
+  useEffect(() => {
+    const onPointerDown = () => {
+      pressedPane.current = null; // a pane's own handler (after this one) sets it again
+    };
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return;
+      const raw = a.getAttribute("href");
+      if (!raw || raw.startsWith("#")) return;
+      const { layout: l } = stateRef.current;
+      const inPane = (a.closest("[data-pane-id]") as HTMLElement | null)?.dataset.paneId ?? pressedPane.current;
+      const paneIds = new Set(allPanes(l).map((p) => p.id));
+      const pane = inPane && paneIds.has(inPane) ? inPane : null;
+      const inSide = pane !== null && pane === l.float?.leaf.id;
+      // The side view's own links stay in it. Anything else only while the screen is split (on
+      // a desktop), or shows a lone pane that isn't the real page (another tab's: `panesActive`);
+      // otherwise a link is an ordinary page navigation (the side view stays open).
+      if (!inSide && !panesActive()) return;
+      const base = (pane && allPanes(l).find((p) => p.id === pane)?.href) || "/";
+      const href = resolveHref(raw, base);
+      if (!href) return;
+      if (!canShowInPane(href)) {
+        // A page a pane can't show: the window goes there, into this pane (`routeChanged`).
+        if (pane) focusPane(pane);
+        return;
+      }
+      e.preventDefault();
+      if (pane) navigatePane(pane, href);
+      else navigateMain(href);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, []);
+  // Phones: the Back gesture leaves the side view's history entry.
+  useEffect(() => {
+    const onPop = () => closeSideFromHistory();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  // The browser's Back while split goes back inside the active pane (`paneHistoryTraverse`). In the
+  // capture phase, so it runs before Next's own popstate listener, which it then stops. Whether it
+  // was Back or Forward comes from the Navigation API where there is one (else Back).
+  useEffect(() => {
+    let direction: "back" | "forward" | null = null;
+    type Nav = EventTarget & { currentEntry?: { index: number } | null };
+    const nav = (window as unknown as { navigation?: Nav }).navigation;
+    const onNavigate = (e: Event) => {
+      const ev = e as Event & { navigationType?: string; destination?: { index: number } };
+      const from = nav?.currentEntry?.index;
+      direction = ev.navigationType === "traverse" && ev.destination && from !== undefined ? (ev.destination.index < from ? "back" : "forward") : null;
+    };
+    const onPop = (e: PopStateEvent) => {
+      const dir = direction;
+      direction = null;
+      if (paneHistoryTraverse(dir)) e.stopImmediatePropagation();
+    };
+    nav?.addEventListener("navigate", onNavigate);
+    window.addEventListener("popstate", onPop, true);
+    return () => {
+      nav?.removeEventListener("navigate", onNavigate);
+      window.removeEventListener("popstate", onPop, true);
+    };
+  }, []);
+
+  // Escape: a full-screen pane goes back to its place; else the side view closes — when the key
+  // comes from inside it (or from nowhere in particular), not from a menu, a dialog or a vim editor.
+  const notesCfg = useNotesConfig();
+  const vim = notesCfg.config.vimMode;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const l = stateRef.current.layout;
+      const target = e.target instanceof Element ? e.target : null;
+      if (target?.closest(".cm-editor") && vim) return;
+      if (document.querySelector('[role="menu"], [role="dialog"]')) return;
+      const inPane = (target?.closest("[data-pane-id]") as HTMLElement | null)?.dataset.paneId ?? null;
+      const fromNowhere = !target || target === document.body;
+      if (l.maximizedId && (fromNowhere || inPane === l.maximizedId)) {
+        toggleMaximize(l.maximizedId);
+        return;
+      }
+      if (l.sideId && (inPane === l.sideId || (fromNowhere && l.activePaneId === l.sideId))) closePane(l.sideId);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [vim]);
+
+  // A pane just opened gets keyboard focus (Space, shortcuts), unless focus is already in it.
+  useEffect(() => {
+    const id = takeFocusRequest();
+    if (!id) return;
+    const el = hostRef.current?.querySelector<HTMLElement>(`[data-pane-id="${CSS.escape(id)}"]`);
+    if (el && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
+  });
+
+  // Which panes are drawn. The real page keeps the key "page" whatever pane it's in, so it never
+  // remounts as panes open and close around it; the others by id, in a fixed order (moving a
+  // box in the DOM can restart media in it).
+  const frames: Frame[] = [];
+  const pageIsShown = (leaf: PaneLeaf) => leaf.id === pageLeafId && leaf.href === routeHref;
+  if (!layout.tree) {
+    frames.push({ key: "page", leaf: null, page: true, kind: "plain" });
+  } else if (!desktop) {
+    // Phones: the page as usual, and the side view over it.
+    frames.push({ key: "page", leaf: null, page: true, kind: "plain" });
+    if (sideFloat) frames.push({ key: sideFloat.leaf.id, leaf: sideFloat.leaf, page: false, kind: "float" });
+  } else {
+    const shown = panes.map((leaf) => ({ leaf, page: pageIsShown(leaf), kind: (leaf.id === sideFloat?.leaf.id ? "float" : "tree") as Frame["kind"] }));
+    const pageFrame = shown.find((f) => f.leaf.id === pageLeafId);
+    if (pageFrame) frames.push({ key: "page", ...pageFrame });
+    for (const f of shown.filter((f) => f !== pageFrame).sort((a, b) => (a.leaf.id < b.leaf.id ? -1 : 1))) frames.push({ key: f.leaf.id, ...f });
+  }
+
+  const leafCount = collectLeaves(layout.tree).length;
+  // Split: the tree's panes get bars. One tree pane (with the side view over it) is just the page.
+  const split = desktop && leafCount > 1;
+  const rects = layout.tree && split ? layoutRects(layout.tree) : null;
+
+  return (
+    <div ref={hostRef} data-pane-host className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      <Suspense fallback={null}>
+        <RouteTracker />
+      </Suspense>
+      {frames.map((f) => (
+        <PaneFrame
+          key={f.key}
+          leaf={f.leaf}
+          kind={f.kind}
+          chrome={f.leaf !== null && (f.kind === "float" || (f.kind === "tree" && split))}
+          desktop={desktop}
+          rect={f.leaf && f.kind === "tree" ? rects?.panes.get(f.leaf.id) ?? null : null}
+          floatWidth={f.kind === "float" ? sideFloat?.width ?? 560 : null}
+          maximized={f.leaf !== null && layout.maximizedId === f.leaf.id}
+          active={f.leaf !== null && layout.activePaneId === f.leaf.id}
+          isSide={f.leaf !== null && layout.sideId === f.leaf.id}
+          inSplit={f.leaf !== null && f.kind === "tree" && leafCount > 1}
+          splitDirection={f.leaf ? parentSplit(layout.tree, f.leaf.id)?.direction ?? null : null}
+          canFloat={f.kind === "tree" && leafCount > 1}
+          routeKey={f.kind === "plain" || (f.kind === "tree" && !split) ? pathname : null}
+          realRouter={router}
+          onPressed={(id) => (pressedPane.current = id)}
+        >
+          {f.page ? children : null}
+        </PaneFrame>
+      ))}
+      {rects?.dividers.map((d) => <Divider key={d.split.id} divider={d} hostRef={hostRef} hidden={layout.maximizedId !== null} />)}
+    </div>
+  );
+}
+
+const GUTTER = 8;
+
+function rectStyle(r: PaneRect): React.CSSProperties {
+  const half = GUTTER / 2;
+  const l = r.edges.l ? half : 0;
+  const t = r.edges.t ? half : 0;
+  const rr = r.edges.r ? half : 0;
+  const b = r.edges.b ? half : 0;
+  return {
+    left: `calc(${r.x * 100}% + ${l}px)`,
+    top: `calc(${r.y * 100}% + ${t}px)`,
+    width: `calc(${r.w * 100}% - ${l + rr}px)`,
+    height: `calc(${r.h * 100}% - ${t + b}px)`,
+  };
+}
+
+/** One pane: a bar (Back, the page's trail, its controls) over the page, which scrolls under the
+    bar like a phone screen under its top bar. A pane is a size container (`@container/pane`,
+    `data-pane`): `sm:`/`md:` follow its width and `lg:`+ is off inside it (`app/globals.css`), so
+    every page's phone/tablet layout fits it unchanged. Without `chrome` (nothing split; or a single
+    pane left) it's just the page, laid out as a normal page. */
+function PaneFrame({
+  leaf,
+  kind,
+  chrome,
+  desktop,
+  rect,
+  floatWidth,
+  maximized,
   active,
-  canClose,
-  onFocus,
-  onClose,
+  isSide,
+  inSplit,
+  splitDirection,
+  canFloat,
+  routeKey,
+  realRouter,
+  onPressed,
+  children,
 }: {
-  href: string;
+  leaf: PaneLeaf | null;
+  kind: Frame["kind"];
+  chrome: boolean;
+  desktop: boolean;
+  rect: PaneRect | null;
+  floatWidth: number | null;
+  maximized: boolean;
   active: boolean;
-  canClose: boolean;
-  onFocus: () => void;
-  onClose: () => void;
+  isSide: boolean;
+  inSplit: boolean;
+  splitDirection: "row" | "col" | null;
+  canFloat: boolean;
+  routeKey: string | null;
+  realRouter: ReturnType<typeof useRouter>;
+  onPressed: (id: string) => void;
+  children: React.ReactNode;
 }) {
-  const Component = TOOL_COMPONENTS[href];
-  const title = paneTitle(href);
-  const TitleIcon = title?.icon;
-  // The pane's box, for phone-style sheets to portal into (`lib/paneContext.ts`).
+  const id = leaf?.id ?? null;
+  const href = leaf?.href ?? null;
   const [paneEl, setPaneEl] = useState<HTMLDivElement | null>(null);
-  // Beside the page's name in the bar: where the page puts its intro "?" (`ToolLayout`).
   const [titleSlot, setTitleSlot] = useState<HTMLSpanElement | null>(null);
-  // The page's own trail (`PageBar`, e.g. "Library / Tunes / Setlists"), shown in place of the
-  // name once the page has set it.
   const [crumbStore] = useState(createCrumbStore);
-  const page = useCurrentCrumbs(crumbStore);
-  const atTopLeft = useAtTopLeft(paneEl);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // The pane's own router: links and `router.push` change what this pane shows.
+  const realRouterRef = useRef(realRouter);
+  const hrefRef = useRef(href);
+  useEffect(() => {
+    realRouterRef.current = realRouter;
+    hrefRef.current = href;
+  });
+  const paneRouter = useMemo<PaneRouter | null>(() => {
+    if (!id) return null;
+    const go = (to: string, replace: boolean) => {
+      const resolved = resolveHref(to, hrefRef.current ?? "/");
+      if (!resolved) {
+        window.location.assign(to);
+        return;
+      }
+      if (navigatePane(id, resolved, { replace })) return;
+      // A page a pane can't show: the window goes there, in this pane (`routeChanged`).
+      focusPane(id);
+      if (replace) realRouterRef.current.replace(resolved);
+      else realRouterRef.current.push(resolved);
+    };
+    const back = () => paneBack(id);
+    markPaneBack(back, () => paneCanGoBack(id));
+    return { push: (to) => go(to, false), replace: (to) => go(to, true), back, forward: () => {} };
+  }, [id]);
+
+  // Inside a pane (`chrome`, or a lone pane left after closing the others): the pane's own address.
+  const nav = useMemo<PaneNav | null>(() => {
+    if (!href) return null;
+    const [path, search = ""] = href.split("#")[0].split("?");
+    return { pathname: path, search, router: chrome ? paneRouter : null };
+  }, [href, chrome, paneRouter]);
+
+  // The page in it: the real page (`children`), or the pane's from `PANE_ROUTES`. Made once per
+  // address, so resizing or another pane changing doesn't re-render it.
+  const content = useMemo(() => {
+    if (children) return children;
+    if (!href) return null;
+    return renderPaneHref(href) ?? <Unavailable href={href} id={id} />;
+  }, [children, href, id]);
+
+  // A new page in the pane starts at its top.
+  const path = href ? pathOf(href) : null;
+  useLayoutEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [path]);
+
+  // The plain page slides in on every route change (the page transition).
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    if (routeKey === null) return;
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const page = scrollRef.current;
+    if (!page || prefersReducedMotion()) return;
+    page.scrollTop = 0;
+    const slide = page.animate([{ opacity: 0, transform: "translateX(36px) scale(0.985)" }, { opacity: 1, transform: "none" }], {
+      duration: 480,
+      easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+    });
+    return () => slide.cancel();
+  }, [routeKey]);
+
+  const isFloat = kind === "float";
+  const phoneSide = isFloat && !desktop;
+  let box: string;
+  let style: React.CSSProperties | undefined;
+  if (!chrome) {
+    box = "relative flex min-h-0 min-w-0 flex-1 flex-col";
+  } else if (phoneSide) {
+    box = "fixed inset-0 z-[65] flex flex-col bg-background pt-[env(safe-area-inset-top)]";
+  } else if (maximized) {
+    box = "absolute inset-0 z-[35] flex flex-col bg-background";
+  } else if (isFloat) {
+    box = "absolute inset-y-0 right-0 z-30 flex flex-col bg-background shadow-2xl shadow-black/25 ring-1 ring-foreground/10";
+    style = { width: `min(${floatWidth ?? 560}px, calc(100% - 3rem))` };
+  } else {
+    box = "absolute flex flex-col";
+    style = rect ? rectStyle(rect) : { inset: 0 };
+  }
 
   return (
     <div
       ref={setPaneEl}
-      data-pane
-      // The pane that gets keyboard shortcuts when nothing has focus (`keyIsForPane`).
-      data-pane-active={active ? "" : undefined}
-      onPointerDownCapture={onFocus}
-      className="@container/pane relative flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden"
+      data-pane={chrome ? "" : undefined}
+      data-pane-id={chrome && id ? id : undefined}
+      data-pane-active={chrome && active ? "" : undefined}
+      aria-label={chrome ? (isSide ? "Side view" : "Pane") : undefined}
+      role={chrome ? "region" : undefined}
+      tabIndex={chrome ? -1 : undefined}
+      onPointerDownCapture={
+        id
+          ? () => {
+              onPressed(id);
+              if (chrome) focusPane(id);
+            }
+          : undefined
+      }
+      onFocusCapture={chrome && id && !active ? () => focusPane(id) : undefined}
+      style={style}
+      className={`${chrome ? "@container/pane overflow-hidden outline-none" : ""} ${box}`}
     >
-      {/* Like `AppShell`'s page scroller (a flex column, so pages' `flex-1` fills it). The bar is
-          sticky inside it with a negative margin, so the page starts under it and scrolls beneath
-          it, as on a phone, while the scrollbar runs the full height beside it. */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background">
-        {/* The top-left pane leaves room for the hidden sidebar's menu button (`--sidebar-toggle-room`). */}
-        <div
-          className={`sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-2 border-b border-foreground/10 bg-background/90 px-4 backdrop-blur sm:px-6 ${
-            atTopLeft ? "pl-[calc(1rem+var(--sidebar-toggle-room,0px))] sm:pl-[calc(1.5rem+var(--sidebar-toggle-room,0px))]" : ""
-          }`}
-        >
-          <div className={`flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active ? "text-foreground" : "text-muted"}`}>
-            {page && page.crumbs.length > 0 ? (
-              <CrumbTrail crumbs={page.crumbs} icon={page.icon} variant="compact" />
-            ) : (
-              <>
-                {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
-                <span className="truncate">{title?.label ?? ""}</span>
-              </>
-            )}
-            {page?.intro && <IntroButton onClick={page.intro.show} label={page.intro.label} />}
-            <span ref={setTitleSlot} className="flex shrink-0 items-center empty:hidden" />
-          </div>
-          {canClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close this pane"
-              title="Close this pane"
-              className="-mr-2.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-danger"
-            >
-              <CloseIcon className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        {Component ? (
-          <PaneContext.Provider value={paneEl}>
-            <PaneTitleSlotContext.Provider value={titleSlot}>
-              <PaneCrumbStoreContext.Provider value={crumbStore}>
-                <Component />
+      {isFloat && desktop && !maximized && <FloatResizer width={floatWidth ?? 560} />}
+      <div
+        ref={scrollRef}
+        data-page-scroll={chrome ? undefined : ""}
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background"
+      >
+        {chrome && leaf ? (
+          <PaneBar
+            leaf={leaf}
+            paneEl={paneEl}
+            crumbStore={crumbStore}
+            setTitleSlot={setTitleSlot}
+            desktop={desktop}
+            active={active}
+            isFloat={isFloat}
+            isSide={isSide}
+            maximized={maximized}
+            inSplit={inSplit}
+            splitDirection={splitDirection}
+            canFloat={canFloat}
+          />
+        ) : null}
+        <PaneIdContext.Provider value={chrome ? id : null}>
+          <PaneContext.Provider value={chrome ? paneEl : null}>
+            <PaneTitleSlotContext.Provider value={chrome ? titleSlot : null}>
+              <PaneCrumbStoreContext.Provider value={chrome ? crumbStore : null}>
+                <PaneNavContext.Provider value={nav}>
+                  <NextPaneContexts nav={nav}>
+                    <Fragment key={children ? "page" : path}>{content}</Fragment>
+                  </NextPaneContexts>
+                </PaneNavContext.Provider>
               </PaneCrumbStoreContext.Provider>
             </PaneTitleSlotContext.Provider>
           </PaneContext.Provider>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-1 p-4 pt-20 text-center text-sm text-muted">
-            <p>This tool isn&apos;t available anymore.</p>
-            <p className="text-xs">Close this pane, or right-click a page in the sidebar to open another.</p>
-          </div>
-        )}
+        </PaneIdContext.Provider>
       </div>
     </div>
   );
 }
 
-/** A resizable divider between two sibling panes — the exact same drag mechanics as
-    `components/Sidebar.tsx`'s own resize handle (`setPointerCapture`, an absolute pointer-position
-    -to-size mapping on every move rather than a drag-origin delta), just computing a percentage
-    of the split container instead of an absolute pixel width. */
-function SplitContainer({
-  node,
-  onResize,
-  children,
+const iconButton =
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground";
+
+/** A pane's bar, the phone top bar's twin (3.5rem, see-through, the page scrolling under it):
+    Back (inside the pane), the page's trail, its "?", then full screen, ⋮ and ×. On a phone the
+    side view's bar is Back, the trail and ⋮ — Back is the one way out. */
+function PaneBar({
+  leaf,
+  paneEl,
+  crumbStore,
+  setTitleSlot,
+  desktop,
+  active,
+  isFloat,
+  isSide,
+  maximized,
+  inSplit,
+  splitDirection,
+  canFloat,
 }: {
-  node: PaneSplit;
-  onResize: (sizes: [number, number]) => void;
-  children: [React.ReactNode, React.ReactNode];
+  leaf: PaneLeaf;
+  paneEl: HTMLDivElement | null;
+  crumbStore: ReturnType<typeof createCrumbStore>;
+  setTitleSlot: (el: HTMLSpanElement | null) => void;
+  desktop: boolean;
+  active: boolean;
+  isFloat: boolean;
+  isSide: boolean;
+  maximized: boolean;
+  inSplit: boolean;
+  splitDirection: "row" | "col" | null;
+  canFloat: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState(false);
-  const row = node.direction === "row";
+  const page = useCurrentCrumbs(crumbStore);
+  const title = paneTitle(leaf.href);
+  const TitleIcon = title?.icon;
+  const atTopLeft = useAtTopLeft(paneEl);
+  const canBack = (leaf.back?.length ?? 0) > 0;
+  const showBack = canBack || !desktop;
+  const detach = paneDetach(leaf.id);
+  const url = new URL(leaf.href, "http://x");
+  const noteView = url.pathname === "/shed-notes" && url.searchParams.get("view") === "note";
 
-  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
-  }
-
-  function onDrag(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragging || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const pct = row
-      ? ((e.clientX - rect.left) / rect.width) * 100
-      : ((e.clientY - rect.top) / rect.height) * 100;
-    // Neither side below 20%, nor narrower than a small phone (a pane lays out like one) or
-    // shorter than a usable strip, while there's room for that.
-    const minPct = Math.min(50, Math.max(20, ((row ? 320 : 200) / (row ? rect.width : rect.height)) * 100));
-    const clamped = Math.min(100 - minPct, Math.max(minPct, pct));
-    onResize([clamped, 100 - clamped]);
-  }
-
-  return (
-    // The panes shrink (by their share) to make room for the divider; held at full basis they
-    // ran 8px past the window, cutting into the right pane's close button.
-    <div
-      ref={containerRef}
-      className={`flex h-full w-full min-h-0 min-w-0 ${row ? "flex-row" : "flex-col"}`}
-    >
-      <div
-        style={{ flexBasis: `${node.sizes[0]}%` }}
-        className="h-full min-h-0 w-full min-w-0 shrink grow-0 overflow-hidden"
-      >
-        {children[0]}
-      </div>
-      <div
-        role="separator"
-        aria-orientation={row ? "vertical" : "horizontal"}
-        aria-label={row ? "Resize panes horizontally" : "Resize panes vertically"}
-        tabIndex={0}
-        onPointerDown={startDrag}
-        onPointerMove={onDrag}
-        onPointerUp={() => setDragging(false)}
-        onPointerCancel={() => setDragging(false)}
-        className={`group z-10 flex shrink-0 touch-none items-center justify-center outline-none ${
-          row ? "w-2 cursor-col-resize" : "h-2 cursor-row-resize"
-        }`}
-      >
-        <div
-          className={`transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${
-            dragging ? "bg-accent" : "bg-surface-hover"
-          } ${row ? "h-full w-0.5" : "h-0.5 w-full"}`}
-        />
-      </div>
-      <div
-        style={{ flexBasis: `${node.sizes[1]}%` }}
-        className="h-full min-h-0 w-full min-w-0 shrink grow-0 overflow-hidden"
-      >
-        {children[1]}
-      </div>
-    </div>
-  );
-}
-
-function PaneNode({
-  node,
-  activeId,
-  canClose,
-  onFocus,
-  onClose,
-  onResize,
-}: {
-  node: PaneTree;
-  activeId: string;
-  /** Whether *any* pane can be closed right now — false when this is the only pane left, since
-      closing it would have nothing to collapse into (`removePane` would just no-op anyway, but
-      showing a close button that does nothing is its own small confusion worth avoiding). */
-  canClose: boolean;
-  onFocus: (id: string) => void;
-  onClose: (targetId: string) => void;
-  onResize: (splitId: string, sizes: [number, number]) => void;
-}) {
-  if (node.type === "leaf") {
-    return (
-      <Pane
-        href={node.href}
-        active={node.id === activeId}
-        canClose={canClose}
-        onFocus={() => onFocus(node.id)}
-        onClose={() => onClose(node.id)}
-      />
-    );
-  }
-  return (
-    <SplitContainer node={node} onResize={(sizes) => onResize(node.id, sizes)}>
-      <PaneNode
-        node={node.children[0]}
-        activeId={activeId}
-        canClose={canClose}
-        onFocus={onFocus}
-        onClose={onClose}
-        onResize={onResize}
-      />
-      <PaneNode
-        node={node.children[1]}
-        activeId={activeId}
-        canClose={canClose}
-        onFocus={onFocus}
-        onClose={onClose}
-        onResize={onResize}
-      />
-    </SplitContainer>
-  );
-}
-
-/**
- * "Advanced layouts" — an opt-in tiling window manager for the main content area. Off by default
- * (`lib/useTilingLayout.ts`'s `enabled`); `AppShell.tsx` only ever mounts this component once
- * that's true *and* the screen is desktop-sized (that check lives in `AppShell`, not here — see
- * its own comment for why). Every pane renders its tool directly from `TOOL_COMPONENTS`, bypassing
- * the Next.js router entirely for the panes that aren't "the one matching the current URL" —
- * there's no way to have Next's own router simultaneously render several different routes' pages
- * at once, so this keeps its own tree of live, lazily-imported tool components instead, and only
- * *reflects* the active pane's href into the real URL (via `router.replace`, never `push` — tiling
- * around shouldn't flood the back button with history entries) so a copied link still opens the
- * right tool for whoever you send it to. That link only ever restores a single tool, never the
- * whole tiled arrangement — the arrangement itself is this browser's own `localStorage`,
- * deliberately not something encoded in the URL.
- *
- * The sidebar (and the `/` command palette, which navigates through the same Next.js router) stay
- * in sync *both* ways: this component's own navigation calls move the URL to match whichever pane
- * is active, and clicking a sidebar nav link or picking a result from `/` search retargets the
- * *active* pane's tool instead of doing nothing visible (Next still resolves that route's real
- * page into `children`, which `AppShell` ignores the whole time tiling is on, so without this a
- * click just silently went nowhere from the user's point of view). The `pathname`-watching effect
- * below is what closes that loop: it compares the live URL against the active pane's own href on
- * every render, and only ever acts when they've drifted apart — which happens from an outside
- * navigation, never from this component's own `router.replace` calls (those always set the URL to
- * exactly what the pane's href already just became), so there's no feedback loop.
- *
- * An edge button doesn't open any UI of its own — `requestPaneSplit` just records which pane and
- * which direction (`lib/useTilingLayout.ts`'s `requestSplit`) and opens the *real* `/` command
- * palette on the pane's behalf; `CommandPalette.tsx`'s own `go()` checks for that pending request
- * and performs the split instead of its usual navigation when one exists.
- */
-export default function TilingLayout() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const state = useTilingState();
-  // The last pathname this component actually reacted to — *not* just "whatever `active.href`
-  // currently says," which is what the outside-navigation effect below used to compare against
-  // directly. That compared-every-render approach is what caused a real bug, reported directly
-  // ("if i have 2 windows open... go back to the metronome it will refresh the window and the
-  // metronome will stop"): focusing a different pane used to call `router.replace()` purely to
-  // keep the address bar in sync, and that alone — regardless of which pane or tool — was traced
-  // to remounting whichever `TOOL_COMPONENTS` entry the navigation targeted (confirmed with
-  // instance-id tracing: `Pane`/`AppShell` stayed perfectly stable while the tool component
-  // underneath got a fresh instance, losing all its state, exactly when and only when
-  // `router.replace`/`push` targeted that tool's own href). Focus/close/split now update the
-  // address bar via `syncAddressBar` (raw History API, bypassing Next's router entirely — see its
-  // own doc comment) instead, which never triggers that remount, but also never updates Next's own
-  // `usePathname()` — so comparing `pathname` against the active pane's href on *every* render
-  // (including ones only triggered by `activePaneId` changing from a focus click) would misfire,
-  // treating our own now-stale `pathname` as a fake "outside navigation" and overwriting the pane
-  // we just focused. Tracking the last `pathname` *value itself* this effect has seen fixes that:
-  // it only reacts when Next's own router genuinely moved (a sidebar Link, `/` search, or
-  // browser back/forward), which is the only case it needs to catch.
-  const lastSeenPathnameRef = useRef(pathname);
-
-  // Split screen with a single pane isn't split screen: go back to the plain page (also covers a
-  // single-pane layout left over from the old "Advanced layouts" toggle).
-  useEffect(() => {
-    if (!state.tree) return;
-    const leaves = collectLeaves(state.tree);
-    if (leaves.length !== 1) return;
-    updateTilingState({ enabled: false, tree: null, activePaneId: null });
-    if (leaves[0].href !== window.location.pathname || leaves[0].href !== pathname) router.replace(leaves[0].href);
-  }, [state.tree, pathname, router]);
-
-  // Seed a single pane showing wherever you currently are — a fallback for the rare case this
-  // mounts with no tree at all (normally `AdvancedLayoutsButton`'s own click handler already seeds
-  // one at the exact moment "Advanced layouts" is turned on, using the page you were on then; this
-  // only matters if that somehow didn't happen first).
-  useEffect(() => {
-    if (state.tree) return;
-    const root = createLeaf(pathname);
-    updateTilingState({ tree: root, activePaneId: root.id });
-  }, [state.tree, pathname]);
-
-  // An outside navigation (a sidebar Link, or picking a result in `/` search) changed the real URL
-  // without going through any of this component's own handlers below — retarget the active pane's
-  // tool to match, the same way clicking a nav link already does in the non-tiling page.
-  useEffect(() => {
-    if (pathname === lastSeenPathnameRef.current) return;
-    lastSeenPathnameRef.current = pathname;
-    if (!state.tree || !state.activePaneId) return;
-    const active = collectLeaves(state.tree).find((l) => l.id === state.activePaneId);
-    if (!active || active.href === pathname) return;
-    updateTilingState({ tree: updateLeafHref(state.tree, state.activePaneId, pathname) });
-  }, [pathname, state.tree, state.activePaneId]);
-
-  if (!state.tree || !state.activePaneId) {
-    // The brief instant before the seeding effect above runs — nothing meaningful to show yet.
-    return null;
-  }
-
-  function focusPane(id: string) {
-    if (id === state.activePaneId) return; // already active — nothing to do
-    const leaf = collectLeaves(state.tree!).find((l) => l.id === id);
-    updateTilingState({ activePaneId: id });
-    if (leaf) syncAddressBar(leaf.href);
-  }
-
-  function closePane(targetId: string) {
-    const next = removePane(state.tree!, targetId);
-    if (!next) return; // the only pane left — nothing to collapse into
-    const leaves = collectLeaves(next);
-    // Down to one pane: split screen is over — back to the plain page.
-    if (leaves.length === 1) {
-      updateTilingState({ enabled: false, tree: null, activePaneId: null });
-      router.replace(leaves[0].href);
-      return;
+  const split = (edge: "right" | "down") => {
+    requestSplit(leaf.id, edge);
+    window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
+  };
+  const openAsPage = () => {
+    if (noteView) {
+      url.searchParams.delete("view");
+      navigatePane(leaf.id, `${url.pathname}?${url.searchParams}`, { replace: true });
     }
-    const stillActive = leaves.some((l) => l.id === state.activePaneId);
-    const nextActive = stillActive ? leaves.find((l) => l.id === state.activePaneId)! : leaves[0];
-    updateTilingState({ tree: next, activePaneId: nextActive.id });
-    syncAddressBar(nextActive.href);
+    keepOnlyPane(leaf.id);
+  };
+
+  return (
+    <div
+      className={`sticky top-0 z-20 -mb-14 flex h-14 shrink-0 items-center gap-1.5 border-b border-foreground/10 bg-background/90 px-3 backdrop-blur sm:px-4 ${
+        atTopLeft && !maximized ? "pl-[calc(0.75rem+var(--sidebar-toggle-room,0px))] sm:pl-[calc(1rem+var(--sidebar-toggle-room,0px))]" : ""
+      }`}
+    >
+      {showBack && (
+        <button
+          type="button"
+          onClick={() => paneBack(leaf.id)}
+          title={canBack ? "Back" : "Back to the page"}
+          className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-1.5 pr-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+        >
+          <ChevronLeftIcon className="h-4 w-4" /> Back
+        </button>
+      )}
+      <div className={`ml-1 flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active || !desktop ? "text-foreground" : "text-muted"}`}>
+        {page && page.crumbs.length > 0 ? (
+          <CrumbTrail crumbs={page.crumbs} icon={page.icon} variant="compact" />
+        ) : (
+          <>
+            {TitleIcon && <TitleIcon className="h-4 w-4 shrink-0 text-muted" />}
+            <span className="truncate">{title?.label ?? ""}</span>
+          </>
+        )}
+        {page?.intro && <IntroButton onClick={page.intro.show} label={page.intro.label} />}
+        <span ref={setTitleSlot} className="flex shrink-0 items-center empty:hidden" />
+      </div>
+      {desktop && (
+        <button type="button" onClick={() => toggleMaximize(leaf.id)} aria-label={maximized ? "Exit full screen" : "Full screen"} title={maximized ? "Exit full screen (Esc)" : "Full screen"} className={iconButton}>
+          {maximized ? <MinimizeIcon className="h-4 w-4" /> : <MaximizeIcon className="h-4 w-4" />}
+        </button>
+      )}
+      <Flyout icon={DotsVerticalIcon} label="Pane options" align="end">
+        {(closeMenu) => {
+          const run = (fn: () => void) => () => {
+            closeMenu();
+            fn();
+          };
+          return (
+            <>
+              {desktop && inSplit && splitDirection && (
+                <>
+                  <FlyoutItem icon={SideBySideIcon} label="Side by side" checked={splitDirection === "row"} onSelect={run(() => splitDirection !== "row" && flipPane(leaf.id))} />
+                  <FlyoutItem icon={StackedIcon} label="Above and below" checked={splitDirection === "col"} onSelect={run(() => splitDirection !== "col" && flipPane(leaf.id))} />
+                  <FlyoutItem icon={SwapIcon} label="Swap places" onSelect={run(() => swapPane(leaf.id))} />
+                </>
+              )}
+              {/* Every pane: beside the page (tiled) or over it (floating, the side view). The side
+                  view's own choice is remembered for the next thing it opens. */}
+              {desktop && (isFloat || canFloat) && (
+                <>
+                  <FlyoutItem icon={PushIcon} label="Beside the page" checked={!isFloat} onSelect={run(() => isFloat && dockFloat())} />
+                  <FlyoutItem icon={OverlayIcon} label="Over the page" checked={isFloat} onSelect={run(() => !isFloat && floatPane(leaf.id, { choose: isSide }))} />
+                </>
+              )}
+              {desktop && (
+                <>
+                  <FlyoutItem icon={SideBySideIcon} label="Open beside…" onSelect={run(() => split("right"))} />
+                  <FlyoutItem icon={StackedIcon} label="Open below…" onSelect={run(() => split("down"))} />
+                </>
+              )}
+              <FlyoutItem icon={ExternalLinkIcon} label={noteView ? "Open in Shed Notes" : "Open as a page"} onSelect={run(openAsPage)} />
+              {desktop && <FlyoutItem icon={NewTabIcon} label="Open in a new tab" onSelect={run(() => newTab(pageHrefOf(leaf.href), { after: true }))} />}
+              {detach && (
+                <FlyoutItem
+                  icon={CloseIcon}
+                  label={detach.label}
+                  onSelect={run(() => {
+                    detach.run();
+                    closePane(leaf.id);
+                  })}
+                />
+              )}
+            </>
+          );
+        }}
+      </Flyout>
+      {desktop && (
+        <button type="button" onClick={() => closePane(leaf.id)} aria-label="Close this pane" title={isSide ? "Close (Esc)" : "Close this pane"} className={`${iconButton} -mr-1 hover:text-danger`}>
+          <CloseIcon className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The divider between two panes: drag to resize (each side keeps at least a small phone's width
+    while there's room), double-click for half and half, arrow keys when focused. */
+function Divider({ divider, hostRef, hidden }: { divider: DividerRect; hostRef: React.RefObject<HTMLDivElement | null>; hidden: boolean }) {
+  const { split } = divider;
+  const row = split.direction === "row";
+  const [dragging, setDragging] = useState(false);
+  const f = split.sizes[0] / 100;
+  const style: React.CSSProperties = row
+    ? { left: `calc(${(divider.x + divider.w * f) * 100}% - ${GUTTER / 2}px)`, top: `${divider.y * 100}%`, width: GUTTER, height: `${divider.h * 100}%` }
+    : { top: `calc(${(divider.y + divider.h * f) * 100}% - ${GUTTER / 2}px)`, left: `${divider.x * 100}%`, height: GUTTER, width: `${divider.w * 100}%` };
+
+  const splitBox = useCallback(() => {
+    const host = hostRef.current?.getBoundingClientRect();
+    if (!host) return null;
+    return { left: host.left + divider.x * host.width, top: host.top + divider.y * host.height, width: divider.w * host.width, height: divider.h * host.height };
+  }, [hostRef, divider.x, divider.y, divider.w, divider.h]);
+
+  function setPct(pct: number) {
+    const box = splitBox();
+    if (!box) return;
+    const total = row ? box.width : box.height;
+    const minPct = Math.min(50, Math.max(15, ((row ? 320 : 200) / total) * 100));
+    const clamped = Math.round(Math.min(100 - minPct, Math.max(minPct, pct)) * 10) / 10;
+    resizePanes(split.id, [clamped, 100 - clamped]);
   }
 
-  function resizeSplitNode(splitId: string, sizes: [number, number]) {
-    updateTilingState({ tree: resizeSplit(state.tree!, splitId, sizes) });
+  function onMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    const box = splitBox();
+    if (!box) return;
+    setPct(row ? ((e.clientX - box.left) / box.width) * 100 : ((e.clientY - box.top) / box.height) * 100);
   }
 
   return (
-    <PaneNode
-      node={state.tree}
-      activeId={state.activePaneId}
-      canClose={collectLeaves(state.tree).length > 1}
-      onFocus={focusPane}
-      onClose={closePane}
-      onResize={resizeSplitNode}
-    />
+    <div
+      role="separator"
+      aria-orientation={row ? "vertical" : "horizontal"}
+      aria-label={row ? "Resize the panes side to side" : "Resize the panes up and down"}
+      aria-valuenow={Math.round(split.sizes[0])}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      tabIndex={0}
+      title="Drag to resize · double-click for half and half"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={onMove}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+      onDoubleClick={() => resizePanes(split.id, [50, 50])}
+      onKeyDown={(e) => {
+        const step = e.shiftKey ? 10 : 2;
+        if ((row && e.key === "ArrowLeft") || (!row && e.key === "ArrowUp")) setPct(split.sizes[0] - step);
+        else if ((row && e.key === "ArrowRight") || (!row && e.key === "ArrowDown")) setPct(split.sizes[0] + step);
+        else return;
+        e.preventDefault();
+      }}
+      style={style}
+      className={`group absolute z-[25] flex touch-none items-center justify-center outline-none ${row ? "cursor-col-resize" : "cursor-row-resize"} ${hidden ? "hidden" : ""}`}
+    >
+      <div className={`rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragging ? "bg-accent" : "bg-foreground/10"} ${row ? "h-full w-0.5" : "h-0.5 w-full"}`} />
+    </div>
+  );
+}
+
+/** The side view's left edge, when it floats over the page: drag to make it wider or narrower. */
+function FloatResizer({ width }: { width: number }) {
+  const [dragging, setDragging] = useState(false);
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize the side view"
+      aria-valuemin={SIDE_MIN_WIDTH}
+      aria-valuemax={SIDE_MAX_WIDTH}
+      aria-valuenow={width}
+      tabIndex={0}
+      title="Drag to resize"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(e) => {
+        if (!dragging) return;
+        const host = e.currentTarget.closest("[data-pane-host]")?.getBoundingClientRect();
+        if (host) setFloatWidth(host.right - e.clientX);
+      }}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") setFloatWidth(width + 24);
+        else if (e.key === "ArrowRight") setFloatWidth(width - 24);
+        else return;
+        e.preventDefault();
+      }}
+      className="group absolute -left-2 top-0 z-30 flex h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none"
+    >
+      <div className={`h-10 w-1 rounded-full transition-colors ${dragging ? "bg-accent" : "bg-transparent group-hover:bg-accent/60 group-focus-visible:bg-accent"}`} />
+    </div>
+  );
+}
+
+/** A saved pane whose page can't be shown in a pane (it was the real page when it was saved). */
+function Unavailable({ href, id }: { href: string; id: string | null }) {
+  const router = useRouter();
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4 pt-20 text-center text-sm text-muted">
+      <p>This page can&apos;t be shown in split screen.</p>
+      <button
+        type="button"
+        onClick={() => {
+          if (id) focusPane(id);
+          router.push(href);
+        }}
+        className="flex h-9 items-center rounded-md bg-foreground/[0.05] px-3 font-medium text-foreground transition-colors hover:bg-surface-hover"
+      >
+        Open it here
+      </button>
+    </div>
   );
 }
 
@@ -416,4 +808,57 @@ function useAtTopLeft(el: HTMLElement | null) {
     return () => observer.disconnect();
   }, [el]);
   return at;
+}
+
+function svg(className?: string) {
+  return { viewBox: "0 0 24 24", className, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+}
+
+/** Two panes side by side. */
+function SideBySideIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svg(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M12 4v16" />
+    </svg>
+  );
+}
+
+/** Two panes, one above the other. */
+function StackedIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svg(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 12h18" />
+    </svg>
+  );
+}
+
+/** Two arrows passing each other: swap places. */
+function SwapIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svg(className)}>
+      <path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
+    </svg>
+  );
+}
+
+/** Two panels side by side: the page and the view pushed beside it. */
+function PushIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svg(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M14 4v16" />
+    </svg>
+  );
+}
+
+/** A panel floating over the page. */
+function OverlayIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svg(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <rect x="12" y="7" width="7" height="10" rx="1" />
+    </svg>
+  );
 }

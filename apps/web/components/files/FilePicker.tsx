@@ -10,7 +10,7 @@ import SaveWhere from "@/components/files/SaveWhere";
 import { FileRow, FileTypeIcon, fileDetail, useFileUploader } from "@/components/files/FileParts";
 import { CloseIcon, SearchIcon, TrashIcon, UploadIcon, WaveIcon } from "@/components/tools";
 import { type StoredEntry, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
-import { useDeviceUrls } from "@/lib/deviceFiles";
+import { otherDeviceName, useDeviceUrls } from "@/lib/deviceFiles";
 import { useSaveTarget } from "@/lib/storagePlan";
 import { type DropArea, useFileDrop } from "@/lib/useFileDrop";
 
@@ -118,7 +118,7 @@ export function useFilePicker({ filter, onFile, saveToFiles = false, dropInto, t
     const entry = linkedItems.find((i) => `${i.kind}:${i.id}` === linked);
     void (async () => {
       if (!entry || !filter.matches(entry)) return setError("That file isn't in your Files any more.");
-      if (!entry.url) return setError(entry.device ? `“${entry.name}” is kept on ${entry.device.label}. Open it there.` : `Couldn't open “${entry.name}”.`);
+      if (!entry.url) return setError(entry.device ? `“${entry.name}” is kept on ${otherDeviceName(entry.device.label)}. Open it there.` : `Couldn't open “${entry.name}”.`);
       try {
         const res = await fetch(entry.url);
         if (!res.ok) throw new Error(String(res.status));
@@ -361,15 +361,23 @@ function FilePickerDialog({
                 const id = `${entry.kind}:${entry.id}`;
                 const where = entry.kind === "recording" ? "Recording" : entry.kind === "song" ? "Tune song" : null;
                 if (!entry.url) {
-                  // Kept on another device: listed, but it can't be opened here.
+                  // Kept on another device: listed, but it can't be opened here. A tap says so (a
+                  // phone has no hover title).
+                  const where = entry.device ? otherDeviceName(entry.device.label) : "another device";
                   return (
-                    <div key={id} className="flex min-h-12 items-center gap-3 px-2.5 py-2 opacity-60" title={`Kept on ${entry.device?.label ?? "another device"}`}>
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setError(`“${entry.name}” is kept on ${where}. Open it there.`)}
+                      className="flex min-h-12 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left opacity-60"
+                      title={`Kept on ${where}`}
+                    >
                       <FileTypeIcon kind={fileKind(entry.mimeType, entry.name)} recording={entry.kind === "recording"} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{entry.name}</span>
-                        <span className="block truncate text-xs text-muted">{entry.device ? `On ${entry.device.label}` : "Not available"}</span>
+                        <span className="block truncate text-xs text-muted">{entry.device ? `On ${where} · open it there` : "Not available"}</span>
                       </span>
-                    </div>
+                    </button>
                   );
                 }
                 return (

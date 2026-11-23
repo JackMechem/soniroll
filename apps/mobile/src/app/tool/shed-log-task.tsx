@@ -20,6 +20,7 @@ import { ChevronRightIcon, PencilIcon, PlayIcon, StopwatchIcon } from '@/compone
 import { useRecordingPlayer } from '@/components/recordings/RecordingParts';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { AttachmentChips } from '@/components/shedLog/Attachments';
+import { type FileGroup, LinkedFiles, fileAttachmentsOf } from '@/components/shedLog/LinkedFiles';
 import { HistoryRow, PageHeader, PageNotes, Quiet, RecordingList, Rows } from '@/components/shedLog/pageParts';
 import { Bar, CalendarIcon, CheckBox, Label, Panel, RoutineIcon, Section, SmallButton, routineColor } from '@/components/shedLog/parts';
 import { RecordClip } from '@/components/shedLog/RecordClip';
@@ -53,7 +54,7 @@ function TaskScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const log = usePracticeLog();
   if (isLoading) return <ScreenSpinner />;
-  if (!isAuthenticated) return <ShedLogGate />;
+  if (!isAuthenticated) return <ShedLogGate header="Shed Log" />;
   if (!log.ready) return <ScreenSpinner />;
   return <Task log={log} />;
 }
@@ -170,6 +171,12 @@ function Task({ log }: { log: ReturnType<typeof usePracticeLog> }) {
       ? log.updateOccurrence(day, routineId, (o) => ({ ...o, taskAttachments: { ...(o.taskAttachments ?? {}), [taskId]: items } }))
       : dayTask && log.saveDayTask(day, { ...dayTask, attachments: items });
   const everyTime = routineId ? (task.attachments ?? []) : [];
+  // Files, folders and tags (added on the website): the task's own, then the day's.
+  const fileGroups: FileGroup[] = [
+    { key: 'own', attachments: fileAttachmentsOf(task.attachments) },
+    ...(routineId ? [{ key: 'day', title: day === today ? 'Just for today' : `Just for ${formatShortDate(day)}`, attachments: fileAttachmentsOf(occ?.taskAttachments?.[taskId]) }] : []),
+  ];
+  const fileCount = fileGroups.reduce((n, g) => n + g.attachments.length, 0);
   const facts = [planned > 0 ? formatMinutesShort(planned) : null, routine ? describeRepeat(routine.repeat) : date ? formatLongDate(date) : null].filter(Boolean).join(' · ');
 
   return (
@@ -262,6 +269,12 @@ function Task({ log }: { log: ReturnType<typeof usePracticeLog> }) {
             />
           </View>
         </Panel>
+
+        {fileCount > 0 ? (
+          <Section title="Files">
+            <LinkedFiles groups={fileGroups} />
+          </Section>
+        ) : null}
 
         <Section title="Notes">
           <PageNotes target={taskNoteTarget(place)} start={() => taskNotes.startNote(place)} />

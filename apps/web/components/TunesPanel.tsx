@@ -8,6 +8,7 @@ import SwitchRow from "@/components/SwitchRow";
 import TunesManager from "@/components/TunesManager";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { ChecklistIcon, ListIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/tools";
+import { prettyKey } from "@/components/library/ui";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { STANDARDS, nameId } from "@/lib/standards";
@@ -212,7 +213,7 @@ export default function TunesPanel({
                         onClick={() => toggle(tune.id, "keys", k.id)}
                         className={chip(k.enabled)}
                       >
-                        {k.value}
+                        {prettyKey(k.value)}
                       </button>
                     ))}
                   </div>

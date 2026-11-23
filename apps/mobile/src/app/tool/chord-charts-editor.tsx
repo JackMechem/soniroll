@@ -334,14 +334,14 @@ function ChordChartEditorScreen() {
           <ScrollView
             ref={scrollRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 6, paddingBottom: 16 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
             onScroll={(e) => {
               scrollY.current = e.nativeEvent.contentOffset.y;
             }}
             scrollEventThrottle={32}
           >
-            <Pressable onPress={() => setDetailsOpen(true)} className="flex-row items-center gap-2 px-2 pb-2 pt-1">
+            <Pressable onPress={() => setDetailsOpen(true)} className="flex-row items-center gap-2 pb-2 pt-1">
               <View className="flex-1">
                 <Text numberOfLines={1} className="font-ui-bold text-base font-bold" style={{ color: title.trim() ? colors.foreground : colors.muted }}>
                   {title.trim() || 'Untitled — tap to add details'}
@@ -353,7 +353,7 @@ function ChordChartEditorScreen() {
               <PencilIcon color={colors.muted} size={18} />
             </Pressable>
             {error ? (
-              <Text className="font-ui px-2 pb-2 text-sm" style={{ color: colors.danger }}>
+              <Text className="font-ui pb-2 text-sm" style={{ color: colors.danger }}>
                 {error}
               </Text>
             ) : null}

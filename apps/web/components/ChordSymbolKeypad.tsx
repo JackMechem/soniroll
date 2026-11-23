@@ -65,3 +65,38 @@ export default function ChordSymbolKeypad({
     </div>
   );
 }
+
+/** One plain key for the ear trainers' other keypads (numerals, root letters, digits, delete), in
+    the same look as the symbol keys. */
+export function KeypadKey({
+  label,
+  caption,
+  title,
+  onPress,
+  wide,
+  disabled,
+}: {
+  label: string;
+  caption?: string;
+  title?: string;
+  onPress: () => void;
+  wide?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title ?? label}
+      aria-label={title ?? label}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onPress}
+      disabled={disabled}
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1.5 py-1.5 hover:bg-surface-hover disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10 ${
+        wide ? "col-span-2" : ""
+      }`}
+    >
+      <span className="text-base font-semibold leading-none">{label}</span>
+      {caption && <span className="text-xs leading-none text-muted">{caption}</span>}
+    </button>
+  );
+}

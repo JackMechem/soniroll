@@ -438,6 +438,30 @@ function normalizeChordToken(token: string): string {
   return token.replace(/(^|\/)([a-g])/g, (_, pre: string, letter: string) => pre + letter.toUpperCase());
 }
 
+/** Rewrites the common ways people type a chord quality into iReal's own spelling, so a typed
+    "Cmaj7", "Dm7", "Dm7b5", "CM7", "Bdim7", "Caug" or "C7(b9)" reads the same as "C^7", "D-7",
+    "Dh7", "C^7", "Bo7", "C+" and "C7b9" (the chart builder used to drop them silently). The
+    printed glyphs (Δ, ø, °, ♭, ♯) are accepted too. Only the quality after the root (and its
+    accidental) is touched; "maj"/"M" on its own is a plain major triad. */
+export function chordAliasToIreal(token: string): string {
+  const t = token.replace(/6\/9/g, "69").replace(/♭/g, "b").replace(/♯/g, "#").replace(/[∆Δ]/g, "^").replace(/ø/g, "h").replace(/[°º]/g, "o");
+  const m = /^([A-Ga-g][b#]?)([^/]*)(\/.*)?$/.exec(t);
+  if (!m) return t;
+  const [, root, rawQuality, bass = ""] = m;
+  let q = rawQuality.replace(/[()]/g, "");
+  const MINOR = "(?:min|mi|m|-)";
+  const MAJOR = "(?:maj|Maj|MAJ|ma|Ma|M|\\^)";
+  q = q
+    .replace(new RegExp(`^${MINOR}${MAJOR}`), "-^") // mMaj7, m(maj7), -^7
+    .replace(new RegExp(`^${MINOR}7b5`), "h7") // m7b5, -7b5
+    .replace(/^dim/, "o")
+    .replace(/^aug/, "+")
+    .replace(/^(?:maj|Maj|MAJ|ma|Ma|M)(?=[0-9])/, "^") // maj7, M9, ma7#11
+    .replace(/^(?:maj|Maj|MAJ|ma|Ma|M)$/, "") // a plain major triad
+    .replace(/^(?:min|mi|m)(?!aj)/, "-");
+  return root + q + bass;
+}
+
 /** Parses one typed chord token ("C^7", "Bb7alt", "c^7/e", "NC", ...) into a `ChordSlot`, or
     `null` if it isn't recognizable — the same plain iReal-style grammar `tokenizeChart` reads out
     of a pasted chart, `CHORD_RE` and all, just applied to one standalone token instead of a
@@ -452,7 +476,7 @@ export function parseChordToken(token: string): ChordSlot | null {
   // A lone "/" is iReal's "keep playing the previous chord" beat placeholder — accepted so a
   // pasted chart's bars survive a round trip through the chart builder's text form.
   if (trimmed === "/") return { kind: "slash" };
-  const normalized = normalizeChordToken(trimmed);
+  const normalized = normalizeChordToken(chordAliasToIreal(trimmed));
   const match = CHORD_RE.exec(normalized);
   if (!match || match[0].length !== normalized.length) return null;
   const slashIndex = normalized.indexOf("/");

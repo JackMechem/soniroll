@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import Select from "@/components/Select";
 import SwitchRow from "@/components/SwitchRow";
 import { ChevronRightIcon, ChordChartIcon, DocumentIcon, PlusIcon } from "@/components/tools";
 import { CapIcon, ClipboardIcon, Dialog, btnPrimary, dialogFooter, btnSecondary, errorText, field, FileIcon } from "@/components/lessons/parts";
@@ -298,21 +299,17 @@ export function NewLessonDialog({
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
-          Time <span className="font-normal text-muted">(optional)</span>
+          <span>
+            Time <span className="font-normal text-muted">(optional)</span>
+          </span>
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={field} />
         </label>
       </div>
       {time && (
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
+        <div className="flex flex-col gap-1.5 text-sm font-medium">
           Length
-          <select value={length} onChange={(e) => setLength(Number(e.target.value))} className={field}>
-            {[15, 20, 30, 45, 60, 75, 90, 120].map((m) => (
-              <option key={m} value={m}>
-                {m} minutes
-              </option>
-            ))}
-          </select>
-        </label>
+          <Select value={length} onChange={setLength} options={[15, 20, 30, 45, 60, 75, 90, 120].map((m) => ({ value: m, label: `${m} minutes` }))} />
+        </div>
       )}
       {future && <SwitchRow label={`Hide it from ${otherName} until it starts`} checked={hidden} onChange={setHidden} />}
       {error && <p className="text-sm text-danger">{error}</p>}

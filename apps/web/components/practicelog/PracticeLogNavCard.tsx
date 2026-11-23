@@ -4,7 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
-import { practicedMinutes } from "@/components/practicelog/minutes";
+import { formatPracticed, practicedOfGoal } from "@/components/practicelog/minutes";
 import { navIconButtonClass, navIconClass, navRowClass } from "@/components/navRow";
 import { CalendarIcon, CheckIcon } from "@/components/tools";
 import { goalOn, minutesOn, todayKey } from "@/lib/practiceLog";
@@ -52,7 +52,7 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
 
   if (collapsed) {
     return (
-      <Link href="/shed-log" onClick={onNavigate} title={show ? `Shed Log — ${practicedMinutes(minutes)} of ${goal} min today` : "Shed Log"} aria-label="Shed Log" className={`relative ${navIconButtonClass(active)}`}>
+      <Link href="/shed-log" onClick={onNavigate} title={show ? `Shed Log — ${practicedOfGoal(minutes, goal)} today` : "Shed Log"} aria-label="Shed Log" className={`relative ${navIconButtonClass(active)}`}>
         <CalendarIcon className="h-4 w-4 text-accent" />
         {watch.running && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />}
       </Link>
@@ -67,8 +67,9 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
       <span className="min-w-0 flex-1 truncate">Shed Log</span>
       {timerDot}
       {show && goal > 0 && (
-        <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted" title={`${practicedMinutes(minutes)} of ${goal} minutes today`}>
-          {practicedMinutes(minutes)} of {goal} min
+        <span className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted" title={`${practicedOfGoal(minutes, goal)} today`}>
+          {/* Just the time (the ring shows the goal), so "Shed Log" keeps its room. */}
+          {formatPracticed(minutes)}
           <GoalRing frac={frac} met={met} />
         </span>
       )}

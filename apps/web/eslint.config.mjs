@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Third-party code copied in as is (see each file's header).
     "lib/vendor/**",
+    // pdf.js's decoders, copied in by scripts/copy-pdfjs-assets.mjs.
+    "public/pdfjs/**",
     // `convex/_generated/**` was ignored here before the Expo-migration monorepo restructure —
     // Convex now lives in packages/convex (its own package, own lint config if it ever needs
     // one), entirely outside this app's own directory tree, so eslint run from here never sees

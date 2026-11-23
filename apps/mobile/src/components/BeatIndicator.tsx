@@ -22,6 +22,7 @@ function Bar({
   number,
   small,
   fit,
+  tick,
   onPress,
 }: {
   level: BeatLevel;
@@ -31,6 +32,8 @@ function Bar({
   small: boolean;
   /** Fitted width (dp), when the strip had to shrink to stay on one row. */
   fit?: number;
+  /** A subdivision tick: shorter than its beat, so each beat's group reads at a glance. */
+  tick?: boolean;
   onPress?: () => void;
 }) {
   const { colors } = useAppTheme();
@@ -39,7 +42,8 @@ function Bar({
   const base = small ? 28 : 40;
   const width = fit ?? base;
   // Bars keep their height; only a really narrow one (many beats of many ticks) gets shorter.
-  const seg = width >= (small ? 18 : 24) ? (small ? 9 : 17) : small ? 8 : 13;
+  const full = width >= (small ? 18 : 24) ? (small ? 9 : 17) : small ? 8 : 13;
+  const seg = tick ? Math.round(full * 0.6) : full;
   const pad = width < 20 ? 2 : 3;
 
   const bar = (
@@ -170,6 +174,7 @@ export function BeatIndicator({
                       label={`Subdivision after beat ${i + 1}${dotCount > 1 ? ` (${d + 1}/${dotCount})` : ''}: ${LEVEL_LABEL[dotLevel]}`}
                       small={small}
                       fit={fit}
+                      tick
                       onPress={onCycleSub ? () => onCycleSub(i, d) : undefined}
                     />
                   );

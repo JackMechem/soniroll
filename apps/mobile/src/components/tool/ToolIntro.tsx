@@ -3,7 +3,7 @@ import { NAV_LINKS_DATA } from '@jam-practice/core/navLinks';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { INTRO_NOTES, INTRO_OMIT } from '@/components/tool/introNotes';
+import { INTRO_NOTES, INTRO_OMIT, INTRO_STEP_TEXT } from '@/components/tool/introNotes';
 import { ToolSheet } from '@/components/tool/SettingChip';
 import { HelpIcon } from '@/components/tool/toolIcons';
 import { Button, IconButton, ToolIcon } from '@/components/ui';
@@ -76,18 +76,24 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
   const notes = INTRO_NOTES[href] ?? [];
   // Leave out what the phone doesn't have (Record on the Tuner, Export as PDF in Shed Notes…).
   const omit = INTRO_OMIT[href];
-  const steps = topic.steps.filter((step) => !omit?.steps?.includes(step.title));
-  const options = topic.options?.filter((option) => !omit?.options?.includes(option.name));
+  // …and say the rest the phone's way (its buttons, not the website's keys).
+  const stepText = INTRO_STEP_TEXT[href];
+  const steps = topic.steps
+    .filter((step) => !omit?.steps?.includes(step.title))
+    .map((step) => ({ title: phoneWords(step.title), text: phoneWords(stepText?.[step.title] ?? step.text) }));
+  const options = topic.options
+    ?.filter((option) => !omit?.options?.includes(option.name))
+    .map((option) => ({ name: phoneWords(option.name), text: phoneWords(option.text) }));
   return (
     <>
       <View className="flex-row items-start gap-3">
         {tool ? <ToolIcon tool={tool} size={40} /> : null}
         <View className="flex-1 gap-1">
           <Text className="font-ui-semibold text-base font-semibold leading-6" style={{ color: colors.foreground }}>
-            {topic.tagline}
+            {phoneWords(topic.tagline)}
           </Text>
           <Text className="font-ui text-sm leading-5" style={{ color: colors.muted }}>
-            {topic.purpose}
+            {phoneWords(topic.purpose)}
           </Text>
         </View>
       </View>
@@ -148,4 +154,10 @@ function ToolIntroBody({ topic, href, onDone }: { topic: HelpTopic; href: string
       <Button label="Got it" onPress={onDone} style={{ alignSelf: 'flex-end' }} />
     </>
   );
+}
+
+/** The phone says "count-in" for the bars of click before you play, in every tool (the website's
+    Help says "count-off" for some). */
+function phoneWords(text: string): string {
+  return text.replace(/\b([Cc])ount-off\b/g, '$1ount-in');
 }

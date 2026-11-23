@@ -341,7 +341,9 @@ function TextInput({ mark, width, aspect, onDone }: { mark: TextMark; width: num
   const [text, setText] = useState(mark.text);
   const px = width / UNITS;
   const lines = Math.max(1, text.split("\n").length);
-  const size = mark.size * px;
+  // Typed at 16px at least, so it's readable on a phone's small page (and iOS doesn't zoom in);
+  // the mark itself keeps its size on the page.
+  const size = Math.max(16, mark.size * px);
   const done = useRef(false);
   const finish = (value: string | null) => {
     if (done.current) return;

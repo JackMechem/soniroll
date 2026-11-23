@@ -6,7 +6,7 @@ import { Pressable, Text, View, Share } from 'react-native';
 
 import { formatMinutesShort, type ProgressCard } from '@jam-practice/core/practiceLog';
 
-import { CalendarCheckIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon } from '@/components/icons';
+import { CalendarCheckIcon, EyeOffIcon, HeartIcon, MusicNoteIcon, SetlistIcon, ShareIcon, TrophyIcon } from '@/components/icons';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -138,7 +138,7 @@ export function PostListItem({
             >
               <UserAvatar url={post.authorAvatarUrl ?? null} name={post.authorUsername} size="sm" />
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-                {post.authorUsername}
+                @{post.authorUsername}
               </Text>
             </Pressable>
           ) : null}
@@ -158,7 +158,7 @@ export function PostListItem({
           ) : null}
           {routineTasks || isMilestone ? (
             <View className="flex-row items-center gap-1 rounded-full px-2.5 py-1" style={{ backgroundColor: `${colors.accent}22` }}>
-              <CalendarCheckIcon color={colors.accent} size={14} />
+              {routineTasks ? <CalendarCheckIcon color={colors.accent} size={14} /> : <TrophyIcon color={colors.accent} size={14} />}
               <Text className="font-ui-bold text-xs font-bold" style={{ color: colors.accent }}>
                 {routineTasks ? 'Routine' : 'Milestone'}
               </Text>

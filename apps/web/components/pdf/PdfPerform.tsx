@@ -5,6 +5,7 @@ import PdfPageView from "@/components/pdf/PdfPageView";
 import type { Layer } from "@/components/pdf/markup";
 import type { PdfSources } from "@/components/pdf/usePdfDoc";
 import { CloseIcon, SlidesIcon } from "@/components/tools";
+import { usePaneElement, usePaneKeyGuard } from "@/lib/paneContext";
 
 /**
  * Playing from the PDF: full screen, the page (or two side by side) as big as it fits, turned with
@@ -13,6 +14,12 @@ import { CloseIcon, SlidesIcon } from "@/components/tools";
  */
 export default function PdfPerform({ sources, layer, start, hideMarks, onExit }: { sources: PdfSources; layer: Layer; start: number; hideMarks: boolean; onExit: (page: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  // In a split-screen pane: that pane, not the whole window.
+  // There it doesn't go full screen either: the point is seeing the other panes (a metronome)
+  // while you play, and its keys only work while its pane has the keyboard.
+  const inPane = usePaneElement() !== null;
+  const inPaneRef = useRef(inPane);
+  const forThisPane = usePaneKeyGuard();
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [index, setIndex] = useState(start);
   const [twoUp, setTwoUp] = useState<boolean | null>(null);
@@ -25,10 +32,11 @@ export default function PdfPerform({ sources, layer, start, hideMarks, onExit }:
     const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
     ro.observe(el);
     // Full screen where the browser allows it (not on iPhone; the page still fills the window).
-    el.requestFullscreen?.().catch(() => null);
+    const full = !inPaneRef.current;
+    if (full) el.requestFullscreen?.().catch(() => null);
     return () => {
       ro.disconnect();
-      if (document.fullscreenElement) void document.exitFullscreen().catch(() => null);
+      if (full && document.fullscreenElement) void document.exitFullscreen().catch(() => null);
     };
   }, []);
 
@@ -48,6 +56,7 @@ export default function PdfPerform({ sources, layer, start, hideMarks, onExit }:
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (!forThisPane(e)) return;
       if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
         e.preventDefault();
         turn(1);
@@ -64,7 +73,7 @@ export default function PdfPerform({ sources, layer, start, hideMarks, onExit }:
 
   // Leaving full screen (Esc in the browser) leaves the view too.
   useEffect(() => {
-    const onChange = () => !document.fullscreenElement && onExit(index);
+    const onChange = () => !inPane && !document.fullscreenElement && onExit(index);
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   });
@@ -77,7 +86,7 @@ export default function PdfPerform({ sources, layer, start, hideMarks, onExit }:
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[72] flex select-none items-center justify-center bg-background"
+      className={`${inPane ? "absolute z-[22]" : "fixed z-[72]"} inset-0 flex select-none items-center justify-center bg-background`}
       style={{ gap }}
       onPointerDown={(e) => {
         swipe.current = { x: e.clientX, y: e.clientY };

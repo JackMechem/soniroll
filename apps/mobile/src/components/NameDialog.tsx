@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -33,14 +33,19 @@ export function NameDialog({
     if (visible) setValue(initialValue);
   }
   const ok = value.trim().length > 0;
+  // The keyboard goes with the dialog (Android left it open over the page, with nothing focused).
+  function close() {
+    Keyboard.dismiss();
+    onClose();
+  }
   function submit() {
     if (!ok) return;
     onSubmit(value.trim());
-    onClose();
+    close();
   }
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: `${colors.overlay}99`, paddingTop: insets.top + 72, paddingHorizontal: 20 }} onPress={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
+      <Pressable style={{ flex: 1, backgroundColor: `${colors.overlay}99`, paddingTop: insets.top + 72, paddingHorizontal: 20 }} onPress={close}>
         <Pressable onPress={() => {}} className="gap-3 rounded-2xl p-5" style={{ backgroundColor: colors.surface }}>
           <Text className="font-ui-bold text-lg font-bold" style={{ color: colors.foreground }}>
             {title}
@@ -57,7 +62,7 @@ export function NameDialog({
             style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: colors.foreground }}
           />
           <View className="flex-row justify-end gap-2">
-            <Pressable onPress={onClose} className="rounded-xl px-4 py-2.5" style={{ backgroundColor: colors.background }}>
+            <Pressable onPress={close} className="rounded-xl px-4 py-2.5" style={{ backgroundColor: colors.background }}>
               <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
                 Cancel
               </Text>

@@ -35,7 +35,8 @@ export const MetronomeIcon = mci('metronome');
 export const BassIcon = mci('music-clef-bass');
 export const NoteIcon = mci('music-note');
 export const StopwatchIcon = mci('timer-outline');
-export const TunerIcon = mci('tune');
+// A tuner's needle on its dial (the website's icon); the old sliders read as settings.
+export const TunerIcon = mci('gauge');
 export const WaveIcon = mci('waveform');
 export const MetricModulationIcon = mci('metronome-tick');
 export const TempoTrainerIcon = mci('speedometer');
@@ -102,6 +103,7 @@ export const DotsVerticalIcon = mci('dots-vertical');
 export const FolderMoveIcon = mci('folder-move-outline');
 export const FolderIcon = mci('folder-music-outline');
 export const FolderPlusIcon = mci('folder-plus-outline');
+export const TagIcon = mci('tag-outline');
 export const HistoryIcon = mci('history');
 export const ClearIcon = mci('close-circle');
 export const RepeatIcon = mci('repeat');
@@ -116,6 +118,7 @@ export const UnlinkIcon = mci('link-variant-off');
 export const ProgressionIcon = mci('stairs-up');
 export const LessonsIcon = mci('school');
 export const CalendarCheckIcon = mci('calendar-check-outline');
+export const TrophyIcon = mci('trophy-outline');
 
 export function StarIcon({ color, size = 18, filled }: IconProps & { filled?: boolean }) {
   return <MaterialCommunityIcons name={filled ? 'star' : 'star-outline'} size={size} color={color} />;

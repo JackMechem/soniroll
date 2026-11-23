@@ -67,6 +67,8 @@ export default defineConfig({
       exact("@convex-dev/auth/react", "native/convexAuthReact.ts"),
       { find: /^convex-auth-react-original$/, replacement: require.resolve("@convex-dev/auth/react") },
       exact("next/link", "shims/next-link.tsx"),
+      // Split-screen panes: Next's internal router contexts don't exist here.
+      exact("@/components/panes/NextPaneContexts", "shims/next-pane-contexts.tsx"),
       exact("next/navigation", "shims/next-navigation.ts"),
       exact("next/dynamic", "shims/next-dynamic.tsx"),
       exact("next/image", "shims/next-image.tsx"),

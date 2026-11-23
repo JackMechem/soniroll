@@ -1,5 +1,5 @@
 import { NAV_LINKS_DATA, currentToolHref, hrefToSlug } from '@jam-practice/core/navLinks';
-import { attachmentKey, type Attachment } from '@jam-practice/core/practiceLog';
+import { attachmentKey, isFileAttachment, type Attachment } from '@jam-practice/core/practiceLog';
 import { sortByText } from '@jam-practice/core/sortText';
 import { useRouter } from 'expo-router';
 import { useMemo, useState, type ComponentType } from 'react';
@@ -20,7 +20,9 @@ import { useAppTheme } from '@/theme/ThemeProvider';
  * What's attached to a routine or task (the website's `components/practicelog/Attachments.tsx`):
  * tunes, setlists, chord charts and tools as chips that open what they point at; with `onChange`,
  * each has a × and there's an Attach button that opens the picker sheet. `fixed` go first, without
- * a × (a routine task's own attachments, before the ones for just that day).
+ * a × (a routine task's own attachments, before the ones for just that day). Files, folders and
+ * tags aren't chips: the routine and task screens list them under Files (`LinkedFiles`), and
+ * editing here keeps them as they are.
  */
 
 /** Tools you can attach (everything in the tool list but the library pages and Community). */
@@ -56,9 +58,12 @@ export function AttachmentChips({
   const { colors, derived } = useAppTheme();
   const router = useRouter();
   const [picking, setPicking] = useState(false);
-  if (!items.length && !fixed.length && !onChange) return null;
+  const shownItems = items.filter((a) => !isFileAttachment(a));
+  const shownFixed = fixed.filter((a) => !isFileAttachment(a));
+  if (!shownItems.length && !shownFixed.length && !onChange) return null;
 
   function open(a: Attachment) {
+    if (isFileAttachment(a)) return;
     if (a.kind === 'tool') {
       const tool = toolOf(a.href);
       if (tool) router.push(`/tool/${hrefToSlug(tool.href)}`);
@@ -69,7 +74,7 @@ export function AttachmentChips({
 
   return (
     <View className="flex-row flex-wrap items-center gap-1.5">
-      {[...fixed.map((a) => ({ a, own: false })), ...items.map((a) => ({ a, own: true }))].map(({ a, own }) => {
+      {[...shownFixed.map((a) => ({ a, own: false })), ...shownItems.map((a) => ({ a, own: true }))].map(({ a, own }) => {
         const Icon = iconOf(a);
         const label = labelOf(a);
         return (

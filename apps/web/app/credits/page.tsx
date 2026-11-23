@@ -6,15 +6,14 @@ export const metadata = {
 
 export default function CreditsPage() {
   return (
-    <LegalPage title="Credits" updated="November 18, 2026">
+    <LegalPage title="Credits" updated="November 23, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         Most of soniroll&apos;s sounds are synthesized in the browser. The rest are real recordings:
         the <strong>Piano</strong> and <strong>Rhodes</strong> tones in the trainers, and Rhythm
-        Section&apos;s piano, bass and drums. Some of them are licensed under{" "}
-        <LegalLink href="https://creativecommons.org/licenses/by/3.0/">
-          Creative Commons Attribution 3.0
-        </LegalLink>
-        , which requires crediting them, and the others are too good not to name. This page is that
+        Section&apos;s piano, Rhodes, bass and drums. Some of them are licensed under Creative Commons
+        Attribution (<LegalLink href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</LegalLink> or{" "}
+        <LegalLink href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</LegalLink>), which requires
+        crediting them, and the others are too good not to name. This page is that
         credit, along with the people and other work soniroll is built on.
       </p>
 
@@ -31,12 +30,11 @@ export default function CreditsPage() {
 
       <LegalSection title="Rhodes">
         <p>
-          Samples from the FluidR3 GM SoundFont&apos;s &quot;Electric Piano 1&quot; instrument,
-          converted to per-note mp3s by the{" "}
-          <LegalLink href="https://github.com/gleitz/midi-js-soundfonts">
-            midi-js-soundfonts
-          </LegalLink>{" "}
-          project.
+          The Rhodes, in the trainers and in Rhythm Section&apos;s chords, is{" "}
+          <LegalLink href="https://github.com/sfzinstruments/jlearman.jRhodes3d">jRhodes3d</LegalLink> by Jeff Learman (a 1977 Rhodes Mark I
+          Stage 73), licensed under{" "}
+          <LegalLink href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</LegalLink> and served by soniroll itself as trimmed mono
+          mp3s.
         </p>
       </LegalSection>
 
@@ -59,7 +57,8 @@ export default function CreditsPage() {
           The piano comping in Rhythm Section uses the velocity-layered{" "}
           <LegalLink href="https://archive.org/details/SalamanderGrandPianoV3">Salamander Grand Piano</LegalLink> (Alexander Holm,{" "}
           <LegalLink href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</LegalLink>), as hosted by the{" "}
-          <LegalLink href="https://github.com/tambien/Piano">Tone.js Piano</LegalLink> project.
+          <LegalLink href="https://github.com/tambien/Piano">Tone.js Piano</LegalLink> project. The Rhodes is jRhodes3d (see Rhodes above),
+          with three of its velocity layers.
         </p>
       </LegalSection>
 
@@ -75,10 +74,10 @@ export default function CreditsPage() {
 
       <LegalSection title="How this works">
         <p>
-          The piano and Rhodes samples don&apos;t ship with soniroll itself — your browser fetches the
-          specific notes a tool actually plays directly from the hosts above (all GitHub Pages), the first time
+          The piano samples don&apos;t ship with soniroll itself — your browser fetches the specific
+          notes a tool actually plays directly from the hosts above (all GitHub Pages), the first time
           each one comes up, and keeps them for the rest of that browser tab so repeats are
-          instant. See the{" "}
+          instant. The Rhodes, bass and drums come from soniroll itself. See the{" "}
           <LegalLink href="/privacy">Privacy policy</LegalLink> for what that means for your
           browser&apos;s outgoing requests.
         </p>
@@ -91,8 +90,8 @@ export default function CreditsPage() {
           by Karoryfer Samples — a 1958 Otto Rubner double bass, played pizzicato and mapped by D.
           Smolken, recorded by Ludwik Zamenhof. It&apos;s released under{" "}
           <LegalLink href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</LegalLink>, so
-          no credit is required, but it&apos;s too good not to name. Unlike the piano and Rhodes,
-          these samples are served by soniroll itself (converted to mp3).
+          no credit is required, but it&apos;s too good not to name. Unlike the piano, these samples
+          are served by soniroll itself (converted to mp3).
         </p>
       </LegalSection>
 

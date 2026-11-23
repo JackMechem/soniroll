@@ -172,57 +172,59 @@ function LibraryScreen() {
 
               <SortControl value={order} options={TUNE_ORDERS} onChange={setOrder} />
 
-              <View className="gap-1">
-                <SectionHeader
-                  title="Tunes I Know"
-                  count={tunes.length}
-                  detail="Ready to play · Jam Practice picks from these"
-                  right={<SectionLinks href={{ pathname: '/library/tunes', params: { list: 'tunes' } }} onAdd={() => setListAdd('tunes')} addLabel="Add to Tunes I Know" />}
-                />
-                {tunes.length === 0 ? (
-                  <EmptyState
-                    title="No tunes you know yet"
-                    body="Jam Practice and Tune of the day pick from these."
-                    action={{ label: 'Add a tune', Icon: PlusIcon, onPress: () => addTune('tunes') }}
-                    secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('tunes') }}
-                  />
-                ) : (
-                  preview('tunes', tunes)
-                )}
-              </View>
-
-              {isAuthenticated ? (
-                <View className="gap-1">
-                  <SectionHeader
-                    title="Tunes to Learn"
-                    count={learn.length}
-                    detail="Still learning · kept apart from your practice"
-                    right={<SectionLinks href={{ pathname: '/library/tunes', params: { list: 'learn' } }} onAdd={() => setListAdd('learn')} addLabel="Add to Tunes to Learn" />}
-                  />
-                  {learn.length === 0 ? (
-                    <EmptyState
-                      title="Nothing to learn yet"
-                      body="Add a tune you're working on."
-                      action={{ label: 'Add a tune to learn', Icon: PlusIcon, onPress: () => addTune('learn') }}
-                      secondary={{ label: 'Pick from the standards', onPress: () => setAddingStandard('learn') }}
-                    />
-                  ) : (
-                    preview('learn', learn)
-                  )}
-                </View>
-              ) : null}
-
-              {library.length > 0 ? (
-                <View className="gap-1">
-                  <SectionHeader
-                    title="Library"
-                    count={library.length}
-                    detail="Came in with chord charts · not sorted yet"
-                    right={<SeeAll href={{ pathname: '/library/tunes', params: { list: 'library' } }} />}
-                  />
-                  {preview('library', library)}
-                </View>
-              ) : null}
+              {/* Lists with tunes first; an empty one is a single "add" row under its heading. */}
+              {[
+                {
+                  key: 'tunes',
+                  size: tunes.length,
+                  node: (
+                    <View key="tunes" className="gap-1">
+                      <SectionHeader
+                        title="Tunes I Know"
+                        count={tunes.length}
+                        detail="Ready to play · Jam Practice picks from these"
+                        right={tunes.length ? <SectionLinks href={{ pathname: '/library/tunes', params: { list: 'tunes' } }} onAdd={() => setListAdd('tunes')} addLabel="Add to Tunes I Know" /> : undefined}
+                      />
+                      {tunes.length === 0 ? <AddRow label="Add a tune you know" detail="Jam Practice and Tune of the day pick from these." onPress={() => setListAdd('tunes')} /> : preview('tunes', tunes)}
+                    </View>
+                  ),
+                },
+                ...(isAuthenticated
+                  ? [
+                      {
+                        key: 'learn',
+                        size: learn.length,
+                        node: (
+                          <View key="learn" className="gap-1">
+                            <SectionHeader
+                              title="Tunes to Learn"
+                              count={learn.length}
+                              detail="Still learning · kept apart from your practice"
+                              right={learn.length ? <SectionLinks href={{ pathname: '/library/tunes', params: { list: 'learn' } }} onAdd={() => setListAdd('learn')} addLabel="Add to Tunes to Learn" /> : undefined}
+                            />
+                            {learn.length === 0 ? <AddRow label="Add a tune to learn" detail="A tune you're working on." onPress={() => setListAdd('learn')} /> : preview('learn', learn)}
+                          </View>
+                        ),
+                      },
+                    ]
+                  : []),
+                ...(library.length > 0
+                  ? [
+                      {
+                        key: 'library',
+                        size: library.length,
+                        node: (
+                          <View key="library" className="gap-1">
+                            <SectionHeader title="Library" count={library.length} detail="Came in with chord charts · not sorted yet" right={<SeeAll href={{ pathname: '/library/tunes', params: { list: 'library' } }} />} />
+                            {preview('library', library)}
+                          </View>
+                        ),
+                      },
+                    ]
+                  : []),
+              ]
+                .sort((a, b) => Number(a.size === 0) - Number(b.size === 0))
+                .map((section) => section.node)}
             </>
           )}
         </ScrollView>
@@ -267,6 +269,30 @@ function LibraryScreen() {
         />
       ) : null}
     </View>
+  );
+}
+
+/** An empty list's one row under its heading: + and what to add (opens the same choices as +). */
+function AddRow({ label, detail, onPress }: { label: string; detail: string; onPress: () => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      android_ripple={{ color: colors['surface-hover'] }}
+      className="flex-row items-center gap-3 overflow-hidden rounded-xl px-4 py-3"
+      style={{ backgroundColor: colors.surface }}
+    >
+      <PlusIcon color={colors.accent} size={20} />
+      <View className="flex-1">
+        <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground }}>
+          {label}
+        </Text>
+        <Text className="font-ui text-xs" style={{ color: colors.muted }}>
+          {detail}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 

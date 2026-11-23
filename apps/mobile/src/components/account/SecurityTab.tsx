@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { api } from '@jam-practice/convex/_generated/api';
 import { useAction, useQuery } from 'convex/react';
 import { useState } from 'react';
@@ -37,6 +38,7 @@ export function SecurityTab() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
 
   const hasPassword = providers?.includes('password') ?? false;
   const email = user?.email ?? null;
@@ -122,7 +124,7 @@ export function SecurityTab() {
               <TextInput
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                secureTextEntry
+                secureTextEntry={!showPasswords}
                 autoComplete="current-password"
                 className="rounded-xl px-3 py-2.5 text-base font-ui"
                 style={inputStyle}
@@ -133,7 +135,7 @@ export function SecurityTab() {
             <TextInput
               value={newPassword}
               onChangeText={setNewPassword}
-              secureTextEntry
+              secureTextEntry={!showPasswords}
               autoComplete="new-password"
               className="rounded-xl px-3 py-2.5 text-base font-ui"
               style={inputStyle}
@@ -143,12 +145,25 @@ export function SecurityTab() {
             <TextInput
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
-              secureTextEntry
+              secureTextEntry={!showPasswords}
               autoComplete="new-password"
               className="rounded-xl px-3 py-2.5 text-base font-ui"
               style={inputStyle}
             />
           </Field>
+          <Pressable
+            onPress={() => setShowPasswords((v) => !v)}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: showPasswords }}
+            accessibilityLabel="Show passwords"
+            hitSlop={8}
+            className="flex-row items-center gap-1.5 self-start"
+          >
+            <MaterialCommunityIcons name={showPasswords ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.muted} />
+            <Text className="text-sm font-ui" style={{ color: colors.muted }}>
+              {showPasswords ? 'Hide passwords' : 'Show passwords'}
+            </Text>
+          </Pressable>
           {error ? (
             <Text className="text-sm font-ui" style={{ color: colors.danger }}>
               {error}

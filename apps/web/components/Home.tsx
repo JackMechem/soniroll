@@ -483,7 +483,7 @@ export default function Home() {
         );
       case "lessons":
         return lessonsData ? (
-          <Card title="Lessons" tone="plain" action={{ label: "All lessons", href: "/lessons" }}>
+          <Card title="Lessons" action={{ label: "All lessons", href: "/lessons" }}>
             <LessonsDashboard data={lessonsData} />
           </Card>
         ) : null;

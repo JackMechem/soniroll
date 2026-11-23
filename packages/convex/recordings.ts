@@ -4,6 +4,7 @@ import { MAX_FILE_BYTES, assertFits, assertHasRoom, assertPlanForOnline } from "
 import { cleanDevice } from "./files";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { dropMeta } from "./lib/fileFolders";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 
 /**
@@ -224,5 +225,6 @@ export const remove = mutation({
       .withIndex("by_user_item", (q) => q.eq("userId", userId).eq("kind", "recording").eq("itemId", id))
       .collect())
       await ctx.db.delete(share._id);
+    await dropMeta(ctx, userId, "recording", id);
   },
 });

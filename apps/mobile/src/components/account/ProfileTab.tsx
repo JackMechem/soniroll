@@ -213,15 +213,13 @@ export function ProfileTab() {
 
       <View className="flex-row items-center gap-2 rounded-xl p-3" style={{ backgroundColor: colors.background }}>
         <Text className="flex-1 text-sm font-ui" style={{ color: colors.foreground }}>
-          <Text className="font-semibold font-ui-semibold">{tunes.length}</Text> tune
-          {tunes.length === 1 ? '' : 's'} and{' '}
-          <Text className="font-semibold font-ui-semibold">{tunesToLearn.length}</Text> tune
-          {tunesToLearn.length === 1 ? '' : 's'} to learn show on your public profile.
+          Your public profile shows <Text className="font-semibold font-ui-semibold">{tunes.length}</Text> {tunes.length === 1 ? 'tune' : 'tunes'} you know and{' '}
+          <Text className="font-semibold font-ui-semibold">{tunesToLearn.length}</Text> you&apos;re learning.
         </Text>
         <InfoButton
           title="Your tunes"
           size={16}
-          text="Every tune in your Tunes and Tunes to Learn lists shows on your public profile automatically — there's nothing to pick. Manage them from those pages."
+          text="Every tune in Tunes I Know and Tunes to Learn shows on your public profile — there's nothing to pick. Tunes still in the Library list (not sorted yet) stay private. Manage them in the Library."
         />
       </View>
 

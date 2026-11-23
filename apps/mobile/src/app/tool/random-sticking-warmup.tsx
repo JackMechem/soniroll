@@ -206,7 +206,7 @@ function RandomStickingWarmupScreen() {
 
   const phaseLabel =
     phase === 'countoff'
-      ? 'Count-off…'
+      ? 'Count-in…'
       : phase === 'playing' && repeats > 1
         ? `Repeat ${currentRepeat} of ${repeats}`
         : phase === 'playing'
@@ -269,7 +269,7 @@ function RandomStickingWarmupScreen() {
 
           <SettingChip Icon={RepeatIcon} label="Playback" value={`${repeats}×`}>
             <CountField
-              title="Count-off bars"
+              title="Count-in bars"
               hint="Plain metronome bars played before the pattern starts, so you come in on time."
               value={countOffBars}
               min={0}

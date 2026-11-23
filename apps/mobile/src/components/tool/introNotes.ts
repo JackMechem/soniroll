@@ -68,3 +68,12 @@ export const INTRO_OMIT: Partial<Record<string, { steps?: string[]; options?: st
   // Keyboard-only and website-only parts of Shed Notes (see `app/tool/shed-notes-note.tsx`).
   '/shed-notes': { options: ['Command palette', 'Export as PDF', 'Export and import', 'Vim mappings', 'Word suggestions'] },
 };
+
+/** A step from the website's Help said the phone's way (keyed by the step's title), where the
+    website's wording names keys or buttons the phone doesn't have. */
+export const INTRO_STEP_TEXT: Partial<Record<string, Record<string, string>>> = {
+  '/time-test': {
+    'Calibrate once': "Press Calibrate to measure your phone's delay, so a stroke right on the click scores 0 ms.",
+    Record: 'Press Record, play after the count-in, then stop to see how you did.',
+  },
+};

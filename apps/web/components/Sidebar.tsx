@@ -34,12 +34,12 @@ import {
   HeartIcon,
   HelpIcon,
   ShieldIcon,
-  DocumentIcon,
-  ShareIcon,
-  UserIcon,
   NAV_LINKS,
   SearchIcon,
-  findToolLink,
+  FileIcon,
+  HomeIcon,
+  SideViewIcon,
+  SplitIcon,
   StarIcon,
   filterLinks,
   groupByCategory,
@@ -55,12 +55,16 @@ import { IntroButton } from "@/components/help/ToolIntro";
 import { type PageCrumbs, useCurrentCrumbs } from "@/lib/pageCrumbs";
 import { FeedbackBarButton, showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import { useIsAdmin } from "@/lib/useIsAdmin";
-import { collectLeaves } from "@/lib/tilingLayout";
-import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
+import { findPane } from "@/lib/tilingLayout";
+import { canShowInPane } from "@/lib/toolRegistry";
 import { useFavorites } from "@/lib/useFavorites";
 import { useIsDesktop } from "@/lib/useIsDesktop";
-import { openInSplit, useTilingState } from "@/lib/useTilingLayout";
+import { navigateMain, openBeside, useTilingState } from "@/lib/useTilingLayout";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { isLibraryPath, pageNameFor } from "@/components/pageNames";
+import PhoneTabsButton, { openTabsSheet } from "@/components/tabs/PhoneTabs";
+import { NewTabIcon, TabsIcon } from "@/components/tabs/tabParts";
+import { newTab } from "@/lib/useTabs";
 
 const STORAGE_KEY = "jam-practice-sidebar";
 const DEFAULT_WIDTH = 244;
@@ -108,17 +112,6 @@ function CloseIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-/** A pane split side by side ("row") or top and bottom ("col"). */
-function SplitIcon({ direction }: { direction: "row" | "col" }) {
-  return (
-    <svg {...svgProps("h-4 w-4 text-muted")}>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d={direction === "row" ? "M12 4v16" : "M3 12h18"} />
-    </svg>
-  );
-}
-
 
 /** The sidebar's own "more options" trigger — three vertical dots, filled rather than stroked
     (every other icon in this file is an outlined `svgProps` icon, but a stroked dot at this size
@@ -320,12 +313,6 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-/** The library's other pages (chord charts, the setlist chart reader, files; old recordings
-    links), which the sidebar files under Library (`/tunes`). */
-function isLibraryPath(path: string) {
-  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files" || path === "/recordings" || path.startsWith("/recordings/");
-}
-
 /** Shared by Favorites and every real category in `NavItems` below — a collapsible section: a
     small muted heading (a star for Favorites; click to fold it away) over its rows. A module-level
     component (not a function defined inside `NavItems`'s own render, which the React Compiler
@@ -353,7 +340,7 @@ function CategoryBlock({
   // A light section: a small heading (click to fold it away), then the tools. Favorites stands
   // out: a soft accent panel with a stronger heading and an accent star.
   return (
-    <div className={`flex flex-col gap-0.5 ${star ? "rounded-lg bg-accent/[0.08] p-1.5 pt-2" : ""}`}>
+    <div data-nav-section className={`flex flex-col gap-0.5 ${star ? "rounded-lg bg-accent/[0.08] p-1.5 pt-2" : ""}`}>
       <button
         type="button"
         onClick={onToggleCollapse}
@@ -402,27 +389,47 @@ function NavItems({
   const pathname = usePathname();
   const { favorites, toggleFavorite, isAuthenticated } = useFavorites();
   const [collapsedCategories, setCategoryCollapsed] = useCollapsedCategories();
-  // Which link counts as "active" — normally just the real URL, but while "Advanced layouts" is
-  // genuinely in effect (on, and desktop-sized — the same condition `AppShell.tsx` gates
-  // `TilingLayout` on), focusing a different pane no longer moves Next's own `usePathname()` (see
-  // `lib/useTilingLayout.ts`'s `syncAddressBar` for why — routing that through Next's router was
-  // traced to a real pane-losing-its-state bug), so the sidebar has to read the *active pane's own
-  // href* directly instead, or it would silently stop following pane focus changes.
+  // Which link counts as "active": the real URL, or with split screen showing, the main pane's page
+  // (where the sidebar opens things; panes change the address bar without Next's router, so
+  // `usePathname()` doesn't follow them).
   const tilingState = useTilingState();
   const isDesktop = useIsDesktop();
-  const activePaneHref =
-    tilingState.enabled && isDesktop && tilingState.tree && tilingState.activePaneId
-      ? collectLeaves(tilingState.tree).find((l) => l.id === tilingState.activePaneId)?.href
-      : undefined;
+  const mainPane = isDesktop ? findPane(tilingState.layout, tilingState.layout.mainPaneId) : undefined;
+  const activePaneHref = mainPane ? mainPane.href.split(/[?#]/)[0] : undefined;
   const effectivePathname = activePaneHref ?? pathname;
   const navRef = useRef<HTMLElement>(null);
   // Bring the page you're on into view in a long list (the sidebar, or the phone menu as it
-  // opens), so you can see where you are and what's next to it. Only when it's out of sight.
+  // opens), so you can see where you are and what's next to it. Only when it's out of sight of the
+  // list itself, and then from its section's heading when that fits, so a section isn't left cut
+  // off at the top. The list can still grow just after (favorites and folded sections load), so
+  // it looks again as it does, for a moment.
   useEffect(() => {
-    const row = navRef.current?.querySelector('[aria-current="page"]');
-    if (!row) return;
-    const r = row.getBoundingClientRect();
-    if (r.top < 96 || r.bottom > window.innerHeight - 140) row.scrollIntoView({ block: "center" });
+    const nav = navRef.current;
+    if (!nav) return;
+    const bring = () => {
+      const row = nav.querySelector('[aria-current="page"]');
+      if (!row) return;
+      const n = nav.getBoundingClientRect();
+      const r = row.getBoundingClientRect();
+      if (r.top >= n.top && r.bottom <= n.bottom - 8) return;
+      const section = row.closest("[data-nav-section]");
+      const top = section ? section.getBoundingClientRect().top : r.top;
+      const from = r.bottom - top <= n.height - 24 ? top : r.top - 40;
+      nav.scrollTop += from - n.top - 8;
+    };
+    bring();
+    let frame = 0;
+    const mo = new MutationObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(bring);
+    });
+    mo.observe(nav, { childList: true, subtree: true });
+    const stop = setTimeout(() => mo.disconnect(), 2000);
+    return () => {
+      clearTimeout(stop);
+      cancelAnimationFrame(frame);
+      mo.disconnect();
+    };
   }, [effectivePathname, collapsed]);
   // The icon strip (collapsed) can hold more icons than fit: while there are more below, a fade
   // and a ⌄ button at its bottom say so (the scrollbar is hidden there).
@@ -454,17 +461,20 @@ function NavItems({
   function onNavContextMenu(e: React.MouseEvent) {
     const a = (e.target as HTMLElement).closest("a[href]");
     const href = a?.getAttribute("href");
-    if (!isDesktop || !href || !TOOL_COMPONENTS[href]) return;
+    if (!isDesktop || !href || !canShowInPane(href)) return;
     e.preventDefault();
-    const current = TOOL_COMPONENTS[effectivePathname] ? effectivePathname : DASHBOARD_PATH;
+    // "Open" shows the page's own icon (the sidebar row's), like the rows below show theirs.
+    const OpenIcon = pageNameFor(href)?.icon ?? (href === DASHBOARD_PATH ? HomeIcon : FileIcon);
     setMenu({
       x: e.clientX,
       y: e.clientY,
       items: [
-        { label: "Open", onSelect: () => router.push(href) },
+        { label: "Open", icon: <OpenIcon className="h-4 w-4 text-muted" />, onSelect: () => navigateMain(href) || router.push(href) },
         // Short, so they fit the menu's width; the split icons say it's split screen.
-        { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
-        { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
+        { label: "Open side by side", icon: <SplitIcon direction="row" className="h-4 w-4 text-muted" />, onSelect: () => openBeside(href, { mode: "right" }) },
+        { label: "Open above and below", icon: <SplitIcon direction="col" className="h-4 w-4 text-muted" />, onSelect: () => openBeside(href, { mode: "down" }) },
+        { label: "Open in the side view", icon: <SideViewIcon className="h-4 w-4 text-muted" />, onSelect: () => openBeside(href) },
+        { label: "Open in a new tab", icon: <NewTabIcon className="h-4 w-4" />, onSelect: () => newTab(href, { after: true }), divider: true },
       ],
     });
   }
@@ -730,20 +740,8 @@ function SearchExtras({ query, large, toolsFound, onNavigate }: { query: string;
   );
 }
 
-/** Advanced-layouts toggle logic shared by the desktop and mobile options flyouts (mobile only
-    ever reaches this via a href that's never actually reachable there — `AppShell.tsx` disables
-    tiling outright below the `lg` breakpoint regardless — but the toggle itself is still harmless
-    to expose, consistent with this being "the one place Advanced layouts lives" rather than
-    special-casing mobile out of a shared helper for no real benefit).
-
-    Turning it *on* also resets the pane tree to a single fresh pane right here, seeded from
-    `usePathname()` — the page you're actually looking at this instant, not whatever was last
-    saved. Fixes a real bug reported directly ("when I initially turned the feature on, the tool I
-    was using stopped displaying and there was text saying 'unknown tool'"): `TilingLayout`'s own
-    seeding effect only ever fires when there's *no* saved tree at all, so turning the feature back
-    on after having used (and left) it earlier silently resumed whatever stale tree was last saved.
-    Falls back to the first tileable tool (`TILEABLE_LINKS[0]`) if you happen to enable it from a
-    page that isn't a tool at all (e.g. the home page). */
+/** The app's sidebar on desktop (resizable, collapsible to icons, hideable) and the phone's top
+    bar and menu. Right-click a page in it to open it in split screen or the side view. */
 export default function Sidebar() {
   // The ⋮ menus offer the desktop app everywhere but inside it.
   const inDesktop = useInDesktopApp();
@@ -905,6 +903,7 @@ export default function Sidebar() {
         </button>
         <MobileBarTitle path={currentPath} />
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          <PhoneTabsButton />
           <PracticeTimerWidget bar />
           <FeedbackBarButton />
         </div>
@@ -943,6 +942,15 @@ export default function Sidebar() {
               >
                 {(close) => (
                   <>
+                    <FlyoutItem
+                      icon={TabsIcon}
+                      label="Tabs"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        openTabsSheet();
+                        close();
+                      }}
+                    />
                     <FlyoutItem
                       icon={FeedbackIcon}
                       label="Send feedback"
@@ -1137,6 +1145,14 @@ export default function Sidebar() {
             {(close) => (
               <>
                 <FlyoutItem
+                  icon={NewTabIcon}
+                  label="New tab"
+                  onSelect={() => {
+                    newTab();
+                    close();
+                  }}
+                />
+                <FlyoutItem
                   icon={MegaphoneIcon}
                   label={`What's new · v${SHOWN_VERSION}`}
                   onSelect={() => {
@@ -1256,6 +1272,14 @@ export default function Sidebar() {
               <Flyout icon={DotsIcon} label="Sidebar options" align="start">
                 {(close) => (
                   <>
+                    <FlyoutItem
+                      icon={NewTabIcon}
+                      label="New tab"
+                      onSelect={() => {
+                        newTab();
+                        close();
+                      }}
+                    />
                     <FlyoutItem
                       icon={settingsIcon}
                       label={settingsLabel}
@@ -1386,27 +1410,8 @@ export default function Sidebar() {
   );
 }
 
-/** The phone top bar's middle: the page you're on (its icon and name), or the logo on pages that
-    aren't in the tool list. Library pages all count as Library. */
-/** The phone top bar's name for pages that aren't a tool or a Library/Community/Lessons page. */
-const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { match: (p) => p === "/account" || p === "/settings", label: "Account", href: "/account", icon: GearIcon },
-  { match: (p) => p.startsWith("/u/"), label: "Profile", icon: UserIcon },
-  { match: (p) => p === "/help" || p.startsWith("/help/"), label: "Help", href: "/help", icon: HelpIcon },
-  { match: (p) => p === "/changelog", label: "What's new", href: "/changelog", icon: MegaphoneIcon },
-  { match: (p) => p === "/feedback", label: "Feedback", href: "/feedback", icon: FeedbackIcon },
-  { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
-  { match: (p) => p === "/plans", label: "Storage plans", href: "/plans", icon: CloudIcon },
-  { match: (p) => p === DOWNLOAD_PATH, label: "Desktop app", href: DOWNLOAD_PATH, icon: DownloadIcon },
-  { match: (p) => p === MOBILE_PATH, label: "Phone app", href: MOBILE_PATH, icon: PhoneIcon },
-  { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
-  { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
-  { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },
-  { match: (p) => p === "/admin" || p.startsWith("/admin/"), label: "Admin", href: "/admin", icon: ShieldIcon },
-  { match: (p) => p === "/reset-password", label: "Reset password", icon: ShieldIcon },
-  { match: (p) => /^\/(setlist|routine|tune|file|note)\//.test(p), label: "Shared", icon: ShareIcon },
-];
-
+/** The phone top bar's middle: the page you're on (its icon and name, `pageNameFor`), or the logo
+    on pages that aren't in the tool list. */
 function MobileBarTitle({ path }: { path: string }) {
   // The page's own trail (`PageBar`), once it's mounted; until then (and on the server) the name
   // worked out from the address below.
@@ -1437,15 +1442,8 @@ function MobileBarCrumbs({ page }: { page: PageCrumbs }) {
 }
 
 function MobileBarName({ path }: { path: string }) {
-  const link =
-    findToolLink(isLibraryPath(path) || path.startsWith("/tunes/") ? "/tunes" : path) ??
-    NAV_LINKS.find((l) => l.href !== "/" && (path.startsWith(`${l.href}/`) || (l.href === "/community" && path.startsWith("/post"))));
-  const page = link ? null : PAGE_TITLES.find((t) => t.match(path));
-  const item = link
-    ? { href: link.href, label: link.label.length > 24 && link.short ? link.short : link.label, Icon: link.icon }
-    : page
-      ? { href: page.href, label: page.label, Icon: page.icon }
-      : null;
+  const found = pageNameFor(path);
+  const item = found ? { href: found.href, label: found.label.length > 24 && found.short ? found.short : found.label, Icon: found.icon } : null;
   if (path === DASHBOARD_PATH || !item) {
     const logo = (
       <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex h-10 items-center rounded-md px-1">
@@ -1569,7 +1567,7 @@ function VersionTag({ onNavigate }: { onNavigate?: () => void }) {
       href="/changelog"
       onClick={onNavigate}
       title={DESKTOP_VERSION ? `What's new — soniroll desktop ${DESKTOP_VERSION} (website v${APP_VERSION})` : "What's new"}
-      className="mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
+      className="relative mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 pointer-coarse:after:absolute pointer-coarse:after:-inset-y-3 pointer-coarse:after:-inset-x-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
     >
       {DESKTOP_VERSION ? `v${DESKTOP_VERSION}` : VERSION_LABEL.replace(/ beta$/, "")}
       {DESKTOP_VERSION ? (

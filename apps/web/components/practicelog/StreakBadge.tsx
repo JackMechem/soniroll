@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { GoalRing } from "@/components/practicelog/PracticeLogNavCard";
-import { practicedMinutes } from "@/components/practicelog/minutes";
+import { practicedOfGoal } from "@/components/practicelog/minutes";
 import { formatStopwatch, useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { minutesOn, streak, todayKey, goalOn } from "@/lib/practiceLog";
 import { useSiteSettings } from "@/lib/siteSettings";
@@ -32,7 +32,7 @@ export default function StreakBadge({ compact = false, onNavigate }: { compact?:
   const goal = goalOn(data, today);
   const frac = goal > 0 ? Math.min(1, minutes / goal) : 0;
   const title = lit
-    ? `${s}-day streak · ${practicedMinutes(minutes)} of ${goal} min today`
+    ? `${s}-day streak · ${practicedOfGoal(minutes, goal)} today`
     : s > 0
       ? `${s}-day streak — practice today to keep it`
       : "Practice today to start a streak";

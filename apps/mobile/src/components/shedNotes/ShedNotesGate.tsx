@@ -5,9 +5,10 @@ const POINTS = ['Notes in folders, linked with [[double brackets]]', 'Music nota
 
 /** Shed Notes signed out (the website's `GatedShedNotes`): notes are kept in your account, so this
     is the app's one sign-in gate. */
-export function ShedNotesGate() {
+export function ShedNotesGate({ header }: { header?: string }) {
   return (
     <SignInGateScreen
+      header={header}
       Icon={NoteDocIcon}
       title="Notes for your practice"
       body="Write, link and keep notes on what you're working on. Free with an account."

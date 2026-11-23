@@ -34,12 +34,15 @@ export function AttachedNotes({
   newTitle,
   compact,
   button,
+  addLabel = 'Add notes',
 }: {
   target: NoteTarget;
   label: string;
   newTitle: string;
   compact?: boolean;
   button?: boolean;
+  /** The add button's words (a routine's card says which day the note is for). */
+  addLabel?: string;
 }) {
   const { colors, derived } = useAppTheme();
   const { isAuthenticated } = useConvexAuth();
@@ -54,7 +57,7 @@ export function AttachedNotes({
     <View className={button ? 'gap-3' : 'gap-1.5'}>
       {button && notes?.length === 0 ? (
         <Text className="font-ui text-sm" style={{ color: colors.muted }}>
-          No Shed Notes yet.
+          No Shed Notes yet. They&apos;re longer notes, with links, notation and search.
         </Text>
       ) : null}
       {notes?.map((n) => (
@@ -88,14 +91,14 @@ export function AttachedNotes({
         >
           <PlusIcon color={colors.foreground} size={16} />
           <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
-            Add notes
+            {addLabel}
           </Text>
         </Pressable>
       ) : (
         <Pressable onPress={() => setAdding(true)} accessibilityRole="button" hitSlop={6} className="flex-row items-center gap-1 self-start py-1">
           <PlusIcon color={colors.muted} size={16} />
           <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-            Add notes
+            {addLabel}
           </Text>
         </Pressable>
       )}

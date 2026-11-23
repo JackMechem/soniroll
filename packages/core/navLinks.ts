@@ -102,7 +102,6 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
   {
     href: "/find-the-root",
     label: "Find the Root",
-    short: "Rootless voicings",
     description:
       "Hear a rootless voicing (E♭ G B♭ D) and sing, play or pick the root that makes it the chord asked for (C for a C minor 9).",
     blurb: "Hear a chord without its root, find the root",

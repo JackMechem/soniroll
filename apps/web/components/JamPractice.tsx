@@ -24,6 +24,8 @@ import { useLibraryTunes } from "@/lib/useTuneLists";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
 import { Key, Tempo, Tune } from "@/lib/types";
 import { useToolActivity } from "@/lib/toolTime";
+import { tuneHref } from "@/lib/useTuneLists";
+import { prettyKey } from "@/components/library/ui";
 
 type PickResult = {
   tune: Tune;
@@ -272,7 +274,7 @@ export default function JamPractice() {
         {/* Only what the tune has: a tune with no tempo or key just shows its time signature. */}
         {pick && (
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-base text-muted sm:gap-x-6 sm:text-lg">
-            {pick.key && <span>{pick.key.value}</span>}
+            {pick.key && <span>Key of {prettyKey(pick.key.value)}</span>}
             <span>{pick.tune.timeSignature}</span>
           </div>
         )}
@@ -287,6 +289,15 @@ export default function JamPractice() {
             </span>
             <span className="text-sm text-muted">BPM</span>
           </div>
+        )}
+        {/* No tempo, no count-off: say so rather than look like it's broken. */}
+        {pick && !pick.tempo && (
+          <p className="max-w-sm text-sm text-muted">
+            This tune has no tempo saved, so there&apos;s no count-off.{" "}
+            <Link href={tuneHref("tunes", pick.tune.id)} className="whitespace-nowrap font-medium text-accent hover:underline">
+              Add a tempo
+            </Link>
+          </p>
         )}
         {/* Stays in place (dimmed, still) after Stop, so the buttons below don't jump up. */}
         {pick?.tempo && (

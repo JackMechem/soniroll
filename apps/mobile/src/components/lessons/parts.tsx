@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { api } from '@jam-practice/convex/_generated/api';
 import { MONTH_NAMES, WEEKDAY_NAMES, WEEKDAY_SHORT, formatShortDate, formatTime, toDateKey } from '@jam-practice/core/practiceLog';
 import type { FunctionReturnType } from 'convex/server';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 
@@ -401,9 +401,10 @@ export function FieldLabel({ children, aside }: { children: ReactNode; aside?: s
 export function LessonsGate() {
   return (
     <>
-      {/* Signed out on any Lessons screen (Lesson settings, a lesson…), the header says what this is. */}
-      <Stack.Screen options={{ title: 'Lessons' }} />
+      {/* Signed out on any Lessons screen (Lesson settings, a lesson…), the header says what this is
+          (not a student's name from before signing out). */}
       <SignInGateScreen
+        header="Lessons"
         Icon={LessonsIcon}
         title="Lessons, for teachers and students"
         body="A page for each student, with everything from their lessons. Free with an account."

@@ -23,10 +23,12 @@ export function SwitchRow({
 }) {
   const { colors } = useAppTheme();
   return (
-    <View className="gap-1">
+    // The label in the text colour (muted grey read as switched off or disabled); a disabled row
+    // is faded instead.
+    <View className="gap-1" style={{ opacity: disabled ? 0.5 : 1 }}>
       <View className="flex-row items-center justify-between gap-2">
         <View className="flex-1 flex-row items-center gap-1.5">
-          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.muted }}>
+          <Text className="text-sm font-semibold font-ui-semibold" style={{ color: colors.foreground }}>
             {label}
           </Text>
           {hint ? <InfoButton title={label} text={hint} size={16} /> : null}

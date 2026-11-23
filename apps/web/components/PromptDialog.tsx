@@ -41,13 +41,13 @@ export default function PromptDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-overlay p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-overlay p-0 sm:items-center sm:p-4"
       onClick={onCancel}
     >
       <div
         role="dialog"
         aria-label={title}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="flex w-full flex-col gap-4 rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-left text-foreground shadow-2xl shadow-black/20 sm:max-w-sm sm:rounded-xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-semibold">{title}</h2>

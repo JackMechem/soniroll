@@ -19,6 +19,7 @@
       "@/lib/recorderEngine": ["./src/native/recorderEngine.ts"],
       "@/lib/tunerRecorder": ["./src/native/tunerRecorder.ts"],
       "@/lib/padInput": ["./src/native/padInput.ts"],
+      "@/components/panes/NextPaneContexts": ["./src/shims/next-pane-contexts.tsx"],
       "@/*": ["../web/*"],
       "@web/*": ["../web/*"],
       "convex-auth-react-original": ["../web/node_modules/@convex-dev/auth/dist/react/index.d.ts"],

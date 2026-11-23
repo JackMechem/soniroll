@@ -33,10 +33,17 @@ const FIRST_RUN: Record<Platform, string> = {
   linux: "Make the AppImage executable (chmod +x) and run it, or install the .deb or .rpm. Needs PipeWire (standard on recent distributions).",
 };
 
+/** An iPhone or iPad (iPads say Macintosh, with touch). */
+function isAppleMobile() {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+}
+
 export default function DownloadPage() {
   const release = useDesktopRelease();
   const platform = useSyncExternalStore(noSubscribe, detectPlatform, () => null);
   const desktop = useSyncExternalStore(noSubscribe, inDesktopApp, () => false);
+  const apple = useSyncExternalStore(noSubscribe, isAppleMobile, () => false);
   const order: Platform[] = platform ? [platform, ...(["mac", "windows", "linux"] as Platform[]).filter((p) => p !== platform)] : ["mac", "windows", "linux"];
   const primary = platform && release ? release.downloads[platform][0] : undefined;
 
@@ -70,6 +77,12 @@ export default function DownloadPage() {
               {platform === "mac" ? " · Apple silicon and Intel" : ""}
             </p>
           </div>
+        ) : platform === null && apple ? (
+          // An iPhone or iPad: no app for those yet (the phone app is Android only).
+          <p className="max-w-xl text-sm">
+            On an iPhone or iPad? The desktop app is for computers, and there&apos;s no iPhone app yet: soniroll.com works in Safari. Tap Share,
+            then Add to Home Screen, to open it like an app.
+          </p>
         ) : platform === null ? (
           // No computer detected (a phone or tablet): say so first; the list below is the quieter
           // second step (a link down the page rather than off to GitHub).

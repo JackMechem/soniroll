@@ -49,6 +49,10 @@ export type StoredEntry = {
   device?: DeviceRef | null;
   /** In a note: stays online, never moved to a device. */
   keepOnline?: boolean;
+  /** Its Files folder ("Etudes/Wilcoxon"; "" = the top level) and tags, where the list has them
+      (`files.storage`, `fileFolders.inFolder` / `withTag`). */
+  folder?: string;
+  tags?: string[];
 };
 
 /** An upload as a `StoredEntry`. */

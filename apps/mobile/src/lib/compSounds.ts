@@ -1,17 +1,21 @@
 import type { AudioBuffer, GainNode } from 'react-native-audio-api';
 
 import { getAudioContext } from '@/lib/audioContext';
+import { RHODES_SAMPLES } from '@/lib/rhodesSamples';
 
 /**
- * The Rhythm Section's comping piano — a port of the website's `apps/web/lib/compSounds.ts`: the
- * Salamander Grand Piano (CC BY 3.0) in the velocity-layered set the Tone.js Piano project hosts
- * (layers 4 / 8 / 12 of 16, every minor third, A2–C6), downloaded once like the website does. The
- * Rhodes was taken out on the website (licence), so it isn't here either. No compressor on the phone.
+ * The Rhythm Section's comping piano and Rhodes — a port of the website's
+ * `apps/web/lib/compSounds.ts`: the Salamander Grand Piano (CC BY 3.0) in the velocity-layered set
+ * the Tone.js Piano project hosts (layers 4 / 8 / 12 of 16, every minor third, A2–C6), downloaded
+ * once like the website does; and jRhodes3d (Jeff Learman, CC BY 4.0), layers 4 / 3 / 2 (soft to
+ * hard — jRhodes3d counts its layers down), bundled from the website's `public/samples/rhodes/`
+ * (`rhodesSamples.ts`). No compressor on the phone.
  */
 
-export type CompInstrument = 'piano';
+export type CompInstrument = 'piano' | 'rhodes';
 
-type Sample = { midi: number; layer: number; url: string };
+/** `src` is a URL (piano) or a bundled asset (Rhodes); `url` names it in the buffer cache. */
+type Sample = { midi: number; layer: number; url: string; src: string | number };
 
 const PIANO_NAMES = ['C', 'Ds', 'Fs', 'A'];
 const PIANO_PCS = [0, 3, 6, 9];
@@ -22,14 +26,45 @@ function pianoSamples(): Sample[] {
     const k = PIANO_PCS.indexOf(midi % 12);
     if (k < 0) continue;
     const name = `${PIANO_NAMES[k]}${Math.floor(midi / 12) - 1}`;
-    for (const layer of PIANO_LAYERS) out.push({ midi, layer, url: `https://tambien.github.io/Piano/audio/${name}v${layer}.mp3` });
+    for (const layer of PIANO_LAYERS) {
+      const url = `https://tambien.github.io/Piano/audio/${name}v${layer}.mp3`;
+      out.push({ midi, layer, url, src: url });
+    }
   }
   return out;
 }
 
-const SAMPLES: Record<CompInstrument, Sample[]> = { piano: pianoSamples() };
-const LAYER_VELOCITY: Record<CompInstrument, Record<number, number>> = { piano: { 4: 0.3, 8: 0.55, 12: 0.8 } };
-const TRIM: Record<CompInstrument, number> = { piano: 0.55 };
+const RHODES_FILES: [number, number[]][] = [
+  [45, [2, 3, 4]],
+  [50, [2, 3, 4]],
+  [55, [2, 3, 4]],
+  [59, [2, 3, 4]],
+  [62, [2, 3, 4]],
+  [65, [2, 3, 4]],
+  [71, [2, 4]],
+  [76, [2, 4]],
+  [81, [2, 4]],
+  [86, [2, 4]],
+];
+function rhodesSamples(): Sample[] {
+  return RHODES_FILES.flatMap(([midi, layers]) =>
+    layers.map((layer) => {
+      const name = `${midi}_${layer}`;
+      const asset = RHODES_SAMPLES[name];
+      if (asset === undefined) throw new Error(`No Rhodes sample ${name}`);
+      return { midi, layer, url: `rhodes:${name}`, src: asset };
+    }),
+  );
+}
+
+const SAMPLES: Record<CompInstrument, Sample[]> = { piano: pianoSamples(), rhodes: rhodesSamples() };
+/** Which velocity (0–1) each layer stands for. */
+const LAYER_VELOCITY: Record<CompInstrument, Record<number, number>> = {
+  piano: { 4: 0.3, 8: 0.55, 12: 0.8 },
+  rhodes: { 4: 0.3, 3: 0.55, 2: 0.8 },
+};
+/** Level trim so the two sit at the same loudness under the bass. */
+const TRIM: Record<CompInstrument, number> = { piano: 0.55, rhodes: 0.85 };
 
 const buffers = new Map<string, AudioBuffer>();
 const loading = new Map<CompInstrument, Promise<void>>();
@@ -47,7 +82,7 @@ export function loadComp(instrument: CompInstrument, onProgress?: (fraction: num
   let done = 0;
   const job = Promise.all(
     list.map(async (s) => {
-      if (!buffers.has(s.url)) buffers.set(s.url, await ctx.decodeAudioData(s.url));
+      if (!buffers.has(s.url)) buffers.set(s.url, await ctx.decodeAudioData(s.src));
       done++;
       onProgress?.(done / list.length);
     }),
@@ -93,7 +128,7 @@ export function playCompNote(instrument: CompInstrument, midi: number, time: num
   const g = ctx.createGain();
   const level = TRIM[instrument] * (0.35 + 0.65 * velocity);
   const start = Math.max(time, ctx.currentTime);
-  const release = 0.35;
+  const release = instrument === 'piano' ? 0.35 : 0.25; // a damper coming down / a key let go
   const end = start + Math.max(0.08, seconds);
   g.gain.setValueAtTime(level, start);
   g.gain.setValueAtTime(level, end);

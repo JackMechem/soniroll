@@ -15,7 +15,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, ExternalLinkIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, ExternalLinkIcon, FileIcon, ImageIcon, LinkIcon, MaximizeIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, SideViewIcon, SplitIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
 import {
   type FileKind,
   type StoredEntry,
@@ -33,13 +33,16 @@ import {
   saveFile,
 } from "@/lib/files";
 import { PLAN_HREF, type SaveTarget, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
-import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
+import { deleteOnDevice, otherDeviceName, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
 import { KeptHereHint } from "@/components/files/StorageMove";
 import SaveWhere from "@/components/files/SaveWhere";
 import PdfEditor from "@/components/pdf/PdfEditor";
 import PdfInline from "@/components/pdf/PdfInline";
 import { useOpenInTool } from "@/components/files/openInTool";
+import type { FileOrganizer } from "@/components/files/FileFolders";
+import { openFileBeside, opensBeside } from "@/lib/fileView";
+import { usePaneId } from "@/lib/paneContext";
 
 // ---------------------------------------------------------------- icons
 
@@ -119,11 +122,13 @@ export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; auto
   const kind = fileKind(file.mimeType, file.name);
   const url = file.url;
   if (!url && file.device) {
+    const where = otherDeviceName(file.device.label);
     return (
       <div className="flex max-w-sm flex-col items-center gap-3 p-10 text-center">
         <DeviceIcon className="h-8 w-8 text-muted" />
         <p className="text-sm text-muted">
-          This file is kept on {file.device.label}, so open it there. A{" "}
+          This file is kept on {where}, so open it there
+          {where !== file.device.label && " (if you saved it in this browser, its data was cleared since: add the file again to keep it here)"}. A{" "}
           <Link href={PLAN_HREF} className="text-accent hover:underline">
             storage plan
           </Link>{" "}
@@ -231,8 +236,17 @@ const isMedia = (f: { mimeType: string; name: string }) => ["audio", "video"].in
  * Adding one or more files to the account, optionally attached to a tune: `pick()` opens the
  * file chooser, `drop` props make an element a drop target, and `input` must be rendered. They're
  * saved online with a storage plan, or on this device without one (`lib/storagePlan.ts`).
+ * `existing`: the files already there; adding one with the same name and size asks first ("Add
+ * again", or skip it). `folder`: new files go into this Files folder. `onSaved`: called with each file
+ * once it's saved (e.g. to attach it to a Shed Log task).
  */
-export function useFileUploader(tuneId: string | undefined, target: SaveTarget) {
+export function useFileUploader(
+  tuneId: string | undefined,
+  target: SaveTarget,
+  existing?: readonly { name: string; size: number }[],
+  folder?: string,
+  onSaved?: (file: { id: Id<"files">; name: string; mimeType: string }) => void,
+) {
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
   const create = useMutation(filesApi.create);
   const createOnDevice = useMutation(filesApi.createOnDevice);
@@ -241,16 +255,33 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [askAgain, setAskAgain] = useState<{ names: string[]; answer: (again: boolean) => void } | null>(null);
 
   const uploadAll = useCallback(
-    async (files: File[]): Promise<boolean> => {
+    async (chosen: File[]): Promise<boolean> => {
+      let files = chosen;
+      const repeats = existing ? files.filter((f) => existing.some((e) => e.name === f.name && e.size === f.size)) : [];
+      if (repeats.length) {
+        const again = await new Promise<boolean>((answer) => setAskAgain({ names: repeats.map((f) => f.name), answer }));
+        setAskAgain(null);
+        if (!again) files = files.filter((f) => !repeats.includes(f));
+      }
       if (!files.length) return true;
       setError(null);
       setProgress({ done: 0, total: files.length });
       const failures: string[] = [];
       for (let i = 0; i < files.length; i++) {
         try {
-          await saveFile(files[i], storage, { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create(args), createOnDevice: (args) => createOnDevice(args) }, tuneId, undefined, online);
+          const into = folder ? { folder } : {};
+          const savedId = await saveFile(
+            files[i],
+            storage,
+            { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create({ ...args, ...into }), createOnDevice: (args) => createOnDevice({ ...args, ...into }) },
+            tuneId,
+            undefined,
+            online,
+          );
+          onSaved?.({ id: savedId, name: files[i].name, mimeType: files[i].type || "application/octet-stream" });
         } catch (e) {
           failures.push(errorText(e, `Couldn't upload "${files[i].name}".`));
           // Out of room: the rest won't fit either.
@@ -262,21 +293,37 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
       if (failures.length) setError(failures.join(" "));
       return failures.length === 0;
     },
-    [create, createOnDevice, generateUploadUrl, online, storage, tuneId],
+    [create, createOnDevice, existing, folder, generateUploadUrl, online, storage, tuneId, onSaved],
   );
 
   const input = (
-    <input
-      ref={inputRef}
-      type="file"
-      multiple
-      className="hidden"
-      onChange={(e) => {
-        const files = Array.from(e.target.files ?? []);
-        e.target.value = "";
-        void uploadAll(files);
-      }}
-    />
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = "";
+          void uploadAll(files);
+        }}
+      />
+      {askAgain && (
+        <ConfirmDialog
+          title={askAgain.names.length === 1 ? "You already have this file" : "You already have some of these"}
+          message={
+            askAgain.names.length === 1
+              ? `You already have “${askAgain.names[0]}”. Add another copy?`
+              : `You already have ${askAgain.names.map((n) => `“${n}”`).join(", ")}. Add another copy of each?`
+          }
+          confirmLabel="Add again"
+          cancelLabel="Skip"
+          onConfirm={() => askAgain.answer(true)}
+          onCancel={() => askAgain.answer(false)}
+        />
+      )}
+    </>
   );
 
   const drop = {
@@ -335,7 +382,13 @@ function deleteMessage(item: StoredEntry, tune: string | undefined) {
     case "profile":
       return "It's taken off your profile.";
     default:
-      return "The file is deleted from your account for good. If the tune it's on is shared, it disappears from the link too.";
+      return [
+        "The file is deleted from your account for good.",
+        item.sharedId && "Its link stops working.",
+        item.tuneId && `If ${tune ?? "the tune it's on"} is shared, it disappears from that link too.`,
+      ]
+        .filter(Boolean)
+        .join(" ");
   }
 }
 
@@ -344,8 +397,10 @@ function deleteMessage(item: StoredEntry, tune: string | undefined) {
  * share by link, download, attach an upload to a tune (or move / detach it), go to where it's
  * managed, delete — and deleting several at once. `tuneName` shows which tune a file is on;
  * `hereTuneId` (on a tune's page) offers "Remove from this tune" instead of "Move to another tune".
+ * `organizer` (the Files page's `useFileOrganizer`) adds "Move to folder…" and "Tags…" to the menu,
+ * and the folder and tags to the file viewer and the PDF editor's ⋮.
  */
-export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: string) => string | undefined; hereTuneId?: string }) {
+export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: (tuneId: string) => string | undefined; hereTuneId?: string; organizer?: FileOrganizer }) {
   const update = useMutation(filesApi.update);
   const rename = useMutation(filesApi.renameItem);
   const remove = useMutation(filesApi.removeItem);
@@ -368,6 +423,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     }
   }
   const router = useRouter();
+  const paneId = usePaneId();
   const openIn = useOpenInTool();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [open, setOpen] = useState<StoredEntry | null>(null);
@@ -381,11 +437,28 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     item.href ? item.href : item.kind === "song" && item.tuneId ? `/tunes/tune?id=${encodeURIComponent(item.tuneId)}` : null;
   const goToLabel = (item: StoredEntry) => (item.kind === "song" ? `Open ${(item.tuneId && tuneName(item.tuneId)) || "the tune"}` : (GO_TO[item.kind] ?? "Open"));
 
+  /** Opens a file: a PDF in the side view (so it stays open beside whatever you open next), the
+      rest in the preview. */
+  function openFile(item: StoredEntry) {
+    if (item.kind !== "profile" && opensBeside(item) && openFileBeside(item.kind, item.id, { from: paneId })) return;
+    setOpen(item);
+  }
+
   function items(item: StoredEntry): MenuItem[] {
     const onTune = item.tuneId ? tuneName(item.tuneId) : undefined;
     const where = goTo(item);
+    const beside = item.kind !== "profile" && opensBeside(item);
+    const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
     return [
-      { label: "Open", onSelect: () => setOpen(item), icon: <FileIcon className="h-4 w-4" /> },
+      { label: "Open", onSelect: () => openFile(item), icon: <FileIcon className="h-4 w-4" /> },
+      // A PDF opens in the side view; these are the other ways (a split, or the whole window).
+      ...(beside && wide
+        ? [{ label: "Open side by side", onSelect: () => void openFileBeside(item.kind, item.id, { mode: "right", from: paneId }), icon: <SplitIcon className="h-4 w-4" /> }]
+        : []),
+      ...(beside ? [{ label: "Open full window", onSelect: () => setOpen(item), icon: <MaximizeIcon className="h-4 w-4" /> }] : []),
+      ...(!beside && item.kind !== "profile"
+        ? [{ label: "Open in the side view", onSelect: () => void openFileBeside(item.kind, item.id, { from: paneId }), icon: <SideViewIcon className="h-4 w-4" /> }]
+        : []),
       // Audio (and video): open it in a tool that plays it.
       ...openIn.toolsFor(item).map((t) => ({ label: `Open in ${t.label}`, onSelect: t.open, icon: <t.icon className="h-4 w-4" /> })),
       ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
@@ -403,19 +476,22 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
           ? [{ label: "Remove from this tune", onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }), icon: <LinkIcon className="h-4 w-4" /> }]
           : [
               { label: item.tuneId ? "Move to another tune" : "Attach to a tune", onSelect: () => setLinking(item), icon: <LinkIcon className="h-4 w-4" /> },
-              ...(item.tuneId ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }) }] : []),
+              ...(item.tuneId
+                ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }), icon: <CloseIcon className="h-4 w-4" /> }]
+                : []),
             ]),
-      ...(where ? [{ label: goToLabel(item), onSelect: () => router.push(where) }] : []),
-      { label: "Delete", onSelect: () => setDeleting({ items: [item] }), danger: true, icon: <TrashIcon className="h-4 w-4" /> },
+      ...(where ? [{ label: goToLabel(item), onSelect: () => router.push(where), icon: <ExternalLinkIcon className="h-4 w-4" /> }] : []),
+      ...(organizer ? organizer.menuItems(item) : []),
+      { label: "Delete", onSelect: () => setDeleting({ items: [item] }), danger: true, divider: !!organizer, icon: <TrashIcon className="h-4 w-4" /> },
     ];
   }
 
   /** The ⋮ button's menu, under the button. */
-  const openMenu = (item: StoredEntry, e: React.MouseEvent) => setMenu({ ...menuPosition(e), items: items(item) });
+  const openMenu = (item: StoredEntry, e: React.MouseEvent) => setMenu({ ...menuPosition(e), items: items(item), title: item.name });
   /** A right-click menu, at the pointer. */
   const contextMenu = (item: StoredEntry, e: React.MouseEvent) => {
     e.preventDefault();
-    setMenu({ x: e.clientX, y: e.clientY, items: items(item) });
+    setMenu({ x: e.clientX, y: e.clientY, items: items(item), title: item.name });
   };
   /** Ask, then delete several items (the Files page's selection). */
   const deleteMany = (list: StoredEntry[], onDone?: () => void) => list.length && setDeleting({ items: list, onDone });
@@ -486,7 +562,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     <>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
       {open && open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf" && (
-        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} />
+        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} extraMenu={organizer?.menuItems(open)} />
       )}
       {open && !(open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf") && (
         <FilePreviewDialog
@@ -494,6 +570,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
           onClose={() => setOpen(null)}
           actions={
             <>
+              {organizer && open.kind !== "profile" && organizer.previewBar(open)}
               {openIn.toolsFor(open).map((t, i) => (
                 <button key={t.href} type="button" className={i === 0 && isMedia(open) ? primaryBtn : actionBtn} onClick={t.open} disabled={!!openIn.busy}>
                   <t.icon className="h-4 w-4" /> Open in {t.label}
@@ -555,7 +632,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
   return {
     openMenu,
     contextMenu,
-    openFile: setOpen,
+    openFile,
     deleteMany,
     putOnline,
     error: error ?? openIn.error,
@@ -628,7 +705,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
   const files = useDeviceUrls(useQuery(filesApi.listForTune, isAuthenticated ? { tuneId } : "skip"));
   const update = useMutation(filesApi.update);
   const saveTarget = useSaveTarget();
-  const uploader = useFileUploader(tuneId, saveTarget);
+  const uploader = useFileUploader(tuneId, saveTarget, files);
   const actions = useFileActions({ tuneName, hereTuneId: tuneId });
   const [adding, setAdding] = useState(false);
 
@@ -691,7 +768,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
       <UploadProgress progress={uploader.progress} />
       {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
       {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
-      {isAuthenticated && files && files.length > 0 && <KeptHereHint />}
+      {isAuthenticated && files && files.length > 0 && <KeptHereHint items={files} />}
       {uploader.input}
       {actions.dialogs}
       {adding && (

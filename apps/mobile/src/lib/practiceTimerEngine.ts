@@ -1,5 +1,5 @@
 import type { PracticeSession, RunSegment } from '@jam-practice/core/practiceTimer';
-import { stepAt } from '@jam-practice/core/practiceTimer';
+import { stepAt as coreStepAt } from '@jam-practice/core/practiceTimer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Vibration } from 'react-native';
 
@@ -11,6 +11,13 @@ import {
 } from '@/lib/notifications';
 import { playTransitionChime } from '@/lib/practiceTimerChime';
 import { queueLogEntry } from '@/lib/practiceLogQueue';
+
+/** `stepAt`, with a name for a step left unnamed ("Step 2"), so the running view, the bar, the
+    notifications and the Shed Log never show a blank title or "Next:" with nothing after it. */
+function stepAt(session: PracticeSession, index: number): RunSegment | null {
+  const step = coreStepAt(session, index);
+  return step && !step.title.trim() ? { ...step, title: `Step ${index + 1}` } : step;
+}
 
 export type EngineState = {
   /** A snapshot of the session being run, not a live reference — editing or deleting the saved
@@ -143,7 +150,8 @@ function recordStep(done: boolean) {
     ms: done ? state.durationMs : Math.max(0, elapsed),
     done,
     session: session.name || 'Practice Timer',
-    title: state.current.title,
+    // The step's own title (blank stays blank: the Shed Log shows the session's name for it).
+    title: coreStepAt(session, state.index)?.title ?? state.current.title,
     segmentId: session.type === 'custom' ? (session.segments[state.index]?.id ?? '') : 'pomodoro',
     ...(session.type === 'custom' && session.link ? { link: session.link } : {}),
   });

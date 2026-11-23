@@ -96,6 +96,13 @@ export function deviceLabel(): string {
   return os ? `${browser} on ${os}` : browser;
 }
 
+/** The device a file is kept on, named as seen from here: its label ("Firefox on Linux"), or
+    "another Chrome on Linux" when that's also what this browser is called (another profile or
+    computer, or this browser's data was cleared since it was saved). */
+export function otherDeviceName(label: string): string {
+  return label === deviceLabel() ? `another ${label}` : label;
+}
+
 /** Asks the browser to keep this site's files even when the disk gets full (it may say no, or
     ask the person). Resolves whether it will. */
 export async function askToKeepFiles(): Promise<boolean> {

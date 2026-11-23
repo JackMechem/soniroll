@@ -225,7 +225,10 @@ function MetronomeScreen() {
         onTap={tap}
         tempoNote={<TempoNoteValuePicker value={tempoNoteValue} onChange={(next) => updateSettings({ tempoNoteValue: next })} />}
       />
-      <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
+      {/* Changing meters with nothing in the form yet: no beat unit to convert to, so no line. */}
+      {useStructure && structure.form.length === 0 ? null : (
+        <TempoNoteConversionHint bpm={bpm} tempoNoteValue={tempoNoteValue} effectiveBeatUnit={effectiveBeatUnit} />
+      )}
       {useStructure && activeSection ? (
         <Text className="font-ui-semibold text-sm font-semibold" style={{ color: colors.muted }}>
           Section <Text style={{ color: colors.foreground }}>{activeSection.name}</Text> · bar {engineState.barInSection + 1} of {activeSection.bars}

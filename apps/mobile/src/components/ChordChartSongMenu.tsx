@@ -89,7 +89,7 @@ export function ChordChartSongMenu({
               {/* Composer and playlist, else key and style — never an empty line. */}
               <Text numberOfLines={1} className="font-ui text-sm" style={{ color: colors.muted }}>
                 {[song.composer ? formatComposer(song.composer) : null, currentPlaylist?.name].filter(Boolean).join(' · ') ||
-                  [song.key ? prettyKeyName(song.key) : null, song.style || null].filter(Boolean).join(' · ') ||
+                  [song.key ? `Key of ${prettyKeyName(song.key)}` : null, song.style || null].filter(Boolean).join(' · ') ||
                   'Chord chart'}
               </Text>
             </View>

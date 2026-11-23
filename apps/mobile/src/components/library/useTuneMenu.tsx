@@ -21,7 +21,8 @@ export function newChartParams(list: TuneListId, tune: Tune) {
   return {
     title: tune.name,
     tune: `${list}:${tune.id}`,
-    key: tune.keys[0]?.value ?? '',
+    // The first key you play it in that's switched on (a standard's own key comes first).
+    key: (tune.keys.find((k) => k.enabled) ?? tune.keys[0])?.value ?? '',
     timeSignature: tune.timeSignature,
   };
 }

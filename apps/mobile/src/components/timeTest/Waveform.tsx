@@ -354,7 +354,7 @@ export function Waveform({
           onLayout={(e) => setWidth(Math.floor(e.nativeEvent.layout.width))}
           className="overflow-hidden rounded-md"
           style={{ height: HEIGHT, backgroundColor: colors.background }}
-          accessibilityLabel="Recording waveform with each stroke coloured by how far it was from the click"
+          accessibilityLabel="Recording waveform with each stroke colored by how far it was from the click"
         >
           {width > 0 ? (
             <>
