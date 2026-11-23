@@ -106,11 +106,38 @@ export function setSyncedValue<T>(key: string, value: T, write: (value: T) => vo
   notify(key);
 
   if (entry.timer) clearTimeout(entry.timer);
-  entry.timer = setTimeout(() => {
+  const fire = () => {
     entry.timer = null;
+    pending.delete(key);
     entry.sent = { json: JSON.stringify(entry.value), at: Date.now() };
     write(entry.value);
-  }, DEBOUNCE_MS);
+  };
+  entry.timer = setTimeout(fire, DEBOUNCE_MS);
+  pending.set(key, fire);
+  listenForPageHide();
+}
+
+/** Writes waiting for their debounce, by key — sent at once when the page is hidden. */
+const pending = new Map<string, () => void>();
+let listening = false;
+
+/** A page that's left (closed, reloaded, or navigated "back" to an earlier full page load, when
+    the browser freezes it in the back-forward cache) never runs its timers again, so an edit made
+    just before — e.g. deleting a tune, which goes back to the list — was lost. Send them now. */
+function listenForPageHide() {
+  if (listening || typeof window === "undefined") return;
+  listening = true;
+  const flush = () => {
+    for (const [key, fire] of [...pending]) {
+      const entry = getEntry(key);
+      if (entry.timer) clearTimeout(entry.timer);
+      fire();
+    }
+  };
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
 }
 
 /** Clears a key's cache on sign-out, so a subsequent sign-in (even back-to-back, same tab, a
@@ -123,6 +150,7 @@ export function resetSynced<T>(key: string, write: (value: T) => void) {
   if (entry.timer) {
     clearTimeout(entry.timer);
     entry.timer = null;
+    pending.delete(key);
     if (entry.seeded) write(entry.value);
   }
   entry.seeded = false;
