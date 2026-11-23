@@ -1,7 +1,7 @@
 /**
  * The pure data model for split screen and the side view (no React). One `Layout` object holds
  * everything on screen, so it can be saved as is (`lib/useTilingLayout.ts` keeps it in
- * localStorage) and, later, a tab could hold one `Layout` each.
+ * localStorage) and each tab holds one (`lib/useTabs.ts`).
  *
  * - `tree`: the tiled panes. A `PaneTree` is a binary tree: a `PaneLeaf` shows one page (`href`,
  *   with its own Back list); a `PaneSplit` holds two children side by side (`"row"`) or one above
@@ -200,6 +200,30 @@ export function layoutRects(tree: PaneTree): { panes: Map<string, PaneRect>; div
   }
   walk(tree, 0, 0, 1, 1, { l: false, t: false, r: false, b: false });
   return { panes, dividers };
+}
+
+/** A copy of `layout` with new ids for every pane and split (a duplicated tab), so the two never
+    share a pane id (panes are keyed by id). */
+export function cloneLayout(layout: Layout): Layout {
+  const ids = new Map<string, string>();
+  const map = (id: string) => {
+    if (!ids.has(id)) ids.set(id, newId());
+    return ids.get(id)!;
+  };
+  const cloneTree = (t: PaneTree): PaneTree =>
+    t.type === "leaf"
+      ? { ...t, id: map(t.id), ...(t.back ? { back: [...t.back] } : {}) }
+      : { ...t, id: map(t.id), children: [cloneTree(t.children[0]), cloneTree(t.children[1])] };
+  const remap = (id: string | null) => (id ? map(id) : null);
+  return {
+    v: 2,
+    tree: layout.tree ? cloneTree(layout.tree) : null,
+    float: layout.float ? { leaf: cloneTree(layout.float.leaf) as PaneLeaf, width: layout.float.width } : null,
+    sideId: remap(layout.sideId),
+    activePaneId: remap(layout.activePaneId),
+    mainPaneId: remap(layout.mainPaneId),
+    maximizedId: remap(layout.maximizedId),
+  };
 }
 
 function validTree(node: unknown): node is PaneTree {

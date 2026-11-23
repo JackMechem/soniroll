@@ -91,11 +91,19 @@ function read(): TilingState {
   // brought back on a phone.
   if (layout.float && !isDesktopWindow()) layout = withoutFloat(layout);
   const here = locationHref();
+  const placed = placeAddress(layout, here);
+  state = { layout: placed.layout, pendingSplit: null, pageLeafId: placed.pageLeafId, routeHref: here };
+  state = { ...state, layout: normalize(state.layout, state) };
+  return state;
+}
+
+/** The window's address (`here`, what the real router renders) in `layout`: the pane already
+    showing it is the real page; if none does (typed, or a link from elsewhere) it goes in the main
+    pane, as the real page — the address is what was asked for. */
+function placeAddress(layout: Layout, here: string): { layout: Layout; pageLeafId: string | null } {
   const panes = allPanes(layout);
   const active = panes.find((l) => l.id === layout.activePaneId);
   let page = active?.href === here ? active : panes.find((l) => l.href === here);
-  // Opened at an address no pane shows (typed, or a link from elsewhere): it goes in the main
-  // pane, as the real page — the address is what was asked for.
   if (!page && layout.tree) {
     const leaves = collectLeaves(layout.tree);
     const target = leaves.find((l) => l.id === layout.activePaneId) ?? leaves.find((l) => l.id === layout.mainPaneId) ?? leaves[0];
@@ -103,9 +111,7 @@ function read(): TilingState {
     const moved = page;
     layout = { ...layout, tree: updateLeaf(layout.tree, target.id, () => moved), activePaneId: target.id, mainPaneId: target.id };
   }
-  state = { layout, pendingSplit: null, pageLeafId: page?.id ?? null, routeHref: here };
-  state = { ...state, layout: normalize(state.layout, state) };
-  return state;
+  return { layout, pageLeafId: page?.id ?? null };
 }
 
 function withoutFloat(layout: Layout): Layout {
@@ -169,6 +175,9 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/** Every change to the layout or the real route (tabs keep the active tab's copy current). */
+export const subscribeTiling = subscribe;
+
 export function useTilingState(): TilingState {
   return useSyncExternalStore(subscribe, read, () => SERVER_STATE);
 }
@@ -183,9 +192,16 @@ export function paneCount(layout: Layout = read().layout): number {
 }
 
 /** The screen is split (two or more tiled panes, on a desktop-sized window): links and the sidebar
-    open pages in panes. With only the side view over the page, the page navigates as usual. */
+    open pages in panes. With only the side view over the page, the page navigates as usual. Also
+    true for a lone pane that isn't the real page (another tab's page, or what's left after
+    closing the others): Next's router is still on the page from before, so a link to that page
+    wouldn't change anything — the pane follows links instead. */
 export function panesActive(): boolean {
-  return isDesktopWindow() && collectLeaves(read().layout.tree).length > 1;
+  if (!isDesktopWindow()) return false;
+  const s = read();
+  const leaves = collectLeaves(s.layout.tree);
+  if (leaves.length > 1) return true;
+  return leaves.length === 1 && !(leaves[0].id === s.pageLeafId && leaves[0].href === s.routeHref);
 }
 
 /** The address bar follows the active pane, through the History API rather than Next's router:
@@ -502,6 +518,7 @@ export function routeChanged(href: string) {
   if (s.routeHref === href) return;
   if (!s.layout.tree) {
     state = { ...s, routeHref: href };
+    for (const listener of listeners) listener();
     return;
   }
   let layout = s.layout;
@@ -514,6 +531,56 @@ export function routeChanged(href: string) {
   const target = layout.activePaneId && collectLeaves(layout.tree).some((l) => l.id === layout.activePaneId) ? layout.activePaneId : layout.mainPaneId!;
   const tree = updateLeaf(layout.tree!, target, (l) => (l.href === href ? l : { ...l, href, back: [...(l.back ?? []), l.href].slice(-BACK_LIMIT) }));
   set({ routeHref: href, pageLeafId: target, layout: { ...layout, tree, activePaneId: target, mainPaneId: target, maximizedId: layout.maximizedId === target ? target : null } }, { sync: false });
+}
+
+// ——— Tabs ———
+
+/**
+ * Puts a tab's layout on screen (`lib/useTabs.ts`): `saved` (a split or the side view), or just
+ * the page at `href` (a tab with one page). The panes it had before go (unmounted: tools with an
+ * engine of their own, like the Metronome, keep running and show in the background dock).
+ *
+ * - Switching (the default): the address bar follows the tab's active pane. On a desktop its
+ *   panes render from `PANE_ROUTES` (the real page only where a pane already shows the window's
+ *   address), so nothing goes through Next's router. Returns an address the real router must go to
+ *   instead, or null: on a phone (which shows only the main pane, as the real page), or a lone page
+ *   a pane can't show (admin, legal…).
+ * - `keepAddress`: loading the tab after the page opened (the account's tabs arriving): the
+ *   window's address stays and goes in the main pane, as when a saved split is opened at an address.
+ */
+export function showTabLayout(saved: Layout | null, href: string, { keepAddress = false }: { keepAddress?: boolean } = {}): string | null {
+  const s = read();
+  const desktop = isDesktopWindow();
+  let layout: Layout;
+  if (saved?.tree) {
+    layout = saved;
+  } else {
+    const leaf = createLeaf(normalizePaneHref(href));
+    layout = { ...EMPTY_LAYOUT, tree: leaf, activePaneId: leaf.id, mainPaneId: leaf.id };
+  }
+  if (!desktop) layout = withoutFloat(layout);
+  focusRequest = null;
+  if (keepAddress) {
+    const placed = placeAddress(layout, s.routeHref);
+    set({ layout: placed.layout, pageLeafId: placed.pageLeafId, pendingSplit: null });
+    return null;
+  }
+  const leaves = collectLeaves(layout.tree);
+  if (desktop) {
+    const panes = allPanes(layout);
+    const active = findPane(layout, layout.activePaneId) ?? leaves[0];
+    const page = active.href === s.routeHref ? active : panes.find((l) => l.href === s.routeHref);
+    const lone = leaves.length === 1 && !layout.float ? leaves[0] : null;
+    if (lone && !canShowInPane(lone.href) && lone.href !== s.routeHref) {
+      set({ layout, pageLeafId: lone.id, pendingSplit: null }, { sync: false });
+      return lone.href;
+    }
+    set({ layout, pageLeafId: page?.id ?? null, pendingSplit: null });
+    return null;
+  }
+  const main = leaves.find((l) => l.id === layout.mainPaneId) ?? leaves[0];
+  set({ layout, pageLeafId: main.id, pendingSplit: null }, { sync: false });
+  return main.href === s.routeHref ? null : main.href;
 }
 
 // ——— Splitting from the ⌘K palette ———

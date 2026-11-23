@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { hasInAppHistory } from "@/lib/goBack";
+import { registerLeaveGuard } from "@/lib/leaveGuards";
 
 type Pending = { kind: "back" } | { kind: "go"; run: () => void };
 
@@ -45,6 +46,16 @@ export function useLeaveGuard(dirty: boolean, message = "Your changes haven't be
     dirtyRef.current = dirty;
     noHistoryRef.current = noHistory;
   });
+
+  // Switching tabs swaps the page out without a link: it asks through here (`lib/leaveGuards.ts`).
+  useEffect(
+    () =>
+      registerLeaveGuard({
+        dirty: () => dirtyRef.current,
+        ask: (go) => setPending({ kind: "go", run: go }),
+      }),
+    [],
+  );
 
   // Catch Back from the moment there's something to lose.
   useEffect(() => {

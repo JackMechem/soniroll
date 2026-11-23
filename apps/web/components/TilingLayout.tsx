@@ -7,6 +7,8 @@ import { OPEN_PALETTE_EVENT } from "@/components/CommandPalette";
 import { CrumbTrail } from "@/components/PageBar";
 import NextPaneContexts from "@/components/panes/NextPaneContexts";
 import { IntroButton } from "@/components/help/ToolIntro";
+import { NewTabIcon } from "@/components/tabs/tabParts";
+import { newTab } from "@/lib/useTabs";
 import {
   ChevronLeftIcon,
   CloseIcon,
@@ -46,6 +48,7 @@ import {
   navigateMain,
   navigatePane,
   paneBack,
+  panesActive,
   paneCanGoBack,
   paneDetach,
   requestSplit,
@@ -73,6 +76,14 @@ function paneTitle(href: string) {
 }
 
 const pathOf = (href: string) => href.split(/[?#]/)[0];
+
+/** A pane's address as a page of its own (a note in the side view is Shed Notes with that note). */
+function pageHrefOf(href: string) {
+  const url = new URL(href, "http://x");
+  if (url.pathname !== "/shed-notes" || url.searchParams.get("view") !== "note") return href;
+  url.searchParams.delete("view");
+  return `${url.pathname}${url.search}`;
+}
 
 /** `href` as an in-app address, resolved against the pane's own (a relative `?tab=x` stays in the
     pane's page); null for another site. */
@@ -163,14 +174,14 @@ export default function TilingLayout({ children }: { children: React.ReactNode }
       const raw = a.getAttribute("href");
       if (!raw || raw.startsWith("#")) return;
       const { layout: l } = stateRef.current;
-      const desktopNow = window.matchMedia(desktopQuery).matches;
       const inPane = (a.closest("[data-pane-id]") as HTMLElement | null)?.dataset.paneId ?? pressedPane.current;
       const paneIds = new Set(allPanes(l).map((p) => p.id));
       const pane = inPane && paneIds.has(inPane) ? inPane : null;
       const inSide = pane !== null && pane === l.float?.leaf.id;
       // The side view's own links stay in it. Anything else only while the screen is split (on
-      // a desktop); otherwise a link is an ordinary page navigation (the side view stays open).
-      if (!inSide && !(desktopNow && collectLeaves(l.tree).length > 1)) return;
+      // a desktop), or shows a lone pane that isn't the real page (another tab's: `panesActive`);
+      // otherwise a link is an ordinary page navigation (the side view stays open).
+      if (!inSide && !panesActive()) return;
       const base = (pane && allPanes(l).find((p) => p.id === pane)?.href) || "/";
       const href = resolveHref(raw, base);
       if (!href) return;
@@ -608,6 +619,7 @@ function PaneBar({
                 </>
               )}
               <FlyoutItem icon={ExternalLinkIcon} label={noteView ? "Open in Shed Notes" : "Open as a page"} onSelect={run(openAsPage)} />
+              {desktop && <FlyoutItem icon={NewTabIcon} label="Open in a new tab" onSelect={run(() => newTab(pageHrefOf(leaf.href), { after: true }))} />}
               {detach && (
                 <FlyoutItem
                   icon={CloseIcon}

@@ -636,3 +636,125 @@ update their pane's saved address.
 "Website: UI pass 3 fixes"), so that commit deletes `NotePeek.tsx` while its `AppShell` still
 imports it — the tree only builds again once this work is committed. Use plain `rm` while others
 share the working tree.
+
+## 2026-11-23: tabs (each a view of its own)
+
+Jack: "another thing id like, if you could add tabs that are essentially different views (that
+save to the browser or account) that would be pretty cool" — after the split-screen rework above.
+
+### What was built
+
+- **A tab is one `Layout`.** `lib/useTabs.ts` keeps the list; only the active tab is on screen, as
+  the live layout in `useTilingLayout.ts`. Switching copies the screen into the tab you leave and
+  puts the other tab's layout on screen with `showTabLayout(saved, href)` (new in
+  `useTilingLayout.ts`). On a desktop its panes render from `PANE_ROUTES` (the real page only where
+  a pane already shows the window's address) and the address bar follows the tab's active pane by
+  `syncAddressBar`, so a switch never goes through Next's router. Phones show only the main pane
+  (as the real page), so there a switch is a `router.replace` (`setTabNavigator`, from `TabsSync`);
+  so is a lone tab page a pane can't show (admin, legal).
+- **Desktop strip** (`components/tabs/TabStrip.tsx`, at the top of the content area, from `lg`):
+  only once there are two or more tabs. The surface colour of the sidebar; the active tab is the
+  page's background colour and joins the page below it. Each tab: its main pane's page icon (tool
+  category colour) and name (`tabTitle` in `components/pageNames.ts`, the phone top bar's naming
+  moved out of `Sidebar.tsx`), "+N" when it holds more panes, × (always on the active tab, on
+  hover for the others), middle click closes. Click switches, double-click renames in place
+  (Enter/click away keeps, Esc doesn't, empty = back to the page's name), right-click: Rename,
+  Duplicate, Close other tabs, Close tab. Drag to reorder (HTML drag and drop, an accent bar where
+  it lands). + after the tabs and a double-click on the empty strip open a new tab; ⋮ at the end
+  has New tab / Rename / Duplicate / Close other tabs / Close this tab. More tabs than fit: the
+  tabs shrink to 7.5rem, then scroll (no scrollbar), keeping the active one in view.
+- **New tab opens the dashboard.** Where to find it before the strip shows: the sidebar's ⋮ (both
+  the full and the icon-strip sidebar), ⌘K ("new tab"; typing a tab's name or "tab" also lists the
+  other tabs to switch to), a page's right-click menu in the sidebar ("Open in a new tab", that
+  page) and a pane's ⋮ ("Open in a new tab", that pane's page — a note in the side view opens as
+  Shed Notes). Up to 12 tabs (`MAX_TABS`).
+- **Phones:** no strip. A count (a rounded square with the number, like a browser's) in the top
+  bar once there are two or more tabs, and "Tabs" in the menu's ⋮; both open a sheet listing the
+  tabs (tap to switch, ⋮ Rename/Duplicate, ×) with a New tab button (`components/tabs/PhoneTabs.tsx`).
+- **Keyboard:** Ctrl+Alt (⌘⌥ on a Mac) + 1–8 for that tab, 9 for the last, [ and ] for the one
+  before/after (`e.code`, since Alt changes `e.key` on a Mac). Not while typing (inputs,
+  contenteditable, CodeMirror). Tooltips on the tabs show them. None of these is a browser
+  shortcut (Ctrl/⌘+number and ⌘⌥←/→ are the browser's own).
+- **Unsaved work:** switching, closing or opening a tab swaps the page out without a link, so
+  `useLeaveGuard` now also registers in `lib/leaveGuards.ts` and tabs call `confirmLeave(go)`: the
+  page's own "Leave without saving?" dialog asks first (checked with a new chord chart).
+- `panesActive()` is now also true for a **lone pane that isn't the real page** (a tab's page
+  after a switch): links and the sidebar go into that pane. Without it a sidebar link to the page
+  Next's router still had underneath did nothing (same URL, no `routeChanged`).
+- `routeChanged` now notifies listeners when nothing is split too (tabs keep the active tab's
+  address in step).
+- `cloneLayout` (`lib/tilingLayout.ts`) gives a duplicated tab new pane ids (panes are keyed by id).
+
+### Saving (the shape and keys)
+
+- `jam-practice-tabs`, through `useSyncedSettings` with the module-level `TABS_DEFAULTS`
+  (`components/tabs/TabsSync.tsx`): signed in it's a `syncedSettings` row in the account, signed
+  out it's this browser's localStorage. No merge between them; signing in or out switches lists.
+  The phone app doesn't read it.
+- Shape: `{ tabs: SavedTab[] }`, `SavedTab = { id, name?, href, layout? }`: `href` is the tab's
+  address (its active pane's, or its one page); `layout` (the `Layout`, `v: 2`) only when it holds
+  more than one pane (a split or the side view); `name` only once renamed. Page addresses and pane
+  layouts only, no page contents; Back lists are kept (≤20 per pane, as before).
+- **One tab saves nothing** (`tabs: []`): the screen is the one tab, kept on this device in
+  `jam-practice-tiling` as before. So today's saved layout simply becomes the first tab when a
+  second one opens (no migration step, nothing lost), and people who never open a tab cost the
+  account nothing. Closing down to one tab writes `[]` again.
+- `jam-practice-tiling` still holds the screen (the active tab) on this device, so a reload draws
+  it at once; signed in, the account's copy of that tab is applied if it differs once it loads.
+- Which tab is open is per device and per store: `jam-practice-active-tab` =
+  `{ account?: id, local?: id }`. Two devices can be on different tabs.
+- Writes are the synced store's (debounced 600 ms, flushed on page hide); every layout change
+  of the active tab rewrites the list, so with tabs open there's one account write per pause in
+  using the panes.
+
+### Decisions
+
+- **Inactive tabs unmount** (cheaper, no hidden pages listening to keys or holding Convex
+  subscriptions, and only the active tab can hold Next's real page anyway). Tools with an engine
+  of their own keep playing: the Metronome, Metric Modulation and the Tuner — they show in the
+  background dock as when you leave their page (checked: Metronome started in tab 1, switched to
+  tab 2, the dock's Metronome card with Stop showed). Everything else stops on a switch, as when
+  you go to another page (Rhythm Section, Slow Downer, Jam Practice, a recording — the Recorder's
+  leave guard asks first).
+- **Another device's tabs:** the tab on screen is this device's — a change to it from elsewhere
+  is ignored here (the next change here writes over it); other tabs, new and closed tabs show
+  straight away. A device whose tab isn't in the list (new to these tabs, or its tab was closed
+  elsewhere) joins the tab already showing its page, else its screen becomes a new tab at the
+  end (`join`): opening soniroll somewhere new never changes a tab set up elsewhere. The cost: a
+  first sign-in on a new device (landing on the dashboard) adds a Dashboard tab if no tab shows it.
+- Duplicate stays on the tab you're on (switching would remount what's showing).
+- New tab (+, ⌘K) goes at the end; "Open in a new tab" right after the current tab.
+- No "always show the strip" setting: the strip appears at two tabs, and New tab is in four other
+  places. With the strip showing, the page bar under it needs no room for the hidden sidebar's
+  menu button (`AppShell` sets `--sidebar-toggle-room` to 0 under the strip).
+
+### Verified (headless Chromium against the dev server)
+
+Signed out, 1440: New tab from the sidebar ⋮ (address /dashboard), switching by click and by
+Ctrl+Alt+1 / ] / 9, Metronome still running in the background dock after a switch, rename by
+double-click, reload (tabs, names, active tab, address kept), a page's "Open in a new tab", a split
+inside tab 2 kept through switching away and back and a reload, drag to reorder, a sidebar link in
+a lone-pane tab (goes into it), closing the active tab, "Close other tabs" from the right-click
+menu down to one tab (`tabs: []` saved, the strip gone, the split left on screen), a pane's ⋮
+"Open in a new tab", ⌘K "new tab" and listing tabs, the chart editor's leave dialog on a switch
+(Cancel stays, Leave switches), 12 tabs at 1100 wide (+ disabled, no page overflow, active in view),
+the hidden sidebar's menu button beside the strip; light and dark. Phone (390, dark, signed out):
+"Tabs" in the menu's ⋮, the sheet, New tab, the count in the top bar, switching (a real
+navigation), no horizontal overflow. Signed in (the shared `uxpass` account): tabs with a split
+saved to the account and back after a reload; a second browser context (another device) opened at
+`/tuner` joined the tab showing the Tuner and switched between both; a phone context listed them,
+switched and closed them; a second window of the same context saw the same list. Cleaned up after:
+the account's `jam-practice-tabs` is `{"tabs":[]}` (the row stays). `tsc` (web, desktop), `eslint`
+on every changed file; no console errors in any run.
+
+**Not verified:** two devices open at the same moment (live updates arriving while you work — code
+only); hover looks (the × on inactive tabs, hover fills); a real mouse drag (Playwright's
+`dragTo`); the desktop app running (only `tsc`; its router shim has `replace`); audio by ear; a
+window resized from desktop to phone width while a tab shows a lone pane (the phone layout then
+shows Next's page underneath, the address bar the pane's — an old edge case of lone panes, more
+likely with tabs); `pnpm build`.
+
+**Note for other agents:** while testing, the shared `uxpass` account briefly had tabs, so another
+agent's signed-in page could have shown a tab strip (its screen becoming a tab). It's back to one
+tab. The privacy line about open tabs went in with the Files commit (`7a06059`), ahead of this
+code.

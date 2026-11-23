@@ -40,6 +40,8 @@ import { chartHref, searchCharts, useChartTitles } from "@/components/library/us
 import { displayKey } from "@jam-practice/core/setlistKeys";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { HELP_TOPICS } from "@/lib/helpContent";
+import { NewTabIcon, TabsIcon, tabName } from "@/components/tabs/tabParts";
+import { MAX_TABS, newTab, switchTab, useTabs } from "@/lib/useTabs";
 import {
   applyPendingSplit,
   clearPendingSplit,
@@ -51,7 +53,23 @@ export const OPEN_PALETTE_EVENT = "open-command-palette";
 
 type Icon = React.ComponentType<{ className?: string }>;
 export type SearchItem = { href: string; label: string; detail?: string; icon: Icon };
-type Item = SearchItem;
+/** `run`: an action instead of a page (tabs). */
+type Item = SearchItem & { run?: () => void };
+
+/** Tabs the palette finds once something's typed: "New tab", and the other open tabs by name. */
+function useTabItems(query: string): Item[] {
+  const { tabs, activeId } = useTabs();
+  if (!query.trim()) return [];
+  const items: (Item & { description: string })[] = [
+    ...(tabs.length < MAX_TABS ? [{ href: "tab:new", label: "New tab", description: "tabs open view", icon: NewTabIcon, run: () => void newTab() }] : []),
+    ...(tabs.length > 1
+      ? tabs
+          .filter((t) => t.id !== activeId)
+          .map((t) => ({ href: `tab:${t.id}`, label: tabName(t), detail: "Tab", description: "tabs switch go to", icon: TabsIcon, run: () => switchTab(t.id) }))
+      : []),
+  ];
+  return filterNavLinks(items, query).map(({ href, label, detail, icon, run }) => ({ href, label, detail, icon, run }));
+}
 
 /** Pages and settings the palette finds besides the tools: `words` are what people might type
     for them ("theme", "dark mode", "goal"). `account` ones only show signed in. */
@@ -177,6 +195,7 @@ function Palette({ onClose }: { onClose: () => void }) {
 
   const results = filterLinks(query);
   const { words, help: helpItems, pageGroups, tunes: tuneItems, charts: chartItems } = useSearchExtras(query, { charts: !pendingSplit });
+  const tabItems = useTabItems(query);
   // How many of the typed words are in a result's name — groups are ordered by their best one,
   // so "theme" or "files" put the page first, while a tool's name keeps the tool on top (ties
   // keep the tools first).
@@ -188,6 +207,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     ...(helpItems.length ? [{ category: "Help", items: helpItems }] : []),
     ...pageGroups,
     ...(tuneItems.length ? [{ category: "Your tunes", items: tuneItems }] : []),
+    ...(tabItems.length && !pendingSplit ? [{ category: "Tabs", items: tabItems }] : []),
   ]
     .map((g, i) => ({ g, i, score: words.length ? Math.max(...g.items.map((it) => nameScore(it.label))) : 0 }))
     .sort((a, b) => b.score - a.score || a.i - b.i)
@@ -212,6 +232,11 @@ function Palette({ onClose }: { onClose: () => void }) {
   function go(index: number) {
     const target = ordered[index];
     if (!target) return;
+    if (target.run) {
+      onClose();
+      target.run();
+      return;
+    }
     // A pane's "Open another beside it…" opened this palette (`requestSplit`): the pick opens in a
     // new pane there. With split screen showing, a pick opens in the main pane; otherwise it's a
     // normal page navigation.

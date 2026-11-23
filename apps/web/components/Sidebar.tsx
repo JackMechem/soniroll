@@ -34,12 +34,8 @@ import {
   HeartIcon,
   HelpIcon,
   ShieldIcon,
-  DocumentIcon,
-  ShareIcon,
-  UserIcon,
   NAV_LINKS,
   SearchIcon,
-  findToolLink,
   StarIcon,
   filterLinks,
   groupByCategory,
@@ -61,6 +57,10 @@ import { useFavorites } from "@/lib/useFavorites";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { navigateMain, openBeside, useTilingState } from "@/lib/useTilingLayout";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { isLibraryPath, pageNameFor } from "@/components/pageNames";
+import PhoneTabsButton, { openTabsSheet } from "@/components/tabs/PhoneTabs";
+import { NewTabIcon, TabsIcon } from "@/components/tabs/tabParts";
+import { newTab } from "@/lib/useTabs";
 
 const STORAGE_KEY = "jam-practice-sidebar";
 const DEFAULT_WIDTH = 244;
@@ -330,12 +330,6 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-/** The library's other pages (chord charts, the setlist chart reader, files; old recordings
-    links), which the sidebar files under Library (`/tunes`). */
-function isLibraryPath(path: string) {
-  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files" || path === "/recordings" || path.startsWith("/recordings/");
-}
-
 /** Shared by Favorites and every real category in `NavItems` below — a collapsible section: a
     small muted heading (a star for Favorites; click to fold it away) over its rows. A module-level
     component (not a function defined inside `NavItems`'s own render, which the React Compiler
@@ -495,6 +489,7 @@ function NavItems({
         { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openBeside(href, { mode: "right" }) },
         { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openBeside(href, { mode: "down" }) },
         { label: "Open in the side view", icon: <SideViewIcon />, onSelect: () => openBeside(href) },
+        { label: "Open in a new tab", icon: <NewTabIcon className="h-4 w-4" />, onSelect: () => newTab(href, { after: true }), divider: true },
       ],
     });
   }
@@ -923,6 +918,7 @@ export default function Sidebar() {
         </button>
         <MobileBarTitle path={currentPath} />
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          <PhoneTabsButton />
           <PracticeTimerWidget bar />
           <FeedbackBarButton />
         </div>
@@ -961,6 +957,15 @@ export default function Sidebar() {
               >
                 {(close) => (
                   <>
+                    <FlyoutItem
+                      icon={TabsIcon}
+                      label="Tabs"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        openTabsSheet();
+                        close();
+                      }}
+                    />
                     <FlyoutItem
                       icon={FeedbackIcon}
                       label="Send feedback"
@@ -1155,6 +1160,14 @@ export default function Sidebar() {
             {(close) => (
               <>
                 <FlyoutItem
+                  icon={NewTabIcon}
+                  label="New tab"
+                  onSelect={() => {
+                    newTab();
+                    close();
+                  }}
+                />
+                <FlyoutItem
                   icon={MegaphoneIcon}
                   label={`What's new · v${SHOWN_VERSION}`}
                   onSelect={() => {
@@ -1274,6 +1287,14 @@ export default function Sidebar() {
               <Flyout icon={DotsIcon} label="Sidebar options" align="start">
                 {(close) => (
                   <>
+                    <FlyoutItem
+                      icon={NewTabIcon}
+                      label="New tab"
+                      onSelect={() => {
+                        newTab();
+                        close();
+                      }}
+                    />
                     <FlyoutItem
                       icon={settingsIcon}
                       label={settingsLabel}
@@ -1404,27 +1425,8 @@ export default function Sidebar() {
   );
 }
 
-/** The phone top bar's middle: the page you're on (its icon and name), or the logo on pages that
-    aren't in the tool list. Library pages all count as Library. */
-/** The phone top bar's name for pages that aren't a tool or a Library/Community/Lessons page. */
-const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { match: (p) => p === "/account" || p === "/settings", label: "Account", href: "/account", icon: GearIcon },
-  { match: (p) => p.startsWith("/u/"), label: "Profile", icon: UserIcon },
-  { match: (p) => p === "/help" || p.startsWith("/help/"), label: "Help", href: "/help", icon: HelpIcon },
-  { match: (p) => p === "/changelog", label: "What's new", href: "/changelog", icon: MegaphoneIcon },
-  { match: (p) => p === "/feedback", label: "Feedback", href: "/feedback", icon: FeedbackIcon },
-  { match: (p) => p === SUPPORT_PATH, label: "Support", href: SUPPORT_PATH, icon: HeartIcon },
-  { match: (p) => p === "/plans", label: "Storage plans", href: "/plans", icon: CloudIcon },
-  { match: (p) => p === DOWNLOAD_PATH, label: "Desktop app", href: DOWNLOAD_PATH, icon: DownloadIcon },
-  { match: (p) => p === MOBILE_PATH, label: "Phone app", href: MOBILE_PATH, icon: PhoneIcon },
-  { match: (p) => p === "/credits", label: "Credits", href: "/credits", icon: HeartIcon },
-  { match: (p) => p === "/privacy", label: "Privacy", href: "/privacy", icon: ShieldIcon },
-  { match: (p) => p === "/terms", label: "Terms", href: "/terms", icon: DocumentIcon },
-  { match: (p) => p === "/admin" || p.startsWith("/admin/"), label: "Admin", href: "/admin", icon: ShieldIcon },
-  { match: (p) => p === "/reset-password", label: "Reset password", icon: ShieldIcon },
-  { match: (p) => /^\/(setlist|routine|tune|file|note)\//.test(p), label: "Shared", icon: ShareIcon },
-];
-
+/** The phone top bar's middle: the page you're on (its icon and name, `pageNameFor`), or the logo
+    on pages that aren't in the tool list. */
 function MobileBarTitle({ path }: { path: string }) {
   // The page's own trail (`PageBar`), once it's mounted; until then (and on the server) the name
   // worked out from the address below.
@@ -1455,15 +1457,8 @@ function MobileBarCrumbs({ page }: { page: PageCrumbs }) {
 }
 
 function MobileBarName({ path }: { path: string }) {
-  const link =
-    findToolLink(isLibraryPath(path) || path.startsWith("/tunes/") ? "/tunes" : path) ??
-    NAV_LINKS.find((l) => l.href !== "/" && (path.startsWith(`${l.href}/`) || (l.href === "/community" && path.startsWith("/post"))));
-  const page = link ? null : PAGE_TITLES.find((t) => t.match(path));
-  const item = link
-    ? { href: link.href, label: link.label.length > 24 && link.short ? link.short : link.label, Icon: link.icon }
-    : page
-      ? { href: page.href, label: page.label, Icon: page.icon }
-      : null;
+  const found = pageNameFor(path);
+  const item = found ? { href: found.href, label: found.label.length > 24 && found.short ? found.short : found.label, Icon: found.icon } : null;
   if (path === DASHBOARD_PATH || !item) {
     const logo = (
       <Link href={DASHBOARD_PATH} aria-label="Dashboard" className="flex h-10 items-center rounded-md px-1">

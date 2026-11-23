@@ -158,6 +158,10 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   `window.location` for a page's own state, and don't write it with `history.replaceState` from a
   page that can be in a pane. A page a pane should show must be in `PANE_ROUTES`
   (`lib/toolRegistry.tsx`, kept in step with `app/` like the desktop's routes).
+- Tabs (`lib/useTabs.ts`) each hold one `Layout`; only the active tab is mounted, and switching
+  puts a layout on screen with `showTabLayout`, never Next's router (phones excepted). Something
+  that swaps the page out without a link must ask through `confirmLeave` (`lib/leaveGuards.ts`) so
+  unsaved work isn't lost; `useLeaveGuard` registers there.
 - Split-screen panes are size containers (`data-pane`): inside one, `sm:`/`md:` follow the
   pane's width, `lg:` and up never apply and `max-lg:` always does (`@custom-variant`s at the top
   of `globals.css`). Use `100cqw`, not `100vw`, for widths. A phone-only sheet portaled to `<body>`
@@ -332,7 +336,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Random Sticking Warmup | `tools-sticking-warmup.md` |
 | Slow Downer, old Recorder, Community posts, old Home, legal pages | `tools-slow-downer-recorder-community-home.md` |
 | Backend: sync design, auth, email, account page, profiles, follows, file storage | `backend-convex.md` |
-| Split screen and the side view (one system since 2026-11-23: `openBeside`, panes with their own address, flip/swap/float/full screen, phones) | `tiling-split-screen.md` |
+| Split screen and the side view (one system since 2026-11-23: `openBeside`, panes with their own address, flip/swap/float/full screen, phones); tabs (each a saved layout: the strip, the phone sheet, `jam-practice-tabs` in the account or browser, shortcuts) | `tiling-split-screen.md` |
 | Older shared-conventions list (partly superseded by the section above) | `shared-conventions.md` |
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |
