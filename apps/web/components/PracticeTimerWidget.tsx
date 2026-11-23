@@ -116,19 +116,20 @@ export default function PracticeTimerWidget({
   );
 
   if (bar) {
-    // Just the stopwatch and the time left (the step's name is in the label and on the tool
-    // page), so the page name beside it keeps its room.
+    // The stopwatch and the time left (on a phone the step's name is in the label and on the
+    // tool page, so the page name beside it keeps its room; a wider screen has room for it).
     return (
       <Link
         href={taskHref ?? "/practice-timer"}
         onClick={openTask}
-        aria-label={`${taskHref ? "Now practicing" : "Practice Timer"} ${state.alarming ? "time's up" : "running"}: ${state.current.title}`}
+        aria-label={`${state.alarming ? "Time's up" : taskHref ? "Now practicing" : "Practice Timer"}: ${state.current.title}`}
         title={state.current.title}
         className={`${TOUCH_HIT} flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-2.5 text-xs font-medium lg:hidden ${
           state.alarming ? "animate-pulse text-danger" : "text-foreground"
         }`}
       >
         <StopwatchIcon className={`h-4 w-4 shrink-0 ${state.alarming ? "" : "text-accent"}`} />
+        <span className="hidden max-w-[10rem] truncate sm:inline">{state.current.title}</span>
         {state.alarming ? <span className="whitespace-nowrap">Time&apos;s up</span> : remaining}
       </Link>
     );

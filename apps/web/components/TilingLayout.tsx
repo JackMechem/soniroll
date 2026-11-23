@@ -48,6 +48,7 @@ import {
   navigateMain,
   navigatePane,
   paneBack,
+  paneHistoryTraverse,
   panesActive,
   paneCanGoBack,
   paneDetach,
@@ -206,6 +207,30 @@ export default function TilingLayout({ children }: { children: React.ReactNode }
     const onPop = () => closeSideFromHistory();
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  // The browser's Back while split goes back inside the active pane (`paneHistoryTraverse`). In the
+  // capture phase, so it runs before Next's own popstate listener, which it then stops. Whether it
+  // was Back or Forward comes from the Navigation API where there is one (else Back).
+  useEffect(() => {
+    let direction: "back" | "forward" | null = null;
+    type Nav = EventTarget & { currentEntry?: { index: number } | null };
+    const nav = (window as unknown as { navigation?: Nav }).navigation;
+    const onNavigate = (e: Event) => {
+      const ev = e as Event & { navigationType?: string; destination?: { index: number } };
+      const from = nav?.currentEntry?.index;
+      direction = ev.navigationType === "traverse" && ev.destination && from !== undefined ? (ev.destination.index < from ? "back" : "forward") : null;
+    };
+    const onPop = (e: PopStateEvent) => {
+      const dir = direction;
+      direction = null;
+      if (paneHistoryTraverse(dir)) e.stopImmediatePropagation();
+    };
+    nav?.addEventListener("navigate", onNavigate);
+    window.addEventListener("popstate", onPop, true);
+    return () => {
+      nav?.removeEventListener("navigate", onNavigate);
+      window.removeEventListener("popstate", onPop, true);
+    };
   }, []);
 
   // Escape: a full-screen pane goes back to its place; else the side view closes — when the key
@@ -604,18 +629,18 @@ function PaneBar({
                   <FlyoutItem icon={SwapIcon} label="Swap places" onSelect={run(() => swapPane(leaf.id))} />
                 </>
               )}
-              {/* The side view: over the page or beside it. Any other pane can become it. */}
-              {desktop && (isFloat || isSide) && (
+              {/* Every pane: beside the page (tiled) or over it (floating, the side view). The side
+                  view's own choice is remembered for the next thing it opens. */}
+              {desktop && (isFloat || canFloat) && (
                 <>
-                  <FlyoutItem icon={OverlayIcon} label="Over the page" checked={isFloat} onSelect={run(() => !isFloat && floatPane(leaf.id))} />
                   <FlyoutItem icon={PushIcon} label="Beside the page" checked={!isFloat} onSelect={run(() => isFloat && dockFloat())} />
+                  <FlyoutItem icon={OverlayIcon} label="Over the page" checked={isFloat} onSelect={run(() => !isFloat && floatPane(leaf.id, { choose: isSide }))} />
                 </>
               )}
-              {desktop && !isFloat && !isSide && canFloat && <FlyoutItem icon={OverlayIcon} label="Float over the page" onSelect={run(() => floatPane(leaf.id))} />}
-              {desktop && !isFloat && (
+              {desktop && (
                 <>
-                  <FlyoutItem icon={SideBySideIcon} label="Open another beside it…" onSelect={run(() => split("right"))} />
-                  <FlyoutItem icon={StackedIcon} label="Open another below it…" onSelect={run(() => split("down"))} />
+                  <FlyoutItem icon={SideBySideIcon} label="Open beside…" onSelect={run(() => split("right"))} />
+                  <FlyoutItem icon={StackedIcon} label="Open below…" onSelect={run(() => split("down"))} />
                 </>
               )}
               <FlyoutItem icon={ExternalLinkIcon} label={noteView ? "Open in Shed Notes" : "Open as a page"} onSelect={run(openAsPage)} />

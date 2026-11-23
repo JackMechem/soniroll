@@ -171,5 +171,5 @@ export function tuneSummary(tune: Tune): string {
 export function menuPosition(e: React.MouseEvent) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
   // ContextMenu's width (208px), so the menu's right edge lines up with the button's.
-  return { x: rect.right - 208, y: rect.bottom + 4 };
+  return { x: rect.right - 208, y: rect.bottom + 4, flipY: rect.top - 4 };
 }

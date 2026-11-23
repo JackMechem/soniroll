@@ -36,6 +36,10 @@ import {
   ShieldIcon,
   NAV_LINKS,
   SearchIcon,
+  FileIcon,
+  HomeIcon,
+  SideViewIcon,
+  SplitIcon,
   StarIcon,
   filterLinks,
   groupByCategory,
@@ -108,27 +112,6 @@ function CloseIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-/** A panel at the right of the page: the side view. */
-function SideViewIcon() {
-  return (
-    <svg {...svgProps("h-4 w-4 text-muted")}>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <rect x="12" y="7" width="7" height="10" rx="1" />
-    </svg>
-  );
-}
-
-/** A pane split side by side ("row") or top and bottom ("col"). */
-function SplitIcon({ direction }: { direction: "row" | "col" }) {
-  return (
-    <svg {...svgProps("h-4 w-4 text-muted")}>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d={direction === "row" ? "M12 4v16" : "M3 12h18"} />
-    </svg>
-  );
-}
-
 
 /** The sidebar's own "more options" trigger — three vertical dots, filled rather than stroked
     (every other icon in this file is an outlined `svgProps` icon, but a stroked dot at this size
@@ -480,15 +463,17 @@ function NavItems({
     const href = a?.getAttribute("href");
     if (!isDesktop || !href || !canShowInPane(href)) return;
     e.preventDefault();
+    // "Open" shows the page's own icon (the sidebar row's), like the rows below show theirs.
+    const OpenIcon = pageNameFor(href)?.icon ?? (href === DASHBOARD_PATH ? HomeIcon : FileIcon);
     setMenu({
       x: e.clientX,
       y: e.clientY,
       items: [
-        { label: "Open", onSelect: () => navigateMain(href) || router.push(href) },
+        { label: "Open", icon: <OpenIcon className="h-4 w-4 text-muted" />, onSelect: () => navigateMain(href) || router.push(href) },
         // Short, so they fit the menu's width; the split icons say it's split screen.
-        { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openBeside(href, { mode: "right" }) },
-        { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openBeside(href, { mode: "down" }) },
-        { label: "Open in the side view", icon: <SideViewIcon />, onSelect: () => openBeside(href) },
+        { label: "Open side by side", icon: <SplitIcon direction="row" className="h-4 w-4 text-muted" />, onSelect: () => openBeside(href, { mode: "right" }) },
+        { label: "Open above and below", icon: <SplitIcon direction="col" className="h-4 w-4 text-muted" />, onSelect: () => openBeside(href, { mode: "down" }) },
+        { label: "Open in the side view", icon: <SideViewIcon className="h-4 w-4 text-muted" />, onSelect: () => openBeside(href) },
         { label: "Open in a new tab", icon: <NewTabIcon className="h-4 w-4" />, onSelect: () => newTab(href, { after: true }), divider: true },
       ],
     });

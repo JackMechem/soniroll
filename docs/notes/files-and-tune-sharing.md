@@ -358,3 +358,40 @@ core (only the old `.at()` errors); eslint on the changed web files.
 `draggable` but phones use the ⋮ menu), moving a recording/song/lesson file/hand-in (same code path as
 uploads; only uploads were tried), the 500-item / 2000-folder limits, Safari, the desktop app
 (`tsc`/build not run there).
+
+### 2026-11-23 — review fixes (folders, tags, menus)
+
+- **Tags can't be doubled** (`components/library/TagEditor.tsx`): a tag already there in any case
+  ("nfdrone" / "NFDrone") isn't added again, pills are keyed by the lower-case tag (the React
+  duplicate-key error is gone), removing one removes that tag only, and `uniqueTags` cleans what the
+  dialog starts with and saves, so the display is what's saved. Tunes' Tags dialog is the same
+  editor. The tag box has focus when the dialog opens.
+- **Menus stay on screen** (`components/ContextMenu.tsx`, every ⋮/right-click menu): measured once
+  drawn, opened upward above the ⋮ button when it doesn't fit below (`menuPosition` now passes
+  `flipY`), never off screen, scrolling when long. **On phones (< 640px) it's a bottom sheet** with
+  the item's name as its heading (`MenuState.title`), every item reachable; a tap on the dimmed page
+  closes it without reaching what's under it. `Flyout` menus scroll too when taller than the window.
+- **The Files page's address follows you**: the open folder, the search and a single picked tag are
+  written back as `?folder=`, `?q=`, `?tag=` (replaced, not pushed; the search after 400 ms). In a
+  pane through the pane's router, as a page through `history.replaceState` (Next keeps its search
+  params in step). So a pane's Back, and a reload, return to the folder and search.
+- **Where column**: every row says where it is — the folder's name, or "Files" at the top level
+  (folders too: their parent), after "Recording · Tune" when it is one; in the filtered list it's a
+  button that opens the folder (the top level too). The phone's line under the name only adds the
+  folder in the filtered list. With no source row, the type row's first chip is "Everything N" like
+  the phone's (was "All types"). The ⋮ item is always "Tags…". The phone sort menu says "Newest",
+  "Oldest", "Name", "Largest", "Smallest" (it showed "Newest fi…").
+- **"Moved to …" notice** after moving files or a folder (`showNotice`, `lib/notice.ts`).
+- Menu icons for Open side by side / Open full window / Open in the side view / Detach / Open the
+  tune; the side view and split icons moved to `components/tools.tsx` (`SideViewIcon`, `SplitIcon`),
+  shared with the sidebar's right-click menu, whose "Open" now shows the page's icon.
+- A tune's Files card: `KeptHereHint` takes the list and says "kept on the device that saved
+  them" when one is on another device, nothing when none is on a device.
+- Left as is: Download isn't offered for a file kept on another device (there's nothing here to
+  download); the folder delete dialogs were already `alertdialog` with `aria-modal`.
+- Verified in headless Chromium (uxpass, 1440 light/dark, 390 light/dark): duplicate tags (one pill,
+  no console error), focus in the tag box, Move → notice, Where cells, `?folder=&q=` written and kept
+  over a reload, a Library pane's Back after the sidebar opened the Tuner in it (folder kept), a ⋮
+  menu flipping above its button in a 520px-tall window, the phone sheet (all items, bottom at 830 of
+  844, backdrop tap), the tune's hint for a file on another device. Everything made was deleted.
+  Not verified: real touch scrolling of a long sheet, Safari.

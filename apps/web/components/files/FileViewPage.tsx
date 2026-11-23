@@ -19,6 +19,7 @@ import { goBackOr } from "@/lib/goBack";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { usePageCrumbs } from "@/lib/pageCrumbs";
 import { usePaneId } from "@/lib/paneContext";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 
 const KINDS: StoredKind[] = ["file", "recording", "song", "lesson", "handin", "profile"];
 
@@ -26,11 +27,13 @@ const KINDS: StoredKind[] = ["file", "recording", "song", "lesson", "handin", "p
  * `/files/view?kind=…&id=…`: one of your own files on a page of its own, mostly for the side view
  * and split screen (`lib/fileView.ts`) — a PDF in the PDF viewer and editor (markings saved as
  * always) filling the pane under its bar, anything else shown in place with Download. As a page of
- * its own (not in a pane) a PDF opens in the full-window editor, and Done goes back.
+ * its own a PDF fills the page on a desktop (so panes floating over it, and the sidebar, stay
+ * usable) and the whole screen on a phone; Done goes back.
  */
 export default function FileViewPage({ kind, id }: { kind: string; id: string }) {
   const router = useRouter();
   const inPane = usePaneId() !== null;
+  const desktop = useIsDesktop();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storedKind = KINDS.includes(kind as StoredKind) ? (kind as StoredKind) : null;
   const raw = useQuery(api.fileFolders.item, isAuthenticated && storedKind && id ? { kind: storedKind, id } : "skip");
@@ -74,7 +77,7 @@ export default function FileViewPage({ kind, id }: { kind: string; id: string })
     const editor = (
       <PdfEditor
         file={{ id: item.kind === "file" ? item.id : undefined, name: item.name, url: item.url }}
-        embedded={inPane}
+        embedded={inPane || desktop}
         onClose={inPane ? undefined : () => goBackOr(router, filesHref({ folder }))}
       />
     );

@@ -6,7 +6,7 @@ import Flyout, { FlyoutItem } from "@/components/Flyout";
 import PromptDialog from "@/components/PromptDialog";
 import { CloseIcon, DotsVerticalIcon, PencilIcon } from "@/components/tools";
 import { MAX_TABS, closeTab, duplicateTab, newTab, renameTab, switchTab, useTabs, type TabView } from "@/lib/useTabs";
-import { DuplicateIcon, NewTabIcon, TabLabel, tabName } from "./tabParts";
+import { DuplicateIcon, NewTabIcon, TabLabel, PageNameText, tabName } from "./tabParts";
 
 const OPEN_EVENT = "open-tabs-sheet";
 
@@ -18,7 +18,8 @@ export function openTabsSheet() {
 /**
  * Tabs on a phone: no strip, just a count in the top bar once there are two or more (tap it for
  * the list), and the list itself — tap a tab to show it, ⋮ to rename or duplicate it, × to close
- * it, and New tab. A phone shows each tab's main page (no split screen there).
+ * it, and New tab. A phone shows one page of a tab at a time (no split screen there): its main
+ * page, with the others under it ("Also in this tab") to show instead.
  */
 export default function PhoneTabsButton() {
   const { tabs } = useTabs();
@@ -45,6 +46,29 @@ export default function PhoneTabsButton() {
       )}
       {open && <TabsSheet onClose={() => setOpen(false)} />}
     </>
+  );
+}
+
+/** A tab's other pages (beside its main one on a desktop): a phone shows one page at a time, so
+    each is a button that shows that page of the tab. */
+function OtherPages({ tab, onPick }: { tab: TabView; onPick: () => void }) {
+  return (
+    <div className="-mt-1 flex flex-wrap items-center gap-1.5 px-4 pb-2.5 pl-12 text-xs text-muted">
+      <span>Also in this tab:</span>
+      {tab.pageHrefs.slice(1).map((href, i) => (
+        <button
+          key={`${i}:${href}`}
+          type="button"
+          onClick={() => {
+            onPick();
+            switchTab(tab.id, href);
+          }}
+          className="h-7 max-w-full truncate rounded-full bg-foreground/[0.06] px-2.5 font-medium text-foreground hover:bg-surface-hover"
+        >
+          <PageNameText href={href} />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -84,60 +108,63 @@ function TabsSheet({ onClose }: { onClose: () => void }) {
           {tabs.map((tab) => {
             const on = tab.id === activeId;
             return (
-              <li key={tab.id} className={`flex items-center gap-1 rounded-2xl pr-1 ${on ? "bg-accent/15" : "bg-foreground/[0.04]"}`}>
-                <button
-                  type="button"
-                  aria-current={on ? "page" : undefined}
-                  onClick={() => {
-                    onClose();
-                    switchTab(tab.id);
-                  }}
-                  className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl px-4 text-left text-sm ${on ? "font-semibold" : "font-medium"}`}
-                >
-                  <TabLabel tab={tab} active={on} iconClassName="h-5 w-5" />
-                </button>
-                {tabs.length > 1 && (
-                  <>
-                    <Flyout
-                      icon={DotsVerticalIcon}
-                      label={`Options for ${tabName(tab)}`}
-                      align="end"
-                      buttonClassName="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
-                    >
-                      {(close) => (
-                        <>
-                          <FlyoutItem
-                            icon={PencilIcon}
-                            label="Rename"
-                            onSelect={() => {
-                              close();
-                              setRenaming(tab);
-                            }}
-                          />
-                          {!full && (
+              <li key={tab.id} className={`flex flex-col rounded-2xl ${on ? "bg-accent/15" : "bg-foreground/[0.04]"}`}>
+                <div className="flex items-center gap-1 pr-1">
+                  <button
+                    type="button"
+                    aria-current={on ? "page" : undefined}
+                    onClick={() => {
+                      onClose();
+                      switchTab(tab.id);
+                    }}
+                    className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl px-4 text-left text-sm ${on ? "font-semibold" : "font-medium"}`}
+                  >
+                    <TabLabel tab={tab} active={on} iconClassName="h-5 w-5" mark={false} />
+                  </button>
+                  {tabs.length > 1 && (
+                    <>
+                      <Flyout
+                        icon={DotsVerticalIcon}
+                        label={`Options for ${tabName(tab)}`}
+                        align="end"
+                        buttonClassName="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+                      >
+                        {(close) => (
+                          <>
                             <FlyoutItem
-                              icon={DuplicateIcon}
-                              label="Duplicate"
+                              icon={PencilIcon}
+                              label="Rename"
                               onSelect={() => {
                                 close();
-                                duplicateTab(tab.id);
+                                setRenaming(tab);
                               }}
                             />
-                          )}
-                        </>
-                      )}
-                    </Flyout>
-                    <button
-                      type="button"
-                      onClick={() => closeTab(tab.id)}
-                      aria-label={`Close ${tabName(tab)}`}
-                      title="Close tab"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
-                    >
-                      <CloseIcon className="h-4 w-4" />
-                    </button>
-                  </>
-                )}
+                            {!full && (
+                              <FlyoutItem
+                                icon={DuplicateIcon}
+                                label="Duplicate"
+                                onSelect={() => {
+                                  close();
+                                  duplicateTab(tab.id);
+                                }}
+                              />
+                            )}
+                          </>
+                        )}
+                      </Flyout>
+                      <button
+                        type="button"
+                        onClick={() => closeTab(tab.id)}
+                        aria-label={`Close ${tabName(tab)}`}
+                        title="Close tab"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+                      >
+                        <CloseIcon className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                {tab.panes > 1 && <OtherPages tab={tab} onPick={onClose} />}
               </li>
             );
           })}

@@ -193,15 +193,20 @@ export function OnOtherDevice({ label, what = "file" }: { label: string; what?: 
 }
 
 /** A line under something just saved, on the free plan: it's kept on this device, and a plan keeps
-    it on all of them. Nothing with a plan (or while loading). */
-export function KeptHereHint({ what = "Files" }: { what?: string }) {
+    it on all of them. Nothing with a plan (or while loading). With `items` (a list of saved
+    files), it says what's true of them: nothing if none is kept on a device, "on the device that
+    saved them" if some are on another one. */
+export function KeptHereHint({ what = "Files", items }: { what?: string; items?: { device?: unknown; url?: string | null }[] }) {
   const storage = useStoragePlan();
   if (!storage || storage.hasPlan) return null;
+  const onDevices = items?.filter((i) => i.device);
+  if (onDevices && onDevices.length === 0) return null;
+  const elsewhere = !!onDevices?.some((i) => !i.url);
   return (
     <p className="flex items-start gap-1.5 text-xs text-muted">
       <DeviceIcon className="mt-px h-3.5 w-3.5 shrink-0" />
       <span>
-        {what} are kept on this device.{" "}
+        {what} are kept on {elsewhere ? "the device that saved them" : "this device"}.{" "}
         <Link href={PLAN_HREF} className="font-medium text-accent hover:underline">
           Get them on all your devices
         </Link>

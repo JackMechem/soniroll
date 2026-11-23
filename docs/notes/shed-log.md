@@ -821,3 +821,18 @@ changed file; `convex dev --once`.
 online (only device-kept ones); a recording/song/lesson file attached (same code path); assigned
 routines; the pill during an alarm; keyboard focus between the PDF pane and a tool pane with a real
 keyboard (the PDF's keys are guarded with `usePaneKeyGuard`); `pnpm build`; the desktop app.
+
+### 2026-11-23 — review fixes (task page wording, chips)
+
+- Task page: the status card's button reads **"Add for today only"** (tunes, charts, tools for this
+  day; was "Attach for today") and the Files section's is **"Add files"** (for every time; was
+  "Add", with a tooltip saying so). The routine page's Files button is "Add files" too.
+- The routine card's ⋮ is labelled "Options for <routine name>".
+- The phone top bar's timer chip: its label is plain ("Now practicing: Scales", "Time's up: …"),
+  and from `sm` up (a tablet's bar has room) it shows the step's name before the time.
+- The phone top bar's trail gives way from the left: an earlier crumb ("Library") shrinks before the
+  page's own name, which keeps up to 8 letters (`CrumbTrail` compact) — "L… / Files", not
+  "Library / F", with the tab count and the timer chip showing. At 340px with both, the earlier
+  crumb disappears and the name can run a few pixels into the ? button (not fixed).
+- Verified in headless Chromium (uxpass, dark 1440): the task and routine pages' buttons; the trail
+  measured at 390/340/320 with a stand-in for the chip (signed out). The tablet chip name: code only.

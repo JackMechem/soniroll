@@ -272,11 +272,12 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
         </div>
       )}
       <div className="flex flex-col gap-1.5 border-t border-foreground/[0.06] pt-3">
+        {/* Tunes, charts and tools; files have their own section below (for every time). */}
         <span className="text-xs font-semibold text-muted">Attached</span>
         <div className="flex flex-wrap items-center gap-1.5">
           {/* Files, folders and tags are listed under Files. */}
           {everyTime.some((a) => !isFileAttachment(a)) && <AttachmentList items={everyTime} noFiles />}
-          <AttachmentList items={dayAttachments} onChange={setDayAttachments} noFiles addLabel={routineId ? `Attach for ${day === today ? "today" : formatShortDate(day)}` : "Attach"} />
+          <AttachmentList items={dayAttachments} onChange={setDayAttachments} noFiles addLabel={routineId ? `Add for ${day === today ? "today" : formatShortDate(day)} only` : "Attach"} />
         </div>
       </div>
     </section>
@@ -289,8 +290,8 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
       count: fileCount || undefined,
       action:
         isAuthenticated && !routine?.assigned ? (
-          <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON}>
-            <PlusIcon className="h-4 w-4" /> Add
+          <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON} title="Files for every time you do this task">
+            <PlusIcon className="h-4 w-4" /> Add files
           </button>
         ) : undefined,
       content: (

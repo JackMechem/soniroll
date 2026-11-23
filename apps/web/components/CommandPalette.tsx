@@ -237,7 +237,7 @@ function Palette({ onClose }: { onClose: () => void }) {
       target.run();
       return;
     }
-    // A pane's "Open another beside it…" opened this palette (`requestSplit`): the pick opens in a
+    // A pane's "Open beside…" opened this palette (`requestSplit`): the pick opens in a
     // new pane there. With split screen showing, a pick opens in the main pane; otherwise it's a
     // normal page navigation.
     if (!applyPendingSplit(target.href) && !navigateMain(target.href)) router.push(target.href);
@@ -282,8 +282,8 @@ function Palette({ onClose }: { onClose: () => void }) {
               setQuery(e.target.value);
               setActive(0);
             }}
-            placeholder={pendingSplit ? "Pick a tool to tile…" : "Search tools, tunes, charts, pages and settings…"}
-            aria-label="Search tools"
+            placeholder={pendingSplit ? (pendingSplit.edge === "down" ? "Open below… (pick a tool or page)" : "Open beside… (pick a tool or page)") : "Search tools, tunes, charts, pages and settings…"}
+            aria-label={pendingSplit ? (pendingSplit.edge === "down" ? "Open below" : "Open beside") : "Search tools"}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
           />
         </div>

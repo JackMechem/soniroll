@@ -181,7 +181,7 @@ export default function RoutinePage({ id, date }: { id: string; date?: string })
       action:
         isAuthenticated && !routine.assigned ? (
           <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON}>
-            <PlusIcon className="h-4 w-4" /> Add
+            <PlusIcon className="h-4 w-4" /> Add files
           </button>
         ) : undefined,
       content: (

@@ -1,5 +1,6 @@
 "use client";
 
+import Notice from "@/components/Notice";
 import TilingLayout from "@/components/TilingLayout";
 import PracticeLogGlobal from "@/components/practicelog/PracticeLogGlobal";
 import TabStrip from "@/components/tabs/TabStrip";
@@ -20,6 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <PracticeLogGlobal />
       <TabsSync />
+      <Notice />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TabStrip />
         <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${strip ? "lg:[--sidebar-toggle-room:0px]" : ""}`}>

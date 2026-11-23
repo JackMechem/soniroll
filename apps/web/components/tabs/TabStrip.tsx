@@ -16,7 +16,7 @@ import {
   useTabs,
   type TabView,
 } from "@/lib/useTabs";
-import { DuplicateIcon, NewTabIcon, TabLabel, tabName, tabShortcut } from "./tabParts";
+import { DuplicateIcon, NewTabIcon, TabLabel, tabName, tabShortcut, useTabName } from "./tabParts";
 
 const DRAG_TYPE = "application/x-soniroll-tab";
 
@@ -94,7 +94,7 @@ export default function TabStrip() {
                   role="tab"
                   aria-selected={on}
                   draggable
-                  title={`${tabName(tab)}${shortcut ? ` (${shortcut})` : ""}`}
+                  title={shortcut ? `(${shortcut})` : undefined}
                   onClick={() => switchTab(tab.id)}
                   onDoubleClick={() => setEditing(tab.id)}
                   onAuxClick={(e) => {
@@ -114,7 +114,7 @@ export default function TabStrip() {
                   onDragEnd={() => setDrag(null)}
                   className={`flex h-full min-w-0 flex-1 items-center gap-2 rounded-[inherit] pl-3 pr-8 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${on ? "font-medium" : ""}`}
                 >
-                  <TabLabel tab={tab} active={on} />
+                  <TabLabel tab={tab} active={on} hint={shortcut ? ` (${shortcut})` : ""} />
                 </button>
               )}
               {editing !== tab.id && (
@@ -176,12 +176,13 @@ export default function TabStrip() {
 /** Renaming a tab in place: Enter or clicking away keeps it, Escape doesn't. Empty goes back to
     its page's name. */
 function RenameField({ tab, onDone }: { tab: TabView; onDone: () => void }) {
-  const [value, setValue] = useState(tab.name ?? tabName(tab));
+  const pageName = useTabName({ ...tab, name: null });
+  const [value, setValue] = useState(tab.name ?? pageName);
   const finished = useRef(false);
   const finish = (keep: boolean) => {
     if (finished.current) return;
     finished.current = true;
-    if (keep) renameTab(tab.id, value === tabName({ ...tab, name: null }) ? "" : value);
+    if (keep) renameTab(tab.id, value === pageName || value === tabName({ ...tab, name: null }) ? "" : value);
     onDone();
   };
   return (

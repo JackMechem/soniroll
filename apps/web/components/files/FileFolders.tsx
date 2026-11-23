@@ -10,6 +10,7 @@ import { ManageTagsDialog, TagPill, TagsDialog } from "@/components/library/TagE
 import { ChevronRightIcon, CloseIcon, FolderIcon, FolderOpenIcon, FolderPlusIcon, PencilIcon, TagIcon, TrashIcon } from "@/components/tools";
 import { type StoredEntry, errorText } from "@/lib/files";
 import { deleteOnDevice } from "@/lib/deviceFiles";
+import { showNotice } from "@/lib/notice";
 import { cleanFolder, countFileTags, folderName, folderParent, isInFolder } from "@jam-practice/core/fileFolders";
 
 /**
@@ -80,7 +81,10 @@ export function useFileOrganizer({ items, folders, onFolderMoved }: { items: Sto
   async function moveTo(list: StoredEntry[], folder: string) {
     const todo = list.filter((i) => (fresh(i).folder ?? "") !== folder);
     if (!todo.length) return;
-    await run(moveItems({ items: todo.map(ref), folder }), "Couldn't move them.");
+    if (await run(moveItems({ items: todo.map(ref), folder }), "Couldn't move them.")) {
+      const what = todo.length === 1 ? `“${todo[0].name}”` : `${todo.length} files`;
+      showNotice(`Moved ${what} to “${folderLabel(folder)}”`);
+    }
   }
 
   /** Renames or moves a folder to `to` (a full path). */
@@ -88,7 +92,10 @@ export function useFileOrganizer({ items, folders, onFolderMoved }: { items: Sto
     const clean = cleanFolder(to);
     if (!clean || clean === from) return;
     if (clean.startsWith(`${from}/`)) return setError("A folder can't go inside itself.");
-    if (await run(renameFolder({ from, to: clean }), "Couldn't move the folder.")) onFolderMoved?.(from, clean);
+    if (await run(renameFolder({ from, to: clean }), "Couldn't move the folder.")) {
+      onFolderMoved?.(from, clean);
+      if (folderParent(clean) !== folderParent(from)) showNotice(`Moved “${folderName(clean)}” to “${folderLabel(folderParent(clean))}”`);
+    }
   }
 
   /** A sibling with the same name (ignoring case) is the same folder. */
@@ -136,7 +143,7 @@ export function useFileOrganizer({ items, folders, onFolderMoved }: { items: Sto
     const now = fresh(item);
     return [
       { label: "Move to folder…", onSelect: () => setMoving({ items: [now] }), icon: <FolderIcon className="h-4 w-4" />, divider: true },
-      { label: now.tags?.length ? "Tags…" : "Add tags…", onSelect: () => setTagging(now), icon: <TagIcon className="h-4 w-4" /> },
+      { label: "Tags…", onSelect: () => setTagging(now), icon: <TagIcon className="h-4 w-4" /> },
     ];
   }
 

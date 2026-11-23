@@ -5,6 +5,7 @@ import {
   DocumentIcon,
   DownloadIcon,
   FeedbackIcon,
+  FileIcon,
   GearIcon,
   HeartIcon,
   HelpIcon,
@@ -46,6 +47,7 @@ const PAGE_TITLES: { match: (path: string) => boolean; label: string; href?: str
   { match: (p) => p === "/admin" || p.startsWith("/admin/"), label: "Admin", href: "/admin", icon: ShieldIcon },
   { match: (p) => p === "/reset-password", label: "Reset password", icon: ShieldIcon },
   { match: (p) => /^\/(setlist|routine|tune|file|note)\//.test(p), label: "Shared", icon: ShareIcon },
+  { match: (p) => p === "/files/view", label: "File", icon: FileIcon },
 ];
 
 /** `color`: a tool's category colour (`--cat-n`), as the sidebar shows its icon. */

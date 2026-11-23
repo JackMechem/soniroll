@@ -381,6 +381,26 @@ export function MaximizeIcon({ className }: { className?: string }) {
   );
 }
 
+/** The side view: a panel at the right of the page. */
+export function SideViewIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <rect x="12" y="7" width="7" height="10" rx="1" />
+    </svg>
+  );
+}
+
+/** Split screen: two pages side by side ("row", the default) or one above the other ("col"). */
+export function SplitIcon({ className, direction = "row" }: { className?: string; direction?: "row" | "col" }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d={direction === "row" ? "M12 4v16" : "M3 12h18"} />
+    </svg>
+  );
+}
+
 export function MinimizeIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>

@@ -4,6 +4,7 @@ import { LIBRARY_CRUMB } from "@/components/library/hrefs";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
@@ -22,8 +23,9 @@ import { useBackup } from "@/lib/storageMove";
 import { PLAN_HREF, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
 import SaveWhere from "@/components/files/SaveWhere";
 import { useSiteSettings } from "@/lib/siteSettings";
-import { FolderCrumbs, useFileOrganizer } from "@/components/files/FileFolders";
-import { childFolders, cleanFolder, folderAfterDelete, folderName, hasFileTag, isInFolder, movedFolder } from "@jam-practice/core/fileFolders";
+import { usePaneId } from "@/lib/paneContext";
+import { FolderCrumbs, folderLabel, useFileOrganizer } from "@/components/files/FileFolders";
+import { childFolders, cleanFolder, folderAfterDelete, folderName, folderParent, hasFileTag, isInFolder, movedFolder } from "@jam-practice/core/fileFolders";
 
 type Source = StoredKind;
 
@@ -49,13 +51,14 @@ const SOURCE_SHORT: Record<Source, string | null> = {
 type SortKey = "added" | "name" | "where" | "size";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 
-/** The phone's sort menu (the columns sort on wider screens). */
+/** The phone's sort menu (the columns sort on wider screens). Short, so the chosen one fits the
+    button whole ("Newest first" was cut to "Newest fi…"). */
 const SORT_OPTIONS: { value: string; label: string; sort: Sort }[] = [
-  { value: "new", label: "Newest first", sort: { key: "added", dir: "desc" } },
-  { value: "old", label: "Oldest first", sort: { key: "added", dir: "asc" } },
+  { value: "new", label: "Newest", sort: { key: "added", dir: "desc" } },
+  { value: "old", label: "Oldest", sort: { key: "added", dir: "asc" } },
   { value: "name", label: "Name", sort: { key: "name", dir: "asc" } },
-  { value: "big", label: "Largest first", sort: { key: "size", dir: "desc" } },
-  { value: "small", label: "Smallest first", sort: { key: "size", dir: "asc" } },
+  { value: "big", label: "Largest", sort: { key: "size", dir: "desc" } },
+  { value: "small", label: "Smallest", sort: { key: "size", dir: "asc" } },
 ];
 
 /** A kind as a filter. */
@@ -89,7 +92,17 @@ const COLUMNS = "sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,13rem)_5.5rem_6.5r
  * pill lists matching files from every folder, each with its folder in the Where column.
  * `?folder=Etudes/Wilcoxon` and `?tag=Gig` (`initialFolder`, `initialTag`) open on one.
  */
-export default function FilesPage({ initialSource = "all", initialFolder = null, initialTag = null }: { initialSource?: Source | "all"; initialFolder?: string | null; initialTag?: string | null }) {
+export default function FilesPage({
+  initialSource = "all",
+  initialFolder = null,
+  initialTag = null,
+  initialQuery = "",
+}: {
+  initialSource?: Source | "all";
+  initialFolder?: string | null;
+  initialTag?: string | null;
+  initialQuery?: string;
+}) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
   const tunes = useTuneIndex();
@@ -97,7 +110,7 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
   const saveTarget = useSaveTarget();
   const myFiles = useMemo(() => storage?.items.filter((i) => i.kind === "file"), [storage]);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [source, setSource] = useState<Source | "all">(initialSource);
   const [kind, setKind] = useState<FileKind | "all">("all");
   const [folder, setFolder] = useState(() => cleanFolder(initialFolder ?? ""));
@@ -137,6 +150,33 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
   const pickedTags = useMemo(() => tagFilter.filter((t) => tagCounts.some((x) => x.tag.toLowerCase() === t.toLowerCase())), [tagFilter, tagCounts]);
   const toggleTag = (tag: string) =>
     setTagFilter(pickedTags.some((t) => t.toLowerCase() === tag.toLowerCase()) ? pickedTags.filter((t) => t.toLowerCase() !== tag.toLowerCase()) : [...pickedTags, tag]);
+  // The open folder, the search and a single picked tag live in the address too (`?folder=`,
+  // `?q=`, `?tag=`), replaced as you browse: Back (a split-screen pane's Back included) and a
+  // reload come back to the same place. In a pane the pane's own router keeps its address; as a
+  // page, the History API (Next keeps its search params in step, without a navigation).
+  const paneId = usePaneId();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tagParam = pickedTags.length === 1 ? pickedTags[0] : "";
+  useEffect(() => {
+    if (initialSource !== "all" || !storage) return;
+    const current = searchParams?.toString() ?? "";
+    const want = new URLSearchParams(current);
+    const put = (key: string, value: string) => (value ? want.set(key, value) : want.delete(key));
+    put("folder", here);
+    put("q", query.trim());
+    put("tag", tagParam);
+    const next = want.toString();
+    if (next === current) return;
+    const timer = window.setTimeout(() => {
+      const href = `${pathname}?${next}`;
+      if (paneId) router.replace(href, { scroll: false });
+      else window.history.replaceState(null, "", href);
+    }, query.trim() ? 400 : 0);
+    return () => window.clearTimeout(timer);
+  }, [initialSource, storage, searchParams, pathname, paneId, router, here, query, tagParam]);
+
   /** No search or filter: show folders. */
   const folderView = !query.trim() && source === "all" && kind === "all" && pickedTags.length === 0;
   const uploader = useFileUploader(undefined, saveTarget, myFiles, folderView && here ? here : undefined);
@@ -171,10 +211,17 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
   const showSources = counts.bySource.size > 1 || source !== "all";
   const showKinds = counts.byKind.size > 1 || kind !== "all";
 
-  /** The Where column: what it is and which tune it's on (and its folder, in the filtered list). */
+  /** The Where column: what it is, which tune it's on, and the folder it's in ("Files" at the top
+      level) — the same for every row, folders included, in the folder view and the filtered list. */
   const whereOf = (item: StoredEntry) => {
     const tune = item.tuneId ? tuneName(item.tuneId) : undefined;
-    return [SOURCE_SHORT[item.kind], tune, !folderView && item.folder ? folderName(item.folder) : null].filter(Boolean).join(" · ") || (folderView ? "" : "Your files");
+    return [SOURCE_SHORT[item.kind], tune, folderLabel(item.folder ?? "")].filter(Boolean).join(" · ");
+  };
+  /** The phone's line under the name: the folder only in the filtered list (in the folder view
+      it's the one you're in). */
+  const phoneWhereOf = (item: StoredEntry) => {
+    const tune = item.tuneId ? tuneName(item.tuneId) : undefined;
+    return [SOURCE_SHORT[item.kind], tune, !folderView && item.folder ? folderName(item.folder) : null].filter(Boolean).join(" · ");
   };
 
   const shown = useMemo(() => {
@@ -377,7 +424,8 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
               )}
               {showKinds && (
               <div className="flex flex-wrap items-center gap-1.5">
-                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label="All types" />
+                {/* With no source row above, this row's "all" is Everything, as on phones. */}
+                <FilterChip active={kind === "all"} onClick={() => setKind("all")} label={showSources ? "All types" : "Everything"} count={showSources ? undefined : items.length} />
                 {(Object.keys(FILE_KIND_LABEL) as FileKind[])
                   .filter((k) => counts.byKind.get(k))
                   .map((k) => (
@@ -588,8 +636,8 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
                           </span>
                         </span>
                       </button>
-                      <span role="cell" className="hidden px-2 text-sm text-muted sm:block">
-                        Folder
+                      <span role="cell" className="hidden truncate px-2 text-sm text-muted sm:block">
+                        {folderLabel(folderParent(f.path))}
                       </span>
                       <span role="cell" className="hidden px-2 text-right text-sm tabular-nums text-muted sm:block">
                         {f.size ? formatBytes(f.size) : ""}
@@ -642,7 +690,7 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
                             </span>
                             {/* Phones: everything in one line under the name. */}
                             <span className="block truncate text-xs text-muted sm:hidden">
-                              {fileDetail(item, [where === "Your files" ? null : where, item.device && !item.url ? `On ${otherDeviceName(item.device.label)}` : null, ...(item.tags ?? [])].filter(Boolean).join(" · ") || null)}
+                              {fileDetail(item, [phoneWhereOf(item) || null, item.device && !item.url ? `On ${otherDeviceName(item.device.label)}` : null, ...(item.tags ?? [])].filter(Boolean).join(" · ") || null)}
                             </span>
                             <span className="hidden min-w-0 items-center gap-1 text-xs text-muted sm:flex">
                               <span className="shrink-0">{FILE_KIND_LABEL[fileKind(item.mimeType, item.name)]}</span>
@@ -662,16 +710,23 @@ export default function FilesPage({ initialSource = "all", initialFolder = null,
                               <Link href={`/tunes/tune?id=${encodeURIComponent(item.tuneId)}`} className="text-foreground hover:text-accent hover:underline">
                                 {tuneName(item.tuneId)}
                               </Link>
-                              {!folderView && item.folder && " · "}
+                              {" · "}
                             </>
                           ) : (
-                            !folderView && item.folder ? (SOURCE_SHORT[item.kind] ? `${SOURCE_SHORT[item.kind]} · ` : "") : where
+                            SOURCE_SHORT[item.kind] && `${SOURCE_SHORT[item.kind]} · `
                           )}
-                          {/* The filtered list: the folder it's in, opening it. */}
-                          {!folderView && item.folder && (
-                            <button type="button" onClick={() => openFolder(item.folder!)} title={`Open the folder ${item.folder}`} className="inline-flex max-w-full items-center gap-1 align-bottom text-foreground hover:text-accent hover:underline">
+                          {/* The folder it's in ("Files" at the top level); in the filtered list it opens it. */}
+                          {folderView ? (
+                            folderLabel(item.folder ?? "")
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openFolder(item.folder ?? "")}
+                              title={item.folder ? `Open the folder ${item.folder}` : "Open the top of Files"}
+                              className="inline-flex max-w-full items-center gap-1 align-bottom text-foreground hover:text-accent hover:underline"
+                            >
                               <FolderIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
-                              <span className="truncate">{folderName(item.folder)}</span>
+                              <span className="truncate">{folderLabel(item.folder ?? "")}</span>
                             </button>
                           )}
                         </span>

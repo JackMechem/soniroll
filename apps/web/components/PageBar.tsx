@@ -175,11 +175,12 @@ export function CrumbTrail({
   };
   const crumbItem = (c: Crumb, i: number) => {
     // Earlier crumbs give way first (they shrink faster than the page's own name), down to a few
-    // letters each. On phones a short one ("Help", "Tunes") is already under that minimum, so it
-    // just takes its own width (a minimum would leave a gap after its "/").
+    // letters each. On phones a short one ("Help", "Library") has no minimum (one would leave a gap
+    // after its "/"), so with the bar full (the tab count, the timer chip) it gives way before the
+    // page's own name does ("Lib… / Files", not "Library / F").
     const short = compact && (c.short ?? c.label).length <= 7;
     return (
-      <li key={`${i}-${c.label}`} className={`flex items-center gap-1.5 ${short ? "shrink-0" : compact ? "min-w-[4rem] max-w-[7.5rem] shrink-[2]" : "min-w-[2.5rem] max-w-[16rem] shrink-[2]"}`}>
+      <li key={`${i}-${c.label}`} className={`flex items-center gap-1.5 ${short ? "min-w-0 shrink-[3]" : compact ? "min-w-[4rem] max-w-[7.5rem] shrink-[2]" : "min-w-[2.5rem] max-w-[16rem] shrink-[2]"}`}>
         {crumbEl(c)}
         {sep}
       </li>
@@ -213,7 +214,11 @@ export function CrumbTrail({
           </li>
         )}
         {after.map((c, i) => crumbItem(c, i + 100))}
-        <li className="flex min-w-0 shrink items-center">
+        <li
+          className="flex min-w-0 shrink items-center"
+          // Phones: the page's own name keeps up to its first 8 letters whatever's beside it.
+          style={compact ? { minWidth: `${Math.min(lastLabel.length, 8)}ch` } : undefined}
+        >
           {compact ? (
             // The page's heading on phones (the desktop bar's is the h1 below, hidden there).
             <span role="heading" aria-level={1} className="flex min-w-0">

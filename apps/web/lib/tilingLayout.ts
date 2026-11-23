@@ -77,6 +77,34 @@ export function insertBeside(tree: PaneTree, targetId: string, edge: PaneEdge, l
   return recurse(tree);
 }
 
+/** How many panes sit side by side (`"row"`) or one above the other (`"col"`) across `node`. */
+function countAlong(node: PaneTree, direction: "row" | "col"): number {
+  if (node.type === "leaf") return 1;
+  const a = countAlong(node.children[0], direction);
+  const b = countAlong(node.children[1], direction);
+  return node.direction === direction ? a + b : Math.max(a, b);
+}
+
+/** After a pane was added (`leafId`): every split on its way down from the top that runs the same
+    way as the one holding it shares its room out by the panes along that line, so a third pane
+    beside two gives thirds instead of halving one of them. Other splits keep their sizes. */
+export function balanceAlong(tree: PaneTree, leafId: string): PaneTree {
+  const holder = parentSplit(tree, leafId);
+  if (!holder) return tree;
+  const direction = holder.direction;
+  const contains = (node: PaneTree): boolean => (node.type === "leaf" ? node.id === leafId : contains(node.children[0]) || contains(node.children[1]));
+  function walk(node: PaneTree): PaneTree {
+    if (node.type === "leaf" || !contains(node)) return node;
+    const children: [PaneTree, PaneTree] = [walk(node.children[0]), walk(node.children[1])];
+    if (node.direction !== direction) return { ...node, children };
+    const a = countAlong(children[0], direction);
+    const b = countAlong(children[1], direction);
+    const first = Math.round((a / (a + b)) * 1000) / 10;
+    return { ...node, children, sizes: [first, 100 - first] };
+  }
+  return walk(tree);
+}
+
 /** Splits the leaf `targetId` with a new pane showing `newHref` (see `insertBeside`). */
 export function splitLeaf(tree: PaneTree, targetId: string, edge: PaneEdge, newHref: string): { tree: PaneTree; newPaneId: string } {
   const leaf = createLeaf(newHref);

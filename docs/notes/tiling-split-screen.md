@@ -758,3 +758,63 @@ likely with tabs); `pnpm build`.
 agent's signed-in page could have shown a tab strip (its screen becoming a tab). It's back to one
 tab. The privacy line about open tabs went in with the Files commit (`7a06059`), ahead of this
 code.
+
+## 2026-11-23: review fixes (side view, panes, tabs)
+
+A review of today's split screen, side view and tabs found things covering each other. What changed:
+
+- **The side view opens beside the page by default** (`DEFAULT_SIDE_PREFS.mode = "push"`): over the
+  page it hid the Metronome's controls under a PDF, half the "now practicing" pill, the Library's
+  Upload. `jam-practice-note-peek` now carries `chosen: true` once someone picks Over/Beside in the
+  side view's ⋮; a stored mode without it (the old default, saved with every width change, so a
+  real choice couldn't be told apart) reads as beside. "Over the page" stays in every pane's ⋮ for
+  quick peeks. Beside the page needs room: the side view keeps its width if the other panes stay
+  ≥ 320px, else everything along the row is shared out evenly, else (a narrow window) it floats.
+- **Things open next to where they were opened** (`openBeside`): from a pane of a split with no
+  side view, the new pane goes right beside that pane (and becomes the side view); from a pane the
+  floating side view covers, the float docks first; "Open side by side"/"Open beside…" from the
+  floating side view docks it and splits it, so nothing lands under it (the task page's file case).
+- **Even splits and a minimum** (`balanceAlong` in `tilingLayout.ts`): a new pane shares the room
+  out along its line (a third pane beside two gives thirds, not 50/25/25). A new pane (and the one
+  it's opened beside) must be ≥ 360px wide (`MIN_PANE_WIDTH`) or 240px tall; with no room it opens
+  in a new tab instead, with a notice (`setNoRoomHandler`, registered by `useTabs`).
+- **A PDF as the page** (`/files/view` not in a pane) fills the page on a desktop (`PdfEditor
+  embedded`, Done goes back) instead of the full-window editor at z-70, which covered a floated
+  pane and the sidebar. Phones keep the full-screen editor.
+- **Browser Back while split** goes back inside the active pane only (`paneHistoryTraverse`, from a
+  capture-phase `popstate` listener in `TilingLayout` that stops Next's own listener). It used to
+  load the window's previous page into the focused pane (two copies of the PDF). Forward does
+  nothing in a pane (direction from the Navigation API's `navigate` event; Back if it's missing).
+  With nothing left in the pane's own history, Back does nothing (the browser entry is used up).
+- **Phones don't rewrite tabs** (`useTabs.ts`): a phone shows one page of a tab, and used to save
+  that back (dropping the other panes and turning the PDF side view into a pane). Now a phone
+  never copies its screen into a tab; where it went inside a tab is remembered on the phone only
+  (`phoneHrefs`). Tab actions (new, close, rename, duplicate, reorder) still save from anywhere.
+- **Tab names:** a tab showing one of your files is named after the file (`useTabName`, a
+  `fileFolders.item` query); `/files/view` is "File" in `pageNames.ts` (was "Page"). "+N" became a
+  small split mark whose tooltip lists the pages ("3 pages: Tuner, Dashboard, Metronome"). The phone's
+  tab list shows "Also in this tab:" with a button per other page (`switchTab(id, href)` shows that
+  page of the tab on the phone).
+- **Wording:** every pane's ⋮ has the same pair, "Beside the page" / "Over the page" (was "Float
+  over the page" on some), and "Open beside…" / "Open below…"; the ⌘K picker then says "Open
+  beside… (pick a tool or page)" (was "Pick a tool to tile…").
+- **Close other tabs** shows "Closed N other tabs · Undo" (`lib/notice.ts` + `components/Notice.tsx`,
+  a small one-at-a-time notice mounted by `AppShell`, also used for "no room").
+- **Not a bug:** "Float over the page floats the wrong pane" (Dashboard | Metronome) came from the
+  review script's locator — `filter({ hasText: "Tap tempo" })` matched the Dashboard pane too
+  (hidden text), so it opened the Dashboard's menu. Floating from the right pane's own ⋮ floats it.
+
+Verified in headless Chromium (dev, signed out and a throwaway `.test` account, deleted after):
+the old unchosen "overlay" pref opening beside; the pane menu's wording; thirds from "Open beside…"
+and a fourth pane opening in a new tab with the notice; browser Back/Forward in a split (pane Back,
+no duplicate); a PDF from Files beside the Files pane, Upload uncovered; Metronome floated over the
+PDF page (embedded editor, float on top, sidebar usable); a PDF from a Files pane in a split (new
+pane beside it, thirds); "Open side by side" from inside the floating side view (docked, three
+panes); a PDF opened from a pane the float covered (float docked, Back in it); 1440 dark three panes
+with a PDF (no overflow); 390 phone PDF from Files (full-screen side view). Tabs: a desktop tab with
+Metronome + PDF side view, a phone switching into it, navigating and showing the PDF through "Also
+in this tab", then the desktop reloaded — the tab still had both panes; Close other tabs + Undo.
+`tsc` (web, desktop), eslint on the changed files.
+**Not verified:** a real phone and two devices open at the same moment; Safari/Firefox (no
+Navigation API in older ones: Back is assumed); the desktop app running; hover tooltips (the split
+mark's list); audio by ear.

@@ -2,9 +2,10 @@
 
 import { useSyncExternalStore } from "react";
 import { confirmLeave } from "@/lib/leaveGuards";
+import { showNotice } from "@/lib/notice";
 import { type Layout, allPanes, cloneLayout, collectLeaves, findPane, readLayout } from "@/lib/tilingLayout";
 import { normalizePaneHref } from "@/lib/toolRegistry";
-import { getTilingState, showTabLayout, subscribeTiling } from "@/lib/useTilingLayout";
+import { getTilingState, setNoRoomHandler, showTabLayout, subscribeTiling } from "@/lib/useTilingLayout";
 
 /**
  * Tabs: each one a view of its own — one page, or a split of several with a side view — saved as
@@ -26,6 +27,10 @@ import { getTilingState, showTabLayout, subscribeTiling } from "@/lib/useTilingL
  *   straight away.
  * - A device whose tab isn't in the list (new to it, or its tab was closed elsewhere) joins the
  *   tab showing its page, or its screen becomes a new tab (`join`).
+ * - A phone (or a window narrower than a desktop) shows one page of a tab and never writes what it
+ *   shows back into the tab: where it goes inside a tab stays on the phone (`phoneHrefs`), so it
+ *   can't flatten a split or a side view set up on a desktop. Tab actions (new, close, rename,
+ *   duplicate, reorder) are saved from any device.
  */
 
 export const TABS_KEY = "jam-practice-tabs";
@@ -42,8 +47,9 @@ export type SavedTab = { id: string; name?: string; href: string; layout?: Layou
 export type TabsSettings = { tabs: SavedTab[] };
 export const TABS_DEFAULTS: TabsSettings = { tabs: [] };
 
-/** What the tab strip and the phone's tab list show. `mainHref` names the tab until it's renamed. */
-export type TabView = { id: string; name: string | null; href: string; mainHref: string; panes: number };
+/** What the tab strip and the phone's tab list show. `mainHref` names the tab until it's renamed;
+    `pageHrefs` is every page in it, the main one first. */
+export type TabView = { id: string; name: string | null; href: string; mainHref: string; panes: number; pageHrefs: string[] };
 export type TabsView = { tabs: TabView[]; activeId: string };
 
 type Writer = (patch: Partial<TabsSettings>) => void;
@@ -64,7 +70,13 @@ let viewKey = "";
 let subscribed = false;
 const listeners = new Set<() => void>();
 
-const SERVER_VIEW: TabsView = { tabs: [{ id: LIVE_TAB_ID, name: null, href: "/", mainHref: "/", panes: 1 }], activeId: LIVE_TAB_ID };
+const SERVER_VIEW: TabsView = { tabs: [{ id: LIVE_TAB_ID, name: null, href: "/", mainHref: "/", panes: 1, pageHrefs: ["/"] }], activeId: LIVE_TAB_ID };
+
+const isDesktopWindow = () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+/** On a phone: the page it's on inside each tab it visited (never saved; see the top). */
+const phoneHrefs = new Map<string, string>();
+/** On a phone: the page a tab switch is on its way to (Next's router hasn't got there yet). */
+let phonePending: string | null = null;
 
 function newId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `t${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
@@ -115,9 +127,17 @@ function isTabMode() {
   return tabs.length >= 2 && activeId !== null && tabs.some((t) => t.id === activeId);
 }
 
-/** Copies the screen into the active tab; true if that changed it. */
+/** Copies the screen into the active tab; true if that changed it. A phone only remembers the
+    page it's on, for itself. */
 function refreshActive(): boolean {
   if (!isTabMode()) return false;
+  if (!isDesktopWindow()) {
+    const here = getTilingState().routeHref;
+    if (phonePending && here !== phonePending) return false;
+    phonePending = null;
+    phoneHrefs.set(activeId!, here);
+    return false;
+  }
   const i = tabs.findIndex((t) => t.id === activeId);
   const next = withLive(tabs[i]);
   if (JSON.stringify(next) === JSON.stringify(tabs[i])) return false;
@@ -133,16 +153,19 @@ function save() {
   if (writer && writable) writer({ tabs: value });
 }
 
-function tabView(tab: SavedTab): TabView {
+function tabView(tab: SavedTab, phoneHref?: string): TabView {
   const layout = tab.layout;
   const leaves = collectLeaves(layout?.tree ?? null);
   const main = layout ? (leaves.find((l) => l.id === layout.mainPaneId) ?? leaves[0]) : undefined;
-  return { id: tab.id, name: tab.name ?? null, href: tab.href, mainHref: main?.href ?? tab.href, panes: layout ? allPanes(layout).length : 1 };
+  const mainHref = phoneHref ?? main?.href ?? tab.href;
+  const others = layout ? allPanes(layout).filter((p) => p !== main).map((p) => p.href) : [];
+  return { id: tab.id, name: tab.name ?? null, href: phoneHref ?? tab.href, mainHref, panes: layout ? allPanes(layout).length : 1, pageHrefs: [mainHref, ...others] };
 }
 
 function emit() {
+  const desktop = isDesktopWindow();
   const next: TabsView = isTabMode()
-    ? { tabs: tabs.map((t) => tabView(t.id === activeId ? withLive(t) : t)), activeId: activeId! }
+    ? { tabs: tabs.map((t) => (desktop ? tabView(t.id === activeId ? withLive(t) : t) : tabView(t, t.id === activeId ? (phonePending ?? getTilingState().routeHref) : phoneHrefs.get(t.id)))), activeId: activeId! }
     : { tabs: [tabView({ id: LIVE_TAB_ID, ...liveTab() })], activeId: LIVE_TAB_ID };
   const key = JSON.stringify(next);
   if (key === viewKey && view) return;
@@ -272,8 +295,8 @@ export function receiveSavedTabs(raw: unknown, storeScope: string, ready: boolea
     join(list);
     return;
   }
-  // The tab on screen stays as this device has it.
-  tabs = list.map((t) => (t.id === activeId ? withLive(t) : t));
+  // The tab on screen stays as this device has it (a phone keeps the saved one: it shows only a page of it).
+  tabs = list.map((t) => (t.id === activeId && isDesktopWindow() ? withLive(t) : t));
   emit();
 }
 
@@ -297,13 +320,21 @@ function resolveId(id: string) {
   return id === LIVE_TAB_ID ? activeId : id;
 }
 
-function goTo(id: string) {
+function goTo(id: string, pageHref?: string) {
   refreshActive();
   const target = tabs.find((t) => t.id === id);
   if (!target) return;
   activeId = id;
   storeActiveId(id);
-  const go = showTabLayout(target.layout ?? null, target.href);
+  let go: string | null;
+  if (isDesktopWindow()) go = showTabLayout(target.layout ?? null, target.href);
+  else {
+    // A phone shows one page of the tab: the one asked for, the one it was on, or the main one.
+    const href = pageHref ?? phoneHrefs.get(id) ?? tabView(target).mainHref;
+    phoneHrefs.set(id, href);
+    phonePending = normalizePaneHref(href);
+    go = showTabLayout(null, href);
+  }
   refreshActive();
   save();
   emit();
@@ -314,10 +345,12 @@ export function tabCount(): number {
   return isTabMode() ? tabs.length : 1;
 }
 
-/** Shows another tab (after asking, if the page on screen has unsaved work). */
-export function switchTab(id: string) {
-  if (!isTabMode() || id === activeId || !tabs.some((t) => t.id === id)) return;
-  confirmLeave(() => goTo(id));
+/** Shows another tab (after asking, if the page on screen has unsaved work). `pageHref`: on a
+    phone, which of the tab's pages to show (the tab list's "Also open"). */
+export function switchTab(id: string, pageHref?: string) {
+  if (!isTabMode() || !tabs.some((t) => t.id === id)) return;
+  if (id === activeId && (!pageHref || pageHref === getTilingState().routeHref)) return;
+  confirmLeave(() => goTo(id, pageHref));
 }
 
 /** The tab at this position (0-based; -1 = the last one), for the keyboard shortcuts. */
@@ -390,12 +423,29 @@ export function closeTab(id: string) {
   });
 }
 
-/** Closes every tab but this one. */
+/** Closes every tab but this one (with Undo in a notice). */
 export function closeOtherTabs(id: string) {
   if (!isTabMode() || !tabs.some((t) => t.id === id)) return;
   const keep = () => {
+    refreshActive();
+    const before = tabs;
     tabs = tabs.filter((t) => t.id === id);
     settle();
+    const closed = before.length - 1;
+    showNotice(`Closed ${closed} other ${closed === 1 ? "tab" : "tabs"}`, {
+      action: {
+        label: "Undo",
+        run: () => {
+          // Back as they were, staying on this tab (only if nothing's changed the tabs since).
+          if (isTabMode() || tabs.length) return;
+          tabs = before.map((t) => (t.id === id && isDesktopWindow() ? withLive(t) : t));
+          activeId = id;
+          storeActiveId(id);
+          save();
+          emit();
+        },
+      },
+    });
   };
   if (id === activeId) keep();
   else
@@ -442,3 +492,10 @@ export function moveTab(id: string, to: number) {
   save();
   emit();
 }
+
+// No room for another pane beside the others: it opens in a new tab instead.
+setNoRoomHandler((href) => {
+  if (!newTab(href, { after: true })) return false;
+  showNotice("No room for another pane here, so it opened in a new tab.");
+  return true;
+});

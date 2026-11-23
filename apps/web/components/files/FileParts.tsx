@@ -15,7 +15,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
-import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, ExternalLinkIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
+import { CloudIcon, DeviceIcon, CloseIcon, DocumentIcon, DownloadIcon, ExternalLinkIcon, FileIcon, ImageIcon, LinkIcon, MaximizeIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, SideViewIcon, SplitIcon, TrashIcon, UploadIcon, VideoIcon, WaveIcon } from "@/components/tools";
 import {
   type FileKind,
   type StoredEntry,
@@ -452,9 +452,13 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
     return [
       { label: "Open", onSelect: () => openFile(item), icon: <FileIcon className="h-4 w-4" /> },
       // A PDF opens in the side view; these are the other ways (a split, or the whole window).
-      ...(beside && wide ? [{ label: "Open side by side", onSelect: () => void openFileBeside(item.kind, item.id, { mode: "right", from: paneId }) }] : []),
-      ...(beside ? [{ label: "Open full window", onSelect: () => setOpen(item) }] : []),
-      ...(!beside && item.kind !== "profile" ? [{ label: "Open in the side view", onSelect: () => void openFileBeside(item.kind, item.id, { from: paneId }) }] : []),
+      ...(beside && wide
+        ? [{ label: "Open side by side", onSelect: () => void openFileBeside(item.kind, item.id, { mode: "right", from: paneId }), icon: <SplitIcon className="h-4 w-4" /> }]
+        : []),
+      ...(beside ? [{ label: "Open full window", onSelect: () => setOpen(item), icon: <MaximizeIcon className="h-4 w-4" /> }] : []),
+      ...(!beside && item.kind !== "profile"
+        ? [{ label: "Open in the side view", onSelect: () => void openFileBeside(item.kind, item.id, { from: paneId }), icon: <SideViewIcon className="h-4 w-4" /> }]
+        : []),
       // Audio (and video): open it in a tool that plays it.
       ...openIn.toolsFor(item).map((t) => ({ label: `Open in ${t.label}`, onSelect: t.open, icon: <t.icon className="h-4 w-4" /> })),
       ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
@@ -472,20 +476,22 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
           ? [{ label: "Remove from this tune", onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }), icon: <LinkIcon className="h-4 w-4" /> }]
           : [
               { label: item.tuneId ? "Move to another tune" : "Attach to a tune", onSelect: () => setLinking(item), icon: <LinkIcon className="h-4 w-4" /> },
-              ...(item.tuneId ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }) }] : []),
+              ...(item.tuneId
+                ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }), icon: <CloseIcon className="h-4 w-4" /> }]
+                : []),
             ]),
-      ...(where ? [{ label: goToLabel(item), onSelect: () => router.push(where) }] : []),
+      ...(where ? [{ label: goToLabel(item), onSelect: () => router.push(where), icon: <ExternalLinkIcon className="h-4 w-4" /> }] : []),
       ...(organizer ? organizer.menuItems(item) : []),
       { label: "Delete", onSelect: () => setDeleting({ items: [item] }), danger: true, divider: !!organizer, icon: <TrashIcon className="h-4 w-4" /> },
     ];
   }
 
   /** The ⋮ button's menu, under the button. */
-  const openMenu = (item: StoredEntry, e: React.MouseEvent) => setMenu({ ...menuPosition(e), items: items(item) });
+  const openMenu = (item: StoredEntry, e: React.MouseEvent) => setMenu({ ...menuPosition(e), items: items(item), title: item.name });
   /** A right-click menu, at the pointer. */
   const contextMenu = (item: StoredEntry, e: React.MouseEvent) => {
     e.preventDefault();
-    setMenu({ x: e.clientX, y: e.clientY, items: items(item) });
+    setMenu({ x: e.clientX, y: e.clientY, items: items(item), title: item.name });
   };
   /** Ask, then delete several items (the Files page's selection). */
   const deleteMany = (list: StoredEntry[], onDone?: () => void) => list.length && setDeleting({ items: list, onDone });
@@ -762,7 +768,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
       <UploadProgress progress={uploader.progress} />
       {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
       {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
-      {isAuthenticated && files && files.length > 0 && <KeptHereHint />}
+      {isAuthenticated && files && files.length > 0 && <KeptHereHint items={files} />}
       {uploader.input}
       {actions.dialogs}
       {adding && (
