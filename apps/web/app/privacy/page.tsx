@@ -8,7 +8,8 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy policy" updated="November 23, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a set of free music practice tools run by Jack Mechem.
+        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>, the desktop app and the Android app) is a set of free music
+        practice tools run by Jack Mechem.
         Every tool is free; the only thing sold is optional extra storage (a storage plan). This page says what it collects and why, in plain words.
       </p>
 
@@ -23,7 +24,8 @@ export default function PrivacyPage() {
 
       <LegalSection title="Signed out">
         <p>
-          Your settings, tunes, chord charts, practice history and any audio files you open stay in your browser&apos;s own storage. They aren&apos;t
+          Your settings, open tabs, tunes, chord charts, practice history and any audio files you open stay in your browser&apos;s own storage (or the
+          app&apos;s, in the desktop and phone apps). They aren&apos;t
           sent to soniroll. Clearing your browser&apos;s data for soniroll.com deletes them.
         </p>
       </LegalSection>
@@ -100,7 +102,9 @@ export default function PrivacyPage() {
           <li>
             <strong>Lessons:</strong> once you join a teacher, they see a summary of your Shed Log, how you&apos;re doing on the routines they gave you
             (including notes and recordings on those), and anything you hand in. Not your other routines, notes or recordings. Lesson materials, hand-ins
-            and booking details are shared only between the teacher and that student, and booking emails go to both. Leave a teacher at any time.
+            and booking details are shared only between the teacher and that student, and booking emails go to both. &ldquo;Add to calendar&rdquo;
+            saves a calendar file on your device, or, if you pick Google Calendar, sends that lesson&apos;s time and title to Google. Leave a teacher at
+            any time.
           </li>
         </ul>
       </LegalSection>
@@ -124,7 +128,8 @@ export default function PrivacyPage() {
 
       <LegalSection title="Administration">
         <p>
-          The administrators can see each account&apos;s email, username, sign-in method and sign-up date, read feedback, and remove posts or accounts
+          The administrators can see each account&apos;s email, username, sign-in method and sign-up date, how much storage it uses (totals and
+          counts, online and on devices, not file names) and its storage plan, read feedback, and remove posts or accounts
           that break the <LegalLink href="/terms">terms</LegalLink>. They don&apos;t browse your private stuff (your library, Shed Log, Shed Notes,
           recordings or notes).
         </p>
@@ -132,6 +137,9 @@ export default function PrivacyPage() {
 
       <LegalSection title="Cookies and browser storage">
         <p>Only what the site needs to work: keeping you signed in, your theme, tool settings and similar preferences. No ad or tracking cookies.</p>
+        <p>
+          The phone app&apos;s timer alerts and reminders are scheduled on your phone itself; no push notification service is used.
+        </p>
       </LegalSection>
 
       <LegalSection title="Services soniroll uses">
@@ -148,15 +156,22 @@ export default function PrivacyPage() {
             lesson emails).
           </li>
           <li>
-            <LegalLink href="https://policies.google.com/privacy">Google</LegalLink> handles &quot;Sign in with Google&quot;, if you use it.
+            <LegalLink href="https://policies.google.com/privacy">Google</LegalLink> handles &quot;Sign in with Google&quot;, if you use it, and Google
+            Calendar if you add a lesson to it. In the desktop app, Google Fonts serves a theme&apos;s font the first time you pick one (the website
+            hosts its own fonts).
           </li>
           <li>
             <LegalLink href="https://vercel.com/legal/privacy-policy">Vercel</LegalLink> hosts the website and, like any web host, sees standard
             request details such as IP addresses.
           </li>
           <li>
-            <LegalLink href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub Pages</LegalLink> serves the piano
-            samples straight to your browser (see <LegalLink href="/credits">Credits</LegalLink>).
+            <LegalLink href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub</LegalLink> serves the piano
+            samples straight to your browser (GitHub Pages; see <LegalLink href="/credits">Credits</LegalLink>), and the desktop and Android app
+            downloads and desktop updates.
+          </li>
+          <li>
+            <LegalLink href="https://www.buymeacoffee.com/privacy-policy">Buy Me a Coffee</LegalLink> takes donations, if you give one; soniroll
+            never sees your payment details.
           </li>
         </ul>
         <p>These may process data outside your country, including in the United States. soniroll doesn&apos;t sell or share data for advertising.</p>
@@ -165,7 +180,8 @@ export default function PrivacyPage() {
       <LegalSection title="Keeping and deleting">
         <p>
           Your data is kept while your account exists. Deleting your account (from the Account page) permanently removes it and everything tied to it:
-          profile, posts, library, Shed Log, Shed Notes, scores, recordings, files, lessons and feedback. Daily usage totals aren&apos;t tied to anyone, so there&apos;s
+          profile, posts, settings and tabs, library, Shed Log, Shed Notes, scores, recordings, files (with their folders, tags and PDF markings),
+          lessons and feedback. Daily usage totals aren&apos;t tied to anyone, so there&apos;s
           nothing of yours in them to delete.
         </p>
       </LegalSection>

@@ -6,10 +6,10 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of service" updated="November 17, 2026">
+    <LegalPage title="Terms of service" updated="November 23, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         These terms cover your use of soniroll (
-        <LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>, and its desktop app), a
+        <LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>, its desktop app and its Android app), a
         collection of music practice tools built and operated by Jack Mechem. By using the site,
         you agree to these terms. If you don&apos;t agree, please don&apos;t use it.
       </p>
@@ -61,7 +61,8 @@ export default function TermsPage() {
       <LegalSection title="Your content">
         <p>
           You keep all rights to what you make or upload — tunes, chord charts, recordings,
-          setlists, routines, files, lesson materials, posts and profile pictures. You&apos;re responsible
+          setlists, routines, notes, scores, files (and your markings on them), lesson materials,
+          posts and profile pictures. You&apos;re responsible
           for having the right to use whatever you upload (for example, not uploading copyrighted
           recordings or scans you don&apos;t have permission to share). By posting something
           publicly (a public profile, a Community post, a shared link), you let soniroll show it to
@@ -84,6 +85,23 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Lessons">
+        <p>
+          Lessons helps teachers and students keep notes, materials, assignments and bookings in one
+          place. The lessons themselves are between the teacher and the student: soniroll doesn&apos;t
+          take part in them, doesn&apos;t handle lesson fees, and isn&apos;t responsible for what&apos;s
+          taught, arranged or shared there. Teachers are responsible for having their students&apos;
+          (or a parent&apos;s) agreement to what they share with them.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Donations">
+        <p>
+          Donating (through Buy Me a Coffee) is optional and is a gift: it doesn&apos;t buy storage,
+          features or anything else, and everything stays free whether you give or not.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Intellectual property">
         <p>
           The soniroll name, design, and its original source code belong to Jack Mechem. soniroll
@@ -93,7 +111,9 @@ export default function TermsPage() {
           <LegalLink href="https://github.com/JackMechem/soniroll">
             public GitHub repository
           </LegalLink>
-          , if anything.
+          , if anything. The sounds and fonts soniroll includes (for example the piano and Rhodes
+          samples) belong to their makers and are used under their own licenses, listed on the{" "}
+          <LegalLink href="/credits">Credits</LegalLink> page.
         </p>
       </LegalSection>
 
@@ -125,8 +145,9 @@ export default function TermsPage() {
 
       <LegalSection title="Third-party services">
         <p>
-          soniroll relies on third-party services (currently Convex, Resend, Google, Vercel and Polar —
-          see the Privacy policy for what each is used for) to provide accounts, email and payments. Those
+          soniroll relies on third-party services (currently Convex, Resend, Google, Vercel, Polar,
+          GitHub and Buy Me a Coffee — see the Privacy policy for what each is used for) to provide
+          accounts, email, payments, downloads and donations. Those
           services have their own terms, and soniroll isn&apos;t responsible for their
           availability, changes, or errors.
         </p>
@@ -138,7 +159,8 @@ export default function TermsPage() {
           of any kind, express or implied — including that it will be uninterrupted, error-free,
           or fit for any particular purpose. Several parts of the app (in particular, the audio
           tools) haven&apos;t been tested against every possible device, browser, or piece of
-          hardware. Use it accordingly, and don&apos;t rely on it as your only copy of anything
+          hardware, and the Android app is an early test version (an alpha). Use it accordingly, and
+          don&apos;t rely on it as your only copy of anything
           irreplaceable — export or back up anything important.
         </p>
       </LegalSection>
