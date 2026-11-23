@@ -43,7 +43,7 @@ import { HELP_TOPICS } from "@/lib/helpContent";
 import {
   applyPendingSplit,
   clearPendingSplit,
-  syncAddressBar,
+  navigateMain,
   useTilingState,
 } from "@/lib/useTilingLayout";
 
@@ -212,20 +212,10 @@ function Palette({ onClose }: { onClose: () => void }) {
   function go(index: number) {
     const target = ordered[index];
     if (!target) return;
-    // An edge button in `components/TilingLayout.tsx` opened this palette on a pane's behalf
-    // (`requestSplit`) — picking a result here splits that pane instead of navigating the whole
-    // page. `applyPendingSplit` already updates the pane tree itself; this only still owns moving
-    // the URL, same as an ordinary pick. Uses `syncAddressBar` (raw History API), not
-    // `router.replace` — routing a tiling-internal address-bar update through Next's own router
-    // was traced to a real bug (see `TilingLayout.tsx`'s own doc comment): navigating to a URL
-    // matching a `TOOL_COMPONENTS` entry remounts that tool wherever else it's already showing,
-    // which would lose a sibling pane's running state the instant a split picked a tool that
-    // happened to already be open elsewhere.
-    if (applyPendingSplit(target.href)) {
-      syncAddressBar(target.href);
-    } else {
-      router.push(target.href);
-    }
+    // A pane's "Open another beside it…" opened this palette (`requestSplit`): the pick opens in a
+    // new pane there. With split screen showing, a pick opens in the main pane; otherwise it's a
+    // normal page navigation.
+    if (!applyPendingSplit(target.href) && !navigateMain(target.href)) router.push(target.href);
     onClose();
   }
 

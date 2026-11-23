@@ -702,3 +702,10 @@ own page; the totals as a tiny line; the full page stretched across the screen.
 Verified in headless Chromium signed in (throwaway accounts, deleted): the task page empty, with a
 note and a recording, light and dark; the routine page in the side view light and dark; the routine
 as a page at 1440 and 390 (no overflow); no console errors. Not verified by touch.
+
+### 2026-11-23: the side view is now a pane of split screen
+
+`NotePeek.tsx` and the `SideItem` store are gone: the side view is a pane (`openBeside` in
+`lib/useTilingLayout.ts`; `openSide`/`openNotePeek` in `lib/notePeek.ts` turn a task, routine or
+note into its address). Task and routine pages no longer take `inPanel`; in a pane the pane's bar
+has Back and the trail. Phones: Back is a real history entry. Details in `tiling-split-screen.md`.

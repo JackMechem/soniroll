@@ -35,7 +35,9 @@ import {
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { type Recording, recordingsApi } from "@/lib/recordings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
-import { followSide, openNotePeek, openSide } from "@/lib/notePeek";
+import { openNotePeek, openSide } from "@/lib/notePeek";
+import { usePaneId } from "@/lib/paneContext";
+import { goBackOr } from "@/lib/goBack";
 
 const noopSubscribe = () => () => {};
 
@@ -62,11 +64,12 @@ function minutesFor(routine: Routine, occ: Occurrence): number {
 /** `/shed-log/routine?id=…` — one routine's page, a dashboard you arrange (`PageSections`): its
     notes (a Shed Note linking each task's notes), its tasks (each with its own page), what's
     attached, when it's coming up, every clip recorded for it and every day it was practiced. */
-/** `inPanel`: drawn in the side view (`NotePeek`) — no page bar; its tasks and notes open in the
-    view too. As a page of its own it has Back (to the page you came from), and its tasks open in
-    the side view. */
-export default function RoutinePage({ id, date, inPanel = false }: { id: string; date?: string; inPanel?: boolean }) {
+/** Its tasks and notes open in the side view (from inside the side view, in it, with Back). As a
+    page of its own it has Back (to the page you came from); in a pane (the side view, split
+    screen) the pane's bar has Back and the trail instead. */
+export default function RoutinePage({ id, date }: { id: string; date?: string }) {
   const router = useRouter();
+  const inPane = usePaneId() !== null;
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
 
@@ -96,22 +99,18 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
     return [...m.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
   }, [recordings]);
 
-  /** The page around it: nothing extra in the side view; a page bar and Back as a page. */
-  const frame = (label: string, children: React.ReactNode) =>
-    inPanel ? (
-      <>{children}</>
-    ) : (
-      <PageShell>
-        <PageBar crumbs={[...ROUTINES_CRUMBS, { label }]} icon={SHED_LOG_ICON} />
-        {/* A readable column, not the whole width. */}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log/routines"))} />
-          {children}
-        </div>
-      </PageShell>
-    );
-  // From the side view, things open in it (with Back); from the page, in a fresh side view.
-  const show = inPanel ? followSide : openSide;
+  /** The page around it: the page bar (its trail goes in a pane's bar) and Back, outside a pane. */
+  const frame = (label: string, children: React.ReactNode) => (
+    <PageShell>
+      <PageBar crumbs={[...ROUTINES_CRUMBS, { label }]} icon={SHED_LOG_ICON} />
+      {/* A readable column, not the whole width. */}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        {!inPane && <BackButton onClick={() => goBackOr(router, "/shed-log/routines")} />}
+        {children}
+      </div>
+    </PageShell>
+  );
+  const show = openSide;
 
   if (!log.ready || !mounted) return frame("Routine", <LoadingSpinner />);
   if (!routine) return frame("Routine", <EmptyCard>That routine doesn&apos;t exist anymore.</EmptyCard>);
@@ -166,7 +165,7 @@ export default function RoutinePage({ id, date, inPanel = false }: { id: string;
           label={routine.name || "Routine"}
           newTitle={routine.name || "Routine"}
           newBody={routineNoteBody}
-          onOpen={(noteId) => (inPanel ? followSide({ kind: "note", id: noteId }) : openNotePeek(noteId))}
+          onOpen={(noteId) => openNotePeek(noteId)}
         />
       ) : (
         <Quiet>Sign in to keep notes.</Quiet>

@@ -5,6 +5,7 @@ import PdfPageView from "@/components/pdf/PdfPageView";
 import type { Layer } from "@/components/pdf/markup";
 import type { PdfSources } from "@/components/pdf/usePdfDoc";
 import { CloseIcon, SlidesIcon } from "@/components/tools";
+import { usePaneElement } from "@/lib/paneContext";
 
 /**
  * Playing from the PDF: full screen, the page (or two side by side) as big as it fits, turned with
@@ -13,6 +14,8 @@ import { CloseIcon, SlidesIcon } from "@/components/tools";
  */
 export default function PdfPerform({ sources, layer, start, hideMarks, onExit }: { sources: PdfSources; layer: Layer; start: number; hideMarks: boolean; onExit: (page: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  // In a split-screen pane: that pane, not the whole window.
+  const inPane = usePaneElement() !== null;
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [index, setIndex] = useState(start);
   const [twoUp, setTwoUp] = useState<boolean | null>(null);
@@ -77,7 +80,7 @@ export default function PdfPerform({ sources, layer, start, hideMarks, onExit }:
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[72] flex select-none items-center justify-center bg-background"
+      className={`${inPane ? "absolute z-[22]" : "fixed z-[72]"} inset-0 flex select-none items-center justify-center bg-background`}
       style={{ gap }}
       onPointerDown={(e) => {
         swipe.current = { x: e.clientX, y: e.clientY };

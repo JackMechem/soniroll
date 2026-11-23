@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
+import { PaneNavContext } from "@/lib/paneContext";
 import { getLocation, getRouteParams, navigate, useLocation } from "../router";
 
-/** Stand-in for `next/navigation`, on top of the desktop router. */
+/** Stand-in for `next/navigation`, on top of the desktop router. Inside a split-screen pane the
+    pane's own address and router (`PaneNavContext`, set by the website's `TilingLayout`). */
 
 const router = {
   push: (href: string, options?: { scroll?: boolean }) => navigate(href, options),
@@ -13,16 +15,21 @@ const router = {
 };
 
 export function useRouter() {
-  return router;
+  const pane = useContext(PaneNavContext)?.router;
+  return useMemo(() => (pane ? { ...router, ...pane } : router), [pane]);
 }
 
 export function usePathname(): string {
-  return useLocation().pathname;
+  const pane = useContext(PaneNavContext);
+  const { pathname } = useLocation();
+  return pane ? pane.pathname : pathname;
 }
 
 export function useSearchParams(): URLSearchParams {
+  const pane = useContext(PaneNavContext);
   const { search } = useLocation();
-  return useMemo(() => new URLSearchParams(search), [search]);
+  const s = pane ? pane.search : search;
+  return useMemo(() => new URLSearchParams(s), [s]);
 }
 
 export function useParams<T extends Record<string, string> = Record<string, string>>(): T {

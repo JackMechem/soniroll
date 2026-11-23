@@ -41,6 +41,7 @@ import { downloadFile, errorText } from "@/lib/files";
 import { usePdfDoc, usePdfDocs, type PdfSources } from "@/components/pdf/usePdfDoc";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import type { PDFDocumentProxy } from "@/lib/pdfjs";
+import { usePaneElement } from "@/lib/paneContext";
 
 export type PdfFile = {
   /** A `files` row of the signed-in user's: markings are saved to it. Without one (a shared file,
@@ -81,6 +82,8 @@ const ZOOMS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 2, 3];
  */
 export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: () => void }) {
   const { isAuthenticated } = useConvexAuth();
+  // In a split-screen pane or the side view it covers just that pane (so other panes stay usable).
+  const paneEl = usePaneElement();
   const fileId = file.id ? (file.id as Id<"files">) : null;
   const canEdit = !!fileId && isAuthenticated;
 
@@ -324,7 +327,7 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
   };
 
   const body = (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-background text-foreground" role="dialog" aria-label={file.name}>
+    <div className={`${paneEl ? "absolute z-[21]" : "fixed z-[70]"} inset-0 flex flex-col bg-background text-foreground`} role="dialog" aria-label={file.name}>
       {/* Top bar */}
       <div className="flex shrink-0 items-center gap-1 border-b border-foreground/10 bg-surface px-2 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:gap-2 sm:px-3">
         <button type="button" onClick={close} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium hover:bg-surface-hover">
@@ -657,7 +660,7 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
       )}
     </div>
   );
-  return createPortal(body, document.body);
+  return createPortal(body, paneEl ?? document.body);
 }
 
 // ---------------------------------------------------------------- bits

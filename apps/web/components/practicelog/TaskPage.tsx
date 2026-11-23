@@ -37,7 +37,9 @@ import {
 } from "@/lib/practiceLog";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import { recordingsApi } from "@/lib/recordings";
-import { followSide, openNotePeek } from "@/lib/notePeek";
+import { openNotePeek } from "@/lib/notePeek";
+import { usePaneId } from "@/lib/paneContext";
+import { goBackOr } from "@/lib/goBack";
 import { routineHref } from "@/lib/shedLogPages";
 import { usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
@@ -50,11 +52,12 @@ const SHED_LOG_ICON = findToolLink("/shed-log")?.icon;
  * the routine's notes), recordings made for it (Record here saves the clip on the task and puts it
  * in the notes), what's attached, and the days it was practiced. Start runs it on the timer.
  *
- * `inPanel`: drawn in the side view (`NotePeek`) — no page bar, and its notes and routine open in
- * the view too. As a page of its own it has Back (to the page you came from).
+ * Its notes open in the side view (from inside the side view, in it, with Back). As a page of its
+ * own it has Back (to the page you came from); in a pane the pane's bar has Back and the trail.
  */
-export default function TaskPage({ routineId, date, taskId, inPanel = false }: { routineId?: string; date?: string; taskId: string; inPanel?: boolean }) {
+export default function TaskPage({ routineId, date, taskId }: { routineId?: string; date?: string; taskId: string }) {
   const router = useRouter();
+  const inPane = usePaneId() !== null;
   const log = usePracticeLog();
   const { isAuthenticated } = useConvexAuth();
   const { engine, startRoutine, startDayTasks, runningTask } = useRoutineTimer();
@@ -114,20 +117,17 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
         { label: date ? formatShortDate(date) : "Day", href: date ? `/shed-log?date=${date}` : "/shed-log" },
       ];
 
-  /** The page around it: nothing extra in the side view; a page bar and Back as a page. */
-  const frame = (label: string, children: React.ReactNode) =>
-    inPanel ? (
-      <>{children}</>
-    ) : (
-      <PageShell>
-        <PageBar crumbs={[...baseCrumbs, { label }]} icon={SHED_LOG_ICON} />
-        {/* A readable column, not the whole width. */}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/shed-log"))} />
-          {children}
-        </div>
-      </PageShell>
-    );
+  /** The page around it: the page bar (its trail goes in a pane's bar) and Back, outside a pane. */
+  const frame = (label: string, children: React.ReactNode) => (
+    <PageShell>
+      <PageBar crumbs={[...baseCrumbs, { label }]} icon={SHED_LOG_ICON} />
+      {/* A readable column, not the whole width. */}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        {!inPane && <BackButton onClick={() => goBackOr(router, "/shed-log")} />}
+        {children}
+      </div>
+    </PageShell>
+  );
 
   if (!log.ready || !mounted) return frame("Task", <LoadingSpinner />);
   if (!task || (routineId && !routine)) return frame("Task", <Quiet>That task isn&apos;t there anymore.</Quiet>);
@@ -253,7 +253,7 @@ export default function TaskPage({ routineId, date, taskId, inPanel = false }: {
           newTitle={routine ? `${routine.name || "Routine"} · ${title}` : `${title} · ${date ? formatShortDate(date) : ""}`}
           newBody={() => TASK_NOTE_START}
           onCreated={routine ? linkFromRoutine : undefined}
-          onOpen={(id) => (inPanel ? followSide({ kind: "note", id }) : openNotePeek(id))}
+          onOpen={(id) => openNotePeek(id)}
           handleRef={notesRef}
         />
       ),

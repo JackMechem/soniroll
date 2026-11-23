@@ -55,11 +55,11 @@ import { IntroButton } from "@/components/help/ToolIntro";
 import { type PageCrumbs, useCurrentCrumbs } from "@/lib/pageCrumbs";
 import { FeedbackBarButton, showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import { useIsAdmin } from "@/lib/useIsAdmin";
-import { collectLeaves } from "@/lib/tilingLayout";
-import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
+import { findPane } from "@/lib/tilingLayout";
+import { canShowInPane } from "@/lib/toolRegistry";
 import { useFavorites } from "@/lib/useFavorites";
 import { useIsDesktop } from "@/lib/useIsDesktop";
-import { openInSplit, useTilingState } from "@/lib/useTilingLayout";
+import { navigateMain, openBeside, useTilingState } from "@/lib/useTilingLayout";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 
 const STORAGE_KEY = "jam-practice-sidebar";
@@ -105,6 +105,16 @@ function CloseIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
       <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
+/** A panel at the right of the page: the side view. */
+function SideViewIcon() {
+  return (
+    <svg {...svgProps("h-4 w-4 text-muted")}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <rect x="12" y="7" width="7" height="10" rx="1" />
     </svg>
   );
 }
@@ -402,18 +412,13 @@ function NavItems({
   const pathname = usePathname();
   const { favorites, toggleFavorite, isAuthenticated } = useFavorites();
   const [collapsedCategories, setCategoryCollapsed] = useCollapsedCategories();
-  // Which link counts as "active" — normally just the real URL, but while "Advanced layouts" is
-  // genuinely in effect (on, and desktop-sized — the same condition `AppShell.tsx` gates
-  // `TilingLayout` on), focusing a different pane no longer moves Next's own `usePathname()` (see
-  // `lib/useTilingLayout.ts`'s `syncAddressBar` for why — routing that through Next's router was
-  // traced to a real pane-losing-its-state bug), so the sidebar has to read the *active pane's own
-  // href* directly instead, or it would silently stop following pane focus changes.
+  // Which link counts as "active": the real URL, or with split screen showing, the main pane's page
+  // (where the sidebar opens things; panes change the address bar without Next's router, so
+  // `usePathname()` doesn't follow them).
   const tilingState = useTilingState();
   const isDesktop = useIsDesktop();
-  const activePaneHref =
-    tilingState.enabled && isDesktop && tilingState.tree && tilingState.activePaneId
-      ? collectLeaves(tilingState.tree).find((l) => l.id === tilingState.activePaneId)?.href
-      : undefined;
+  const mainPane = isDesktop ? findPane(tilingState.layout, tilingState.layout.mainPaneId) : undefined;
+  const activePaneHref = mainPane ? mainPane.href.split(/[?#]/)[0] : undefined;
   const effectivePathname = activePaneHref ?? pathname;
   const navRef = useRef<HTMLElement>(null);
   // Bring the page you're on into view in a long list (the sidebar, or the phone menu as it
@@ -479,17 +484,17 @@ function NavItems({
   function onNavContextMenu(e: React.MouseEvent) {
     const a = (e.target as HTMLElement).closest("a[href]");
     const href = a?.getAttribute("href");
-    if (!isDesktop || !href || !TOOL_COMPONENTS[href]) return;
+    if (!isDesktop || !href || !canShowInPane(href)) return;
     e.preventDefault();
-    const current = TOOL_COMPONENTS[effectivePathname] ? effectivePathname : DASHBOARD_PATH;
     setMenu({
       x: e.clientX,
       y: e.clientY,
       items: [
-        { label: "Open", onSelect: () => router.push(href) },
+        { label: "Open", onSelect: () => navigateMain(href) || router.push(href) },
         // Short, so they fit the menu's width; the split icons say it's split screen.
-        { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
-        { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
+        { label: "Open side by side", icon: <SplitIcon direction="row" />, onSelect: () => openBeside(href, { mode: "right" }) },
+        { label: "Open above and below", icon: <SplitIcon direction="col" />, onSelect: () => openBeside(href, { mode: "down" }) },
+        { label: "Open in the side view", icon: <SideViewIcon />, onSelect: () => openBeside(href) },
       ],
     });
   }
@@ -755,20 +760,8 @@ function SearchExtras({ query, large, toolsFound, onNavigate }: { query: string;
   );
 }
 
-/** Advanced-layouts toggle logic shared by the desktop and mobile options flyouts (mobile only
-    ever reaches this via a href that's never actually reachable there — `AppShell.tsx` disables
-    tiling outright below the `lg` breakpoint regardless — but the toggle itself is still harmless
-    to expose, consistent with this being "the one place Advanced layouts lives" rather than
-    special-casing mobile out of a shared helper for no real benefit).
-
-    Turning it *on* also resets the pane tree to a single fresh pane right here, seeded from
-    `usePathname()` — the page you're actually looking at this instant, not whatever was last
-    saved. Fixes a real bug reported directly ("when I initially turned the feature on, the tool I
-    was using stopped displaying and there was text saying 'unknown tool'"): `TilingLayout`'s own
-    seeding effect only ever fires when there's *no* saved tree at all, so turning the feature back
-    on after having used (and left) it earlier silently resumed whatever stale tree was last saved.
-    Falls back to the first tileable tool (`TILEABLE_LINKS[0]`) if you happen to enable it from a
-    page that isn't a tool at all (e.g. the home page). */
+/** The app's sidebar on desktop (resizable, collapsible to icons, hideable) and the phone's top
+    bar and menu. Right-click a page in it to open it in split screen or the side view. */
 export default function Sidebar() {
   // The ⋮ menus offer the desktop app everywhere but inside it.
   const inDesktop = useInDesktopApp();

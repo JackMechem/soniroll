@@ -17,7 +17,7 @@ import { VimSwitch } from "./NotePane";
 
 /**
  * A Shed Note outside Shed Notes: its title, a short toolbar and the full editor, saving as you
- * type. The side view (`NotePeek`) and the notes on routine and task pages (`InlineNote`) are
+ * type. The side view (`NoteSidePane`) and the notes on routine and task pages (`InlineNote`) are
  * this. Links to other notes go to `onOpenNote` (the side view opens them in place); one that
  * doesn't exist yet is made first.
  *

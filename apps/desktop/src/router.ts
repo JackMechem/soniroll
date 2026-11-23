@@ -61,12 +61,14 @@ export function navigate(href: string, { replace = false, scroll = true } = {}) 
   if (scroll && !url.hash) window.scrollTo(0, 0);
 }
 
-// Website code sometimes calls history.pushState/replaceState itself (the split-screen layout
-// keeps the address bar in sync that way); keep the router in step.
+// Website code sometimes calls history.pushState/replaceState itself; keep the router in step.
+// Not for split screen's (`__pane` in the state): the address bar follows the active pane, but the
+// page (`Routes`, the real page in its pane) stays what it is, as on the website.
 for (const method of ["pushState", "replaceState"] as const) {
   const original = window.history[method].bind(window.history);
   window.history[method] = (...args: Parameters<History["pushState"]>) => {
     original(...args);
+    if ((args[0] as { __pane?: boolean } | null)?.__pane) return;
     queueMicrotask(notify);
   };
 }

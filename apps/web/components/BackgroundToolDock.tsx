@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { allPanes } from "@/lib/tilingLayout";
+import { useTilingState } from "@/lib/useTilingLayout";
 import { useSyncExternalStore } from "react";
 import BeatIndicator from "@/components/BeatIndicator";
 import { useSidebarShownWidth } from "@/components/Sidebar";
@@ -165,6 +167,10 @@ export default function BackgroundToolDock() {
   const isDesktop = useIsDesktop();
   const pathname = usePathname();
   const sidebarWidth = useSidebarShownWidth();
+  // With panes open (split screen, the side view), a tool showing in any of them isn't "in the
+  // background".
+  const { layout } = useTilingState();
+  const shown = new Set(layout.tree ? allPanes(layout).map((p) => p.href.split(/[?#]/)[0]) : [pathname]);
 
   if (!isDesktop) return null;
 
@@ -173,9 +179,9 @@ export default function BackgroundToolDock() {
       style={{ left: sidebarWidth + 16 }}
       className="fixed bottom-4 z-30 flex w-56 flex-col-reverse gap-2"
     >
-      <MetronomeCard hidden={pathname === "/metronome"} />
-      <PolyrhythmCard hidden={pathname === "/random-metric-modulation"} />
-      <TunerCard hidden={pathname === "/tuner"} />
+      <MetronomeCard hidden={shown.has("/metronome")} />
+      <PolyrhythmCard hidden={shown.has("/random-metric-modulation")} />
+      <TunerCard hidden={shown.has("/tuner")} />
     </div>
   );
 }

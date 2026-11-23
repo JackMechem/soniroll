@@ -44,3 +44,43 @@ export function usePaneKeyGuard() {
   });
   return useCallback((e: KeyboardEvent) => keyIsForPane(paneRef.current, e), []);
 }
+
+/** The id of the pane a page is shown in (`lib/useTilingLayout.ts`), or null on a normal page.
+    Pass it as `from` to `openBeside`, so something opened from inside the side view opens there
+    (with Back) rather than replacing it. */
+export const PaneIdContext = createContext<string | null>(null);
+
+export function usePaneId() {
+  return useContext(PaneIdContext);
+}
+
+/** A pane's own router: `push`/`replace` change what the pane shows (not the window's page),
+    `back` goes back inside the pane. */
+export type PaneRouter = {
+  push: (href: string, options?: { scroll?: boolean }) => void;
+  replace: (href: string, options?: { scroll?: boolean }) => void;
+  back: () => void;
+  forward: () => void;
+};
+
+/** The address a page in a pane sees: the pane's own (`usePathname`, `useSearchParams` and
+    `useRouter` give these inside a pane — `components/panes/NextPaneContexts.tsx` on the website,
+    the `next/navigation` stand-in in the desktop app). `router` null: the window's own router. */
+export type PaneNav = { pathname: string; search: string; router: PaneRouter | null };
+
+export const PaneNavContext = createContext<PaneNav | null>(null);
+
+const paneBackChecks = new WeakMap<object, () => boolean>();
+
+/** Marks a pane router's `back` so `goBackOr` can ask whether the pane has somewhere to go back to
+    (Next's `useRouter()` hands out a copy of the router, but the same `back` function). */
+export function markPaneBack(back: () => void, canGoBack: () => boolean) {
+  paneBackChecks.set(back, canGoBack);
+}
+
+/** For `back` from a pane's router: whether there's a page to go back to in that pane. Undefined
+    for the window's own router. */
+export function paneCanGoBackFor(back: unknown): boolean | undefined {
+  if (typeof back !== "function") return undefined;
+  return paneBackChecks.get(back)?.();
+}

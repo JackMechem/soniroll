@@ -149,9 +149,15 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   `users.current` has answered (as `useChordChartsLibrary` does). See `docs/notes/ux-refresh.md`.
 - `react-hooks` lint (React Compiler) rejects reading refs during render and calling `setState`
   synchronously inside an effect; restructure rather than disabling the rule.
-- In split-screen (tiling) mode, keep the address bar in sync with `history.replaceState`
-  (`syncAddressBar`), not Next's router — `router.replace` remounts the pane and stopped running
-  audio.
+- Split screen and the side view are one system (`lib/useTilingLayout.ts`, drawn by
+  `components/TilingLayout.tsx`). Each pane has its own address: inside a pane `usePathname`,
+  `useSearchParams` and `useRouter` are the pane's (`components/panes/NextPaneContexts.tsx`
+  provides Next's internal contexts; the desktop shim reads `PaneNavContext`), links open in the
+  pane, and the address bar follows the active pane through `syncAddressBar` (History API, never
+  Next's router — a router navigation re-renders the real route and remounted panes). Don't read
+  `window.location` for a page's own state, and don't write it with `history.replaceState` from a
+  page that can be in a pane. A page a pane should show must be in `PANE_ROUTES`
+  (`lib/toolRegistry.tsx`, kept in step with `app/` like the desktop's routes).
 - Split-screen panes are size containers (`data-pane`): inside one, `sm:`/`md:` follow the
   pane's width, `lg:` and up never apply and `max-lg:` always does (`@custom-variant`s at the top
   of `globals.css`). Use `100cqw`, not `100vw`, for widths. A phone-only sheet portaled to `<body>`
@@ -261,6 +267,10 @@ Web (`apps/web`):
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
 - Notation: `components/notation/ScoreEditor.tsx` (the one notation editor — never write another;
   wrap it with a `header`) and `Score.tsx` (read-only view too); scores via `lib/useScores.ts`.
+- Beside the page: `openBeside(href, { mode })` (`lib/useTilingLayout.ts`) — the side view
+  (default; over or beside the page, full screen with Back on phones) or a split (`mode: "right"` /
+  `"down"`). Returns false when a pane can't show the page. `usePaneId()` says which pane a page is
+  in. Shed Log things and notes: `openSide` / `openNotePeek` (`lib/notePeek.ts`) wrap it.
 - Notes: `components/shednotes/AttachedNotes.tsx` (Shed Notes on anything — a `NoteTarget` from
   `packages/core/shedNotes.ts`), `NoteEditor` (CodeMirror markdown editor), `renderNotation` (abcjs).
 
@@ -297,7 +307,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Bass Genius history (bass lines, players, transcriptions, comping, the swing drummer) — now Rhythm Section's bass | `bass-genius.md` |
 | Drum Generator history (styles, kit, notation) — now Rhythm Section's drums; Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |
-| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`); routine and task pages (notes, recordings per task, Arrange), the note side view (`NotePeek`) | `shed-log.md` |
+| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`); routine and task pages (notes, recordings per task, Arrange), opening them in the side view | `shed-log.md` |
 | Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Rhythm Section's bass players; clefs, key signatures, re-barring | `score-writer.md` |
 | Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
@@ -321,7 +331,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Random Sticking Warmup | `tools-sticking-warmup.md` |
 | Slow Downer, old Recorder, Community posts, old Home, legal pages | `tools-slow-downer-recorder-community-home.md` |
 | Backend: sync design, auth, email, account page, profiles, follows, file storage | `backend-convex.md` |
-| Split screen (tiling panes) | `tiling-split-screen.md` |
+| Split screen and the side view (one system since 2026-11-23: `openBeside`, panes with their own address, flip/swap/float/full screen, phones) | `tiling-split-screen.md` |
 | Older shared-conventions list (partly superseded by the section above) | `shared-conventions.md` |
 | What was never verified (older list) | `untested.md` |
 | Git auto-commit quirk | `environment-quirk.md` |

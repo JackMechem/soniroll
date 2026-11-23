@@ -472,3 +472,167 @@ listeners call the guard too (Find the Root Enter, Time Test R, Slow Downer B). 
 shortcut must go through it.** Outside split screen nothing changes. Also: the intro "?" goes in
 a slot after the pane title (`PaneTitleSlotContext`), and tool idea credits are in the page flow,
 not fixed. Verified headless with Metronome + Tuner side by side; not on a real browser window.
+
+## 2026-11-23: split screen and the side view become one system
+
+Jack: "the split pane thing doesnt work perfectly, some window will reset (specifically the
+library) when clicking on the other pane, windows should function individually"; he wants to read a
+PDF with the metronome beside it, every PDF in a side view "like clicking on a task in shed logs",
+the same splits as right-clicking a tool, and a way to switch a split between side by side and
+above and below — "make the split pane tiling functionality more featured and easier to use and
+polished", the same everywhere.
+
+### Why panes reset (the bug)
+
+Two causes, both "a pane read or changed the window's address instead of its own":
+- **Pages read the real URL.** The Library picks its tab from `useSearchParams()` (`?tab=files`);
+  a pane only had a pathname (`leaf.href` was `/tunes`), so its tab lived only in the window's
+  address. Anything that changed that address (another pane's link, the sidebar, closing a pane,
+  reloading) put it back on Tunes. Same for every page with state in its query (`?id=`, `?date=`).
+- **Links inside a pane went through Next's router.** Opening a tune from the Library pane
+  navigated the whole window to `/tunes/tune?…`; the old outside-navigation effect then set the
+  active pane's href to that, which wasn't in `TOOL_COMPONENTS`, so the pane showed "This tool isn't
+  available anymore" — and any real navigation remounted the panes rendered from the route.
+
+### What was built
+
+- **Each pane is its own little browser.** `leaf.href` is the full address (path and query) and
+  each leaf has its own Back list (`back`). Inside a pane, Next's own `usePathname`,
+  `useSearchParams` and `useRouter` return the pane's: `components/panes/NextPaneContexts.tsx`
+  provides Next's internal contexts (`AppRouterContext`, `PathnameContext`, `SearchParamsContext`,
+  `PathParamsContext`, and in development `NavigationPromisesContext` — Next's hooks read that first
+  and its own segments below spread it, so a pane gets a full set of its own; providing `null` broke
+  the page with "unsupported type passed to use()"). Outside a pane it passes the outer values
+  through, so the page keeps the same element tree either way. Checked that the override really
+  reaches Next's hooks (same module instance under Turbopack): a Library pane at `?tab=files` shows
+  Files while the window is on `/metronome`. The desktop app aliases that file to a pass-through and
+  its `next/navigation` stand-in reads `PaneNavContext` (`lib/paneContext.ts`) instead.
+- **Links open in their pane.** One capture-phase click listener on the document (`TilingLayout`):
+  a link inside a pane (or in a menu portaled from it — the pane that last got a pointer press is
+  remembered) navigates that pane; a link outside the panes (sidebar) goes to the main pane, the
+  tree pane last clicked. It runs before Next's `<Link>` handler, which then sees `defaultPrevented`.
+  Only while the screen is split (desktop, two or more tiled panes), plus always for links inside
+  the side view. A page a pane can't show (admin, legal…) is left to Next: the window navigates and
+  `routeChanged` puts it in that pane as the real page. ⌘K and the sidebar's "Open" use
+  `navigateMain`; the practice timer's "open the step's tool" too (`useOpenStepTools`).
+- **Panes are rendered flat** (`components/TilingLayout.tsx`): one keyed child per pane, placed
+  with absolute positions computed from the tree (`layoutRects`), dividers drawn separately. So
+  splitting, closing, swapping, flipping, floating or docking moves boxes around and never remounts
+  anything. The real page (Next's `children`) keeps the key `"page"` whichever pane holds it
+  (`pageLeafId`, worked out from the address on load), so the page you're on isn't remounted when
+  the first pane opens beside it — checked with a DOM marker on the Shed Log through open, Back,
+  full screen, dock, flip, swap, float and close. Other panes are ordered by id, not tree order
+  (moving a node in the DOM can restart media). `AppShell` always renders `TilingLayout`; with
+  nothing open it's just the page (it also does the page slide-in that `AnimatedPage` did).
+- **One layout object** (`lib/tilingLayout.ts`, `Layout`, `v: 2`): `tree` (tiled panes, null = the
+  plain page), `float` (the side view over the page, px width), `sideId` (where side-view things
+  open: the float, or a tree pane when docked), `activePaneId`, `mainPaneId`, `maximizedId`. Saved
+  under `jam-practice-tiling`. The old `{ enabled, tree, activePaneId }` is read and kept
+  (`readLayout`), retired addresses mapped (`normalizePaneHref`: Bass Genius/Drum Generator,
+  `/chord-charts`, `/files`, `/recordings`, `/settings`…). **Tabs later:** a tab would hold one
+  `Layout` each (e.g. `{ tabs: [{ id, name, layout }], activeTab }` under a new key, with today's
+  `jam-practice-tiling` as the first tab); `set()` in `useTilingLayout.ts` is the one place that
+  saves, and `pageLeafId`/`routeHref` stay per window (only the active tab can hold the real page).
+- **The side view is a pane** (`NotePeek.tsx` and its store are gone). Its look is still this
+  device's choice (`jam-practice-note-peek`: over or beside, width): "Over the page" is the float,
+  the page stays a normal desktop page under it; "Beside the page" docks it as a split at the right.
+  Full screen is the pane's ⤢ (any pane: `maximizedId`, Esc restores). A note shows as
+  `/shed-notes?id=…&view=note` (`NoteSidePane`: just the editor; as a page of its own it's Shed Notes
+  with that note). Task and routine pages lost `inPanel`: in a pane the pane's bar has Back and the
+  trail, so they hide their own `BackButton` (fixes "Back plus ×" side by side). The side view stays
+  open when the page under it changes (so a PDF can stay beside whatever tool you open); on a phone
+  a real navigation closes it.
+- **Phones:** no split screen (a saved split shows just the page). The side view is full screen
+  with a bar of Back, the trail and ⋮ (no ×: Back is the way out). Opening it pushes a history
+  entry (`__paneSide`), so the phone's Back gesture closes it and stays on the Shed Log; the bar's
+  Back goes back inside the view, then closes it (through `history.back()`).
+- **Pane controls** (every pane, the side view included): Back (when the pane has history), the
+  page's trail and "?", ⤢ full screen, ⋮, ×. ⋮ has Side by side / Above and below (flip), Swap
+  places, Over the page / Beside the page (the side view) or "Float over the page" (any other
+  pane), "Open another beside it… / below it…" (the ⌘K picker, `requestSplit`), "Open as a page"
+  (only this pane stays — no remount; "Open in Shed Notes" for a note), and "Take off …" for an
+  attached note. Dividers: drag (each side keeps 320px wide / 200px tall while there's room),
+  double-click for half and half, arrow keys (Shift for bigger steps). The sidebar's right-click
+  menu gained "Open in the side view". A newly opened pane gets keyboard focus; focusing a pane by
+  Tab makes it active (Space etc. still go through `keyIsForPane`).
+- **Closing down to one pane** leaves it showing as a plain page without remounting (a running
+  metronome keeps going); if it isn't the real page it stays a lone pane (its own address, no bar)
+  until the next real navigation turns it back into the plain page.
+- **Which pages can be panes:** `PANE_ROUTES` in `lib/toolRegistry.tsx` (was `TOOL_COMPONENTS`):
+  every tool, the dashboard, the Shed Log and its routine/task/routines/edit pages, Shed Notes and a
+  note, the Library (`/tunes` with its tabs), tune/setlist/recording/list pages, chart view/edit/
+  new/import/playlist, setlist charts, Community and its sub-pages, a post, a profile, Lessons and
+  its pages, shared file/tune/setlist links, plus Account and Help (already there before). Not
+  admin, legal, landing, sign-in. `canShowInPane(href)` asks.
+- `BackgroundToolDock` hides a tool's card while any pane shows it (it only checked the URL); the
+  sidebar highlights the main pane's page; `goBackOr` asks the pane's own history in a pane
+  (`markPaneBack`). `PdfEditor` (and Play mode) cover just their pane when opened inside one.
+
+### The API (for opening things beside)
+
+```ts
+import { openBeside } from "@/lib/useTilingLayout";
+openBeside("/shed-log/task?routine=r&task=t");          // the side view (the default)
+openBeside("/metronome", { mode: "right" });             // split: side by side ("down": above and below)
+openBeside(href, { from: usePaneId(), detach });         // from a pane; detach = a "Take off …" menu item
+```
+- Returns false (and does nothing) when a pane can't show the page — open it as a page then.
+- Side mode: if a side view is open it goes there (Back returns to what it showed), else a new one
+  over/beside the page by this device's choice. Phones: always the side view.
+- An edge mode splits the pane given as `from`, else the main pane.
+- Other calls: `navigatePane`, `navigateMain`, `closePane`, `toggleMaximize`, `flipPane`,
+  `swapPane`, `floatPane`, `dockFloat`, `keepOnlyPane`, `canShowInPane`, `usePaneId()`.
+
+**For the PDF agent:** `PdfEditor` already fills just its pane when it's inside one. What's missing
+is an address for "one of my files": add a route (e.g. `app/files/view/page.tsx`, `?id=<fileId>`,
+rendering the file viewer / `PdfEditor` filling the page; no page there today), add it to
+`PANE_ROUTES` and the desktop's `routes.tsx`, then in `useFileActions` open PDFs with
+`openBeside(fileViewHref(id))` (falling back to today's behaviour when it returns false). From a
+task page, files attached to it can open beside the page the same way.
+
+### Decisions
+
+- Panes render pages from `PANE_ROUTES` rather than Next routes (still no way to mount several
+  App Router routes at once); Next's contexts are overridden instead of rewriting pages to use our
+  own hooks, so every existing page works in a pane unchanged.
+- The side view doesn't close when the page under it changes (it did): Jack wants it to stay while
+  he uses tools. Phones still close it on a real navigation.
+- With only the side view over the page, the page isn't a "pane" (no bar, desktop layout, its
+  links navigate as usual); split-screen link handling starts at two tiled panes.
+- A real navigation while split (browser Back/Forward, a page a pane can't show) goes into the
+  active tree pane as the real page; the pane that held the real page before re-renders from
+  `PANE_ROUTES` (one remount, only in that case).
+- Opening an address directly (typed, a link from outside) with a saved split puts that page in the
+  main pane instead of ignoring it.
+
+### Verified (headless Chromium against the dev server, 1440 and 390, light and dark)
+
+Library pane at `?tab=files` keeps its tab (and scroll) while clicking the other pane; a tune opened
+in the Library pane shows in the pane (scroll kept at 300 after clicking the other pane); pane Back;
+a registry pane's `useSearchParams` reads its own address while the window is elsewhere; old saved
+layout format; reload with the address of the active pane and with another address. Signed in
+(the shared `uxpass` test account, no data created): Shed Log routine name → side view over the
+page (the Shed Log's DOM node unchanged), task inside it, Back, full screen + Esc, Beside the page,
+flip, swap, Over the page, close — address bar following each; sidebar link with the side view
+open (Shed Log → Metronome, side view stays); a note in the side view beside the Metronome. Phone
+(390): full-screen side view with Back/trail/⋮, no overflow, Back inside it, the browser Back
+closing it on `/shed-log`, the bar's Back closing it. Signed out: right-click → side by side and
+above and below, Metronome started, sidebar link to the main pane, ⌘K split from a pane's menu,
+closing panes one by one down to the plain page — still running, and Space in another pane didn't
+stop it; closing the Library pane leaving the Metronome as a lone pane, then a sidebar link back to
+a plain page. Divider keys, double-click and drag (stops at 320px). `tsc` (web, desktop) and
+`eslint` on every changed file; no console errors in any run.
+
+**Not verified:** the desktop app running (only `tsc`; its router now ignores `__pane`
+replaceStates); a real phone's Back gesture (the browser's Back stood in for it); hover looks with a
+real mouse; `pnpm build` (the `next/dist/shared/lib/*.shared-runtime` imports are the risk — they
+resolved under Turbopack dev); audio by ear (the Metronome engine outlives its component, so
+"still running" was also checked with DOM markers for the Shed Log, not for the Metronome);
+PDFs in a pane; the chart editor's leave guard in a pane (the pane's link handler runs before it);
+pages that write their own query with `history.replaceState` (Shed Notes, Help, Score Writer) don't
+update their pane's saved address.
+
+**Incident:** my `git rm` of `NotePeek.tsx` was staged while another agent committed (`dc6b519`,
+"Website: UI pass 3 fixes"), so that commit deletes `NotePeek.tsx` while its `AppShell` still
+imports it — the tree only builds again once this work is committed. Use plain `rm` while others
+share the working tree.
