@@ -123,6 +123,7 @@ export default function ChartViewPage({ id }: { id: string }) {
     <LibraryPage>
       <Hero
         title={trail.title}
+        heading={chart.title || "Untitled chart"}
         crumbs={trail.parents}
         icon={LibraryIcon}
         subtitle={chart.composer ? formatComposer(chart.composer) : undefined}

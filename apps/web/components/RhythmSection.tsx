@@ -760,7 +760,7 @@ export default function RhythmSection({
           options={[
             { value: "none", label: "No chart" },
             { value: "chart", label: "A chart" },
-            { value: "typed", label: "Typed" },
+            { value: "typed", label: "Type chords" },
           ]}
         />
         {typed ? (
@@ -1204,7 +1204,7 @@ export default function RhythmSection({
           {running || downloading ? <StopIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           {running || downloading ? "Stop" : "Play"}
         </button>
-        <OptionsButton summary={`${style.name} · ${bpm} BPM`} onOpen={() => setOptionsOpen(true)} />
+        <OptionsButton summary={`${bpm} BPM · ${style.name}`} onOpen={() => setOptionsOpen(true)} />
       </div>
       <p className="min-h-5 text-center text-sm text-muted tabular-nums" aria-live="polite">
         {status}
@@ -1289,7 +1289,7 @@ export default function RhythmSection({
                           className="flex h-7 items-center gap-1 rounded-md bg-foreground/[0.05] px-2.5 font-medium text-foreground transition-colors hover:bg-surface-hover"
                         >
                           {settings.showChart ? <EyeOffIcon className="h-3.5 w-3.5" /> : <EyeIcon className="h-3.5 w-3.5" />}
-                          {settings.showChart ? "Hide chart" : "Show chart"}
+                          {settings.showChart ? "Hide chord chart" : "Show chord chart"}
                         </button>
                         {!live && (
                           <button

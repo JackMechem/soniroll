@@ -40,8 +40,7 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
   const names = playlists.map((p) => p.name);
   // A chart you just wrote or edited goes into "Recently opened", like one you opened.
   const { record: recordRecent } = useRecentCharts();
-  // The chart just saved, for when there's no page to go back to (opened from a bookmark or a
-  // new tab): then Save opens the chart itself.
+  // The chart just saved: Save opens it.
   const savedId = useRef<string | null>(null);
 
   const forTune = editId ? null : parseTune(params?.get("tune") ?? null);
@@ -106,9 +105,12 @@ export default function ChartEditorPage({ editId, playlist }: { editId?: string;
               lists[forTune.list].setTunes((prev) => prev.map((t) => (t.id === forTune.id ? addChartsToTune(t, [ids[0]]) : t)));
             }
           }}
-          onClose={() =>
-            goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : savedId.current ? chartHref(savedId.current) : "/tunes")
-          }
+          onClose={() => {
+            // A new chart opens once saved (it used to go back to the page before, which read as
+            // nothing having happened); one written for a tune goes back to that tune's page.
+            if (savedId.current && !forTune) router.replace(chartHref(savedId.current));
+            else goBackOr(router, forTune ? tuneHref(forTune.list, forTune.id) : "/tunes");
+          }}
         />
       )}
     </PageShell>

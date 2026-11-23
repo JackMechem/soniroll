@@ -29,7 +29,7 @@ export default function HelpButton({ title, groups }: { title: string; groups: H
         onClick={() => setOpen(true)}
         aria-label={`${title} help`}
         title="Help and controls"
-        className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+        className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 hover:bg-surface-hover hover:text-foreground"
       >
         <HelpIcon className="h-4 w-4" />
       </button>

@@ -144,7 +144,7 @@ export default function DayPanel({
   return (
     <section className={`flex flex-col gap-5 ${wide ? "mx-auto w-full max-w-6xl" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => onDateChange(addDays(date, -1))} aria-label="Previous day" className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={() => onDateChange(addDays(date, -1))} aria-label="Previous day" className="relative rounded-md p-1.5 pointer-coarse:after:absolute pointer-coarse:after:-inset-2 text-muted hover:bg-surface-hover hover:text-foreground">
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
         <div className={`min-w-0 ${wide ? "" : "flex-1 text-center"}`}>
@@ -166,7 +166,7 @@ export default function DayPanel({
             )}
           </p>
         </div>
-        <button type="button" onClick={() => onDateChange(addDays(date, 1))} aria-label="Next day" className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={() => onDateChange(addDays(date, 1))} aria-label="Next day" className="relative rounded-md p-1.5 pointer-coarse:after:absolute pointer-coarse:after:-inset-2 text-muted hover:bg-surface-hover hover:text-foreground">
           <ChevronRightIcon className="h-5 w-5" />
         </button>
         {controls && <div className="ml-auto">{controls}</div>}

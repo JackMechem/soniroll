@@ -58,6 +58,11 @@ export function AuthForm({
   const [passwordBad, setPasswordBad] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  // The email box gets the cursor on opening, except on touch screens, where that throws the
+  // keyboard up over the dialog before you've read it.
+  useEffect(() => {
+    if (!window.matchMedia("(pointer: coarse)").matches) emailRef.current?.focus();
+  }, []);
   const passwordOk = flow === "signUp" ? password.length >= 8 : password.length > 0;
   const ready = looksLikeEmail(email) && passwordOk;
   const [code, setCode] = useState("");
@@ -216,7 +221,6 @@ export function AuthForm({
             ref={emailRef}
             type="email"
             required
-            autoFocus
             autoComplete="email"
             value={email}
             onChange={(e) => {
@@ -300,7 +304,7 @@ export function AuthForm({
               // The form stays mounted, so its autoFocus doesn't run again: back to the email.
               emailRef.current?.focus();
             }}
-            className="py-1 text-left text-sm text-muted"
+            className="py-2.5 text-left text-sm text-muted sm:py-1"
           >
             {flow === "signIn" ? "Need an account? " : "Have an account? "}
             <span className="font-medium text-accent hover:underline">
@@ -311,7 +315,7 @@ export function AuthForm({
             <Link
               href={`/reset-password${email ? `?${new URLSearchParams({ email })}` : ""}`}
               onClick={onClose}
-              className="py-1 text-sm font-medium text-accent hover:underline"
+              className="py-2.5 text-sm font-medium text-accent hover:underline sm:py-1"
             >
               Forgot your password?
             </Link>
@@ -360,16 +364,18 @@ export function SignInModal({ onClose, initialFlow = "signIn" }: { onClose: () =
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-overlay p-4"
+      // Scrolls when the screen is shorter than the dialog (a phone on its side, or with the
+      // keyboard up); `my-auto` keeps it centred otherwise.
+      className="fixed inset-0 z-[70] flex justify-center overflow-y-auto overscroll-contain bg-overlay p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-label="Sign in"
-        className="relative flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="relative my-auto flex w-full max-w-sm shrink-0 flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
+        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center sm:right-2.5 sm:top-2.5 sm:h-9 sm:w-9 justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground">
           <CloseIcon className="h-4 w-4" />
         </button>
         <AuthForm onClose={onClose} initialFlow={initialFlow} />

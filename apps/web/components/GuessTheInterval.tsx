@@ -45,7 +45,7 @@ import {
 import {
   ACCIDENTAL_STYLES,
   AccidentalStyle,
-  spellNote,
+  spellInterval,
 } from "@/lib/noteSpelling";
 import { formatDuration, shuffled } from "@/lib/trainerUtils";
 import {
@@ -693,7 +693,7 @@ export default function GuessTheInterval() {
   const weakEntries = weakIntervalEntries(settings.intervalStats);
   const revealedNotes =
     revealNotes && status && round
-      ? noteGlyphs(`${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`)
+      ? noteGlyphs(spellInterval(round.notes, accidentalStyle, roundSeed).join(" → "))
       : null;
 
   return (

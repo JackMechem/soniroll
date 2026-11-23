@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import GoalDialog from "@/components/practicelog/GoalDialog";
-import { formatPracticed, practicedMinutes } from "@/components/practicelog/minutes";
+import { formatPracticed } from "@/components/practicelog/minutes";
 import { TOUCH_TEXT } from "@/components/practicelog/touch";
 import { ChevronLeftIcon, ChevronRightIcon, ShareIcon } from "@/components/tools";
 import {
@@ -149,7 +149,9 @@ export default function Momentum({
 
       <Card wide label="In total" action={hours > 0 ? <ShareButton onClick={() => onShare("hours")} /> : undefined} value={
           // Under an hour in minutes ("1 min", not "0.0 h"), like the week beside it.
-          hours < 1 ? <Value value={formatPracticed(hours * 60)} /> : <Value value={hours < 10 ? hours.toFixed(1) : Math.floor(hours)} unit="h" />
+          // Hours and minutes like every other time on the page ("1 h 18 min", not "1.3 h"); whole
+          // hours from 100 h, so it fits.
+          hours < 100 ? <Value value={formatPracticed(hours * 60)} /> : <Value value={Math.floor(hours)} unit="h" />
         }>
         <Bar frac={Math.max(0.03, Math.min(1, (hours - ms.from) / (ms.to - ms.from)))} />
         <Note>
@@ -282,7 +284,7 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
           {goal > 0 ? "Change" : "Set a goal"}
         </button>
       }
-      value={<Value value={practicedMinutes(minutes)} unit={goal > 0 ? `/ ${goal} min` : "min"} />}
+      value={<Value value={formatPracticed(minutes)} unit={goal > 0 ? `/ ${formatMinutesShort(goal)}` : undefined} />}
       aside={goal > 0 && <span className="text-xs font-medium tabular-nums text-muted">{Math.round(frac * 100)}%</span>}
     >
       {goal > 0 && <Bar frac={frac} done={met} />}

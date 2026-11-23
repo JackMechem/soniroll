@@ -1569,7 +1569,7 @@ function VersionTag({ onNavigate }: { onNavigate?: () => void }) {
       href="/changelog"
       onClick={onNavigate}
       title={DESKTOP_VERSION ? `What's new — soniroll desktop ${DESKTOP_VERSION} (website v${APP_VERSION})` : "What's new"}
-      className="mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
+      className="relative mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 pointer-coarse:after:absolute pointer-coarse:after:-inset-y-3 pointer-coarse:after:-inset-x-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
     >
       {DESKTOP_VERSION ? `v${DESKTOP_VERSION}` : VERSION_LABEL.replace(/ beta$/, "")}
       {DESKTOP_VERSION ? (

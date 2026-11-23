@@ -18,8 +18,8 @@ export const SYMBOL_KEYS: { insert: string; caption: string; title: string }[] =
   { insert: "b", caption: "flat", title: "Flat" },
   { insert: "/", caption: "bass", title: "Slash (bass note)" },
   // These two already read as words on the key, so they have no caption under them.
-  { insert: "sus", caption: "", title: "Suspended" },
-  { insert: "add", caption: "", title: "Add" },
+  { insert: "sus", caption: "suspended", title: "Suspended" },
+  { insert: "add", caption: "add note", title: "Add" },
 ];
 
 /** A little Sibelius-keypad-style palette of chord-symbol buttons, laid out as a tidy fixed grid

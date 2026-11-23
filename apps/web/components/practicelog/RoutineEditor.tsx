@@ -159,7 +159,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         }
         icon={SHED_LOG_ICON}
       />
-      {error && <p ref={errorRef} className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p ref={errorRef} className="max-w-3xl rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
       <Card title="Routine">
         <div className="flex flex-col gap-1.5">
@@ -193,7 +193,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
         </label>
         <div className="flex flex-col gap-1.5">
           <span className={LABEL}>Color</span>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-sm:gap-4">
             {ROUTINE_COLORS.map((c, i) => (
               <button
                 key={c}
@@ -202,7 +202,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                 aria-label={COLOR_NAMES[i] ?? `Color ${i + 1}`}
                 title={COLOR_NAMES[i]}
                 aria-pressed={r.color === i}
-                className={`h-7 w-7 rounded-full ${r.color === i ? "ring-2 ring-foreground ring-offset-2 ring-offset-surface" : ""}`}
+                className={`relative h-7 w-7 rounded-full before:absolute before:-inset-2 ${r.color === i ? "ring-2 ring-foreground ring-offset-2 ring-offset-surface" : ""}`}
                 style={{ background: c }}
               />
             ))}
@@ -310,6 +310,19 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   value={task.title}
                   autoFocus={task.id === added}
                   onChange={(e) => setTask(i, { title: e.target.value })}
+                  onKeyDown={(e) => {
+                    // Enter starts the next task (a new row right under this one), like the Shed
+                    // Log's own add-task field, instead of doing nothing.
+                    if (e.key !== "Enter" || e.nativeEvent.isComposing || !task.title.trim()) return;
+                    e.preventDefault();
+                    const next = newTask();
+                    setAdded(next.id);
+                    setR((prev) => {
+                      const at = prev.tasks.findIndex((t) => t.id === task.id) + 1;
+                      return { ...prev, tasks: [...prev.tasks.slice(0, at), next, ...prev.tasks.slice(at)] };
+                    });
+                  }}
+                  enterKeyHint="next"
                   placeholder="Task — e.g. Scales in all 12 keys"
                   aria-label={`Task ${i + 1}`}
                   className={`${INPUT} flex-1`}
@@ -432,7 +445,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
 
 function Card({ title, detail, children }: { title: string; detail?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg bg-surface">
+    // Capped (left-aligned) so the fields stay easy to scan on a wide screen.
+    <section className="w-full max-w-3xl rounded-lg bg-surface">
       <div className="flex h-11 items-center justify-between gap-2 px-4">
         <h2 className="text-sm font-medium">{title}</h2>
         {detail && <span className="text-xs tabular-nums text-muted">{detail}</span>}
@@ -444,7 +458,7 @@ function Card({ title, detail, children }: { title: string; detail?: string; chi
 
 function IconButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent">
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} className="relative flex h-8 w-8 items-center pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent">
       {children}
     </button>
   );
@@ -453,7 +467,7 @@ function IconButton({ label, onClick, disabled, children }: { label: string; onC
 function Stepper({ value, min, max, step = 1, onChange }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void }) {
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
   return (
-    <div className="flex h-8 items-center overflow-hidden rounded-md bg-background">
+    <div className="flex h-8 items-center overflow-hidden rounded-md bg-background max-sm:h-10">
       <button type="button" onClick={() => onChange(clamp(value - step))} aria-label="Less" className="h-full w-8 text-muted hover:bg-surface-hover hover:text-foreground">
         −
       </button>

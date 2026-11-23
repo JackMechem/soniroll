@@ -732,6 +732,9 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const hasGoogle = providers?.includes("google") ?? false;
   const username = profile?.username || null;
   const current = NAV.flatMap((g) => g.items).find((i) => i.id === view)!;
+  // Opened as Settings (the sidebar's Settings, `/settings`): the trail says "Settings", not
+  // "Account".
+  const rootLabel = NAV.find((g) => g.items.some((i) => i.id === view))?.group === "Settings" ? "Settings" : "Account";
 
   function handleSignOut() {
     void signOut();
@@ -756,7 +759,7 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
             ? [{ label: "Account" }]
             : [
                 {
-                  label: "Account",
+                  label: rootLabel,
                   href: "/account",
                   onClick: () => {
                     if (window.matchMedia(NARROW).matches) {
@@ -771,9 +774,10 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
         icon={GearIcon}
       />
       {/* Who you are, like the dashboard's header: name and email on the left, View profile on the
-          right. Phones show it over the list of sections only, not again on each section. Sign out
-          is at the end of the sections, out of the way. */}
-      <header className={`flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between ${phoneList ? "" : "max-md:hidden"}`}>
+          right. Phones show it over the list of sections only, not again on each section; wider,
+          on the Profile section only (Settings and the rest open without it). Sign out is at the
+          end of the sections, out of the way. */}
+      <header className={`flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-center sm:justify-between ${phoneList ? "" : "max-md:hidden"} ${view === "profile" ? "" : "md:hidden"}`}>
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar url={profile?.avatarUrl ?? null} />
           <div className="min-w-0">

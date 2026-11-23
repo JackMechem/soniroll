@@ -805,15 +805,17 @@ function AuthModal({ mode, onClose, onSuccess }: { mode: "signIn" | "signUp"; on
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm" onClick={onClose}>
+    // Scrolls when the screen is shorter than the dialog (a phone on its side, or with the
+    // keyboard up); `my-auto` keeps it centred otherwise.
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto overscroll-contain bg-overlay p-4 backdrop-blur-sm" onClick={onClose}>
       <div
         role="dialog"
         aria-modal
         aria-label={mode === "signUp" ? "Sign up" : "Sign in"}
         onClick={(e) => e.stopPropagation()}
-        className="landing-rise relative flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-surface p-6 text-left shadow-2xl"
+        className="landing-rise relative my-auto flex w-full max-w-sm shrink-0 flex-col gap-4 rounded-3xl bg-surface p-6 text-left shadow-2xl"
       >
-        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
+        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-2 top-2 flex h-11 w-11 items-center sm:right-3 sm:top-3 sm:h-8 sm:w-8 justify-center rounded-full text-muted hover:bg-background hover:text-foreground">
           <CloseIcon className="h-4 w-4" />
         </button>
         <AuthForm initialFlow={mode} onClose={onClose} onSuccess={onSuccess} googleRedirectTo={DASHBOARD_PATH} />
