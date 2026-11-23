@@ -99,7 +99,9 @@ export function LibraryHeader({ right }: { right?: ReactNode }) {
     <View>
       <TabHeader title="Library" right={right} />
       <View style={{ borderBottomWidth: 1, borderBottomColor: derived.hairline }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8 }}>
+        {/* Lined up with the page's 16dp gutter, the underline only as wide as the name (the Shed
+            Log's tabs). */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
           {LIBRARY_TABS.map((tab) => {
             const active = pathname === tab.href;
             return (
@@ -110,7 +112,7 @@ export function LibraryHeader({ right }: { right?: ReactNode }) {
                 }}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
-                className="h-11 justify-center px-3"
+                className="h-11 justify-center"
                 style={{ borderBottomWidth: 3, borderBottomColor: active ? colors.accent : 'transparent', marginBottom: -1 }}
               >
                 {/* The bold label always sets the width (hidden when not picked), so switching tabs

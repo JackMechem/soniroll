@@ -63,11 +63,11 @@ function TuneNotesScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Stack.Screen
         options={{
-          title: 'Notes',
+          title: 'Quick note',
           headerTitle: () => (
             <View style={{ flexShrink: 1 }}>
               <Text numberOfLines={1} className="font-ui-bold text-lg font-bold tracking-tight" style={{ color: colors.foreground }}>
-                Notes
+                Quick note
               </Text>
               {found ? (
                 <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.muted }}>

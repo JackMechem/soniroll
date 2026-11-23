@@ -5,25 +5,28 @@ import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, FadeInUp, FadeOut, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarHeight } from '@/components/FloatingTabBar';
 import { FLAME } from '@/components/shedLog/parts';
 import { openProgressShare } from '@/lib/progressShare';
 import { dismissToast, useCelebrationState, type Toast } from '@/lib/shedLogCelebrations';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
- * What the Shed Log's celebrations look like (`lib/shedLogCelebrations.ts` decides when): toasts at
- * the top of the screen, and confetti falling over everything for the big moments — left out when
- * the phone asks for reduced motion. Mounted once, app-wide, so a goal met from the timer is
- * celebrated wherever you are.
+ * What the Shed Log's celebrations look like (`lib/shedLogCelebrations.ts` decides when): a toast at
+ * the bottom of the screen (one at a time), and confetti falling over everything for the big
+ * moments — left out when the phone asks for reduced motion. Mounted once, app-wide, so a goal met
+ * from the timer is celebrated wherever you are.
  */
 export function Celebrations() {
   const { toasts, rain } = useCelebrationState();
   const reduce = useReducedMotion();
   const insets = useSafeAreaInsets();
+  // At the bottom, above the tab bar (it covered the screen's title and buttons at the top).
+  const tabBar = useTabBarHeight();
   return (
     <>
       {rain !== null && !reduce ? <Confetti key={rain} /> : null}
-      <View pointerEvents="box-none" style={{ position: 'absolute', top: insets.top + 8, left: 12, right: 12, gap: 8 }}>
+      <View pointerEvents="box-none" style={{ position: 'absolute', bottom: insets.bottom + tabBar + 12, left: 12, right: 12, gap: 8 }}>
         {toasts.map((t) => (
           <ToastCard key={t.id} toast={t} />
         ))}

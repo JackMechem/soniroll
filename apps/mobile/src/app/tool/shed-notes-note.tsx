@@ -64,7 +64,7 @@ function NoteScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { id, edit } = useLocalSearchParams<{ id?: string; edit?: string }>();
   if (isLoading) return <ScreenSpinner />;
-  if (!isAuthenticated) return <ShedNotesGate />;
+  if (!isAuthenticated) return <ShedNotesGate header="Shed Notes" />;
   if (!id) return <Gone />;
   return <NotePage key={id} id={id} startEditing={edit === '1'} />;
 }

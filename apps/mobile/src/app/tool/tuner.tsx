@@ -211,7 +211,7 @@ function TunerScreen() {
               {transpose !== 0 ? <SheetText>Notes are shown as written for this transposing instrument, not concert pitch.</SheetText> : null}
             </SettingChip>
 
-            <SettingChip Icon={MicrophoneIcon} label="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
+            <SettingChip Icon={MicrophoneIcon} label="Mic" title="Microphone" value={(SENSITIVITY[sensitivity] ?? SENSITIVITY.normal).label.split(' (')[0]}>
               <Field label="Sensitivity" hint="How quiet a signal can be before it's ignored as silence — raise it in a noisy room.">
                 <PillChoice
                   label="Sensitivity"
@@ -222,7 +222,7 @@ function TunerScreen() {
               </Field>
             </SettingChip>
 
-            <SettingChip Icon={ToneIcon} label="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
+            <SettingChip Icon={ToneIcon} label="Tone" title="Reference & tone" value={`A = ${refA} Hz${sustain ? ' · notes held' : ''}`}>
               <SliderField
                 label="Reference pitch (A4)"
                 value={refA}
@@ -260,8 +260,9 @@ function TunerScreen() {
 
             <SettingChip
               Icon={WaveIcon}
-              label="Pitch graph"
-              value={dialGraph ? 'In the dial' : 'Off'}
+              label="Graph"
+              title="Pitch graph"
+              value={dialGraph ? 'On' : 'Off'}
               toggle={{ checked: dialGraph, onChange: (v) => updateSettings({ dialGraph: v }) }}
             >
               <SwitchRow

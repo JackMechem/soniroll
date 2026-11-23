@@ -123,7 +123,10 @@ function Home() {
 
   const signedOut = !authLoading && !isAuthenticated;
   const favoriteTools = TOOL_LINKS.filter((t) => favorites.includes(t.href));
-  const pinned = favoriteTools.length ? favoriteTools : STARTER_HREFS.flatMap((h) => TOOL_BY_HREF.get(h) ?? []);
+  // A few favorites still fill the card: the suggestions not starred yet make up the rest (one
+  // starred tool left a lone half-width tile where four had been).
+  const starters = STARTER_HREFS.flatMap((h) => (favorites.includes(h) ? [] : (TOOL_BY_HREF.get(h) ?? [])));
+  const pinned = [...favoriteTools, ...starters].slice(0, Math.max(STARTER_HREFS.length, favoriteTools.length));
 
   // Pick up where you left off: recent tools first, then recent tunes and charts.
   const recents: Recent[] = [];
@@ -274,17 +277,20 @@ function Home() {
   );
 }
 
-/** Signed out: a slim banner under the tools — what an account adds, in a line, and Sign in (the
-    Account screen also has Create an account). The header's Sign in pill stays too. */
+/** Signed out: a slim banner under the tools — what an account adds, in a line, and Create an
+    account (the header's Sign in pill is the way in for someone who has one; two Sign in buttons on
+    one screen read as a mistake). */
 function SignInBanner() {
   const router = useRouter();
   const { colors } = useAppTheme();
   return (
-    <View className="flex-row items-center gap-3 rounded-xl py-2.5 pl-4 pr-2.5" style={{ backgroundColor: colors.surface }}>
-      <Text className="font-ui flex-1 text-sm leading-5" style={{ color: colors.muted }}>
-        Sign in for a Shed Log, recordings and your tunes on soniroll.com.
+    <View className="gap-2.5 rounded-xl p-4" style={{ backgroundColor: colors.surface }}>
+      <Text className="font-ui text-sm leading-5" style={{ color: colors.muted }}>
+        A free account adds a Shed Log, recordings and your tunes on soniroll.com.
       </Text>
-      <Button label="Sign in" kind="secondary" onPress={() => router.push('/profile')} />
+      <View className="flex-row">
+        <Button label="Create an account" kind="secondary" onPress={() => router.push({ pathname: '/profile', params: { flow: 'signUp' } })} />
+      </View>
     </View>
   );
 }

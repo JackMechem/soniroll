@@ -12,7 +12,7 @@ import {
 } from '@jam-practice/core/intervals';
 import { scoreOf, type Grade } from '@jam-practice/core/noteGrade';
 import { parseRange } from '@jam-practice/core/noteRange';
-import { ACCIDENTAL_STYLES, spellNote, type AccidentalStyle } from '@jam-practice/core/noteSpelling';
+import { ACCIDENTAL_STYLES, spellInterval, type AccidentalStyle } from '@jam-practice/core/noteSpelling';
 import { bumpGradeCounts, rankWeak, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { shuffled } from '@jam-practice/core/trainerUtils';
 import { useEffect, useRef, useState } from 'react';
@@ -296,6 +296,30 @@ function GuessTheIntervalScreen() {
     learnStyleRef.current = null;
   }
 
+  /** Stop pressed mid-session: what was answered so far shows as the results (not added to
+      History, whose times are for whole sessions), rather than the session just vanishing. */
+  function stopEarly() {
+    const session = sessionRef.current;
+    if (session && activeLevel === null) {
+      const results = [...session.results];
+      const rounds = [...session.rounds];
+      // The round on screen counts once it's been answered.
+      if (session.round && session.best !== null) {
+        results.push(session.best);
+        rounds.push(session.round);
+        bumpIntervalStat(session.round.interval.id, session.best);
+      }
+      if (results.length) {
+        setSummary({ results, rounds });
+        setLastElapsedMs(null);
+        setIsNewBest(false);
+        setRound(null);
+      }
+    }
+    sessionStartRef.current = null;
+    endSession();
+  }
+
   function scheduleAdvance(index: number) {
     if (skipTimeoutRef.current) return;
     skipTimeoutRef.current = setTimeout(() => {
@@ -478,7 +502,7 @@ function GuessTheIntervalScreen() {
   const weakEntries = weakIntervalEntries(settings.intervalStats);
   const revealedNotes =
     revealNotes && status && round
-      ? `${spellNote(round.notes[0], accidentalStyle, roundSeed, false)} → ${spellNote(round.notes[1], accidentalStyle, roundSeed, false)}`
+      ? spellInterval(round.notes, accidentalStyle, roundSeed).join(' → ')
       : null;
   const showingSummary = summary !== null && !running;
 
@@ -699,7 +723,7 @@ function GuessTheIntervalScreen() {
           <BigButton
             label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
             secondary={running}
-            onPress={running ? endSession : () => start(learnMode ? 'learn' : 'normal')}
+            onPress={running ? stopEarly : () => start(learnMode ? 'learn' : 'normal')}
           />
         ) : null
       }

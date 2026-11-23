@@ -10,6 +10,7 @@ import {
   routineStatus,
   scheduleTasks,
   tasksOf,
+  todayKey,
   type DayRoutine,
   type RoutineTask,
 } from '@jam-practice/core/practiceLog';
@@ -381,6 +382,8 @@ export function RoutineCard({
         label={`${routine.name || 'Untitled routine'} · ${formatShortDate(date)}`}
         newTitle={`${routine.name || 'Untitled routine'} · ${formatShortDate(date)}`}
         compact
+        // The routine's own page has its notes too ("Start notes"): this one is just this day's.
+        addLabel={date === todayKey() ? 'Note for today' : `Note for ${formatShortDate(date)}`}
       />
 
       <ActionSheet visible={menu} title={routine.name || 'Untitled routine'} subtitle={formatShortDate(date)} actions={actions} onClose={() => setMenu(false)} />

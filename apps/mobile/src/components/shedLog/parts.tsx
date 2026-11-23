@@ -272,19 +272,22 @@ export function SmallButton({
   const bg = primary ? colors.accent : tint ? withAlpha(colors.accent, 0.12) : derived.fill;
   const fg = primary ? colors['accent-foreground'] : tint ? colors.accent : danger ? colors.danger : colors.foreground;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
-      className="h-9 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-lg px-3"
-      style={{ backgroundColor: bg, opacity: disabled ? 0.45 : 1 }}
-    >
-      {Icon ? <Icon color={fg} size={16} /> : null}
-      <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: fg, flexShrink: 1 }}>
-        {label}
-      </Text>
-    </Pressable>
+    // Rounded clip around it: Android doesn't round off the ripple itself (`ui.tsx`'s `Button`).
+    <View className="overflow-hidden rounded-lg">
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        android_ripple={{ color: primary ? colors['accent-hover'] : colors['surface-hover'] }}
+        className="h-9 flex-row items-center justify-center gap-1.5 px-3"
+        style={{ backgroundColor: bg, opacity: disabled ? 0.45 : 1 }}
+      >
+        {Icon ? <Icon color={fg} size={16} /> : null}
+        <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: fg, flexShrink: 1 }}>
+          {label}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 

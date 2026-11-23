@@ -51,8 +51,9 @@ export function TodaySummary({ data, today, onGoal }: { data: PracticeLogData; t
     <View className="gap-2">
       <Pressable onPress={onGoal} accessibilityRole="button" accessibilityLabel="Today's goal — change it" hitSlop={6} className="gap-1.5">
         <Text className="font-ui-semibold text-[15px] font-semibold" style={{ color: colors.foreground, fontVariant: ['tabular-nums'] }}>
-          {goal > 0 ? `${practicedMinutes(minutes)} of ${goal} min today` : `${practicedMinutes(minutes)} min today`}
-          {met ? <Text style={{ color: success }}> · goal met</Text> : null}
+          {/* Past the goal, "60 of 30 min" read like a mistake: the time, then the goal that's met. */}
+          {goal > 0 && !met ? `${practicedMinutes(minutes)} of ${goal} min today` : `${practicedMinutes(minutes)} min today`}
+          {met ? <Text style={{ color: success }}>{` · ${goal} min goal met`}</Text> : null}
         </Text>
         {goal > 0 ? <Bar frac={minutes / goal} color={met ? success : undefined} height={8} /> : null}
       </Pressable>

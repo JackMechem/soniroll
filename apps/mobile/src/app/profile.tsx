@@ -65,7 +65,7 @@ function ProfileScreen() {
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" onScroll={onScroll} scrollEventThrottle={16}>
             <AuthForm initialFlow={flow === 'signUp' ? 'signUp' : 'signIn'} />
-            <View className="mt-8 gap-[18px] px-6">
+            <View className="mt-8 gap-[18px] px-4">
               <View>
                 <GroupLabel>Settings</GroupLabel>
                 <View className="overflow-hidden rounded-2xl" style={{ backgroundColor: colors.surface }}>
@@ -406,7 +406,7 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
 
   if (step === 'code') {
     return (
-      <View className="px-6 pt-6">
+      <View className="px-4 pt-6">
         <Heading title="Check your email">
           We sent a code to {trimmedEmail}. Enter it below to finish {flow === 'signUp' ? 'creating your account' : 'signing in'}.
         </Heading>
@@ -430,7 +430,7 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
 
   if (step === 'reset') {
     return (
-      <View className="px-6 pt-6">
+      <View className="px-4 pt-6">
         <Heading title="Forgot your password?">Enter your account&apos;s email and we&apos;ll send you a link to choose a new one.</Heading>
         <FieldLabel>Email</FieldLabel>
         <TextInput
@@ -456,7 +456,7 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
 
   if (step === 'resetSent') {
     return (
-      <View className="px-6 pt-6">
+      <View className="px-4 pt-6">
         <Heading title="Check your email">
           If there&apos;s a soniroll account with a password for {trimmedEmail}, we&apos;ve sent it a link to reset the password. It expires in an hour.
         </Heading>
@@ -474,7 +474,7 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
   }
 
   return (
-    <View className="px-6 pt-6">
+    <View className="px-4 pt-6">
       <View accessibilityRole="tablist" className="mb-5 flex-row self-center rounded-full p-1" style={{ backgroundColor: derived.fill }}>
         {(['signIn', 'signUp'] as const).map((f) => (
           <Pressable
@@ -568,7 +568,7 @@ function AuthForm({ initialFlow }: { initialFlow: Flow }) {
       ) : null}
 
       <Text className="font-ui mt-6 text-center text-xs leading-5" style={{ color: colors.muted }}>
-        Google sign-in: use the website for now.
+        Signed up with Google? Set a password in your account on soniroll.com, then sign in here with it.
       </Text>
     </View>
   );

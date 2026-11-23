@@ -349,7 +349,7 @@ function Hub({
         {/* Notes — a preview; writing happens on its own page so the keyboard never covers it */}
         <View className="gap-2">
           <Text className="font-ui-bold px-1 text-lg font-bold" style={{ color: colors.foreground }}>
-            Notes
+            Quick note
           </Text>
           <Pressable
             onPress={() => router.push({ pathname: '/library/tune-notes', params: { id: tune.id } })}
@@ -362,7 +362,7 @@ function Hub({
               className="font-ui flex-1 text-base"
               style={{ color: tune.notes.trim() ? colors.foreground : colors.muted, lineHeight: 22 }}
             >
-              {tune.notes.trim() || 'Tap to write notes — form, tricky changes, voicings, recordings to check out…'}
+              {tune.notes.trim() || 'Tap to write a few lines — form, tricky changes, voicings, recordings to check out…'}
             </Text>
             <PencilIcon color={colors.muted} size={18} />
           </Pressable>

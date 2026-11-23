@@ -52,15 +52,29 @@ export function useCelebrationState(): State {
   return useSyncExternalStore(subscribe, () => state);
 }
 
+/** Toasts waiting their turn: one shows at a time (several at once stacked up over the screen). */
+let waiting: Toast[] = [];
+
+function show(t: Toast) {
+  set({ toasts: [t] });
+  // One you can share stays long enough to reach its button.
+  setTimeout(() => dismissToast(t.id), t.share ? 6000 : 3500);
+}
+
 export function dismissToast(id: number) {
-  set({ toasts: state.toasts.filter((x) => x.id !== id) });
+  if (!state.toasts.some((x) => x.id === id)) {
+    waiting = waiting.filter((x) => x.id !== id);
+    return;
+  }
+  const next = waiting.shift();
+  if (next) show(next);
+  else set({ toasts: [] });
 }
 
 function toast(t: Omit<Toast, 'id'>) {
-  const id = nextId++;
-  set({ toasts: [...state.toasts.slice(-2), { ...t, id }] });
-  // One you can share stays long enough to reach its button.
-  setTimeout(() => dismissToast(id), t.share ? 8000 : 4200);
+  const item = { ...t, id: nextId++ };
+  if (state.toasts.length) waiting = [...waiting, item].slice(-2);
+  else show(item);
 }
 
 function rain() {
@@ -223,7 +237,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean, effects: 
 
     const hit = HOUR_MILESTONES.find((h) => was.hours < h && now.hours >= h);
     if (hit && firstTime(now.today, `hours:${hit}`)) {
-      toast({ kind: 'hours', title: `${hit} hour${hit === 1 ? '' : 's'} of practice!`, detail: 'All logged here, one session at a time.', share: 'hours' });
+      toast({ kind: 'hours', title: `${hit} hour${hit === 1 ? '' : 's'} of practice!`, detail: 'Every session adds up. Keep going.', share: 'hours' });
       big = true;
     }
 

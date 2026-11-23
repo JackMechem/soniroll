@@ -65,7 +65,7 @@ function RoutineScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const log = usePracticeLog();
   if (isLoading) return <ScreenSpinner />;
-  if (!isAuthenticated) return <ShedLogGate />;
+  if (!isAuthenticated) return <ShedLogGate header="Shed Log" />;
   if (!log.ready) return <ScreenSpinner />;
   return <Routine log={log} />;
 }

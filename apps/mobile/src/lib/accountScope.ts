@@ -163,10 +163,22 @@ export function setStoreMode(next: StoreMode) {
   });
 }
 
+const signOutListeners = new Set<() => void>();
+
+/** Runs `fn` when the phone goes from an account to signed out (Sign out, a deleted account, a
+    sign-in that ended) — not at launch signed out. */
+export function onSignedOut(fn: () => void): () => void {
+  signOutListeners.add(fn);
+  return () => {
+    signOutListeners.delete(fn);
+  };
+}
+
 function applyMode(next: StoreMode) {
   if (next === current) return;
   const was = current;
   current = next;
+  const signedOut = next === 'device' && settled === 'account';
   if (next === 'device') {
     void forgetAccountCopies();
     dropHeld();
@@ -177,6 +189,7 @@ function applyMode(next: StoreMode) {
   }
   if (next === 'account' && accountReady) sendHeld();
   for (const fn of modeListeners) fn();
+  if (signedOut) for (const fn of signOutListeners) fn();
 }
 
 function subscribeMode(fn: () => void) {

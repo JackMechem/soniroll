@@ -10,13 +10,13 @@ import {
 import { useAuthActions } from '@convex-dev/auth/react';
 import { api } from '@jam-practice/convex/_generated/api';
 import { useConvexAuth as useBackendAuth, useQuery } from 'convex/react';
-import { Stack } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useAccountWritesGate } from '@/lib/accountScope';
+import { onSignedOut, useAccountWritesGate } from '@/lib/accountScope';
 import { useRecordToolVisits } from '@/lib/toolRecents';
 import { View } from 'react-native';
 
@@ -63,6 +63,27 @@ function SignOutIfAccountGone() {
   return null;
 }
 
+/** Signing out (here, or a session that ended) goes back to Home, so no screen stays open showing
+    the last account's routine, note or lesson (or buttons that no longer do anything). Signed out
+    on the Account screen, it stays open on top of Home: that's where you'd sign in again. */
+function HomeOnSignOut() {
+  const pathname = usePathname();
+  const path = useRef(pathname);
+  useEffect(() => {
+    path.current = pathname;
+  }, [pathname]);
+  useEffect(
+    () =>
+      onSignedOut(() => {
+        const onAccount = path.current === '/profile';
+        router.dismissTo('/');
+        if (onAccount) router.push('/profile');
+      }),
+    [],
+  );
+  return null;
+}
+
 /** A header's right side: the running Practice Timer and a tool that's playing
     (`PracticeTimerWidget.tsx`, `NowPlaying.tsx`; on every screen with a header — the main screens
     show them on the tab bar), then on a tool's screen its ? button (see
@@ -89,6 +110,7 @@ function RootNavigator() {
       {/* The clock and icons follow the theme (they were white on light themes). */}
       <StatusBar style={derived.isDark ? 'light' : 'dark'} />
       <SignOutIfAccountGone />
+      <HomeOnSignOut />
       <Stack
         screenOptions={({ route }) => ({
           // A tool that's playing, and a tool's "?" (what it is and its options) on its own screen.

@@ -84,12 +84,12 @@ export function ChartEditorKeyboard({
 
       <View className="flex-row" style={{ gap: 5 }}>
         <ToolKey label={toolState.section ?? 'A'} caption="section" on={!!toolState.section} onPress={() => onTool('section')} boxed />
-        <ToolKey label="‖:" caption="repeat" on={!!toolState.startRepeat} onPress={() => onTool('startRepeat')} />
-        <ToolKey label=":‖" caption="repeat" on={!!toolState.endRepeat} onPress={() => onTool('endRepeat')} />
+        <ToolKey label="‖:" caption="start" a11y="Start repeat" on={!!toolState.startRepeat} onPress={() => onTool('startRepeat')} />
+        <ToolKey label=":‖" caption="end" a11y="End repeat" on={!!toolState.endRepeat} onPress={() => onTool('endRepeat')} />
         <ToolKey label={toolState.ending ?? '1.'} caption="ending" on={!!toolState.ending} onPress={() => onTool('ending')} />
         <ToolKey glyph={''} caption="coda" on={!!toolState.coda} onPress={() => onTool('coda')} />
         <ToolKey glyph={''} caption="segno" on={!!toolState.segno} onPress={() => onTool('segno')} />
-        <ToolKey glyph={''} caption="repeat bar" on={!!toolState.repeatBar} onPress={() => onTool('repeatBar')} />
+        <ToolKey glyph={''} caption="repeat" a11y="Repeat the bar" on={!!toolState.repeatBar} onPress={() => onTool('repeatBar')} />
         <ToolKey label={toolState.directive ? toolState.directive.split(' ')[0] : 'D.C.'} caption={toolState.directive ? toolState.directive.replace(/^\S+\s*/, '') || 'fine' : 'direction'} on={!!toolState.directive} onPress={() => onTool('directive')} />
         <Pressable
           onPress={onNext}
@@ -138,13 +138,17 @@ function ToolKey({
   label,
   glyph,
   caption,
+  a11y,
   on,
   boxed,
   onPress,
 }: {
   label?: string;
   glyph?: string;
+  /** The word under the key (short: the keys are narrow). */
   caption: string;
+  /** What a screen reader says, when the caption alone isn't enough ("start" → "Start repeat"). */
+  a11y?: string;
   on: boolean;
   boxed?: boolean;
   onPress: () => void;
@@ -154,7 +158,7 @@ function ToolKey({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityLabel={caption}
+      accessibilityLabel={a11y ?? caption}
       accessibilityState={{ selected: on }}
       className="items-center justify-center rounded-lg"
       style={{ flex: 1, height: 46, backgroundColor: on ? colors.accent : colors.background }}

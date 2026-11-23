@@ -80,7 +80,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
 
   async function finish() {
     await signOut();
-    router.replace('/');
+    router.dismissTo('/');
   }
 
   async function onConfirmForm() {

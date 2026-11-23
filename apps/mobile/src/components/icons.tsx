@@ -35,7 +35,8 @@ export const MetronomeIcon = mci('metronome');
 export const BassIcon = mci('music-clef-bass');
 export const NoteIcon = mci('music-note');
 export const StopwatchIcon = mci('timer-outline');
-export const TunerIcon = mci('tune');
+// A tuner's needle on its dial (the website's icon); the old sliders read as settings.
+export const TunerIcon = mci('gauge');
 export const WaveIcon = mci('waveform');
 export const MetricModulationIcon = mci('metronome-tick');
 export const TempoTrainerIcon = mci('speedometer');
