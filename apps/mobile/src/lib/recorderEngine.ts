@@ -59,7 +59,11 @@ export type RecorderSnapshot = {
   error: string | null;
 };
 
-export type FinishedTake = { uri: string; durationSec: number };
+/** A stopped take; `tuneId` is the tune it was started for (the Recorder opened from a tune). */
+export type FinishedTake = { uri: string; durationSec: number; tuneId?: string };
+
+/** The tune the take in progress is for, so stopping it from outside the Recorder keeps it. */
+let takeTuneId: string | undefined;
 
 let snapshot: RecorderSnapshot = { phase: 'idle', startedAt: null, level: 0, error: null };
 const listeners = new Set<() => void>();
@@ -134,9 +138,10 @@ async function beginRecording() {
   }, 100);
 }
 
-export async function startRecording(metronome: RecorderMetronome, options: { autoGain: boolean }) {
+export async function startRecording(metronome: RecorderMetronome, options: { autoGain: boolean; tuneId?: string }) {
   if (snapshot.phase !== 'idle') return;
   autoGain = options.autoGain;
+  takeTuneId = options.tuneId;
   const { granted } = await requestRecordingPermissionsAsync();
   if (!granted) {
     setSnapshot({ error: 'Microphone permission is needed to record.' });
@@ -198,7 +203,15 @@ export async function stopRecording(): Promise<FinishedTake | null> {
     setSnapshot({ error: 'Nothing was recorded.' });
     return null;
   }
-  return { uri: uri.startsWith('file://') ? uri : `file://${uri}`, durationSec };
+  return { uri: uri.startsWith('file://') ? uri : `file://${uri}`, durationSec, ...(takeTuneId ? { tuneId: takeTuneId } : {}) };
+}
+
+/** Where a stopped take goes to be named and saved (the Recorder's Stop and the now-playing strip's). */
+export function saveTakeRoute(take: FinishedTake) {
+  return {
+    pathname: '/recordings/save' as const,
+    params: { uri: take.uri, duration: String(take.durationSec), ...(take.tuneId ? { tuneId: take.tuneId } : {}) },
+  };
 }
 
 export function clearRecorderError() {

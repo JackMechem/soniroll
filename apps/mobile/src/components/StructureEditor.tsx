@@ -112,7 +112,7 @@ export function StructureEditor({
                 onPress={() => onChange(appendToForm(structure, section.id))}
                 accessibilityLabel={`Add ${section.name} to the form`}
                 android_ripple={{ color: colors['surface-hover'] }}
-                className="h-8 flex-row items-center gap-1 overflow-hidden rounded-md px-2.5"
+                className="h-11 flex-row items-center gap-1 overflow-hidden rounded-md px-3.5"
                 style={{ backgroundColor: derived.fill }}
               >
                 <PlusIcon color={colors.muted} size={14} />
@@ -142,7 +142,12 @@ export function StructureEditor({
           />
         ))}
         <Pressable
-          onPress={() => onChange(addSection(structure))}
+          onPress={() => {
+            // The first section goes straight into an empty form, so it's ready to play.
+            const next = addSection(structure);
+            const added = next.sections[next.sections.length - 1];
+            onChange(structure.form.length === 0 && added ? appendToForm(next, added.id) : next);
+          }}
           accessibilityRole="button"
           android_ripple={{ color: colors['surface-hover'] }}
           className="h-11 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-lg"

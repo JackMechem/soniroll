@@ -56,6 +56,11 @@ const MIN_SPEED = 25;
 const MAX_SPEED = 150;
 const SPEED_PRESETS = [50, 60, 70, 80, 90, 100];
 const SKIP_SECONDS = 5;
+
+/** The file that was open, with its loop and place, kept while the app is open: leaving the screen
+    and coming back reopens it where you were (playback itself stops when you leave). */
+type LastOpened = { id: string; loop: LoopRegion | null; loopOn: boolean; time: number };
+let lastOpened: LastOpened | null = null;
 const MIN_SPAN = 2;
 
 function SlowDownerScreen() {
@@ -97,7 +102,11 @@ function SlowDownerScreen() {
       if (wanted) {
         openedRef.current = openId ?? null;
         void openEntry(wanted);
+        return;
       }
+      const last = !openId ? lastOpened : null;
+      const lastEntry = last ? entries.find((e) => e.id === last.id) : undefined;
+      if (last && lastEntry) void openEntry(lastEntry, last);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
   }, [openId]);
@@ -134,7 +143,12 @@ function SlowDownerScreen() {
     return () => clearInterval(id);
   }, [playing, player]);
 
-  async function openEntry(entry: LibraryEntry) {
+  // Remember what's open (see `lastOpened`).
+  useEffect(() => {
+    if (file && duration) lastOpened = { id: file.id, loop, loopOn, time };
+  }, [file, duration, loop, loopOn, time]);
+
+  async function openEntry(entry: LibraryEntry, restore?: LastOpened) {
     const token = ++fileTokenRef.current;
     player.pause();
     setPlaying(false);
@@ -154,6 +168,13 @@ function SlowDownerScreen() {
       setPeaks(result);
       setDuration(player.duration);
       setView({ start: 0, span: player.duration });
+      if (restore) {
+        setLoop(restore.loop);
+        setLoopOn(restore.loopOn && !!restore.loop);
+        const t = Math.min(player.duration, Math.max(0, restore.time));
+        player.seek(t);
+        setTime(t);
+      }
     } catch {
       if (token === fileTokenRef.current) setError("Couldn't read this file — try an MP3, WAV, M4A or FLAC.");
     } finally {
@@ -172,6 +193,7 @@ function SlowDownerScreen() {
   }
 
   function closeFile() {
+    lastOpened = null;
     fileTokenRef.current++;
     player.unload();
     setPlaying(false);

@@ -4,7 +4,7 @@ import { CUSTOM_INSTRUMENT_ID, INSTRUMENTS } from '@jam-practice/core/instrument
 import { attempts, type GradeCounts } from '@jam-practice/core/struggleStats';
 import { isDarkColors } from '@jam-practice/core/themes';
 import { formatDuration } from '@jam-practice/core/trainerUtils';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
@@ -67,9 +67,13 @@ export function formatShortDate(ms: number): string {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}${sameYear ? '' : `, ${d.getFullYear()}`}`;
 }
 
-/** Shows a note name's accidentals as ♯ / ♭ ("G#3" → "G♯3"), display only. */
+/** Shows a note name's accidentals as ♯ / ♭ ("G#3" → "G♯3"), display only. A hair space keeps
+    the ♯ (drawn from a fallback font, wider than its box) off a number after it ("F♯2"). */
 export function noteGlyphs(text: string): string {
-  return text.replace(/([A-G])#/g, '$1♯').replace(/([A-G])b/g, '$1♭');
+  return text
+    .replace(/([A-G])#/g, '$1♯')
+    .replace(/([A-G])b/g, '$1♭')
+    .replace(/([♯♭])(\d)/g, '$1\u200A$2');
 }
 
 // ── The page ──────────────────────────────────────────────────────────────────────────────────
@@ -307,6 +311,32 @@ export function TextButton({ label, onPress, danger, disabled }: { label: string
     </Pressable>
   );
 }
+
+/**
+ * Holds a typed-answer keyboard (Guess the Chord / Progression) for the whole session, so the
+ * screen never changes shape between rounds: while the answer shows, the keyboard stays where it
+ * is, dimmed and ignoring taps, and nothing else takes its place (a Stop button that sat there
+ * once got a tap meant for it typed into the next round). Taps in the first moment after it comes
+ * back are dropped too, in case one was already on its way.
+ */
+export function AnswerKeyboardSlot({ active, children }: { active: boolean; children: ReactNode }) {
+  const activeSince = useRef(0);
+  useEffect(() => {
+    if (active) activeSince.current = Date.now();
+  }, [active]);
+  return (
+    <View
+      pointerEvents={active ? 'auto' : 'none'}
+      accessibilityElementsHidden={!active}
+      importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
+      onStartShouldSetResponderCapture={() => Date.now() - activeSince.current < KEY_SETTLE_MS}
+      style={{ opacity: active ? 1 : 0.4 }}
+    >
+      {children}
+    </View>
+  );
+}
+const KEY_SETTLE_MS = 300;
 
 /** One answer in a quiz's grid of choices: a filled button, tinted in its grade colour once the
     round is answered (the right one and a wrong pick); the others fade. */

@@ -191,7 +191,7 @@ function TunerScreen() {
       }
       chips={
         <SettingsBar>
-            <SettingChip Icon={TunerIcon} label="Instrument" value={instrument.label.split(' (')[0]}>
+            <SettingChip Icon={TunerIcon} label="Instrument" value={instrumentChipValue(instrument)}>
               <Field label="Instrument" hint="Sets which strings the dial and the tap-to-hear buttons below are built from.">
                 <PillChoice
                   label="Instrument"
@@ -258,20 +258,14 @@ function TunerScreen() {
               />
             </SettingChip>
 
+            {/* Just a switch (the pitch graph inside the dial): tapping the chip turns it on or off. */}
             <SettingChip
               Icon={WaveIcon}
               label="Graph"
               title="Pitch graph"
               value={dialGraph ? 'On' : 'Off'}
               toggle={{ checked: dialGraph, onChange: (v) => updateSettings({ dialGraph: v }) }}
-            >
-              <SwitchRow
-                label="Pitch graph in the dial"
-                checked={dialGraph}
-                onChange={(v) => updateSettings({ dialGraph: v })}
-                hint="Draws the last few seconds of what you play inside the ring of notes, so you can watch a held note drift sharp or flat."
-              />
-            </SettingChip>
+            />
         </SettingsBar>
       }
     >
@@ -414,3 +408,11 @@ function TunerScreen() {
 }
 
 export default withScreenLoader(TunerScreen);
+
+/** The Instrument chip's value: the name before any "(…)", or for the transposing groups whose name
+    lists several instruments ("Trumpet / Clarinet / Tenor sax (B♭)") just "B♭ instrument", so the
+    chips beside it aren't squeezed. */
+function instrumentChipValue(instrument: { label: string; transpose: number }): string {
+  const [name, key] = instrument.label.replace(/\)$/, '').split(' (');
+  return instrument.transpose !== 0 && key && name.includes(' / ') ? `${key} instrument` : name;
+}

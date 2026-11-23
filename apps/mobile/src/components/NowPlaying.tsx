@@ -1,6 +1,6 @@
 import { NAV_LINKS_DATA } from '@jam-practice/core/navLinks';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { PlaybackNotificationManager } from 'react-native-audio-api';
 
@@ -8,6 +8,8 @@ import { StopIcon } from '@/components/icons';
 import { toolName, toolRoute } from '@/components/ToolGrid';
 import { ToolIcon } from '@/components/ui';
 import { useNowPlaying, type Playing } from '@/lib/nowPlaying';
+import { getRecorderSnapshot, saveTakeRoute, stopRecording, subscribeRecorder } from '@/lib/recorderEngine';
+import { formatDuration } from '@/lib/recordings';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -42,20 +44,61 @@ function useOpenPlaying() {
   };
 }
 
+/** Stop from the strip. A Recorder take is stopped and goes straight to naming and saving it, as
+    it would from the Recorder's own Stop. */
+function useStopPlaying() {
+  const router = useRouter();
+  return (item: Playing) => {
+    if (item.href !== '/recorder') return item.stop?.();
+    void stopRecording().then((take) => {
+      if (take) router.push(saveTakeRoute(take));
+    });
+  };
+}
+
+/** The Recorder's line in the strip: a red dot and "Recording 0:33" (or "Counting in"). */
+function RecordingStatus({ others }: { others: number }) {
+  const { colors } = useAppTheme();
+  const rec = useSyncExternalStore(subscribeRecorder, getRecorderSnapshot);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (rec.phase !== 'recording') return;
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [rec.phase]);
+  const label =
+    rec.phase === 'countin'
+      ? 'Counting in'
+      : rec.phase === 'finishing'
+        ? 'Saving…'
+        : `Recording ${formatDuration(rec.startedAt ? Math.max(0, now - rec.startedAt) / 1000 : 0)}`;
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger }} />
+      <Text numberOfLines={1} className="font-ui text-xs tabular-nums" style={{ color: colors.danger }}>
+        {others > 0 ? `${label} · and ${others} more` : label}
+      </Text>
+    </View>
+  );
+}
+
 /** The playing tool as a strip docked on top of the tab bar (`FloatingTabBar` renders it, and the
-    pages leave room for it): its icon and name, "Playing", and Stop. Tap it to go back to it. */
+    pages leave room for it): its icon and name, "Playing" (or "Recording 0:33"), and Stop. Tap it
+    to go back to it. */
 export function NowPlayingStrip({ playing }: { playing: Playing[] }) {
   const { colors, derived } = useAppTheme();
   const open = useOpenPlaying();
+  const stop = useStopPlaying();
   const first = playing[0];
   const link = first ? linkOf(first.href) : undefined;
   if (!first || !link) return null;
   const others = playing.length - 1;
+  const recording = first.href === '/recorder';
   return (
     <Pressable
       onPress={() => open(first)}
       accessibilityRole="button"
-      accessibilityLabel={`${link.label} is playing. Open it.`}
+      accessibilityLabel={recording ? 'Recording. Open the Recorder.' : `${link.label} is playing. Open it.`}
       android_ripple={{ color: colors['surface-hover'] }}
       className="flex-row items-center gap-3 pl-4 pr-2"
       style={{ height: NOW_PLAYING_HEIGHT, borderBottomWidth: 1, borderBottomColor: derived.hairline }}
@@ -65,13 +108,17 @@ export function NowPlayingStrip({ playing }: { playing: Playing[] }) {
         <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: colors.foreground }}>
           {toolName(link)}
         </Text>
-        <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.accent }}>
-          {others > 0 ? `Playing · and ${others} more` : 'Playing'}
-        </Text>
+        {recording ? (
+          <RecordingStatus others={others} />
+        ) : (
+          <Text numberOfLines={1} className="font-ui text-xs" style={{ color: colors.accent }}>
+            {others > 0 ? `Playing · and ${others} more` : 'Playing'}
+          </Text>
+        )}
       </View>
-      {first.stop ? (
+      {first.stop || recording ? (
         <Pressable
-          onPress={first.stop}
+          onPress={() => stop(first)}
           hitSlop={4}
           accessibilityRole="button"
           accessibilityLabel={`Stop ${link.label}`}
@@ -79,7 +126,7 @@ export function NowPlayingStrip({ playing }: { playing: Playing[] }) {
           className="h-11 w-11 items-center justify-center overflow-hidden rounded-full"
           style={{ backgroundColor: derived.fill }}
         >
-          <StopIcon color={colors.foreground} size={16} />
+          <StopIcon color={recording ? colors.danger : colors.foreground} size={16} />
         </Pressable>
       ) : null}
     </Pressable>

@@ -153,7 +153,9 @@ export function Momentum({ data, today, onGoal, onShare }: { data: PracticeLogDa
   const practicedToday = minutes > 0;
   const frac = goal > 0 ? Math.min(1, minutes / goal) : 0;
   const met = goal > 0 && minutes >= goal;
-  const left = Math.max(0, Math.ceil(goal - minutes));
+  // From the whole minutes shown above it ("1 / 30 min" is "29 min to go", not 30), and never "0 to go"
+  // while the goal isn't met yet.
+  const left = Math.max(1, goal - Math.round(minutes));
   const goalMessage =
     goal <= 0
       ? minutes > 0

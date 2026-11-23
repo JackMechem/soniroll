@@ -262,7 +262,8 @@ const ChipModeContext = createContext<ChipMode>({ mode: 'chip' });
  * With `toggle`, it's a split chip for a setting that's switched on and off as a whole: the round
  * disc on the left is the switch (a tick on the accent when on, an empty ring when off) and
  * toggles it straight away; the rest of the chip (name, value, a sliders mark) opens the sheet.
- * Dimmed while off.
+ * Dimmed while off. A toggle with nothing else to set (no children) has no sheet: the whole chip
+ * is the switch, so it never has two different tap targets.
  */
 export function SettingChip({
   Icon,
@@ -289,7 +290,7 @@ export function SettingChip({
   /** Control the sheet from outside (e.g. an Edit button elsewhere opening it). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const { colors } = useAppTheme();
   const chipMode = useContext(ChipModeContext);
@@ -309,8 +310,11 @@ export function SettingChip({
   };
   const pop = usePop(`${value ?? ''}|${toggle?.checked ?? ''}`);
   const hasValue = value !== undefined && value !== '';
+  // Just a switch: tapping anywhere on it flips it.
+  const switchOnly = !!toggle && (children === undefined || children === null);
+  const press = switchOnly ? () => toggle.onChange(!toggle.checked) : () => setOpen(true);
 
-  const sheet = (
+  const sheet = switchOnly ? null : (
     <ToolSheet visible={open} onClose={() => setOpen(false)} title={title ?? label}>
       {children}
     </ToolSheet>
@@ -319,13 +323,13 @@ export function SettingChip({
   // closes); the list shows it as a row.
   if (chipMode.mode === 'sheet') return sheet;
   if (chipMode.mode === 'row') {
-    return <ChipListRow Icon={Icon} label={label} value={value} toggle={toggle} onPress={() => chipMode.pick(label, onOpenChange)} />;
+    return <ChipListRow Icon={Icon} label={label} value={value} toggle={toggle} onPress={switchOnly ? press : () => chipMode.pick(label, onOpenChange)} />;
   }
 
   if (inGrid) {
     return (
       <>
-        <StripCell Icon={Icon} label={label} value={hasValue ? value : undefined} pop={pop} toggle={toggle} onPress={() => setOpen(true)} />
+        <StripCell Icon={Icon} label={label} value={hasValue ? value : undefined} pop={pop} toggle={toggle} onPress={press} />
         {sheet}
       </>
     );
@@ -375,15 +379,15 @@ export function SettingChip({
         </View>
       </Pressable>
       <Pressable
-        onPress={() => setOpen(true)}
+        onPress={press}
         accessibilityRole="button"
-        accessibilityLabel={`${label} settings${hasValue ? `: ${value}` : ''}`}
+        accessibilityLabel={switchOnly ? `${label}${hasValue ? `: ${value}` : ''}` : `${label} settings${hasValue ? `: ${value}` : ''}`}
         android_ripple={{ color: colors['surface-hover'] }}
         className="h-14 flex-1 flex-row items-center gap-2 pl-1.5 pr-3"
       >
         {text}
         {inGrid ? <View className="flex-1" /> : null}
-        <SlidersIcon color={colors.muted} size={16} />
+        {switchOnly ? null : <SlidersIcon color={colors.muted} size={16} />}
       </Pressable>
     </View>
   ) : (

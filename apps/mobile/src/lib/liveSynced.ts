@@ -99,9 +99,15 @@ export function createLiveDoc(key: string) {
     });
   }
 
-  // Signing out sends an edit still waiting first, while the account still takes it.
+  // Signing out (or the app going to the background) sends an edit still waiting first, while the
+  // account still takes it, and writes the phone's copy now rather than in 300 ms.
   onFlushAccountWrites(() => {
     if (timer) send();
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (json !== null) void AsyncStorage.setItem(storageKey(), json).catch(() => {});
+    }
   });
 
   /** Signed in, out, or still finding out. Signing in or out drops what's held and loads the right

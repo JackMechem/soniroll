@@ -206,11 +206,15 @@ function PracticeTimerScreen() {
     are in the footer (`RunningControls`). */
 function RunningView({ engineState }: { engineState: EngineState }) {
   const { colors } = useAppTheme();
-  const { alarming, paused, next, index } = engineState;
+  const { alarming, paused, next, index, session } = engineState;
+  // Which session and where in it ("Morning warmup · step 1 of 2"), for a saved one.
+  const steps = session.type === 'custom' ? session.segments.length : 0;
+  const where = [(session.name || '').trim(), steps > 1 ? `step ${index + 1} of ${steps}` : ''].filter(Boolean).join(' · ');
   return (
     <View className="items-center gap-4">
-      <Text className="font-ui-semibold text-sm font-semibold" style={{ color: alarming ? colors.danger : colors.muted }}>
+      <Text className="font-ui-semibold text-center text-sm font-semibold" style={{ color: alarming ? colors.danger : colors.muted }}>
         {alarming ? "Time's up" : paused ? 'Paused' : 'Now running'}
+        {where ? ` · ${where}` : ''}
       </Text>
       <Text className="font-ui-semibold text-center text-3xl font-semibold tracking-tight" style={{ color: colors.foreground }}>
         {engineState.current.title}

@@ -14,6 +14,7 @@ import { ChoiceCards, ListIcon, OptionLabel } from '@/components/tool/rhythm';
 import { SettingChip, SettingsBar } from '@/components/tool/SettingChip';
 import { ToolFrame } from '@/components/tool/ToolFrame';
 import { EmptyState } from '@/components/ui';
+import { onStoreModeChange } from '@/lib/accountScope';
 import { type CountOff, parseBeatsPerBar, playCountOff } from '@/lib/jamPracticeCountOff';
 import { useSyncedSettings } from '@/lib/useSyncedSettings';
 import { useSyncedTunes } from '@/lib/useSyncedTunes';
@@ -43,13 +44,25 @@ const BAR_OPTIONS = [1, 2, 4, 8, 16].map((n) => ({ value: n, label: String(n) })
 
 type PickResult = { tune: Tune; tempo: Tempo | null; key: Key | null };
 
+/** The last tune picked, so leaving the screen and coming back still shows it (while the app stays
+    open and the same account is signed in). The count-off itself stops when you leave. */
+let lastPick: PickResult | null = null;
+// Another account's (or the signed-out) tune list: forget it.
+onStoreModeChange(() => {
+  lastPick = null;
+});
+
 function JamPracticeScreen() {
   const { colors } = useAppTheme();
   const [tunes, setTunes, tunesReady] = useSyncedTunes();
   const [settings, updateSettings, settingsReady] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const { countOffBars, accentFirstBeat, keepGoingIndefinitely, pickFromStandards } = settings;
 
-  const [pick, setPick] = useState<PickResult | null>(null);
+  const [pick, setPickState] = useState<PickResult | null>(() => lastPick);
+  function setPick(next: PickResult | null) {
+    lastPick = next;
+    setPickState(next);
+  }
   const [pickError, setPickError] = useState<string | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   useToolActivity('/jam-practice', isCounting);
@@ -171,20 +184,20 @@ function JamPracticeScreen() {
             />
           </SettingChip>
 
-          {/* Its value says what the number means ("8-bar count-off", not a bare "8 bars"); "keeps
+          {/* Its value says what the number means ("8-bar count-in", not a bare "8 bars"); "keeps
               going" sits in the label, where it doesn't cut the value off on a phone. */}
           <SettingChip
             Icon={MetronomeIcon}
             label={keepGoingIndefinitely ? 'Click · keeps going' : 'Click'}
             title="Click"
-            value={`${countOffBars}-bar count-off`}
+            value={`${countOffBars}-bar count-in`}
           >
             <View className="gap-2.5">
               <OptionLabel
-                title="Count-off bars"
+                title="Count-in bars"
                 hint="How many bars click before the tune starts (or, with Keep metronome going on, before it hands off to the running metronome)."
               />
-              <ChoiceCards label="Count-off bars" cardWidth="14%" options={BAR_OPTIONS} value={countOffBars} onChange={(n) => updateSettings({ countOffBars: n })} />
+              <ChoiceCards label="Count-in bars" cardWidth="14%" options={BAR_OPTIONS} value={countOffBars} onChange={(n) => updateSettings({ countOffBars: n })} />
             </View>
             <SwitchRow
               label="Accent"
@@ -196,7 +209,7 @@ function JamPracticeScreen() {
               label="Keep metronome going"
               checked={keepGoingIndefinitely}
               onChange={(next) => updateSettings({ keepGoingIndefinitely: next })}
-              hint="Keeps clicking at the tune's tempo after the count-off, instead of stopping once it ends."
+              hint="Keeps clicking at the tune's tempo after the count-in, instead of stopping once it ends."
             />
           </SettingChip>
         </SettingsBar>
@@ -243,7 +256,7 @@ function JamPracticeScreen() {
             <EmptyState
               Icon={ShuffleIcon}
               title="No tune picked yet"
-              body="Tap Pick a tune for a random one, with its key, tempo and a count-off."
+              body="Tap Pick a tune for a random one, with its key, tempo and a count-in."
             />
           </View>
         )}
@@ -274,7 +287,7 @@ function JamPracticeScreen() {
                 ? 'Click stopped'
                 : keepGoingIndefinitely
                   ? 'Metronome running'
-                  : `Counting off ${countOffBars} bar${countOffBars === 1 ? '' : 's'}`}
+                  : `Counting in ${countOffBars} bar${countOffBars === 1 ? '' : 's'}`}
             </Text>
           </View>
         ) : null}

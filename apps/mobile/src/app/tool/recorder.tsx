@@ -46,6 +46,7 @@ import {
   clearRecorderError,
   getRecorderSnapshot,
   startRecording,
+  saveTakeRoute,
   stopRecording,
   subscribeRecorder,
   updateRecorderMetronome,
@@ -151,17 +152,12 @@ function RecorderScreen() {
   async function onRecordPress() {
     if (rec.phase === 'idle') {
       clearRecorderError();
-      await startRecording(metronome, { autoGain: settings.autoGain });
+      await startRecording(metronome, { autoGain: settings.autoGain, tuneId });
       return;
     }
     if (rec.phase === 'finishing') return;
     const take = await stopRecording();
-    if (take) {
-      router.push({
-        pathname: '/recordings/save',
-        params: { uri: take.uri, duration: String(take.durationSec), ...(tuneId ? { tuneId } : {}) },
-      });
-    }
+    if (take) router.push(saveTakeRoute(take));
   }
 
   // --- Metronome-tool accent/structure editing, verbatim from `tool/metronome.tsx` ---

@@ -175,6 +175,9 @@ const GROOVE_DEFAULTS: GrooveSettings = {
 };
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
+/** The bass line's and groove's seeds, kept while the app is open: leaving the screen and coming
+    back shows (and plays) the same line, not a new one. "New line" / "New groove" change them. */
+const keptSeeds = { line: newSeed(), groove: newSeed() };
 /** Bars of drums shown at a time. */
 const DRUM_WINDOW = 8;
 /** A sheet's fade-out, before another full-screen thing opens (two at once trips iOS up). */
@@ -347,8 +350,16 @@ function RhythmSectionScreen() {
   const [opened, setOpened] = useState<{ chorus: number; index: number } | null>(null);
   const [viewChorus, setViewChorus] = useState(0);
   // The previews show what these seeds play; Play uses the same ones. "New line" / "New groove".
-  const [seed, setSeed] = useState(newSeed);
-  const [grooveSeed, setGrooveSeed] = useState(newSeed);
+  const [seed, setSeedState] = useState(() => keptSeeds.line);
+  const [grooveSeed, setGrooveSeedState] = useState(() => keptSeeds.groove);
+  function setSeed(next: number) {
+    keptSeeds.line = next;
+    setSeedState(next);
+  }
+  function setGrooveSeed(next: number) {
+    keptSeeds.groove = next;
+    setGrooveSeedState(next);
+  }
 
   // The kit parts' faders, as a gain per sound.
   const voiceGains = useMemo(() => {

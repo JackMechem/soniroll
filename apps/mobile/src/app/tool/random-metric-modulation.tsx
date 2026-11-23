@@ -233,7 +233,7 @@ function RandomMetricModulationScreen() {
                         {shortRatio(entry.label)}
                       </Text>
                       <Text className="font-ui-semibold text-sm font-semibold" style={[fg, { fontVariant: ['tabular-nums'] }]}>
-                        {Math.round(entry.from)} → {Math.round(entry.to)}
+                        {bpmText(entry.from)} → {bpmText(entry.to)}
                       </Text>
                     </View>
                   ))}
@@ -403,7 +403,7 @@ function RandomMetricModulationScreen() {
                   {shortRatio(nextPreview.label)}
                 </Text>
                 <Text className="font-ui-semibold text-sm font-semibold" style={[fg, { fontVariant: ['tabular-nums'] }]}>
-                  {Math.round(nextPreview.toBpm)} BPM
+                  {bpmText(nextPreview.toBpm)} BPM
                 </Text>
               </View>
             ) : null}
@@ -418,7 +418,7 @@ function RandomMetricModulationScreen() {
               >
                 <View className="items-center">
                   <Text className="font-ui-semibold text-2xl font-semibold" style={[muted, { fontVariant: ['tabular-nums'] }]}>
-                    {Math.round(engineState.referenceBpm)}
+                    {bpmText(engineState.referenceBpm)}
                   </Text>
                   <Text className="font-ui text-xs" style={muted}>
                     {engineState.returnToOriginal ? 'Original' : 'Previous'}
@@ -452,7 +452,7 @@ function RandomMetricModulationScreen() {
             </PlanText>
           ) : lastModulation ? (
             <Text className="font-ui-semibold text-center text-sm font-semibold" style={fg}>
-              Modulated {ratioPart(lastModulation.label)}: {Math.round(lastModulation.from)} → {Math.round(lastModulation.to)} BPM
+              Modulated {ratioPart(lastModulation.label)}: {bpmText(lastModulation.from)} → {bpmText(lastModulation.to)} BPM
             </Text>
           ) : (
             <PlanText> </PlanText>
@@ -464,3 +464,8 @@ function RandomMetricModulationScreen() {
 }
 
 export default withScreenLoader(RandomMetricModulationScreen);
+
+/** A tempo to a tenth, like the big BPM readout (62.5, not 63; 100, not 100.0). */
+function bpmText(bpm: number): string {
+  return String(Math.round(bpm * 10) / 10);
+}

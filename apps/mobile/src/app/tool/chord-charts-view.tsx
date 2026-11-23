@@ -26,8 +26,8 @@ const BARS_PER_ROW = 4;
  * time signature) live *in the navigation header*, next to the back button, rather than in a block
  * above the chart; the header's right side holds a compact key button (transpose, display-only —
  * accent-filled while transposed) and the same ⋮ menu the library rows use (Edit / Playlists / Delete).
- * Below the header there's nothing but the chart, with tight side padding so it renders as large as
- * the width allows.
+ * Below the header there's nothing but the chart, at the usual 16 dp side gutter (it scales to the
+ * width, so four bars a line still fit on a 360 dp phone).
  */
 function ChordChartsViewScreen() {
   const { colors } = useAppTheme();
@@ -101,7 +101,7 @@ function ChordChartsViewScreen() {
         }}
       />
       <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 6, paddingTop: 4, paddingBottom: 16, flexGrow: 1 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16, flexGrow: 1 }}>
           {selectedSongLoading ? (
             <View className="flex-1 items-center justify-center py-12">
               <LoadingSpinner showLabel label="Loading chart…" />

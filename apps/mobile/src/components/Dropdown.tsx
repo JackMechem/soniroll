@@ -67,7 +67,8 @@ export function Dropdown<T>({
             className="rounded-3xl p-2"
             style={{ backgroundColor: colors.background, maxHeight: '70%' }}
           >
-            <ScrollView>
+            {/* The scrollbar stays visible on Android, so a long list shows that it scrolls. */}
+            <ScrollView persistentScrollbar>
               {options.map((option, i) => {
                 const selected = option.value === value;
                 return (

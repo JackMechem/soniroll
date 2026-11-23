@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useConvexAuth } from '@convex-dev/auth/react';
 import { useConvexAuth as useBackendAuth } from 'convex/react';
 import { useEffect, useSyncExternalStore } from 'react';
+import { AppState } from 'react-native';
 
 /**
  * Which copy the phone's stores read: the website's rule is "no merge — signing in switches which
@@ -269,10 +270,16 @@ export function onFlushAccountWrites(fn: () => void): () => void {
 }
 
 /** Sends every edit still waiting for its debounce. Call it just before signing out, while the
-    account still takes writes. */
+    account still takes writes. Also runs when the app goes to the background (below): Android may
+    close it from there before the 600 ms are up, and the edit would never reach the account (the
+    website lost edits the same way when a page was left inside that window). */
 export function flushAccountWrites() {
   for (const fn of flushers) fn();
 }
+
+AppState.addEventListener('change', (state) => {
+  if (state !== 'active') flushAccountWrites();
+});
 
 /** Mounted once, in the root layout: tells the writes above when the backend has the sign-in. */
 export function useAccountWritesGate() {

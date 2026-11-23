@@ -50,6 +50,7 @@ import {
   SliderField,
   StrugglesChip,
   TextButton,
+  AnswerKeyboardSlot,
   ToolScreen,
   noteGlyphs,
   useGradeColors,
@@ -686,12 +687,12 @@ function GuessTheChordScreen() {
         ) : null
       }
       footer={
-        answering ? (
-          <View>
+        running && round ? (
+          <AnswerKeyboardSlot active={answering}>
             {/* How to type a symbol, beside the keyboard, in the first round only. */}
             {progress?.index === 1 ? (
               <Text className="font-ui px-4 pb-2 text-center text-xs leading-4" style={{ color: colors.muted }}>
-                Root, quality, then an optional /bass: F♯Δ7, A♭-7/D.
+                {giveRoot ? 'The root is filled in: add the quality, then an optional /bass (Δ7, -7/D).' : 'Root, quality, then an optional /bass: F♯Δ7, A♭-7/D.'}
               </Text>
             ) : null}
             <ChordAnswerKeyboard
@@ -701,11 +702,11 @@ function GuessTheChordScreen() {
               onGiveUp={giveUp}
               onSubmit={gradeAndReveal}
             />
-          </View>
+          </AnswerKeyboardSlot>
         ) : null
       }
       action={
-        !answering && (!showingSummary || learnMode) ? (
+        !(running && round) && (!showingSummary || learnMode) ? (
           <BigButton
             label={running ? 'Stop' : learnMode ? `Start level ${learn.selected + 1}` : 'Start'}
             secondary={running}
@@ -767,6 +768,8 @@ function GuessTheChordScreen() {
                     <Text numberOfLines={1} className="font-ui-semibold text-sm font-semibold" style={{ color: GRADE_COLOR.incorrect }}>
                       {missLine}
                     </Text>
+                  ) : answering && giveRoot && untouched ? (
+                    <MutedText>Root given · type the rest</MutedText>
                   ) : null}
                 </FeedbackLine>
                 <FeedbackLine>
@@ -793,8 +796,8 @@ function GuessTheChordScreen() {
               <ElapsedTimer active={running} startedAt={sessionStartedAt} />
             </View>
           ) : null}
-          {/* While answering, the keyboard's at the bottom: a quiet Stop. */}
-          {answering ? <TextButton label="Stop" onPress={endSession} /> : null}
+          {/* While a round runs, the keyboard's at the bottom: a quiet Stop that never moves. */}
+          {running && round ? <TextButton label="Stop" onPress={endSession} /> : null}
         </View>
       )}
 
