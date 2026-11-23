@@ -32,7 +32,7 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-overlay p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-overlay p-0 sm:items-center sm:p-4"
       onClick={onCancel}
     >
       <div
@@ -40,7 +40,7 @@ export default function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-message`}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-xl ring-1 ring-foreground/[0.06] bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
+        className="flex w-full flex-col gap-4 rounded-t-xl ring-1 ring-foreground/[0.06] bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-left text-foreground shadow-2xl shadow-black/20 sm:max-w-sm sm:rounded-xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-1.5">

@@ -176,14 +176,14 @@ export default function LessonSettingsPage() {
                   : "When you usually teach — students request lessons from these times."}
               </p>
             </div>
-            <button
-              type="button"
-              disabled={!dirty || busy}
-              onClick={() => void submit()}
-              className={btnPrimary}
-            >
-              {busy ? "Saving…" : dirty ? "Save" : "Saved"}
-            </button>
+            {/* Nothing to save: a quiet "Saved" rather than a greyed-out button. */}
+            {dirty || busy ? (
+              <button type="button" disabled={busy} onClick={() => void submit()} className={btnPrimary}>
+                {busy ? "Saving…" : "Save"}
+              </button>
+            ) : (
+              <span className="text-xs text-muted">Saved</span>
+            )}
           </div>
           {status && <p className={`-mt-2 text-sm ${status.ok ? "text-emerald-600 dark:text-emerald-400" : "text-danger"}`}>{status.text}</p>}
 
@@ -194,7 +194,8 @@ export default function LessonSettingsPage() {
                 {WEEK.map((wd) => {
                   const mine = dayWindows(wd);
                   return (
-                    <div key={wd} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:px-5">
+                    // A day off is one line ("Not teaching" beside its name), on phones too.
+                    <div key={wd} className={`flex gap-2 px-4 py-3 sm:flex-row sm:items-start sm:px-5 ${mine.length ? "flex-col" : "flex-row"}`}>
                       <div className="flex w-32 shrink-0 items-center gap-2 pt-1.5">
                         <button
                           type="button"

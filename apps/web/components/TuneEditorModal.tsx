@@ -40,13 +40,13 @@ export default function TuneEditorModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-overlay p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-overlay p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-label={isNew ? "New tune" : "Edit tune"}
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xl ring-1 ring-foreground/[0.06] bg-surface text-left text-foreground shadow-xl"
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-xl pb-[env(safe-area-inset-bottom)] ring-1 sm:max-h-[90dvh] sm:max-w-lg sm:rounded-xl sm:pb-0 ring-foreground/[0.06] bg-surface text-left text-foreground shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 pt-5 sm:px-6">
@@ -65,7 +65,8 @@ export default function TuneEditorModal({
           <label className="flex flex-col gap-2 text-sm">
             <span className="text-xs font-medium text-muted">Name</span>
             <input
-              autoFocus
+              // Editing on a touch screen: no keyboard popping up over the form until you tap.
+              autoFocus={isNew || (typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches)}
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && save()}

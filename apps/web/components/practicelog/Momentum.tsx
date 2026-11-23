@@ -210,14 +210,15 @@ function Card({
   wide?: boolean;
 }) {
   return (
-    <section className={`flex min-w-0 flex-col gap-2 rounded-lg bg-surface p-3 sm:gap-3 sm:p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
+    <section className={`@container flex min-w-0 flex-col gap-2 rounded-lg bg-surface p-3 sm:gap-3 sm:p-4 ${wide ? "sm:col-span-2 xl:col-span-1" : ""}`}>
       <div className="flex h-5 items-center justify-between gap-2">
         <h3 className="truncate text-xs font-medium text-muted">{label}</h3>
         {action}
       </div>
       <div className="flex h-8 items-baseline justify-between gap-2">
         {value}
-        {aside}
+        {/* A narrow card (two side by side on a phone) has no room for it; the bar says the same. */}
+        {aside && <span className="shrink-0 @max-[15rem]:hidden">{aside}</span>}
       </div>
       <div className="mt-auto flex flex-col gap-2 sm:gap-3">{children}</div>
     </section>

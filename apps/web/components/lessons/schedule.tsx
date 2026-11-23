@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import Select from "@/components/Select";
 import { CalendarIcon, CheckIcon, CloseIcon, DownloadIcon, LinkIcon, PlusIcon } from "@/components/tools";
 import { Dialog, dialogFooter, btnPrimary as btnMain, btnSecondary, errorText, field } from "@/components/lessons/parts";
 import { shareLink } from "@/lib/shareLink";
@@ -282,7 +283,9 @@ function BookingDialog({ b, kind, other, onClose }: { b: Booking; kind: "accept"
             : `${other} gets an email${b.status === "confirmed" ? " (and a calendar update that removes it)" : ""}.`}
       </p>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
-        A message <span className="font-normal text-muted">(optional, goes in the email)</span>
+        <span>
+          A message <span className="font-normal text-muted">(optional, goes in the email)</span>
+        </span>
         <textarea
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
@@ -351,12 +354,12 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
           <CalendarIcon className="h-4 w-4 text-muted" /> Booking
         </h2>
         {teacher ? (
-          <button type="button" onClick={() => setDialog("offer")} className={`${btnPrimary} flex items-center gap-1`}>
+          <button type="button" onClick={() => setDialog("offer")} className={btnSecondary}>
             <PlusIcon className="h-3.5 w-3.5" /> Offer times
           </button>
         ) : (
           data.canRequest && (
-            <button type="button" onClick={() => setDialog("request")} className={`${btnPrimary} flex items-center gap-1`}>
+            <button type="button" onClick={() => setDialog("request")} className={btnSecondary}>
               <PlusIcon className="h-3.5 w-3.5" /> Request a lesson
             </button>
           )
@@ -451,7 +454,7 @@ export function ScheduleCard({ lessonId }: { lessonId: Id<"lessonStudents"> }) {
 
       {teacher && !data.hasAvailability && (
         <Link href="/lessons/settings#hours" className="text-xs font-medium text-accent hover:underline">
-          Set your teaching hours so students can request lessons →
+          Set your teaching hours so students can request lessons&nbsp;→
         </Link>
       )}
 
@@ -535,13 +538,7 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
         <p className="text-sm text-muted">Pick a few times — {name} chooses one.</p>
         <label className="flex items-center gap-2 text-sm font-medium">
           Length
-          <select value={len} onChange={(e) => setLengthMin(Number(e.target.value))} className="h-9 rounded-md bg-background px-2 text-sm">
-            {LESSON_LENGTHS.map((m) => (
-              <option key={m} value={m}>
-                {m} min
-              </option>
-            ))}
-          </select>
+          <Select value={len} onChange={setLengthMin} options={LESSON_LENGTHS.map((m) => ({ value: m, label: `${m} min` }))} className="w-28" />
         </label>
       </div>
       {free === undefined ? (
@@ -595,11 +592,15 @@ function OfferTimesDialog({ lessonId, name, defaultEmail, onClose }: { lessonId:
         </div>
       )}
       <label className="flex flex-col gap-1.5 text-sm font-medium">
-        Email it to <span className="font-normal text-muted">(leave empty to just get a link)</span>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`${name}'s email`} className={field} />
+        <span>
+          Email it to <span className="font-normal text-muted">(optional)</span>
+        </span>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`${name}'s email, or leave empty for a link`} className={field} />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
-        A note <span className="font-normal text-muted">(optional)</span>
+        <span>
+          A note <span className="font-normal text-muted">(optional)</span>
+        </span>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -683,7 +684,9 @@ function RequestLessonDialog({ lessonId, teacherName, onClose }: { lessonId: Id<
         </div>
       )}
       <label className="flex flex-col gap-1.5 text-sm font-medium">
-        A note <span className="font-normal text-muted">(optional)</span>
+        <span>
+          A note <span className="font-normal text-muted">(optional)</span>
+        </span>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}

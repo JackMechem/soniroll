@@ -15,7 +15,7 @@ import { ArchiveIcon, CloudIcon, DeviceIcon, DownloadIcon, LibraryIcon, ChevronR
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 import StoragePill from "@/components/files/StoragePill";
-import { tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
+import { otherDeviceName, tidyDeviceFiles, useDeviceUrls } from "@/lib/deviceFiles";
 import { StorageMovePanel } from "@/components/files/StorageMove";
 import { useBackup } from "@/lib/storageMove";
 import { PLAN_HREF, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
@@ -86,7 +86,8 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
   const tunes = useTuneIndex();
   const tuneName = (id: string) => tunes.get(id)?.tune.name;
   const saveTarget = useSaveTarget();
-  const uploader = useFileUploader(undefined, saveTarget);
+  const myFiles = useMemo(() => storage?.items.filter((i) => i.kind === "file"), [storage]);
+  const uploader = useFileUploader(undefined, saveTarget, myFiles);
   const actions = useFileActions({ tuneName });
 
   const [query, setQuery] = useState("");
@@ -465,7 +466,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                           type="button"
                           role="cell"
                           onClick={() => (showChecks && !window.matchMedia("(min-width: 640px)").matches ? toggle(item) : actions.openFile(item))}
-                          className="flex min-w-0 items-center gap-3 px-2 py-2 text-left"
+                          className={`flex min-w-0 items-center gap-3 px-2 py-2 text-left ${item.device && !item.url ? "opacity-60" : ""}`}
                         >
                           <FileTypeIcon kind={fileKind(item.mimeType, item.name)} recording={item.kind === "recording"} />
                           <span className="min-w-0 flex-1">
@@ -480,7 +481,7 @@ export default function FilesPage({ initialSource = "all" }: { initialSource?: S
                               <PlaceBadge item={item} paid={!!plan?.hasPlan} />
                             </span>
                             {/* Phones: everything in one line under the name. */}
-                            <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, where === "Your files" ? null : where)}</span>
+                            <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, [where === "Your files" ? null : where, item.device && !item.url ? `On ${otherDeviceName(item.device.label)}` : null].filter(Boolean).join(" · ") || null)}</span>
                             <span className="hidden truncate text-xs text-muted sm:block">{FILE_KIND_LABEL[fileKind(item.mimeType, item.name)]}</span>
                           </span>
                         </button>
@@ -577,12 +578,13 @@ function PlaceBadge({ item, paid }: { item: StoredEntry; paid: boolean }) {
     return item.url ? (
       <span title="Kept on this device" className={`${badge} bg-foreground/[0.05] text-muted`}>
         <DeviceIcon className="h-3 w-3" />
-        <span className="hidden lg:inline">This device</span>
+        <span>This device</span>
       </span>
     ) : (
-      <span title={`Kept on ${item.device.label}. Open it there.`} className={`${badge} bg-foreground/[0.05] text-muted`}>
+      <span title={`Kept on ${otherDeviceName(item.device.label)}. Open it there.`} className={`${badge} bg-foreground/[0.05] text-muted`}>
         <DeviceIcon className="h-3 w-3" />
-        <span className="max-w-[10rem] truncate">{item.device.label}</span>
+        {/* Phones say where in the line under the name, so the name keeps its room. */}
+        <span className="hidden max-w-[10rem] truncate sm:inline">{otherDeviceName(item.device.label).replace(/^another/, "Another")}</span>
       </span>
     );
   }

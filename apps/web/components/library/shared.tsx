@@ -153,7 +153,7 @@ export function MenuButton({ label, onClick, alwaysVisible = false }: { label: s
       }}
       aria-label={label}
       title="Options"
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-foreground/[0.08] hover:text-foreground focus-visible:opacity-100 ${
+      className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 hover:bg-foreground/[0.08] hover:text-foreground focus-visible:opacity-100 ${
         alwaysVisible ? "" : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
       }`}
     >

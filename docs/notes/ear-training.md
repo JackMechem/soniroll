@@ -122,3 +122,6 @@ keyboard: `onPointerDown` sets the input's `inputMode` to "none" for a touch tap
 for a mouse/pen), before focus, so the caret still shows and a hardware keyboard still types.
 Guess the Chord keeps the keyboard: its keypad has no root letters. Not verified on a real phone
 (headless Chromium has no on-screen keyboard).
+
+2026-11-23: out of date. UI pass 2 gave Guess the Chord's keypad a number row (and root letters
+when the root isn't given), so it now hides the phone keyboard on touch the same way.

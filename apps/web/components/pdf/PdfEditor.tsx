@@ -255,6 +255,17 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  // The page grid: Escape goes back to the document (not out of the editor).
+  useEffect(() => {
+    if (view !== "pages") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || menu || (e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
+      setView("read");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [view, menu]);
+
   // No page scrolling behind the editor.
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -357,10 +368,8 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
           <Pop
             label="Music symbols and stamps"
             trigger={
-              <span className={`${toolCls(options.tool === "stamp")} w-auto gap-1 px-2 sm:w-auto sm:px-2.5`}>
-                <span className="text-xl leading-none" style={{ fontFamily: fontFamily("music") }}>
-                  {""}
-                </span>
+              <span className={`${toolCls(options.tool === "stamp")} w-auto min-w-9 gap-1 px-2 sm:w-auto sm:px-2.5 pointer-coarse:w-auto pointer-coarse:min-w-11`}>
+                <FitGlyph text={""} family={fontFamily("music")} max={20} />
                 <span className="hidden text-xs font-medium sm:inline">{options.tool === "stamp" ? options.stamp.label : "Symbols"}</span>
               </span>
             }
@@ -383,9 +392,13 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
                           }}
                           className={`flex h-11 items-center justify-center rounded-md hover:bg-surface-hover ${options.tool === "stamp" && options.stamp.label === s.label ? "bg-accent/15 text-accent" : "bg-foreground/[0.04]"}`}
                         >
-                          <span className={s.font === "music" ? "text-2xl leading-none" : "text-xs"} style={{ fontFamily: fontFamily(s.font) }}>
-                            {s.text}
-                          </span>
+                          {s.font === "music" ? (
+                            <FitGlyph text={s.text} family={fontFamily(s.font)} max={28} />
+                          ) : (
+                            <span className="text-xs" style={{ fontFamily: fontFamily(s.font) }}>
+                              {s.text}
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -649,8 +662,50 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
 
 // ---------------------------------------------------------------- bits
 
+// 44px on touch screens (the row scrolls sideways when they don't all fit).
 const toolCls = (active: boolean) =>
-  `flex h-10 w-9 shrink-0 items-center justify-center rounded-lg transition-colors sm:w-10 ${active ? "bg-accent/15 text-accent" : "text-foreground/80 hover:bg-surface-hover"}`;
+  `flex h-10 w-9 shrink-0 items-center justify-center rounded-lg transition-colors sm:w-10 pointer-coarse:h-11 pointer-coarse:w-11 ${active ? "bg-accent/15 text-accent" : "text-foreground/80 hover:bg-surface-hover"}`;
+
+/** A music-font (SMuFL) glyph drawn to fit its box: the fonts' glyphs sit at odd heights and some
+    (repeat signs) are taller than a line, so its ink is measured (canvas `measureText`, once the
+    font has loaded) and centred, shrunk to `max` px when it's bigger. */
+function FitGlyph({ text, family, max }: { text: string; family: string; max: number }) {
+  const [box, setBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    const font = `24px ${family}`;
+    void document.fonts
+      .load(font, text)
+      .catch(() => [])
+      .then(() => {
+        const ctx = document.createElement("canvas").getContext("2d");
+        if (!ctx || !live) return;
+        ctx.font = font;
+        const m = ctx.measureText(text);
+        const w = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+        const h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+        if (w > 0 && h > 0) setBox({ x: -m.actualBoundingBoxLeft, y: -m.actualBoundingBoxAscent, w, h });
+      });
+    return () => {
+      live = false;
+    };
+  }, [text, family]);
+  const scale = box ? Math.min(1, max / box.h, (max * 1.5) / box.w) : 1;
+  return (
+    <svg
+      aria-hidden
+      viewBox={box ? `${box.x} ${box.y} ${box.w} ${box.h}` : `0 -${max} ${max} ${max}`}
+      width={box ? box.w * scale : max}
+      height={box ? box.h * scale : max}
+      className={box ? "" : "invisible"}
+      overflow="visible"
+    >
+      <text fontSize={24} fill="currentColor" style={{ fontFamily: family }}>
+        {text}
+      </text>
+    </svg>
+  );
+}
 
 function ToolBtn({ label, icon: Icon, active = false, danger, onClick }: { label: string; icon: ComponentType<{ className?: string }>; active?: boolean; danger?: boolean; onClick: () => void }) {
   return (

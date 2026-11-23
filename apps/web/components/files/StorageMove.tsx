@@ -6,6 +6,7 @@ import { useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CloseIcon, DeviceIcon, DownloadIcon } from "@/components/tools";
 import { type StoredEntry, errorText, formatBytes } from "@/lib/files";
+import { otherDeviceName } from "@/lib/deviceFiles";
 import { downloadEverything, isMovable, useStorageMoves } from "@/lib/storageMove";
 import { type AccountStorage, PLAN_HREF, moveDateLabel, useStoragePlan } from "@/lib/storagePlan";
 
@@ -181,7 +182,7 @@ export function OnOtherDevice({ label, what = "file" }: { label: string; what?: 
     <p className="flex items-start gap-2 rounded-md bg-foreground/[0.05] px-3 py-2 text-xs text-muted">
       <DeviceIcon className="mt-px h-3.5 w-3.5 shrink-0" />
       <span>
-        This {what} is kept on {label}, so play it there. A{" "}
+        This {what} is kept on {otherDeviceName(label)}, so play it there. A{" "}
         <Link href={PLAN_HREF} className="text-accent hover:underline">
           storage plan
         </Link>{" "}

@@ -33,7 +33,7 @@ import {
   saveFile,
 } from "@/lib/files";
 import { PLAN_HREF, type SaveTarget, useSaveTarget, useStoragePlan } from "@/lib/storagePlan";
-import { deleteOnDevice, useDeviceUrls } from "@/lib/deviceFiles";
+import { deleteOnDevice, otherDeviceName, useDeviceUrls } from "@/lib/deviceFiles";
 import { isMovable, useStorageMoves } from "@/lib/storageMove";
 import { KeptHereHint } from "@/components/files/StorageMove";
 import SaveWhere from "@/components/files/SaveWhere";
@@ -119,11 +119,13 @@ export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; auto
   const kind = fileKind(file.mimeType, file.name);
   const url = file.url;
   if (!url && file.device) {
+    const where = otherDeviceName(file.device.label);
     return (
       <div className="flex max-w-sm flex-col items-center gap-3 p-10 text-center">
         <DeviceIcon className="h-8 w-8 text-muted" />
         <p className="text-sm text-muted">
-          This file is kept on {file.device.label}, so open it there. A{" "}
+          This file is kept on {where}, so open it there
+          {where !== file.device.label && " (if you saved it in this browser, its data was cleared since: add the file again to keep it here)"}. A{" "}
           <Link href={PLAN_HREF} className="text-accent hover:underline">
             storage plan
           </Link>{" "}
@@ -231,8 +233,10 @@ const isMedia = (f: { mimeType: string; name: string }) => ["audio", "video"].in
  * Adding one or more files to the account, optionally attached to a tune: `pick()` opens the
  * file chooser, `drop` props make an element a drop target, and `input` must be rendered. They're
  * saved online with a storage plan, or on this device without one (`lib/storagePlan.ts`).
+ * `existing`: the files already there; adding one with the same name and size asks first ("Add
+ * again", or skip it).
  */
-export function useFileUploader(tuneId: string | undefined, target: SaveTarget) {
+export function useFileUploader(tuneId: string | undefined, target: SaveTarget, existing?: readonly { name: string; size: number }[]) {
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
   const create = useMutation(filesApi.create);
   const createOnDevice = useMutation(filesApi.createOnDevice);
@@ -241,9 +245,17 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [askAgain, setAskAgain] = useState<{ names: string[]; answer: (again: boolean) => void } | null>(null);
 
   const uploadAll = useCallback(
-    async (files: File[]): Promise<boolean> => {
+    async (chosen: File[]): Promise<boolean> => {
+      let files = chosen;
+      const repeats = existing ? files.filter((f) => existing.some((e) => e.name === f.name && e.size === f.size)) : [];
+      if (repeats.length) {
+        const again = await new Promise<boolean>((answer) => setAskAgain({ names: repeats.map((f) => f.name), answer }));
+        setAskAgain(null);
+        if (!again) files = files.filter((f) => !repeats.includes(f));
+      }
       if (!files.length) return true;
       setError(null);
       setProgress({ done: 0, total: files.length });
@@ -262,21 +274,37 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget) 
       if (failures.length) setError(failures.join(" "));
       return failures.length === 0;
     },
-    [create, createOnDevice, generateUploadUrl, online, storage, tuneId],
+    [create, createOnDevice, existing, generateUploadUrl, online, storage, tuneId],
   );
 
   const input = (
-    <input
-      ref={inputRef}
-      type="file"
-      multiple
-      className="hidden"
-      onChange={(e) => {
-        const files = Array.from(e.target.files ?? []);
-        e.target.value = "";
-        void uploadAll(files);
-      }}
-    />
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = "";
+          void uploadAll(files);
+        }}
+      />
+      {askAgain && (
+        <ConfirmDialog
+          title={askAgain.names.length === 1 ? "You already have this file" : "You already have some of these"}
+          message={
+            askAgain.names.length === 1
+              ? `You already have “${askAgain.names[0]}”. Add another copy?`
+              : `You already have ${askAgain.names.map((n) => `“${n}”`).join(", ")}. Add another copy of each?`
+          }
+          confirmLabel="Add again"
+          cancelLabel="Skip"
+          onConfirm={() => askAgain.answer(true)}
+          onCancel={() => askAgain.answer(false)}
+        />
+      )}
+    </>
   );
 
   const drop = {
@@ -335,7 +363,13 @@ function deleteMessage(item: StoredEntry, tune: string | undefined) {
     case "profile":
       return "It's taken off your profile.";
     default:
-      return "The file is deleted from your account for good. If the tune it's on is shared, it disappears from the link too.";
+      return [
+        "The file is deleted from your account for good.",
+        item.sharedId && "Its link stops working.",
+        item.tuneId && `If ${tune ?? "the tune it's on"} is shared, it disappears from that link too.`,
+      ]
+        .filter(Boolean)
+        .join(" ");
   }
 }
 
@@ -628,7 +662,7 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
   const files = useDeviceUrls(useQuery(filesApi.listForTune, isAuthenticated ? { tuneId } : "skip"));
   const update = useMutation(filesApi.update);
   const saveTarget = useSaveTarget();
-  const uploader = useFileUploader(tuneId, saveTarget);
+  const uploader = useFileUploader(tuneId, saveTarget, files);
   const actions = useFileActions({ tuneName, hereTuneId: tuneId });
   const [adding, setAdding] = useState(false);
 

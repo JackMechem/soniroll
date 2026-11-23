@@ -96,13 +96,14 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
     LESSONS_CRUMB,
     { label: heading, href: personHref },
     ...(session ? [{ label: data.session ? data.session.title : "Earlier", href: lessonHref(lessonId, session) }] : []),
-    ...(selected ? [{ label: "Notes", href: href() }, { label: selected.title || "Untitled" }] : [{ label: "Notes" }]),
+    // An open note replaces "Notes" (the note's Back link goes to the list).
+    ...(selected ? [{ label: selected.title || "Untitled" }] : [{ label: "Notes" }]),
   ];
 
   async function newNote() {
     setCreating(true);
     try {
-      const title = `Lesson — ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+      const title = data?.session ? "Notes" : `Lesson — ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
       const id = await addItem({ lessonId: lessonId as Id<"lessonStudents">, kind: "note", title, body: "", ...(sessionArg ? { sessionId: sessionArg } : {}) });
       setQuery("");
       router.replace(href(id));
@@ -315,6 +316,8 @@ function NoteView({ note, teacher, listHref, onDeleted, lessonId }: { note: Note
         lessonId={lessonId}
         markdown={note.body}
         editable={teacher}
+        // A new (empty) note: ready to type into, except on touch screens (no keyboard popping up).
+        autoFocus={teacher && !note.body.trim() && !window.matchMedia("(pointer: coarse)").matches}
         onChange={teacher ? (md) => queue({ body: md }) : undefined}
         placeholder="What you worked on, what to practice next… Type # for a heading, - for a list, [ ] for a checklist."
       />

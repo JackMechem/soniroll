@@ -19,7 +19,7 @@ import { displayKey, isMinorKey } from "@jam-practice/core/setlistKeys";
 import { useChartActions } from "@/components/library/useChartActions";
 import { playAlongHref } from "@/components/library/usePlayAlong";
 import Select from "@/components/Select";
-import { BassIcon, DotsVerticalIcon, LibraryIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon } from "@/components/tools";
+import { BassIcon, DotsVerticalIcon, LibraryIcon, MaximizeIcon, MinimizeIcon, PencilIcon, PlusIcon, RepeatIcon } from "@/components/tools";
 import { goBackOr } from "@/lib/goBack";
 import { formatComposer, KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
@@ -210,12 +210,12 @@ export default function ChartViewPage({ id }: { id: string }) {
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {!inList("tunes") && (
                   <button type="button" onClick={() => addToList("tunes")} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-                    <PlusIcon className="h-4 w-4" /> {linkedTunes.length ? "Move to" : "Add to"} {TUNE_LIST_LABEL.tunes}
+                    {linkedTunes.length ? <RepeatIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />} {linkedTunes.length ? "Move to" : "Add to"} {TUNE_LIST_LABEL.tunes}
                   </button>
                 )}
                 {isAuthenticated && !inList("learn") && (
                   <button type="button" onClick={() => addToList("learn")} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover">
-                    <PlusIcon className="h-4 w-4" /> {linkedTunes.length ? "Move to" : "Add to"} {TUNE_LIST_LABEL.learn}
+                    {linkedTunes.length ? <RepeatIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />} {linkedTunes.length ? "Move to" : "Add to"} {TUNE_LIST_LABEL.learn}
                   </button>
                 )}
               </div>

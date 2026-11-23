@@ -111,15 +111,18 @@ export function SupportCard({ always = false }: { always?: boolean }) {
           Why it helps
         </Link>
       </div>
-      <button
-        type="button"
-        onClick={hideForAWhile}
-        aria-label="Not now"
-        title="Not now (hides this for 30 days)"
-        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
-      >
-        <CloseIcon className="h-4 w-4" />
-      </button>
+      {/* While the dashboard is edited (`always`), its frame has its own × to take the card off. */}
+      {!always && (
+        <button
+          type="button"
+          onClick={hideForAWhile}
+          aria-label="Not now"
+          title="Not now (hides this for 30 days)"
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+      )}
     </section>
   );
 }

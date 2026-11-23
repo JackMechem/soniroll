@@ -8,8 +8,8 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy policy" updated="November 23, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
-        Mechem. This page says what it collects and why, in plain words.
+        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a set of free music practice tools run by Jack Mechem.
+        Every tool is free; the only thing sold is optional extra storage (a storage plan). This page says what it collects and why, in plain words.
       </p>
 
       <LegalSection title="The short version">

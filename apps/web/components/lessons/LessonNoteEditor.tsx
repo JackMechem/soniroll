@@ -24,8 +24,11 @@ export default function LessonNoteEditor({
   editable,
   onChange,
   placeholder,
+  autoFocus = false,
 }: {
   lessonId: string;
+  /** Put the cursor in the text when it opens (a new note). */
+  autoFocus?: boolean;
   markdown: string;
   editable: boolean;
   onChange?: (markdown: string) => void;
@@ -76,6 +79,7 @@ export default function LessonNoteEditor({
           viewRef.current = v;
         }}
         placeholder={editable ? placeholder : ""}
+        autoFocus={editable && autoFocus}
         bottomSpace="3rem"
         className="min-h-[50vh]"
       />

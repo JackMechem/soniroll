@@ -732,9 +732,6 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const hasGoogle = providers?.includes("google") ?? false;
   const username = profile?.username || null;
   const current = NAV.flatMap((g) => g.items).find((i) => i.id === view)!;
-  // Opened as Settings (the sidebar's Settings, `/settings`): the trail says "Settings", not
-  // "Account".
-  const rootLabel = NAV.find((g) => g.items.some((i) => i.id === view))?.group === "Settings" ? "Settings" : "Account";
 
   function handleSignOut() {
     void signOut();
@@ -759,7 +756,9 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
             ? [{ label: "Account" }]
             : [
                 {
-                  label: rootLabel,
+                  // Always "Account" (also when opened as Settings), so the trail doesn't change
+                  // between sections; the side list's group names say which part you're in.
+                  label: "Account",
                   href: "/account",
                   onClick: () => {
                     if (window.matchMedia(NARROW).matches) {

@@ -107,18 +107,18 @@ export function CrumbTrail({
   let before: Crumb[] = earlier;
   let folded: Crumb[] = [];
   let after: Crumb[] = [];
-  // Compact: all of it when it's short ("Help / Metronome"), else "… / parent / page" — the
-  // phone bar has room for about 20 characters, and the page's own name must not be the part
-  // that's cut short. The bar: all of it up to five, else "first / … / last two / page".
+  // Compact: all of it when it's short ("Library / Tunes / Setlists"), else "… / parent / page" —
+  // the phone bar has room for about 28 characters (~245px at 390 wide), and the page's own name
+  // must not be the part that's cut short. The bar: all of it up to five, else "first / … / last two / page".
   const length = crumbs.reduce((n, c) => n + (compact && c.short ? c.short : c.label).length + 3, -3);
-  if (compact && earlier.length > 1 && length > 20) {
+  if (compact && earlier.length > 1 && length > 26) {
     before = [];
     folded = earlier.slice(0, -1);
     after = earlier.slice(-1);
     // Still too long for both ("… / Sam St… / Lesson — Nov…"): fold the parent too, so the page's
     // own name is whole ("… / Lesson — Nov 20").
     const tail = [after[0], last].reduce((n, c) => n + (c.short ?? c.label).length + 3, -3);
-    if (tail > 22) {
+    if (tail > 24) {
       folded = earlier;
       after = [];
     }

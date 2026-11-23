@@ -67,7 +67,7 @@ export default function TemplatesPane({
   async function newTemplate() {
     flush();
     try {
-      const made = await createMut({ name: "New template", body: "" });
+      const made = await createMut({ name: "Untitled template", body: "" });
       setOpenId(made.id);
     } catch (e) {
       onNotice(errorText(e));
@@ -87,8 +87,9 @@ export default function TemplatesPane({
         <button type="button" onClick={onBack} className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium transition-colors hover:bg-surface-hover">
           <ChevronLeftIcon className="h-4 w-4" /> Notes
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight">Templates</h2>
-        <button type="button" onClick={() => void newTemplate()} className="flex h-8 shrink-0 items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
+        {/* Phones: the title on its own line under the buttons, so neither is squeezed. */}
+        <h2 className="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight max-sm:order-last max-sm:basis-full">Templates</h2>
+        <button type="button" onClick={() => void newTemplate()} className="flex h-8 shrink-0 max-sm:ml-auto items-center gap-1 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover">
           <PlusIcon className="h-4 w-4" /> New template
         </button>
       </div>
