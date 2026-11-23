@@ -9,6 +9,8 @@ import { ownerTune } from "./lib/tunes";
 import { sharedInLesson, sharedInNote } from "./scores";
 import { FREE_CLOUD_BYTES, MAX_FILE_BYTES, assertFits, assertHasRoom, assertPlanForOnline, bytesUsed, planFor, quotaFor, storedItems, type DeviceRef, type StoredKind } from "./lib/storage";
 import type { PublicRecording, PublicTune } from "@jam-practice/core/profileTunes";
+import { allFolderPaths } from "@jam-practice/core/fileFolders";
+import { dropMeta, madeFolders, metaMap, writeMeta } from "./lib/fileFolders";
 
 /**
  * Files: anything a person uploads to keep with their account (PDFs, images, audio, video,
@@ -35,10 +37,19 @@ export const storage = query({
     if (!userId) return null;
     const shares = await ctx.db.query("sharedFiles").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
     const shareOf = new Map(shares.map((row) => [`${row.kind}:${row.itemId}`, row._id as string]));
-    const items = (await storedItems(ctx, userId, true)).map((item) => ({ ...item, sharedId: shareOf.get(`${item.kind}:${item.id}`) ?? null }));
+    const meta = await metaMap(ctx, userId);
+    const items = (await storedItems(ctx, userId, true)).map((item) => {
+      const m = meta.get(`${item.kind}:${item.id}`);
+      return { ...item, sharedId: shareOf.get(`${item.kind}:${item.id}`) ?? null, folder: m?.folder ?? "", tags: m?.tags ?? [] };
+    });
     const { plan, gift, hasPlan, cloudBytes } = await planFor(ctx, userId);
     return {
       items,
+      /** Every folder (A–Z): made with New folder, or with something in it, and their parents. */
+      folders: allFolderPaths(
+        (await madeFolders(ctx, userId)).map((f) => f.path),
+        items.map((i) => i.folder),
+      ),
       /** Bytes online (what counts towards `quota`) and on devices. */
       used: items.reduce((sum, item) => sum + (item.device ? 0 : item.size), 0),
       onDevices: items.reduce((sum, item) => sum + (item.device ? item.size : 0), 0),
@@ -86,7 +97,7 @@ export const storagePlan = query({
 
 // ---------------------------------------------------------------- any stored item, by kind
 
-const kindArg = v.union(
+export const kindArg = v.union(
   v.literal("file"),
   v.literal("recording"),
   v.literal("song"),
@@ -100,7 +111,7 @@ type OwnedItem = { storageId?: Id<"_storage">; device?: DeviceRef; name: string;
 
 /** One of `userId`'s stored files, by its kind and id (as `storage` lists them), or null if it
     doesn't exist or isn't theirs. Ids come from the client, so every kind re-checks ownership. */
-async function ownedItem(ctx: QueryCtx, userId: Id<"users">, kind: StoredKind, id: string): Promise<OwnedItem | null> {
+export async function ownedItem(ctx: QueryCtx, userId: Id<"users">, kind: StoredKind, id: string): Promise<OwnedItem | null> {
   const sizeOf = async (storageId: Id<"_storage">) => (await ctx.db.system.get(storageId))?.size ?? 0;
   if (kind === "file") {
     const fileId = ctx.db.normalizeId("files", id);
@@ -271,6 +282,7 @@ export const removeItem = mutation({
       await ctx.db.patch(profile._id, profile.avatarStorageId === id ? { avatarStorageId: undefined, updatedAt: Date.now() } : { bannerStorageId: undefined, updatedAt: Date.now() });
     }
     await dropShares(ctx, userId, kind, id);
+    await dropMeta(ctx, userId, kind, id);
   },
 });
 
@@ -412,15 +424,16 @@ export const generateUploadUrl = mutation({
     left: the upload is deleted and it throws. */
 export const create = mutation({
   /** `keepOnline`: it's for a note (see the schema). */
-  args: { storageId: v.id("_storage"), name: v.string(), tuneId: v.optional(v.string()), keepOnline: v.optional(v.boolean()) },
-  handler: async (ctx, { storageId, name, tuneId, keepOnline }) => {
+  /** `folder`: put it in this Files folder (e.g. uploaded while that folder is open). */
+  args: { storageId: v.id("_storage"), name: v.string(), tuneId: v.optional(v.string()), keepOnline: v.optional(v.boolean()), folder: v.optional(v.string()) },
+  handler: async (ctx, { storageId, name, tuneId, keepOnline, folder }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
     // A picture for a note goes online on any plan (everyone who can open the note sees it).
     if (!keepOnline) await assertPlanForOnline(ctx, userId, storageId);
     const meta = await assertFits(ctx, userId, storageId);
     const now = Date.now();
-    return await ctx.db.insert("files", {
+    const id = await ctx.db.insert("files", {
       userId,
       storageId,
       name: name.trim().slice(0, MAX_NAME) || "File",
@@ -431,6 +444,8 @@ export const create = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    if (folder) await writeMeta(ctx, userId, "file", id, { folder });
+    return id;
   },
 });
 
@@ -503,13 +518,13 @@ export function cleanDevice(device: DeviceRef): DeviceRef {
 /** Saves a file kept on the caller's device: its data stays there (under `device.key`); this
     row is its name, size and tune, so it shows in lists on every device. */
 export const createOnDevice = mutation({
-  args: { name: v.string(), mimeType: v.string(), size: v.number(), tuneId: v.optional(v.string()), device: deviceArg },
-  handler: async (ctx, { name, mimeType, size, tuneId, device }) => {
+  args: { name: v.string(), mimeType: v.string(), size: v.number(), tuneId: v.optional(v.string()), device: deviceArg, folder: v.optional(v.string()) },
+  handler: async (ctx, { name, mimeType, size, tuneId, device, folder }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save files.");
     if (size > MAX_FILE_BYTES) throw new Error(`Files can be up to ${MAX_FILE_BYTES / (1024 * 1024)} MB.`);
     const now = Date.now();
-    return await ctx.db.insert("files", {
+    const id = await ctx.db.insert("files", {
       userId,
       device: cleanDevice(device),
       name: name.trim().slice(0, MAX_NAME) || "File",
@@ -519,6 +534,8 @@ export const createOnDevice = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    if (folder) await writeMeta(ctx, userId, "file", id, { folder });
+    return id;
   },
 });
 
@@ -635,6 +652,7 @@ export const remove = mutation({
     if (row.storageId) await ctx.storage.delete(row.storageId);
     await ctx.db.delete(id);
     await dropShares(ctx, userId, "file", id);
+    await dropMeta(ctx, userId, "file", id);
     const markup = await ctx.db
       .query("pdfMarkups")
       .withIndex("by_file", (q) => q.eq("fileId", id))

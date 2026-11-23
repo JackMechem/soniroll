@@ -212,7 +212,8 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   online (sharing, Lessons, notes, profile); a storage plan (Polar, `billing.ts`) saves online. Only
   online bytes count (`packages/convex/lib/storage.ts`; every upload path must call `assertHasRoom` /
   `assertFits`). Wrap any new query of files/recordings/songs with `useDeviceUrls` so device files
-  play. A new kind of stored file must also be added to `storedItems` and `ownedItem` in `files.ts`.
+  play. A new kind of stored file must also be added to `storedItems` / `storedItemById` (`lib/storage.ts`)
+  and `ownedItem` in `files.ts`, and its delete path should call `dropMeta` (its folder and tags, `fileMeta`).
   Every tool and feature stays free; only storage is sold. See `docs/notes/storage-plans.md`.
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
@@ -316,7 +317,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Library as two tabs (Tunes, Files; FB-30, 2026-11-20): every chart on a tune (`tuneChartIds`, several per tune), the Library tune list, tags, linking on import and the one-time pass (`useAutoLinkCharts`), Open in Slow Downer/Tuner from Files | `library-two-tabs.md` |
 | PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias | `pdf-editor.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
-| Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
+| Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link; folders and tags on files (`fileMeta`, `fileFolders.ts`: `inFolder`/`withTag` for other features) | `files-and-tune-sharing.md` |
 | Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |
 | Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`); the editable dashboard (Edit mode, `lib/dashboardLayout.ts`, `DashboardGrid`) | `site-settings.md` |
 | Tool presets (save/apply/rename/delete a tool's options; the Presets chip and panel section; how a tool opts in; which tools are skipped and why) | `presets.md` |

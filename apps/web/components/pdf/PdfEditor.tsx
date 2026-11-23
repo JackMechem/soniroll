@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import ContextMenu, { type MenuItem, type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useEdgeFade } from "@/components/library/ui";
 import PdfPageView, { type Tool, type ToolOptions } from "@/components/pdf/PdfPageView";
@@ -80,7 +80,7 @@ const ZOOMS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 2, 3];
  * for playing from it, and a download with the markings baked in. The markings are a layer saved
  * with the file (`pdfMarkups`); the PDF itself is never changed.
  */
-export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: () => void }) {
+export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile; onClose: () => void; extraMenu?: MenuItem[] }) {
   const { isAuthenticated } = useConvexAuth();
   // In a split-screen pane or the side view it covers just that pane (so other panes stay usable).
   const paneEl = usePaneElement();
@@ -322,6 +322,8 @@ export default function PdfEditor({ file, onClose }: { file: PdfFile; onClose: (
               { label: "Clear all markings…", icon: <TrashIcon className="h-4 w-4" />, danger: true, onSelect: () => setConfirmClear(true) },
             ]
           : []),
+        // The Files page's "Move to folder…" and "Tags…".
+        ...(extraMenu ?? []),
       ],
     });
   };

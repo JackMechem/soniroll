@@ -243,3 +243,118 @@ it, and have an upload button that opens the system file picker".
 - **Not verified:** a real OS drag-and-drop (only synthetic `DragEvent`s), saving online with a storage
   plan (the test account is free; same `saveFile` path as the Files page), audio by ear, Safari, real
   phones, a file over 100 MB, and migrating a real old browser-library file signed in.
+
+## 2026-11-23 — Folders and tags on files (web; backend on dev)
+
+Jack: "can you make it so I can put tags on files and put files in different folders so people can
+organize their files however they want? And make it so I can associate a tag or folder with a task /
+routine?" This entry is the first half (folders and tags, plus the queries the routine/task half
+needs); linking a folder or tag to a routine or task is a separate piece of work.
+
+**Data model (`packages/convex/schema.ts`).**
+- **`fileMeta`** (userId, kind, itemId, folder, tags, updatedAt): where one stored item is filed.
+  `kind` + `itemId` are exactly what `files.storage` lists (`StoredKind`: upload, recording, tune
+  song, lesson file, hand-in, profile image), so **every kind** can be filed, online or kept on a
+  device (the row is in Convex either way). `folder` is a path, "Etudes/Wilcoxon", "" = the top
+  level. `tags` are cleaned (trimmed, deduped ignoring case, max 30). One row per item, only while
+  it has a folder or a tag (`writeMeta` deletes it when both are empty). Indexes `by_user_item`
+  (userId, kind, itemId) and `by_user_folder` (userId, folder).
+- **`fileFolders`** (userId, path, createdAt; `by_user`): folders made with New folder, so a folder
+  can be empty — the same idea as `shedNoteFolders`. A file's folder also makes that folder and its
+  parents exist (`allFolderPaths`).
+- Why a side table and not fields on `files`/`recordings`/`tuneSongs`: lesson files, hand-ins and
+  profile images have no row of their own to put a field on (a hand-in is one entry in a
+  submission's array), and one table gives one index for "files in this folder" across every kind.
+  Cost: a row whose item was deleted somewhere that doesn't clean up (e.g. a lesson item deleted in
+  Lessons) is left behind; every read resolves rows through `storedItemById`, which drops them, and
+  the Files page builds its folder list from items that exist. Rows are tiny.
+- Cleaned up on delete: `files.removeItem`, `files.remove`, `recordings.remove`, `tuneSongs.remove`
+  (`dropMeta`). `tuneSongs.set` (replacing a tune's song) **carries the old song's folder and tags
+  over** to the new row. Account deletion (`account.performDelete`) deletes both tables.
+- `files.create` and `files.createOnDevice` take an optional `folder` (uploads made while a folder
+  is open go into it).
+
+**Backend (`packages/convex/fileFolders.ts`, helpers in `lib/fileFolders.ts`).**
+- Queries: `overview()` → `{ folders: string[], tags: {tag, count}[] } | null`;
+  `inFolder({ folder, deep? })` → `OrganizedItem[]`; `withTag({ tag: string | string[] })` →
+  `OrganizedItem[]` (any of the tags, ignoring case). `OrganizedItem` = `StoredItem` (the shape
+  `files.storage` lists: kind, id, name, mimeType, size, createdAt, url, device, tuneId, href,
+  keepOnline) + `folder` + `tags`. Newest first. `url` is null for device-kept items: on the web wrap
+  the result in `useDeviceUrls`.
+- Mutations (all re-check ownership through `files.ownedItem`, now exported): `moveItems({ items:
+  [{kind, id}], folder })` (≤ 500), `setTags({ kind, id, tags })`, `tagItems({ items, add?, remove? })`,
+  `renameTag({ from, to })` / `deleteTag({ tag })` (every item), `createFolder({ path })` (≤ 2000 made
+  folders), `renameFolder({ from, to })` (rename or move, merging onto an existing one; refuses
+  moving into itself), `deleteFolder({ path })` (contents move **up one level**: files to the
+  parent, subfolders become the parent's).
+- Helpers for other Convex code (`lib/fileFolders.ts`): `itemsInFolder(ctx, userId, folder, deep =
+  false, withUrls = true)`, `itemsWithTag(ctx, userId, tags, withUrls = true)`, `folderList(ctx,
+  userId)`, `metaRows`, `metaMap`, `metaFor`, `writeMeta`, `dropMeta`, `madeFolders`,
+  `rowsInFolder`. A named folder reads only its own rows through `by_user_folder` (the "deep" range
+  is `gte(folder + "/")`, `lt(folder + "0")` — "/" sorts just below "0"), so a task page showing a
+  folder stays quick on a big account; the top level ("") has to read everything (`storedItems`).
+  `withTag` reads the user's `fileMeta` rows (only filed items) and filters.
+- `lib/storage.ts` gained **`storedItemById(ctx, userId, kind, id, withUrl)`**: one item in
+  `storedItems`' shape, ownership checked. Keep it in step with `storedItems` and `ownedItem` when a
+  new kind is added.
+- `files.storage` now returns each item's `folder` and `tags`, and `folders` (every folder, A–Z).
+- Pure rules in **`packages/core/fileFolders.ts`**: `cleanFolder` (re-exported from `shedNotes`),
+  `cleanTag`, `cleanTags`, `fileTagKey`, `hasFileTag`, `folderParent`, `folderName`, `isInFolder(item,
+  folder, deep)`, `folderAncestors`, `movedFolder`, `folderAfterDelete`, `allFolderPaths`,
+  `compareFolders`, `childFolders`, `countFileTags`. It doesn't import `tuneLibrary` (that pulls the
+  standards list into Convex).
+
+**Web.**
+- `components/files/FileFolders.tsx` (new): `useFileOrganizer({ items, folders, onFolderMoved })`
+  — the ⋮ items (Move to folder…, Tags… / Add tags…), a folder's ⋮ (Open, Rename, Move to…, New
+  folder inside, Delete), `previewBar` (the folder and tags in the file viewer's footer), `moveMany`
+  / `tagMany` for ticked files, `newFolder`, `manageTags`, drag and drop (`dragItem`, `dragFolder`,
+  `dropOn`, `over`), and the dialogs (portaled at z-80, above the preview and the PDF editor).
+  `FolderPickerDialog` (a tree, tap one then Move here, New folder inside the picked one; a bottom
+  sheet on phones), `DeleteFolderDialog` (the safe choice first: "Delete folder, move what's in it to
+  …"; then "Delete the folder and its N files for good", which deletes each file through
+  `files.removeItem` and its device copy, then the folder), `FolderCrumbs`.
+- `FilesPage`: **folder view** when nothing is searched or filtered — the path ("Files › Etudes ›
+  Wilcoxon", every part a button and a drop target; on phones the middle parts fold into "…"),
+  New folder, the folders here first (count, size, ⋮, right-click, draggable, drop target), then the
+  files here. Searching, a source/type filter or a tag pill switches to the flat list of every
+  folder, with the folder in the Where column (a button that opens it; on phones it's in the line
+  under the name). Search also matches tags and folder paths. A **tag row** like the Tunes tab's
+  (pills with counts, Edit → `ManageTagsDialog`, now with a `noun`). Ticked files get **Move** and
+  **Tag**. Uploads go into the open folder (`useFileUploader`'s new 4th argument). File rows show up
+  to three tags under the name from `sm`. `?folder=Etudes/Wilcoxon` and `?tag=Gig` open on one
+  (`LibraryHub` passes them; a new link re-applies them) — for the routine/task links.
+- `useFileActions({ organizer })`: menu items, the preview's folder/tag bar, and the PDF editor's ⋮
+  (`PdfEditor`'s new `extraMenu`). Only the Files page passes an organizer; a tune's Files section
+  and the file picker don't show folders or tags.
+- **Tag pills are "any of"** (a file with any picked tag shows), matching the Library's tune tags
+  since Jack's 2026-11-20 change — not "every tag".
+- Drag and drop is HTML5 drag (desktop); our own drags use custom types
+  (`application/x-soniroll-files` / `-folder`), so the page's file-upload drop and `useFileDrop`
+  ignore them. Dragging a ticked row drags everything ticked.
+- **Fixed in passing:** `TagEditor` hid its suggestions the instant the input lost focus, which
+  moved the dialog's Save button up between press and release, so Save missed whenever suggestions
+  were showing (tunes' Tags dialog too). Hiding now waits 200 ms.
+- **Signed out:** Files is sign-in only (it shows the sign-in box), so there's nothing to organise
+  and no folder/tag UI.
+- **Mobile app:** no Files browser, so nothing shows; `tsc` passes.
+- Help topic `files` (a step and two options) and the privacy policy ("the folders and tags you put
+  them in") updated. `previewSeed` writes no files, so it's unchanged.
+
+**Verified** (headless Chromium on dev, the shared `uxpass` test account, at 1440 and 390, light and
+dark, no horizontal overflow, no console errors): uploading three generated files; New folder, New
+folder inside, Move to folder… (picker), dragging a file onto a folder row and a folder onto the
+"Files" crumb (Playwright `dragTo`, real HTML5 drag events in Chromium); opening folders, the
+breadcrumb, a three-deep path on a phone; upload while a folder is open lands in it; tags from the ⋮
+menu and from the preview; the tag row, `?tag=Gig` and `?folder=` links, search by folder name; the
+PDF editor's ⋮ with Move to folder / Add tags; Edit tags → rename and delete a tag; rename a folder;
+delete a folder moving its contents up, and with "for good" (both files gone); the page inside a
+split-screen pane (the account had a layout open). Through the CLI with `--identity`: `overview`,
+`inFolder` (shallow, deep, top level), `withTag` (case), path cleaning (" Wilcoxon 150 / Sub "),
+tag dedupe, and a foreign/bad id refused. Everything made was deleted afterwards (plus the leftover
+`desk-review-etude.pdf`); `fileMeta` and `fileFolders` are empty on dev. tsc in web, mobile, convex,
+core (only the old `.at()` errors); eslint on the changed web files.
+**Not verified:** a real mouse drag in a real browser (only Playwright's), touch devices (rows are
+`draggable` but phones use the ⋮ menu), moving a recording/song/lesson file/hand-in (same code path as
+uploads; only uploads were tried), the 500-item / 2000-folder limits, Safari, the desktop app
+(`tsc`/build not run there).

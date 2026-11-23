@@ -34,8 +34,9 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings and the presets you save, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, and the details of your recordings and files (PDFs,
-            images, audio, video and so on, on their own or attached to a tune): their names, sizes, dates and which tune they&apos;re on.
+            <strong>Your stuff:</strong> tool settings and the presets you save, your open tabs (which pages each one shows and how they&apos;re split), how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, and the details of your recordings and files (PDFs,
+            images, audio, video and so on, on their own or attached to a tune): their names, sizes, dates, which tune they&apos;re on, and the
+            folders and tags you put them in.
             When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
           <li>

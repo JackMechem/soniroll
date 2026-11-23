@@ -3,6 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { MAX_FILE_BYTES, assertFits, assertPlanForOnline } from "./lib/storage";
 import { cleanDevice } from "./files";
+import { dropMeta, metaFor, writeMeta } from "./lib/fileFolders";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -69,11 +70,14 @@ export const set = mutation({
       if (size > MAX_FILE_BYTES) throw new Error(`Songs can be up to ${MAX_FILE_BYTES / (1024 * 1024)} MB.`);
       where = { device: cleanDevice(args.device), size };
     } else throw new Error("The song didn't arrive — try again.");
+    // A new song for the tune keeps the old one's Files folder and tags.
+    const kept = existing.length ? await metaFor(ctx, userId, "song", existing[0]._id) : null;
     for (const row of existing) {
       if (row.storageId) await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);
+      await dropMeta(ctx, userId, "song", row._id);
     }
-    return await ctx.db.insert("tuneSongs", {
+    const id = await ctx.db.insert("tuneSongs", {
       userId,
       tuneId: args.tuneId,
       ...where,
@@ -82,6 +86,8 @@ export const set = mutation({
       durationSec: Math.max(0, args.durationSec),
       createdAt: Date.now(),
     });
+    if (kept) await writeMeta(ctx, userId, "song", id, { folder: kept.folder, tags: kept.tags });
+    return id;
   },
 });
 
@@ -97,6 +103,7 @@ export const remove = mutation({
     for (const row of rows) {
       if (row.storageId) await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);
+      await dropMeta(ctx, userId, "song", row._id);
     }
   },
 });

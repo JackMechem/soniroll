@@ -215,6 +215,109 @@ export async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: 
   return out.sort((a, b) => b.createdAt - a.createdAt);
 }
 
+/** One of `userId`'s stored items by its kind and id, as `storedItems` lists it, or null when it's
+    gone or isn't theirs (ids come from the client or from `fileMeta`, so ownership is checked
+    here). Keep this in step with `storedItems` when a kind is added. */
+export async function storedItemById(ctx: QueryCtx, userId: Id<"users">, kind: StoredKind, id: string, withUrl = true): Promise<StoredItem | null> {
+  const url = async (sid: Id<"_storage">) => (withUrl ? await ctx.storage.getUrl(sid) : null);
+  if (kind === "file") {
+    const rowId = ctx.db.normalizeId("files", id);
+    const f = rowId && (await ctx.db.get(rowId));
+    if (!f || f.userId !== userId) return null;
+    return { kind, device: f.device ?? null, keepOnline: f.keepOnline, id: f._id, name: f.name, mimeType: f.mimeType, size: f.size, createdAt: f.createdAt, url: f.storageId ? await url(f.storageId) : null, tuneId: f.tuneId ?? null, href: null };
+  }
+  if (kind === "recording") {
+    const rowId = ctx.db.normalizeId("recordings", id);
+    const r = rowId && (await ctx.db.get(rowId));
+    if (!r || r.userId !== userId) return null;
+    return {
+      kind,
+      device: r.device ?? null,
+      keepOnline: r.keepOnline,
+      id: r._id,
+      name: r.name,
+      mimeType: r.mimeType,
+      size: r.storageId ? await fileSize(ctx, r.storageId) : (r.size ?? 0),
+      createdAt: r.createdAt,
+      url: r.storageId ? await url(r.storageId) : null,
+      tuneId: r.tuneId ?? null,
+      href: `/tunes/recording?id=${r._id}`,
+    };
+  }
+  if (kind === "song") {
+    const rowId = ctx.db.normalizeId("tuneSongs", id);
+    const s = rowId && (await ctx.db.get(rowId));
+    if (!s || s.userId !== userId) return null;
+    return {
+      kind,
+      device: s.device ?? null,
+      keepOnline: s.keepOnline,
+      id: s._id,
+      name: s.name,
+      mimeType: s.mimeType,
+      size: s.storageId ? await fileSize(ctx, s.storageId) : (s.size ?? 0),
+      createdAt: s.createdAt,
+      url: s.storageId ? await url(s.storageId) : null,
+      tuneId: s.tuneId,
+      href: null,
+    };
+  }
+  if (kind === "lesson") {
+    const rowId = ctx.db.normalizeId("lessonItems", id);
+    const item = rowId && (await ctx.db.get(rowId));
+    if (!item || item.teacherId !== userId || !item.fileId) return null;
+    return {
+      kind,
+      device: null,
+      id: item._id,
+      name: item.fileName || item.title,
+      mimeType: item.fileType ?? "",
+      size: await fileSize(ctx, item.fileId),
+      createdAt: item.createdAt,
+      url: await url(item.fileId),
+      tuneId: null,
+      href: `/lessons/lesson?pair=${item.lessonId}&id=${item.sessionId ?? "earlier"}`,
+    };
+  }
+  if (kind === "handin") {
+    const [subPart, filePart] = id.split(":");
+    const subId = ctx.db.normalizeId("lessonSubmissions", subPart ?? "");
+    const sub = subId && (await ctx.db.get(subId));
+    if (!sub || sub.studentId !== userId) return null;
+    const f = sub.files.find((file) => file.fileId === filePart);
+    if (!f) return null;
+    const item = await ctx.db.get(sub.itemId);
+    return {
+      kind,
+      device: null,
+      id: `${sub._id}:${f.fileId}`,
+      name: f.name,
+      mimeType: f.type,
+      size: f.size,
+      createdAt: sub.submittedAt,
+      url: await url(f.fileId),
+      tuneId: null,
+      href: `/lessons/lesson?pair=${sub.lessonId}&id=${item?.sessionId ?? "earlier"}`,
+    };
+  }
+  const profile = await ctx.db.query("profiles").withIndex("by_user", (q) => q.eq("userId", userId)).unique();
+  const name = profile?.avatarStorageId === id ? "Profile picture" : profile?.bannerStorageId === id ? "Profile banner" : null;
+  if (!profile || !name) return null;
+  const meta = await ctx.db.system.get(id as Id<"_storage">);
+  return {
+    kind: "profile",
+    device: null,
+    id,
+    name,
+    mimeType: meta?.contentType ?? "image/jpeg",
+    size: meta?.size ?? 0,
+    createdAt: meta?._creationTime ?? 0,
+    url: await url(id as Id<"_storage">),
+    tuneId: null,
+    href: "/account?tab=profile",
+  };
+}
+
 /** Bytes the account keeps online (what counts towards its limit). */
 export async function bytesUsed(ctx: QueryCtx, userId: Id<"users">) {
   return (await storedItems(ctx, userId, false)).reduce((sum, item) => sum + (item.device ? 0 : item.size), 0);

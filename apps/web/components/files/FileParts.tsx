@@ -40,6 +40,7 @@ import SaveWhere from "@/components/files/SaveWhere";
 import PdfEditor from "@/components/pdf/PdfEditor";
 import PdfInline from "@/components/pdf/PdfInline";
 import { useOpenInTool } from "@/components/files/openInTool";
+import type { FileOrganizer } from "@/components/files/FileFolders";
 
 // ---------------------------------------------------------------- icons
 
@@ -234,9 +235,9 @@ const isMedia = (f: { mimeType: string; name: string }) => ["audio", "video"].in
  * file chooser, `drop` props make an element a drop target, and `input` must be rendered. They're
  * saved online with a storage plan, or on this device without one (`lib/storagePlan.ts`).
  * `existing`: the files already there; adding one with the same name and size asks first ("Add
- * again", or skip it).
+ * again", or skip it). `folder`: new files go into this Files folder.
  */
-export function useFileUploader(tuneId: string | undefined, target: SaveTarget, existing?: readonly { name: string; size: number }[]) {
+export function useFileUploader(tuneId: string | undefined, target: SaveTarget, existing?: readonly { name: string; size: number }[], folder?: string) {
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
   const create = useMutation(filesApi.create);
   const createOnDevice = useMutation(filesApi.createOnDevice);
@@ -262,7 +263,15 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget, 
       const failures: string[] = [];
       for (let i = 0; i < files.length; i++) {
         try {
-          await saveFile(files[i], storage, { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create(args), createOnDevice: (args) => createOnDevice(args) }, tuneId, undefined, online);
+          const into = folder ? { folder } : {};
+          await saveFile(
+            files[i],
+            storage,
+            { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create({ ...args, ...into }), createOnDevice: (args) => createOnDevice({ ...args, ...into }) },
+            tuneId,
+            undefined,
+            online,
+          );
         } catch (e) {
           failures.push(errorText(e, `Couldn't upload "${files[i].name}".`));
           // Out of room: the rest won't fit either.
@@ -274,7 +283,7 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget, 
       if (failures.length) setError(failures.join(" "));
       return failures.length === 0;
     },
-    [create, createOnDevice, existing, generateUploadUrl, online, storage, tuneId],
+    [create, createOnDevice, existing, folder, generateUploadUrl, online, storage, tuneId],
   );
 
   const input = (
@@ -378,8 +387,10 @@ function deleteMessage(item: StoredEntry, tune: string | undefined) {
  * share by link, download, attach an upload to a tune (or move / detach it), go to where it's
  * managed, delete — and deleting several at once. `tuneName` shows which tune a file is on;
  * `hereTuneId` (on a tune's page) offers "Remove from this tune" instead of "Move to another tune".
+ * `organizer` (the Files page's `useFileOrganizer`) adds "Move to folder…" and "Tags…" to the menu,
+ * and the folder and tags to the file viewer and the PDF editor's ⋮.
  */
-export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: string) => string | undefined; hereTuneId?: string }) {
+export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: (tuneId: string) => string | undefined; hereTuneId?: string; organizer?: FileOrganizer }) {
   const update = useMutation(filesApi.update);
   const rename = useMutation(filesApi.renameItem);
   const remove = useMutation(filesApi.removeItem);
@@ -440,7 +451,8 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
               ...(item.tuneId ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }) }] : []),
             ]),
       ...(where ? [{ label: goToLabel(item), onSelect: () => router.push(where) }] : []),
-      { label: "Delete", onSelect: () => setDeleting({ items: [item] }), danger: true, icon: <TrashIcon className="h-4 w-4" /> },
+      ...(organizer ? organizer.menuItems(item) : []),
+      { label: "Delete", onSelect: () => setDeleting({ items: [item] }), danger: true, divider: !!organizer, icon: <TrashIcon className="h-4 w-4" /> },
     ];
   }
 
@@ -520,7 +532,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
     <>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
       {open && open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf" && (
-        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} />
+        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} extraMenu={organizer?.menuItems(open)} />
       )}
       {open && !(open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf") && (
         <FilePreviewDialog
@@ -528,6 +540,7 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
           onClose={() => setOpen(null)}
           actions={
             <>
+              {organizer && open.kind !== "profile" && organizer.previewBar(open)}
               {openIn.toolsFor(open).map((t, i) => (
                 <button key={t.href} type="button" className={i === 0 && isMedia(open) ? primaryBtn : actionBtn} onClick={t.open} disabled={!!openIn.busy}>
                   <t.icon className="h-4 w-4" /> Open in {t.label}

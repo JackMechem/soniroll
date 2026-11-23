@@ -70,8 +70,11 @@ export function TagEditor({ tags, known, onChange }: { tags: string[]; known: st
           } else if (e.key === "Backspace" && !text && tags.length) onChange(tags.slice(0, -1));
         }}
         onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
+        onBlur={(e) => {
+          // Hide the suggestions a moment later: hiding them at once moved the dialog's Save button
+          // up between the press and the release, so the click missed it.
+          const box = e.currentTarget;
+          window.setTimeout(() => setFocused(document.activeElement === box), 200);
           if (text.trim()) add(text);
         }}
         placeholder={tags.length ? "Add another tag" : "Add a tag, e.g. Gig, Ballads"}
@@ -148,17 +151,22 @@ export function TagsDialog({
   );
 }
 
-/** Every tag, to rename or delete across all your tunes. */
+/** Every tag, to rename or delete across all your tunes (or, with `noun`, files). */
 export function ManageTagsDialog({
   tags,
   onRename,
   onDelete,
   onClose,
+  noun = { one: "tune", many: "tunes" },
+  emptyText = "No tags yet. Add one on a tune's page, or when you import charts.",
 }: {
   tags: { tag: string; count: number }[];
   onRename: (from: string, to: string) => void;
   onDelete: (tag: string) => void;
   onClose: () => void;
+  /** What has the tags ("tune" / "tunes"). */
+  noun?: { one: string; many: string };
+  emptyText?: string;
 }) {
   const [renaming, setRenaming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -189,14 +197,14 @@ export function ManageTagsDialog({
             </button>
           </div>
           {tags.length === 0 ? (
-            <p className="text-sm text-muted">No tags yet. Add one on a tune&apos;s page, or when you import charts.</p>
+            <p className="text-sm text-muted">{emptyText}</p>
           ) : (
             <ul className="-mx-2 flex flex-col overflow-y-auto">
               {tags.map(({ tag, count }) => (
                 <li key={tag} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-surface-hover">
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{tag}</span>
                   <span className="shrink-0 text-xs tabular-nums text-muted">
-                    {count} tune{count === 1 ? "" : "s"}
+                    {count} {count === 1 ? noun.one : noun.many}
                   </span>
                   <button
                     type="button"
@@ -236,7 +244,7 @@ export function ManageTagsDialog({
       {deleting && (
         <ConfirmDialog
           title={`Delete the tag “${deleting}”?`}
-          message="It's taken off every tune. The tunes themselves stay."
+          message={`It's taken off every ${noun.one}. The ${noun.many} themselves stay.`}
           confirmLabel="Delete tag"
           onConfirm={() => {
             onDelete(deleting);
