@@ -143,7 +143,7 @@ function PostScreenContent() {
                     >
                       <UserAvatar url={post.authorAvatarUrl} name={post.authorUsername} size="sm" />
                       <Text className="text-xs font-ui" style={{ color: colors.muted }}>
-                        {post.authorUsername}
+                        @{post.authorUsername}
                       </Text>
                     </Pressable>
                   ) : null}

@@ -153,7 +153,11 @@ function TemplateEditor({ template, onChange }: { template: NoteTemplate; onChan
   const keyboard = useKeyboardHeight();
   const cfg = useNotesConfig();
   const notes = useNoteList();
-  const [name, setName] = useState(template.name);
+  // A new template's "New template" is a placeholder rather than text to type after; the name
+  // field gets the cursor, and left empty the template keeps that name.
+  const [defaultName] = useState(() => (/^New template( \d+)?$/.test(template.name) ? template.name : null));
+  const [fresh] = useState(() => defaultName !== null && !template.title.trim() && !template.body.trim());
+  const [name, setName] = useState(defaultName !== null ? '' : template.name);
   const [title, setTitle] = useState(template.title);
   const [body, setBody] = useState(template.body);
   const [notation, setNotation] = useState(false);
@@ -169,13 +173,14 @@ function TemplateEditor({ template, onChange }: { template: NoteTemplate; onChan
           value={name}
           onChangeText={(v) => {
             setName(v);
-            onChange({ name: v });
+            onChange({ name: v.trim() ? v : (defaultName ?? template.name) });
           }}
-          placeholder="Template name"
+          autoFocus={fresh}
+          placeholder={defaultName ?? 'Template name'}
           placeholderTextColor={colors.muted}
           accessibilityLabel="Template name"
           className="font-ui-extrabold text-2xl font-extrabold"
-          style={{ color: colors.foreground, paddingVertical: 2 }}
+          style={{ color: colors.foreground, paddingVertical: 2, paddingHorizontal: 0 }}
         />
         <TextInput
           value={title}

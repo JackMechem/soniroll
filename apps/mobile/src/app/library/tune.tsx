@@ -212,7 +212,7 @@ function Hub({
                   triggerLabel={previewKey ? `${prettyKeyName(previewKey)}${chartMinor ? 'm' : ''}` : chart.key ? prettyKeyName(chart.key) : 'Key'}
                   highlighted={!!previewKey}
                   options={[
-                    { value: '', label: `Original (${chart.key ? prettyKeyName(chart.key) : '—'})` },
+                    { value: '', label: chart.key ? `Original (${prettyKeyName(chart.key)})` : 'As written' },
                     ...KEY_NAMES.map((k) => ({ value: k, label: `${prettyKeyName(k)}${chartMinor ? 'm' : ''}` })),
                   ]}
                 />

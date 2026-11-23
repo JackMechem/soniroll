@@ -1,14 +1,16 @@
 import { api } from '@jam-practice/convex/_generated/api';
 import type { Id } from '@jam-practice/convex/_generated/dataModel';
 import { useMutation, useQuery } from 'convex/react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PostListItem } from '@/components/community/CommunityTunes';
+import { HeartIcon, UsersIcon } from '@/components/icons';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { EmptyState } from '@/components/ui';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { withScreenLoader } from '@/components/ScreenLoader';
 
@@ -23,6 +25,7 @@ import { withScreenLoader } from '@/components/ScreenLoader';
  * `myLikes` query, since there's nothing to cross-reference (this list *is* the liked list). */
 function LikedPostsScreen() {
   const { colors } = useAppTheme();
+  const router = useRouter();
   const posts = useQuery(api.communityTunes.likedPosts);
   const removePost = useMutation(api.communityTunes.remove);
   const [deletingId, setDeletingId] = useState<Id<'communityTunes'> | null>(null);
@@ -37,12 +40,12 @@ function LikedPostsScreen() {
               <LoadingSpinner />
             </View>
           ) : posts.length === 0 ? (
-            <Text
-              className="rounded-2xl p-5 text-center text-sm font-ui"
-              style={{ backgroundColor: colors.surface, color: colors.muted }}
-            >
-              Nothing here yet — tap the heart on a post in Community to save it here.
-            </Text>
+            <EmptyState
+              Icon={HeartIcon}
+              title="No liked posts yet"
+              body="Tap the heart on a post in Community to keep it here."
+              action={{ label: 'Browse Community', Icon: UsersIcon, onPress: () => router.navigate('/tool/community') }}
+            />
           ) : (
             <View className="gap-2">
               {posts.map((post) => (

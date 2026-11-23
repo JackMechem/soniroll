@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionSheet, type SheetAction } from '@/components/ActionSheet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { SendIcon } from '@/components/files/icons';
 import { DotsVerticalIcon, FolderMoveIcon, PencilIcon, ShareIcon, TrashIcon } from '@/components/icons';
 import { ScreenSpinner, withScreenLoader } from '@/components/ScreenLoader';
 import { useBackWithin } from '@/components/scoreWriter/useBackWithin';
@@ -124,6 +125,11 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
     if (saveState === 'saved') setText(note.body);
   }
   const [editing, setEditing] = useState(startEditing && canEdit);
+  // A note still called "Untitled" shows that as a placeholder, not as text to type after ("Untitled"
+  // + "Major" made "UntitledMajor"); a brand-new one opens with the cursor in the title (as on the
+  // website). Left empty, it keeps "Untitled" (and still takes its first line as its title).
+  const untitled = mine && DEFAULT_TITLE.test(note.title);
+  const [focusTitle] = useState(() => startEditing && untitled && !note.body.trim());
   const [startSel, setStartSel] = useState<Sel | undefined>(undefined);
   const [draft, setDraft] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ title: string; actions: SheetAction[] } | null>(null);
@@ -141,7 +147,8 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
 
   const fail = (e: unknown) => setNotice(errorText(e));
   const byKey = useMemo(() => new Map(notes.map((n) => [titleKey(n.title), n])), [notes]);
-  const titles = useMemo(() => notes.map((n) => ({ title: n.title, folder: n.folder })), [notes]);
+  // For the `[[` suggestions: the most recently changed first.
+  const titles = useMemo(() => [...notes].sort((a, b) => b.updatedAt - a.updatedAt).map((n) => ({ title: n.title, folder: n.folder })), [notes]);
   const openNote = (noteId: string) => router.push({ pathname: '/tool/shed-notes-note', params: { id: noteId } });
 
   function change(next: string) {
@@ -279,7 +286,7 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
           label: 'Copy as Markdown',
           onPress: () => void Clipboard.setStringAsync(text).then(() => setNotice('Copied the note’s text'), () => {}),
         },
-        { key: 'send', icon: icon(ShareIcon), label: 'Send the text…', onPress: () => void Share.share({ title: note.title, message: `# ${note.title}\n\n${text}` }).catch(() => {}) },
+        { key: 'send', icon: icon(SendIcon), label: 'Send the text…', onPress: () => void Share.share({ title: note.title, message: `# ${note.title}\n\n${text}` }).catch(() => {}) },
         { key: 'settings', icon: icon(GearIcon), label: 'Shed Notes settings', onPress: () => router.push('/tool/shed-notes-settings') },
         ...(mine ? [{ key: 'delete', icon: icon(TrashIcon, true), label: 'Delete note', danger: true, onPress: () => setDeleting(true) }] : []),
       ],
@@ -289,9 +296,12 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
   const titleField = (
     <TextInput
       ref={titleInput}
-      value={draft ?? note.title}
+      value={draft ?? (untitled ? '' : note.title)}
+      placeholder={untitled ? note.title : undefined}
+      placeholderTextColor={colors.muted}
+      autoFocus={editing && focusTitle}
       onChangeText={(t) => setDraft(t.replace(/\n/g, ' '))}
-      onFocus={() => setDraft((d) => d ?? note.title)}
+      onFocus={() => setDraft((d) => d ?? (untitled ? '' : note.title))}
       onSubmitEditing={() => {
         void commitTitle();
         if (editing) editor.current?.focus();
@@ -303,7 +313,8 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
       returnKeyType="done"
       accessibilityLabel="Note title"
       className="font-ui-extrabold text-[26px] font-extrabold"
-      style={{ color: colors.foreground, paddingVertical: 2, lineHeight: 32 }}
+      // No side padding, so it lines up with the text under it.
+      style={{ color: colors.foreground, paddingVertical: 2, paddingHorizontal: 0, lineHeight: 32 }}
     />
   );
 
@@ -421,10 +432,12 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
           value={text}
           onChange={change}
           notes={titles}
+          self={note.title}
           templates={mine ? templates : undefined}
           fontSize={fontSize}
           spellcheck={cfg.config.spellcheck}
           initialSelection={startSel}
+          autoFocus={!focusTitle}
           placeholder="Start writing. [[ links a note, # makes a heading, - [ ] a checkbox."
           onNotation={mine ? () => setNotation({ scoreId: null }) : undefined}
           onFile={canEdit ? () => setPickingFile(true) : undefined}
@@ -458,7 +471,7 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
         )}
         {noticeView}
 
-        {mine && !text.trim() ? (
+        {mine && !text.trim() && templates?.length ? (
           // An empty note: start it from a template.
           <View className="flex-row flex-wrap items-center gap-1.5">
             <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
@@ -475,13 +488,6 @@ function OpenNote({ noteState, note, notes, startEditing }: { noteState: ReturnT
               <Pressable onPress={openMenu} className="rounded-md px-2.5 py-1.5">
                 <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
                   More…
-                </Text>
-              </Pressable>
-            ) : null}
-            {templates && templates.length === 0 ? (
-              <Pressable onPress={() => router.push('/tool/shed-notes-templates')} className="rounded-md px-2.5 py-1.5">
-                <Text className="font-ui-semibold text-xs font-semibold" style={{ color: colors.muted }}>
-                  Make a template
                 </Text>
               </Pressable>
             ) : null}

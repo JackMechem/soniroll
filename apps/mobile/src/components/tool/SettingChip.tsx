@@ -21,6 +21,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -179,6 +180,14 @@ export function ToolSheet({ visible, onClose, title, children }: { visible: bool
   const keyboard = useKeyboardHeight();
   const lift = Platform.OS === 'android' && keyboard > MIN_KEYBOARD ? keyboard : 0;
   const [contentHeight, setContentHeight] = useState<number | null>(null);
+  // 80% of the screen, but never so tall that, lifted over the keyboard, its header slides up
+  // under the status bar: capped to the room between the status bar and the keyboard, the
+  // header stays put and the body scrolls.
+  const { height: screenHeight } = useWindowDimensions();
+  const bottom = insets.bottom + 12 + lift;
+  // (On iOS the KeyboardAvoidingView takes the keyboard's room instead of `lift`.)
+  const covered = Platform.OS === 'ios' ? keyboard : 0;
+  const maxHeight = Math.max(160, Math.min(screenHeight * 0.8, screenHeight - insets.top - 12 - bottom - covered));
   return (
     // The Modal fades the backdrop in and `SheetSlide` slides the sheet up. The sheet sits in the
     // normal layout (a column that ends at the bottom), not absolutely positioned, and slides with
@@ -192,8 +201,8 @@ export function ToolSheet({ visible, onClose, title, children }: { visible: bool
           <SheetSlide
             style={{
               marginHorizontal: 12,
-              marginBottom: insets.bottom + 12 + lift,
-              maxHeight: '80%',
+              marginBottom: bottom,
+              maxHeight,
               borderRadius: 24,
               overflow: 'hidden',
               backgroundColor: colors.surface,

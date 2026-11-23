@@ -1,5 +1,5 @@
 import { useConvexAuth } from '@convex-dev/auth/react';
-import { type FileKind, FILE_KIND_LABEL, fileDetail, fileKind, formatBytes } from '@jam-practice/core/files';
+import { type FileKind, FILE_KIND_LABEL, fileDetail, fileKind, formatBytes, formatFileDate } from '@jam-practice/core/files';
 import { sortKey } from '@jam-practice/core/sortText';
 import { useQuery } from 'convex/react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -260,7 +260,7 @@ function FilesScreen() {
           )
         }
         renderItem={({ item }) => (
-          <FileRow item={item} paid={paid} detail={fileDetail(item, whereOf(item))} tune={item.tuneId ? tuneName(item.tuneId) : undefined} onOpen={() => actions.openFile(item)} onMenu={() => actions.openMenu(item)} />
+          <FileRow item={item} paid={paid} detail={rowDetail(item, whereOf(item))} tune={item.tuneId ? tuneName(item.tuneId) : undefined} onOpen={() => actions.openFile(item)} onMenu={() => actions.openMenu(item)} />
         )}
       />
       {actions.elements}
@@ -327,3 +327,10 @@ function StorageCard({
 }
 
 export default withScreenLoader(FilesScreen);
+
+/** A row's line under the name: `fileDetail`, without the date when the name already starts with
+    it (a recording is named for when it was made: "Nov 23, 6:38 PM"), so the rest isn't cut off. */
+function rowDetail(item: { name: string; mimeType: string; size: number; createdAt: number }, extra?: string | null) {
+  if (!item.name.startsWith(formatFileDate(item.createdAt))) return fileDetail(item, extra);
+  return [FILE_KIND_LABEL[fileKind(item.mimeType, item.name)], formatBytes(item.size), extra].filter(Boolean).join(' · ');
+}

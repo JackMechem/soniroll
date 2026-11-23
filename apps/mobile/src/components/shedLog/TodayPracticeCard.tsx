@@ -15,6 +15,7 @@ import { Pressable, Text, View } from 'react-native';
 import { CheckIcon, PlayIcon, PlusIcon } from '@/components/icons';
 import { DayTimerCard } from '@/components/shedLog/DayTimer';
 import { Bar, CheckBox, Field, Muted, RoutineIcon, SmallButton, routineColor, useSuccess } from '@/components/shedLog/parts';
+import { GoalSheet } from '@/components/shedLog/sheets';
 import { TodaySummary } from '@/components/shedLog/Stats';
 import { Card } from '@/components/ui';
 import { useToday } from '@/lib/useClock';
@@ -46,6 +47,7 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   const today = useToday();
   const { startRoutine, runningTask } = useRoutineTimer();
   const [title, setTitle] = useState('');
+  const [goalOpen, setGoalOpen] = useState(false);
   const { data } = log;
   const items = routinesOn(data, today).filter((i) => !i.occurrence.skipped);
   const tasks = data.days[today]?.tasks ?? [];
@@ -56,7 +58,9 @@ function TodayBody({ log }: { log: ReturnType<typeof usePracticeLog> }) {
   };
   return (
     <>
-      <TodaySummary data={data} today={today} onGoal={() => router.navigate('/tool/shed-log')} />
+      {/* Tapping the goal changes it right here (the same sheet as the Shed Log's). */}
+      <TodaySummary data={data} today={today} onGoal={() => setGoalOpen(true)} />
+      <GoalSheet log={log} visible={goalOpen} onClose={() => setGoalOpen(false)} />
       <DayTimerCard data={data} date={today} compact />
       {items.length === 0 && tasks.length === 0 ? (
         <View className="gap-3">

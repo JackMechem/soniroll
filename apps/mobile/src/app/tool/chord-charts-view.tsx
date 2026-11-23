@@ -90,7 +90,7 @@ function ChordChartsViewScreen() {
                   triggerLabel={transposeKey ? `${prettyKeyName(transposeKey)}${minor ? 'm' : ''}` : selected.key ? prettyKeyName(selected.key) : 'Key'}
                   highlighted={!!transposeKey}
                   options={[
-                    { value: '', label: `Original (${selected.key ? prettyKeyName(selected.key) : '—'})` },
+                    { value: '', label: selected.key ? `Original (${prettyKeyName(selected.key)})` : 'As written' },
                     // In the chart's own quality: a minor chart offers C♯m, Dm, … (not major keys).
                     ...KEY_NAMES.map((k) => ({ value: k, label: `${prettyKeyName(k)}${minor ? 'm' : ''}` })),
                   ]}

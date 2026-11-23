@@ -117,6 +117,7 @@ export const UnlinkIcon = mci('link-variant-off');
 export const ProgressionIcon = mci('stairs-up');
 export const LessonsIcon = mci('school');
 export const CalendarCheckIcon = mci('calendar-check-outline');
+export const TrophyIcon = mci('trophy-outline');
 
 export function StarIcon({ color, size = 18, filled }: IconProps & { filled?: boolean }) {
   return <MaterialCommunityIcons name={filled ? 'star' : 'star-outline'} size={size} color={color} />;

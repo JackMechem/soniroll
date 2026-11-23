@@ -243,7 +243,8 @@ function InlineText({ nodes, actions }: { nodes: Inline[]; actions: MarkdownActi
                 accessibilityHint={exists ? `Opens ${n.target}` : `Makes a note called ${n.target}`}
                 style={exists ? { color: colors.accent, backgroundColor: withAlpha(colors.accent, 0.12) } : { color: colors.muted, textDecorationLine: 'underline', textDecorationStyle: 'dashed' }}
               >
-                {` ${n.label} `}
+                {/* Thin spaces pad the highlight (inline text can't take padding); full spaces read as a gap. */}
+                {exists ? `\u2009${n.label}\u2009` : n.label}
               </Text>
             );
           }

@@ -221,7 +221,7 @@ function JoinCodeForm({ onClose, onCode }: { onClose: () => void; onCode: (code:
         Paste the invite link your teacher sent, or its code.
       </Text>
       <Field value={text} onChangeText={setText} placeholder="https://www.soniroll.com/lessons/join?invite=…" autoFocus onSubmit={() => code && onCode(code)} label="Invite link" />
-      {text.trim() && !code ? <ErrorLine>That doesn&apos;t look like an invite link.</ErrorLine> : null}
+      {text.trim() && !code ? <ErrorLine>That doesn&apos;t look like an invite link or code (the code is the part after “invite=”).</ErrorLine> : null}
       <View className="flex-row justify-end gap-2">
         <Button label="Cancel" kind="secondary" onPress={onClose} />
         <Button label="Open the invite" disabled={!code} onPress={() => code && onCode(code)} />
