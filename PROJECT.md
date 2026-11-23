@@ -62,8 +62,8 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   older names in UI text (sheddex, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
-- GitHub: `git@github.com:JackMechem/sheddex.git` — the repo is now named **JackMechem/soniroll** on
-  GitHub (the old name redirects). The in-app GitHub links in `Home.tsx`, `Landing.tsx` and
+- GitHub: `git@github.com:JackMechem/soniroll.git` (renamed from JackMechem/sheddex, which still
+  redirects; the local `origin` points at the new name since 2026-11-23). The in-app GitHub links in `Home.tsx`, `Landing.tsx` and
   `app/terms` point at it; the feedback ↔ commit tools use `REPO` in `packages/convex/lib/github.ts`.
 
 ## Working with Jack
