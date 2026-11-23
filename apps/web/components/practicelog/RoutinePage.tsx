@@ -12,11 +12,14 @@ import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import PageBar from "@/components/PageBar";
 import PageNotes from "@/components/practicelog/PageNotes";
 import RoutineCard from "@/components/practicelog/RoutineCard";
+import { AttachmentPicker } from "@/components/practicelog/Attachments";
+import { type FileGroup, LinkedFiles, splitFiles, useLinkedCount } from "@/components/practicelog/FileAttachments";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
 import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList } from "@/components/practicelog/pageParts";
 import { RoutineShareDialog } from "@/components/practicelog/Sharing";
-import { CheckIcon, PencilIcon, ShareIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlusIcon, ShareIcon, findToolLink } from "@/components/tools";
 import {
+  type FileAttachment,
   type Occurrence,
   type Routine,
   ROUTINE_COLORS,
@@ -38,6 +41,7 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 import { openNotePeek, openSide } from "@/lib/notePeek";
 import { usePaneId } from "@/lib/paneContext";
 import { goBackOr } from "@/lib/goBack";
+import { taskHref } from "@/lib/shedLogPages";
 
 const noopSubscribe = () => () => {};
 
@@ -77,6 +81,21 @@ export default function RoutinePage({ id, date }: { id: string; date?: string })
   const recordings = useDeviceUrls(useQuery(recordingsApi.listForRoutine, isAuthenticated ? { routineId: id } : "skip"));
   const routine = log.data.routines.find((r) => r.id === id);
   const [sharing, setSharing] = useState(false);
+  const [addingFiles, setAddingFiles] = useState(false);
+  // Its Files: the routine's own, then each task's (added on the task's page or in the editor).
+  const ownFiles = splitFiles(routine?.attachments);
+  const fileGroups: FileGroup[] = routine
+    ? [
+        { key: "own", attachments: ownFiles.files, onChange: routine.assigned ? undefined : (files) => log.saveRoutine({ ...routine, attachments: [...ownFiles.other, ...files] }) },
+        ...routine.tasks.map((t) => ({
+          key: `task:${t.id}`,
+          title: t.title || "Untitled task",
+          href: taskHref({ routineId: routine.id, taskId: t.id, date }),
+          attachments: splitFiles(t.attachments).files,
+        })),
+      ]
+    : [];
+  const fileCount = useLinkedCount(fileGroups);
   // The routine's notes and its tasks' notes (`routine:<id>` and `routine:<id>/task:<task>`).
   const routineKey = targetKey({ kind: "routineNotes", routineId: id });
   const notesUnder = useQuery(api.shedNotes.attachedTo, isAuthenticated && id ? { prefix: routineKey } : "skip");
@@ -155,6 +174,23 @@ export default function RoutinePage({ id, date }: { id: string; date?: string })
   );
 
   const sections: PageSection[] = [
+    {
+      id: "files",
+      title: "Files",
+      count: fileCount || undefined,
+      action:
+        isAuthenticated && !routine.assigned ? (
+          <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON}>
+            <PlusIcon className="h-4 w-4" /> Add
+          </button>
+        ) : undefined,
+      content: (
+        <LinkedFiles
+          groups={fileGroups}
+          empty="No files yet. Add PDFs, recordings or any file from your Files, or link a folder or a tag: what's in it shows here, even files added later. Files on its tasks show here too."
+        />
+      ),
+    },
     {
       id: "notes",
       title: "Notes",
@@ -275,6 +311,14 @@ export default function RoutinePage({ id, date }: { id: string; date?: string })
       </section>
       <PageSections pageKey={routineKey} sections={sections} />
       {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
+      {addingFiles && (
+        <AttachmentPicker
+          only="files"
+          selected={ownFiles.files}
+          onChange={(next) => log.saveRoutine({ ...routine, attachments: [...ownFiles.other, ...(next as FileAttachment[])] })}
+          onClose={() => setAddingFiles(false)}
+        />
+      )}
     </>,
   );
 }

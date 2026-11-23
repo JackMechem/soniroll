@@ -11,7 +11,8 @@ import { type NoteTarget, TASK_NOTE_START, targetKey } from "@jam-practice/core/
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
 import PageBar, { type Crumb } from "@/components/PageBar";
-import { AttachmentList } from "@/components/practicelog/Attachments";
+import { AttachmentList, AttachmentPicker } from "@/components/practicelog/Attachments";
+import { type FileGroup, LinkedFiles, splitFiles, useLinkedCount } from "@/components/practicelog/FileAttachments";
 import PageNotes, { type PageNotesHandle } from "@/components/practicelog/PageNotes";
 import PageSections, { type PageSection } from "@/components/practicelog/PageSections";
 import { FILL, PageTitle, QUIET_BUTTON, Quiet, ROWS, RecordingList } from "@/components/practicelog/pageParts";
@@ -21,10 +22,12 @@ import { RunningTimer } from "@/components/practicelog/RoutineCard";
 import Subtasks from "@/components/practicelog/Subtasks";
 import { useAttachedNotes } from "@/components/shednotes/AttachedNotes";
 import { embedText } from "@/components/shednotes/fileEmbedSetup";
-import { CheckIcon, PencilIcon, PlayIcon, StopwatchIcon, findToolLink } from "@/components/tools";
+import { CheckIcon, PencilIcon, PlayIcon, PlusIcon, StopwatchIcon, findToolLink } from "@/components/tools";
 import {
   type Attachment,
+  type FileAttachment,
   DAY_TASKS_ID,
+  isFileAttachment,
   type DayTask,
   describeRepeat,
   ROUTINE_COLORS,
@@ -62,6 +65,7 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
   const { isAuthenticated } = useConvexAuth();
   const { engine, startRoutine, startDayTasks, runningTask } = useRoutineTimer();
   const [logging, setLogging] = useState(false);
+  const [addingFiles, setAddingFiles] = useState(false);
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const notesRef = useRef<PageNotesHandle | null>(null);
   const appendLine = useMutation(api.shedNotes.appendLine);
@@ -81,6 +85,42 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
     }
     return date ? log.data.days[date]?.tasks?.find((t) => t.id === taskId) : undefined;
   }, [routineId, routine, taskId, date, log.data.days]);
+
+  // A task added to the routine for one day lives on that day: the day it's on.
+  const extraDay = useMemo(() => {
+    if (!routineId || routine?.tasks.some((t) => t.id === taskId)) return null;
+    return Object.entries(log.data.days).find(([, d]) => d.routines?.[routineId]?.extraTasks?.some((t) => t.id === taskId))?.[0] ?? null;
+  }, [routineId, routine, taskId, log.data.days]);
+
+  // Its Files: the task's own (every time), and the ones for just this day.
+  const ownFiles = splitFiles(task?.attachments);
+  const viewDay = date ?? todayKey();
+  const dayFiles = routineId ? splitFiles(log.data.days[viewDay]?.routines?.[routineId]?.taskAttachments?.[taskId]) : { files: [], other: [] };
+  const fileGroups: FileGroup[] = [
+    { key: "own", attachments: ownFiles.files, onChange: routine?.assigned ? undefined : (files) => saveTaskAttachments([...ownFiles.other, ...files]) },
+    {
+      key: "day",
+      title: viewDay === todayKey() ? "Just for today" : `Just for ${formatShortDate(viewDay)}`,
+      attachments: dayFiles.files,
+      onChange: (files) =>
+        routineId &&
+        log.updateOccurrence(viewDay, routineId, (o) => ({ ...o, taskAttachments: { ...(o.taskAttachments ?? {}), [taskId]: [...dayFiles.other, ...files] } })),
+    },
+  ];
+  const fileCount = useLinkedCount(fileGroups);
+
+  /** Saves the task's own attachments, wherever the task lives (the routine, one day's additions
+      to it, or a day's own task). */
+  function saveTaskAttachments(attachments: Attachment[]) {
+    if (routine && routine.tasks.some((t) => t.id === taskId)) {
+      log.saveRoutine({ ...routine, tasks: routine.tasks.map((t) => (t.id === taskId ? { ...t, attachments } : t)) });
+    } else if (routineId && extraDay) {
+      log.updateOccurrence(extraDay, routineId, (o) => ({ ...o, extraTasks: (o.extraTasks ?? []).map((t) => (t.id === taskId ? { ...t, attachments } : t)) }));
+    } else if (!routineId && date) {
+      const own = log.data.days[date]?.tasks?.find((t) => t.id === taskId);
+      if (own) log.saveDayTask(date, { ...own, attachments });
+    }
+  }
 
   const target: NoteTarget = routineId ? { kind: "task", routineId, taskId } : { kind: "dayTask", date: date ?? "", taskId };
   const key = targetKey(target);
@@ -234,14 +274,32 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
       <div className="flex flex-col gap-1.5 border-t border-foreground/[0.06] pt-3">
         <span className="text-xs font-semibold text-muted">Attached</span>
         <div className="flex flex-wrap items-center gap-1.5">
-          {everyTime.length > 0 && <AttachmentList items={everyTime} />}
-          <AttachmentList items={dayAttachments} onChange={setDayAttachments} addLabel={routineId ? `Attach for ${day === today ? "today" : formatShortDate(day)}` : "Attach"} />
+          {/* Files, folders and tags are listed under Files. */}
+          {everyTime.some((a) => !isFileAttachment(a)) && <AttachmentList items={everyTime} noFiles />}
+          <AttachmentList items={dayAttachments} onChange={setDayAttachments} noFiles addLabel={routineId ? `Attach for ${day === today ? "today" : formatShortDate(day)}` : "Attach"} />
         </div>
       </div>
     </section>
   );
 
   const sections: PageSection[] = [
+    {
+      id: "files",
+      title: "Files",
+      count: fileCount || undefined,
+      action:
+        isAuthenticated && !routine?.assigned ? (
+          <button type="button" onClick={() => setAddingFiles(true)} className={QUIET_BUTTON}>
+            <PlusIcon className="h-4 w-4" /> Add
+          </button>
+        ) : undefined,
+      content: (
+        <LinkedFiles
+          groups={fileGroups}
+          empty="No files yet. Add PDFs, recordings or any file from your Files, or link a folder or a tag: what's in it shows here, even files added later. They open beside the page."
+        />
+      ),
+    },
     {
       id: "notes",
       title: "Notes",
@@ -330,6 +388,14 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
       {task.notes && <p className="-mt-3 whitespace-pre-wrap text-sm">{task.notes}</p>}
       {dayPanel}
       <PageSections pageKey={key} sections={sections} />
+      {addingFiles && (
+        <AttachmentPicker
+          only="files"
+          selected={ownFiles.files}
+          onChange={(next) => saveTaskAttachments([...ownFiles.other, ...(next as FileAttachment[])])}
+          onClose={() => setAddingFiles(false)}
+        />
+      )}
       {logging && (
         <LogTimeDialog
           date={day}

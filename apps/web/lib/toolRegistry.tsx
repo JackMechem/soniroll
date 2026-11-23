@@ -75,6 +75,7 @@ const MaterialsPage = dynamic(() => import("@/components/lessons/MaterialsPage")
 const StudentPage = dynamic(() => import("@/components/lessons/StudentPage"), { loading: PaneLoading });
 const TeacherPage = dynamic(() => import("@/components/lessons/TeacherPage"), { loading: PaneLoading });
 
+const FileViewPage = dynamic(() => import("@/components/files/FileViewPage"), { loading: PaneLoading });
 const SharedFilePage = dynamic(() => import("@/components/files/SharedFilePage"), { loading: PaneLoading });
 const SharedTunePage = dynamic(() => import("@/components/files/SharedTunePage"), { loading: PaneLoading });
 const SharedSetlistPage = dynamic(() => import("@/components/SharedSetlistPage"), { loading: PaneLoading });
@@ -170,6 +171,7 @@ const PANE_ROUTES: PaneRoute[] = [
   { path: "/lessons/student", render: (query) => <StudentPage id={q(query, "id")} /> },
   { path: "/lessons/teacher", render: (query) => <TeacherPage id={q(query, "id")} /> },
 
+  { path: "/files/view", render: (query) => <FileViewPage kind={q(query, "kind") || "file"} id={q(query, "id")} /> },
   { path: "/file/:id", render: (_, { id }) => <SharedFilePage id={id} /> },
   { path: "/tune/:id", render: (_, { id }) => <SharedTunePage id={id} /> },
   { path: "/setlist/:id", render: (_, { id }) => <SharedSetlistPage id={id} /> },

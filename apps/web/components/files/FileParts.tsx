@@ -41,6 +41,8 @@ import PdfEditor from "@/components/pdf/PdfEditor";
 import PdfInline from "@/components/pdf/PdfInline";
 import { useOpenInTool } from "@/components/files/openInTool";
 import type { FileOrganizer } from "@/components/files/FileFolders";
+import { openFileBeside, opensBeside } from "@/lib/fileView";
+import { usePaneId } from "@/lib/paneContext";
 
 // ---------------------------------------------------------------- icons
 
@@ -235,9 +237,16 @@ const isMedia = (f: { mimeType: string; name: string }) => ["audio", "video"].in
  * file chooser, `drop` props make an element a drop target, and `input` must be rendered. They're
  * saved online with a storage plan, or on this device without one (`lib/storagePlan.ts`).
  * `existing`: the files already there; adding one with the same name and size asks first ("Add
- * again", or skip it). `folder`: new files go into this Files folder.
+ * again", or skip it). `folder`: new files go into this Files folder. `onSaved`: called with each file
+ * once it's saved (e.g. to attach it to a Shed Log task).
  */
-export function useFileUploader(tuneId: string | undefined, target: SaveTarget, existing?: readonly { name: string; size: number }[], folder?: string) {
+export function useFileUploader(
+  tuneId: string | undefined,
+  target: SaveTarget,
+  existing?: readonly { name: string; size: number }[],
+  folder?: string,
+  onSaved?: (file: { id: Id<"files">; name: string; mimeType: string }) => void,
+) {
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl);
   const create = useMutation(filesApi.create);
   const createOnDevice = useMutation(filesApi.createOnDevice);
@@ -264,7 +273,7 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget, 
       for (let i = 0; i < files.length; i++) {
         try {
           const into = folder ? { folder } : {};
-          await saveFile(
+          const savedId = await saveFile(
             files[i],
             storage,
             { generateUploadUrl: () => generateUploadUrl({}), create: (args) => create({ ...args, ...into }), createOnDevice: (args) => createOnDevice({ ...args, ...into }) },
@@ -272,6 +281,7 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget, 
             undefined,
             online,
           );
+          onSaved?.({ id: savedId, name: files[i].name, mimeType: files[i].type || "application/octet-stream" });
         } catch (e) {
           failures.push(errorText(e, `Couldn't upload "${files[i].name}".`));
           // Out of room: the rest won't fit either.
@@ -283,7 +293,7 @@ export function useFileUploader(tuneId: string | undefined, target: SaveTarget, 
       if (failures.length) setError(failures.join(" "));
       return failures.length === 0;
     },
-    [create, createOnDevice, existing, folder, generateUploadUrl, online, storage, tuneId],
+    [create, createOnDevice, existing, folder, generateUploadUrl, online, storage, tuneId, onSaved],
   );
 
   const input = (
@@ -413,6 +423,7 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
     }
   }
   const router = useRouter();
+  const paneId = usePaneId();
   const openIn = useOpenInTool();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [open, setOpen] = useState<StoredEntry | null>(null);
@@ -426,11 +437,24 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
     item.href ? item.href : item.kind === "song" && item.tuneId ? `/tunes/tune?id=${encodeURIComponent(item.tuneId)}` : null;
   const goToLabel = (item: StoredEntry) => (item.kind === "song" ? `Open ${(item.tuneId && tuneName(item.tuneId)) || "the tune"}` : (GO_TO[item.kind] ?? "Open"));
 
+  /** Opens a file: a PDF in the side view (so it stays open beside whatever you open next), the
+      rest in the preview. */
+  function openFile(item: StoredEntry) {
+    if (item.kind !== "profile" && opensBeside(item) && openFileBeside(item.kind, item.id, { from: paneId })) return;
+    setOpen(item);
+  }
+
   function items(item: StoredEntry): MenuItem[] {
     const onTune = item.tuneId ? tuneName(item.tuneId) : undefined;
     const where = goTo(item);
+    const beside = item.kind !== "profile" && opensBeside(item);
+    const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
     return [
-      { label: "Open", onSelect: () => setOpen(item), icon: <FileIcon className="h-4 w-4" /> },
+      { label: "Open", onSelect: () => openFile(item), icon: <FileIcon className="h-4 w-4" /> },
+      // A PDF opens in the side view; these are the other ways (a split, or the whole window).
+      ...(beside && wide ? [{ label: "Open side by side", onSelect: () => void openFileBeside(item.kind, item.id, { mode: "right", from: paneId }) }] : []),
+      ...(beside ? [{ label: "Open full window", onSelect: () => setOpen(item) }] : []),
+      ...(!beside && item.kind !== "profile" ? [{ label: "Open in the side view", onSelect: () => void openFileBeside(item.kind, item.id, { from: paneId }) }] : []),
       // Audio (and video): open it in a tool that plays it.
       ...openIn.toolsFor(item).map((t) => ({ label: `Open in ${t.label}`, onSelect: t.open, icon: <t.icon className="h-4 w-4" /> })),
       ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
@@ -602,7 +626,7 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
   return {
     openMenu,
     contextMenu,
-    openFile: setOpen,
+    openFile,
     deleteMany,
     putOnline,
     error: error ?? openIn.error,

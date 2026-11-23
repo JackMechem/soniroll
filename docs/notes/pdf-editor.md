@@ -81,3 +81,32 @@ symbols to staff lines.
 - Verified in headless Chromium with a throwaway account (deleted after): Escape on all three
   popovers, Escape after typing, Escape with nothing selected, tool row at 1440, 390 and 360
   (light/dark, with a mark selected). Not verified: a real touch screen.
+
+## 2026-11-23: PDFs open beside the page
+
+Jack: "be viewing a pdf and see the metronome or another tool at the same time … by default open
+every pdf in a … side view like clicking on a task in shed logs".
+
+- **`/files/view?kind=&id=`** (`app/files/view/page.tsx`, `components/files/FileViewPage.tsx`, in
+  `PANE_ROUTES` and the desktop's `routes.tsx`): one of your own files as a page (any `StoredKind`,
+  through `fileFolders.item` and `useDeviceUrl`). A PDF fills it with `PdfEditor embedded` (under the
+  pane's bar, which has Back/⤢/⋮/×; trail "Files / folder / name"); other kinds show in place with
+  Open in…, Download and "Open <folder>". As a page of its own (not in a pane) a PDF opens in the
+  full-window editor and Done goes back. `lib/fileView.ts`: `fileViewHref`, `filesHref`,
+  `opensBeside` (PDFs), `openFileBeside(kind, id, { mode, from })`.
+- **`useFileActions.openFile`** (Files, a tune's Files, a task's Files…): a PDF goes to the side view
+  (`openBeside`; the old full-window editor only if that fails). Its ⋮ adds "Open side by side"
+  (desktop) and "Open full window"; other files get "Open in the side view". Audio/video/images keep
+  the preview dialog on a plain click (it's a quick look; the side view is one menu item away).
+- **`PdfEditor`**: `embedded` (fills its box instead of covering the window; not portaled), `onClose`
+  optional (no Done button and Escape doesn't leave without it), keys only when its pane has the
+  keyboard (`usePaneKeyGuard`), and what's waiting to save is saved when it unmounts (a pane closed
+  or went Back), not only on Done.
+- **`PdfPerform`** in a pane: no browser full screen (the point is seeing the other panes), covers
+  just the editor's box, keys guarded the same way.
+- The side view keeps this device's choice of over/beside the page: "Over the page" covers part of
+  a tool; "Beside the page" (the pane's ⋮) puts the PDF and the tool side by side.
+- Lost on the beside path: the Files page's Move to folder / Tags items in the editor's ⋮ (they need
+  the Files page's organizer); "Open full window" still has them.
+- Verified with the Shed Log entry of the same date (`shed-log.md`): the side view beside the
+  Metronome, a pen mark saved from it, Play inside it, 390 full screen with Back.

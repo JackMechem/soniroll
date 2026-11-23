@@ -103,6 +103,7 @@ export const DotsVerticalIcon = mci('dots-vertical');
 export const FolderMoveIcon = mci('folder-move-outline');
 export const FolderIcon = mci('folder-music-outline');
 export const FolderPlusIcon = mci('folder-plus-outline');
+export const TagIcon = mci('tag-outline');
 export const HistoryIcon = mci('history');
 export const ClearIcon = mci('close-circle');
 export const RepeatIcon = mci('repeat');

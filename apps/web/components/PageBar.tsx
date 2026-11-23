@@ -8,6 +8,9 @@ import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { topicById } from "@/lib/helpContent";
 import { type Crumb, type CrumbIcon, usePageCrumbs } from "@/lib/pageCrumbs";
+import NowPracticingPill from "@/components/practicelog/NowPracticing";
+import { usePaneId, usePaneTitleSlot } from "@/lib/paneContext";
+import { useTilingState } from "@/lib/useTilingLayout";
 
 export type { Crumb } from "@/lib/pageCrumbs";
 
@@ -61,6 +64,11 @@ export default function PageBar({
   const shownIntro = intro ?? (topic ? { label: `How ${topic.title} works`, show: ownIntro.show } : undefined);
   const Icon = icon ?? (topic ? ICON_BY_ID[topic.id] : undefined);
   usePageCrumbs({ crumbs: phoneCrumbs ?? crumbs, icon: Icon, intro: phoneIntro ? shownIntro : undefined });
+  // In split screen this bar is hidden (the pane's bar shows the trail): "now practicing" goes in
+  // the main pane's bar instead (once, not in every pane).
+  const paneId = usePaneId();
+  const paneTitleSlot = usePaneTitleSlot();
+  const mainPaneId = useTilingState().layout.mainPaneId;
 
   return (
     <>
@@ -72,11 +80,16 @@ export default function PageBar({
         {/* Only the room left over (`basis-0`), cut short with … when the header is tight, so
             the title and the buttons on the right never get squeezed by it (FB-22). */}
         {titleExtra && <div className="ml-3 min-w-0 flex-1 basis-0 truncate pr-4">{titleExtra}</div>}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {actions}
-          <FeedbackHeaderButton />
+        <div className="ml-auto flex min-w-0 shrink items-center gap-2">
+          {/* What you're practicing (or next today): opens its task in the side view. */}
+          {!paneId && <NowPracticingPill />}
+          <div className="flex shrink-0 items-center gap-2">
+            {actions}
+            <FeedbackHeaderButton />
+          </div>
         </div>
       </div>
+      {paneId && paneId === mainPaneId && paneTitleSlot && createPortal(<span className="ml-1 flex min-w-0"><NowPracticingPill compact /></span>, paneTitleSlot)}
       {ownIntro.open && topic && <ToolIntro topic={topic} onClose={ownIntro.close} />}
     </>
   );

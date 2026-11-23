@@ -269,6 +269,8 @@ Web (`apps/web`):
   A tool that opens a file uses `useFilePicker` (`components/files/FilePicker.tsx`: the "Open a
   file" dialog listing the user's files, Upload, saving to Files) and `lib/useFileDrop.ts`
   (drop a file anywhere on the tool's page or pane).
+  One of your files beside the page: `openFileBeside(kind, id)` (`lib/fileView.ts`, the
+  `/files/view` page; PDFs open there by default).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
 - Notation: `components/notation/ScoreEditor.tsx` (the one notation editor — never write another;
   wrap it with a `header`) and `Score.tsx` (read-only view too); scores via `lib/useScores.ts`.
@@ -312,14 +314,14 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Bass Genius history (bass lines, players, transcriptions, comping, the swing drummer) — now Rhythm Section's bass | `bass-genius.md` |
 | Drum Generator history (styles, kit, notation) — now Rhythm Section's drums; Syncopation | `drum-generator-and-syncopation.md` |
 | Time Test (`/time-test`, from Jack's `time-test` app): the TS port of the stroke detector and analysis, `lib/padInput.ts` (AudioWorklet on web, `pad_input.rs` on desktop), `ClickTrack.onSchedule` | `time-test.md` |
-| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`); routine and task pages (notes, recordings per task, Arrange), opening them in the side view | `shed-log.md` |
+| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`); routine and task pages (notes, recordings per task, Arrange), opening them in the side view; files, folders and tags on routines/tasks (`FileAttachment`, `fileFolders.linked`); the "now practicing" pill (`NowPracticing.tsx`) | `shed-log.md` |
 | Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Rhythm Section's bass players; clefs, key signatures, re-barring | `score-writer.md` |
 | Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Library as two tabs (Tunes, Files; FB-30, 2026-11-20): every chart on a tune (`tuneChartIds`, several per tune), the Library tune list, tags, linking on import and the one-time pass (`useAutoLinkCharts`), Open in Slow Downer/Tuner from Files | `library-two-tabs.md` |
-| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias | `pdf-editor.md` |
+| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias; PDFs open in the side view (`/files/view`, `lib/fileView.ts`) | `pdf-editor.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link; folders and tags on files (`fileMeta`, `fileFolders.ts`: `inFolder`/`withTag` for other features) | `files-and-tune-sharing.md` |
 | Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |

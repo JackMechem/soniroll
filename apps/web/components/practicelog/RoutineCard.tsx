@@ -392,7 +392,8 @@ export default function RoutineCard({
           </button>
         ))}
 
-      {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} />}
+      {/* On the routine's own page its files are in the page's Files section. */}
+      {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} noFiles={embedded} />}
 
       {occurrence.notes !== undefined && occurrence.notes !== "" && (
         <LegacyNotes

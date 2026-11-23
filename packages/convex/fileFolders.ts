@@ -13,8 +13,8 @@ import {
   folderAfterDelete,
   movedFolder,
 } from "@jam-practice/core/fileFolders";
-import { folderList, itemsInFolder, itemsWithTag, madeFolders, metaFor, metaRows, rowsInFolder, writeMeta } from "./lib/fileFolders";
-import type { StoredKind } from "./lib/storage";
+import { type OrganizedItem, folderList, itemsInFolder, itemsWithTag, madeFolders, metaFor, metaRows, rowsInFolder, writeMeta } from "./lib/fileFolders";
+import { type StoredKind, storedItemById } from "./lib/storage";
 
 /**
  * Folders and tags for everything on the Files page (uploads, recordings, tune songs, lesson files,
@@ -75,6 +75,60 @@ export const withTag = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     return itemsWithTag(ctx, userId, tag);
+  },
+});
+
+/** One of the caller's items with its folder and tags (the file pane, `/files/view`), or null when
+    it isn't theirs or is gone. */
+export const item = query({
+  args: { kind: kindArg, id: v.string() },
+  handler: async (ctx, { kind, id }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const found = await storedItemById(ctx, userId, kind, id, true);
+    if (!found) return null;
+    const meta = await metaFor(ctx, userId, kind, id);
+    return { ...found, folder: meta?.folder ?? "", tags: meta?.tags ?? [] };
+  },
+});
+
+/**
+ * What a Shed Log routine or task has attached from Files, as it is now: the items picked one by
+ * one (`missing`: the ones that are gone or aren't the caller's), and the items in each linked
+ * folder (and the folders under it) and with each linked tag — so files added there later show up
+ * too. Each item has its `folder`, `tags` and `url` (null when kept on a device: `useDeviceUrls`).
+ * Null when signed out.
+ */
+export const linked = query({
+  args: { items: v.array(itemArg), folders: v.array(v.string()), tags: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const items: OrganizedItem[] = [];
+    const missing: { kind: StoredKind; id: string }[] = [];
+    for (const { kind, id } of args.items.slice(0, 100)) {
+      const found = await storedItemById(ctx, userId, kind, id, true);
+      if (!found) {
+        missing.push({ kind, id });
+        continue;
+      }
+      const meta = await metaFor(ctx, userId, kind, id);
+      items.push({ ...found, folder: meta?.folder ?? "", tags: meta?.tags ?? [] });
+    }
+    const folders: { path: string; items: OrganizedItem[] }[] = [];
+    for (const raw of [...new Set(args.folders.map(cleanFolder))].slice(0, 20)) {
+      // The top level would be every file: not something to link.
+      if (raw) folders.push({ path: raw, items: await itemsInFolder(ctx, userId, raw, true) });
+    }
+    const tags: { tag: string; items: OrganizedItem[] }[] = [];
+    const seen = new Set<string>();
+    for (const raw of args.tags.slice(0, 20)) {
+      const tag = cleanTag(raw);
+      if (!tag || seen.has(fileTagKey(tag))) continue;
+      seen.add(fileTagKey(tag));
+      tags.push({ tag, items: await itemsWithTag(ctx, userId, tag) });
+    }
+    return { items, missing, folders, tags };
   },
 });
 

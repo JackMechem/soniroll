@@ -33,6 +33,7 @@ import { IconButton } from '@/components/ui';
 import { useDeviceUrls } from '@/lib/deviceFiles';
 import { recordingsApi, type Recording } from '@/lib/recordings';
 import { taskRoute } from '@/lib/shedLogPages';
+import { type FileGroup, LinkedFiles, fileAttachmentsOf } from '@/components/shedLog/LinkedFiles';
 import { useToday } from '@/lib/useClock';
 import { usePracticeLog } from '@/lib/usePracticeLog';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -131,6 +132,12 @@ function Routine({ log }: { log: ReturnType<typeof usePracticeLog> }) {
     return ordered.length ? `## Tasks\n${ordered.map((n) => `- [[${n.title}]]`).join('\n')}\n\n` : '';
   };
 
+  // Files, folders and tags (added on the website): the routine's own, then each task's.
+  const fileGroups: FileGroup[] = [
+    { key: 'own', attachments: fileAttachmentsOf(routine.attachments) },
+    ...routine.tasks.map((t) => ({ key: `task:${t.id}`, title: t.title || 'Untitled task', attachments: fileAttachmentsOf(t.attachments) })),
+  ];
+
   // The day it's looked at for (the Shed Log's day it was opened from; else today): its card.
   const day = params.date || today;
   const dayName = day === today ? 'today' : formatShortDate(day);
@@ -197,6 +204,12 @@ function Routine({ log }: { log: ReturnType<typeof usePracticeLog> }) {
             </Panel>
           )}
         </Section>
+
+        {fileGroups.some((g) => g.attachments.length) ? (
+          <Section title="Files">
+            <LinkedFiles groups={fileGroups} />
+          </Section>
+        ) : null}
 
         <Section title="Notes">
           <PageNotes

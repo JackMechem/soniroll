@@ -41,7 +41,7 @@ import { downloadFile, errorText } from "@/lib/files";
 import { usePdfDoc, usePdfDocs, type PdfSources } from "@/components/pdf/usePdfDoc";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import type { PDFDocumentProxy } from "@/lib/pdfjs";
-import { usePaneElement } from "@/lib/paneContext";
+import { usePaneElement, usePaneKeyGuard } from "@/lib/paneContext";
 
 export type PdfFile = {
   /** A `files` row of the signed-in user's: markings are saved to it. Without one (a shared file,
@@ -79,11 +79,17 @@ const ZOOMS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 2, 3];
  * numbers, shapes), page editing (order, rotation, deleting, blank and staff pages), page turning
  * for playing from it, and a download with the markings baked in. The markings are a layer saved
  * with the file (`pdfMarkups`); the PDF itself is never changed.
+ *
+ * `embedded`: it fills the box it's in (a page of its own, `/files/view` — in a pane that's under
+ * the pane's bar) instead of covering the window. Without `onClose` there's no Done button and
+ * Escape doesn't leave (the pane's bar has Back and ×).
  */
-export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile; onClose: () => void; extraMenu?: MenuItem[] }) {
+export default function PdfEditor({ file, onClose, extraMenu, embedded = false }: { file: PdfFile; onClose?: () => void; extraMenu?: MenuItem[]; embedded?: boolean }) {
   const { isAuthenticated } = useConvexAuth();
   // In a split-screen pane or the side view it covers just that pane (so other panes stay usable).
   const paneEl = usePaneElement();
+  // Its keys (tools, undo, Escape) only when its pane has the keyboard, not while you use another.
+  const forThisPane = usePaneKeyGuard();
   const fileId = file.id ? (file.id as Id<"files">) : null;
   const canEdit = !!fileId && isAuthenticated;
 
@@ -151,8 +157,18 @@ export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile;
   }, [editedLayer, fileId, canEdit, save]);
   const close = () => {
     if (pending.current && fileId) void save({ fileId, data: pending.current });
-    onClose();
+    pending.current = null;
+    onClose?.();
   };
+  // Closed some other way (its pane closed, Back in the pane): what's waiting is saved too.
+  const flushRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    flushRef.current = () => {
+      if (pending.current && fileId) void save({ fileId, data: pending.current });
+      pending.current = null;
+    };
+  });
+  useEffect(() => () => flushRef.current(), []);
 
   // ---- tools
   const [options, setOptions] = useState<ToolOptions>(DEFAULT_OPTIONS);
@@ -231,7 +247,7 @@ export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile;
     if (view !== "read") return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest("input, textarea, [contenteditable]") || menu) return;
+      if (t.closest("input, textarea, [contenteditable]") || menu || !forThisPane(e)) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
@@ -245,7 +261,7 @@ export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile;
         removeSelected();
       } else if (e.key === "Escape") {
         if (selected) setSelected(null);
-        else close();
+        else if (onClose) close();
       } else if (!mod && canEdit) {
         const keyTool: Record<string, Tool> = { v: "select", h: "hand", p: "pen", m: "highlight", e: "eraser", t: "text" };
         const tool = keyTool[e.key.toLowerCase()];
@@ -262,12 +278,12 @@ export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile;
   useEffect(() => {
     if (view !== "pages") return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || menu || (e.target as HTMLElement).closest("input, textarea, [contenteditable]")) return;
+      if (e.key !== "Escape" || menu || (e.target as HTMLElement).closest("input, textarea, [contenteditable]") || !forThisPane(e)) return;
       setView("read");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, menu]);
+  }, [view, menu, forThisPane]);
 
   // No page scrolling behind the editor.
   useEffect(() => {
@@ -329,12 +345,18 @@ export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile;
   };
 
   const body = (
-    <div className={`${paneEl ? "absolute z-[21]" : "fixed z-[70]"} inset-0 flex flex-col bg-background text-foreground`} role="dialog" aria-label={file.name}>
+    <div
+      className={`${embedded ? "relative min-h-0 flex-1" : `${paneEl ? "absolute z-[21]" : "fixed z-[70]"} inset-0`} flex flex-col bg-background text-foreground`}
+      role={embedded ? "region" : "dialog"}
+      aria-label={file.name}
+    >
       {/* Top bar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-foreground/10 bg-surface px-2 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:gap-2 sm:px-3">
-        <button type="button" onClick={close} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium hover:bg-surface-hover">
-          <ChevronLeftIcon className="h-4 w-4" /> Done
-        </button>
+      <div className={`flex shrink-0 items-center gap-1 border-b border-foreground/10 bg-surface px-2 py-2 sm:gap-2 sm:px-3 ${embedded ? "" : "pt-[calc(env(safe-area-inset-top)+0.5rem)]"}`}>
+        {onClose && (
+          <button type="button" onClick={close} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium hover:bg-surface-hover">
+            <ChevronLeftIcon className="h-4 w-4" /> Done
+          </button>
+        )}
         <div className="min-w-0 flex-1 px-1">
           <h2 className="truncate text-sm font-semibold">{file.name}</h2>
           <p className="truncate text-xs text-muted">
@@ -662,7 +684,7 @@ export default function PdfEditor({ file, onClose, extraMenu }: { file: PdfFile;
       )}
     </div>
   );
-  return createPortal(body, paneEl ?? document.body);
+  return embedded ? body : createPortal(body, paneEl ?? document.body);
 }
 
 // ---------------------------------------------------------------- bits

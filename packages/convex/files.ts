@@ -283,6 +283,14 @@ export const removeItem = mutation({
     }
     await dropShares(ctx, userId, kind, id);
     await dropMeta(ctx, userId, kind, id);
+    // A PDF's markings go with it (as `remove` does).
+    if (kind === "file") {
+      const markup = await ctx.db
+        .query("pdfMarkups")
+        .withIndex("by_file", (q) => q.eq("fileId", id as Id<"files">))
+        .first();
+      if (markup) await ctx.db.delete(markup._id);
+    }
   },
 });
 
