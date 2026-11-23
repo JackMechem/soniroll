@@ -33,6 +33,37 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.17",
+    date: "2026-11-23",
+    title: "Split screen, tabs, and files where you practice",
+    summary: "Open a PDF beside the Metronome, keep several views in tabs, sort your files into folders with tags, and keep a task's files on its page. The real Rhodes is back.",
+    changes: [
+      {
+        kind: "new",
+        text: "**PDFs open beside the page**, so you can read and mark up a chart while the Metronome or any tool keeps running next to it. Make it a split, flip it between side by side and above and below, or open it full window.",
+      },
+      {
+        kind: "improved",
+        text: "**Split screen, rebuilt**: every pane keeps its own place (the Library no longer resets when you click the other pane), and every pane has the same bar: Back, full screen, swap, flip, float over the page, and close. The Library, tunes, charts, the Shed Log, notes, Community and Lessons can all go in a pane now.",
+      },
+      { kind: "new", text: "**Tabs**: keep several views open (a page, or a split) and switch between them. Rename, reorder and duplicate them; they're saved to your account, or this browser when you're signed out. Ctrl+Alt+1–9 switches." },
+      { kind: "new", text: "**Folders and tags for your files**: make folders (inside folders too), drag files into them, tag them and filter by tag." },
+      { kind: "new", text: "**Files on routines and tasks**: attach a PDF or any file, or link a whole folder or tag, and its files show on the task's page, ready to open beside whatever you're doing." },
+      { kind: "new", text: "**Now practicing**: the task you're on (or what's next) sits in the top bar of every page. Click it to open the task beside the page." },
+      { kind: "new", text: "**The Rhodes is back**, a real 1977 Rhodes Mark I (jRhodes3d by Jeff Learman, who kindly gave permission): in Rhythm Section's chords and as the Rhodes sound in the ear trainers." },
+      { kind: "fixed", text: "Scanned PDFs no longer open with every page blank." },
+      { kind: "fixed", text: "A change made on your phone could be undone by soniroll left open on a computer. Now an open page picks up changes from your other devices, and an edit made just before leaving a page is saved." },
+      { kind: "improved", text: "Chord charts read the usual spellings (Cmaj7, Dm7b5, Bdim7, C7(b9)), and Tab moves to the next bar. Tune and chart pages show their name as the heading." },
+      { kind: "improved", text: "Ear trainers: Guess the Chord has number keys and a centred answer row; Guess the Progression marks a right numeral with the wrong quality as partly right and waits for you; intervals are spelled from the root (B♭ to A, not A♯ to A)." },
+      { kind: "improved", text: "The Slow Downer reopens your file and loop when you come back, and Rhythm Section keeps your style and tempo when you switch between no chart, a chart and typed chords." },
+      { kind: "improved", text: "Three rounds of polish on phones and computers: dialogs as sheets on phones, bigger tap targets, one way of writing practice time (1 h 35 min), clearer Files labels, lesson and setlist headings, and more." },
+      {
+        kind: "new",
+        text: "Phone app (Android alpha 5): three rounds of fixes (sheets above the keyboard, the trainers' Stop button, the recording bar, notes, the Library), the Rhodes, and a task's files on its screen.",
+      },
+    ],
+  },
+  {
     version: "0.10.16",
     date: "2026-11-22",
     title: "Routine and task pages",
