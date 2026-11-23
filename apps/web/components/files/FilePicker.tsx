@@ -361,15 +361,23 @@ function FilePickerDialog({
                 const id = `${entry.kind}:${entry.id}`;
                 const where = entry.kind === "recording" ? "Recording" : entry.kind === "song" ? "Tune song" : null;
                 if (!entry.url) {
-                  // Kept on another device: listed, but it can't be opened here.
+                  // Kept on another device: listed, but it can't be opened here. A tap says so (a
+                  // phone has no hover title).
+                  const where = entry.device?.label ?? "another device";
                   return (
-                    <div key={id} className="flex min-h-12 items-center gap-3 px-2.5 py-2 opacity-60" title={`Kept on ${entry.device?.label ?? "another device"}`}>
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setError(`“${entry.name}” is kept on ${where}. Open it there.`)}
+                      className="flex min-h-12 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left opacity-60"
+                      title={`Kept on ${where}`}
+                    >
                       <FileTypeIcon kind={fileKind(entry.mimeType, entry.name)} recording={entry.kind === "recording"} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{entry.name}</span>
-                        <span className="block truncate text-xs text-muted">{entry.device ? `On ${entry.device.label}` : "Not available"}</span>
+                        <span className="block truncate text-xs text-muted">{entry.device ? `On ${entry.device.label} · open it there` : "Not available"}</span>
                       </span>
-                    </div>
+                    </button>
                   );
                 }
                 return (

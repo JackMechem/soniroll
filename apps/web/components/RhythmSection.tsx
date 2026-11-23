@@ -333,13 +333,14 @@ export default function RhythmSection({
     [typedText, typedKey, typedMeter],
   );
   const song = noTune ? null : typed ? typedResult.song : chartSong;
-  const wantsTune = typed || (source === "chart" && !!chartId);
 
   // ——— The style ———
   const storedStyle = grooveSettings.style === "swing-comping" ? "medium-swing" : grooveSettings.style;
+  // Never picked: swing with chords (A chart, even before one's picked, or Type chords), a bossa
+  // with No chart.
   const style = useMemo(
-    () => styleById(storedStyle || (wantsTune ? ((song ? beatsInMeter(song.timeSignature) : 4) === 3 ? "jazz-waltz" : "medium-swing") : "bossa-nova")),
-    [storedStyle, wantsTune, song],
+    () => styleById(storedStyle || (!noTune ? ((song ? beatsInMeter(song.timeSignature) : 4) === 3 ? "jazz-waltz" : "medium-swing") : "bossa-nova")),
+    [storedStyle, noTune, song],
   );
   const family = bassFamilyOf(style);
   const walking = family === "walking";
@@ -514,6 +515,9 @@ export default function RhythmSection({
     if (next === source) return;
     stop();
     update({ source: next });
+    // Changing where the chords come from keeps the style (and so the tempo) you were hearing: a
+    // never-picked style is a default that depends on the source, so it's kept as picked here.
+    if (!storedStyle) updateGroove({ style: style.id });
   };
 
   const start = useCallback(async () => {

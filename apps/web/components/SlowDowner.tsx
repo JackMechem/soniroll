@@ -39,6 +39,12 @@ import { useToolActivity } from "@/lib/toolTime";
 import { usePaneKeyGuard } from "@/lib/paneContext";
 
 const SETTINGS_KEY = "jam-practice-slow-downer";
+
+/** What was open when the Slow Downer was last left (in this tab), so coming back to it reopens the
+    same file at the same place, with its loop (as the phone app does). Kept in memory only: a reload
+    starts empty, and closing the file forgets it. */
+type LastOpened = { file: File; loop: LoopRegion | null; loopOn: boolean; time: number };
+let lastOpened: LastOpened | null = null;
 const DEFAULT_SETTINGS = { speed: 100, preservePitch: true, volume: 1, maximized: false };
 
 const MIN_SPEED = 25;
@@ -145,12 +151,40 @@ export default function SlowDowner({ openStored }: { openStored?: string }) {
   const loopRef = useRef({ loop, loopOn });
   const fileTokenRef = useRef(0);
   const fileKeyRef = useRef<string | null>(null);
+  /** The open file itself, and where it was, kept for `lastOpened` when the page is left. */
+  const openFileRef = useRef<File | null>(null);
+  const lastStateRef = useRef({ loop, loopOn, time });
+  /** Where to put the playhead once a reopened file's length is known. */
+  const pendingSeekRef = useRef<number | null>(null);
   /** The saved loop the current loop is, if it's one. */
   const currentSaved = loop ? loops.find((l) => sameLoop(l, loop)) : undefined;
 
   useEffect(() => {
     loopRef.current = { loop, loopOn };
   }, [loop, loopOn]);
+  useEffect(() => {
+    lastStateRef.current = { loop, loopOn, time };
+  }, [loop, loopOn, time]);
+
+  // Leaving the page remembers the open file; coming back (unless Files asked for another one)
+  // opens it again.
+  useEffect(() => {
+    const last = openStored ? null : lastOpened;
+    if (last) {
+      void Promise.resolve().then(() => {
+        loadFile(last.file, false);
+        setLoop(last.loop);
+        setLoopOn(last.loopOn);
+        pendingSeekRef.current = last.time;
+      });
+    }
+    return () => {
+      const f = openFileRef.current;
+      lastOpened = f ? { file: f, ...lastStateRef.current } : null;
+    };
+    // Mount and unmount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Apply speed, pitch and volume to the media element.
   useEffect(() => {
@@ -225,6 +259,8 @@ export default function SlowDowner({ openStored }: { openStored?: string }) {
     setDuration(0);
     setView({ start: 0, span: 1 });
     fileKeyRef.current = fileKeyOf(next);
+    openFileRef.current = next;
+    pendingSeekRef.current = null;
     setMarkers(loadMarkers(fileKeyRef.current));
     setLoops(loadLoops(fileKeyRef.current));
     setMenu(null);
@@ -253,6 +289,8 @@ export default function SlowDowner({ openStored }: { openStored?: string }) {
     fileTokenRef.current++;
     mediaRef.current?.pause();
     fileKeyRef.current = null;
+    openFileRef.current = null;
+    lastOpened = null;
     setPlaying(false);
     setFile(null);
     setPeaks(null);
@@ -816,6 +854,13 @@ export default function SlowDowner({ openStored }: { openStored?: string }) {
           const d = e.currentTarget.duration;
           setDuration(d);
           setView({ start: 0, span: d });
+          // A file reopened on coming back: back to where it was.
+          const at = pendingSeekRef.current;
+          pendingSeekRef.current = null;
+          if (at !== null && at > 0 && at < d) {
+            e.currentTarget.currentTime = at;
+            setTime(at);
+          }
         }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}

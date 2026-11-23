@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DisclosureSummary } from "@/components/Disclosure";
 import SwitchRow from "@/components/SwitchRow";
-import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
+import ChordSymbolKeypad, { KeypadKey } from "@/components/ChordSymbolKeypad";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -151,9 +151,15 @@ const DEFAULT_SLASH_CHANCE = 35;
     (also used by the mobile app) folds case, so the M is spelled out as "maj" here first. */
 function readChord(raw: string) {
   const m = /^(\s*[A-Ga-g](?:#|b|♯|♭)?)(.*)$/.exec(raw);
-  const text = m ? m[1] + m[2].replace(/M(?![Aa])/g, "maj") : raw;
+  // A bare Δ (what the keypad's Δ key types) means major 7, as on a chart: "CΔ", "CΔ/E".
+  const text = m ? m[1] + m[2].replace(/M(?![Aa])/g, "maj").replace(/^(-?)\s*[\^Δ∆]\s*(?=$|\/)/, "$1^7") : raw;
   return parseChordInput(text);
 }
+
+const ROOT_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+/** With the letters and the symbol keypad, these type every chord in the pool, so on a touch
+    screen the phone's keyboard can stay down. */
+const DIGIT_KEYS = ["2", "5", "6", "7", "9", "11", "13"];
 
 /** With "Give the root" on, the answer field holds only the quality (the root sits in a badge
     beside it); this puts the given root back in front. If what's typed already starts with a root
@@ -524,6 +530,7 @@ export default function GuessTheChord() {
     // Only ever reached from gradeAndReveal (a form submit, the "I don't know" button, or the
     // max-time timer), never during render — same ref-mutation timing pattern every trainer here
     // uses.
+    // eslint-disable-next-line react-hooks/purity
     noteTimerRef.current = { startedAt: performance.now(), durationMs: pauseMs };
     if (cfgRef.current.soundFeedback) {
       playClick();
@@ -589,6 +596,20 @@ export default function GuessTheChord() {
     });
   }
 
+  function backspace() {
+    const el = inputElRef.current;
+    const start = el?.selectionStart ?? typed.length;
+    const end = el?.selectionEnd ?? typed.length;
+    const from = start === end ? Math.max(0, start - 1) : start;
+    setTypedValue(typed.slice(0, from) + typed.slice(end));
+    const refocus = !isTouchFirst() || document.activeElement === el;
+    requestAnimationFrame(() => {
+      if (!refocus) return;
+      el?.focus();
+      el?.setSelectionRange(from, from);
+    });
+  }
+
   /** `"weak"` starts a focused session on just the qualities tracked as struggles (see
       `weakChordEntries`) instead of the normal quiz/drill — one round per struggling quality, not
       the full 12-key sweep "Drill every chord" does, so it stays a quick, targeted practice on
@@ -647,6 +668,7 @@ export default function GuessTheChord() {
     };
     // Only ever reached from start() itself (a button's onClick, or a space-bar toggle) — not
     // called during render.
+    // eslint-disable-next-line react-hooks/purity
     sessionStartRef.current = performance.now();
 
     const seconds = Math.max(MIN_ROUND_SECONDS, roundSeconds);
@@ -832,7 +854,7 @@ export default function GuessTheChord() {
   const typedParsed = round && !status ? readChord(fullTyped) : null;
   // "?" until the round is answered, so the circle never looks like it's giving the answer away.
   const mainLabel = !running || !round ? "?" : (revealedText ?? "?");
-  const mainLabelLong = mainLabel.length > 10;
+  const mainLabelLong = mainLabel.length > 6;
   // The big label shows the right chord once answered: green when the answer was right, the
   // normal text colour when it wasn't (what was typed is shown in a small line underneath).
   const glow = running && status === "correct" ? GRADE_COLOR.correct : null;
@@ -1203,12 +1225,13 @@ export default function GuessTheChord() {
         )}
         {/* Steps aside while a finished run's results show. */}
         {!(learnMode && !running) && !(summary && !running) && (
-        <div className="relative flex h-44 w-44 items-center justify-center p-4 text-center sm:h-56 sm:w-56">
+        // Smaller while a round runs, so the keypad, Submit and Stop all fit on the screen.
+        <div className={`relative flex items-center justify-center p-4 text-center ${running ? "h-32 w-32" : "h-44 w-44 sm:h-56 sm:w-56"}`}>
           {!running && <span aria-hidden className={IDLE_RING} />}
           <CountdownRing active={showCountdown} timerRef={noteTimerRef} />
           <p
             className={!running ? IDLE_MARK : `relative z-10 font-bold in-[.classic-look]:font-extrabold transition-colors duration-200 ${
-              mainLabelLong ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
+              mainLabelLong ? "text-lg leading-tight" : "text-2xl"
             }`}
             style={
               glow
@@ -1238,17 +1261,6 @@ export default function GuessTheChord() {
           </div>
         )}
 
-        {running && round && (
-          <button
-            type="button"
-            onClick={() => playChordSound(round.notes)}
-            className={SECONDARY_BUTTON}
-          >
-            <PlayIcon className="h-3.5 w-3.5" />
-            Replay
-          </button>
-        )}
-
         {/* Stays in place once answered (greyed out), with Next where Submit was. */}
         {running && round && (
           <form
@@ -1260,8 +1272,21 @@ export default function GuessTheChord() {
             }}
             className="flex w-full flex-col items-center gap-2"
           >
-            <div className="w-full max-w-[18rem]">
+            <div className="flex w-full max-w-[22rem] flex-col gap-1">
+              {!giveRoot && (
+                <div role="group" aria-label="Root keypad" className="grid grid-cols-7 gap-1">
+                  {ROOT_LETTERS.map((l) => (
+                    <KeypadKey key={l} label={l} disabled={!!status} onPress={() => insertSymbol(l)} />
+                  ))}
+                </div>
+              )}
               <ChordSymbolKeypad onInsert={insertSymbol} disabled={!!status} />
+              <div role="group" aria-label="Number keypad" className="grid grid-cols-8 gap-1">
+                {DIGIT_KEYS.map((d) => (
+                  <KeypadKey key={d} label={d} disabled={!!status} onPress={() => insertSymbol(d)} />
+                ))}
+                <KeypadKey label="⌫" title="Delete" disabled={!!status} onPress={backspace} />
+              </div>
             </div>
             <div className="flex w-full max-w-[16rem] items-center gap-2">
             {givenRoot && (
@@ -1272,10 +1297,15 @@ export default function GuessTheChord() {
                 {noteGlyphs(givenRoot)}
               </span>
             )}
+            {/* The keypad types every answer, so a tap on the box shows its caret but not the
+                phone's keyboard (as in Guess the Progression). Set from the tap itself, before
+                focus, so a hardware keyboard or a mouse click still types normally. */}
             <input
               ref={inputElRef}
               type="text"
-              inputMode="text"
+              onPointerDown={(e) => {
+                e.currentTarget.inputMode = e.pointerType === "touch" ? "none" : "text";
+              }}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
@@ -1298,10 +1328,17 @@ export default function GuessTheChord() {
                 (typeHint ?? readingLine)
               )}
             </p>
-            {/* Submit in the middle column, so it's centred and Next lands exactly where it was;
-                "I don't know" beside it (hidden once answered). */}
-            <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <span aria-hidden />
+            {/* Replay, Submit and I don't know on one centred row; once answered, Next takes
+                Submit's place and I don't know only turns invisible, so nothing moves. */}
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => playChordSound(round.notes)}
+                className={SECONDARY_BUTTON}
+              >
+                <PlayIcon className="h-3.5 w-3.5" />
+                Replay
+              </button>
               <button
                 type="submit"
                 disabled={!status && !canSubmit}
@@ -1313,7 +1350,7 @@ export default function GuessTheChord() {
                 type="button"
                 onClick={gradeAndReveal}
                 disabled={!!status}
-                className={`${SECONDARY_BUTTON} justify-self-start ${status ? "invisible" : ""}`}
+                className={`${SECONDARY_BUTTON} ${status ? "invisible" : ""}`}
               >
                 I don&apos;t know
               </button>

@@ -353,7 +353,7 @@ function CategoryBlock({
   // A light section: a small heading (click to fold it away), then the tools. Favorites stands
   // out: a soft accent panel with a stronger heading and an accent star.
   return (
-    <div className={`flex flex-col gap-0.5 ${star ? "rounded-lg bg-accent/[0.08] p-1.5 pt-2" : ""}`}>
+    <div data-nav-section className={`flex flex-col gap-0.5 ${star ? "rounded-lg bg-accent/[0.08] p-1.5 pt-2" : ""}`}>
       <button
         type="button"
         onClick={onToggleCollapse}
@@ -417,12 +417,37 @@ function NavItems({
   const effectivePathname = activePaneHref ?? pathname;
   const navRef = useRef<HTMLElement>(null);
   // Bring the page you're on into view in a long list (the sidebar, or the phone menu as it
-  // opens), so you can see where you are and what's next to it. Only when it's out of sight.
+  // opens), so you can see where you are and what's next to it. Only when it's out of sight of the
+  // list itself, and then from its section's heading when that fits, so a section isn't left cut
+  // off at the top. The list can still grow just after (favorites and folded sections load), so
+  // it looks again as it does, for a moment.
   useEffect(() => {
-    const row = navRef.current?.querySelector('[aria-current="page"]');
-    if (!row) return;
-    const r = row.getBoundingClientRect();
-    if (r.top < 96 || r.bottom > window.innerHeight - 140) row.scrollIntoView({ block: "center" });
+    const nav = navRef.current;
+    if (!nav) return;
+    const bring = () => {
+      const row = nav.querySelector('[aria-current="page"]');
+      if (!row) return;
+      const n = nav.getBoundingClientRect();
+      const r = row.getBoundingClientRect();
+      if (r.top >= n.top && r.bottom <= n.bottom - 8) return;
+      const section = row.closest("[data-nav-section]");
+      const top = section ? section.getBoundingClientRect().top : r.top;
+      const from = r.bottom - top <= n.height - 24 ? top : r.top - 40;
+      nav.scrollTop += from - n.top - 8;
+    };
+    bring();
+    let frame = 0;
+    const mo = new MutationObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(bring);
+    });
+    mo.observe(nav, { childList: true, subtree: true });
+    const stop = setTimeout(() => mo.disconnect(), 2000);
+    return () => {
+      clearTimeout(stop);
+      cancelAnimationFrame(frame);
+      mo.disconnect();
+    };
   }, [effectivePathname, collapsed]);
   // The icon strip (collapsed) can hold more icons than fit: while there are more below, a fade
   // and a ⌄ button at its bottom say so (the scrollbar is hidden there).

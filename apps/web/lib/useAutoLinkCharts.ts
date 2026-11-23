@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { linkedChartIds } from "@jam-practice/core/tuneLibrary";
-import type { LibrarySongMeta } from "./useChordChartsLibrary";
+import { deletingChartIds, type LibrarySongMeta } from "./useChordChartsLibrary";
 import { useChartLinker } from "./useTuneLists";
 
 /**
@@ -18,9 +18,11 @@ export function useAutoLinkCharts(allSongs: LibrarySongMeta[], loading: boolean)
   useEffect(() => {
     if (!ready || loading || allSongs.length === 0) return;
     const seen = new Set(linkedIds);
-    const fresh = allSongs.filter((s) => !seen.has(s.id));
+    // A chart being deleted (with its tune) is about to leave the list: not an orphan.
+    const live = allSongs.filter((s) => !deletingChartIds.has(s.id));
+    const fresh = live.filter((s) => !seen.has(s.id));
     const onTunes = linkedChartIds({ tunes: known, learn, library });
-    const orphans = allSongs.filter((s) => !onTunes.has(s.id));
+    const orphans = live.filter((s) => !onTunes.has(s.id));
     if (fresh.length === 0 && orphans.length === 0) return;
     const run = () =>
       link(

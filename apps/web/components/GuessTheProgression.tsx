@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DisclosureSummary } from "@/components/Disclosure";
 import SwitchRow from "@/components/SwitchRow";
-import ChordSymbolKeypad from "@/components/ChordSymbolKeypad";
+import ChordSymbolKeypad, { KeypadKey } from "@/components/ChordSymbolKeypad";
 import Hint from "@/components/Hint";
 import ToolLayout from "@/components/ToolLayout";
 import { toolPresets } from "@/lib/toolPresets";
@@ -176,11 +176,19 @@ const DEFAULT_SETTINGS = {
   history: [] as HistoryEntry[],
 };
 
-/** Every chord correct → correct, some → partial, none → incorrect. */
-function gradeOf(marks: boolean[]): Grade {
+/** Every chord correct → correct, some → partial, none → incorrect. A chord with the right
+    numeral (or root) but not the right quality counts towards partial, so "ii V I" for
+    "ii7 V7 IΔ7" isn't scored as a complete miss. */
+function gradeOf(marks: boolean[], partlyRight = false): Grade {
   const right = marks.filter(Boolean).length;
   if (right === marks.length) return "correct";
-  return right > 0 ? "partial" : "incorrect";
+  return right > 0 || partlyRight ? "partial" : "incorrect";
+}
+
+/** The keypad's Δ key types a bare "^"; on its own (as in "IΔ" or "CΔ/E") that means major 7, the
+    way it's written on a chart, so it reads as "^7" ("^9", "^13" are left alone). */
+function withLoneDelta(raw: string): string {
+  return raw.replace(/[\^Δ∆](?=$|[\s,|/])/g, "^7");
 }
 
 /** How one typed token is drawn while typing: a numeral with its suffix's glyphs, or a chord name
@@ -207,6 +215,7 @@ function slotReason(
   qualities: boolean,
 ): string | null {
   if (!token) return null;
+  token = withLoneDelta(token);
   const chord = round.progression.chords[index];
   const minor = isMinorFamily(chord.quality.id);
   let typedRaw: string;
@@ -238,36 +247,6 @@ const UPPER_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"];
 const LOWER_NUMERALS = ["i", "ii", "iii", "iv", "v", "vi", "vii"];
 const ROOT_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
 const DIGIT_KEYS = ["7", "6", "9", "11", "13"];
-
-function KeypadKey({
-  label,
-  caption,
-  title,
-  onPress,
-  wide,
-}: {
-  label: string;
-  caption?: string;
-  title?: string;
-  onPress: () => void;
-  wide?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={title ?? label}
-      aria-label={title ?? label}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onPress}
-      className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1.5 py-1.5 hover:bg-surface-hover pointer-coarse:min-h-10 ${
-        wide ? "col-span-2" : ""
-      }`}
-    >
-      <span className="text-base font-semibold leading-none">{label}</span>
-      {caption && <span className="text-xs leading-none text-muted">{caption}</span>}
-    </button>
-  );
-}
 
 export default function GuessTheProgression() {
   const [settings, updateSettings] = useSyncedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
@@ -511,13 +490,18 @@ export default function GuessTheProgression() {
     const session = sessionRef.current;
     if (!session || !session.round || session.best !== null) return;
     const { answerMode: mode, typeQualities: qualities } = cfgRef.current;
-    const roundMarks = gradeAnswer(typedRef.current, session.round, mode, qualities);
-    const grade = gradeOf(roundMarks);
+    const typedNow = withLoneDelta(typedRef.current);
+    const roundMarks = gradeAnswer(typedNow, session.round, mode, qualities);
+    const tokens = splitAnswer(typedNow, mode);
+    const partlyRight = roundMarks.some((m, i) => !m && slotReason(tokens[i], session.round!, i, mode, qualities) !== null);
+    const grade = gradeOf(roundMarks, partlyRight);
     session.best = grade;
     session.answers.push(typedRef.current.trim());
     session.marks.push(roundMarks);
     setMarks(roundMarks);
     setStatus(grade);
+    // After a miss (or a partly right answer) it waits for Next, so there's time to compare.
+    if (grade !== "correct") return;
     const pauseMs = cfgRef.current.advanceDelayMs;
     // Only reached from an event handler or the round timer, never during render.
     // eslint-disable-next-line react-hooks/purity
@@ -1092,7 +1076,7 @@ export default function GuessTheProgression() {
               max={MAX_ADVANCE_DELAY_MS / 1000}
               step={0.25}
               disabled={running}
-              hint="How long the revealed answer stays on screen before the next progression plays."
+              hint="How long a right answer stays on screen before the next progression plays. After a miss it waits for you to press Next."
               onChange={(v) => updateSettings({ advanceDelayMs: Math.round(v * 1000) })}
             />
             {!drillMode && !learnMode && (
@@ -1131,11 +1115,12 @@ export default function GuessTheProgression() {
         {/* Steps aside while a finished run's results show. */}
         {!(learnMode && !running) && !(summary && !running) && (
         // Smaller while a round runs, so the keypads, Submit and Stop all fit on a laptop screen.
-        <div className={`relative flex items-center justify-center p-4 text-center ${running ? "h-28 w-28" : "h-36 w-36 sm:h-44 sm:w-44"}`}>
+        // (Smaller still on a phone, so Stop stays on the screen under the keypads.)
+        <div className={`relative flex items-center justify-center text-center ${running ? "h-20 w-20 p-2 sm:h-28 sm:w-28 sm:p-4" : "h-36 w-36 p-4 sm:h-44 sm:w-44"}`}>
           {!running && <span aria-hidden className={IDLE_RING} />}
-          <CountdownRing active={running} timerRef={noteTimerRef} />
+          <CountdownRing active={running && (!status || status === "correct")} timerRef={noteTimerRef} />
           <span
-            className={!running ? IDLE_MARK : "relative z-10 text-3xl font-bold tabular-nums transition-colors duration-200"}
+            className={!running ? IDLE_MARK : "relative z-10 text-2xl font-bold tabular-nums transition-colors duration-200 sm:text-3xl"}
             style={
               glow
                 ? { color: glow }
@@ -1157,8 +1142,9 @@ export default function GuessTheProgression() {
               {round.progression.chords.map((_, i) => {
                 const mark = marks?.[i];
                 const shown = status ? answerFor(round, i) : typedTokens[i] ? prettyToken(typedTokens[i], answerMode) : "?";
-                const color = status ? (mark ? GRADE_COLOR.correct : GRADE_COLOR.incorrect) : undefined;
                 const reason = status && !mark ? slotReason(typedTokens[i], round, i, answerMode, typeQualities) : null;
+                // Amber when the numeral (or root) was right but not the quality or case.
+                const color = status ? (mark ? GRADE_COLOR.correct : reason ? GRADE_COLOR.partial : GRADE_COLOR.incorrect) : undefined;
                 return (
                   // A fixed height with room for the "You: …" line, so answering doesn't grow it.
                   <div
@@ -1193,8 +1179,14 @@ export default function GuessTheProgression() {
               {status ? (
                 <>
                   Key of {keyName}
-                  {round.progression.minor ? " minor" : ""} · {round.progression.name} · next in{" "}
-                  <CountdownLabel active={running} timerRef={noteTimerRef} />
+                  {round.progression.minor ? " minor" : ""} · {round.progression.name}
+                  {status === "correct" ? (
+                    <>
+                      {" "}· next in <CountdownLabel active={running} timerRef={noteTimerRef} />
+                    </>
+                  ) : (
+                    " · press Next"
+                  )}
                 </>
               ) : typeHint ? (
                 typeHint

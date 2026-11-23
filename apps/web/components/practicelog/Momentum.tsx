@@ -265,7 +265,8 @@ function Bar({ frac, done = false }: { frac: number; done?: boolean }) {
 function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: number; progress: { done: number; total: number }; onEdit: () => void }) {
   const frac = goal > 0 ? Math.min(1, minutes / goal) : 0;
   const met = goal > 0 && minutes >= goal;
-  const left = Math.max(0, Math.ceil(goal - minutes));
+  // From the whole minutes shown ("1 min / 30 min" → 29 to go), and never "0 to go" before it's met.
+  const left = Math.max(1, goal - Math.round(minutes));
   const message = goal <= 0
     ? minutes > 0 ? "Practicing on a rest day — nice" : "A rest day, no goal today"
     : met
@@ -285,7 +286,7 @@ function GoalCard({ minutes, goal, progress, onEdit }: { minutes: number; goal: 
         </button>
       }
       value={<Value value={formatPracticed(minutes)} unit={goal > 0 ? `/ ${formatMinutesShort(goal)}` : undefined} />}
-      aside={goal > 0 && <span className="text-xs font-medium tabular-nums text-muted">{Math.round(frac * 100)}%</span>}
+      aside={goal > 0 && <span className="text-xs font-medium tabular-nums text-muted">{met ? Math.round(frac * 100) : Math.min(99, Math.round(frac * 100))}%</span>}
     >
       {goal > 0 && <Bar frac={frac} done={met} />}
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

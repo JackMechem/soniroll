@@ -18,8 +18,8 @@ export const SYMBOL_KEYS: { insert: string; caption: string; title: string }[] =
   { insert: "b", caption: "flat", title: "Flat" },
   { insert: "/", caption: "bass", title: "Slash (bass note)" },
   // These two already read as words on the key, so they have no caption under them.
-  { insert: "sus", caption: "suspended", title: "Suspended" },
-  { insert: "add", caption: "add note", title: "Add" },
+  { insert: "sus", caption: "", title: "Suspended" },
+  { insert: "add", caption: "", title: "Add" },
 ];
 
 /** A little Sibelius-keypad-style palette of chord-symbol buttons, laid out as a tidy fixed grid
@@ -63,5 +63,40 @@ export default function ChordSymbolKeypad({
         </button>
       ))}
     </div>
+  );
+}
+
+/** One plain key for the ear trainers' other keypads (numerals, root letters, digits, delete), in
+    the same look as the symbol keys. */
+export function KeypadKey({
+  label,
+  caption,
+  title,
+  onPress,
+  wide,
+  disabled,
+}: {
+  label: string;
+  caption?: string;
+  title?: string;
+  onPress: () => void;
+  wide?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title ?? label}
+      aria-label={title ?? label}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onPress}
+      disabled={disabled}
+      className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-foreground/[0.05] px-1.5 py-1.5 hover:bg-surface-hover disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10 ${
+        wide ? "col-span-2" : ""
+      }`}
+    >
+      <span className="text-base font-semibold leading-none">{label}</span>
+      {caption && <span className="text-xs leading-none text-muted">{caption}</span>}
+    </button>
   );
 }

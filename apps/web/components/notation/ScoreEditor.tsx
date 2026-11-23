@@ -577,7 +577,7 @@ export default function ScoreEditor({
         {/* Palette */}
         <div
           ref={paletteRef}
-          className={`sticky z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5 ${underAppBar ? "top-[calc(env(safe-area-inset-top)+4rem)] lg:top-2" : "top-2"}`}
+          className={`sticky z-10 flex flex-col gap-2 rounded-lg bg-surface p-2.5 ${underAppBar ? "top-[calc(env(safe-area-inset-top)+4rem)] max-lg:before:absolute max-lg:before:inset-x-0 max-lg:before:bottom-full max-lg:before:h-2 max-lg:before:bg-background lg:top-2" : "top-2"}`}
         >
           {/* On phones the less-used tools (tie, ghost, chord, accidentals, octaves, redo) hide
               behind "More", and Undo and More move up beside Play (CSS order), so the palette (which
