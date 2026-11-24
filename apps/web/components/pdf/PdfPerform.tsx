@@ -12,7 +12,7 @@ import { usePaneElement, usePaneKeyGuard } from "@/lib/paneContext";
  * the arrow keys, space, Page Up/Down (what Bluetooth page-turner pedals send), a tap on either
  * side, or a swipe. Escape leaves, back on the page you were on.
  */
-export default function PdfPerform({ sources, layer, start, hideMarks, onExit }: { sources: PdfSources; layer: Layer; start: number; hideMarks: boolean; onExit: (page: number) => void }) {
+export default function PdfPerform({ sources, layer, start, hideMarks, images, onExit }: { sources: PdfSources; layer: Layer; start: number; hideMarks: boolean; images?: Record<string, string | null | undefined>; onExit: (page: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   // In a split-screen pane: that pane, not the whole window.
   // There it doesn't go full screen either: the point is seeing the other panes (a metronome)
@@ -107,10 +107,10 @@ export default function PdfPerform({ sources, layer, start, hideMarks, onExit }:
       onPointerMove={() => !chrome && setChrome(true)}
     >
       {size.w > 0 &&
-        shown.map((p) => <PdfPageView key={p.id} doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} width={Math.floor(fit(sources.aspectOf(p)))} hideMarks={hideMarks} eager />)}
+        shown.map((p) => <PdfPageView key={p.id} doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} width={Math.floor(fit(sources.aspectOf(p)))} hideMarks={hideMarks} images={images} eager />)}
       {/* The next pages, drawn ahead so turning is instant. */}
       <div className="pointer-events-none absolute -left-[9999px] top-0 opacity-0" aria-hidden>
-        {size.w > 0 && pages.slice(first + step, first + step * 2).map((p) => <PdfPageView key={p.id} doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} width={Math.floor(fit(sources.aspectOf(p)))} hideMarks={hideMarks} eager />)}
+        {size.w > 0 && pages.slice(first + step, first + step * 2).map((p) => <PdfPageView key={p.id} doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} width={Math.floor(fit(sources.aspectOf(p)))} hideMarks={hideMarks} images={images} eager />)}
       </div>
 
       <div className={`absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] transition-opacity duration-300 ${chrome ? "opacity-100" : "pointer-events-none opacity-0"}`}>

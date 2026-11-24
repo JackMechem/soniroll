@@ -1,5 +1,5 @@
 import { UNITS, staffLines, type Layer, type LayerPage } from "@/components/pdf/markup";
-import { drawMarks, fontFamily } from "@/components/pdf/marksRender";
+import { drawMarks, fontFamily, type MarkImages } from "@/components/pdf/marksRender";
 
 /** Pixels per unit for the drawn markings: 3000 px across a page, sharp when printed. */
 const MARK_SCALE = 3;
@@ -7,9 +7,11 @@ const MARK_SCALE = 3;
 /**
  * A new PDF with the layer applied: the pages in the layer's order and rotation (copied from the
  * original, so its text and music stay sharp), added blank and staff pages, and the markings drawn
- * over each page. The original file isn't touched.
+ * over each page (text wrapped and styled as on screen, turned marks, see-through ones, pictures and
+ * covers). The original file isn't touched. `images`: the pictures image marks point at, by
+ * `kind:id` (ones missing are left out).
  */
-export async function exportPdf(original: ArrayBuffer, layer: Layer, others: Record<string, ArrayBuffer> = {}): Promise<Uint8Array> {
+export async function exportPdf(original: ArrayBuffer, layer: Layer, others: Record<string, ArrayBuffer> = {}, images?: MarkImages): Promise<Uint8Array> {
   const { PDFDocument, degrees, rgb } = await import("pdf-lib");
   const src = await PDFDocument.load(original, { ignoreEncryption: true });
   const out = await PDFDocument.create();
@@ -21,7 +23,9 @@ export async function exportPdf(original: ArrayBuffer, layer: Layer, others: Rec
   const paper = turned ? { width: firstSize.height, height: firstSize.width } : firstSize;
 
   // Fonts used by text marks must be loaded before they're drawn on a canvas.
-  await Promise.all(["hand", "music", "sans"].map((f) => document.fonts.load(`20px ${fontFamily(f as "hand")}`).catch(() => null)));
+  const fonts = new Set<string>();
+  for (const p of layer.pages) for (const m of p.marks) if (m.t === "text") fonts.add(`${m.italic ? "italic " : ""}${m.bold ? 700 : 400} 20px ${fontFamily(m.font)}`);
+  await Promise.all([...fonts].map((f) => document.fonts.load(f).catch(() => null)));
 
   for (const page of layer.pages) {
     let pdfPage;
@@ -47,7 +51,7 @@ export async function exportPdf(original: ArrayBuffer, layer: Layer, others: Rec
         }
       }
     }
-    if (page.marks.length) await drawLayerImage(out, pdfPage, page, total);
+    if (page.marks.length) await drawLayerImage(out, pdfPage, page, total, images);
   }
   return out.save();
 }
@@ -57,7 +61,7 @@ type PdfLibPage = ReturnType<PdfLibDoc["addPage"]>;
 
 /** The page's markings as a transparent picture over the whole page. They're drawn as shown, then
     turned back to the page's own (unrotated) orientation, since that's how PDF positions things. */
-async function drawLayerImage(out: PdfLibDoc, pdfPage: PdfLibPage, page: LayerPage, total: number) {
+async function drawLayerImage(out: PdfLibDoc, pdfPage: PdfLibPage, page: LayerPage, total: number, images?: MarkImages) {
   const box = pdfPage.getCropBox();
   const shownW = total % 180 === 0 ? box.width : box.height;
   const shownH = total % 180 === 0 ? box.height : box.width;
@@ -66,7 +70,7 @@ async function drawLayerImage(out: PdfLibDoc, pdfPage: PdfLibPage, page: LayerPa
   shown.width = UNITS * MARK_SCALE;
   shown.height = Math.round(UNITS * aspect * MARK_SCALE);
   const ctx = shown.getContext("2d")!;
-  drawMarks(ctx, page.marks, MARK_SCALE);
+  drawMarks(ctx, page.marks, MARK_SCALE, images);
 
   let canvas = shown;
   if (total) {
@@ -79,7 +83,27 @@ async function drawLayerImage(out: PdfLibDoc, pdfPage: PdfLibPage, page: LayerPa
     c.rotate((-total * Math.PI) / 180);
     c.drawImage(shown, -shown.width / 2, -shown.height / 2);
   }
+  whitenClear(canvas);
   const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't draw the markings."))), "image/png"));
   const png = await out.embedPng(await blob.arrayBuffer());
   pdfPage.drawImage(png, { x: box.x, y: box.y, width: box.width, height: box.height });
+}
+
+/** Makes the clear pixels white and all but clear (1/255: a canvas can't keep a colour on a fully
+    clear pixel). PDF viewers scale a picture's colours and its transparency separately, so clear
+    pixels left black show as a grey line round a cover. */
+function whitenClear(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) {
+      d[i] = 255;
+      d[i + 1] = 255;
+      d[i + 2] = 255;
+      d[i + 3] = 1;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }
