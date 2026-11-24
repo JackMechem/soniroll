@@ -37,16 +37,18 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "@/components/tools";
-import { downloadFile, errorText } from "@/lib/files";
+import { downloadFile, errorText, type StoredKind } from "@/lib/files";
 import { usePdfDoc, usePdfDocs, type PdfSources } from "@/components/pdf/usePdfDoc";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import type { PDFDocumentProxy } from "@/lib/pdfjs";
 import { usePaneElement, usePaneKeyGuard } from "@/lib/paneContext";
 
 export type PdfFile = {
-  /** A `files` row of the signed-in user's: markings are saved to it. Without one (a shared file,
-      a note's embed) the PDF opens to read only. */
+  /** The id of an item in the signed-in user's Files: markings are saved to it. Without one (a
+      shared file, a note's embed) the PDF opens to read only. */
   id?: string | null;
+  /** Which kind of item `id` is (a lesson file, a hand-in, …); an upload (`files`) when left out. */
+  kind?: StoredKind;
   name: string;
   url: string;
 };
@@ -90,14 +92,21 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
   const paneEl = usePaneElement();
   // Its keys (tools, undo, Escape) only when its pane has the keyboard, not while you use another.
   const forThisPane = usePaneKeyGuard();
-  const fileId = file.id ? (file.id as Id<"files">) : null;
-  const canEdit = !!fileId && isAuthenticated;
+  const fileId = file.id && (!file.kind || file.kind === "file") ? (file.id as Id<"files">) : null;
+  // Which PDF the markings belong to: an upload by its id, any other item in your Files by kind + id.
+  const otherKind = file.id && !fileId ? file.kind : undefined;
+  const otherId = otherKind ? file.id : undefined;
+  const target = useMemo(
+    () => (fileId ? { fileId } : otherKind && otherId ? { kind: otherKind, id: otherId } : null),
+    [fileId, otherKind, otherId],
+  );
+  const canEdit = !!target && isAuthenticated;
 
   // ---- the PDF itself
   const { doc, aspects, error: loadError, bytesRef } = usePdfDoc(file.url);
 
   // ---- the markings
-  const saved = useQuery(api.pdfMarkups.get, canEdit && fileId ? { fileId } : "skip");
+  const saved = useQuery(api.pdfMarkups.get, canEdit && target ? target : "skip");
   const savedReady = !canEdit || saved !== undefined;
   const base = useMemo(() => (doc && savedReady ? parseLayer(saved?.data, doc.numPages) : null), [doc, savedReady, saved?.data]);
   const [history, setHistory] = useState<History | null>(null);
@@ -141,12 +150,12 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
   const pending = useRef<string | null>(null);
   const editedLayer = history?.layer;
   useEffect(() => {
-    if (!editedLayer || !fileId || !canEdit) return;
+    if (!editedLayer || !target || !canEdit) return;
     const data = JSON.stringify(editedLayer);
     pending.current = data;
     const t = setTimeout(() => {
       setSaveState("saving");
-      save({ fileId, data })
+      save({ ...target, data })
         .then(() => {
           if (pending.current === data) pending.current = null;
           setSaveState("saved");
@@ -154,9 +163,9 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
         .catch(() => setSaveState("error"));
     }, 1000);
     return () => clearTimeout(t);
-  }, [editedLayer, fileId, canEdit, save]);
+  }, [editedLayer, target, canEdit, save]);
   const close = () => {
-    if (pending.current && fileId) void save({ fileId, data: pending.current });
+    if (pending.current && target) void save({ ...target, data: pending.current });
     pending.current = null;
     onClose?.();
   };
@@ -164,7 +173,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
   const flushRef = useRef<() => void>(() => {});
   useEffect(() => {
     flushRef.current = () => {
-      if (pending.current && fileId) void save({ fileId, data: pending.current });
+      if (pending.current && target) void save({ ...target, data: pending.current });
       pending.current = null;
     };
   });
@@ -360,7 +369,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
         <div className="min-w-0 flex-1 px-1">
           <h2 className="truncate text-sm font-semibold">{file.name}</h2>
           <p className="truncate text-xs text-muted">
-            {!canEdit ? (isAuthenticated || !fileId ? "View only" : "Sign in to mark it up") : saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn't save — it'll try again" : history ? "Saved" : "Markings are saved with this file"}
+            {!canEdit ? (isAuthenticated || !target ? "View only" : "Sign in to mark it up") : saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn't save — it'll try again" : history ? "Saved" : "Markings are saved with this file"}
           </p>
         </div>
         {canEdit && (
@@ -577,7 +586,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
       {view === "pages" && layer && doc ? (
         <PdfPages
           sources={sources}
-          fileId={fileId ?? ""}
+          fileId={file.id ?? ""}
           layer={layer}
           onChange={(next) => commit(() => next)}
           onOpen={(i) => {

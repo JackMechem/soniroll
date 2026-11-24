@@ -76,7 +76,7 @@ export default function FileViewPage({ kind, id }: { kind: string; id: string })
   if (pdf && item.url) {
     const editor = (
       <PdfEditor
-        file={{ id: item.kind === "file" ? item.id : undefined, name: item.name, url: item.url }}
+        file={{ id: item.kind === "profile" ? undefined : item.id, kind: item.kind, name: item.name, url: item.url }}
         embedded={inPane || desktop}
         onClose={inPane ? undefined : () => goBackOr(router, filesHref({ folder }))}
       />

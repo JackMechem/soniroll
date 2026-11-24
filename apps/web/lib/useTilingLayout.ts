@@ -63,15 +63,16 @@ export type TilingState = {
 };
 
 export type SideMode = "overlay" | "push";
-/** `chosen`: the person picked the mode themselves (the side view's ⋮). Before 2026-11-23 the mode
-    was saved with every width change, so a stored "overlay" without `chosen` was only the old
-    default — beside wins then. */
+/** `chosen`: the person picked the mode themselves (the side view's ⋮). Without it, the stored
+    mode was only a default (it used to be saved with every width change) — over the page wins. */
 type SidePrefs = { mode: SideMode; width: number; chosen?: boolean };
 
 export const SIDE_MIN_WIDTH = 360;
 export const SIDE_MAX_WIDTH = 900;
-/** Beside the page by default: over the page hid the tool you opened a PDF or a task beside. */
-const DEFAULT_SIDE_PREFS: SidePrefs = { mode: "push", width: 560 };
+/** Over the page by default (Jack, 2026-11-23: a task's page "should always open over the content
+    not side by side"); "Beside the page" in the side view's ⋮ moves it beside and is remembered.
+    (PDFs open in place, not in the side view, so they don't cover a tool.) */
+const DEFAULT_SIDE_PREFS: SidePrefs = { mode: "overlay", width: 560 };
 export const clampSideWidth = (w: number) => Math.round(Math.min(SIDE_MAX_WIDTH, Math.max(SIDE_MIN_WIDTH, w)));
 
 const SERVER_STATE: TilingState = { layout: EMPTY_LAYOUT, pendingSplit: null, pageLeafId: null, routeHref: "/" };
@@ -231,7 +232,7 @@ function getSidePrefs(): SidePrefs {
     if (stored) {
       const chosen = stored.chosen === true;
       sidePrefs = {
-        mode: chosen && stored.mode === "overlay" ? "overlay" : "push",
+        mode: chosen && stored.mode === "push" ? "push" : "overlay",
         width: typeof stored.width === "number" ? clampSideWidth(stored.width) : DEFAULT_SIDE_PREFS.width,
         ...(chosen ? { chosen } : {}),
       };
@@ -309,8 +310,8 @@ export function openBeside(rawHref: string, options: OpenBesideOptions = {}): bo
       const leaf = createLeaf(href);
       targetId = leaf.id;
       const prefs = getSidePrefs();
-      // Beside the page (the default) when there's room for it; otherwise (a narrow window, or
-      // the panes already there would get too narrow) it floats over the page.
+      // Over the page (the default), or beside it if chosen and there's room (a narrow window,
+      // or panes that would get too narrow, float it over the page anyway).
       const tree = desktop && prefs.mode === "push" ? dockAtEdge(layout.tree!, leaf, prefs.width, host!) : null;
       layout = tree ? { ...layout, tree } : { ...layout, float: { leaf, width: prefs.width } };
       layout = { ...layout, sideId: leaf.id };

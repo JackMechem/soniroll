@@ -565,10 +565,10 @@ export function useFileActions({ tuneName, hereTuneId, organizer }: { tuneName: 
   const dialogs = (
     <>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
-      {open && open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf" && (
-        <PdfEditor file={{ id: open.id, name: open.name, url: open.url }} onClose={() => setOpen(null)} extraMenu={organizer?.menuItems(open)} />
+      {open && open.url && open.kind !== "profile" && fileKind(open.mimeType, open.name) === "pdf" && (
+        <PdfEditor file={{ id: open.id, kind: open.kind, name: open.name, url: open.url }} onClose={() => setOpen(null)} extraMenu={organizer?.menuItems(open)} />
       )}
-      {open && !(open.url && open.kind === "file" && fileKind(open.mimeType, open.name) === "pdf") && (
+      {open && !(open.url && open.kind !== "profile" && fileKind(open.mimeType, open.name) === "pdf") && (
         <FilePreviewDialog
           file={open}
           onClose={() => setOpen(null)}

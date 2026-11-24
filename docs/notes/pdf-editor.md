@@ -120,3 +120,17 @@ that pane in a split — with Back returning. The side view and a split are in t
 side view", "Open side by side"), and "Open full window" stays. Other file kinds still open the quick
 preview. Checked in headless Chromium: alone (Back returns to Files) and in a Files | Metronome split
 (the Files pane became the PDF, no new pane).
+
+## 2026-11-23 (later) — Markings on any PDF in your Files
+
+Jack: "what happened to editing pdfs?" — his `stickControl.pdf` is a lesson file, and markings only
+ever worked on uploads (`pdfMarkups.fileId` is a `files` id), so every other kind opened "View only"
+(not new today; it just showed now that every PDF in Files opens the same way). `pdfMarkups` now has
+an optional `item` ("<kind>:<id>", index `by_user_item`) beside `fileId`: uploads keep their rows by
+`fileId` (no migration), lesson files, hand-ins, recordings and songs use `item`, with ownership
+checked by `storedItemById`. `get`/`save` take `{ fileId }` or `{ kind, id }`; `PdfFile` gained
+`kind`; `files.removeItem` deletes either kind of row; account deletion already deletes by user.
+Checked in headless Chromium on dev: a lesson-file PDF made through the backend opens with the tools,
+a pen stroke saves ("Saved") and is there after a reload; an upload still says "Markings are saved
+with this file". Not checked: a hand-in, or a student opening a teacher's lesson file (not in their
+Files, so it stays view-only).
