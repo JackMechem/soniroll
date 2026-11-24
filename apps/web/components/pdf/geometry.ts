@@ -11,7 +11,9 @@ import { UNITS, isBoxShape, normAngle, type ImageMark, type InkMark, type Mark, 
 /** The CSS font family for each kind of text. Plain text is a print face so it looks the same in
     a downloaded PDF; chord symbols use the charts' handwritten face; symbols are SMuFL (Petaluma). */
 export function fontFamily(font: TextFont) {
-  if (font === "hand") return chordFont.style.fontFamily;
+  // Music symbols in handwritten text ("To \uE048") come from the music font: the handwritten one
+  // has none.
+  if (font === "hand") return `${chordFont.style.fontFamily}, ${chordSymbolFont.style.fontFamily}`;
   if (font === "music") return chordSymbolFont.style.fontFamily;
   if (font === "serif") return 'Georgia, "Times New Roman", Times, serif';
   if (font === "mono") return '"Courier New", Courier, monospace';
@@ -58,6 +60,13 @@ function width100(m: Pick<TextMark, "font" | "bold" | "italic">, text: string) {
 
 export function textWidth(m: Pick<TextMark, "font" | "bold" | "italic" | "size">, text: string) {
   return (width100(m, text) * m.size) / 100;
+}
+
+/** The width of a text mark's longest word (the narrowest it can wrap to without breaking one). */
+export function longestWord(m: TextMark) {
+  let w = 0;
+  for (const word of m.text.split(/\s+/)) if (word) w = Math.max(w, textWidth(m, word));
+  return w;
 }
 
 export type TextLine = { text: string; /** Where it starts in the mark's text. */ start: number; width: number };
@@ -382,7 +391,8 @@ export function resizeTo<M extends Mark>(m: M, f: Frame, mode: "scale" | "width"
   if (m.t === "text") {
     if (mode === "width") {
       const pad = m.frame ? m.size * 0.3 : 0;
-      const next = { ...m, w: Math.max(m.size * 0.8, f.w - pad * 2), x: f.cx, y: f.cy };
+      // Never narrower than its longest word (it would break inside words).
+      const next = { ...m, w: Math.max(m.size * 0.8, longestWord(m), f.w - pad * 2), x: f.cx, y: f.cy };
       // Keep the top where it was: the height comes from the wrapped text.
       const nf = frameOf(next);
       const d = (nf.h - old.h) / 2;

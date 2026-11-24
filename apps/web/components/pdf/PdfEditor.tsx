@@ -3,22 +3,24 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
-import { useMutation, useQuery } from "convex/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "convex/react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuItem, type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useFilePicker, type FileFilter } from "@/components/files/FilePicker";
 import { useFileUploader } from "@/components/files/FileParts";
-import { useEdgeFade } from "@/components/library/ui";
 import ObjectBar, { stepSize, type BarActions } from "@/components/pdf/ObjectBar";
 import PdfPageView, { type PageEditing, type TextStyle, type Tool, type ToolOptions, type Typing } from "@/components/pdf/PdfPageView";
 import PdfPages from "@/components/pdf/PdfPages";
 import PdfPerform from "@/components/pdf/PdfPerform";
-import { FitGlyph, IconBtn, Pop, Swatch, ToolBtn, keepFocus, toolCls } from "@/components/pdf/editorParts";
+import PdfOutline, { type OutlineActions, type OutlineTab } from "@/components/pdf/PdfOutline";
+import { headingNear, sectionsOf, usePdfOutline } from "@/components/pdf/outline";
+import { CustomColour, FitGlyph, IconBtn, Pop, Swatch, ToolBtn, keepFocus, toolCls, useRowScroll } from "@/components/pdf/editorParts";
 import { exportPdf } from "@/components/pdf/exportPdf";
 import { aabb, fontFamily, imageKey, reanchorText, translate, unionBox } from "@/components/pdf/geometry";
+import { covers } from "@/components/pdf/barPlace";
 import {
   HIGHLIGHTS,
   INKS,
@@ -50,6 +52,7 @@ import {
   HandIcon,
   HighlighterIcon,
   ImageIcon,
+  ListIcon,
   PagesIcon,
   PencilIcon,
   PlayIcon,
@@ -63,6 +66,8 @@ import {
 } from "@/components/tools";
 import { downloadFile, errorText, fileKind, type StoredEntry, type StoredKind } from "@/lib/files";
 import { usePdfDoc, usePdfDocs, type PdfSources } from "@/components/pdf/usePdfDoc";
+import { useLayerSync } from "@/components/pdf/useLayerSync";
+import { mergeLayers } from "@/components/pdf/merge";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 import type { PDFDocumentProxy } from "@/lib/pdfjs";
 import { usePaneElement, usePaneKeyGuard } from "@/lib/paneContext";
@@ -170,8 +175,23 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
     },
     [base],
   );
-  const undo = () => setHistory((h) => (h && h.past.length ? { layer: h.past[h.past.length - 1], past: h.past.slice(0, -1), future: [h.layer, ...h.future] } : h));
-  const redo = () => setHistory((h) => (h && h.future.length ? { layer: h.future[0], past: [...h.past, h.layer], future: h.future.slice(1) } : h));
+  // Undo and redo select what they bring back (or change), so it can be cut, moved or deleted again.
+  const undo = () => {
+    const h = history;
+    if (!h?.past.length) return;
+    const prev = h.past[h.past.length - 1];
+    finishTypingRef.current();
+    setHistory({ layer: prev, past: h.past.slice(0, -1), future: [h.layer, ...h.future] });
+    setSelection(changedMarks(h.layer, prev));
+  };
+  const redo = () => {
+    const h = history;
+    if (!h?.future.length) return;
+    const next = h.future[0];
+    finishTypingRef.current();
+    setHistory({ layer: next, past: [...h.past, h.layer], future: h.future.slice(1) });
+    setSelection(changedMarks(h.layer, next));
+  };
 
   // Pages inserted from your other PDFs: their files' addresses, then the PDFs themselves.
   const otherIds = useMemo(() => [...new Set((layer?.pages ?? []).flatMap((p) => (p.src.kind === "pdf" && p.src.file ? [p.src.file] : [])))], [layer]);
@@ -208,27 +228,6 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
 
   const updatePage = useCallback((pageId: string, change: (p: LayerPage) => LayerPage, merge?: string) => commit((l) => ({ ...l, pages: l.pages.map((p) => (p.id === pageId ? change(p) : p)) }), merge), [commit]);
 
-  // ---- saving (a second after the last change)
-  const save = useMutation(api.pdfMarkups.save);
-  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
-  const pending = useRef<string | null>(null);
-  const editedLayer = history?.layer;
-  useEffect(() => {
-    if (!editedLayer || !target || !canEdit) return;
-    const data = JSON.stringify(editedLayer);
-    pending.current = data;
-    const t = setTimeout(() => {
-      setSaveState("saving");
-      save({ ...target, data })
-        .then(() => {
-          if (pending.current === data) pending.current = null;
-          setSaveState("saved");
-        })
-        .catch(() => setSaveState("error"));
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [editedLayer, target, canEdit, save]);
-
   // ---- tools
   const [options, setOptions] = useState<ToolOptions>(DEFAULT_OPTIONS);
   const setOpt = (patch: Partial<ToolOptions>) => setOptions((o) => ({ ...o, ...patch }));
@@ -239,6 +238,43 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
     typingRef.current = t;
     setTypingState(t);
   };
+  // Text being typed is saved after a pause in the typing (and at once when the page goes away).
+  const [typingSnap, setTypingSnap] = useState<Typing | null>(null);
+  useEffect(() => {
+    if (!typing) return;
+    const t = setTimeout(() => setTypingSnap(typing), 800);
+    return () => clearTimeout(t);
+  }, [typing]);
+  const typedSoFar = typing && typingSnap && typingSnap.mark.id === typing.mark.id && typingSnap.pageId === typing.pageId ? typingSnap : null;
+  const editedLayer = history?.layer ?? null;
+  const local = useMemo(() => (typedSoFar && layer ? withTyping(layer, typedSoFar) : editedLayer), [typedSoFar, layer, editedLayer]);
+  const liveRef = useRef<Layer | null>(null);
+  useEffect(() => {
+    const t = typingRef.current;
+    liveRef.current = t && layer ? withTyping(layer, t) : editedLayer;
+  });
+  const sync = useLayerSync({
+    target,
+    enabled: canEdit,
+    row: signedInOwner ? saved : undefined,
+    pageCount: doc?.numPages ?? 0,
+    local,
+    live: liveRef,
+    // Newer markings saved elsewhere: this copy's changes (and its undo steps) go on top of them.
+    rebase: (from, theirs) =>
+      setHistory((h) =>
+        h
+          ? { ...h, layer: mergeLayers(from, h.layer, theirs), past: h.past.map((l) => mergeLayers(from, l, theirs)), future: h.future.map((l) => mergeLayers(from, l, theirs)) }
+          : h,
+      ),
+    onDraft: (draft) => setHistory((h) => ({ layer: draft, past: [...(h?.past ?? []), ...(base ? [base] : [])], future: [] })),
+  });
+  // Typing counts once it changes something (not just from clicking into a box).
+  const typingDirty =
+    !!typing &&
+    typing !== typedSoFar &&
+    (typing.isNew ? !!typing.mark.text.trim() || !!typing.cover : JSON.stringify(layer?.pages.find((p) => p.id === typing.pageId)?.marks.find((m) => m.id === typing.mark.id)) !== JSON.stringify(typing.mark));
+  const unsaved = sync.pending || typingDirty;
   const [penOnly, setPenOnly] = useState(false);
   const [spaceHand, setSpaceHand] = useState(false);
   const [gestureActive, setGestureActive] = useState(false);
@@ -298,6 +334,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
     const t = typingRef.current;
     if (!t) return;
     setTyping(null);
+    setTypingSnap(null);
     const text = t.mark.text.replace(/\s+$/, "");
     const mark = roundMark({ ...t.mark, text });
     const page = pageById(t.pageId);
@@ -315,8 +352,13 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
       setSelection({ pageId: t.pageId, ids: [mark.id] });
     }
   };
+  const finishTypingRef = useRef(finishTyping);
+  useEffect(() => {
+    finishTypingRef.current = finishTyping;
+  });
   const startTyping = (pageId: string, t: Omit<Typing, "pageId">) => {
     if (typingRef.current) finishTyping();
+    setTypingSnap(null);
     setTyping({ ...t, pageId });
     setSelection({ pageId, ids: [t.mark.id] });
   };
@@ -451,7 +493,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
   const rootRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   // The tool row scrolls sideways on a narrow phone; its edges fade to show there's more.
-  const { attach: toolRowRef, style: toolRowFade } = useEdgeFade<HTMLDivElement>();
+  const { attach: toolRowRef, style: toolRowFade, hints: toolRowHints } = useRowScroll<HTMLDivElement>();
   const [areaWidth, setAreaWidth] = useState(0);
   useEffect(() => {
     const el = scrollRef.current;
@@ -465,6 +507,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
   const pageWidth = Math.round(fitWidth * zoom);
   const zoomBy = (dir: 1 | -1) => setZoom((z) => (dir > 0 ? ZOOMS.find((v) => v > z + 0.01) ?? z : [...ZOOMS].reverse().find((v) => v < z - 0.01) ?? z));
   const [current, setCurrent] = useState(0);
+  const [currentY, setCurrentY] = useState(0);
   const [scrollTick, setScrollTick] = useState(0);
   const onScroll = () => {
     const el = scrollRef.current;
@@ -473,14 +516,25 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
     const mid = el.getBoundingClientRect().top + el.clientHeight / 3;
     const found = el.querySelectorAll<HTMLElement>("[data-page]");
     let idx = 0;
+    let y = 0;
     found.forEach((p, i) => {
-      if (p.getBoundingClientRect().top <= mid) idx = i;
+      const r = p.getBoundingClientRect();
+      if (r.top <= mid) {
+        idx = i;
+        y = Math.max(0, ((mid - r.top) / Math.max(1, r.width)) * UNITS);
+      }
     });
     setCurrent(idx);
+    setCurrentY(Math.round(y / 10) * 10);
   };
-  const goToPage = (i: number) => {
-    const el = scrollRef.current?.querySelectorAll<HTMLElement>("[data-page]")[i];
-    el?.scrollIntoView({ block: "start" });
+  /** Scrolls to page `i`, `y` units down it (a section's start) or its top. */
+  const goToPage = (i: number, y?: number) => {
+    const area = scrollRef.current;
+    const el = area?.querySelectorAll<HTMLElement>("[data-page]")[i];
+    if (!area || !el) return;
+    const r = el.getBoundingClientRect();
+    const k = r.width / UNITS;
+    area.scrollTop += r.top - area.getBoundingClientRect().top - 16 + Math.max(0, (y ?? 0) - 8) * k;
   };
   /** The middle of what's showing of a page, in units (where pasted text and pictures go). */
   function visibleCentre(pageId: string, ph: number): [number, number] {
@@ -510,21 +564,14 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
     return () => el.removeEventListener("wheel", onWheel);
   }, [view]);
 
-  // ---- closing (what's waiting is saved; text being typed is kept)
-  const flushRef = useRef<() => void>(() => {});
-  useEffect(() => {
-    flushRef.current = () => {
-      if (pending.current && target) void save({ ...target, data: pending.current });
-      pending.current = null;
-    };
-  });
-  const close = () => {
+  // ---- closing (text being typed is kept; what isn't saved yet is saved, see `useLayerSync`)
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const close = (force = false) => {
     finishTyping();
-    flushRef.current();
+    // Offline or failing: ask (a save under way just carries on after it closes).
+    if (!force && (sync.offline || sync.error) && sync.dirtyNow()) return setConfirmLeave(true);
     onClose?.();
   };
-  // Closed some other way (its pane closed, Back in the pane): what's waiting is saved too.
-  useEffect(() => () => flushRef.current(), []);
 
   // ---- keys
   useEffect(() => {
@@ -593,6 +640,11 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
         const keyTool: Record<string, Tool> = { v: "select", h: "hand", p: "pen", m: "highlight", e: "eraser", t: "text" };
         const next = keyTool[k];
         if (next) pickTool(next);
+        else if (k === "b") {
+          // (Not typed into the name box that opens for it.)
+          e.preventDefault();
+          addSection();
+        }
         else if (e.key === "+" || e.key === "=") zoomBy(1);
         else if (e.key === "-") zoomBy(-1);
       }
@@ -674,17 +726,104 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
       const sel = { left: r.left + box.x * k, top: r.top + box.y * k, right: r.left + (box.x + box.w) * k, bottom: r.top + (box.y + box.h) * k };
       const bw = barRef.current?.offsetWidth ?? 360;
       const bh = barRef.current?.offsetHeight ?? 44;
-      // Above the selection (over its turn handle, which sits just above it), so it doesn't cover
-      // the next thing down the page; below when there's no room above.
-      let top = sel.top - bh - (typingRef.current ? 12 : 46);
-      if (top < area.top + 8) top = sel.bottom + 14;
-      top = Math.max(area.top + 8, Math.min(area.bottom - bh - 8, top));
       const left = Math.max(area.left + 8, Math.min(area.right - bw - 8, (sel.left + sel.right) / 2 - bw / 2));
+      // By the selection, but never over what's next to it: just above it (over its turn handle),
+      // just below, then further away step by step; the first spot clear of print and of other
+      // marks wins. When none is, it waits at the top (or bottom) of the window.
+      const page = pageById(selection?.pageId);
+      const ids = new Set(selectedIds);
+      const others = (page?.marks ?? [])
+        .filter((m) => !ids.has(m.id))
+        .map((m) => {
+          const b = aabb(m);
+          return { left: r.left + b.x * k, top: r.top + b.y * k, right: r.left + (b.x + b.w) * k, bottom: r.top + (b.y + b.h) * k };
+        });
+      const above = sel.top - bh - (typingRef.current ? 12 : 46);
+      const below = sel.bottom + 14;
+      const fits = (t: number) => t >= area.top + 8 && t + bh <= area.bottom - 8;
+      const spots = [0, 1, 2, 3, 4, 5].flatMap((i) => [above - i * 26, below + i * 26]).filter(fits);
+      let top = spots.find((t) => !covers(el, { left, top: t - 6, right: left + bw, bottom: t + bh + 6 }, others));
+      if (top === undefined) top = sel.top - area.top > bh + 24 ? area.top + 8 : area.bottom - bh - 8;
       const next = { left: Math.round(left - root.left), top: Math.round(top - root.top) };
       setBarPos((p) => (p && p.left === next.left && p.top === next.top ? p : next));
     });
     return () => cancelAnimationFrame(raf);
   });
+
+  // ---- the outline (sections) and pages panel
+  const outlineStored = useSyncExternalStore(subscribeOutline, readOutlinePref, () => null);
+  const wide = rootWidth >= 768;
+  // Open when you last left it open on this device (at first: on wide screens).
+  const outlineOpen = view === "read" && (outlineStored ?? (wide ? "1" : "0")) === "1";
+  const setOutlineOpen = (open: boolean) => writeOutlinePref(open ? "1" : "0");
+  const [outlineTab, setOutlineTab] = useState<OutlineTab>("outline");
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const pdfOutline = usePdfOutline(doc);
+  const addSection = (index = current) => {
+    const page = pages[index];
+    if (!page || !canEdit) return;
+    // Where the window's top is on that page (its top when you can see the top of it, or it's
+    // another page).
+    let y = 0;
+    const el = scrollRef.current?.querySelectorAll<HTMLElement>("[data-page]")[index];
+    const area = scrollRef.current?.getBoundingClientRect();
+    if (el && area && index === current) {
+      const r = el.getBoundingClientRect();
+      const down = ((area.top - r.top) / Math.max(1, r.width)) * UNITS;
+      if (down > 60) y = Math.round(down / 10) * 10;
+    }
+    const id = newId();
+    const n = sectionsOf(layer!).length + 1;
+    void headingNear(sources.docFor(page), page.src.kind === "pdf" ? page.src.page : null, page.rotate, y).then((heading) => {
+      updatePage(page.id, (p) => ({ ...p, bookmarks: [...(p.bookmarks ?? []), { id, title: heading ?? `Section ${n}`, ...(y ? { y } : {}) }] }));
+      setOutlineOpen(true);
+      setOutlineTab("outline");
+      setRenaming(id);
+    });
+  };
+  const patchBookmark = (pageId: string, id: string, change: (b: NonNullable<LayerPage["bookmarks"]>[number]) => NonNullable<LayerPage["bookmarks"]>[number] | null) =>
+    updatePage(pageId, (p) => {
+      const list = (p.bookmarks ?? []).flatMap((b) => {
+        if (b.id !== id) return [b];
+        const next = change(b);
+        return next ? [next] : [];
+      });
+      const { bookmarks: _drop, ...rest } = p;
+      void _drop;
+      return list.length ? { ...rest, bookmarks: list } : rest;
+    });
+  const outlineActions: OutlineActions = {
+    onJump: (i, y) => {
+      if (!wide) setOutlineOpen(false);
+      requestAnimationFrame(() => goToPage(i, y));
+    },
+    onAdd: addSection,
+    onRename: (pageId, id, title) => patchBookmark(pageId, id, (b) => (b.title === title ? b : { ...b, title })),
+    onRemove: (pageId, id) => patchBookmark(pageId, id, () => null),
+    onSub: (pageId, id, sub) => patchBookmark(pageId, id, (b) => ({ ...b, sub: sub || undefined })),
+    onUsePdfOutline: () => {
+      if (!pdfOutline?.length) return;
+      commit((l) => {
+        const pagesNext = l.pages.map((p) => ({ ...p }));
+        for (const it of pdfOutline) {
+          const idx = it.page === null ? -1 : pagesNext.findIndex((p) => p.src.kind === "pdf" && !p.src.file && p.src.page === it.page);
+          if (idx < 0) continue;
+          const p = pagesNext[idx];
+          if (p.bookmarks?.some((b) => b.title === it.title)) continue;
+          p.bookmarks = [...(p.bookmarks ?? []), { id: newId(), title: it.title.slice(0, 120), ...(it.y ? { y: it.y } : {}), ...(it.depth > 0 ? { sub: true } : {}) }];
+        }
+        return { ...l, pages: pagesNext };
+      });
+      setOutlineTab("outline");
+    },
+    onPages: (change) => commit((l) => ({ ...l, pages: change(l.pages) })),
+    onEditPages: () => {
+      finishTyping();
+      setSelection(null);
+      setView("pages");
+    },
+    onClose: () => setOutlineOpen(false),
+  };
 
   // ---- downloads
   const download = async (withMarks: boolean) => {
@@ -771,6 +910,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
           penOnly,
           onPen: () => setPenOnly(true),
           scrollBy: (dx, dy) => scrollRef.current?.scrollBy(dx, dy),
+          textStyleChosen: options.text !== DEFAULT_TEXT,
         }
       : undefined;
 
@@ -780,13 +920,39 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
       : "Sign in to mark it up"
     : newer
       ? "Made with a newer soniroll: reload the page to edit"
-      : saveState === "saving"
-        ? "Saving…"
-        : saveState === "error"
-          ? "Couldn't save — it'll try again"
-          : history
-            ? "Saved"
-            : "Markings are saved with this file";
+      : unsaved && sync.offline
+        ? "Offline: saves when you're back online"
+        : unsaved && sync.error
+          ? `Couldn't save: ${sync.error.replace(/\.$/, "")}. Trying again…`
+          : unsaved
+            ? "Saving…"
+            : history
+              ? "Saved"
+              : "Markings are saved with this file";
+
+  // Page and zoom (on a phone the selection's toolbar takes their place).
+  const pagePills = view === "read" && layer && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+          {showBar && docked ? (
+            <div className="mx-auto flex max-w-full justify-center">
+              <ObjectBar marks={selectedMarks} ptPerUnit={ptPerUnit(selPage)} actions={barActions} docked />
+            </div>
+          ) : (
+            <>
+              <span className="pointer-events-auto rounded-full bg-surface/95 px-3 py-1.5 text-xs font-medium tabular-nums shadow-md ring-1 ring-foreground/10">
+                {Math.min(current + 1, pages.length)} / {pages.length}
+              </span>
+              <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-surface/95 p-1 shadow-md ring-1 ring-foreground/10">
+                <IconBtn label="Zoom out" icon={ZoomOutIcon} onClick={() => zoomBy(-1)} />
+                <button type="button" onClick={() => setZoom(1)} className="h-8 min-w-12 rounded-full px-1 text-xs font-medium tabular-nums hover:bg-surface-hover" title="Fit the width">
+                  {Math.round(zoom * 100)}%
+                </button>
+                <IconBtn label="Zoom in" icon={ZoomInIcon} onClick={() => zoomBy(1)} />
+              </div>
+            </>
+          )}
+        </div>
+      );
 
   const body = (
     <div
@@ -798,7 +964,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
       {/* Top bar */}
       <div className={`flex shrink-0 items-center gap-1 border-b border-foreground/10 bg-surface px-2 py-2 sm:gap-2 sm:px-3 ${embedded ? "" : "pt-[calc(env(safe-area-inset-top)+0.5rem)]"}`}>
         {onClose && (
-          <button type="button" onClick={close} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium hover:bg-surface-hover">
+          <button type="button" onClick={() => close()} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-2 pr-3 text-sm font-medium hover:bg-surface-hover">
             <ChevronLeftIcon className="h-4 w-4" /> Done
           </button>
         )}
@@ -806,6 +972,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
           <h2 className="truncate text-sm font-semibold">{file.name}</h2>
           <p className="truncate text-xs text-muted">{status}</p>
         </div>
+        <IconBtn label="Outline and pages" icon={ListIcon} onClick={() => setOutlineOpen(!outlineOpen)} active={outlineOpen} disabled={!layer || view !== "read"} />
         {canEdit && (
           <>
             <IconBtn label="Undo (Ctrl+Z)" icon={UndoIcon} onClick={undo} disabled={!history?.past.length} />
@@ -840,7 +1007,8 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
 
       {/* Tools */}
       {tools && (
-        <div className="shrink-0 border-b border-foreground/10 bg-surface">
+        <div className="relative shrink-0 border-b border-foreground/10 bg-surface">
+          {toolRowHints}
           <div ref={toolRowRef} style={toolRowFade} className="flex items-center gap-0.5 overflow-x-auto px-2 py-1.5 [scrollbar-width:none] sm:justify-center sm:gap-1">
             <ToolBtn label="Select, move and resize (V)" icon={CursorIcon} active={tool === "select"} onClick={() => pickTool("select")} />
             <ToolBtn label="Drag the page (H, or hold Space)" icon={HandIcon} active={tool === "hand"} onClick={() => pickTool("hand")} />
@@ -849,7 +1017,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
             <ToolBtn label="Eraser (E)" icon={EraserIcon} active={tool === "eraser"} onClick={() => pickTool("eraser")} />
             <ToolBtn label="Text: click to type, or drag a box for text that wraps (T)" icon={TextIcon} active={tool === "text"} onClick={() => pickTool("text")} />
             <ToolBtn
-              label="Edit the PDF's text: click a line to retype it (it's covered and typed over). A scanned page has no text — use Cover in Shapes, then Text"
+              label="Edit the PDF's text: click a line to retype it. It's covered and typed over — the original words stay in the file underneath (hidden, but a download can still be searched or copied for them). A scanned page has no text: use Cover in Shapes, then Text"
               icon={EditTextIcon}
               active={tool === "edittext"}
               onClick={() => pickTool("edittext")}
@@ -974,6 +1142,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
                       {INKS.map((c) => (
                         <Swatch key={c.color} name={c.name} color={c.color} on={options.ink === c.color} onClick={() => setOpt({ ink: c.color })} />
                       ))}
+                      <CustomColour color={options.ink} on={!INKS.some((c) => c.color === options.ink)} onPick={(c) => setOpt({ ink: c })} />
                     </div>
                   </div>
                   <div>
@@ -982,6 +1151,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
                       {HIGHLIGHTS.map((c) => (
                         <Swatch key={c.color} name={c.name} color={c.color} on={options.highlight === c.color} onClick={() => setOpt({ highlight: c.color })} />
                       ))}
+                      <CustomColour color={options.highlight} on={!HIGHLIGHTS.some((c) => c.color === options.highlight)} onPick={(c) => setOpt({ highlight: c })} label="Custom highlighter colour" />
                     </div>
                   </div>
                   <div>
@@ -1016,6 +1186,11 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
           }}
         />
       ) : (
+        <div className="relative flex min-h-0 flex-1">
+        {outlineOpen && layer && wide && (
+          <PdfOutline layer={layer} sources={sources} images={images} canEdit={canEdit} current={current} currentY={currentY} pdfOutline={pdfOutline} mode="side" tab={outlineTab} onTab={setOutlineTab} renaming={renaming} onRenaming={setRenaming} actions={outlineActions} />
+        )}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div ref={scrollRef} onScroll={onScroll} className="relative min-h-0 flex-1 overflow-auto">
           {loadError ? (
             <p className="p-10 text-center text-sm text-muted">{loadError}</p>
@@ -1039,6 +1214,9 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
             </div>
           )}
         </div>
+        {pagePills}
+        </div>
+        </div>
       )}
 
       {/* The selection's toolbar */}
@@ -1048,27 +1226,11 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
         </div>
       )}
 
-      {/* Page and zoom (on a phone the selection's toolbar takes their place) */}
-      {view === "read" && layer && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-          {showBar && docked ? (
-            <div className="mx-auto flex max-w-full justify-center">
-              <ObjectBar marks={selectedMarks} ptPerUnit={ptPerUnit(selPage)} actions={barActions} docked />
-            </div>
-          ) : (
-            <>
-              <span className="pointer-events-auto rounded-full bg-surface/95 px-3 py-1.5 text-xs font-medium tabular-nums shadow-md ring-1 ring-foreground/10">
-                {Math.min(current + 1, pages.length)} / {pages.length}
-              </span>
-              <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-surface/95 p-1 shadow-md ring-1 ring-foreground/10">
-                <IconBtn label="Zoom out" icon={ZoomOutIcon} onClick={() => zoomBy(-1)} />
-                <button type="button" onClick={() => setZoom(1)} className="h-8 min-w-12 rounded-full px-1 text-xs font-medium tabular-nums hover:bg-surface-hover" title="Fit the width">
-                  {Math.round(zoom * 100)}%
-                </button>
-                <IconBtn label="Zoom in" icon={ZoomInIcon} onClick={() => zoomBy(1)} />
-              </div>
-            </>
-          )}
+      {outlineOpen && layer && !wide && (
+        <div className="absolute inset-0 z-[8] flex flex-col justify-end bg-overlay" onPointerDown={(e) => e.target === e.currentTarget && setOutlineOpen(false)}>
+          <div className="h-[78%] overflow-hidden rounded-t-2xl shadow-[0_-8px_30px_rgb(0_0_0/0.2)] ring-1 ring-foreground/10">
+            <PdfOutline layer={layer} sources={sources} images={images} canEdit={canEdit} current={current} currentY={currentY} pdfOutline={pdfOutline} mode="sheet" tab={outlineTab} onTab={setOutlineTab} renaming={renaming} onRenaming={setRenaming} actions={outlineActions} />
+          </div>
         </div>
       )}
 
@@ -1130,6 +1292,27 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
       )}
       {picker.elements}
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {confirmLeave && (
+        <ConfirmDialog
+          title="Leave without saving?"
+          message={sync.offline ? "You're offline, so your latest markings aren't saved yet. They're kept on this device and saved next time you open this PDF here." : "Your latest markings couldn't be saved yet. They're kept on this device and saved next time you open this PDF here."}
+          confirmLabel="Leave"
+          onConfirm={() => {
+            setConfirmLeave(false);
+            close(true);
+          }}
+          onCancel={() => setConfirmLeave(false)}
+        />
+      )}
+      {sync.askLeave && (
+        <ConfirmDialog
+          title="Leave without saving?"
+          message="Your latest markings aren't saved yet. They're kept on this device and saved next time you open this PDF here."
+          confirmLabel="Leave"
+          onConfirm={() => sync.answerLeave(true)}
+          onCancel={() => sync.answerLeave(false)}
+        />
+      )}
       {confirmClear && (
         <ConfirmDialog
           title="Clear all markings?"
@@ -1149,3 +1332,63 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
   return embedded ? body : createPortal(body, paneEl ?? document.body);
 }
 
+/** The layer with the text being typed in it (as it'll be once typing finishes), for saving. */
+function withTyping(layer: Layer, t: Typing): Layer {
+  const text = t.mark.text.replace(/\s+$/, "");
+  return {
+    ...layer,
+    pages: layer.pages.map((p) => {
+      if (p.id !== t.pageId) return p;
+      const mark = roundMark({ ...t.mark, text });
+      if (p.marks.some((m) => m.id === mark.id)) return { ...p, marks: text ? p.marks.map((m) => (m.id === mark.id ? mark : m)) : p.marks.filter((m) => m.id !== mark.id) };
+      const added = [...(t.cover && !p.marks.some((m) => m.id === t.cover!.id) ? [t.cover] : []), ...(text ? [mark] : [])];
+      return added.length ? { ...p, marks: [...p.marks, ...added] } : p;
+    }),
+  };
+}
+
+/** What changed from one layer to the next, as a selection: the marks on one page that are new or
+    different in `to` (the page with the most of them). Undo and redo select them. */
+function changedMarks(from: Layer, to: Layer): { pageId: string; ids: string[] } | null {
+  let best: { pageId: string; ids: string[] } | null = null;
+  for (const p of to.pages) {
+    const was = from.pages.find((q) => q.id === p.id);
+    if (!was || was.marks === p.marks) continue;
+    const before = new Map(was.marks.map((m) => [m.id, m]));
+    const ids = p.marks.filter((m) => {
+      const b = before.get(m.id);
+      return !b || (b !== m && JSON.stringify(b) !== JSON.stringify(m));
+    }).map((m) => m.id);
+    if (ids.length && (!best || ids.length > best.ids.length)) best = { pageId: p.id, ids };
+  }
+  return best;
+}
+
+// The outline panel's open/closed state, per device.
+const OUTLINE_KEY = "jam-practice-pdf-outline";
+const outlineListeners = new Set<() => void>();
+function subscribeOutline(fn: () => void) {
+  outlineListeners.add(fn);
+  window.addEventListener("storage", fn);
+  return () => {
+    outlineListeners.delete(fn);
+    window.removeEventListener("storage", fn);
+  };
+}
+let outlineMemory: string | null = null;
+function readOutlinePref(): string | null {
+  try {
+    return localStorage.getItem(OUTLINE_KEY) ?? outlineMemory;
+  } catch {
+    return outlineMemory;
+  }
+}
+function writeOutlinePref(v: string) {
+  outlineMemory = v;
+  try {
+    localStorage.setItem(OUTLINE_KEY, v);
+  } catch {
+    // Not remembered after a reload; it still opens and closes.
+  }
+  for (const fn of outlineListeners) fn();
+}

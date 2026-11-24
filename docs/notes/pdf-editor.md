@@ -73,7 +73,7 @@ turning, exported PDFs (pdftoppm/pdfinfo), 390 px dark with no overflow, `next b
 
 ## Ideas not done
 
-Mobile markup; showing markings on shared links; text search; bookmarks/setlists of PDFs; snapping
+Mobile markup; showing markings on shared links; text search; setlists of PDFs (sections came 2026-11-23); snapping
 symbols to staff lines.
 
 ## UI pass 2 fixes (2026-11-20)
@@ -269,3 +269,136 @@ against a scan in other PDF viewers (poppler drew it a shade lighter than Chrome
 grid; marquee on touch (use Select all); covers aren't joined to the text that replaced them (move
 the text and the cover stays); Edit text guesses fonts (embedded fonts aren't used); pictures from
 another device can't be drawn into downloads; an older build seeing a v2 layer (above).
+
+## 2026-11-23 (later still) — Saving that can't lose work, the review's fixes, sections and an outline
+
+Three parts, from a review of the object editor and a request from Jack. No version bump.
+
+### Part 1: saving
+
+Two bugs lost work. (1) Text typed in the last second before a reload was gone while the header
+already said "Saved" (text being typed lived only in the editor's `typing` state, the save waited a
+second, and nothing ran on reload). (2) A stale or offline tab saved its whole old layer over newer
+markings from another tab.
+
+**Design** (`useLayerSync.ts`, `merge.ts`, `pdfMarkups.ts`):
+- `pdfMarkups` rows have a `rev` (missing on older rows = 0). `get` returns it; `save` takes
+  `baseRev`, the revision the client's copy started from. When the row has moved on, nothing is
+  written and the newer `data` + `rev` come back (`ok: false`). Without `baseRev` (builds from
+  before this) it overwrites, as before — an old desktop build can still clobber; nothing to do
+  about builds already out.
+- The client keeps a **base** (the saved layer + rev its changes build on). It saves as soon as the
+  layer differs from the base — every finished edit (history step), and text being typed after an
+  800 ms pause (`withTyping` puts the typed mark into the saved layer). One save at a time; edits
+  made meanwhile go in the next. The status says "Saving…" whenever anything differs from the base
+  (or typing changed something), "Offline: saves when you're back online" (`navigator.onLine` or
+  Convex's connection state), "Couldn't save: … Trying again…" (retries every 4 s), else "Saved".
+- **Merging**: `mergeLayers(base, mine, theirs)` applies this copy's changes since base onto the
+  newer layer, by id: added/deleted/changed marks and pages; a changed mark takes my changed fields
+  and their other fields (they moved it, I recoloured it: both stay); a mark they deleted that I
+  changed comes back; order follows mine only if I reordered (their additions slotted next to
+  their neighbours); bookmarks are a list by id the same way. It's idempotent, so merging changes
+  that already landed is harmless. A refused save merges and saves again with the new rev; a newer
+  row arriving live (the query) is merged the same way into the open editor (`rebase`), including
+  the undo stack, so undo never drops another tab's marks. Our own save's echo (it can arrive
+  before the mutation resolves) is recognised by its JSON and not merged.
+- **Leaving**: `beforeunload` asks while anything's unsaved; the app's tab switching asks through
+  `registerLeaveGuard` (a "Leave without saving?" dialog); Done asks when offline or failing. On
+  `pagehide` / `visibilitychange` hidden / unmount the unsaved layer is kept as a **draft** in
+  localStorage (`jam-practice-pdf-draft:<file>`: base JSON, my JSON, rev) and, on pagehide, sent
+  once more as a `keepalive` fetch to Convex's HTTP API (`/api/mutation`, Bearer token from
+  `useAuthToken`, only under 60 KB). The next open on this device merges the draft onto the saved
+  layer (a no-op if it landed) and saves; the draft is cleared when the layer and base agree.
+
+Verified (headless Chromium, dev, throwaway `pdf2@soniroll.test`): the exact repro — T, click,
+type, Escape, reload at once — 3/3 kept (status "Saving…" before the reload, the browser's leave
+prompt came up); reload while still typing (no Escape) kept the text, via the draft (seen in
+localStorage, then merged and cleared) — the keepalive fetch was called with a token, but I
+couldn't see its request in CDP, so whether Chrome sent it isn't proven; two tabs, A offline
+(CDP network emulation) adds text, B adds text and saves, A back online → both marks in A, B and a
+fresh tab; B's undo after that removed only B's own mark. Offline status text, the leave dialog on
+a new app tab and on Done, and "Saved" once back online. Not verified: two real devices, an iPhone
+closing a backgrounded tab (draft on `visibilitychange` should cover it), the old-row (no `rev`)
+path beyond reading the code.
+
+### Part 2: the review's findings
+
+- Downloads (`exportPdf.ts`): text in sans/serif/typewriter is **real PDF text** (Helvetica, Times,
+  Courier with bold/italic; positions from the screen layout, the baseline measured with canvas
+  `alphabeticBaseline`, aligned with the PDF font's own widths, turned with the mark and the page,
+  underline as a line). Handwritten text, symbols and letters outside WinAnsi stay in the picture.
+  **Covers** are real filled boxes (no soft edge). Everything else is drawn in order into
+  see-through pictures, a new one wherever real text or a cover comes between, so stacking holds.
+  **No real redaction**: removing the PDF's own words would mean rewriting its content streams
+  (text matrices, fonts, glyph widths) — not feasible here. The Edit text tool's hint now says the
+  original words stay in the file underneath, still searchable/copyable.
+- **Per-word styles skipped**: typing happens in a real textarea (caret, IME, paste), which can only
+  show one style; mixed styles would need a contenteditable editor with its own caret/selection
+  mapping, run-aware wrapping and export — too risky next to the typing that was just fixed.
+  Styles stay per box.
+- Phone two-finger drag with the Pen/Highlighter/Eraser/Shapes: a second finger (on any page)
+  drops the stroke and the two fingers scroll (`pan2` gesture; gestures now track their pointer id,
+  so another finger lifting doesn't end a stroke).
+- Touch selection: corner handles always, with a small mark's frame padded out to 44 px so they
+  sit outside it; side handles only when there's room. New text on a touch screen is at least 34
+  units (about 12 px at 390 wide, was ~7) until you pick a size.
+- Phone toolbars: an arrow button on the faded edge (`useRowScroll`, taps scroll), on the tool row
+  and the docked selection bar; the docked bar starts with Delete and the colour; forward/backward
+  and duplicate move into its ⋮.
+- Undo/redo select what they bring back or change (`changedMarks`), so Delete → ⌘Z → ⌘X works.
+- The floating bar tries spots by the selection (above, below, then further away) and takes the
+  first that covers no print and no other mark (`barPlace.ts`: the drawn page reduced to a grid of
+  inked cells, cached per drawing); otherwise it waits at the top or bottom of the window.
+- Retyped lines take the original's colour (the pixel least like the paper; near-greys → true
+  black), not #1f2328. Covers take the median of the lighter half of a ring around the box (was the
+  single lightest pixel).
+- Custom colour (`<input type=color>`, a rainbow swatch) in every colour popover and the pen popover.
+- Italic text no longer clips at the right while typing (padding on the textarea, the wrap width
+  unchanged). Narrowing a text box stops at its longest word.
+- Symbols (music font) get colour, size, layers and delete only.
+- "To coda": the handwritten font falls back to the music font for SMuFL glyphs, so the coda shows.
+- Swatches have an inset line (black and white show on any theme); Typewriter is shown at weight 600.
+- Phones: every popover (fonts, colours, sizes, symbols…) opens as a bottom sheet. Dragging marks
+  is clamped to the page. Symbols scale up in their tiles (up to 3×).
+
+### Part 3: sections and the outline panel
+
+Jack: "make it so i can book mark pages, so i can make different sections of the pdf and a table of
+contents shows on the left side with clickable links to go to the section".
+
+- **Data**: `LayerPage.bookmarks?: { id, title, y?, sub? }[]` — kept on the page they start on (a
+  section runs until the next one), not in a list of their own, so builds that don't know about
+  them keep them (they spread pages). No layer version bump: older v2 builds read and keep them
+  (only "Reset pages" there would drop them). Turning a page drops its sections' `y`.
+- **Panel** (`PdfOutline.tsx`, `outline.ts`): the list button in the top bar; a 256 px column on the
+  left when the editor is ≥ 768 px wide, a bottom sheet otherwise (closes when you jump). Open or
+  closed is remembered per device (`jam-practice-pdf-outline`; at first open on wide screens).
+  Outline tab: sections and sub-sections (one level), each a link to where it starts with a
+  collapsible strip of its pages' thumbnails; ⋮ Rename / Make it a (sub-)section / Delete;
+  double-click renames; the section you're in and its page are highlighted as you scroll and kept
+  in view. "Before the first section" lists earlier pages. The PDF's own outline (pdf.js
+  `getOutline`, with `XYZ` heights) shows under "In the PDF", with **Use as sections** (copies it,
+  depth > 0 as sub-sections, skipping ones already there). Pages tab: every page as a thumbnail with
+  its number, a tick box (Turn / Delete the ticked ones), ⋮ Add a section here / Turn / Delete.
+- **Adding**: + in the panel, a page's ⋮, or **B**. It starts where the window's top is on the page
+  you're on (the top if you can see it) and is named from the biggest text near there (a song's
+  title; `headingNear`), else "Section n"; the name box opens selected.
+- **Play**: a Sections button lists them (drawn inside the full-screen view: popovers portaled to
+  `<body>` don't show in full screen).
+- **Downloads** write the sections as the PDF's outline (Outlines dictionary, sub-sections nested
+  and open, `/XYZ` to the section's height on upright pages; `PageMode /UseOutlines`).
+
+Verified: the outline PDF's own outline listed and copied, renaming (double-click), a section from
+a page's ⋮, making it a sub-section, jumping (highlight follows), ticking pages, reload keeps the
+sections and the open panel, Play's list jumps, and the download's outline checked with qpdf
+(Ballads › Autumn Leaves, Blue Bossa; Modal tunes › Footprints, right pages). 1440 light/dark and
+390 light/dark (sheet, Pages tab in two columns, no horizontal overflow).
+
+### Also checked
+
+`tsc` (web, desktop, convex), eslint on `components/pdf/`, `next build`, desktop `vite build`,
+`npx convex dev --once`. Downloads checked with pdftotext (typed text is real text, and the covered
+original still is — as the hint says), pdffonts (Helvetica/Times-BoldItalic added), pdftoppm (text
+and covers line up with the screen; the scan's cover has no edge). Not verified: real touch
+screens and pens, Safari/iOS, the desktop app running, IME typing, hover-only bits, very large
+PDFs, other PDF viewers' outline display.

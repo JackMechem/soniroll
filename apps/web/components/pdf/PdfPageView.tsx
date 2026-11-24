@@ -76,6 +76,8 @@ export type PageEditing = {
   onPen: () => void;
   /** Scrolls the document (the hand tool's drag). */
   scrollBy: (dx: number, dy: number) => void;
+  /** New text takes `options.text` as it is (you've styled text), not the phone's bigger size. */
+  textStyleChosen?: boolean;
 };
 
 /** The largest canvas we'll draw (iOS refuses bigger ones). */
@@ -86,7 +88,7 @@ const HANDLE_DIRS: Record<Handle, [number, number]> = { n: [0, -1], s: [0, 1], e
 const CORNERS: Handle[] = ["nw", "ne", "se", "sw"];
 const ALL_HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
-type Gesture =
+type Gesture = (
   | { kind: "ink" | "shape"; mark: Mark; cover?: boolean }
   | { kind: "move"; x0: number; y0: number; orig: Mark[]; targets: { xs: number[]; ys: number[] }; moved: boolean; toggle?: string; dx: number; dy: number }
   | { kind: "resize"; handle: Handle; orig: Mark[]; frame: Frame | null; box: Box }
@@ -96,7 +98,10 @@ type Gesture =
   | { kind: "erase"; gone: Set<string> }
   | { kind: "pan"; lx: number; ly: number }
   | { kind: "textbox"; x0: number; y0: number; sx: number; sy: number }
-  | { kind: "tap"; x0: number; y0: number; sx: number; sy: number; shift: boolean };
+  | { kind: "tap"; x0: number; y0: number; sx: number; sy: number; shift: boolean }
+  /** Two fingers on the page while drawing: the stroke is dropped and they scroll it. */
+  | { kind: "pan2"; pts: Map<number, [number, number]>; mid: [number, number] }
+) & { pointerId?: number; touch?: boolean; last?: [number, number] };
 
 /**
  * One page: the PDF page drawn on a canvas (only while it's near the screen), an added page's
@@ -236,55 +241,122 @@ export default function PdfPageView({
   const editable = (m: Mark) => !m.locked;
   const isTextEditable = (m: Mark | null): m is TextMark => !!m && m.t === "text" && m.font !== "music" && !m.locked;
 
-  /** The paper's colour around a box (units): the lightest of a ring of pixels just outside it, so a
-      cover matches cream or grey scans as well as white paper. */
+  /** The paper's colour around a box (units): the middle (median) of the lighter half of a ring of
+      pixels just outside it — the paper, not the print next to it — so a cover matches cream or grey
+      scans, and the scan's grain, rather than its brightest speck. */
   const paperColor = (b: Box) => {
+    const px = sampleRing(b, 3);
+    if (!px.length) return "#ffffff";
+    const lum = (p: number[]) => p[0] * 0.3 + p[1] * 0.59 + p[2] * 0.11;
+    px.sort((a, c) => lum(a) - lum(c));
+    const light = px.slice(Math.floor(px.length / 2));
+    const mid = (i: number) => {
+      const vals = light.map((p) => p[i]).sort((a, c) => a - c);
+      return vals[Math.floor(vals.length / 2)];
+    };
+    return toHex([mid(0), mid(1), mid(2)]);
+  };
+  /** Pixels of the drawn page in a ring `m` units outside a box (or inside it with `inside`). */
+  const sampleRing = (b: Box, m: number, inside = false): number[][] => {
     const c = canvasRef.current;
     const ctx = c?.getContext("2d", { willReadFrequently: true });
-    if (!c || !ctx || !c.width) return "#ffffff";
+    if (!c || !ctx || !c.width) return [];
     const k = c.width / UNITS;
-    let best: [number, number, number] | null = null;
-    let bestL = -1;
-    const m = 3;
-    for (let i = 0; i <= 8; i++) {
-      const t = i / 8;
-      for (const [x, y] of [
-        [b.x + b.w * t, b.y - m],
-        [b.x + b.w * t, b.y + b.h + m],
-        [b.x - m, b.y + b.h * t],
-        [b.x + b.w + m, b.y + b.h * t],
-      ]) {
-        const sx = Math.round(x * k);
-        const sy = Math.round(y * k);
-        if (sx < 0 || sy < 0 || sx >= c.width || sy >= c.height) continue;
-        try {
-          const d = ctx.getImageData(sx, sy, 1, 1).data;
-          const l = d[0] * 0.3 + d[1] * 0.59 + d[2] * 0.11;
-          if (l > bestL) {
-            bestL = l;
-            best = [d[0], d[1], d[2]];
-          }
-        } catch {
-          return "#ffffff";
-        }
+    const x0 = Math.max(0, Math.floor((b.x - (inside ? 0 : m)) * k));
+    const y0 = Math.max(0, Math.floor((b.y - (inside ? 0 : m)) * k));
+    const x1 = Math.min(c.width, Math.ceil((b.x + b.w + (inside ? 0 : m)) * k));
+    const y1 = Math.min(c.height, Math.ceil((b.y + b.h + (inside ? 0 : m)) * k));
+    if (x1 <= x0 || y1 <= y0) return [];
+    let d: Uint8ClampedArray;
+    try {
+      d = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+    } catch {
+      return [];
+    }
+    const w = x1 - x0;
+    const h = y1 - y0;
+    const out: number[][] = [];
+    const step = Math.max(1, Math.round(Math.sqrt((w * h) / 4000)));
+    const ring = Math.max(1, Math.round(m * k * 0.6));
+    for (let y = 0; y < h; y += step)
+      for (let x = 0; x < w; x += step) {
+        const edge = x < ring || y < ring || x >= w - ring || y >= h - ring;
+        if (!inside && !edge) continue;
+        const i = (y * w + x) * 4;
+        out.push([d[i], d[i + 1], d[i + 2]]);
+      }
+    return out;
+  };
+  /** The colour of the print inside a box: the pixel least like the paper (black when it's faint). */
+  const inkColor = (b: Box, paper: string) => {
+    const px = sampleRing(b, 0, true);
+    const pp = [1, 3, 5].map((i) => parseInt(paper.slice(i, i + 2), 16));
+    let best: number[] | null = null;
+    let bestD = 0;
+    for (const p of px) {
+      const d = Math.abs(p[0] - pp[0]) + Math.abs(p[1] - pp[1]) + Math.abs(p[2] - pp[2]);
+      if (d > bestD) {
+        bestD = d;
+        best = p;
       }
     }
-    if (!best) return "#ffffff";
-    return `#${best.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+    // Dark print (anything nearly black or grey) is retyped in true black.
+    if (!best || Math.max(...best) - Math.min(...best) < 40) return "#000000";
+    return toHex(best as [number, number, number]);
   };
 
-  const startWindowGesture = (g: Gesture) => {
+  const startWindowGesture = (g: Gesture, from?: { pointerId: number; pointerType: string; clientX: number; clientY: number }) => {
+    if (from) {
+      g.pointerId = from.pointerId;
+      g.touch = from.pointerType === "touch";
+      g.last = [from.clientX, from.clientY];
+    }
     gesture.current = g;
-    const move = (e: PointerEvent) => onMove(e);
-    const up = (e: PointerEvent) => {
+    const owner = {};
+    if (g.touch) touchGestures.add(owner);
+    const stop = () => {
+      touchGestures.delete(owner);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+      window.removeEventListener("pointerdown", down);
+    };
+    // A second finger while drawing with a finger: drop the stroke and scroll with both.
+    const toPan = (e: PointerEvent) => {
+      const cur = gesture.current;
+      if (!cur || !cur.touch || e.pointerType !== "touch" || e.pointerId === cur.pointerId || cur.kind === "pan2") return false;
+      if (cur.kind !== "ink" && cur.kind !== "shape" && cur.kind !== "erase") return false;
+      setDraft(null);
+      const pts = new Map<number, [number, number]>([
+        [cur.pointerId!, cur.last ?? [e.clientX, e.clientY]],
+        [e.pointerId, [e.clientX, e.clientY]],
+      ]);
+      gesture.current = { kind: "pan2", pts, mid: midOf(pts), touch: true };
+      return true;
+    };
+    const move = (e: PointerEvent) => {
+      const cur = gesture.current;
+      if (cur && cur.pointerId !== undefined && e.pointerId !== cur.pointerId && cur.kind !== "pan2") {
+        toPan(e);
+        return;
+      }
+      if (cur && cur.pointerId === e.pointerId) cur.last = [e.clientX, e.clientY];
+      onMove(e);
+    };
+    const down = (e: PointerEvent) => {
+      toPan(e);
+    };
+    const up = (e: PointerEvent) => {
+      const cur = gesture.current;
+      // Another finger (or the pen's partner) lifting doesn't end a stroke.
+      if (cur && cur.kind !== "pan2" && cur.pointerId !== undefined && e.pointerId !== cur.pointerId) return;
+      stop();
       onUp(e);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
+    window.addEventListener("pointerdown", down);
     if (g.kind === "move" || g.kind === "resize" || g.kind === "rotate" || g.kind === "end") editing?.onGesture(true);
   };
 
@@ -321,7 +393,9 @@ export default function PdfPageView({
 
   const newText = (x: number, y: number, w?: number): TextMark => {
     const s = editing!.options.text;
-    const m: TextMark = { id: newId(), t: "text", x: 0, y: 0, text: "", ...s, align: s.align ?? "left", ...(w ? { w } : {}) };
+    // On a phone the usual size is tiny on screen: bigger, unless you've picked a size.
+    const size = editing!.textStyleChosen || !coarse() ? s.size : Math.max(s.size, 34);
+    const m: TextMark = { id: newId(), t: "text", x: 0, y: 0, text: "", ...s, size, align: s.align ?? "left", ...(w ? { w } : {}) };
     const f = frameOf(m);
     const lay = layoutText(m);
     // The click is the top-left (a box) or the start of the first line (a click).
@@ -345,8 +419,9 @@ export default function PdfPageView({
     const w = r.w + padX * 2;
     const h = r.h + padY * 2;
     const coverBox = { x: r.cx - w / 2, y: r.cy - h / 2, w, h };
-    const cover: ShapeMark = roundMark({ id: newId(), t: "shape", shape: "rect", x1: coverBox.x, y1: coverBox.y, x2: coverBox.x + w, y2: coverBox.y + h, color: "#000000", width: 0, fill: paperColor(coverBox), ...(r.angle ? { rot: r.angle } : {}) });
-    const m: TextMark = { id: newId(), t: "text", x: 0, y: 0, text: r.text, size: r.size, color: "#1f2328", font: r.font, ...(r.bold ? { bold: true } : {}), ...(r.italic ? { italic: true } : {}), align: "left", ...(r.angle ? { rot: r.angle } : {}) };
+    const paper = paperColor(coverBox);
+    const cover: ShapeMark = roundMark({ id: newId(), t: "shape", shape: "rect", x1: coverBox.x, y1: coverBox.y, x2: coverBox.x + w, y2: coverBox.y + h, color: "#000000", width: 0, fill: paper, ...(r.angle ? { rot: r.angle } : {}) });
+    const m: TextMark = { id: newId(), t: "text", x: 0, y: 0, text: r.text, size: r.size, color: inkColor({ x: r.cx - r.w / 2, y: r.cy - r.h / 2, w: r.w, h: r.h }, paper), font: r.font, ...(r.bold ? { bold: true } : {}), ...(r.italic ? { italic: true } : {}), align: "left", ...(r.angle ? { rot: r.angle } : {}) };
     const f = frameOf(m);
     // Its left edge where the line starts, its middle a little above the baseline (where text drawn
     // on its line's middle has its baseline).
@@ -386,6 +461,8 @@ export default function PdfPageView({
 
   const onPointerDown = (e: ReactPointerEvent) => {
     if (!editing || e.button > 0) return;
+    // A second finger while one draws (on this page or another): that stroke turns into scrolling.
+    if (e.pointerType === "touch" && touchGestures.size) return;
     if (e.pointerType === "pen") editing.onPen();
     const [x, y] = toUnits(e);
     const o = editing.options;
@@ -429,7 +506,7 @@ export default function PdfPageView({
     }
     if (tool === "eraser") {
       const g: Gesture = { kind: "erase", gone: new Set() };
-      startWindowGesture(g);
+      startWindowGesture(g, e);
       const hit = hitTest(shown, x, y, tol, (m) => !!m.locked);
       if (hit) {
         g.gone.add(hit.id);
@@ -439,12 +516,12 @@ export default function PdfPageView({
       const hl = tool === "highlight";
       const mark: Mark = { id: newId(), t: "ink", pts: [r2(x), r2(y)], color: hl ? o.highlight : o.ink, width: hl ? o.inkWidth * 6 : o.inkWidth, ...(hl ? { highlight: true } : {}) };
       setDraft(mark);
-      startWindowGesture({ kind: "ink", mark });
+      startWindowGesture({ kind: "ink", mark }, e);
     } else if (tool === "shape") {
       const cover = o.shape === "cover";
       const mark: Mark = { id: newId(), t: "shape", shape: o.shape === "cover" ? "rect" : o.shape, x1: r2(x), y1: r2(y), x2: r2(x), y2: r2(y), color: o.ink, width: cover ? 0 : o.inkWidth, ...(cover ? { fill: "#ffffff" } : {}) };
       setDraft(mark);
-      startWindowGesture({ kind: "shape", mark, cover });
+      startWindowGesture({ kind: "shape", mark, cover }, e);
     }
     e.preventDefault();
   };
@@ -452,6 +529,14 @@ export default function PdfPageView({
   function onMove(e: PointerEvent) {
     const g = gesture.current;
     if (!g || !editing) return;
+    if (g.kind === "pan2") {
+      if (!g.pts.has(e.pointerId)) return;
+      g.pts.set(e.pointerId, [e.clientX, e.clientY]);
+      const mid = midOf(g.pts);
+      editing.scrollBy(g.mid[0] - mid[0], g.mid[1] - mid[1]);
+      g.mid = mid;
+      return;
+    }
     const [x, y] = toUnits(e);
     if (g.kind === "ink" && g.mark.t === "ink") {
       const events = e.getCoalescedEvents?.() ?? [e];
@@ -508,6 +593,10 @@ export default function PdfPageView({
         if (!e.shiftKey || dx === 0) dy = s.dy;
         gd = s.guides;
       }
+      // Kept on the page (at least partly off it is lost to the download).
+      const box = unionBox(g.orig.map(aabb))!;
+      dx = Math.max(-box.x, Math.min(UNITS - box.x - box.w, dx));
+      dy = Math.max(-box.y, Math.min(unitsH - box.y - box.h, dy));
       setGuides(gd && (gd.xs.length || gd.ys.length) ? gd : null);
       g.dx = dx;
       g.dy = dy;
@@ -841,15 +930,16 @@ function SelectionOverlay({
     f = { cx: b.x + b.w / 2, cy: b.y + b.h / 2, w: b.w, h: b.h, rot: turning?.groupBox ? turning.deg : 0 };
   }
   const touch = coarse();
-  const pad = touch ? 8 : 4; // px around the marks
-  const w = f.w * px + pad * 2;
-  const h = f.h * px + pad * 2;
+  // px around the marks; on a touch screen a small mark's frame is padded out so its corner handles
+  // sit outside it (and apart from each other) rather than on top of it.
+  const padX = touch ? Math.max(8, (44 - f.w * px) / 2) : 4;
+  const padY = touch ? Math.max(8, (44 - f.h * px) / 2) : 4;
+  const w = f.w * px + padX * 2;
+  const h = f.h * px + padY * 2;
   // On a small mark, side handles would crowd the corners (on touch, where they're big).
-  const roomX = !touch || w >= 56;
-  const roomY = !touch || h >= 56;
-  // Short text on a touch screen keeps its width handles (the size is in the toolbar), not corners.
-  const shortText = touch && single?.t === "text" && !roomY;
-  const sides = (hd: Handle) => (hd === "n" || hd === "s" ? roomX : hd === "e" || hd === "w" ? roomY || shortText : !shortText);
+  const roomX = !touch || w >= 76;
+  const roomY = !touch || h >= 76;
+  const sides = (hd: Handle) => (hd === "n" || hd === "s" ? roomX : hd === "e" || hd === "w" ? roomY : true);
   const handles = (locked ? [] : !single ? CORNERS : single.t === "text" ? [...CORNERS, "e" as Handle, "w" as Handle] : ALL_HANDLES).filter(sides);
   const pos = (hd: Handle) => {
     const [hx, hy] = HANDLE_DIRS[hd];
@@ -900,3 +990,18 @@ function SelectionOverlay({
     </div>
   );
 }
+
+/** Touch gestures under way on any page (a second finger joins them rather than starting another). */
+const touchGestures = new Set<object>();
+
+function midOf(pts: Map<number, [number, number]>): [number, number] {
+  let x = 0;
+  let y = 0;
+  for (const [px, py] of pts.values()) {
+    x += px;
+    y += py;
+  }
+  return [x / Math.max(1, pts.size), y / Math.max(1, pts.size)];
+}
+
+const toHex = (c: [number, number, number] | number[]) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;

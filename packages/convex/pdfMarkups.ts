@@ -32,7 +32,8 @@ async function findRow(ctx: QueryCtx, userId: Id<"users">, t: Target) {
   return { fileId: undefined, item, row };
 }
 
-/** The markings on one of the caller's PDFs, as JSON, or null when there are none yet. */
+/** The markings on one of the caller's PDFs, as JSON, with the revision it's at (rows from before
+    revisions: 0), or null when there are none yet. */
 export const get = query({
   args: target,
   handler: async (ctx, t) => {
@@ -40,14 +41,21 @@ export const get = query({
     if (!userId) return null;
     const found = await findRow(ctx, userId, t);
     if (!found?.row) return null;
-    return { data: found.row.data, updatedAt: found.row.updatedAt };
+    return { data: found.row.data, updatedAt: found.row.updatedAt, rev: found.row.rev ?? 0 };
   },
 });
 
-/** Saves the markings on one of the caller's own PDFs. */
+/**
+ * Saves the markings on one of the caller's own PDFs.
+ *
+ * `baseRev` is the revision the client's copy started from. When the row has moved on since (another
+ * tab or device saved, or this tab was offline), nothing is written: the newer markings come back
+ * (`ok: false`) for the client to merge its own changes into and save again with the new revision.
+ * Without `baseRev` (builds from before revisions) it's written over, as it always was.
+ */
 export const save = mutation({
-  args: { ...target, data: v.string() },
-  handler: async (ctx, { data, ...t }) => {
+  args: { ...target, data: v.string(), baseRev: v.optional(v.number()) },
+  handler: async (ctx, { data, baseRev, ...t }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save your markings.");
     const found = await findRow(ctx, userId, t);
@@ -56,10 +64,15 @@ export const save = mutation({
       : !!(t.kind && t.id && (await storedItemById(ctx, userId, t.kind, t.id, false)));
     if (!found || !owned) throw new Error("This file isn't yours to mark up.");
     if (data.length > MAX_DATA) throw new Error("There are too many markings on this PDF to save. Clear some and try again.");
+    const current = found.row?.rev ?? 0;
+    if (found.row && baseRev !== undefined && baseRev !== current) {
+      return { ok: false as const, rev: current, data: found.row.data, updatedAt: found.row.updatedAt };
+    }
     const updatedAt = Date.now();
-    if (found.row) await ctx.db.patch(found.row._id, { data, updatedAt });
-    else if (found.fileId) await ctx.db.insert("pdfMarkups", { userId, fileId: found.fileId, data, updatedAt });
-    else await ctx.db.insert("pdfMarkups", { userId, item: found.item, data, updatedAt });
-    return updatedAt;
+    const rev = current + 1;
+    if (found.row) await ctx.db.patch(found.row._id, { data, updatedAt, rev });
+    else if (found.fileId) await ctx.db.insert("pdfMarkups", { userId, fileId: found.fileId, data, updatedAt, rev });
+    else await ctx.db.insert("pdfMarkups", { userId, item: found.item, data, updatedAt, rev });
+    return { ok: true as const, rev, updatedAt };
   },
 });

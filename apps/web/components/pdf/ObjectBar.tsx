@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties, type ReactNode } from "react";
-import { useEdgeFade } from "@/components/library/ui";
-import { Pills, Pop, RangeRow, Swatch, keepFocus, keepFocusUnlessField } from "@/components/pdf/editorParts";
+import { CustomColour, Pills, Pop, RangeRow, Swatch, keepFocus, keepFocusUnlessField, useRowScroll } from "@/components/pdf/editorParts";
 import { FONTS, fontFamily } from "@/components/pdf/geometry";
 import { COLORS, FILLS, HIGHLIGHTS, INKS, isBoxShape, type Mark, type TextAlign, type TextMark } from "@/components/pdf/markup";
 import { opacityOf } from "@/components/pdf/marksRender";
@@ -54,98 +53,151 @@ export default function ObjectBar({ marks, ptPerUnit, actions, style, docked }: 
   const coloured = marks.filter((m) => m.t !== "image");
   const color = coloured[0] && "color" in coloured[0] ? coloured[0].color : "#1f2328";
 
-  const { attach: fadeRef, style: fade } = useEdgeFade<HTMLDivElement>();
-  return (
-    <div
-      data-keep-typing
-      onMouseDown={keepFocusUnlessField}
-      onPointerDown={(e) => e.stopPropagation()}
-      className={`pointer-events-auto rounded-2xl bg-surface p-1 shadow-lg ring-1 ring-foreground/10 ${docked ? "max-w-full overflow-hidden" : "absolute z-[5]"}`}
-      style={style}
-      role="toolbar"
-      aria-label="Selected"
-    >
-      <div ref={docked ? fadeRef : undefined} style={docked ? fade : undefined} className={`flex items-center gap-0.5 ${docked ? "overflow-x-auto [scrollbar-width:none]" : ""}`}>
-      {locked ? (
-        <button type="button" onMouseDown={keepFocus} onClick={() => actions.onLock(false)} className={`${btn()} gap-1.5 px-2.5`}>
-          <UnlockIcon className="h-4 w-4" /> Unlock
-        </button>
-      ) : (
+  const { attach: fadeRef, style: fade, hints } = useRowScroll<HTMLDivElement>();
+  // Music symbols are drawn, not written: colour, size and layers only.
+  const symbols = allText && texts.every((m) => m.font === "music");
+  const del = (
+    <button type="button" onMouseDown={keepFocus} onClick={actions.onDelete} className={`${btn()} text-danger`} title="Delete (Del)" aria-label="Delete">
+      <TrashIcon className="h-[18px] w-[18px]" />
+    </button>
+  );
+  const colour = !allText && !allImage && (
+    <ColourPop
+      label={allShape ? "Line colour" : "Colour"}
+      color={color}
+      choices={allInk && marks.every((m) => m.t === "ink" && m.highlight) ? HIGHLIGHTS : allInk ? INKS : COLORS}
+      onPick={(c) => onPatch((m) => (m.t === "image" ? m : { ...m, color: c, ...(m.t === "shape" && m.width === 0 && !m.fill ? { width: 3 } : {}) }))}
+      none={allShape && marks.every((m) => m.t === "shape" && isBoxShape(m.shape)) ? () => onPatch((m) => (m.t === "shape" ? { ...m, width: 0, fill: m.fill ?? "#ffffff" } : m)) : undefined}
+      noneOn={allShape && marks.every((m) => m.t === "shape" && m.width === 0)}
+    />
+  );
+  const symbolColour = symbols && <ColourPop label="Colour" color={texts[0].color} choices={COLORS} onPick={(c) => onPatch((m) => (m.t === "text" ? { ...m, color: c } : m))} />;
+  const layers = (
+    <>
+      {!docked && (
         <>
-          {allText && texts.length > 0 && <TextControls texts={texts} ptPerUnit={ptPerUnit} onPatch={onPatch} />}
-          {!allText && !allImage && (
-            <ColourPop
-              label={allShape ? "Line colour" : "Colour"}
-              color={color}
-              choices={allInk && marks.every((m) => m.t === "ink" && m.highlight) ? HIGHLIGHTS : allInk ? INKS : COLORS}
-              onPick={(c) => onPatch((m) => (m.t === "image" ? m : { ...m, color: c, ...(m.t === "shape" && m.width === 0 && !m.fill ? { width: 3 } : {}) }))}
-              none={allShape && marks.every((m) => m.t === "shape" && isBoxShape(m.shape)) ? () => onPatch((m) => (m.t === "shape" ? { ...m, width: 0, fill: m.fill ?? "#ffffff" } : m)) : undefined}
-              noneOn={allShape && marks.every((m) => m.t === "shape" && m.width === 0)}
-            />
-          )}
-          {allShape && marks.every((m) => m.t === "shape" && (m.shape === "rect" || m.shape === "ellipse")) && (
-            <ColourPop
-              label="Fill"
-              fill
-              color={(first.t === "shape" && first.fill) || ""}
-              choices={FILLS}
-              onPick={(c) => onPatch((m) => (m.t === "shape" ? { ...m, fill: c } : m))}
-              none={() => onPatch((m) => (m.t === "shape" ? { ...m, fill: undefined, width: m.width || 3 } : m))}
-              noneOn={first.t === "shape" && !first.fill}
-            />
-          )}
-          {(allInk || allShape) && (
-            <Pop label="Line width" trigger={<span className={btn()}><WidthGlyph /></span>}>
-              {() => (
-                <div className="w-56">
-                  <RangeRow
-                    label="Line width"
-                    value={first.t === "ink" || first.t === "shape" ? Math.min(first.width, first.t === "ink" && first.highlight ? 60 : 24) : 3}
-                    min={first.t === "ink" && first.highlight ? 4 : 0.5}
-                    max={first.t === "ink" && first.highlight ? 60 : 24}
-                    step={0.5}
-                    format={(v) => String(v)}
-                    onChange={(v) => onPatch((m) => (m.t === "ink" || m.t === "shape" ? { ...m, width: v } : m))}
-                  />
-                </div>
-              )}
-            </Pop>
-          )}
-          {!allText && (
-            <Pop label="Opacity" trigger={<span className={`${btn()} text-xs font-medium tabular-nums`}>{Math.round(opacityOf(first) * 100)}%</span>}>
-              {() => (
-                <div className="w-56">
-                  <RangeRow label="Opacity" value={Math.round(opacityOf(first) * 100)} min={10} max={100} step={5} format={(v) => `${v}%`} onChange={(v) => onPatch((m) => ({ ...m, opacity: v >= 100 && !(m.t === "ink" && m.highlight) ? undefined : v / 100 }))} />
-                </div>
-              )}
-            </Pop>
-          )}
-          {sep}
-          <button type="button" onMouseDown={keepFocus} onClick={actions.onDuplicate} className={btn()} title="Duplicate (Ctrl+D)" aria-label="Duplicate">
-            <CopyIcon className="h-[18px] w-[18px]" />
-          </button>
           <button type="button" onMouseDown={keepFocus} onClick={() => actions.onOrder("forward")} className={btn()} title="Bring forward (Ctrl+])" aria-label="Bring forward">
             <BringForwardIcon className="h-[18px] w-[18px]" />
           </button>
           <button type="button" onMouseDown={keepFocus} onClick={() => actions.onOrder("backward")} className={btn()} title="Send backward (Ctrl+[)" aria-label="Send backward">
             <SendBackwardIcon className="h-[18px] w-[18px]" />
           </button>
-          <Pop label="More" trigger={<span className={btn()}><DotsVerticalIcon className="h-[18px] w-[18px]" /></span>}>
-            {(close) => (
-              <div className="flex w-52 flex-col">
-                <MenuRow onClick={() => (actions.onOrder("front"), close())} hint="Ctrl+Shift+]">Bring to front</MenuRow>
-                <MenuRow onClick={() => (actions.onOrder("back"), close())} hint="Ctrl+Shift+[">Send to back</MenuRow>
-                <MenuRow onClick={() => (actions.onLock(true), close())} icon={<LockIcon className="h-4 w-4" />}>
-                  Lock
-                </MenuRow>
-              </div>
-            )}
-          </Pop>
         </>
       )}
-      <button type="button" onMouseDown={keepFocus} onClick={actions.onDelete} className={`${btn()} text-danger`} title="Delete (Del)" aria-label="Delete">
-        <TrashIcon className="h-[18px] w-[18px]" />
-      </button>
+      <Pop label="More" trigger={<span className={btn()}><DotsVerticalIcon className="h-[18px] w-[18px]" /></span>}>
+        {(close) => (
+          <div className="flex w-52 flex-col">
+            {docked && (
+              <>
+                <MenuRow onClick={() => (actions.onOrder("forward"), close())} icon={<BringForwardIcon className="h-4 w-4" />}>
+                  Bring forward
+                </MenuRow>
+                <MenuRow onClick={() => (actions.onOrder("backward"), close())} icon={<SendBackwardIcon className="h-4 w-4" />}>
+                  Send backward
+                </MenuRow>
+              </>
+            )}
+            <MenuRow onClick={() => (actions.onOrder("front"), close())} hint={docked ? undefined : "Ctrl+Shift+]"}>Bring to front</MenuRow>
+            <MenuRow onClick={() => (actions.onOrder("back"), close())} hint={docked ? undefined : "Ctrl+Shift+["}>Send to back</MenuRow>
+            {docked && (
+              <MenuRow onClick={() => (actions.onDuplicate(), close())} icon={<CopyIcon className="h-4 w-4" />}>
+                Duplicate
+              </MenuRow>
+            )}
+            <MenuRow onClick={() => (actions.onLock(true), close())} icon={<LockIcon className="h-4 w-4" />}>
+              Lock
+            </MenuRow>
+          </div>
+        )}
+      </Pop>
+    </>
+  );
+  return (
+    <div
+      data-keep-typing
+      onMouseDown={keepFocusUnlessField}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={`pointer-events-auto rounded-2xl bg-surface p-1 shadow-lg ring-1 ring-foreground/10 ${docked ? "relative max-w-full overflow-hidden" : "absolute z-[5]"}`}
+      style={style}
+      role="toolbar"
+      aria-label="Selected"
+    >
+      {docked && hints}
+      <div ref={docked ? fadeRef : undefined} style={docked ? fade : undefined} className={`flex items-center gap-0.5 ${docked ? "overflow-x-auto [scrollbar-width:none]" : ""}`}>
+        {locked ? (
+          <>
+            <button type="button" onMouseDown={keepFocus} onClick={() => actions.onLock(false)} className={`${btn()} gap-1.5 px-2.5`}>
+              <UnlockIcon className="h-4 w-4" /> Unlock
+            </button>
+            {del}
+          </>
+        ) : (
+          <>
+            {/* On a phone the bar scrolls sideways: what's used most comes first. */}
+            {docked && del}
+            {docked && (symbolColour || colour || (allText && texts.length > 0 && <ColourPop label="Text colour" color={texts[0].color} choices={COLORS} onPick={(c) => onPatch((m) => (m.t === "text" ? { ...m, color: c } : m))} />))}
+            {symbols ? (
+              <>
+                {!docked && symbolColour}
+                <SizeField
+                  pt={texts[0].size * ptPerUnit}
+                  onSet={(p) => onPatch((m) => (m.t === "text" ? { ...m, size: p / ptPerUnit } : m))}
+                  onStep={(dir) => onPatch((m) => (m.t === "text" ? { ...m, size: stepSize(m.size * ptPerUnit, dir) / ptPerUnit } : m))}
+                />
+              </>
+            ) : (
+              <>
+                {allText && texts.length > 0 && <TextControls texts={texts} ptPerUnit={ptPerUnit} onPatch={onPatch} noColour={docked} />}
+                {!docked && colour}
+                {allShape && marks.every((m) => m.t === "shape" && (m.shape === "rect" || m.shape === "ellipse")) && (
+                  <ColourPop
+                    label="Fill"
+                    fill
+                    color={(first.t === "shape" && first.fill) || ""}
+                    choices={FILLS}
+                    onPick={(c) => onPatch((m) => (m.t === "shape" ? { ...m, fill: c } : m))}
+                    none={() => onPatch((m) => (m.t === "shape" ? { ...m, fill: undefined, width: m.width || 3 } : m))}
+                    noneOn={first.t === "shape" && !first.fill}
+                  />
+                )}
+                {(allInk || allShape) && (
+                  <Pop label="Line width" trigger={<span className={btn()}><WidthGlyph /></span>}>
+                    {() => (
+                      <div className="w-56">
+                        <RangeRow
+                          label="Line width"
+                          value={first.t === "ink" || first.t === "shape" ? Math.min(first.width, first.t === "ink" && first.highlight ? 60 : 24) : 3}
+                          min={first.t === "ink" && first.highlight ? 4 : 0.5}
+                          max={first.t === "ink" && first.highlight ? 60 : 24}
+                          step={0.5}
+                          format={(v) => String(v)}
+                          onChange={(v) => onPatch((m) => (m.t === "ink" || m.t === "shape" ? { ...m, width: v } : m))}
+                        />
+                      </div>
+                    )}
+                  </Pop>
+                )}
+                {!allText && (
+                  <Pop label="Opacity" trigger={<span className={`${btn()} text-xs font-medium tabular-nums`}>{Math.round(opacityOf(first) * 100)}%</span>}>
+                    {() => (
+                      <div className="w-56">
+                        <RangeRow label="Opacity" value={Math.round(opacityOf(first) * 100)} min={10} max={100} step={5} format={(v) => `${v}%`} onChange={(v) => onPatch((m) => ({ ...m, opacity: v >= 100 && !(m.t === "ink" && m.highlight) ? undefined : v / 100 }))} />
+                      </div>
+                    )}
+                  </Pop>
+                )}
+              </>
+            )}
+            {sep}
+            {!docked && (
+              <button type="button" onMouseDown={keepFocus} onClick={actions.onDuplicate} className={btn()} title="Duplicate (Ctrl+D)" aria-label="Duplicate">
+                <CopyIcon className="h-[18px] w-[18px]" />
+              </button>
+            )}
+            {layers}
+            {!docked && del}
+          </>
+        )}
       </div>
     </div>
   );
@@ -222,6 +274,7 @@ function ColourPop({
             {choices.map((c) => (
               <Swatch key={c.color} name={c.name} color={c.color} on={!noneOn && color.toLowerCase() === c.color} onClick={() => onPick(c.color)} />
             ))}
+            <CustomColour color={color} on={!noneOn && !!color && !choices.some((c) => c.color === color.toLowerCase())} onPick={onPick} />
           </div>
         </div>
       )}
@@ -299,7 +352,7 @@ export function stepSize(pt: number, dir: 1 | -1) {
   return [...SIZE_PRESETS].reverse().find((s) => s < pt - 0.25) ?? Math.max(2, Math.round(pt / 1.2));
 }
 
-function TextControls({ texts, ptPerUnit, onPatch }: { texts: TextMark[]; ptPerUnit: number; onPatch: BarActions["onPatch"] }) {
+function TextControls({ texts, ptPerUnit, onPatch, noColour }: { texts: TextMark[]; ptPerUnit: number; onPatch: BarActions["onPatch"]; noColour?: boolean }) {
   const t = texts[0];
   const pt = t.size * ptPerUnit;
   const patchText = (change: (m: TextMark) => TextMark) => onPatch((m) => (m.t === "text" ? change(m) : m));
@@ -317,7 +370,7 @@ function TextControls({ texts, ptPerUnit, onPatch }: { texts: TextMark[]; ptPerU
         label="Font"
         trigger={
           <span className={`${btn()} w-[6.5rem] justify-between gap-1 px-2 max-sm:w-[5.5rem]`}>
-            <span className="truncate text-sm" style={{ fontFamily: t.font === "music" ? undefined : fontFamily(t.font) }}>
+            <span className="truncate text-sm" style={{ fontFamily: t.font === "music" ? undefined : fontFamily(t.font), fontWeight: t.font === "mono" ? 600 : undefined }}>
               {font.label}
             </span>
             <span className="text-[10px] text-muted">▾</span>
@@ -336,7 +389,8 @@ function TextControls({ texts, ptPerUnit, onPatch }: { texts: TextMark[]; ptPerU
                   close();
                 }}
                 className={`flex h-10 items-center rounded-md px-2 text-left ${f.font === t.font ? "bg-accent/15 text-accent" : "hover:bg-surface-hover"}`}
-                style={{ fontFamily: f.font === "music" ? undefined : fontFamily(f.font), fontSize: 15 }}
+                // Courier is a thin face: a heavier weight so it doesn't look greyed out.
+                style={{ fontFamily: f.font === "music" ? undefined : fontFamily(f.font), fontSize: 15, fontWeight: f.font === "mono" ? 600 : undefined }}
               >
                 {f.label}
                 {f.font === "music" && <span className="ml-auto text-xs text-muted">Symbols</span>}
@@ -359,7 +413,7 @@ function TextControls({ texts, ptPerUnit, onPatch }: { texts: TextMark[]; ptPerU
       <button type="button" onMouseDown={keepFocus} onClick={() => toggle("underline")} className={`${btn(texts.every((m) => m.underline))} w-9 underline`} aria-pressed={texts.every((m) => m.underline)} title="Underline (Ctrl+U)" aria-label="Underline">
         U
       </button>
-      <ColourPop label="Text colour" color={t.color} choices={COLORS} onPick={(c) => patchText((m) => ({ ...m, color: c }))} />
+      {!noColour && <ColourPop label="Text colour" color={t.color} choices={COLORS} onPick={(c) => patchText((m) => ({ ...m, color: c }))} />}
       <button type="button" onMouseDown={keepFocus} onClick={() => patchText((m) => ({ ...m, align: nextAlign.value }))} className={btn()} title={`Aligned ${ALIGNS.find((a) => a.value === align)!.label.toLowerCase()} (click for ${nextAlign.label.toLowerCase()})`} aria-label="Alignment">
         <AlignIcon className="h-[18px] w-[18px]" />
       </button>

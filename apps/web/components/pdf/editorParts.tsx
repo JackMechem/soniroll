@@ -19,7 +19,7 @@ export const keepFocusUnlessField = (e: React.MouseEvent) => {
 
 /** A music-font (SMuFL) glyph drawn to fit its box: the fonts' glyphs sit at odd heights and some
     (repeat signs) are taller than a line, so its ink is measured (canvas `measureText`, once the
-    font has loaded) and centred, shrunk to `max` px when it's bigger. */
+    font has loaded) and centred, scaled to `max` px tall (small ones, a staccato dot, up to 3×). */
 export function FitGlyph({ text, family, max }: { text: string; family: string; max: number }) {
   const [box, setBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   useEffect(() => {
@@ -41,7 +41,7 @@ export function FitGlyph({ text, family, max }: { text: string; family: string; 
       live = false;
     };
   }, [text, family]);
-  const scale = box ? Math.min(1, max / box.h, (max * 1.5) / box.w) : 1;
+  const scale = box ? Math.min(3, max / box.h, (max * 1.5) / box.w) : 1;
   return (
     <svg
       aria-hidden
@@ -99,9 +99,30 @@ export function Swatch({ name, color, on, onClick }: { name: string; color: stri
       aria-label={name}
       title={name}
       aria-pressed={on}
-      className={`h-8 w-8 shrink-0 rounded-full ring-offset-2 ring-offset-surface ${on ? "ring-2 ring-accent" : "ring-1 ring-foreground/15"}`}
+      // The inset line keeps black and white swatches visible on any theme.
+      className={`h-8 w-8 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgb(127_127_127/0.45)] ring-offset-2 ring-offset-surface ${on ? "ring-2 ring-accent" : "ring-1 ring-foreground/25"}`}
       style={{ background: color }}
     />
+  );
+}
+
+/** A colour of your own: the system colour picker, shown as a rainbow swatch (or the colour, when
+    it's the one in use and isn't one of the swatches). */
+export function CustomColour({ color, on, onPick, label = "Custom colour" }: { color: string; on: boolean; onPick: (c: string) => void; label?: string }) {
+  return (
+    <label
+      title={label}
+      className={`relative h-8 w-8 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgb(127_127_127/0.45)] ring-offset-2 ring-offset-surface ${on ? "ring-2 ring-accent" : "ring-1 ring-foreground/25"}`}
+      style={{ background: on ? color : "conic-gradient(#f44, #fd4, #4d6, #4cf, #64f, #f4c, #f44)" }}
+    >
+      <span className="sr-only">{label}</span>
+      <input
+        type="color"
+        value={/^#[0-9a-f]{6}$/i.test(color) ? color : "#000000"}
+        onChange={(e) => onPick(e.target.value)}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      />
+    </label>
   );
 }
 
@@ -175,6 +196,8 @@ export function Pop({ label, trigger, children, className = "shrink-0" }: { labe
         onMouseDown={keepFocus}
         onClick={() => {
           if (pos) return setPos(null);
+          // Phones: a sheet along the bottom (easier to reach, and never off the side).
+          if (window.innerWidth < 640) return setPos({ left: 0, right: 0, bottom: 0, maxHeight: "70dvh" });
           const r = btn.current!.getBoundingClientRect();
           const below = window.innerHeight - r.bottom;
           const vertical: React.CSSProperties = below >= 320 || below >= r.top ? { top: r.bottom + 6, maxHeight: below - 14 } : { bottom: window.innerHeight - r.top + 6, maxHeight: r.top - 14 };
@@ -187,11 +210,74 @@ export function Pop({ label, trigger, children, className = "shrink-0" }: { labe
       </button>
       {pos &&
         createPortal(
-          <div ref={panel} data-keep-typing onMouseDown={keepFocusUnlessField} className="fixed z-[75] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl bg-surface p-3 shadow-xl ring-1 ring-foreground/10" style={pos}>
-            {children(() => setPos(null))}
-          </div>,
+          pos.bottom === 0 && pos.left === 0 ? (
+            <div ref={panel} data-keep-typing onMouseDown={keepFocusUnlessField} className="fixed z-[75] overflow-y-auto rounded-t-2xl bg-surface px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[0_-8px_30px_rgb(0_0_0/0.18)] ring-1 ring-foreground/10" style={pos} role="dialog" aria-label={label}>
+              <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-foreground/20" aria-hidden />
+              <div className="mx-auto w-fit max-w-full">{children(() => setPos(null))}</div>
+            </div>
+          ) : (
+            <div ref={panel} data-keep-typing onMouseDown={keepFocusUnlessField} className="fixed z-[75] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl bg-surface p-3 shadow-xl ring-1 ring-foreground/10" style={pos}>
+              {children(() => setPos(null))}
+            </div>
+          ),
           document.body,
         )}
     </>
   );
+}
+
+/** A row that scrolls sideways (a phone's toolbars): its edges fade where there's more, and a small
+    arrow on that side shows it (a tap scrolls). `attach` goes on the scrolling row, `hints` beside it
+    inside a `relative` wrapper. */
+export function useRowScroll<T extends HTMLElement>() {
+  const [el, setEl] = useState<T | null>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useEffect(() => {
+    if (!el) return;
+    const update = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges((p) => (p.left === left && p.right === right ? p : { left, right }));
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    for (const child of el.children) observer.observe(child);
+    const added = new MutationObserver(() => {
+      for (const child of el.children) observer.observe(child);
+      update();
+    });
+    added.observe(el, { childList: true, subtree: true });
+    el.addEventListener("scroll", update, { passive: true });
+    return () => {
+      observer.disconnect();
+      added.disconnect();
+      el.removeEventListener("scroll", update);
+    };
+  }, [el]);
+  const mask =
+    edges.left || edges.right
+      ? `linear-gradient(to right, ${edges.left ? "transparent, black 2.5rem" : "black, black"}, ${edges.right ? "black calc(100% - 2.5rem), transparent" : "black"})`
+      : undefined;
+  const nudge = (dir: 1 | -1) => el?.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: "smooth" });
+  const arrow = (dir: 1 | -1) => (
+    <button
+      type="button"
+      tabIndex={-1}
+      onMouseDown={keepFocus}
+      onClick={() => nudge(dir)}
+      aria-label={dir > 0 ? "More tools" : "Back to the first tools"}
+      className={`absolute top-1/2 z-[1] flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-foreground/80 shadow-md ring-1 ring-foreground/10 ${dir > 0 ? "right-1" : "left-1"}`}
+    >
+      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d={dir > 0 ? "M8 5l5 5-5 5" : "M12 5l-5 5 5 5"} />
+      </svg>
+    </button>
+  );
+  const hints = (
+    <>
+      {edges.left && arrow(-1)}
+      {edges.right && arrow(1)}
+    </>
+  );
+  return { attach: setEl, style: mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined, hints };
 }

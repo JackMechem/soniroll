@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import PdfPageView from "@/components/pdf/PdfPageView";
 import type { Layer } from "@/components/pdf/markup";
 import type { PdfSources } from "@/components/pdf/usePdfDoc";
-import { CloseIcon, SlidesIcon } from "@/components/tools";
+import { BookmarkIcon, CloseIcon, SlidesIcon } from "@/components/tools";
+import { sectionsOf } from "@/components/pdf/outline";
 import { usePaneElement, usePaneKeyGuard } from "@/lib/paneContext";
 
 /**
@@ -24,7 +25,14 @@ export default function PdfPerform({ sources, layer, start, hideMarks, images, o
   const [index, setIndex] = useState(start);
   const [twoUp, setTwoUp] = useState<boolean | null>(null);
   const [chrome, setChrome] = useState(true);
+  const [picking, setPicking] = useState(false);
   const pages = layer.pages;
+  // Sections (bookmarks): a list to jump to, the one you're in shown.
+  const sections = sectionsOf(layer);
+  let at = -1;
+  sections.forEach((s, i) => {
+    if (s.index <= index) at = i;
+  });
 
   useEffect(() => {
     const el = rootRef.current;
@@ -49,14 +57,15 @@ export default function PdfPerform({ sources, layer, start, hideMarks, images, o
 
   // The controls fade after a few seconds.
   useEffect(() => {
-    if (!chrome) return;
+    if (!chrome || picking) return;
     const t = setTimeout(() => setChrome(false), 2500);
     return () => clearTimeout(t);
-  }, [chrome, index]);
+  }, [chrome, index, picking]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!forThisPane(e)) return;
+      if (picking && e.key === "Escape") return setPicking(false);
       if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
         e.preventDefault();
         turn(1);
@@ -97,7 +106,7 @@ export default function PdfPerform({ sources, layer, start, hideMarks, images, o
         if (!s) return;
         const dx = e.clientX - s.x;
         if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - s.y)) return turn(dx < 0 ? 1 : -1);
-        if ((e.target as HTMLElement).closest("button")) return;
+        if ((e.target as HTMLElement).closest("button, [data-no-turn]")) return;
         // A tap: the left third goes back, the rest goes on.
         const r = rootRef.current!.getBoundingClientRect();
         if (e.clientX - r.left < r.width / 3) turn(-1);
@@ -114,9 +123,45 @@ export default function PdfPerform({ sources, layer, start, hideMarks, images, o
       </div>
 
       <div className={`absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] transition-opacity duration-300 ${chrome ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+        <div className="flex items-center gap-2">
         <button type="button" onClick={() => onExit(index)} className="flex h-10 items-center gap-1.5 rounded-full bg-surface/90 px-3 text-sm font-medium text-foreground shadow-md" aria-label="Leave">
           <CloseIcon className="h-4 w-4" /> Done
         </button>
+        {sections.length > 0 && (
+          // In place, not a popover: in full screen only what's inside this view shows.
+          <div className="relative" data-no-turn>
+            <button
+              type="button"
+              onClick={() => setPicking((v) => !v)}
+              aria-expanded={picking}
+              aria-label="Go to a section"
+              title="Go to a section"
+              className="flex h-10 items-center gap-1.5 rounded-full bg-surface/90 px-3 text-sm font-medium text-foreground shadow-md"
+            >
+              <BookmarkIcon className="h-4 w-4" /> <span className="max-w-[9rem] truncate max-sm:hidden">{sections[at]?.bm.title ?? "Sections"}</span>
+            </button>
+            {picking && (
+              <div className="absolute top-12 left-0 z-[1] flex max-h-[70vh] w-64 max-w-[calc(100vw-1.5rem)] flex-col overflow-y-auto rounded-xl bg-surface p-2 shadow-xl ring-1 ring-foreground/10">
+                {sections.map((s, i) => (
+                  <button
+                    key={s.bm.id}
+                    type="button"
+                    onClick={() => {
+                      setIndex(s.index);
+                      setPicking(false);
+                      setChrome(true);
+                    }}
+                    className={`flex h-10 shrink-0 items-center gap-2 rounded-md pr-2 text-left text-sm ${i === at ? "bg-accent/15 text-accent" : "hover:bg-surface-hover"} ${s.bm.sub ? "pl-6" : "pl-2 font-medium"}`}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{s.bm.title || "Untitled section"}</span>
+                    <span className="text-xs tabular-nums text-muted">{s.index + 1}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        </div>
         <span className="rounded-full bg-surface/90 px-3 py-2 text-xs font-medium tabular-nums text-foreground shadow-md">
           {first + 1}
           {shown.length > 1 ? `–${first + shown.length}` : ""} / {pages.length}

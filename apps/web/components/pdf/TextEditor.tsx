@@ -52,7 +52,10 @@ export default function TextEditor({
   const align = mark.align ?? "center";
   const innerLeft = ((f.w - lay.innerW) / 2) * px;
   const innerTop = ((f.h - lay.innerH) / 2) * px;
-  const width = (lay.innerW * px) / k + slack;
+  // Italic letters lean past their measured width: room on the right (padding, so the text still
+  // wraps where it's drawn), or the box would clip the last letter's top.
+  const lean = mark.italic ? (mark.size * 0.25 * px) / k : 0;
+  const width = (lay.innerW * px) / k + slack + lean;
   return (
     <div
       className="absolute"
@@ -114,6 +117,8 @@ export default function TextEditor({
           textAlign: align,
           color: mark.color,
           caretColor: mark.color,
+          paddingRight: lean,
+          boxSizing: "border-box",
           whiteSpace: fixed ? "pre-wrap" : "pre",
           overflowWrap: fixed ? "break-word" : "normal",
           letterSpacing: 0,

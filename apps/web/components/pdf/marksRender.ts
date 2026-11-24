@@ -17,8 +17,9 @@ export function underlineOf(m: TextMark) {
 /** Pictures for image marks, by `kind:id`, ready to draw. */
 export type MarkImages = Map<string, CanvasImageSource>;
 
-/** Draws marks on a canvas whose 1000 units span `scale × 1000` pixels (for downloads). */
-export function drawMarks(ctx: CanvasRenderingContext2D, marks: Mark[], scale: number, images?: MarkImages) {
+/** Draws marks on a canvas whose 1000 units span `scale × 1000` pixels (for downloads). Text marks
+    in `frameOnly` get just their frame (their words are written into the PDF as real text). */
+export function drawMarks(ctx: CanvasRenderingContext2D, marks: Mark[], scale: number, images?: MarkImages, frameOnly?: Set<string>) {
   ctx.save();
   ctx.scale(scale, scale);
   ctx.lineCap = "round";
@@ -57,13 +58,13 @@ export function drawMarks(ctx: CanvasRenderingContext2D, marks: Mark[], scale: n
     } else if (m.t === "image") {
       const img = images?.get(imageKey(m));
       if (img) ctx.drawImage(img, m.x, m.y, m.w, m.h);
-    } else drawText(ctx, m);
+    } else drawText(ctx, m, frameOnly?.has(m.id));
     ctx.restore();
   }
   ctx.restore();
 }
 
-function drawText(ctx: CanvasRenderingContext2D, m: TextMark) {
+function drawText(ctx: CanvasRenderingContext2D, m: TextMark, noWords = false) {
   const lay = layoutText(m);
   const f = frameOf(m);
   const bx = f.cx - f.w / 2;
@@ -80,6 +81,7 @@ function drawText(ctx: CanvasRenderingContext2D, m: TextMark) {
     ctx.arc(f.cx, f.cy, f.w / 2, 0, Math.PI * 2);
     ctx.stroke();
   }
+  if (noWords) return;
   ctx.fillStyle = m.color;
   ctx.font = fontCss(m, m.size);
   ctx.textBaseline = "middle";

@@ -81,12 +81,26 @@ export type ImageMark = Common & { t: "image"; x: number; y: number; w: number; 
 
 export type Mark = InkMark | TextMark | ShapeMark | ImageMark;
 
+/** A section of the PDF, starting on the page it's kept on (the outline down the editor's side,
+    and the outline of a downloaded PDF). A section runs until the next one. Kept on its page (not
+    in a list of their own) so builds that don't know about them keep them when they save. */
+export type Bookmark = {
+  id: string;
+  title: string;
+  /** Where on the page it starts, in units from the top (the top when left out). */
+  y?: number;
+  /** A sub-section of the section before it. */
+  sub?: boolean;
+};
+
 export type LayerPage = {
   id: string;
   src: PageSource;
   /** Turned clockwise from how the PDF shows it. */
   rotate: Rotation;
   marks: Mark[];
+  /** Sections starting on this page, top to bottom. */
+  bookmarks?: Bookmark[];
 };
 
 export const LAYER_VERSION = 2;
@@ -137,7 +151,7 @@ export function parseLayer(json: string | null | undefined, pageCount: number): 
 export function isEmptyLayer(layer: Layer, pageCount: number) {
   return (
     layer.pages.length === pageCount &&
-    layer.pages.every((p, i) => p.src.kind === "pdf" && !p.src.file && p.src.page === i && p.rotate === 0 && p.marks.length === 0)
+    layer.pages.every((p, i) => p.src.kind === "pdf" && !p.src.file && p.src.page === i && p.rotate === 0 && p.marks.length === 0 && !p.bookmarks?.length)
   );
 }
 

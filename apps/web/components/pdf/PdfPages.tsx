@@ -57,7 +57,8 @@ export default function PdfPages({ sources, fileId, layer, images, onChange, onO
   const rotate = (i: number) => {
     const p = pages[i];
     const aspect = sources.aspectOf(p);
-    set(pages.map((q, j) => (j === i ? { ...q, rotate: ((q.rotate + 90) % 360) as Rotation, marks: rotateMarks(q.marks, aspect) } : q)));
+    // A section on it starts at its top once it's turned (its height means something else now).
+    set(pages.map((q, j) => (j === i ? { ...q, rotate: ((q.rotate + 90) % 360) as Rotation, marks: rotateMarks(q.marks, aspect), ...(q.bookmarks ? { bookmarks: q.bookmarks.map((b) => ({ ...b, y: undefined })) } : {}) } : q)));
   };
   const remove = (i: number) => pages.length > 1 && set(pages.filter((_, j) => j !== i));
   const add = (at: number, kind: "blank" | "staff") => {
@@ -78,7 +79,7 @@ export default function PdfPages({ sources, fileId, layer, images, onChange, onO
           marks = rotateMarks(marks, sources.aspectOf(at));
           at = { ...at, rotate: ((at.rotate + 90) % 360) as Rotation };
         }
-        return { ...p, marks };
+        return { ...p, marks, ...(was.bookmarks?.length ? { bookmarks: was.bookmarks } : {}) };
       }),
     });
 
