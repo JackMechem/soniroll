@@ -469,7 +469,9 @@ function PaneFrame({
   return (
     <div
       ref={setPaneEl}
-      data-pane={chrome ? "" : undefined}
+      // Full screen on a desktop it's as wide as the page, so it lays out like one (lg: on — the
+      // Shed Log's two columns, wide tool layouts); otherwise a pane is phone/tablet sized.
+      data-pane={chrome && !(maximized && desktop) ? "" : undefined}
       data-pane-id={chrome && id ? id : undefined}
       data-pane-active={chrome && active ? "" : undefined}
       aria-label={chrome ? (isSide ? "Side view" : "Pane") : undefined}

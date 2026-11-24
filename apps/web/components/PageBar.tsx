@@ -68,8 +68,9 @@ export default function PageBar({
 
   return (
     <>
-      {/* With the sidebar hidden, room at the left for its menu button (`--sidebar-toggle-room`). */}
-      <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 pl-[calc(2rem+var(--sidebar-toggle-room,0px))] pr-8 lg:flex">
+      {/* With the sidebar hidden, room at the left for its menu button (`--sidebar-toggle-room`).
+          Not inside a pane (its own bar shows the trail), even full screen where lg: applies. */}
+      <div className={`absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 pl-[calc(2rem+var(--sidebar-toggle-room,0px))] pr-8 ${paneId ? "" : "lg:flex"}`}>
         {/* Back and Forward (the browser's), always there; inside a pane its bar has its own. */}
         {!paneId && <PageHistoryArrows />}
         <CrumbTrail crumbs={crumbs} icon={Icon} />
