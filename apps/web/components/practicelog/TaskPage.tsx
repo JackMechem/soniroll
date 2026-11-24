@@ -297,7 +297,7 @@ export default function TaskPage({ routineId, date, taskId }: { routineId?: stri
       content: (
         <LinkedFiles
           groups={fileGroups}
-          empty="No files yet. Add PDFs, recordings or any file from your Files, or link a folder or a tag: what's in it shows here, even files added later. They open beside the page."
+          empty="No files yet. Add PDFs, recordings or any file from your Files, or link a folder or a tag: what's in it shows here, even files added later. Tap one to open it; its ⋮ menu opens it beside the page."
         />
       ),
     },

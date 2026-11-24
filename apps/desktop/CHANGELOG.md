@@ -4,6 +4,21 @@ The desktop app's own releases. What's new on the website itself is at
 [soniroll.com/changelog](https://www.soniroll.com/changelog). Each section here becomes the notes
 of the GitHub release for its `desktop-v<version>` tag.
 
+## [0.1.15] - 2026-11-23
+
+- **The PDF editor, rebuilt**: select anything you've added and move, resize, turn, recolour or
+  restack it; real text boxes with fonts, sizes and styles; pictures; Edit text for the PDF's own
+  words. Mark up any PDF in your Files, lesson files included.
+- **Sections and an outline**: bookmark where each section starts, then jump between them from a
+  panel on the left that shows their pages, plus a Pages tab with every page. Downloads keep the
+  sections as the PDF's outline.
+- **Back and Forward** on every window's header (the desktop app has no browser buttons, so these
+  are the way back). The tab bar is always shown, with Now practicing at its right end.
+- PDFs open in the window you're in; the side view always opens over the page. A task's tool no
+  longer opens by itself unless you turn that on in the Shed Log's settings.
+- Markings save as soon as you make them, and another window or device can't write over newer
+  ones. The Shed Log's two columns are back full window. Everything else in the website's 0.10.18.
+
 ## [0.1.14] - 2026-11-23
 
 - **PDFs open beside the page**: read and mark up a chart while the Metronome or any tool runs

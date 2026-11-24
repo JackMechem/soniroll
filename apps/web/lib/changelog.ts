@@ -33,6 +33,31 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.18",
+    date: "2026-11-23",
+    title: "A real PDF editor, sections, and Back and Forward everywhere",
+    summary: "Move, resize and restyle anything on a PDF, split it into sections with an outline on the left, and get around with Back and Forward on every window.",
+    changes: [
+      {
+        kind: "new",
+        text: "**The PDF editor, rebuilt**: click anything you've added to select it, then move, resize, turn, recolour or restack it. Text goes in real text boxes with fonts, sizes, bold, italic and alignment; add pictures; retype the PDF's own words with Edit text.",
+      },
+      {
+        kind: "new",
+        text: "**Sections and an outline**: bookmark where each section of a PDF starts (or press B), nest sections one level, and jump between them from a panel on the left that shows each section's pages. A Pages tab shows every page with its number, to turn or delete several at once. Downloads keep the sections as the PDF's outline.",
+      },
+      { kind: "new", text: "**Mark up any PDF** in your Files, lesson files included, not just ones you uploaded yourself." },
+      { kind: "new", text: "**Back and Forward** at the start of every window's header, split-screen panes included." },
+      { kind: "improved", text: "**The tab bar is always there**, so you're always working in a tab, and the **Now practicing** button sits at its right end." },
+      { kind: "improved", text: "PDFs open in the window you're in instead of a new pane (the ⋮ menu still opens them beside the page). The side view always opens over the page." },
+      { kind: "improved", text: "A task's attached tool no longer opens by itself when the task starts. Turn it back on with **Open attached tools** in the Shed Log's settings." },
+      { kind: "improved", text: "Downloaded PDFs with markings have real, selectable text, and covers are drawn as clean boxes." },
+      { kind: "fixed", text: "PDF markings are saved as soon as you make them, and a second tab or a device that was offline no longer writes over newer markings: both sets are kept." },
+      { kind: "fixed", text: "The Shed Log's two columns are back when it's open full window, and the music symbols in the PDF editor are no longer blank." },
+      { kind: "improved", text: "The privacy policy and terms are up to date with everything soniroll stores today." },
+    ],
+  },
+  {
     version: "0.10.17",
     date: "2026-11-23",
     title: "Split screen, tabs, and files where you practice",

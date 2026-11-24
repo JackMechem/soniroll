@@ -1101,3 +1101,84 @@ export function ZoomOutIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function CopyIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </svg>
+  );
+}
+
+export function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+export function UnlockIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 7.5-2" />
+    </svg>
+  );
+}
+
+/** Bring forward: the front square filled over the back one. */
+export function BringForwardIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="3" width="11" height="11" rx="2" strokeDasharray="2 2.5" />
+      <rect x="10" y="10" width="11" height="11" rx="2" fill="currentColor" fillOpacity="0.25" />
+    </svg>
+  );
+}
+
+/** Send backward: the back square filled, behind the front one. */
+export function SendBackwardIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="3" width="11" height="11" rx="2" fill="currentColor" fillOpacity="0.25" />
+      <rect x="10" y="10" width="11" height="11" rx="2" strokeDasharray="2 2.5" />
+    </svg>
+  );
+}
+
+export function AlignLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 6h16M4 10h10M4 14h16M4 18h10" />
+    </svg>
+  );
+}
+
+export function AlignCenterIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 6h16M7 10h10M4 14h16M7 18h10" />
+    </svg>
+  );
+}
+
+export function AlignRightIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 6h16M10 10h10M4 14h16M10 18h10" />
+    </svg>
+  );
+}
+
+/** Editing the PDF's own text: a text cursor in a line of text. */
+export function EditTextIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 7V5h9v2M8.5 5v12M6.5 17h4" />
+      <path d="M17 6c1 0 2 .5 2 1.5v9c0 1-1 1.5-2 1.5M21 6c-1 0-2 .5-2 1.5M21 18c-1 0-2-.5-2-1.5M17.5 12h3" />
+    </svg>
+  );
+}

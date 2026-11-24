@@ -11,8 +11,6 @@ import { sortByText } from "@jam-practice/core/sortText";
 import { type Attachment, attachmentKey, isFileAttachment } from "@/lib/practiceLog";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { FilesPickerTab, fileAttachmentHref, fileAttachmentIcon } from "@/components/practicelog/FileAttachments";
-import { openFileBeside } from "@/lib/fileView";
-import { usePaneId } from "@/lib/paneContext";
 import { useTuneIndex } from "@/lib/recordings";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { useSetlists } from "@/lib/useSetlists";
@@ -77,7 +75,6 @@ export function AttachmentList({
   noFiles?: boolean;
 }) {
   const resolve = useAttachmentResolver();
-  const paneId = usePaneId();
   const [picking, setPicking] = useState(false);
   const items = noFiles ? all.filter((a) => !isFileAttachment(a)) : all;
   const onChange = changeAll && (noFiles ? (next: Attachment[]) => changeAll([...next, ...all.filter(isFileAttachment)]) : changeAll);
@@ -99,7 +96,6 @@ export function AttachmentList({
             {r.href ? (
               <Link
                 href={r.href}
-                onClick={a.kind === "file" ? (e) => openFileBeside(a.itemKind, a.id, { from: paneId }) && e.preventDefault() : undefined}
                 className="flex min-w-0 items-center gap-1.5 hover:underline"
               >
                 {chip}

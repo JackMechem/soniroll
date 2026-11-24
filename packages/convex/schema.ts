@@ -654,19 +654,25 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
 
-  /** The markings on one of the owner's PDF files (`files`): ink, highlights, text, music symbols,
+  /** The markings on one of the owner's PDFs — an upload (`fileId`, the original key) or any other
+      item in their Files (`item`: "<kind>:<id>", e.g. a lesson file): ink, highlights, text, music symbols,
       and the page list (reordered, rotated, deleted, blank or staff pages added). The PDF itself
       is never changed; the web PDF editor (`apps/web/components/pdf/`) draws this layer over it.
       `data` is the layer as JSON (`apps/web/components/pdf/markup.ts`), kept as one string so a
-      busy page can't hit the 1,024-fields limit. One row per file. */
+      busy page can't hit the 1,024-fields limit. One row per file. `rev` counts saves (missing on
+      rows from before 2026-11-23: 0), so a save made from an older copy is refused instead of
+      overwriting newer markings (`pdfMarkups.save`). */
   pdfMarkups: defineTable({
     userId: v.id("users"),
-    fileId: v.id("files"),
+    fileId: v.optional(v.id("files")),
+    item: v.optional(v.string()),
     data: v.string(),
     updatedAt: v.number(),
+    rev: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
-    .index("by_file", ["fileId"]),
+    .index("by_file", ["fileId"])
+    .index("by_user_item", ["userId", "item"]),
 
   /** A tune shared by link (`/tune/<id>`): the link shows the tune as it is now (read from the
       owner's synced tune lists), its chord chart, attached files and recordings — never its notes.

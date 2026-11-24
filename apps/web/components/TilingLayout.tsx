@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Fragment, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import HistoryArrows from "@/components/HistoryArrows";
 import Flyout, { FlyoutItem } from "@/components/Flyout";
 import { OPEN_PALETTE_EVENT } from "@/components/CommandPalette";
 import { CrumbTrail } from "@/components/PageBar";
@@ -10,7 +11,6 @@ import { IntroButton } from "@/components/help/ToolIntro";
 import { NewTabIcon } from "@/components/tabs/tabParts";
 import { newTab } from "@/lib/useTabs";
 import {
-  ChevronLeftIcon,
   CloseIcon,
   DotsVerticalIcon,
   ExternalLinkIcon,
@@ -48,6 +48,7 @@ import {
   navigateMain,
   navigatePane,
   paneBack,
+  paneForward,
   paneHistoryTraverse,
   panesActive,
   paneCanGoBack,
@@ -405,7 +406,7 @@ function PaneFrame({
     };
     const back = () => paneBack(id);
     markPaneBack(back, () => paneCanGoBack(id));
-    return { push: (to) => go(to, false), replace: (to) => go(to, true), back, forward: () => {} };
+    return { push: (to) => go(to, false), replace: (to) => go(to, true), back, forward: () => paneForward(id) };
   }, [id]);
 
   // Inside a pane (`chrome`, or a lone pane left after closing the others): the pane's own address.
@@ -468,7 +469,9 @@ function PaneFrame({
   return (
     <div
       ref={setPaneEl}
-      data-pane={chrome ? "" : undefined}
+      // Full screen on a desktop it's as wide as the page, so it lays out like one (lg: on — the
+      // Shed Log's two columns, wide tool layouts); otherwise a pane is phone/tablet sized.
+      data-pane={chrome && !(maximized && desktop) ? "" : undefined}
       data-pane-id={chrome && id ? id : undefined}
       data-pane-active={chrome && active ? "" : undefined}
       aria-label={chrome ? (isSide ? "Side view" : "Pane") : undefined}
@@ -564,7 +567,7 @@ function PaneBar({
   const TitleIcon = title?.icon;
   const atTopLeft = useAtTopLeft(paneEl);
   const canBack = (leaf.back?.length ?? 0) > 0;
-  const showBack = canBack || !desktop;
+  const canForward = (leaf.forward?.length ?? 0) > 0;
   const detach = paneDetach(leaf.id);
   const url = new URL(leaf.href, "http://x");
   const noteView = url.pathname === "/shed-notes" && url.searchParams.get("view") === "note";
@@ -587,16 +590,14 @@ function PaneBar({
         atTopLeft && !maximized ? "pl-[calc(0.75rem+var(--sidebar-toggle-room,0px))] sm:pl-[calc(1rem+var(--sidebar-toggle-room,0px))]" : ""
       }`}
     >
-      {showBack && (
-        <button
-          type="button"
-          onClick={() => paneBack(leaf.id)}
-          title={canBack ? "Back" : "Back to the page"}
-          className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground/[0.05] pl-1.5 pr-3 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-        >
-          <ChevronLeftIcon className="h-4 w-4" /> Back
-        </button>
-      )}
+      {/* Back (on a phone with nothing before it, back to the page under the side view) and Forward. */}
+      <HistoryArrows
+        canBack={canBack || !desktop}
+        canForward={canForward}
+        onBack={() => paneBack(leaf.id)}
+        onForward={() => paneForward(leaf.id)}
+        backTitle={canBack ? "Back" : "Back to the page"}
+      />
       <div className={`ml-1 flex min-w-0 flex-1 items-center gap-2 text-sm font-medium transition-colors ${active || !desktop ? "text-foreground" : "text-muted"}`}>
         {page && page.crumbs.length > 0 ? (
           <CrumbTrail crumbs={page.crumbs} icon={page.icon} variant="compact" />

@@ -5,7 +5,15 @@
  *
  * Every page is measured in units: 1000 wide, and as tall as the page is in that frame
  * (`1000 × height / width` as it's shown, after rotation). Marks keep their places at any zoom.
+ *
+ * Version 2 (2026-11-23) made every mark an object you can move, resize and turn: each has an
+ * optional `rot` (degrees clockwise about its box's centre), `opacity` and `locked`; text gained
+ * a box width (it wraps), bold/italic/underline, alignment, line height and more fonts; shapes a
+ * fill; and there are images. Version 1 layers are turned into version 2 when they're read
+ * (`parseLayer`), looking just as they did.
  */
+
+import type { StoredKind } from "@jam-practice/core/files";
 
 export type Rotation = 0 | 90 | 180 | 270;
 
@@ -16,26 +24,45 @@ export type PageSource =
   | { kind: "blank" }
   | { kind: "staff" };
 
-export type InkMark = { id: string; t: "ink"; pts: number[]; color: string; width: number; highlight?: boolean };
+/** What every mark has. `rot`: turned clockwise about the centre of its box, in degrees (not used
+    by lines, arrows and hairpins: their ends say where they point). */
+type Common = { id: string; rot?: number; opacity?: number; locked?: boolean };
+
+/** A pen or highlighter stroke: `pts` is x, y, x, y… (before `rot`). */
+export type InkMark = Common & { t: "ink"; pts: number[]; color: string; width: number; highlight?: boolean };
 
 /** Text of any kind: typed text and text boxes, music symbols (SMuFL glyphs), rehearsal letters,
-    bar numbers, chord symbols, fingerings. `x`, `y` is its centre. */
-export type TextMark = {
-  id: string;
+    bar numbers, chord symbols, fingerings. `x`, `y` is its box's centre. Without `w` the box is
+    as wide as the text (no wrapping); with it, the text wraps at that width. Styles are for the
+    whole box. */
+export type TextMark = Common & {
   t: "text";
   x: number;
   y: number;
+  /** The width the text wraps at (inside the frame's padding). */
+  w?: number;
   text: string;
   size: number;
   color: string;
   font: TextFont;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  /** Centre when left out (how version 1 drew all text). */
+  align?: TextAlign;
+  /** Line height, times the size (1.25 when left out; 1 for music symbols). */
+  lh?: number;
   frame?: "box" | "circle" | "fill";
+  /** The fill behind a `fill` frame (white when left out). */
+  bg?: string;
 };
-export type TextFont = "sans" | "bold" | "hand" | "music";
+export type TextFont = "sans" | "serif" | "mono" | "hand" | "music";
+export type TextAlign = "left" | "center" | "right";
 
-/** A shape from one corner (or end) to the other. */
-export type ShapeMark = {
-  id: string;
+/** A shape from one corner (or end) to the other. Boxes, ellipses and brackets are boxes (turned by
+    `rot`); lines, arrows and hairpins go from (x1, y1) to (x2, y2). A cover (white-out) is a box with
+    a `fill` and no line (`width` 0). */
+export type ShapeMark = Common & {
   t: "shape";
   shape: ShapeKind;
   x1: number;
@@ -44,10 +71,27 @@ export type ShapeMark = {
   y2: number;
   color: string;
   width: number;
+  fill?: string;
 };
 export type ShapeKind = "line" | "arrow" | "rect" | "ellipse" | "cresc" | "dim" | "bracket";
 
-export type Mark = InkMark | TextMark | ShapeMark;
+/** A picture from your Files, by reference (never the picture itself: the layer has to stay small).
+    `x`, `y` is its top-left corner before turning. */
+export type ImageMark = Common & { t: "image"; x: number; y: number; w: number; h: number; src: { kind: StoredKind; id: string }; name?: string };
+
+export type Mark = InkMark | TextMark | ShapeMark | ImageMark;
+
+/** A section of the PDF, starting on the page it's kept on (the outline down the editor's side,
+    and the outline of a downloaded PDF). A section runs until the next one. Kept on its page (not
+    in a list of their own) so builds that don't know about them keep them when they save. */
+export type Bookmark = {
+  id: string;
+  title: string;
+  /** Where on the page it starts, in units from the top (the top when left out). */
+  y?: number;
+  /** A sub-section of the section before it. */
+  sub?: boolean;
+};
 
 export type LayerPage = {
   id: string;
@@ -55,9 +99,12 @@ export type LayerPage = {
   /** Turned clockwise from how the PDF shows it. */
   rotate: Rotation;
   marks: Mark[];
+  /** Sections starting on this page, top to bottom. */
+  bookmarks?: Bookmark[];
 };
 
-export type Layer = { v: 1; pages: LayerPage[] };
+export const LAYER_VERSION = 2;
+export type Layer = { v: 2; pages: LayerPage[] };
 
 export const UNITS = 1000;
 
@@ -67,27 +114,44 @@ export function newId() {
 
 /** The PDF's own pages, in order, with nothing on them. */
 export function freshLayer(pageCount: number): Layer {
-  return { v: 1, pages: Array.from({ length: pageCount }, (_, i) => ({ id: `p${i}`, src: { kind: "pdf", page: i }, rotate: 0, marks: [] })) };
+  return { v: 2, pages: Array.from({ length: pageCount }, (_, i) => ({ id: `p${i}`, src: { kind: "pdf", page: i }, rotate: 0, marks: [] })) };
 }
 
-/** A saved layer, or a fresh one when there's none (or it can't be read). Pages that point past the
-    end of this PDF are dropped. */
-export function parseLayer(json: string | null | undefined, pageCount: number): Layer {
-  if (!json) return freshLayer(pageCount);
+/** A version 1 mark as version 2: only text's "bold" font changed (it's the sans font, bold now),
+    and a bracket's box (its legs were always 18 units, whatever was dragged). */
+function upgradeMark(m: Mark): Mark {
+  if (m.t === "text" && (m.font as string) === "bold") return { ...m, font: "sans", bold: true };
+  // Drawn along its first point's height with 18-unit legs hanging down.
+  if (m.t === "shape" && m.shape === "bracket") return { ...m, x1: Math.min(m.x1, m.x2), x2: Math.max(m.x1, m.x2), y1: m.y1, y2: m.y1 + 18 };
+  return m;
+}
+
+export type ParsedLayer = { layer: Layer; /** Saved by a newer soniroll: shown, but not saved over. */ newer: boolean };
+
+/** A saved layer (version 1 is upgraded), or a fresh one when there's none (or it can't be read).
+    Pages that point past the end of this PDF are dropped. */
+export function parseLayerInfo(json: string | null | undefined, pageCount: number): ParsedLayer {
+  if (!json) return { layer: freshLayer(pageCount), newer: false };
   try {
-    const layer = JSON.parse(json) as Layer;
-    if (layer?.v !== 1 || !Array.isArray(layer.pages)) return freshLayer(pageCount);
-    const pages = layer.pages.filter((p) => p.src.kind !== "pdf" || !!p.src.file || p.src.page < pageCount);
-    return { v: 1, pages };
+    const raw = JSON.parse(json) as { v?: number; pages?: LayerPage[] };
+    if (!raw || !Array.isArray(raw.pages) || typeof raw.v !== "number") return { layer: freshLayer(pageCount), newer: false };
+    const newer = raw.v > LAYER_VERSION;
+    let pages = raw.pages.filter((p) => p.src.kind !== "pdf" || !!p.src.file || p.src.page < pageCount);
+    if (raw.v === 1) pages = pages.map((p) => ({ ...p, marks: p.marks.map(upgradeMark) }));
+    return { layer: { v: 2, pages }, newer };
   } catch {
-    return freshLayer(pageCount);
+    return { layer: freshLayer(pageCount), newer: false };
   }
+}
+
+export function parseLayer(json: string | null | undefined, pageCount: number): Layer {
+  return parseLayerInfo(json, pageCount).layer;
 }
 
 export function isEmptyLayer(layer: Layer, pageCount: number) {
   return (
     layer.pages.length === pageCount &&
-    layer.pages.every((p, i) => p.src.kind === "pdf" && !p.src.file && p.src.page === i && p.rotate === 0 && p.marks.length === 0)
+    layer.pages.every((p, i) => p.src.kind === "pdf" && !p.src.file && p.src.page === i && p.rotate === 0 && p.marks.length === 0 && !p.bookmarks?.length)
   );
 }
 
@@ -99,21 +163,38 @@ export function pageAspect(page: LayerPage, pdfAspects: number[], others?: Recor
   return page.rotate % 180 === 0 ? base : 1 / base;
 }
 
+/** Box shapes (turned by `rot`); the rest go end to end. */
+export const isBoxShape = (shape: ShapeKind) => shape === "rect" || shape === "ellipse" || shape === "bracket";
+
 /** The marks on a page turned a quarter clockwise, to stay where they were on the paper. `aspect`
-    is the page's height ÷ width before turning. */
+    is the page's height ÷ width before turning. Everything turns with the paper. */
 export function rotateMarks(marks: Mark[], aspect: number): Mark[] {
   const h = UNITS * aspect;
   const s = UNITS / h; // the turned page is `h` wide, scaled back to 1000
   const pt = (x: number, y: number): [number, number] => [(h - y) * s, x * s];
+  const turn = (rot: number | undefined) => normAngle((rot ?? 0) + 90);
   return marks.map((m) => {
     if (m.t === "ink") {
+      // The points turn with the page; turning them all is the same as turning the stroke.
       const pts: number[] = [];
       for (let i = 0; i < m.pts.length; i += 2) pts.push(...pt(m.pts[i], m.pts[i + 1]));
       return { ...m, pts, width: m.width * s };
     }
     if (m.t === "text") {
       const [x, y] = pt(m.x, m.y);
-      return { ...m, x, y, size: m.size * s };
+      return { ...m, x, y, size: m.size * s, ...(m.w ? { w: m.w * s } : {}), rot: turn(m.rot) };
+    }
+    if (m.t === "image") {
+      const [cx, cy] = pt(m.x + m.w / 2, m.y + m.h / 2);
+      const w = m.w * s;
+      const hh = m.h * s;
+      return { ...m, x: cx - w / 2, y: cy - hh / 2, w, h: hh, rot: turn(m.rot) };
+    }
+    if (isBoxShape(m.shape)) {
+      const [cx, cy] = pt((m.x1 + m.x2) / 2, (m.y1 + m.y2) / 2);
+      const w = (Math.abs(m.x2 - m.x1) * s) / 2;
+      const hh = (Math.abs(m.y2 - m.y1) * s) / 2;
+      return { ...m, x1: cx - w, y1: cy - hh, x2: cx + w, y2: cy + hh, width: m.width * s, rot: turn(m.rot) };
     }
     const [x1, y1] = pt(m.x1, m.y1);
     const [x2, y2] = pt(m.x2, m.y2);
@@ -121,15 +202,25 @@ export function rotateMarks(marks: Mark[], aspect: number): Mark[] {
   });
 }
 
-/** Moves a mark by `dx`, `dy` units. */
-export function moveMark(m: Mark, dx: number, dy: number): Mark {
-  if (m.t === "ink") return { ...m, pts: m.pts.map((v, i) => v + (i % 2 ? dy : dx)) };
-  if (m.t === "text") return { ...m, x: m.x + dx, y: m.y + dy };
-  return { ...m, x1: m.x1 + dx, y1: m.y1 + dy, x2: m.x2 + dx, y2: m.y2 + dy };
+/** An angle in degrees, in (-180, 180]. */
+export function normAngle(a: number) {
+  let r = a % 360;
+  if (r > 180) r -= 360;
+  if (r <= -180) r += 360;
+  return Math.abs(r) < 1e-6 ? 0 : r;
 }
 
 /** Rounds to two decimals, so saved ink stays small. */
 export const r2 = (v: number) => Math.round(v * 100) / 100;
+
+/** A mark with its numbers rounded (saved layers stay small). */
+export function roundMark<M extends Mark>(m: M): M {
+  const o = { ...m } as Record<string, unknown>;
+  for (const k of ["x", "y", "w", "h", "x1", "y1", "x2", "y2", "size", "width"]) if (typeof o[k] === "number") o[k] = r2(o[k] as number);
+  if (typeof o.rot === "number") o.rot = Math.round((o.rot as number) * 10) / 10 || undefined;
+  if (Array.isArray(o.pts)) o.pts = (o.pts as number[]).map(r2);
+  return o as M;
+}
 
 // ---------------------------------------------------------------- what can be placed
 
@@ -143,6 +234,9 @@ export const INKS = [
   { name: "Purple", color: "#8250df" },
 ] as const;
 
+/** Text and shape colours: the inks, plus grey and white (for text on a dark fill). */
+export const COLORS = [...INKS, { name: "Grey", color: "#6e7781" }, { name: "White", color: "#ffffff" }] as const;
+
 export const HIGHLIGHTS = [
   { name: "Yellow", color: "#ffe14d" },
   { name: "Green", color: "#7ee787" },
@@ -151,61 +245,81 @@ export const HIGHLIGHTS = [
   { name: "Orange", color: "#ffb35c" },
 ] as const;
 
-export type Stamp = { label: string; text: string; font: TextFont; size: number; frame?: TextMark["frame"]; /** Counts up each time it's placed. */ next?: "letter" | "number" };
+/** Fills for boxes and behind text. */
+export const FILLS = [
+  { name: "White", color: "#ffffff" },
+  { name: "Cream", color: "#fff8e1" },
+  ...HIGHLIGHTS,
+  { name: "Grey", color: "#e6e8eb" },
+  { name: "Black", color: "#1f2328" },
+] as const;
+
+export type Stamp = {
+  label: string;
+  text: string;
+  font: TextFont;
+  bold?: boolean;
+  size: number;
+  frame?: TextMark["frame"];
+  /** Counts up each time it's placed. */
+  next?: "letter" | "number";
+};
 
 /** Music symbols, drawn with Petaluma (SMuFL code points). */
 export const SYMBOLS: { group: string; items: Stamp[] }[] = [
   {
     group: "Road map",
     items: [
-      { label: "Fermata", text: "", font: "music", size: 44 },
-      { label: "Segno", text: "", font: "music", size: 44 },
-      { label: "Coda", text: "", font: "music", size: 44 },
-      { label: "Start repeat", text: "", font: "music", size: 44 },
-      { label: "End repeat", text: "", font: "music", size: 44 },
-      { label: "D.S.", text: "", font: "music", size: 44 },
-      { label: "D.C.", text: "", font: "music", size: 44 },
+      { label: "Fermata", text: "\uE4C0", font: "music", size: 44 },
+      { label: "Segno", text: "\uE047", font: "music", size: 44 },
+      { label: "Coda", text: "\uE048", font: "music", size: 44 },
+      { label: "Start repeat", text: "\uE040", font: "music", size: 44 },
+      { label: "End repeat", text: "\uE041", font: "music", size: 44 },
+      { label: "D.S.", text: "\uE045", font: "music", size: 44 },
+      { label: "D.C.", text: "\uE046", font: "music", size: 44 },
       { label: "Fine", text: "Fine", font: "hand", size: 26 },
-      { label: "To coda", text: "To ", font: "hand", size: 26 },
-      { label: "Breath", text: "", font: "music", size: 44 },
-      { label: "Caesura", text: "", font: "music", size: 44 },
+      { label: "To coda", text: "To \uE048", font: "hand", size: 26 },
+      { label: "Breath", text: "\uE4CE", font: "music", size: 44 },
+      { label: "Caesura", text: "\uE4D1", font: "music", size: 44 },
     ],
   },
   {
     group: "Dynamics",
     items: [
-      { label: "ppp", text: "", font: "music", size: 44 },
-      { label: "pp", text: "", font: "music", size: 44 },
-      { label: "p", text: "", font: "music", size: 44 },
-      { label: "mp", text: "", font: "music", size: 44 },
-      { label: "mf", text: "", font: "music", size: 44 },
-      { label: "f", text: "", font: "music", size: 44 },
-      { label: "ff", text: "", font: "music", size: 44 },
-      { label: "fff", text: "", font: "music", size: 44 },
-      { label: "sfz", text: "", font: "music", size: 44 },
-      { label: "fp", text: "", font: "music", size: 44 },
+      { label: "ppp", text: "\uE52A", font: "music", size: 44 },
+      { label: "pp", text: "\uE52B", font: "music", size: 44 },
+      { label: "p", text: "\uE520", font: "music", size: 44 },
+      { label: "mp", text: "\uE52C", font: "music", size: 44 },
+      { label: "mf", text: "\uE52D", font: "music", size: 44 },
+      { label: "f", text: "\uE522", font: "music", size: 44 },
+      { label: "ff", text: "\uE52F", font: "music", size: 44 },
+      { label: "fff", text: "\uE530", font: "music", size: 44 },
+      { label: "sfz", text: "\uE539", font: "music", size: 44 },
+      { label: "fp", text: "\uE534", font: "music", size: 44 },
     ],
   },
   {
     group: "Articulations",
     items: [
-      { label: "Accent", text: "", font: "music", size: 44 },
-      { label: "Staccato", text: "", font: "music", size: 44 },
-      { label: "Tenuto", text: "", font: "music", size: 44 },
-      { label: "Marcato", text: "", font: "music", size: 44 },
+      { label: "Accent", text: "\uE4A0", font: "music", size: 44 },
+      { label: "Staccato", text: "\uE4A2", font: "music", size: 44 },
+      { label: "Tenuto", text: "\uE4A4", font: "music", size: 44 },
+      { label: "Marcato", text: "\uE4AC", font: "music", size: 44 },
     ],
   },
 ];
 
 /** Rehearsal and bar tools: letters and numbers count up as they're placed. */
 export const STAMPS: Stamp[] = [
-  { label: "Rehearsal letter", text: "A", font: "bold", size: 30, frame: "box", next: "letter" },
+  { label: "Rehearsal letter", text: "A", font: "sans", bold: true, size: 30, frame: "box", next: "letter" },
   { label: "Bar number", text: "1", font: "sans", size: 18, next: "number" },
-  { label: "Circled number", text: "1", font: "bold", size: 20, frame: "circle", next: "number" },
-  { label: "Fingering", text: "1", font: "bold", size: 20 },
+  { label: "Circled number", text: "1", font: "sans", bold: true, size: 20, frame: "circle", next: "number" },
+  { label: "Fingering", text: "1", font: "sans", bold: true, size: 20 },
 ];
 
-export const SHAPES: { shape: ShapeKind; label: string }[] = [
+/** What the Shapes popover offers: the shapes, and a cover (a box filled like the paper, no line). */
+export type ShapeChoice = ShapeKind | "cover";
+export const SHAPES: { shape: ShapeChoice; label: string }[] = [
   { shape: "line", label: "Line" },
   { shape: "arrow", label: "Arrow" },
   { shape: "rect", label: "Box" },
@@ -213,6 +327,7 @@ export const SHAPES: { shape: ShapeKind; label: string }[] = [
   { shape: "cresc", label: "Crescendo" },
   { shape: "dim", label: "Diminuendo" },
   { shape: "bracket", label: "Bracket" },
+  { shape: "cover", label: "Cover (white-out)" },
 ];
 
 /** The stamp's text after `text`: B after A, 13 after 12. */

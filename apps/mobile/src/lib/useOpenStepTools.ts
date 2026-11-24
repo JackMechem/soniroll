@@ -16,7 +16,7 @@ export function useOpenStepTools() {
   const router = useRouter();
   const pathname = usePathname();
   const [settings] = useSyncedSettings(SOUND_SETTINGS_KEY, DEFAULT_SOUND_SETTINGS);
-  const on = settings.openTools !== false;
+  const on = settings.openTools === true;
   useEffect(() => {
     if (!on) return;
     return onStepTool((href) => {

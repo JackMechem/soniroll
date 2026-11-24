@@ -63,15 +63,16 @@ export type TilingState = {
 };
 
 export type SideMode = "overlay" | "push";
-/** `chosen`: the person picked the mode themselves (the side view's ⋮). Before 2026-11-23 the mode
-    was saved with every width change, so a stored "overlay" without `chosen` was only the old
-    default — beside wins then. */
+/** `chosen`: the person picked the mode themselves (the side view's ⋮). Without it, the stored
+    mode was only a default (it used to be saved with every width change) — over the page wins. */
 type SidePrefs = { mode: SideMode; width: number; chosen?: boolean };
 
 export const SIDE_MIN_WIDTH = 360;
 export const SIDE_MAX_WIDTH = 900;
-/** Beside the page by default: over the page hid the tool you opened a PDF or a task beside. */
-const DEFAULT_SIDE_PREFS: SidePrefs = { mode: "push", width: 560 };
+/** Over the page by default (Jack, 2026-11-23: a task's page "should always open over the content
+    not side by side"); "Beside the page" in the side view's ⋮ moves it beside and is remembered.
+    (PDFs open in place, not in the side view, so they don't cover a tool.) */
+const DEFAULT_SIDE_PREFS: SidePrefs = { mode: "overlay", width: 560 };
 export const clampSideWidth = (w: number) => Math.round(Math.min(SIDE_MAX_WIDTH, Math.max(SIDE_MIN_WIDTH, w)));
 
 const SERVER_STATE: TilingState = { layout: EMPTY_LAYOUT, pendingSplit: null, pageLeafId: null, routeHref: "/" };
@@ -231,7 +232,7 @@ function getSidePrefs(): SidePrefs {
     if (stored) {
       const chosen = stored.chosen === true;
       sidePrefs = {
-        mode: chosen && stored.mode === "overlay" ? "overlay" : "push",
+        mode: chosen && stored.mode === "push" ? "push" : "overlay",
         width: typeof stored.width === "number" ? clampSideWidth(stored.width) : DEFAULT_SIDE_PREFS.width,
         ...(chosen ? { chosen } : {}),
       };
@@ -293,26 +294,16 @@ export function openBeside(rawHref: string, options: OpenBesideOptions = {}): bo
   if (mode === "side") {
     const side = findPane(layout, layout.sideId);
     if (side) {
-      // The side view floating over the pane it's opened from would hide that pane: it moves
-      // beside the panes first (opened from the page's own chrome it stays as it is).
-      if (desktop && side.id === floatId && fromId && fromId !== floatId && floatCovers(layout, fromId)) layout = docked(layout) ?? layout;
+      // Already open (over the page, or wherever it was put): it shows the new page.
       targetId = side.id;
       layout = navigateIn(layout, side.id, href, false);
-    } else if (desktop && fromId && fromId !== floatId && collectLeaves(layout.tree).length > 1) {
-      // From a pane of a split: right beside that pane, which keeps its place (and becomes where
-      // the side view opens things from now on).
-      const placed = placeBeside(layout, fromId, "right", href, host!);
-      if (!placed) return noRoomFor(href);
-      layout = { ...placed.layout, sideId: placed.newId };
-      targetId = placed.newId;
     } else {
+      // A new side view always floats over the page, split or not (Jack, 2026-11-23: it "should
+      // always open over the content not side by side"). "Beside the page" in its ⋮ docks that
+      // one; the next opens over the page again.
       const leaf = createLeaf(href);
       targetId = leaf.id;
-      const prefs = getSidePrefs();
-      // Beside the page (the default) when there's room for it; otherwise (a narrow window, or
-      // the panes already there would get too narrow) it floats over the page.
-      const tree = desktop && prefs.mode === "push" ? dockAtEdge(layout.tree!, leaf, prefs.width, host!) : null;
-      layout = tree ? { ...layout, tree } : { ...layout, float: { leaf, width: prefs.width } };
+      layout = { ...layout, float: { leaf, width: getSidePrefs().width } };
       layout = { ...layout, sideId: leaf.id };
       // A phone's Back closes it (the history entry the full-screen view adds).
       if (!desktop) window.history.pushState({ ...(window.history.state ?? {}), __pane: true, __paneSide: true }, "", href);
@@ -401,16 +392,6 @@ function noRoomFor(href: string): boolean {
   return noRoomHandler?.(href) ?? false;
 }
 
-/** Whether the side view, floating over the panes, covers (part of) the tree pane `paneId`. */
-function floatCovers(layout: Layout, paneId: string): boolean {
-  if (!layout.tree || !layout.float) return false;
-  const r = layoutRects(layout.tree).panes.get(paneId);
-  if (!r) return false;
-  const { width } = hostSize();
-  const floatLeft = width - Math.min(layout.float.width, width - 48);
-  return (r.x + r.w) * width > floatLeft + 1;
-}
-
 /** The floating side view moved into the split, beside everything (as "Beside the page"); null
     when there's no room for it there. */
 function docked(layout: Layout): Layout | null {
@@ -426,8 +407,9 @@ export function openInSplit(href: string, edge: PaneEdge) {
 }
 
 function navigateIn(layout: Layout, paneId: string, href: string, replace: boolean): Layout {
+  // Going somewhere new clears Forward (as in a browser).
   const change = (l: PaneLeaf): PaneLeaf =>
-    l.href === href ? l : { ...l, href, back: replace ? l.back : [...(l.back ?? []), l.href].slice(-BACK_LIMIT) };
+    l.href === href ? l : { ...l, href, back: replace ? l.back : [...(l.back ?? []), l.href].slice(-BACK_LIMIT), forward: replace ? l.forward : undefined };
   if (layout.float?.leaf.id === paneId) return { ...layout, float: { ...layout.float, leaf: change(layout.float.leaf) } };
   return layout.tree ? { ...layout, tree: updateLeaf(layout.tree, paneId, change) } : layout;
 }
@@ -475,7 +457,34 @@ export function paneBack(paneId: string) {
     if (!isDesktopWindow() && s.layout.sideId === paneId) closePane(paneId);
     return;
   }
-  const change = (l: PaneLeaf): PaneLeaf => ({ ...l, href: back[back.length - 1], back: back.slice(0, -1) });
+  const change = (l: PaneLeaf): PaneLeaf => ({
+    ...l,
+    href: back[back.length - 1],
+    back: back.slice(0, -1),
+    forward: [...(l.forward ?? []), l.href].slice(-BACK_LIMIT),
+  });
+  const layout = s.layout.float?.leaf.id === paneId ? { ...s.layout, float: { ...s.layout.float, leaf: change(s.layout.float.leaf) } } : { ...s.layout, tree: updateLeaf(s.layout.tree!, paneId, change) };
+  detachers.delete(paneId);
+  set({ layout: { ...layout, activePaneId: paneId } });
+}
+
+/** Whether Forward inside this pane has somewhere to go (after Back). */
+export function paneCanGoForward(paneId: string): boolean {
+  return (findPane(read().layout, paneId)?.forward?.length ?? 0) > 0;
+}
+
+/** Forward inside a pane: undoes a Back. */
+export function paneForward(paneId: string) {
+  const s = read();
+  const leaf = findPane(s.layout, paneId);
+  const forward = leaf?.forward ?? [];
+  if (!leaf || !forward.length) return;
+  const change = (l: PaneLeaf): PaneLeaf => ({
+    ...l,
+    href: forward[forward.length - 1],
+    forward: forward.slice(0, -1),
+    back: [...(l.back ?? []), l.href].slice(-BACK_LIMIT),
+  });
   const layout = s.layout.float?.leaf.id === paneId ? { ...s.layout, float: { ...s.layout.float, leaf: change(s.layout.float.leaf) } } : { ...s.layout, tree: updateLeaf(s.layout.tree!, paneId, change) };
   detachers.delete(paneId);
   set({ layout: { ...layout, activePaneId: paneId } });
@@ -524,8 +533,8 @@ function removeFromLayout(paneId: string) {
  * The browser's Back while the screen is split (desktop): Back inside the active pane, never the
  * window's previous page loaded into it (that put the pane beside it's page in it twice). Called
  * from a capture-phase `popstate` listener, before Next's router sees the event; returns true when
- * it handled it (the caller stops Next from navigating). Forward does nothing in a pane (panes have
- * no Forward list): the address bar just goes back to the active pane's address.
+ * it handled it (the caller stops Next from navigating). Forward goes forward in the pane after a
+ * Back; with nothing there the address bar just goes back to the active pane's address.
  */
 export function paneHistoryTraverse(direction: "back" | "forward" | null): boolean {
   if (!panesActive()) return false;
@@ -533,6 +542,7 @@ export function paneHistoryTraverse(direction: "back" | "forward" | null): boole
   const active = findPane(s.layout, s.layout.activePaneId) ?? findPane(s.layout, s.layout.mainPaneId);
   if (!active) return false;
   if (direction !== "forward" && (active.back?.length ?? 0) > 0) paneBack(active.id);
+  else if (direction === "forward" && (active.forward?.length ?? 0) > 0) paneForward(active.id);
   else syncAddressBar(active.href);
   return true;
 }

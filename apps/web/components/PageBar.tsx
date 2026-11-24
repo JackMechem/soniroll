@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import HistoryArrows, { useBrowserHistory } from "@/components/HistoryArrows";
 import { FeedbackHeaderButton } from "@/components/feedback/FeedbackFab";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { topicById } from "@/lib/helpContent";
 import { type Crumb, type CrumbIcon, usePageCrumbs } from "@/lib/pageCrumbs";
-import NowPracticingPill from "@/components/practicelog/NowPracticing";
-import { usePaneId, usePaneTitleSlot } from "@/lib/paneContext";
-import { useTilingState } from "@/lib/useTilingLayout";
+import { usePaneId } from "@/lib/paneContext";
 
 export type { Crumb } from "@/lib/pageCrumbs";
 
@@ -64,16 +63,16 @@ export default function PageBar({
   const shownIntro = intro ?? (topic ? { label: `How ${topic.title} works`, show: ownIntro.show } : undefined);
   const Icon = icon ?? (topic ? ICON_BY_ID[topic.id] : undefined);
   usePageCrumbs({ crumbs: phoneCrumbs ?? crumbs, icon: Icon, intro: phoneIntro ? shownIntro : undefined });
-  // In split screen this bar is hidden (the pane's bar shows the trail): "now practicing" goes in
-  // the main pane's bar instead (once, not in every pane).
+  // In split screen this bar is hidden (the pane's bar shows the trail and its own Back/Forward).
   const paneId = usePaneId();
-  const paneTitleSlot = usePaneTitleSlot();
-  const mainPaneId = useTilingState().layout.mainPaneId;
 
   return (
     <>
-      {/* With the sidebar hidden, room at the left for its menu button (`--sidebar-toggle-room`). */}
-      <div className="absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 pl-[calc(2rem+var(--sidebar-toggle-room,0px))] pr-8 lg:flex">
+      {/* With the sidebar hidden, room at the left for its menu button (`--sidebar-toggle-room`).
+          Not inside a pane (its own bar shows the trail), even full screen where lg: applies. */}
+      <div className={`absolute inset-x-0 top-0 hidden h-14 items-center gap-2 border-b border-foreground/10 pl-[calc(2rem+var(--sidebar-toggle-room,0px))] pr-8 ${paneId ? "" : "lg:flex"}`}>
+        {/* Back and Forward (the browser's), always there; inside a pane its bar has its own. */}
+        {!paneId && <PageHistoryArrows />}
         <CrumbTrail crumbs={crumbs} icon={Icon} />
         {shownIntro && <IntroButton onClick={shownIntro.show} label={shownIntro.label} />}
         {help && <div className="ml-1">{help}</div>}
@@ -81,15 +80,12 @@ export default function PageBar({
             the title and the buttons on the right never get squeezed by it (FB-22). */}
         {titleExtra && <div className="ml-3 min-w-0 flex-1 basis-0 truncate pr-4">{titleExtra}</div>}
         <div className="ml-auto flex min-w-0 shrink items-center gap-2">
-          {/* What you're practicing (or next today): opens its task in the side view. */}
-          {!paneId && <NowPracticingPill />}
           <div className="flex shrink-0 items-center gap-2">
             {actions}
             <FeedbackHeaderButton />
           </div>
         </div>
       </div>
-      {paneId && paneId === mainPaneId && paneTitleSlot && createPortal(<span className="ml-1 flex min-w-0"><NowPracticingPill compact /></span>, paneTitleSlot)}
       {ownIntro.open && topic && <ToolIntro topic={topic} onClose={ownIntro.close} />}
     </>
   );
@@ -305,4 +301,9 @@ function FoldedMenu({ at, crumbs, onClose }: { at: { x: number; y: number }; cru
       )}
     </div>
   );
+}
+
+function PageHistoryArrows() {
+  const { canBack, canForward } = useBrowserHistory();
+  return <HistoryArrows canBack={canBack} canForward={canForward} onBack={() => window.history.back()} onForward={() => window.history.forward()} />;
 }

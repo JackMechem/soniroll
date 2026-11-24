@@ -16,7 +16,7 @@ const PDFS: FileFilter = { accept: "application/pdf,.pdf", matches: (f) => fileK
  * add blank or staff pages, and insert the pages of another PDF from Files (that PDF isn't changed
  * either; its pages are drawn from it). Clicking a page opens it.
  */
-export default function PdfPages({ sources, fileId, layer, onChange, onOpen }: { sources: PdfSources; fileId: string; layer: Layer; onChange: (layer: Layer) => void; onOpen: (index: number) => void }) {
+export default function PdfPages({ sources, fileId, layer, images, onChange, onOpen }: { sources: PdfSources; fileId: string; layer: Layer; images?: Record<string, string | null | undefined>; onChange: (layer: Layer) => void; onOpen: (index: number) => void }) {
   const [note, setNote] = useState<string | null>(null);
   const picker = useFilePicker({
     filter: PDFS,
@@ -57,7 +57,8 @@ export default function PdfPages({ sources, fileId, layer, onChange, onOpen }: {
   const rotate = (i: number) => {
     const p = pages[i];
     const aspect = sources.aspectOf(p);
-    set(pages.map((q, j) => (j === i ? { ...q, rotate: ((q.rotate + 90) % 360) as Rotation, marks: rotateMarks(q.marks, aspect) } : q)));
+    // A section on it starts at its top once it's turned (its height means something else now).
+    set(pages.map((q, j) => (j === i ? { ...q, rotate: ((q.rotate + 90) % 360) as Rotation, marks: rotateMarks(q.marks, aspect), ...(q.bookmarks ? { bookmarks: q.bookmarks.map((b) => ({ ...b, y: undefined })) } : {}) } : q)));
   };
   const remove = (i: number) => pages.length > 1 && set(pages.filter((_, j) => j !== i));
   const add = (at: number, kind: "blank" | "staff") => {
@@ -78,7 +79,7 @@ export default function PdfPages({ sources, fileId, layer, onChange, onOpen }: {
           marks = rotateMarks(marks, sources.aspectOf(at));
           at = { ...at, rotate: ((at.rotate + 90) % 360) as Rotation };
         }
-        return { ...p, marks };
+        return { ...p, marks, ...(was.bookmarks?.length ? { bookmarks: was.bookmarks } : {}) };
       }),
     });
 
@@ -128,7 +129,7 @@ export default function PdfPages({ sources, fileId, layer, onChange, onOpen }: {
             className={`flex flex-col items-center gap-2 rounded-xl p-2 transition-colors ${over === i && dragging !== i ? "bg-accent/15" : "bg-foreground/[0.03]"} ${dragging === i ? "opacity-40" : ""}`}
           >
             <button type="button" onClick={() => onOpen(i)} className="flex h-52 w-full items-center justify-center" aria-label={`Open page ${i + 1}`}>
-              <Thumb doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} />
+              <Thumb doc={sources.docFor(p)} page={p} aspect={sources.aspectOf(p)} images={images} />
             </button>
             <div className="flex w-full items-center justify-between gap-1">
               <span className="pl-1 text-xs font-medium tabular-nums text-muted">
@@ -163,10 +164,10 @@ export default function PdfPages({ sources, fileId, layer, onChange, onOpen }: {
 
 const chip = "inline-flex h-9 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm font-medium hover:bg-surface-hover";
 
-function Thumb({ doc, page, aspect }: { doc: PDFDocumentProxy | null; page: LayerPage; aspect: number }) {
+function Thumb({ doc, page, aspect, images }: { doc: PDFDocumentProxy | null; page: LayerPage; aspect: number; images?: Record<string, string | null | undefined> }) {
   // Fits a 208px-tall box.
   const width = Math.min(160, 208 / aspect);
-  return <PdfPageView doc={doc} page={page} aspect={aspect} width={width} />;
+  return <PdfPageView doc={doc} page={page} aspect={aspect} width={width} images={images} />;
 }
 
 function Small({ label, onClick, disabled, danger, children }: { label: string; onClick: () => void; disabled?: boolean; danger?: boolean; children: React.ReactNode }) {

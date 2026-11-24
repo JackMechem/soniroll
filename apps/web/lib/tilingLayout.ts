@@ -23,6 +23,8 @@ export type PaneLeaf = {
   href: string;
   /** Where Back goes inside this pane (newest last). */
   back?: string[];
+  /** Where Forward goes after going Back (next first, last). Cleared by going somewhere new. */
+  forward?: string[];
 };
 
 export type PaneSplit = {
@@ -240,7 +242,7 @@ export function cloneLayout(layout: Layout): Layout {
   };
   const cloneTree = (t: PaneTree): PaneTree =>
     t.type === "leaf"
-      ? { ...t, id: map(t.id), ...(t.back ? { back: [...t.back] } : {}) }
+      ? { ...t, id: map(t.id), ...(t.back ? { back: [...t.back] } : {}), ...(t.forward ? { forward: [...t.forward] } : {}) }
       : { ...t, id: map(t.id), children: [cloneTree(t.children[0]), cloneTree(t.children[1])] };
   const remap = (id: string | null) => (id ? map(id) : null);
   return {
@@ -272,7 +274,13 @@ export function readLayout(stored: unknown, fixHref: (href: string) => string = 
   const s = stored as Record<string, unknown>;
   const fixTree = (t: PaneTree): PaneTree =>
     t.type === "leaf"
-      ? { type: "leaf", id: t.id, href: fixHref(t.href), ...(Array.isArray(t.back) ? { back: t.back.filter((b): b is string => typeof b === "string").slice(-BACK_LIMIT) } : {}) }
+      ? {
+          type: "leaf",
+          id: t.id,
+          href: fixHref(t.href),
+          ...(Array.isArray(t.back) ? { back: t.back.filter((b): b is string => typeof b === "string").slice(-BACK_LIMIT) } : {}),
+          ...(Array.isArray(t.forward) ? { forward: t.forward.filter((b): b is string => typeof b === "string").slice(-BACK_LIMIT) } : {}),
+        }
       : { ...t, children: [fixTree(t.children[0]), fixTree(t.children[1])] };
   // The old shape: split screen only, on while `enabled`.
   if (s.v !== 2) {

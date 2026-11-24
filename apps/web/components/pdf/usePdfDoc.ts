@@ -14,6 +14,8 @@ export type PdfSources = { docFor: (page: LayerPage) => PDFDocumentProxy | null;
 export function usePdfDoc(url: string) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [aspects, setAspects] = useState<number[]>([]);
+  // Each page's width in points (as the PDF shows it), for text sizes in points.
+  const [widths, setWidths] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const bytesRef = useRef<ArrayBuffer | null>(null);
   useEffect(() => {
@@ -27,12 +29,15 @@ export function usePdfDoc(url: string) {
         bytesRef.current = bytes;
         opened = await openPdf(bytes);
         const list: number[] = [];
+        const ws: number[] = [];
         for (let i = 1; i <= opened.numPages; i++) {
           const vp = (await opened.getPage(i)).getViewport({ scale: 1 });
           list.push(vp.height / vp.width);
+          ws.push(vp.width);
         }
         if (cancelled) return;
         setAspects(list);
+        setWidths(ws);
         setDoc(opened);
       } catch (e) {
         if (!cancelled) setError(errorText(e, "Couldn't open this PDF."));
@@ -43,7 +48,7 @@ export function usePdfDoc(url: string) {
       void opened?.loadingTask.destroy();
     };
   }, [url]);
-  return { doc, aspects, error, bytesRef };
+  return { doc, aspects, widths, error, bytesRef };
 }
 
 export type OpenedPdf = { doc: PDFDocumentProxy; aspects: number[]; bytes: ArrayBuffer };

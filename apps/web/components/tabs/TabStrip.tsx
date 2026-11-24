@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import Flyout, { FlyoutItem } from "@/components/Flyout";
+import NowPracticingPill from "@/components/practicelog/NowPracticing";
 import { CloseIcon, DotsVerticalIcon, PencilIcon, PlusIcon } from "@/components/tools";
 import {
   MAX_TABS,
@@ -21,9 +22,9 @@ import { DuplicateIcon, NewTabIcon, TabLabel, tabName, tabShortcut, useTabName }
 const DRAG_TYPE = "application/x-soniroll-tab";
 
 /**
- * The tab strip over the page on desktop widths (`lib/useTabs.ts`), shown once there are two or
- * more tabs — before that, "New tab" is in the sidebar's ⋮, ⌘K, a page's right-click menu in the
- * sidebar and a pane's ⋮. Click a tab to show it, double-click (or ⋮ / right-click) to rename,
+ * The tab strip over the page on desktop widths (`lib/useTabs.ts`), always shown (Jack: "so there
+ * is always a tab you are working in") — with one tab it's the page you're on, without a × (nothing
+ * is saved until there are two; renaming waits until then too). Click a tab to show it, double-click (or ⋮ / right-click) to rename,
  * drag to reorder, × or a middle click to close; + (or a double-click on the empty strip) for a
  * new tab, which opens the dashboard. The active tab is the page's own colour, joined to it.
  */
@@ -37,16 +38,22 @@ export default function TabStrip() {
   useEffect(() => {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeId, tabs.length]);
-  if (tabs.length < 2) return null;
+  const single = tabs.length < 2;
   const full = tabs.length >= MAX_TABS;
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
 
-  const menuItems = (tab: TabView) => [
-    { label: "Rename", icon: <PencilIcon className="h-4 w-4" />, onSelect: () => setEditing(tab.id) },
-    ...(full ? [] : [{ label: "Duplicate", icon: <DuplicateIcon className="h-4 w-4" />, onSelect: () => duplicateTab(tab.id) }]),
-    { label: "Close other tabs", onSelect: () => closeOtherTabs(tab.id), divider: true },
-    { label: "Close tab", icon: <CloseIcon className="h-4 w-4" />, onSelect: () => closeTab(tab.id) },
-  ];
+  const menuItems = (tab: TabView) =>
+    single
+      ? [
+          { label: "New tab", icon: <NewTabIcon className="h-4 w-4" />, onSelect: () => newTab() },
+          { label: "Duplicate", icon: <DuplicateIcon className="h-4 w-4" />, onSelect: () => duplicateTab(tab.id) },
+        ]
+      : [
+          { label: "Rename", icon: <PencilIcon className="h-4 w-4" />, onSelect: () => setEditing(tab.id) },
+          ...(full ? [] : [{ label: "Duplicate", icon: <DuplicateIcon className="h-4 w-4" />, onSelect: () => duplicateTab(tab.id) }]),
+          { label: "Close other tabs", onSelect: () => closeOtherTabs(tab.id), divider: true },
+          { label: "Close tab", icon: <CloseIcon className="h-4 w-4" />, onSelect: () => closeTab(tab.id) },
+        ];
 
   function drop() {
     if (!drag || drag.drop === null) return setDrag(null);
@@ -93,10 +100,10 @@ export default function TabStrip() {
                   type="button"
                   role="tab"
                   aria-selected={on}
-                  draggable
+                  draggable={!single}
                   title={shortcut ? `(${shortcut})` : undefined}
                   onClick={() => switchTab(tab.id)}
-                  onDoubleClick={() => setEditing(tab.id)}
+                  onDoubleClick={() => !single && setEditing(tab.id)}
                   onAuxClick={(e) => {
                     if (e.button !== 1) return;
                     e.preventDefault();
@@ -112,12 +119,12 @@ export default function TabStrip() {
                     setDrag({ id: tab.id, drop: null });
                   }}
                   onDragEnd={() => setDrag(null)}
-                  className={`flex h-full min-w-0 flex-1 items-center gap-2 rounded-[inherit] pl-3 pr-8 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${on ? "font-medium" : ""}`}
+                  className={`flex h-full min-w-0 flex-1 items-center gap-2 rounded-[inherit] pl-3 ${single ? "pr-3" : "pr-8"} text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${on ? "font-medium" : ""}`}
                 >
                   <TabLabel tab={tab} active={on} hint={shortcut ? ` (${shortcut})` : ""} />
                 </button>
               )}
-              {editing !== tab.id && (
+              {editing !== tab.id && !single && (
                 <button
                   type="button"
                   onClick={() => closeTab(tab.id)}
@@ -146,6 +153,11 @@ export default function TabStrip() {
       </button>
       {/* The empty rest of the strip: double-click for a new tab, as in a browser. */}
       <div className="h-full flex-1" onDoubleClick={() => !full && newTab()} />
+      {/* What you're practicing (or next today), in the one row that's always there: opens its
+          task over the page. */}
+      <div className="mb-1 flex min-w-0 shrink items-center">
+        <NowPracticingPill />
+      </div>
       <Flyout
         icon={DotsVerticalIcon}
         label="Tab options"
@@ -160,10 +172,10 @@ export default function TabStrip() {
           return (
             <>
               {!full && <FlyoutItem icon={NewTabIcon} label="New tab" onSelect={run(() => newTab())} />}
-              <FlyoutItem icon={PencilIcon} label="Rename this tab" onSelect={run(() => setEditing(active.id))} />
+              {!single && <FlyoutItem icon={PencilIcon} label="Rename this tab" onSelect={run(() => setEditing(active.id))} />}
               {!full && <FlyoutItem icon={DuplicateIcon} label="Duplicate this tab" onSelect={run(() => duplicateTab(active.id))} />}
-              <FlyoutItem icon={CloseIcon} label="Close other tabs" onSelect={run(() => closeOtherTabs(active.id))} />
-              <FlyoutItem icon={CloseIcon} label="Close this tab" onSelect={run(() => closeTab(active.id))} />
+              {!single && <FlyoutItem icon={CloseIcon} label="Close other tabs" onSelect={run(() => closeOtherTabs(active.id))} />}
+              {!single && <FlyoutItem icon={CloseIcon} label="Close this tab" onSelect={run(() => closeTab(active.id))} />}
             </>
           );
         }}

@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.10.17 beta** (see versioning).
+**v0.10.18 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -62,8 +62,8 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   older names in UI text (sheddex, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
-- GitHub: `git@github.com:JackMechem/sheddex.git` — the repo is now named **JackMechem/soniroll** on
-  GitHub (the old name redirects). The in-app GitHub links in `Home.tsx`, `Landing.tsx` and
+- GitHub: `git@github.com:JackMechem/soniroll.git` (renamed from JackMechem/sheddex, which still
+  redirects; the local `origin` points at the new name since 2026-11-23). The in-app GitHub links in `Home.tsx`, `Landing.tsx` and
   `app/terms` point at it; the feedback ↔ commit tools use `REPO` in `packages/convex/lib/github.ts`.
 
 ## Working with Jack
@@ -321,7 +321,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Library as two tabs (Tunes, Files; FB-30, 2026-11-20): every chart on a tune (`tuneChartIds`, several per tune), the Library tune list, tags, linking on import and the one-time pass (`useAutoLinkCharts`), Open in Slow Downer/Tuner from Files | `library-two-tabs.md` |
-| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias; PDFs open in the side view (`/files/view`, `lib/fileView.ts`) | `pdf-editor.md` |
+| PDF viewer and editor (FB-31, 2026-11-20): pdf.js + pdf-lib, markings as a layer (`pdfMarkups`), symbols/stamps, page editing and inserting PDFs, Play mode, the desktop legacy-build alias; PDFs open in the side view (`/files/view`, `lib/fileView.ts`); the object editor (2026-11-23: layer v2, select/resize/turn, text boxes, Edit text, pictures, `geometry.ts`); saving with revisions, merging and drafts (`useLayerSync.ts`, `merge.ts`); sections and the outline panel (`PdfOutline.tsx`) | `pdf-editor.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link; folders and tags on files (`fileMeta`, `fileFolders.ts`: `inFolder`/`withTag` for other features) | `files-and-tune-sharing.md` |
 | Storage plans (Polar; Account → Storage plan, `/plans` signed out; embedded checkout), files kept on devices for free accounts (`lib/deviceFiles.ts`, `useDeviceUrls`), the move notice, `keepOnline`, setting up Polar | `storage-plans.md` |

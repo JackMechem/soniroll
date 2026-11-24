@@ -283,14 +283,18 @@ export const removeItem = mutation({
     }
     await dropShares(ctx, userId, kind, id);
     await dropMeta(ctx, userId, kind, id);
-    // A PDF's markings go with it (as `remove` does).
-    if (kind === "file") {
-      const markup = await ctx.db
-        .query("pdfMarkups")
-        .withIndex("by_file", (q) => q.eq("fileId", id as Id<"files">))
-        .first();
-      if (markup) await ctx.db.delete(markup._id);
-    }
+    // A PDF's markings go with it (as `remove` does): uploads by fileId, other kinds by item.
+    const markup =
+      kind === "file"
+        ? await ctx.db
+            .query("pdfMarkups")
+            .withIndex("by_file", (q) => q.eq("fileId", id as Id<"files">))
+            .first()
+        : await ctx.db
+            .query("pdfMarkups")
+            .withIndex("by_user_item", (q) => q.eq("userId", userId).eq("item", `${kind}:${id}`))
+            .first();
+    if (markup) await ctx.db.delete(markup._id);
   },
 });
 

@@ -10,13 +10,14 @@ import { allPanes } from "@/lib/tilingLayout";
 import { getTilingState, navigateMain } from "@/lib/useTilingLayout";
 
 /** Opens a Practice Timer step's tool when the step starts (a Shed Log task's attached tool, or
-    one picked for a step in the timer's editor), unless "Open each step's tool" is off. Mounted
+    one picked for a step in the timer's editor), when "Open each step's tool" is on (off by
+    default since 2026-11-23 — Jack: a task's attached tool shouldn't open unless you ask for it). Mounted
     once for the whole app (in `PracticeTimerAlert`, on web and desktop), so it works from any page. A renamed tool's old href goes
     to the tool it became. */
 export function useOpenStepTools() {
   const router = useRouter();
   const [settings] = useSyncedSettings(SOUND_SETTINGS_KEY, DEFAULT_SOUND_SETTINGS);
-  const on = settings.openTools !== false;
+  const on = settings.openTools === true;
   useEffect(() => {
     if (!on) return;
     const open = (e: Event) => {
