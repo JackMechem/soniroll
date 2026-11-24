@@ -836,3 +836,12 @@ keyboard (the PDF's keys are guarded with `usePaneKeyGuard`); `pnpm build`; the 
   crumb disappears and the name can run a few pixels into the ? button (not fixed).
 - Verified in headless Chromium (uxpass, dark 1440): the task and routine pages' buttons; the trail
   measured at 390/340/320 with a stand-in for the chip (signed out). The tablet chip name: code only.
+
+## 2026-11-23 (evening) — A task's tool doesn't open on its own any more
+
+Jack: "by default a task that has an attached tool should not open the attached tool, there should
+be an option to enable that feature but it should be disabled by default". `openTools` in the
+Practice Timer's sound settings (`jam-practice-practice-timer-sound`) now defaults to false on web
+and phone, and only `true` turns it on (before, anything but false was on). The switch is in the
+Practice Timer's Tools chip as before, and now also in the Shed Log's Settings menu ("Open attached
+tools: on/off"). Not checked in the browser (signed in); tsc and eslint in web and mobile.

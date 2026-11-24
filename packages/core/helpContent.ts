@@ -194,7 +194,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Sound", text: "Which tone plays when a step ends, and whether it plays at all." },
       { name: "Alarm mode", text: "Instead of moving on by itself, the timer waits and keeps ringing until you press Continue." },
       { name: "Full-screen alert", text: "With alarm mode, shows a full-screen Continue / Stop wherever you are on the site." },
-      { name: "Open each step's tool", text: "When a step with a tool starts, that tool opens, wherever you are. This covers Shed Log tasks with a tool attached too (the first one). Turn it off to stay where you are." },
+      { name: "Open each step's tool", text: "Off unless you turn it on (here, or in the Shed Log's Settings menu): when a step with a tool starts, that tool opens, wherever you are. This covers Shed Log tasks with a tool attached too (the first one)." },
     ],
     tips: ["Time on the Practice Timer counts in your Shed Log too."],
     shot: "practice-timer",

@@ -19,7 +19,7 @@ import { RewardProvider } from "@/components/reward/Reward";
 import { DayView, MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
 import { formatPracticed, practicedOfGoal } from "@/components/practicelog/minutes";
-import { findToolLink, ChecklistIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, RepeatIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
+import { findToolLink, ChecklistIcon, ExternalLinkIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, RepeatIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
 import { ChartIcon } from "@/components/practicelog/RoutineIcon";
 import {
   type DayTask,
@@ -45,6 +45,8 @@ import { recordingsApi } from "@/lib/recordings";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { useSiteSettings } from "@/lib/siteSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
+import { DEFAULT_SOUND_SETTINGS, SOUND_SETTINGS_KEY } from "@/lib/practiceTimerSound";
+import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useDeviceUrls } from "@/lib/deviceFiles";
 
 export const VIEW_KEY = "jam-practice-practice-log-view";
@@ -75,6 +77,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   const log = usePracticeLog();
   const { data, ready } = log;
   const router = useRouter();
+  const [timerSettings, updateTimerSettings] = useSyncedSettings(SOUND_SETTINGS_KEY, DEFAULT_SOUND_SETTINGS);
   const [addMenu, setAddMenu] = useState<MenuState | null>(null);
   const [newTask, setNewTask] = useState<DayTask | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
@@ -266,6 +269,12 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 items: [
                   { label: "Daily goal…", icon: <TargetIcon />, onSelect: () => setGoalOpen(true) },
                   { label: data.prefs.sounds ? "Sounds: on" : "Sounds: off", icon: <SpeakerIcon className={`h-4 w-4 ${data.prefs.sounds ? "text-foreground" : "text-muted"}`} />, onSelect: () => log.setPrefs({ sounds: !data.prefs.sounds }) },
+                  // Off by default: starting a task doesn't jump to its attached tool unless you ask.
+                  {
+                    label: timerSettings.openTools ? "Open attached tools: on" : "Open attached tools: off",
+                    icon: <ExternalLinkIcon className={`h-4 w-4 ${timerSettings.openTools ? "text-foreground" : "text-muted"}`} />,
+                    onSelect: () => updateTimerSettings({ openTools: !timerSettings.openTools }),
+                  },
                   { label: "All Shed Log settings", icon: <SlidersIcon className="h-4 w-4 text-muted" />, divider: true, onSelect: () => router.push("/account?tab=practice") },
                 ],
               });

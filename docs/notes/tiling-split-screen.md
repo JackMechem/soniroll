@@ -818,3 +818,25 @@ in this tab", then the desktop reloaded — the tab still had both panes; Close 
 **Not verified:** a real phone and two devices open at the same moment; Safari/Firefox (no
 Navigation API in older ones: Back is assumed); the desktop app running; hover tooltips (the split
 mark's list); audio by ear.
+
+## 2026-11-23 (evening) — Jack's follow-ups: over the page, a tab always, Back/Forward everywhere
+
+- **The side view always opens over the page** ("it should be over the content"): a new side view
+  floats over the page even in a split, and isn't docked when it would cover the pane it was opened
+  from (that rule, and opening beside a pane of a split, were removed — `floatCovers` is gone).
+  "Beside the page" in its ⋮ docks that one; the next opens over again.
+- **The tab strip is always there on desktop** ("so there is always a tab you are working in"):
+  with one tab it shows the page you're on, without × / rename / close-others (nothing is saved
+  until a second tab); + and Duplicate make the second.
+- **"Now practicing" moved into the tab strip's row** (right end), out of the page bar and the main
+  pane's bar.
+- **Back and Forward on every window's header** (`components/HistoryArrows.tsx`): the page bar
+  uses the browser's history (`useBrowserHistory`: the Navigation API's canGoBack/canGoForward where
+  there is one, both enabled in Safari / the desktop app's WebKit); every pane bar uses the pane's
+  own history — panes now have a Forward list (`PaneLeaf.forward`, filled by Back, cleared by going
+  somewhere new; browser Forward in a split goes forward in the active pane). The listener re-reads
+  a tick later: Next changes the address inside an insertion effect, and updating React there gave
+  "useInsertionEffect must not schedule updates".
+Checked in headless Chromium (signed out, 1440): one tab in the strip, Back/Forward on a page
+(Metronome → Tuner → Back → Forward), arrows in each pane bar, a side view opened in a
+Tuner | Metronome split floating over it, no console errors.
