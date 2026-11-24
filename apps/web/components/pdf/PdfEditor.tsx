@@ -858,7 +858,7 @@ export default function PdfEditor({ file, onClose, extraMenu, embedded = false }
               label="Music symbols and stamps"
               trigger={
                 <span className={`${toolCls(tool === "stamp")} w-auto min-w-9 gap-1 px-2 sm:w-auto sm:px-2.5 pointer-coarse:w-auto pointer-coarse:min-w-11`}>
-                  <FitGlyph text={""} family={fontFamily("music")} max={20} />
+                  <FitGlyph text={"\uE4C0"} family={fontFamily("music")} max={20} />
                   <span className="hidden text-xs font-medium sm:inline">{tool === "stamp" ? options.stamp.label : "Symbols"}</span>
                 </span>
               }
